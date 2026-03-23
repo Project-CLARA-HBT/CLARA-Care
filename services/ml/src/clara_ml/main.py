@@ -4,6 +4,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
 
+from clara_ml.agents.careguard import run_careguard_analyze
+from clara_ml.agents.research_tier2 import run_research_tier2
+from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
@@ -69,6 +72,24 @@ def routed_chat_infer(payload: dict) -> dict:
         "retrieved_ids": rag_result.retrieved_ids,
         "model_used": rag_result.model_used,
     }
+
+
+@app.post("/v1/research/tier2")
+def research_tier2(payload: dict) -> dict:
+    query = str(payload.get("query", "")).strip()
+    result = run_research_tier2(query)
+    return result
+
+
+@app.post("/v1/careguard/analyze")
+def careguard_analyze(payload: dict) -> dict:
+    return run_careguard_analyze(payload)
+
+
+@app.post("/v1/scribe/soap")
+def scribe_soap(payload: dict) -> dict:
+    transcript = str(payload.get("transcript", "")).strip()
+    return run_scribe_soap(transcript)
 
 
 @app.get("/v1/prompts/{role}/{intent}")
