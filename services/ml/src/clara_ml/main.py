@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Request, WebSocket
 
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
 from clara_ml.agents.research_tier2 import run_research_tier2
 from clara_ml.agents.scribe_soap import run_scribe_soap
+from clara_ml.config import settings
 from clara_ml.nlp.pii_filter import redact_pii
+from clara_ml.observability import metrics_collector
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.routing import P1RoleIntentRouter
@@ -23,9 +26,49 @@ rag_pipeline = RagPipelineP1()
 router = P1RoleIntentRouter()
 
 
+@app.middleware("http")
+async def instrument_requests(request: Request, call_next):
+    started_at = perf_counter()
+    path = request.url.path
+    try:
+        response = await call_next(request)
+    except Exception:
+        metrics_collector.record(
+            path=path,
+            latency_ms=(perf_counter() - started_at) * 1000.0,
+            status_code=500,
+        )
+        raise
+
+    metrics_collector.record(
+        path=path,
+        latency_ms=(perf_counter() - started_at) * 1000.0,
+        status_code=response.status_code,
+    )
+    return response
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "clara-ml"}
+
+
+@app.get("/health/details")
+def health_details() -> dict:
+    return {
+        "status": "ok",
+        "service": "clara-ml",
+        "environment": settings.environment,
+        "deepseek_configured": bool(settings.deepseek_api_key),
+        "router_ready": hasattr(router, "route"),
+        "rag_ready": hasattr(rag_pipeline, "run") and rag_pipeline.retriever is not None,
+        "prompt_loader_ready": hasattr(prompt_loader, "load"),
+    }
+
+
+@app.get("/metrics")
+def metrics() -> dict:
+    return metrics_collector.snapshot()
 
 
 @app.post("/v1/rag/poc")

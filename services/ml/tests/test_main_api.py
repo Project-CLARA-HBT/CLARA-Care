@@ -1,8 +1,105 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from clara_ml.main import app
+from clara_ml.observability import metrics_collector
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def reset_in_memory_metrics():
+    metrics_collector.reset()
+    yield
+    metrics_collector.reset()
+
+
+def test_metrics_endpoint_returns_snapshot_schema():
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert set(["requests_total", "by_path", "error_total", "avg_latency_ms"]).issubset(body.keys())
+    assert body["requests_total"] == 0
+    assert body["by_path"] == {}
+    assert body["error_total"] == 0
+    assert isinstance(body["avg_latency_ms"], float)
+    assert body["avg_latency_ms"] == 0.0
+
+
+def test_health_details_returns_dependency_and_config_flags():
+    response = client.get("/health/details")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["status"] == "ok"
+    assert body["service"] == "clara-ml"
+    assert isinstance(body["environment"], str)
+    assert isinstance(body["deepseek_configured"], bool)
+    assert isinstance(body["router_ready"], bool)
+    assert body["router_ready"] is True
+    assert isinstance(body["rag_ready"], bool)
+    assert body["rag_ready"] is True
+    assert isinstance(body["prompt_loader_ready"], bool)
+    assert body["prompt_loader_ready"] is True
+
+
+def test_metrics_increment_after_tracked_requests():
+    response_chat = client.post("/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."})
+    assert response_chat.status_code == 200
+
+    response_research = client.post(
+        "/v1/research/tier2",
+        json={"query": "Evaluate DDI evidence for warfarin and NSAID co-prescribing."},
+    )
+    assert response_research.status_code == 200
+
+    response_careguard = client.post(
+        "/v1/careguard/analyze",
+        json={
+            "symptoms": ["chest pain"],
+            "labs": {"egfr": 25},
+            "medications": ["warfarin", "ibuprofen"],
+            "allergies": ["penicillin"],
+        },
+    )
+    assert response_careguard.status_code == 200
+
+    response_scribe = client.post(
+        "/v1/scribe/soap",
+        json={
+            "transcript": (
+                "Patient reports cough and fever for 3 days. "
+                "BP 120/80, HR 90, temp 38.2. Exam noted mild crackles."
+            )
+        },
+    )
+    assert response_scribe.status_code == 200
+
+    response_council = client.post(
+        "/v1/council/run",
+        json={
+            "symptoms": ["fatigue", "palpitations"],
+            "labs": {"egfr": 58, "glucose": 210},
+            "medications": ["metformin"],
+            "history": ["type 2 diabetes"],
+            "specialists": ["cardiology", "endocrinology", "nephrology"],
+        },
+    )
+    assert response_council.status_code == 200
+
+    response_metrics = client.get("/metrics")
+    assert response_metrics.status_code == 200
+    metrics = response_metrics.json()
+
+    assert metrics["requests_total"] == 5
+    assert metrics["error_total"] == 0
+    assert metrics["avg_latency_ms"] >= 0.0
+    assert metrics["by_path"]["/v1/chat/routed"] == 1
+    assert metrics["by_path"]["/v1/research/tier2"] == 1
+    assert metrics["by_path"]["/v1/careguard/analyze"] == 1
+    assert metrics["by_path"]["/v1/scribe/soap"] == 1
+    assert metrics["by_path"]["/v1/council/run"] == 1
 
 
 def test_routed_chat_infer_returns_routing_and_answer():
