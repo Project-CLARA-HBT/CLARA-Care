@@ -40,6 +40,55 @@ export type SystemDependenciesSnapshot = {
   mlStatus: string;
 };
 
+export type SystemEcosystemRawResponse = {
+  generated_at?: string;
+  summary?: Record<string, unknown>;
+  partner_health?: Array<Record<string, unknown>>;
+  data_trust_scores?: Array<Record<string, unknown>>;
+  federation_alerts?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+export type EcosystemSummarySnapshot = {
+  partnersTotal: number | null;
+  partnersDown: number | null;
+  trustLowCount: number | null;
+  criticalAlertCount: number | null;
+};
+
+export type EcosystemPartnerHealthRow = {
+  partner: string;
+  status: string;
+  latencyMs: number | null;
+  errorRatePct: number | null;
+  lastCheck: string;
+};
+
+export type EcosystemDataTrustRow = {
+  source: string;
+  trustScore: number | null;
+  freshnessHours: number | null;
+  driftRisk: string;
+  lastRefresh: string;
+};
+
+export type EcosystemAlertRow = {
+  id: string;
+  severity: string;
+  message: string;
+  source: string;
+  createdAt: string;
+  acknowledged: boolean | null;
+};
+
+export type SystemEcosystemSnapshot = {
+  generatedAt: string | null;
+  summary: EcosystemSummarySnapshot;
+  partnerHealth: EcosystemPartnerHealthRow[];
+  dataTrustScores: EcosystemDataTrustRow[];
+  federationAlerts: EcosystemAlertRow[];
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
@@ -79,6 +128,24 @@ function asBoolean(value: unknown): boolean | null {
   if (["true", "1", "yes", "y", "ok", "up", "healthy", "reachable"].includes(normalized)) return true;
   if (["false", "0", "no", "n", "down", "unhealthy", "unreachable", "error"].includes(normalized)) return false;
   return null;
+}
+
+function asArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  return [];
+}
+
+function asLowerText(value: unknown): string {
+  const text = asText(value);
+  return text ? text.toLowerCase() : "";
+}
+
+function normalizeTextForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
 function pickUnknown(candidates: Array<Record<string, unknown> | null>, keys: string[]): unknown {
@@ -132,6 +199,24 @@ export async function getSystemMetrics(): Promise<SystemMetricsRawResponse> {
 export async function getSystemDependencies(): Promise<SystemDependenciesRawResponse> {
   const response = await api.get<SystemDependenciesRawResponse>("/system/dependencies");
   return response.data;
+}
+
+export async function getSystemEcosystem(): Promise<SystemEcosystemRawResponse> {
+  const response = await api.get<SystemEcosystemRawResponse>("/system/ecosystem");
+  return response.data;
+}
+
+export function isAccessDeniedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const normalized = normalizeTextForMatch(error.message);
+  if (!normalized) return false;
+  return (
+    normalized.includes("403") ||
+    normalized.includes("forbidden") ||
+    normalized.includes("permission") ||
+    normalized.includes("khong du quyen") ||
+    normalized.includes("khong co quyen")
+  );
 }
 
 export function normalizeApiHealth(data: ApiHealthRawResponse): ApiHealthSnapshot {
@@ -239,4 +324,83 @@ export function normalizeSystemDependencies(data: SystemDependenciesRawResponse)
     mlReachable === true ? "reachable" : mlReachable === false ? "unreachable" : mlStatusText ?? "unknown";
 
   return { mlReachable, mlStatus };
+}
+
+export function normalizeSystemEcosystem(data: SystemEcosystemRawResponse): SystemEcosystemSnapshot {
+  const root = asRecord(data) ?? {};
+  const rootData = asRecord(root.data);
+  const rootResult = asRecord(root.result);
+  const rootPayload = asRecord(root.payload);
+  const candidates: Array<Record<string, unknown> | null> = [root, rootData, rootResult, rootPayload];
+
+  const summaryRecord = asRecord(pickUnknown(candidates, ["summary", "overview", "totals"]));
+
+  const partnerHealth = asArray(pickUnknown(candidates, ["partner_health", "partnerHealth", "partners_health"]))
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item, index) => ({
+      partner:
+        asText(pickUnknown([item], ["partner", "name", "id", "source"])) ??
+        `partner-${index + 1}`,
+      status: asText(pickUnknown([item], ["status", "health", "state"])) ?? "unknown",
+      latencyMs: asNumber(pickUnknown([item], ["latency_ms", "latencyMs", "latency"])),
+      errorRatePct: asNumber(pickUnknown([item], ["error_rate_pct", "errorRatePct", "error_rate", "errorRate"])),
+      lastCheck:
+        asText(pickUnknown([item], ["last_check", "lastCheck", "checked_at", "updated_at", "timestamp"])) ?? "--"
+    }));
+
+  const dataTrustScores = asArray(pickUnknown(candidates, ["data_trust_scores", "dataTrustScores", "trust_scores"]))
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item, index) => ({
+      source:
+        asText(pickUnknown([item], ["source", "name", "id"])) ??
+        `source-${index + 1}`,
+      trustScore: asNumber(pickUnknown([item], ["trust_score", "trustScore", "score"])),
+      freshnessHours: asNumber(pickUnknown([item], ["freshness_hours", "freshnessHours", "freshness"])),
+      driftRisk: asText(pickUnknown([item], ["drift_risk", "driftRisk", "risk"])) ?? "unknown",
+      lastRefresh:
+        asText(pickUnknown([item], ["last_refresh", "lastRefresh", "updated_at", "timestamp"])) ?? "--"
+    }));
+
+  const federationAlerts = asArray(pickUnknown(candidates, ["federation_alerts", "federationAlerts", "alerts"]))
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item, index) => ({
+      id: asText(pickUnknown([item], ["id", "alert_id", "code"])) ?? `alert-${index + 1}`,
+      severity: asText(pickUnknown([item], ["severity", "level", "priority"])) ?? "info",
+      message: asText(pickUnknown([item], ["message", "detail", "summary"])) ?? "No alert detail.",
+      source: asText(pickUnknown([item], ["source", "partner", "service"])) ?? "unknown",
+      createdAt: asText(pickUnknown([item], ["created_at", "createdAt", "timestamp"])) ?? "--",
+      acknowledged: asBoolean(pickUnknown([item], ["acknowledged", "acked", "resolved"]))
+    }));
+
+  const derivedPartnersDown = partnerHealth.filter((item) => {
+    const status = asLowerText(item.status);
+    return status === "down" || status === "unreachable" || status === "error";
+  }).length;
+
+  const derivedTrustLowCount = dataTrustScores.filter((item) => item.trustScore !== null && item.trustScore < 60).length;
+  const derivedCriticalAlertCount = federationAlerts.filter((item) => asLowerText(item.severity) === "critical").length;
+
+  const summaryCandidates: Array<Record<string, unknown> | null> = [summaryRecord, ...candidates];
+  const summary: EcosystemSummarySnapshot = {
+    partnersTotal:
+      asNumber(pickUnknown(summaryCandidates, ["partners_total", "partnersTotal"])) ?? partnerHealth.length,
+    partnersDown:
+      asNumber(pickUnknown(summaryCandidates, ["partners_down", "partnersDown"])) ?? derivedPartnersDown,
+    trustLowCount:
+      asNumber(pickUnknown(summaryCandidates, ["trust_low_count", "trustLowCount"])) ?? derivedTrustLowCount,
+    criticalAlertCount:
+      asNumber(pickUnknown(summaryCandidates, ["critical_alert_count", "criticalAlertCount"])) ??
+      derivedCriticalAlertCount
+  };
+
+  return {
+    generatedAt: asText(pickUnknown(candidates, ["generated_at", "generatedAt", "timestamp"])),
+    summary,
+    partnerHealth,
+    dataTrustScores,
+    federationAlerts
+  };
 }

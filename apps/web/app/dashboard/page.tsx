@@ -23,7 +23,12 @@ const MODULE_LINKS = [
   { href: "/careguard", label: "CareGuard", description: "Triaging nhanh theo triệu chứng, thuốc, dị ứng." },
   { href: "/scribe", label: "Medical Scribe", description: "Tạo SOAP note từ transcript buổi khám." },
   { href: "/research", label: "Research Workspace", description: "Tier1/Tier2 nghiên cứu có citations và steps." },
-  { href: "/council", label: "AI Council", description: "Điểm truy cập workflow hội chẩn." }
+  { href: "/council", label: "AI Council", description: "Điểm truy cập workflow hội chẩn." },
+  {
+    href: "/dashboard/ecosystem",
+    label: "Ecosystem Center",
+    description: "Theo dõi partner health, trust score và federation alerts (doctor-only API)."
+  }
 ];
 
 function formatCount(value: number | null): string {
