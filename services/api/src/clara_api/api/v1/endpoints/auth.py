@@ -1,6 +1,12 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from clara_api.core.security import create_access_token, create_refresh_token, decode_refresh_token
+from clara_api.core.rbac import get_current_token
+from clara_api.core.security import (
+    TokenPayload,
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+)
 from clara_api.schemas import LoginRequest, LoginResponse, RefreshTokenRequest
 
 router = APIRouter()
@@ -33,3 +39,8 @@ def refresh_token(payload: RefreshTokenRequest) -> LoginResponse:
     access_token = create_access_token(subject=token_payload.sub, role=role)
     refresh_token = create_refresh_token(subject=token_payload.sub, role=role)
     return LoginResponse(access_token=access_token, refresh_token=refresh_token, role=role)
+
+
+@router.get("/me")
+def me(token_payload: TokenPayload = Depends(get_current_token)) -> dict[str, str]:
+    return {"subject": token_payload.sub, "role": token_payload.role}
