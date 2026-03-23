@@ -14,10 +14,15 @@ class SearchRequest(BaseModel):
 @router.post("/")
 def search_placeholder(
     payload: SearchRequest,
-    _token: TokenPayload = Depends(require_roles("researcher", "doctor")),
+    token: TokenPayload = Depends(require_roles("researcher", "doctor")),
 ) -> dict[str, object]:
     return {
         "query": payload.query,
         "results": [],
         "note": "[P0 placeholder] Nguồn PubMed/RxNorm/openFDA sẽ được tích hợp theo phase.",
+        "meta": {
+            "role": token.role,
+            "intent": "search_placeholder",
+            "router": "role-aware-placeholder",
+        },
     }

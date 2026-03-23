@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=120, validation_alias="GLOBAL_RATE_LIMIT_PER_MIN")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
     pubmed_rate_limit_per_sec: int = Field(default=10, validation_alias="PUBMED_RATE_LIMIT_PER_SEC")
+    ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
+    ml_service_timeout_seconds: float = Field(
+        default=20.0,
+        validation_alias="ML_SERVICE_TIMEOUT_SECONDS",
+        gt=0,
+    )
 
 
 @lru_cache
