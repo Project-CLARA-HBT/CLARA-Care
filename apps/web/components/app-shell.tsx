@@ -8,7 +8,7 @@ type Props = {
   children: ReactNode;
 };
 
-const HIDE_SIDEBAR_ROUTES = new Set(["/", "/login", "/register", "/role-select"]);
+const HIDE_SIDEBAR_ROUTES = new Set(["/", "/huong-dan", "/login", "/register", "/role-select"]);
 
 export default function AppShell({ children }: Props) {
   const pathname = usePathname();

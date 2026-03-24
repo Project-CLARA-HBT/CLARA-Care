@@ -3,7 +3,7 @@ import AppShell from "@/components/app-shell";
 
 export const metadata = {
   title: "CLARA Web",
-  description: "CLARA P0 web interface"
+  description: "CLARA - trợ lý AI y tế cho hỏi đáp và quản lý thuốc an toàn"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
