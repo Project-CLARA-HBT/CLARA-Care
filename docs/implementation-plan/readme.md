@@ -29,6 +29,9 @@ Bộ tài liệu này là kế hoạch triển khai chính thức cho CLARA vớ
 6. `backend-rust-plan.md`
 7. `metrics-gates-and-operating-model.md`
 8. `system-control-tower-dashboard-plan.md`
+9. `ui-ux-audit-report.md`
+10. `content-glossary-vi.md`
+11. `web-sitemap-v2.md`
 
 ## 4. KPI runtime theo role
 
