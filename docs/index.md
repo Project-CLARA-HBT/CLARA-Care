@@ -32,6 +32,13 @@
 - `docs/research/multimodal-rag-and-data-connectors-research.md`
 - `docs/research/medical-slm-and-safety-research.md`
 - `docs/research/risk-deep-dive-and-mitigation.md`
+- `docs/research/competitive-products-flow-benchmark.md`
+- `docs/research/competitive-ai-health-platforms-2026-03-25.md`
+- `docs/research/competitive-selfmed-and-pillbox-apps-2026-03-25.md`
+- `docs/research/trusted-sources-and-api-access-plan.md`
+- `docs/research/deepdive-competitive-intelligence-plan.md`
+- `docs/research/competitive-landscape-deepdive-2026-03-25-v2.md`
+- `docs/research/competitive-uiux-selfmed-chatbot-deepdive-2026-03-25.md`
 
 ### 2.4 Implementation Plan
 
@@ -40,8 +47,20 @@
 - `docs/implementation-plan/workstream-clara-research.md`
 - `docs/implementation-plan/workstream-clara-self-med.md`
 - `docs/implementation-plan/frontend-web-mobile-flutter-plan.md`
+- `docs/implementation-plan/frontend-web-ux-revamp-plan.md`
 - `docs/implementation-plan/backend-rust-plan.md`
 - `docs/implementation-plan/metrics-gates-and-operating-model.md`
+- `docs/implementation-plan/system-control-tower-dashboard-plan.md`
+- `docs/implementation-plan/web-sitemap-v2.md`
+- `docs/implementation-plan/flutter-android-route-map.md`
+- `docs/implementation-plan/web-mobile-information-architecture-v3.md`
+- `docs/implementation-plan/p1-to-p6-microtasks-detailed-plan.md`
+- `docs/implementation-plan/source-integration-execution-board.md`
+- `docs/implementation-plan/docs-gap-audit-2026-03-25.md`
+- `docs/implementation-plan/architecture-plan-alignment-audit-v3.md`
+- `docs/implementation-plan/ship-plan-ddi-admin-frontend-rebuild-v1.md`
+- `docs/implementation-plan/runtime-alignment-gap-report-2026-03-25-v2.md`
+- `docs/implementation-plan/frontend-uiuxpromax-rebuild-execution-plan-v1.md`
 
 ## 3. Thứ tự đọc khuyến nghị
 
