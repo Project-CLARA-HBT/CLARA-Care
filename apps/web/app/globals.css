@@ -4,9 +4,88 @@
 
 :root {
   color-scheme: light;
+
+  --color-bg: #eff6ff;
+  --color-bg-soft: #f7fbff;
+  --color-surface: #ffffff;
+  --color-text: #0b1b33;
+  --color-muted: #4b627a;
+  --color-border: #c7d9ea;
+  --color-primary: #0f6ecd;
+  --color-primary-strong: #0b5cab;
+  --color-accent: #0d9488;
+
+  --font-sans:
+    "Noto Sans",
+    "Manrope",
+    "Avenir Next",
+    "Segoe UI",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Helvetica,
+    Arial,
+    sans-serif;
+  --font-display:
+    "Sora",
+    "Manrope",
+    "Avenir Next",
+    "Segoe UI",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(70rem 40rem at 95% -8%, rgb(59 130 246 / 16%), transparent 58%),
+    radial-gradient(55rem 30rem at -12% 5%, rgb(13 148 136 / 11%), transparent 64%),
+    linear-gradient(180deg, #f9fcff 0%, #eef6ff 48%, #f7fbff 100%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  color: #fff;
+  background: rgb(2 132 199 / 80%);
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.18em;
+}
+
+.glass-card {
+  border: 1px solid rgb(148 163 184 / 0.2);
+  background: rgb(255 255 255 / 0.86);
+  backdrop-filter: blur(8px);
+}
+
+.med-gradient-text {
+  background: linear-gradient(120deg, #0f6ecd, #0d9488 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
