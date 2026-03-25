@@ -72,6 +72,7 @@ class RegisterResponse(BaseModel):
     email: EmailStr
     role: Role
     is_email_verified: bool
+    email_delivery_status: str | None = None
     verification_token_preview: str | None = None
 
 
@@ -85,7 +86,18 @@ class ForgotPasswordRequest(BaseModel):
 
 class ForgotPasswordResponse(BaseModel):
     accepted: bool = True
+    email_delivery_status: str | None = None
     reset_token_preview: str | None = None
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationResponse(BaseModel):
+    accepted: bool = True
+    email_delivery_status: str | None = None
+    verification_token_preview: str | None = None
 
 
 class ResetPasswordRequest(BaseModel):

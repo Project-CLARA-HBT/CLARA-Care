@@ -30,6 +30,34 @@ class Settings(BaseSettings):
         validation_alias="AUTH_ACTION_TOKEN_TTL_MINUTES",
         gt=0,
     )
+    auth_email_delivery_mode: str = Field(
+        default="preview",
+        validation_alias="AUTH_EMAIL_DELIVERY_MODE",
+    )
+    auth_expose_action_token_preview: bool = Field(
+        default=True,
+        validation_alias="AUTH_EXPOSE_ACTION_TOKEN_PREVIEW",
+    )
+    auth_public_web_base_url: str = Field(
+        default="https://clara.thiennn.icu",
+        validation_alias="AUTH_PUBLIC_WEB_BASE_URL",
+    )
+    auth_verify_email_path: str = Field(
+        default="/verify-email",
+        validation_alias="AUTH_VERIFY_EMAIL_PATH",
+    )
+    auth_reset_password_path: str = Field(
+        default="/reset-password",
+        validation_alias="AUTH_RESET_PASSWORD_PATH",
+    )
+    smtp_host: str = Field(default="", validation_alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, validation_alias="SMTP_PORT", gt=0)
+    smtp_username: str = Field(default="", validation_alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", validation_alias="SMTP_PASSWORD")
+    smtp_from_email: str = Field(default="", validation_alias="SMTP_FROM_EMAIL")
+    smtp_use_tls: bool = Field(default=True, validation_alias="SMTP_USE_TLS")
+    smtp_use_ssl: bool = Field(default=False, validation_alias="SMTP_USE_SSL")
+    smtp_timeout_seconds: float = Field(default=10.0, validation_alias="SMTP_TIMEOUT_SECONDS", gt=0)
 
     rate_limit_requests: int = Field(default=120, validation_alias="GLOBAL_RATE_LIMIT_PER_MIN")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")

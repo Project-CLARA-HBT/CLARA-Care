@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.core.auth_email import dispatch_action_email, should_expose_action_token_preview
 from clara_api.core.config import get_settings
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import (
@@ -28,6 +29,8 @@ from clara_api.schemas import (
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
+    ResendVerificationRequest,
+    ResendVerificationResponse,
     ResetPasswordRequest,
     VerifyEmailRequest,
 )
@@ -132,19 +135,29 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Registe
     db.refresh(user)
 
     verification_token_preview: str | None = None
+    email_delivery_status: str | None = None
     if not user.is_email_verified:
-        verification_token_preview = _issue_action_token(
+        verification_token = _issue_action_token(
             db,
             user_id=user.id,
             token_type="verify_email",
             ttl_minutes=settings.auth_action_token_ttl_minutes,
         )
+        email_delivery_status = dispatch_action_email(
+            settings,
+            action="verify_email",
+            recipient=user.email,
+            token=verification_token,
+        )
+        if should_expose_action_token_preview(settings):
+            verification_token_preview = verification_token
 
     return RegisterResponse(
         user_id=user.id,
         email=user.email,
         role=user.role,  # type: ignore[arg-type]
         is_email_verified=user.is_email_verified,
+        email_delivery_status=email_delivery_status,
         verification_token_preview=verification_token_preview,
     )
 
@@ -225,15 +238,60 @@ def forgot_password(
     settings = get_settings()
     user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
     if not user:
-        return ForgotPasswordResponse(accepted=True, reset_token_preview=None)
+        return ForgotPasswordResponse(accepted=True, email_delivery_status="noop", reset_token_preview=None)
 
-    reset_token_preview = _issue_action_token(
+    reset_token = _issue_action_token(
         db,
         user_id=user.id,
         token_type="reset_password",
         ttl_minutes=settings.auth_action_token_ttl_minutes,
     )
-    return ForgotPasswordResponse(accepted=True, reset_token_preview=reset_token_preview)
+    email_delivery_status = dispatch_action_email(
+        settings,
+        action="reset_password",
+        recipient=user.email,
+        token=reset_token,
+    )
+    reset_token_preview = reset_token if should_expose_action_token_preview(settings) else None
+    return ForgotPasswordResponse(
+        accepted=True,
+        email_delivery_status=email_delivery_status,
+        reset_token_preview=reset_token_preview,
+    )
+
+
+@router.post("/resend-verification", response_model=ResendVerificationResponse)
+def resend_verification(
+    payload: ResendVerificationRequest,
+    db: Session = Depends(get_db),
+) -> ResendVerificationResponse:
+    settings = get_settings()
+    user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
+    if not user or user.is_email_verified:
+        return ResendVerificationResponse(
+            accepted=True,
+            email_delivery_status="noop",
+            verification_token_preview=None,
+        )
+
+    verification_token = _issue_action_token(
+        db,
+        user_id=user.id,
+        token_type="verify_email",
+        ttl_minutes=settings.auth_action_token_ttl_minutes,
+    )
+    email_delivery_status = dispatch_action_email(
+        settings,
+        action="verify_email",
+        recipient=user.email,
+        token=verification_token,
+    )
+    verification_token_preview = verification_token if should_expose_action_token_preview(settings) else None
+    return ResendVerificationResponse(
+        accepted=True,
+        email_delivery_status=email_delivery_status,
+        verification_token_preview=verification_token_preview,
+    )
 
 
 @router.post("/reset-password")
