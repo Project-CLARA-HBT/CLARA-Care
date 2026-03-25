@@ -26,6 +26,33 @@ rag_pipeline = RagPipelineP1()
 router = P1RoleIntentRouter()
 
 
+def _as_bool(value: object, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    return default
+
+
+def _as_threshold(value: object, default: float) -> float:
+    if isinstance(value, (int, float)):
+        parsed = float(value)
+    elif isinstance(value, str):
+        try:
+            parsed = float(value.strip())
+        except ValueError:
+            return default
+    else:
+        return default
+    return max(0.0, min(1.0, parsed))
+
+
 @app.middleware("http")
 async def instrument_requests(request: Request, call_next):
     started_at = perf_counter()
@@ -89,8 +116,15 @@ def rag_poc(payload: dict) -> dict:
 @app.post("/v1/chat/routed")
 def routed_chat_infer(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
+    role_hint = str(payload.get("role", "")).strip().lower() or None
+    rag_flow_payload = payload.get("rag_flow")
+    rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
+    role_router_enabled = _as_bool(rag_flow.get("role_router_enabled"), True)
+    intent_router_enabled = _as_bool(rag_flow.get("intent_router_enabled"), True)
+    deepseek_fallback_enabled = _as_bool(rag_flow.get("deepseek_fallback_enabled"), True)
+    low_context_threshold = _as_threshold(rag_flow.get("low_context_threshold"), 0.15)
     pii = redact_pii(query)
-    route = router.route(pii.redacted_text)
+    route = router.route(pii.redacted_text, role_hint=role_hint)
 
     if route.emergency:
         return {
@@ -104,9 +138,31 @@ def routed_chat_infer(payload: dict) -> dict:
             ),
             "retrieved_ids": [],
             "model_used": "emergency-fastpath-v1",
+            "flow_applied": {
+                "role_router_enabled": role_router_enabled,
+                "intent_router_enabled": intent_router_enabled,
+                "deepseek_fallback_enabled": deepseek_fallback_enabled,
+                "low_context_threshold": low_context_threshold,
+            },
         }
 
-    rag_result = rag_pipeline.run(pii.redacted_text)
+    if not role_router_enabled:
+        route.role = role_hint if role_hint in {"normal", "researcher", "doctor"} else "normal"
+
+    if not intent_router_enabled:
+        default_by_role = {
+            "normal": "symptom_triage",
+            "researcher": "evidence_review",
+            "doctor": "doctor_case_review",
+        }
+        route.intent = default_by_role.get(route.role, "symptom_triage")
+        route.confidence = min(route.confidence, 0.6)
+
+    rag_result = rag_pipeline.run(
+        pii.redacted_text,
+        low_context_threshold=low_context_threshold,
+        deepseek_fallback_enabled=deepseek_fallback_enabled,
+    )
     return {
         "role": route.role,
         "intent": route.intent,
@@ -115,6 +171,12 @@ def routed_chat_infer(payload: dict) -> dict:
         "answer": rag_result.answer,
         "retrieved_ids": rag_result.retrieved_ids,
         "model_used": rag_result.model_used,
+        "flow_applied": {
+            "role_router_enabled": role_router_enabled,
+            "intent_router_enabled": intent_router_enabled,
+            "deepseek_fallback_enabled": deepseek_fallback_enabled,
+            "low_context_threshold": low_context_threshold,
+        },
     }
 
 

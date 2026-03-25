@@ -16,6 +16,14 @@ class Settings(BaseSettings):
         default=30.0,
         validation_alias=AliasChoices("DEEPSEEK_TIMEOUT_SECONDS", "DEEPSEEK_TIMEOUT"),
     )
+    external_ddi_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("EXTERNAL_DDI_ENABLED", "CAREGUARD_EXTERNAL_DDI_ENABLED"),
+    )
+    external_ddi_timeout_seconds: float = Field(
+        default=1.5,
+        validation_alias=AliasChoices("EXTERNAL_DDI_TIMEOUT_SECONDS", "CAREGUARD_EXTERNAL_DDI_TIMEOUT_SECONDS"),
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

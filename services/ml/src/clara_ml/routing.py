@@ -84,7 +84,7 @@ class P1RoleIntentRouter:
         "doctor": ("doctor_ddi_check", "doctor_case_review", "doctor_treatment_plan"),
     }
 
-    def route(self, query: str) -> RouteResult:
+    def route(self, query: str, role_hint: str | None = None) -> RouteResult:
         normalized = self._normalize(query)
         if self._contains_any(normalized, self.EMERGENCY_KEYWORDS):
             return RouteResult(
@@ -94,7 +94,12 @@ class P1RoleIntentRouter:
                 emergency=True,
             )
 
-        role, role_confidence = self._classify_role(normalized)
+        role_hint_normalized = (role_hint or "").strip().lower()
+        if role_hint_normalized in {"normal", "researcher", "doctor"}:
+            role = role_hint_normalized
+            role_confidence = 0.99
+        else:
+            role, role_confidence = self._classify_role(normalized)
         intent, intent_confidence = self._classify_intent(role, normalized)
         confidence = round((role_confidence + intent_confidence) / 2.0, 3)
         return RouteResult(role=role, intent=intent, confidence=confidence, emergency=False)

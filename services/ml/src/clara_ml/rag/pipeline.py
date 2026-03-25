@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import List, Protocol
 
 from clara_ml.config import settings
@@ -68,38 +69,97 @@ class RagPipelineP1:
         )
 
     @staticmethod
+    def _tokenize(text: str) -> set[str]:
+        return {
+            token
+            for token in re.findall(r"[a-zA-Z0-9]{3,}", text.lower())
+            if token
+        }
+
+    def _context_relevance(self, query: str, docs: List[Document]) -> float:
+        query_tokens = self._tokenize(query)
+        if not query_tokens or not docs:
+            return 0.0
+        best_score = 0.0
+        for doc in docs:
+            doc_tokens = self._tokenize(doc.text)
+            if not doc_tokens:
+                continue
+            overlap = len(query_tokens.intersection(doc_tokens))
+            score = overlap / max(len(query_tokens), 1)
+            if score > best_score:
+                best_score = score
+        return best_score
+
+    @staticmethod
     def _build_prompt(query: str, docs: List[Document]) -> str:
         context = "\n".join(f"- ({doc.id}) {doc.text}" for doc in docs)
         return (
             "Answer using only retrieved context.\n"
-            "If context is insufficient, say what is missing.\n"
+            "If context is insufficient, still provide a concise safe answer using general medical knowledge.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
         )
 
-    def run(self, query: str) -> RagResult:
+    @staticmethod
+    def _build_no_rag_prompt(query: str) -> str:
+        return (
+            "User asks a health/medical question.\n"
+            "Retrieved context is empty or irrelevant.\n"
+            "Provide a useful, concise, safety-first answer in Vietnamese.\n"
+            "Do not claim you cannot answer due to missing context.\n"
+            "Include: practical next steps, warning signs to seek urgent care, and suggest consulting clinician when needed.\n"
+            f"User query: {query}"
+        )
+
+    def run(
+        self,
+        query: str,
+        *,
+        low_context_threshold: float = 0.15,
+        deepseek_fallback_enabled: bool = True,
+    ) -> RagResult:
         docs = self.retriever.retrieve(query)
         ids = [d.id for d in docs]
+        relevance_score = self._context_relevance(query, docs)
+        threshold = max(0.0, min(1.0, low_context_threshold))
+        has_relevant_context = relevance_score >= threshold
         if self._llm_client and self._deepseek_api_key:
             try:
+                if not has_relevant_context and not deepseek_fallback_enabled:
+                    return RagResult(
+                        query=query,
+                        retrieved_ids=[],
+                        answer=self._local_synthesis(query, docs),
+                        model_used="local-synth-v1-no-fallback",
+                    )
+                prompt = (
+                    self._build_prompt(query, docs)
+                    if has_relevant_context
+                    else self._build_no_rag_prompt(query)
+                )
                 response = self._llm_client.generate(
-                    prompt=self._build_prompt(query, docs),
+                    prompt=prompt,
                     system_prompt=(
                         "You are CLARA clinical assistant. Be concise, safe, and cite source ids."
                     ),
                 )
                 return RagResult(
                     query=query,
-                    retrieved_ids=ids,
+                    retrieved_ids=ids if has_relevant_context else [],
                     answer=response.content,
-                    model_used=response.model or self._llm_client.model,
+                    model_used=(
+                        f"{response.model or self._llm_client.model}-with-rag"
+                        if has_relevant_context
+                        else f"{response.model or self._llm_client.model}-fallback"
+                    ),
                 )
             except Exception:
                 pass
 
         return RagResult(
             query=query,
-            retrieved_ids=ids,
+            retrieved_ids=ids if has_relevant_context else [],
             answer=self._local_synthesis(query, docs),
             model_used="local-synth-v1",
         )
