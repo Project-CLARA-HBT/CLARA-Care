@@ -32,6 +32,12 @@ Bộ tài liệu này là kế hoạch triển khai chính thức cho CLARA vớ
 9. `ui-ux-audit-report.md`
 10. `content-glossary-vi.md`
 11. `web-sitemap-v2.md`
+12. `flutter-android-route-map.md`
+13. `p1-to-p6-microtasks-detailed-plan.md`
+14. `source-integration-execution-board.md`
+15. `docs-gap-audit-2026-03-25.md`
+16. `web-mobile-information-architecture-v3.md`
+17. `architecture-plan-alignment-audit-v3.md`
 
 ## 4. KPI runtime theo role
 
@@ -44,9 +50,10 @@ Bộ tài liệu này là kế hoạch triển khai chính thức cho CLARA vớ
 1. Đọc `phase-00-to-06-master-plan.md` để nắm roadmap tổng thể.
 2. Đọc hai workstream để tách phạm vi Research và Self-Med.
 3. Đọc `system-control-tower-dashboard-plan.md` để triển khai control-plane quản trị.
-4. Triển khai giao diện theo `frontend-web-mobile-flutter-plan.md` và `frontend-web-ux-revamp-plan.md`.
+4. Triển khai giao diện theo `frontend-web-mobile-flutter-plan.md`, `frontend-web-ux-revamp-plan.md` và `flutter-android-route-map.md`.
 5. Triển khai backend theo `backend-rust-plan.md`.
-6. Vận hành bằng `metrics-gates-and-operating-model.md`.
+6. Triển khai tích hợp nguồn theo `source-integration-execution-board.md`.
+7. Vận hành bằng `metrics-gates-and-operating-model.md`.
 
 ## 6. Trách nhiệm điều phối
 
