@@ -17,8 +17,16 @@ services:
       PUBMED_RATE_LIMIT_PER_SEC: ${PUBMED_RATE_LIMIT_PER_SEC:-10}
       ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8010}
       ML_SERVICE_TIMEOUT_SECONDS: ${ML_SERVICE_TIMEOUT_SECONDS:-20}
+      TGC_OCR_BASE_URL: ${TGC_OCR_BASE_URL:-http://host.docker.internal:8080}
+      TGC_OCR_ENDPOINTS: ${TGC_OCR_ENDPOINTS:-/api/ocr,/api/extract,/ocr}
+      TGC_OCR_TIMEOUT_SECONDS: ${TGC_OCR_TIMEOUT_SECONDS:-45}
+      TGC_OCR_API_KEY: ${TGC_OCR_API_KEY:-}
     ports:
       - "127.0.0.1:${APP_API_PORT:-8100}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - clara_api_data:/data
 
   ml:
     build:
@@ -31,6 +39,8 @@ services:
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.vip/v1}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v3.2}
       DEEPSEEK_TIMEOUT_SECONDS: ${DEEPSEEK_TIMEOUT_SECONDS:-30}
+      EXTERNAL_DDI_ENABLED: ${EXTERNAL_DDI_ENABLED:-true}
+      EXTERNAL_DDI_TIMEOUT_SECONDS: ${EXTERNAL_DDI_TIMEOUT_SECONDS:-1.5}
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
 
@@ -45,3 +55,6 @@ services:
       - api
     ports:
       - "127.0.0.1:${APP_WEB_PORT:-3100}:3000"
+
+volumes:
+  clara_api_data:
