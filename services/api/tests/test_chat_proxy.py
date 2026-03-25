@@ -55,7 +55,17 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert body["ml"]["retrieved_ids"] == ["doc-1"]
 
     assert str(captured["url"]).endswith("/v1/chat/routed")
-    assert captured["json"] == {"query": "metformin la gi", "role": "researcher"}
+    assert captured["json"] == {
+        "query": "metformin la gi",
+        "role": "researcher",
+        "rag_flow": {
+            "role_router_enabled": True,
+            "intent_router_enabled": True,
+            "verification_enabled": True,
+            "deepseek_fallback_enabled": True,
+            "low_context_threshold": 0.2,
+        },
+    }
     assert float(captured["timeout"]) > 0
 
 

@@ -172,3 +172,55 @@ def test_system_ecosystem_forbidden_for_non_doctor(email: str) -> None:
 def test_system_ecosystem_unauthorized_without_token() -> None:
     response = client.get("/api/v1/system/ecosystem")
     assert response.status_code == 401
+
+
+def test_system_sources_success_for_doctor() -> None:
+    token = _login("dr@doctor.clara")
+
+    response = client.get(
+        "/api/v1/system/sources",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) == {"public_no_key", "key_required", "commercial"}
+
+    expected_source_fields = {
+        "id",
+        "name",
+        "group",
+        "phase",
+        "key_required",
+        "status",
+        "notes",
+    }
+
+    for phase in ("public_no_key", "key_required", "commercial"):
+        assert isinstance(payload[phase], list)
+        assert len(payload[phase]) > 0
+        for source in payload[phase]:
+            assert set(source.keys()) == expected_source_fields
+            assert source["phase"] == phase
+            assert isinstance(source["key_required"], bool)
+            assert isinstance(source["id"], str)
+            assert isinstance(source["name"], str)
+            assert isinstance(source["group"], str)
+            assert isinstance(source["status"], str)
+            assert isinstance(source["notes"], str)
+
+
+def test_system_sources_forbidden_for_non_doctor() -> None:
+    token = _login("alice@research.clara")
+
+    response = client.get(
+        "/api/v1/system/sources",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_system_sources_unauthorized_without_token() -> None:
+    response = client.get("/api/v1/system/sources")
+    assert response.status_code == 401
