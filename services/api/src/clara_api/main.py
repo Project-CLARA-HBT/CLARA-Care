@@ -4,14 +4,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from clara_api.api.router import api_router
+from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
 from clara_api.core.metrics import APIMetricsMiddleware
 from clara_api.core.rate_limit import RateLimiterMiddleware
 from clara_api.core.rbac import AuthContextMiddleware
-from clara_api.db.base import Base
 from clara_api.db import models as _db_models  # noqa: F401
-from clara_api.db.session import engine
+from clara_api.db.base import Base
+from clara_api.db.session import SessionLocal, engine
 
 settings = get_settings()
 
@@ -32,6 +33,8 @@ app.add_middleware(APIMetricsMiddleware)
 @app.on_event("startup")
 def init_db_schema() -> None:
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        ensure_bootstrap_admin(db, settings)
 
 
 @app.exception_handler(ClaraAPIError)

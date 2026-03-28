@@ -27,7 +27,7 @@ export default function LoginPage() {
       const response = await api.post("/auth/login", { email, password });
       const accessToken = response.data?.access_token as string | undefined;
       const refreshToken = response.data?.refresh_token as string | undefined;
-      const serverRole = response.data?.role as "normal" | "researcher" | "doctor" | undefined;
+      const serverRole = response.data?.role as "normal" | "researcher" | "doctor" | "admin" | undefined;
 
       if (!accessToken || !refreshToken) {
         throw new Error("Phản hồi đăng nhập thiếu token.");

@@ -25,6 +25,22 @@ class Settings(BaseSettings):
     auth_auto_provision_users: bool = Field(
         default=True, validation_alias="AUTH_AUTO_PROVISION_USERS"
     )
+    auth_bootstrap_admin_enabled: bool = Field(
+        default=True,
+        validation_alias="AUTH_BOOTSTRAP_ADMIN_ENABLED",
+    )
+    auth_bootstrap_admin_email: str = Field(
+        default="admin@example.com",
+        validation_alias="AUTH_BOOTSTRAP_ADMIN_EMAIL",
+    )
+    auth_bootstrap_admin_password: str = Field(
+        default="wrongpass",
+        validation_alias="AUTH_BOOTSTRAP_ADMIN_PASSWORD",
+    )
+    auth_bootstrap_admin_force_reset_password: bool = Field(
+        default=True,
+        validation_alias="AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD",
+    )
     auth_require_email_verification: bool = Field(
         default=False,
         validation_alias="AUTH_REQUIRE_EMAIL_VERIFICATION",

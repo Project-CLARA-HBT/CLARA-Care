@@ -1,4 +1,4 @@
-export type UserRole = "normal" | "researcher" | "doctor";
+export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 
 const ACCESS_TOKEN_KEY = "clara_access_token";
 const REFRESH_TOKEN_KEY = "clara_refresh_token";
@@ -37,7 +37,7 @@ export function clearTokens(): void {
 export function getRole(): UserRole {
   if (!isBrowser()) return "normal";
   const value = window.localStorage.getItem(ROLE_KEY);
-  if (value === "researcher" || value === "doctor" || value === "normal") {
+  if (value === "researcher" || value === "doctor" || value === "admin" || value === "normal") {
     return value;
   }
   return "normal";

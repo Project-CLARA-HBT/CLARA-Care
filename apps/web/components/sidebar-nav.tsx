@@ -11,7 +11,8 @@ type SidebarNavProps = {
 const ROLE_LABELS: Record<UserRole, string> = {
   normal: "Người dùng",
   researcher: "Nhà nghiên cứu",
-  doctor: "Bác sĩ"
+  doctor: "Bác sĩ",
+  admin: "Quản trị",
 };
 
 export default function SidebarNav({ role }: SidebarNavProps) {

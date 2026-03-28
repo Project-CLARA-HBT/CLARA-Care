@@ -43,6 +43,8 @@ async def get_current_token(
 
 def require_roles(*roles: str) -> Callable[[TokenPayload], TokenPayload]:
     async def _checker(token: TokenPayload = Depends(get_current_token)) -> TokenPayload:
+        if token.role == "admin":
+            return token
         if token.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

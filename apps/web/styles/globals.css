@@ -70,9 +70,8 @@
     sans-serif;
 }
 
-:root.dark,
-.dark,
-[data-theme="dark"] {
+html.dark,
+html[data-theme="dark"] {
   color-scheme: dark;
   --color-bg: #050c18;
   --bg-canvas: #050c18;
@@ -89,27 +88,6 @@
   --shadow-float: 0 26px 62px -42px rgba(2, 6, 23, 0.88);
   --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
   --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.32);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-bg: #050c18;
-    --bg-canvas: #050c18;
-    --bg-elev-1: rgba(11, 18, 32, 0.82);
-    --bg-elev-2: rgba(15, 23, 42, 0.88);
-    --bg-elev-3: #0f172a;
-    --text-primary: #e2e8f0;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --glass-fill: rgba(15, 23, 42, 0.68);
-    --glass-stroke: rgba(148, 163, 184, 0.22);
-    --glass-highlight: rgba(30, 41, 59, 0.52);
-    --shadow-soft: 0 18px 36px -30px rgba(2, 6, 23, 0.82);
-    --shadow-float: 0 26px 62px -42px rgba(2, 6, 23, 0.88);
-    --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
-    --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.32);
-  }
 }
 
 * {
@@ -195,19 +173,10 @@ select:focus-visible {
   box-shadow: var(--shadow-focus);
 }
 
-.dark body,
-[data-theme="dark"] body {
+html.dark body,
+html[data-theme="dark"] body {
   background-image:
     radial-gradient(62rem 38rem at 94% -14%, rgb(14 116 144 / 20%), transparent 58%),
     radial-gradient(58rem 34rem at -18% -4%, rgb(30 64 175 / 22%), transparent 60%),
     linear-gradient(180deg, #030712 0%, #050c18 52%, #020617 100%);
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-image:
-      radial-gradient(62rem 38rem at 94% -14%, rgb(14 116 144 / 20%), transparent 58%),
-      radial-gradient(58rem 34rem at -18% -4%, rgb(30 64 175 / 22%), transparent 60%),
-      linear-gradient(180deg, #030712 0%, #050c18 52%, #020617 100%);
-  }
 }

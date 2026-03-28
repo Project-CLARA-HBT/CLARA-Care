@@ -1,4 +1,4 @@
-export type UserRole = "normal" | "researcher" | "doctor";
+export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 export type NavGroupKey = "core" | "clinical" | "medication" | "admin" | "support";
 
 export type PageMeta = {
@@ -33,7 +33,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Tổng quan",
     desc: "Bức tranh nhanh hôm nay",
     group: "core",
-    roles: ["normal", "researcher", "doctor"],
+    roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "Tổng quan công việc",
@@ -45,7 +45,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hỏi đáp y tế",
     desc: "Hỏi nhanh hoặc chuyên sâu",
     group: "core",
-    roles: ["normal", "researcher", "doctor"],
+    roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "Hỏi đáp chuyên môn",
@@ -57,7 +57,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Tủ thuốc",
     desc: "Quản lý thuốc cá nhân",
     group: "medication",
-    roles: ["normal", "researcher", "doctor"],
+    roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "Tủ thuốc của tôi",
@@ -69,7 +69,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Kiểm tra tương tác",
     desc: "DDI và cảnh báo an toàn",
     group: "medication",
-    roles: ["normal", "doctor"],
+    roles: ["normal", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "Kiểm tra tương tác thuốc",
@@ -81,7 +81,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hội chẩn AI",
     desc: "Nhiều góc nhìn chuyên khoa",
     group: "clinical",
-    roles: ["doctor"],
+    roles: ["doctor", "admin"],
     page: {
       title: "Hội chẩn ca bệnh",
       subtitle: "Tập hợp ý kiến đa chuyên khoa để xử lý ca khó."
@@ -92,7 +92,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Medical Scribe",
     desc: "Ghi chép khám bệnh",
     group: "clinical",
-    roles: ["doctor"],
+    roles: ["doctor", "admin"],
     page: {
       title: "Ghi chép khám bệnh",
       subtitle: "Soạn ghi chú khám nhanh theo định dạng rõ ràng, nhất quán."
@@ -103,7 +103,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Admin Control Tower",
     desc: "Nguồn RAG và answer flow",
     group: "admin",
-    roles: ["researcher", "doctor"],
+    roles: ["researcher", "doctor", "admin"],
     page: {
       title: "Quản trị hệ thống",
       subtitle: "Bảng điều phối trung tâm cho cấu hình, chất lượng phản hồi và vận hành."
@@ -114,7 +114,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Nguồn tri thức",
     desc: "Quản lý nguồn dữ liệu",
     group: "admin",
-    roles: ["researcher", "doctor"],
+    roles: ["researcher", "doctor", "admin"],
     page: {
       title: "Nguồn tri thức",
       subtitle: "Quản lý nguồn dữ liệu và mức ưu tiên truy xuất."
@@ -125,7 +125,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Luồng trả lời",
     desc: "Điều phối phân tích và phản hồi",
     group: "admin",
-    roles: ["researcher", "doctor"],
+    roles: ["researcher", "doctor", "admin"],
     page: {
       title: "Luồng trả lời",
       subtitle: "Điều phối các bước phân tích, xác minh và phản hồi cuối."
@@ -136,7 +136,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Giám sát vận hành",
     desc: "Theo dõi cảnh báo runtime",
     group: "admin",
-    roles: ["researcher", "doctor"],
+    roles: ["researcher", "doctor", "admin"],
     page: {
       title: "Giám sát vận hành",
       subtitle: "Theo dõi tình trạng hệ thống, cảnh báo và tín hiệu runtime."
@@ -147,7 +147,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hướng dẫn",
     desc: "Bắt đầu trong 5 phút",
     group: "support",
-    roles: ["normal", "researcher", "doctor"],
+    roles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Trung tâm hướng dẫn",
       subtitle: "Các bước sử dụng nhanh cho người mới."

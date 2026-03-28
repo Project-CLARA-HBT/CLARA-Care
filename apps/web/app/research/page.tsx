@@ -18,7 +18,8 @@ import {
 const ROLE_LABELS: Record<UserRole, string> = {
   normal: "Người dùng cá nhân",
   researcher: "Nhà nghiên cứu",
-  doctor: "Bác sĩ"
+  doctor: "Bác sĩ",
+  admin: "Quản trị hệ thống",
 };
 
 type Tier1Result = {

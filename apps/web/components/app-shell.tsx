@@ -14,7 +14,8 @@ type Props = {
 const ROLE_LABELS: Record<UserRole, string> = {
   normal: "Người dùng cá nhân",
   researcher: "Nhà nghiên cứu",
-  doctor: "Bác sĩ"
+  doctor: "Bác sĩ",
+  admin: "Quản trị hệ thống",
 };
 
 export default function AppShell({ children }: Props) {
@@ -34,15 +35,15 @@ export default function AppShell({ children }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-slate-900">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--text-primary)]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1560px]">
         <SidebarNav role={role} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 px-4 py-3 backdrop-blur sm:px-6">
+          <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-[var(--bg-elev-2)] px-4 py-3 backdrop-blur sm:px-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Workspace</p>
-                <h1 className="mt-1 text-lg font-semibold text-slate-900 sm:text-xl">{currentPage.title}</h1>
+                <h1 className="mt-1 text-lg font-semibold text-[var(--text-primary)] sm:text-xl">{currentPage.title}</h1>
                 <p className="mt-0.5 text-sm text-slate-600">{currentPage.subtitle}</p>
               </div>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">

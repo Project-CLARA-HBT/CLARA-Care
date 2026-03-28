@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -11,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from clara_api.core.auth_email import dispatch_action_email, should_expose_action_token_preview
 from clara_api.core.config import get_settings
+from clara_api.core.passwords import hash_password, verify_password
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import (
     TokenPayload,
@@ -39,33 +39,13 @@ router = APIRouter()
 
 
 def _infer_role_from_email(email: str) -> str:
+    if email.endswith("@admin.clara") or email.startswith("admin@"):
+        return "admin"
     if email.endswith("@research.clara"):
         return "researcher"
     if email.endswith("@doctor.clara"):
         return "doctor"
     return "normal"
-
-
-def _hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    iterations = 390000
-    hashed = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
-    return f"pbkdf2_sha256${iterations}${salt.hex()}${hashed.hex()}"
-
-
-def _verify_password(password: str, encoded: str) -> bool:
-    parts = encoded.split("$")
-    if len(parts) != 4 or parts[0] != "pbkdf2_sha256":
-        return False
-    _, iterations_raw, salt_hex, digest_hex = parts
-    try:
-        iterations = int(iterations_raw)
-        salt = bytes.fromhex(salt_hex)
-        expected = bytes.fromhex(digest_hex)
-    except ValueError:
-        return False
-    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
-    return hmac.compare_digest(actual, expected)
 
 
 def _hash_action_token(raw_token: str) -> str:
@@ -115,6 +95,11 @@ def _consume_action_token(db: Session, *, raw_token: str, token_type: str) -> Au
 
 @router.post("/register", response_model=RegisterResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> RegisterResponse:
+    if payload.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Không thể tự đăng ký vai trò admin"
+        )
+
     existing = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email đã tồn tại")
@@ -124,7 +109,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Registe
     is_verified = not settings.auth_require_email_verification
     user = User(
         email=payload.email,
-        hashed_password=_hash_password(payload.password),
+        hashed_password=hash_password(payload.password),
         role=role,
         full_name=payload.full_name.strip(),
         is_email_verified=is_verified,
@@ -166,11 +151,16 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Registe
 def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)) -> dict[str, object]:
     record = _consume_action_token(db, raw_token=payload.token, token_type="verify_email")
     if not record:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token xác thực không hợp lệ hoặc đã hết hạn")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token xác thực không hợp lệ hoặc đã hết hạn",
+        )
 
     user = db.get(User, record.user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại"
+        )
     user.is_email_verified = True
     db.add(user)
     db.commit()
@@ -185,11 +175,14 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
     settings = get_settings()
     user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
 
-    if user is None and settings.auth_auto_provision_users:
+    auto_provision_enabled = (
+        settings.auth_auto_provision_users and settings.environment.lower() != "production"
+    )
+    if user is None and auto_provision_enabled:
         inferred_role = _infer_role_from_email(payload.email)
         user = User(
             email=payload.email,
-            hashed_password=_hash_password(payload.password),
+            hashed_password=hash_password(payload.password),
             role=inferred_role,
             full_name="",
             is_email_verified=True,
@@ -199,14 +192,16 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
         db.commit()
         db.refresh(user)
 
-    if user is None or not _verify_password(payload.password, user.hashed_password):
+    if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Sai email hoặc mật khẩu",
         )
 
     if settings.auth_require_email_verification and not user.is_email_verified:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email chưa được xác thực")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Email chưa được xác thực"
+        )
 
     user.last_login_at = datetime.now(tz=UTC)
     db.add(user)
@@ -222,9 +217,11 @@ def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -
     token_payload = decode_refresh_token(payload.refresh_token)
     user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Người dùng không tồn tại")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Người dùng không tồn tại"
+        )
 
-    role = user.role if user.role in {"normal", "researcher", "doctor"} else "normal"
+    role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
     access_token = create_access_token(subject=user.email, role=role)
     refresh_token = create_refresh_token(subject=user.email, role=role)
     return LoginResponse(access_token=access_token, refresh_token=refresh_token, role=role)
@@ -238,7 +235,9 @@ def forgot_password(
     settings = get_settings()
     user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
     if not user:
-        return ForgotPasswordResponse(accepted=True, email_delivery_status="noop", reset_token_preview=None)
+        return ForgotPasswordResponse(
+            accepted=True, email_delivery_status="noop", reset_token_preview=None
+        )
 
     reset_token = _issue_action_token(
         db,
@@ -286,7 +285,9 @@ def resend_verification(
         recipient=user.email,
         token=verification_token,
     )
-    verification_token_preview = verification_token if should_expose_action_token_preview(settings) else None
+    verification_token_preview = (
+        verification_token if should_expose_action_token_preview(settings) else None
+    )
     return ResendVerificationResponse(
         accepted=True,
         email_delivery_status=email_delivery_status,
@@ -298,13 +299,17 @@ def resend_verification(
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> dict[str, bool]:
     token = _consume_action_token(db, raw_token=payload.token, token_type="reset_password")
     if not token:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token đặt lại mật khẩu không hợp lệ")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Token đặt lại mật khẩu không hợp lệ"
+        )
 
     user = db.get(User, token.user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại"
+        )
 
-    user.hashed_password = _hash_password(payload.new_password)
+    user.hashed_password = hash_password(payload.new_password)
     db.add(user)
     db.commit()
     return {"reset": True}
@@ -318,11 +323,15 @@ def change_password(
 ) -> dict[str, bool]:
     user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại")
-    if not _verify_password(payload.current_password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu hiện tại không đúng")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại"
+        )
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu hiện tại không đúng"
+        )
 
-    user.hashed_password = _hash_password(payload.new_password)
+    user.hashed_password = hash_password(payload.new_password)
     db.add(user)
     db.commit()
     return {"changed": True}
@@ -334,7 +343,9 @@ def logout(_token_payload: TokenPayload = Depends(get_current_token)) -> dict[st
 
 
 @router.get("/me")
-def me(token_payload: TokenPayload = Depends(get_current_token), db: Session = Depends(get_db)) -> dict[str, object]:
+def me(
+    token_payload: TokenPayload = Depends(get_current_token), db: Session = Depends(get_db)
+) -> dict[str, object]:
     user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
     if not user:
         return {"subject": token_payload.sub, "role": token_payload.role}
