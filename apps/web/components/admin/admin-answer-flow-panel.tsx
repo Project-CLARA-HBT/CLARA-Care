@@ -86,7 +86,7 @@ export default function AdminAnswerFlowPanel() {
             <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Flow Toggles</p>
-                <p className="text-xs text-slate-600">Router + Verification + Fallback</p>
+                <p className="text-xs text-slate-600">Router + Verification + Retrieval + Fallback</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {flowToggleKeys.map((key) => {
@@ -162,12 +162,14 @@ export default function AdminAnswerFlowPanel() {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900">Flow Signal Blocks</h3>
-          <span className="text-xs text-slate-500">4 flags + threshold</span>
+          <span className="text-xs text-slate-500">{flowToggleKeys.length} flags + threshold</span>
         </div>
         <div className="mt-3">
           {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-slate-100" /> : <BarBlocks values={flowVisual} />}
         </div>
-        <p className="mt-2 text-xs text-slate-500">Block cuối cùng là threshold, 4 block trước là các flow flags dạng bật/tắt.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          Block cuối cùng là threshold, các block trước là flow flags dạng bật/tắt.
+        </p>
       </section>
     </div>
   );

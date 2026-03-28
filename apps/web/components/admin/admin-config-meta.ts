@@ -16,6 +16,18 @@ export const FLOW_FLAG_META: Record<FlowToggleKey, { label: string; hint: string
   deepseek_fallback_enabled: {
     label: "DeepSeek Fallback",
     hint: "Fallback khi RAG confidence thấp hoặc context không đủ."
+  },
+  scientific_retrieval_enabled: {
+    label: "Scientific Retrieval",
+    hint: "Bật truy xuất từ PubMed/EuropePMC cho câu hỏi cần chứng cứ."
+  },
+  web_retrieval_enabled: {
+    label: "Web Retrieval",
+    hint: "Bật truy xuất bổ sung từ nguồn web uy tín (khi được cấu hình)."
+  },
+  file_retrieval_enabled: {
+    label: "File Retrieval",
+    hint: "Sử dụng nội dung file người dùng upload trong bước retrieval."
   }
 };
 

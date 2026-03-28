@@ -177,6 +177,7 @@ class RagSourceEntry(BaseModel):
     name: str
     enabled: bool
     priority: int = Field(ge=1, le=100)
+    weight: float = Field(default=1.0, ge=0.0, le=1.0)
     category: str
 
 
@@ -186,6 +187,9 @@ class RagFlowConfig(BaseModel):
     verification_enabled: bool = True
     deepseek_fallback_enabled: bool = True
     low_context_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
+    scientific_retrieval_enabled: bool = True
+    web_retrieval_enabled: bool = True
+    file_retrieval_enabled: bool = True
 
 
 class SystemControlTowerConfig(BaseModel):

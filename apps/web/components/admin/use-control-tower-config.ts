@@ -15,19 +15,38 @@ const FLOW_TOGGLES: FlowToggleKey[] = [
   "role_router_enabled",
   "intent_router_enabled",
   "verification_enabled",
-  "deepseek_fallback_enabled"
+  "deepseek_fallback_enabled",
+  "scientific_retrieval_enabled",
+  "web_retrieval_enabled",
+  "file_retrieval_enabled"
 ];
 
 const DEFAULT_FLOW: ControlTowerRagFlow = {
   role_router_enabled: true,
   intent_router_enabled: true,
   verification_enabled: true,
-  deepseek_fallback_enabled: false,
-  low_context_threshold: 0.35
+  deepseek_fallback_enabled: true,
+  low_context_threshold: 0.2,
+  scientific_retrieval_enabled: true,
+  web_retrieval_enabled: true,
+  file_retrieval_enabled: true
 };
+
+const SOURCE_WEIGHT_MIN = 0;
+const SOURCE_WEIGHT_MAX = 1;
+const DEFAULT_SOURCE_WEIGHT = 1;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeWeight(value: number): number {
+  const safe = clamp(
+    Number.isFinite(value) ? value : DEFAULT_SOURCE_WEIGHT,
+    SOURCE_WEIGHT_MIN,
+    SOURCE_WEIGHT_MAX
+  );
+  return Math.round(safe * 100) / 100;
 }
 
 function normalizeSource(source: ControlTowerRagSource, index: number): ControlTowerRagSource {
@@ -42,6 +61,7 @@ function normalizeSource(source: ControlTowerRagSource, index: number): ControlT
     name: safeName,
     enabled: Boolean(source.enabled),
     priority: clamp(safePriority, 1, 100),
+    weight: normalizeWeight(source.weight),
     category: safeCategory
   };
 }
@@ -56,7 +76,11 @@ function normalizeFlow(flow?: Partial<ControlTowerRagFlow> | null): ControlTower
     intent_router_enabled: flow?.intent_router_enabled ?? DEFAULT_FLOW.intent_router_enabled,
     verification_enabled: flow?.verification_enabled ?? DEFAULT_FLOW.verification_enabled,
     deepseek_fallback_enabled: flow?.deepseek_fallback_enabled ?? DEFAULT_FLOW.deepseek_fallback_enabled,
-    low_context_threshold: clamp(Number(flow?.low_context_threshold ?? DEFAULT_FLOW.low_context_threshold), 0, 1)
+    low_context_threshold: clamp(Number(flow?.low_context_threshold ?? DEFAULT_FLOW.low_context_threshold), 0, 1),
+    scientific_retrieval_enabled:
+      flow?.scientific_retrieval_enabled ?? DEFAULT_FLOW.scientific_retrieval_enabled,
+    web_retrieval_enabled: flow?.web_retrieval_enabled ?? DEFAULT_FLOW.web_retrieval_enabled,
+    file_retrieval_enabled: flow?.file_retrieval_enabled ?? DEFAULT_FLOW.file_retrieval_enabled
   };
 }
 
@@ -79,6 +103,7 @@ export type UseControlTowerConfigResult = {
   save: () => Promise<boolean>;
   setSourceEnabled: (sourceId: string, enabled: boolean) => void;
   setSourcePriority: (sourceId: string, value: number) => void;
+  setSourceWeight: (sourceId: string, value: number) => void;
   setSourceCategory: (sourceId: string, category: string) => void;
   setFlowToggle: (key: FlowToggleKey, enabled: boolean) => void;
   setLowContextThreshold: (value: number) => void;
@@ -161,6 +186,19 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
     });
   }, []);
 
+  const setSourceWeight = useCallback((sourceId: string, value: number) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const weight = normalizeWeight(value);
+      return {
+        ...prev,
+        rag_sources: sortSources(
+          prev.rag_sources.map((source) => (source.id === sourceId ? { ...source, weight } : source))
+        )
+      };
+    });
+  }, []);
+
   const setSourceCategory = useCallback((sourceId: string, category: string) => {
     setConfig((prev) => {
       if (!prev) return prev;
@@ -211,6 +249,7 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
     save,
     setSourceEnabled,
     setSourcePriority,
+    setSourceWeight,
     setSourceCategory,
     setFlowToggle,
     setLowContextThreshold,

@@ -94,6 +94,7 @@ export type ControlTowerRagSource = {
   name: string;
   enabled: boolean;
   priority: number;
+  weight: number;
   category: string;
 };
 
@@ -103,6 +104,9 @@ export type ControlTowerRagFlow = {
   verification_enabled: boolean;
   deepseek_fallback_enabled: boolean;
   low_context_threshold: number;
+  scientific_retrieval_enabled: boolean;
+  web_retrieval_enabled: boolean;
+  file_retrieval_enabled: boolean;
 };
 
 export type ControlTowerConfig = {

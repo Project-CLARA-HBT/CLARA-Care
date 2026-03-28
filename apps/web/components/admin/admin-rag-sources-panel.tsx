@@ -17,7 +17,8 @@ export default function AdminRagSourcesPanel() {
     save,
     setSourceCategory,
     setSourceEnabled,
-    setSourcePriority
+    setSourcePriority,
+    setSourceWeight
   } = useControlTowerConfig();
 
   const categoryOptions = useMemo(() => {
@@ -39,7 +40,9 @@ export default function AdminRagSourcesPanel() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">RAG Configuration Block</p>
             <h3 className="mt-2 text-sm font-semibold text-slate-900">Data Source Control</h3>
-            <p className="mt-1 text-xs text-slate-600">Quản lý `enabled`, `priority`, `category` cho từng nguồn tri thức.</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Quản lý `enabled`, `priority`, `weight`, `category` cho từng nguồn tri thức.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -93,6 +96,7 @@ export default function AdminRagSourcesPanel() {
                     <th className="px-3 py-2">Source</th>
                     <th className="px-3 py-2">Category</th>
                     <th className="px-3 py-2">Priority</th>
+                    <th className="px-3 py-2">Weight</th>
                     <th className="px-3 py-2">Enabled</th>
                   </tr>
                 </thead>
@@ -125,6 +129,29 @@ export default function AdminRagSourcesPanel() {
                           onChange={(event) => setSourcePriority(source.id, Number(event.target.value))}
                           className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                         />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex min-w-[200px] items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={source.weight}
+                            onChange={(event) => setSourceWeight(source.id, Number(event.target.value))}
+                            className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                          />
+                          <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={source.weight}
+                            onChange={(event) => setSourceWeight(source.id, Number(event.target.value))}
+                            className="w-24 accent-sky-600"
+                            aria-label={`Weight for ${source.name}`}
+                          />
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         <button
