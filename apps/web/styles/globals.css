@@ -4,8 +4,151 @@
 
 :root {
   color-scheme: light;
+
+  /* Foundation */
+  --color-bg: #edf5ff;
+  --bg-canvas: #edf5ff;
+  --bg-elev-1: rgba(255, 255, 255, 0.84);
+  --bg-elev-2: rgba(255, 255, 255, 0.9);
+  --bg-elev-3: #ffffff;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  /* Brand + status */
+  --brand-500: #0f6ecd;
+  --brand-600: #0b5cab;
+  --brand-700: #0a4f92;
+  --accent-500: #0d9488;
+  --success-500: #059669;
+  --warn-500: #d97706;
+  --danger-500: #dc2626;
+
+  /* Glass */
+  --glass-fill: rgba(255, 255, 255, 0.66);
+  --glass-stroke: rgba(148, 163, 184, 0.26);
+  --glass-highlight: rgba(255, 255, 255, 0.48);
+  --blur-sm: 8px;
+  --blur-md: 14px;
+  --blur-lg: 24px;
+
+  /* Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow-soft: 0 12px 28px -22px rgba(15, 23, 42, 0.4);
+  --shadow-float: 0 24px 60px -38px rgba(2, 132, 199, 0.45);
+  --shadow-hero: 0 34px 88px -42px rgba(2, 132, 199, 0.62);
+  --shadow-focus: 0 0 0 3px rgba(14, 116, 205, 0.28);
+
+  --font-sans:
+    "Noto Sans",
+    "Manrope",
+    "Avenir Next",
+    "Segoe UI",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Helvetica,
+    Arial,
+    sans-serif;
+  --font-display:
+    "Sora",
+    "Manrope",
+    "Avenir Next",
+    "Segoe UI",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  min-height: 100vh;
+  color: var(--text-primary);
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(68rem 40rem at 92% -10%, rgb(59 130 246 / 18%), transparent 58%),
+    radial-gradient(56rem 31rem at -14% 4%, rgb(13 148 136 / 11%), transparent 62%),
+    linear-gradient(180deg, #f7fbff 0%, #edf5ff 48%, #f6faff 100%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  color: #fff;
+  background: rgb(2 132 199 / 80%);
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.18em;
+}
+
+/* Compat classes */
+.glass-card,
+.glass-surface-1 {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(160deg, var(--glass-highlight), var(--glass-fill));
+  backdrop-filter: blur(var(--blur-sm)) saturate(130%);
+  box-shadow: var(--shadow-soft);
+}
+
+.glass-surface-2 {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.6));
+  backdrop-filter: blur(var(--blur-md)) saturate(140%);
+  box-shadow: var(--shadow-float);
+}
+
+.glass-surface-3 {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.54));
+  backdrop-filter: blur(var(--blur-lg)) saturate(150%);
+  box-shadow: var(--shadow-hero);
+}
+
+.med-gradient-text {
+  background: linear-gradient(120deg, var(--brand-500), var(--accent-500) 72%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.focus-ring:focus-visible,
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
