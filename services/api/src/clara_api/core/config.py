@@ -16,11 +16,15 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
-    jwt_secret_key: str = Field(default="change-me", min_length=8, validation_alias="JWT_SECRET_KEY")
+    jwt_secret_key: str = Field(
+        default="change-me", min_length=8, validation_alias="JWT_SECRET_KEY"
+    )
     jwt_algorithm: str = "HS256"
     jwt_access_minutes: int = Field(default=30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     jwt_refresh_minutes: int = Field(default=43200, validation_alias="REFRESH_TOKEN_EXPIRE_MINUTES")
-    auth_auto_provision_users: bool = Field(default=True, validation_alias="AUTH_AUTO_PROVISION_USERS")
+    auth_auto_provision_users: bool = Field(
+        default=True, validation_alias="AUTH_AUTO_PROVISION_USERS"
+    )
     auth_require_email_verification: bool = Field(
         default=False,
         validation_alias="AUTH_REQUIRE_EMAIL_VERIFICATION",
@@ -64,7 +68,7 @@ class Settings(BaseSettings):
     pubmed_rate_limit_per_sec: int = Field(default=10, validation_alias="PUBMED_RATE_LIMIT_PER_SEC")
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
     ml_service_timeout_seconds: float = Field(
-        default=20.0,
+        default=60.0,
         validation_alias="ML_SERVICE_TIMEOUT_SECONDS",
         gt=0,
     )

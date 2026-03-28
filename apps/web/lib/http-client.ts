@@ -3,13 +3,16 @@ import { clearTokens, getAccessToken, getRefreshToken, setAccessToken } from "@/
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
+const DEFAULT_TIMEOUT_MS = 90000;
+const REFRESH_TIMEOUT_MS = 30000;
+
 const fallbackBaseUrl =
   typeof window !== "undefined" ? `${window.location.origin}/api/v1` : "http://localhost:8100/api/v1";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? fallbackBaseUrl;
 
 const api = axios.create({
   baseURL: apiBaseUrl,
-  timeout: 15000
+  timeout: DEFAULT_TIMEOUT_MS
 });
 
 api.interceptors.request.use((config) => {
@@ -38,7 +41,7 @@ api.interceptors.response.use(
         const refreshResponse = await axios.post(
           `${apiBaseUrl}/auth/refresh`,
           { refresh_token: refreshToken },
-          { timeout: 10000 }
+          { timeout: REFRESH_TIMEOUT_MS }
         );
 
         const nextAccessToken = refreshResponse.data?.access_token as string | undefined;
@@ -53,6 +56,10 @@ api.interceptors.response.use(
         clearTokens();
         return Promise.reject(new Error("Không thể làm mới phiên đăng nhập."));
       }
+    }
+
+    if (error.code === "ECONNABORTED") {
+      return Promise.reject(new Error("Yêu cầu xử lý quá thời gian chờ. Vui lòng thử lại."));
     }
 
     const message = error.response?.data?.detail ?? error.message ?? "Đã xảy ra lỗi không xác định.";
