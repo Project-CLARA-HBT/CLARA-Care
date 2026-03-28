@@ -11,16 +11,55 @@ from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import SystemSetting
 from clara_api.db.session import get_db
-from clara_api.schemas import RagFlowConfig
+from clara_api.schemas import RagFlowConfig, SystemControlTowerConfig
 
 router = APIRouter()
 CONTROL_TOWER_KEY = "control_tower_config_v1"
-DEFAULT_RAG_FLOW = RagFlowConfig(
-    role_router_enabled=True,
-    intent_router_enabled=True,
-    verification_enabled=True,
-    deepseek_fallback_enabled=True,
-    low_context_threshold=0.2,
+DEFAULT_CONTROL_TOWER = SystemControlTowerConfig(
+    rag_sources=[
+        {
+            "id": "pubmed",
+            "name": "PubMed",
+            "enabled": True,
+            "priority": 1,
+            "weight": 1.0,
+            "category": "literature",
+        },
+        {
+            "id": "rxnorm",
+            "name": "RxNorm",
+            "enabled": True,
+            "priority": 2,
+            "weight": 1.0,
+            "category": "drug_normalization",
+        },
+        {
+            "id": "openfda",
+            "name": "openFDA",
+            "enabled": True,
+            "priority": 3,
+            "weight": 1.0,
+            "category": "drug_safety",
+        },
+        {
+            "id": "davidrug",
+            "name": "Cục Quản lý Dược (VN)",
+            "enabled": True,
+            "priority": 4,
+            "weight": 1.0,
+            "category": "vn_regulatory",
+        },
+    ],
+    rag_flow=RagFlowConfig(
+        role_router_enabled=True,
+        intent_router_enabled=True,
+        verification_enabled=True,
+        deepseek_fallback_enabled=True,
+        low_context_threshold=0.2,
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=True,
+        file_retrieval_enabled=True,
+    ),
 )
 
 
@@ -46,30 +85,38 @@ def _safe_chat_fallback(message: str, role: str, reason: str) -> dict[str, Any]:
     }
 
 
-def _load_rag_flow(db: Session) -> RagFlowConfig:
+def _load_control_tower(db: Session) -> SystemControlTowerConfig:
     row = db.execute(
         select(SystemSetting).where(SystemSetting.key == CONTROL_TOWER_KEY)
     ).scalar_one_or_none()
     if not row or not isinstance(row.value_json, dict):
-        return DEFAULT_RAG_FLOW
-
-    payload = row.value_json.get("rag_flow")
-    if not isinstance(payload, dict):
-        return DEFAULT_RAG_FLOW
+        return DEFAULT_CONTROL_TOWER
 
     try:
-        return RagFlowConfig.model_validate(payload)
+        return SystemControlTowerConfig.model_validate(row.value_json)
     except Exception:
-        return DEFAULT_RAG_FLOW
+        return DEFAULT_CONTROL_TOWER
 
 
-def _call_ml_service(message: str, role: str, rag_flow: RagFlowConfig) -> dict[str, Any]:
+def _call_ml_service(
+    message: str,
+    role: str,
+    rag_flow: RagFlowConfig,
+    rag_sources: list[dict[str, Any]],
+) -> dict[str, Any]:
     settings = get_settings()
     url = f"{settings.ml_service_url.rstrip('/')}/v1/chat/routed"
-    request_payload = {"query": message, "role": role, "rag_flow": rag_flow.model_dump()}
+    request_payload = {
+        "query": message,
+        "role": role,
+        "rag_flow": rag_flow.model_dump(),
+        "rag_sources": rag_sources,
+    }
 
     try:
-        response = httpx.post(url, json=request_payload, timeout=settings.ml_service_timeout_seconds)
+        response = httpx.post(
+            url, json=request_payload, timeout=settings.ml_service_timeout_seconds
+        )
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
         return _safe_chat_fallback(message, role, reason=f"ml_unavailable:{exc.__class__.__name__}")
     except httpx.HTTPError as exc:
@@ -83,7 +130,9 @@ def _call_ml_service(message: str, role: str, rag_flow: RagFlowConfig) -> dict[s
     try:
         data = response.json()
     except ValueError as exc:
-        return _safe_chat_fallback(message, role, reason=f"ml_invalid_json:{exc.__class__.__name__}")
+        return _safe_chat_fallback(
+            message, role, reason=f"ml_invalid_json:{exc.__class__.__name__}"
+        )
 
     if not isinstance(data, dict):
         return _safe_chat_fallback(message, role, reason="ml_unexpected_payload")
@@ -98,11 +147,23 @@ def chat_placeholder(
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    rag_flow = _load_rag_flow(db)
-    ml_response = _call_ml_service(payload.message, token.role, rag_flow)
+    control_tower = _load_control_tower(db)
+    rag_flow = control_tower.rag_flow
+    rag_sources = [item.model_dump() for item in control_tower.rag_sources]
+    ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
     reply = ml_response.get("answer")
     if not isinstance(reply, str):
-        reply = ""
+        reply = _safe_chat_fallback(
+            payload.message,
+            token.role,
+            reason="ml_unexpected_payload:missing_answer",
+        )["answer"]
+    elif not reply.strip():
+        reply = _safe_chat_fallback(
+            payload.message,
+            token.role,
+            reason="ml_unexpected_payload:blank_answer",
+        )["answer"]
 
     resolved_role = ml_response.get("role")
     if not isinstance(resolved_role, str) or not resolved_role:

@@ -22,7 +22,31 @@ class Settings(BaseSettings):
     )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
-        validation_alias=AliasChoices("EXTERNAL_DDI_TIMEOUT_SECONDS", "CAREGUARD_EXTERNAL_DDI_TIMEOUT_SECONDS"),
+        validation_alias=AliasChoices(
+            "EXTERNAL_DDI_TIMEOUT_SECONDS", "CAREGUARD_EXTERNAL_DDI_TIMEOUT_SECONDS"
+        ),
+    )
+    pubmed_connector_timeout_seconds: float = Field(
+        default=4.0,
+        validation_alias=AliasChoices(
+            "PUBMED_CONNECTOR_TIMEOUT_SECONDS", "RAG_EXTERNAL_TIMEOUT_SECONDS"
+        ),
+    )
+    pubmed_esearch_max_results: int = Field(
+        default=3,
+        validation_alias="PUBMED_ESEARCH_MAX_RESULTS",
+        ge=1,
+        le=10,
+    )
+    europe_pmc_max_results: int = Field(
+        default=3,
+        validation_alias="EUROPE_PMC_MAX_RESULTS",
+        ge=1,
+        le=10,
+    )
+    rag_external_connectors_enabled: bool = Field(
+        default=True,
+        validation_alias="RAG_EXTERNAL_CONNECTORS_ENABLED",
     )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

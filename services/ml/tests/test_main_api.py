@@ -45,7 +45,9 @@ def test_health_details_returns_dependency_and_config_flags():
 
 
 def test_metrics_increment_after_tracked_requests():
-    response_chat = client.post("/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."})
+    response_chat = client.post(
+        "/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."}
+    )
     assert response_chat.status_code == 200
 
     response_research = client.post(
@@ -103,7 +105,9 @@ def test_metrics_increment_after_tracked_requests():
 
 
 def test_routed_chat_infer_returns_routing_and_answer():
-    response = client.post("/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."})
+    response = client.post(
+        "/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."}
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["role"] == "normal"
@@ -111,6 +115,7 @@ def test_routed_chat_infer_returns_routing_and_answer():
     assert isinstance(body["retrieved_ids"], list)
     assert body["model_used"] in {"local-synth-v1", "deepseek-v3.2"}
     assert body["answer"]
+    assert "factcheck" in body
 
 
 def test_routed_chat_infer_emergency_fast_path():
@@ -206,9 +211,9 @@ def test_council_run_returns_expected_schema():
     assert isinstance(body["per_specialist_reasoning_logs"], list)
     assert len(body["per_specialist_reasoning_logs"]) == 3
     for item in body["per_specialist_reasoning_logs"]:
-        assert set(["specialist", "reasoning_log", "key_findings", "triage", "recommendation"]).issubset(
-            item.keys()
-        )
+        assert set(
+            ["specialist", "reasoning_log", "key_findings", "triage", "recommendation"]
+        ).issubset(item.keys())
         assert isinstance(item["reasoning_log"], list)
         assert isinstance(item["key_findings"], list)
         assert item["triage"] in {"routine_follow_up", "same_day_review", "emergency_escalation"}

@@ -64,7 +64,44 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
             "verification_enabled": True,
             "deepseek_fallback_enabled": True,
             "low_context_threshold": 0.2,
+            "scientific_retrieval_enabled": True,
+            "web_retrieval_enabled": True,
+            "file_retrieval_enabled": True,
         },
+        "rag_sources": [
+            {
+                "id": "pubmed",
+                "name": "PubMed",
+                "enabled": True,
+                "priority": 1,
+                "weight": 1.0,
+                "category": "literature",
+            },
+            {
+                "id": "rxnorm",
+                "name": "RxNorm",
+                "enabled": True,
+                "priority": 2,
+                "weight": 1.0,
+                "category": "drug_normalization",
+            },
+            {
+                "id": "openfda",
+                "name": "openFDA",
+                "enabled": True,
+                "priority": 3,
+                "weight": 1.0,
+                "category": "drug_safety",
+            },
+            {
+                "id": "davidrug",
+                "name": "Cục Quản lý Dược (VN)",
+                "enabled": True,
+                "priority": 4,
+                "weight": 1.0,
+                "category": "vn_regulatory",
+            },
+        ],
     }
     assert float(captured["timeout"]) > 0
 
