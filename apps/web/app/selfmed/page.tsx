@@ -282,157 +282,166 @@ export default function SelfMedPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 1</p>
-              <h3 className="text-lg font-semibold text-slate-900">Scan đơn thuốc hoặc hóa đơn</h3>
-              <p className="text-sm text-slate-600">Quét file ảnh/PDF hoặc dán text OCR để nhận diện tên thuốc.</p>
-            </div>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-              Thuốc nhận diện: {scanDetections.length}
-            </span>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="text-sm font-medium text-slate-800" htmlFor="scan-file">
-                Tải file đơn thuốc/hóa đơn
-              </label>
-              <input
-                id="scan-file"
-                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(event) => setScanFile(event.target.files?.[0] ?? null)}
-              />
-              <button
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                type="button"
-                onClick={onScanFile}
-                disabled={isScanningFile}
-              >
-                {isScanningFile ? "Đang quét file..." : "Quét file OCR"}
-              </button>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="text-sm font-medium text-slate-800" htmlFor="scan-text">
-                Hoặc dán nội dung OCR
-              </label>
-              <textarea
-                id="scan-text"
-                className="min-h-[120px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Dán nội dung OCR hóa đơn/đơn thuốc..."
-                value={scanInput}
-                onChange={(event) => setScanInput(event.target.value)}
-              />
-              <button
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                type="button"
-                onClick={onScanText}
-              >
-                Quét nội dung dán tay
-              </button>
-            </div>
-          </div>
-
-          {scanNotice ? <p className={`mt-3 text-sm ${noticeClass(scanNotice)}`}>{scanNotice}</p> : null}
-
-          {scanDetections.length ? (
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {scanDetections.map((detection) => (
-                <li key={`${detection.normalized_name}-${detection.evidence}`} className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">{detection.drug_name}</p>
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${confidencePillClass(detection.confidence)}`}
-                    >
-                      {Math.round(detection.confidence * 100)}%
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">Bằng chứng OCR: {detection.evidence}</p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 2</p>
-            <h3 className="text-lg font-semibold text-slate-900">Thêm vào tủ thuốc {cabinetLabel}</h3>
-            <p className="text-sm text-slate-600">Nhập nhanh từ kết quả scan hoặc thêm thủ công, sau đó kiểm tra lại danh mục trước khi chạy DDI.</p>
-          </div>
-
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <div className="space-y-4">
-              <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-900">Nhập từ kết quả scan</p>
-                <p className="mt-1 text-xs text-slate-600">Hệ thống sẽ thêm toàn bộ thuốc đã nhận diện ở Bước 1 vào tủ thuốc.</p>
-                <button
-                  className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                  type="button"
-                  disabled={!scanDetections.length}
-                  onClick={onImportDetections}
-                >
-                  Thêm {scanDetections.length} thuốc từ scan
-                </button>
-              </article>
-
-              <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-900">Thêm thủ công</p>
-                <form className="mt-3 space-y-3" onSubmit={onAddManual}>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-drug">
-                      Tên thuốc
-                    </label>
-                    <input
-                      id="manual-drug"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="Ví dụ: metformin"
-                      value={manualDrugName}
-                      onChange={(event) => setManualDrugName(event.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-dose">
-                        Liều dùng
-                      </label>
-                      <input
-                        id="manual-dose"
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                        placeholder="Ví dụ: 500mg"
-                        value={manualDosage}
-                        onChange={(event) => setManualDosage(event.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-qty">
-                        Số lượng
-                      </label>
-                      <input
-                        id="manual-qty"
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                        placeholder="1"
-                        value={manualQuantity}
-                        onChange={(event) => setManualQuantity(event.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700" type="submit">
-                    Thêm thủ công vào tủ
-                  </button>
-                  {manualNotice ? <p className={`text-sm ${noticeClass(manualNotice)}`}>{manualNotice}</p> : null}
-                </form>
-              </article>
-            </div>
-
-            <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-900">Danh mục thuốc hiện tại</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 1</p>
+                  <h3 className="text-lg font-semibold text-slate-900">Scan đơn thuốc hoặc hóa đơn</h3>
+                  <p className="text-sm text-slate-600">Quét file ảnh/PDF hoặc dán text OCR để nhận diện tên thuốc.</p>
+                </div>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                  Thuốc nhận diện: {scanDetections.length}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-medium text-slate-800" htmlFor="scan-file">
+                    Tải file đơn thuốc/hóa đơn
+                  </label>
+                  <input
+                    id="scan-file"
+                    className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(event) => setScanFile(event.target.files?.[0] ?? null)}
+                  />
+                  <button
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                    type="button"
+                    onClick={onScanFile}
+                    disabled={isScanningFile}
+                  >
+                    {isScanningFile ? "Đang quét file..." : "Quét file OCR"}
+                  </button>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-medium text-slate-800" htmlFor="scan-text">
+                    Hoặc dán nội dung OCR
+                  </label>
+                  <textarea
+                    id="scan-text"
+                    className="min-h-[120px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    placeholder="Dán nội dung OCR hóa đơn/đơn thuốc..."
+                    value={scanInput}
+                    onChange={(event) => setScanInput(event.target.value)}
+                  />
+                  <button
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    type="button"
+                    onClick={onScanText}
+                  >
+                    Quét nội dung dán tay
+                  </button>
+                </div>
+              </div>
+
+              {scanNotice ? <p className={`mt-3 text-sm ${noticeClass(scanNotice)}`}>{scanNotice}</p> : null}
+
+              {scanDetections.length ? (
+                <ul className="mt-3 grid gap-2 md:grid-cols-2">
+                  {scanDetections.map((detection) => (
+                    <li key={`${detection.normalized_name}-${detection.evidence}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{detection.drug_name}</p>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${confidencePillClass(detection.confidence)}`}
+                        >
+                          {Math.round(detection.confidence * 100)}%
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600">Bằng chứng OCR: {detection.evidence}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 2</p>
+                <h3 className="text-lg font-semibold text-slate-900">Thêm vào tủ thuốc {cabinetLabel}</h3>
+                <p className="text-sm text-slate-600">
+                  Nhập nhanh từ kết quả scan hoặc thêm thủ công trước khi chạy kiểm tra tương tác.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Nhập từ kết quả scan</p>
+                  <p className="mt-1 text-xs text-slate-600">Hệ thống sẽ thêm toàn bộ thuốc đã nhận diện ở Bước 1 vào tủ thuốc.</p>
+                  <button
+                    className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                    type="button"
+                    disabled={!scanDetections.length}
+                    onClick={onImportDetections}
+                  >
+                    Thêm {scanDetections.length} thuốc từ scan
+                  </button>
+                </article>
+
+                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Thêm thủ công</p>
+                  <form className="mt-3 space-y-3" onSubmit={onAddManual}>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-drug">
+                        Tên thuốc
+                      </label>
+                      <input
+                        id="manual-drug"
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        placeholder="Ví dụ: metformin"
+                        value={manualDrugName}
+                        onChange={(event) => setManualDrugName(event.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-dose">
+                          Liều dùng
+                        </label>
+                        <input
+                          id="manual-dose"
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Ví dụ: 500mg"
+                          value={manualDosage}
+                          onChange={(event) => setManualDosage(event.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-qty">
+                          Số lượng
+                        </label>
+                        <input
+                          id="manual-qty"
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="1"
+                          value={manualQuantity}
+                          onChange={(event) => setManualQuantity(event.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <button className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700" type="submit">
+                      Thêm thủ công vào tủ
+                    </button>
+                    {manualNotice ? <p className={`text-sm ${noticeClass(manualNotice)}`}>{manualNotice}</p> : null}
+                  </form>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tủ thuốc</p>
+                  <h3 className="text-lg font-semibold text-slate-900">Danh mục thuốc hiện tại</h3>
+                </div>
                 <button
                   type="button"
                   className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -449,7 +458,7 @@ export default function SelfMedPage() {
               {items.length ? (
                 <ul className="mt-3 space-y-2">
                   {items.map((item) => (
-                    <li key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                    <li key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{item.drug_name}</p>
@@ -481,97 +490,105 @@ export default function SelfMedPage() {
                   ))}
                 </ul>
               ) : null}
-            </article>
-          </div>
 
-          {cabinetNotice ? <p className={`mt-3 text-sm ${noticeClass(cabinetNotice)}`}>{cabinetNotice}</p> : null}
-        </section>
+              {cabinetNotice ? <p className={`mt-3 text-sm ${noticeClass(cabinetNotice)}`}>{cabinetNotice}</p> : null}
+            </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 3</p>
-            <h3 className="text-lg font-semibold text-slate-900">Auto DDI theo toàn bộ tủ thuốc</h3>
-            <p className="text-sm text-slate-600">Tự động kiểm tra tương tác thuốc hiện có, hiển thị mức rủi ro theo màu để dễ quyết định.</p>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">Nguy cơ cao</span>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Nguy cơ trung bình</span>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Nguy cơ thấp</span>
-          </div>
-
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-slate-800" htmlFor="allergy-input">
-              Dị ứng (không bắt buộc)
-            </label>
-            <textarea
-              id="allergy-input"
-              className="min-h-[92px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
-              value={allergiesInput}
-              onChange={(event) => setAllergiesInput(event.target.value)}
-            />
-          </div>
-
-          <button
-            className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-            type="button"
-            onClick={onAutoDdiCheck}
-            disabled={isCheckingDdi || items.length === 0}
-          >
-            {isCheckingDdi ? "Đang phân tích..." : "Chạy auto DDI"}
-          </button>
-
-          {items.length === 0 ? <p className="mt-2 text-xs text-amber-700">Cần ít nhất 1 thuốc trong tủ để phân tích DDI.</p> : null}
-          {ddiError ? <p className="mt-3 text-sm text-red-700">{ddiError}</p> : null}
-
-          {ddiResult ? (
-            <div className="mt-4 space-y-3">
-              <article className={`rounded-2xl border p-4 ${riskPanelClass(ddiResult.riskTier)}`}>
-                <p className="text-xs font-semibold uppercase tracking-wide">Kết quả tổng quan</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(ddiResult.riskTier)}`}>
-                    Mức rủi ro: {ddiResult.riskTier ?? "Chưa xác định"}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm">
-                  {ddiResult.ddiAlerts.length
-                    ? `Phát hiện ${ddiResult.ddiAlerts.length} cảnh báo tương tác cần lưu ý.`
-                    : "Chưa ghi nhận cảnh báo tương tác rõ ràng."}
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 3</p>
+                <h3 className="text-lg font-semibold text-slate-900">Auto DDI theo toàn bộ tủ thuốc</h3>
+                <p className="text-sm text-slate-600">
+                  Tự động kiểm tra tương tác thuốc hiện có, hiển thị mức rủi ro theo màu để dễ quyết định.
                 </p>
-              </article>
+              </div>
 
-              {ddiResult.ddiAlerts.length ? (
-                <ul className="space-y-2">
-                  {ddiResult.ddiAlerts.map((alert, index) => (
-                    <li key={`${alert.title}-${index}`} className={`rounded-xl border p-3 ${riskPanelClass(alert.severity ?? ddiResult.riskTier)}`}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold">{alert.title}</p>
-                        {alert.severity ? (
-                          <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
-                            {alert.severity}
-                          </span>
-                        ) : null}
-                      </div>
-                      {alert.details ? <p className="mt-1 text-xs opacity-90">{alert.details}</p> : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                  Nguy cơ cao
+                </span>
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  Nguy cơ trung bình
+                </span>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  Nguy cơ thấp
+                </span>
+              </div>
 
-              {ddiResult.recommendations.length ? (
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Khuyến nghị</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                    {ddiResult.recommendations.map((item, index) => (
-                      <li key={`${item}-${index}`}>{item}</li>
-                    ))}
-                  </ul>
-                </article>
+              <div className="mt-4">
+                <label className="mb-1 block text-sm font-medium text-slate-800" htmlFor="allergy-input">
+                  Dị ứng (không bắt buộc)
+                </label>
+                <textarea
+                  id="allergy-input"
+                  className="min-h-[92px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
+                  value={allergiesInput}
+                  onChange={(event) => setAllergiesInput(event.target.value)}
+                />
+              </div>
+
+              <button
+                className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+                type="button"
+                onClick={onAutoDdiCheck}
+                disabled={isCheckingDdi || items.length === 0}
+              >
+                {isCheckingDdi ? "Đang phân tích..." : "Chạy auto DDI"}
+              </button>
+
+              {items.length === 0 ? <p className="mt-2 text-xs text-amber-700">Cần ít nhất 1 thuốc trong tủ để phân tích DDI.</p> : null}
+              {ddiError ? <p className="mt-3 text-sm text-red-700">{ddiError}</p> : null}
+
+              {ddiResult ? (
+                <div className="mt-4 space-y-3">
+                  <article className={`rounded-2xl border p-4 ${riskPanelClass(ddiResult.riskTier)}`}>
+                    <p className="text-xs font-semibold uppercase tracking-wide">Kết quả tổng quan</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(ddiResult.riskTier)}`}>
+                        Mức rủi ro: {ddiResult.riskTier ?? "Chưa xác định"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm">
+                      {ddiResult.ddiAlerts.length
+                        ? `Phát hiện ${ddiResult.ddiAlerts.length} cảnh báo tương tác cần lưu ý.`
+                        : "Chưa ghi nhận cảnh báo tương tác rõ ràng."}
+                    </p>
+                  </article>
+
+                  {ddiResult.ddiAlerts.length ? (
+                    <ul className="space-y-2">
+                      {ddiResult.ddiAlerts.map((alert, index) => (
+                        <li key={`${alert.title}-${index}`} className={`rounded-xl border p-3 ${riskPanelClass(alert.severity ?? ddiResult.riskTier)}`}>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold">{alert.title}</p>
+                            {alert.severity ? (
+                              <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
+                                {alert.severity}
+                              </span>
+                            ) : null}
+                          </div>
+                          {alert.details ? <p className="mt-1 text-xs opacity-90">{alert.details}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {ddiResult.recommendations.length ? (
+                    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-semibold text-slate-900">Khuyến nghị</p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                        {ddiResult.recommendations.map((item, index) => (
+                          <li key={`${item}-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ) : null}
+                </div>
               ) : null}
-            </div>
-          ) : null}
-        </section>
+            </section>
+          </div>
+        </div>
       </div>
     </PageShell>
   );
