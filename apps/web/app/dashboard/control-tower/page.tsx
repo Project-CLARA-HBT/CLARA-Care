@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import {
   ControlTowerConfig,
@@ -8,6 +8,73 @@ import {
   getControlTowerConfig,
   updateControlTowerConfig
 } from "@/lib/system";
+
+type FlowFlagKey = Exclude<keyof ControlTowerConfig["rag_flow"], "low_context_threshold">;
+type FlowGroupKey = "routing" | "verification" | "retrieval";
+
+const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: FlowGroupKey }> = [
+  {
+    key: "role_router_enabled",
+    label: "Role Router",
+    hint: "Route theo vai trò chuyên môn trước khi truy xuất dữ liệu.",
+    group: "routing"
+  },
+  {
+    key: "intent_router_enabled",
+    label: "Intent Router",
+    hint: "Chọn nhánh xử lý theo loại yêu cầu (clinical, policy, triage).",
+    group: "routing"
+  },
+  {
+    key: "verification_enabled",
+    label: "FIDES Verification",
+    hint: "Bật lớp kiểm chứng trước khi phát hành câu trả lời.",
+    group: "verification"
+  },
+  {
+    key: "deepseek_fallback_enabled",
+    label: "DeepSeek Fallback",
+    hint: "Fallback khi RAG confidence thấp hoặc context không đủ.",
+    group: "verification"
+  },
+  {
+    key: "scientific_retrieval_enabled",
+    label: "Scientific Retrieval",
+    hint: "Truy xuất từ PubMed/EuropePMC cho câu hỏi cần chứng cứ.",
+    group: "retrieval"
+  },
+  {
+    key: "web_retrieval_enabled",
+    label: "Web Retrieval",
+    hint: "Truy xuất bổ sung từ nguồn web uy tín (khi được cấu hình).",
+    group: "retrieval"
+  },
+  {
+    key: "file_retrieval_enabled",
+    label: "File Retrieval",
+    hint: "Sử dụng nội dung file người dùng upload trong bước retrieval.",
+    group: "retrieval"
+  }
+];
+
+const FLOW_GROUP_META: Record<FlowGroupKey, { label: string; description: string }> = {
+  routing: {
+    label: "Routing",
+    description: "Điều hướng yêu cầu trước retrieval"
+  },
+  verification: {
+    label: "Verification",
+    description: "Kiểm chứng và cơ chế fallback"
+  },
+  retrieval: {
+    label: "Retrieval",
+    description: "Bật/tắt từng nguồn truy xuất"
+  }
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 function sortSources(sources: ControlTowerRagSource[]): ControlTowerRagSource[] {
   return [...sources].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
@@ -54,11 +121,38 @@ export default function ControlTowerPage() {
       source.id === sourceId
         ? {
             ...source,
-            priority: Number.isFinite(priority) ? Math.min(100, Math.max(1, Math.trunc(priority))) : source.priority
+            priority: Number.isFinite(priority) ? clamp(Math.trunc(priority), 1, 100) : source.priority
           }
         : source
     );
     setConfig({ ...config, rag_sources: sortSources(next) });
+  };
+
+  const onToggleFlow = (key: FlowFlagKey) => {
+    if (!config) return;
+    setConfig({
+      ...config,
+      rag_flow: {
+        ...config.rag_flow,
+        [key]: !config.rag_flow[key]
+      }
+    });
+  };
+
+  const onThresholdChange = (value: string) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          low_context_threshold: clamp(parsed, 0, 1)
+        }
+      };
+    });
   };
 
   const onSave = async () => {
@@ -80,126 +174,270 @@ export default function ControlTowerPage() {
     }
   };
 
-  const onToggleFlow = (key: keyof ControlTowerConfig["rag_flow"]) => {
-    if (!config || key === "low_context_threshold") return;
-    setConfig({
-      ...config,
-      rag_flow: {
-        ...config.rag_flow,
-        [key]: !config.rag_flow[key]
-      }
-    });
-  };
+  const stats = useMemo(() => {
+    const sources = config?.rag_sources ?? [];
+    const total = sources.length;
+    const enabled = sources.filter((source) => source.enabled).length;
+    const uniqueCategories = new Set(sources.map((source) => source.category.toLowerCase())).size;
+    const topPriority = sources.length ? Math.min(...sources.map((source) => source.priority)) : 0;
+    const activeFlows = config
+      ? FLOW_FLAGS.filter((flag) => Boolean(config.rag_flow[flag.key])).length
+      : 0;
+
+    return {
+      total,
+      enabled,
+      disabled: Math.max(0, total - enabled),
+      uniqueCategories,
+      topPriority,
+      activeFlows
+    };
+  }, [config]);
+
+  const groupedFlags = useMemo(() => {
+    return {
+      routing: FLOW_FLAGS.filter((flag) => flag.group === "routing"),
+      verification: FLOW_FLAGS.filter((flag) => flag.group === "verification"),
+      retrieval: FLOW_FLAGS.filter((flag) => flag.group === "retrieval")
+    } as const;
+  }, []);
 
   if (isLoading) {
     return (
-      <PageShell title="Control Tower">
-        <p className="text-sm text-slate-600">Đang tải cấu hình...</p>
+      <PageShell title="Control Tower" description="Đang nạp cấu hình control plane.">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+          <div className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+          <div className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 lg:col-span-2" />
+        </div>
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Control Tower">
+    <PageShell
+      title="Control Tower"
+      description="Điều phối nguồn RAG và answer flow theo mô hình control plane, tối ưu cho theo dõi và vận hành."
+    >
       <div className="space-y-4">
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Dashboard điều phối RAG và flow trả lời</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Mô phỏng kiểu Dify: bật/tắt nguồn dữ liệu, điều chỉnh ưu tiên và kiểm soát luồng route/verify/fallback.
-          </p>
+        <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-4 text-slate-100 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">Mission Control</p>
+              <h2 className="text-lg font-semibold sm:text-xl">RAG Source & Flow Orchestration Plane</h2>
+              <p className="max-w-2xl text-sm text-slate-300">
+                Chỉnh trực tiếp nguồn tri thức, độ ưu tiên, và các cờ route/verification/fallback trước khi phát hành.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={isSaving || !config}
+              onClick={onSave}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? "Đang lưu..." : "Lưu cấu hình"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-slate-300">Sources</p>
+              <p className="mt-1 text-xl font-semibold text-white">{stats.total}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-emerald-200">Enabled</p>
+              <p className="mt-1 text-xl font-semibold text-emerald-100">{stats.enabled}</p>
+            </div>
+            <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-amber-200">Disabled</p>
+              <p className="mt-1 text-xl font-semibold text-amber-100">{stats.disabled}</p>
+            </div>
+            <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-cyan-200">Active Flow</p>
+              <p className="mt-1 text-xl font-semibold text-cyan-100">
+                {stats.activeFlows}/{FLOW_FLAGS.length}
+              </p>
+            </div>
+          </div>
         </section>
 
-        {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-        {message ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
+        {error ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        ) : null}
+        {message ? (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
+        ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">RAG flow</p>
-          {config ? (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {[
-                ["role_router_enabled", "Role Router lớp 1"],
-                ["intent_router_enabled", "Intent Router lớp 2"],
-                ["verification_enabled", "FIDES verification"],
-                ["deepseek_fallback_enabled", "Fallback DeepSeek khi RAG yếu"]
-              ].map(([key, label]) => (
-                <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <span className="text-sm text-slate-700">{label}</span>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(config.rag_flow[key as keyof typeof config.rag_flow])}
-                    onChange={() => onToggleFlow(key as keyof typeof config.rag_flow)}
-                  />
-                </label>
-              ))}
-              <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:col-span-2">
-                <span className="text-sm text-slate-700">Ngưỡng low-context (0-1)</span>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3 sm:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Source Registry</p>
+                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Data Sources</h3>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                  {stats.uniqueCategories} category | top priority #{stats.topPriority || "-"}
+                </div>
+              </div>
+            </div>
+
+            {config?.rag_sources?.length ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-[760px] w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2.5 font-semibold sm:px-5">Source</th>
+                      <th className="px-4 py-2.5 font-semibold">Category</th>
+                      <th className="px-4 py-2.5 font-semibold">Priority</th>
+                      <th className="px-4 py-2.5 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {config.rag_sources.map((source) => (
+                      <tr key={source.id} className="align-top hover:bg-slate-50/80">
+                        <td className="px-4 py-3 sm:px-5">
+                          <p className="font-semibold text-slate-900">{source.name}</p>
+                          <p className="mt-1 font-mono text-xs text-slate-500">{source.id}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                            {source.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <label className="sr-only" htmlFor={`priority-${source.id}`}>
+                            Priority cho {source.name}
+                          </label>
+                          <input
+                            id={`priority-${source.id}`}
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={source.priority}
+                            className="h-10 w-24 rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                            onChange={(event) => onPriorityChange(source.id, event.target.value)}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5">
+                            <input
+                              type="checkbox"
+                              checked={source.enabled}
+                              onChange={() => onToggleSource(source.id)}
+                              className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            />
+                            <span
+                              className={`text-xs font-semibold uppercase tracking-wide ${
+                                source.enabled ? "text-emerald-700" : "text-slate-500"
+                              }`}
+                            >
+                              {source.enabled ? "Enabled" : "Disabled"}
+                            </span>
+                          </label>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="px-4 py-4 text-sm text-slate-600 sm:px-5">Chưa có nguồn nào.</p>
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Flow Threshold</p>
+                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Low-context guardrail</h3>
+                </div>
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-sm text-slate-700">
+                  {config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}
+                </p>
+              </div>
+              <div className="mt-3 space-y-3">
                 <input
-                  type="number"
+                  type="range"
                   min={0}
                   max={1}
                   step={0.05}
-                  className="mt-2 w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  value={config.rag_flow.low_context_threshold}
-                  onChange={(event) =>
-                    setConfig({
-                      ...config,
-                      rag_flow: {
-                        ...config.rag_flow,
-                        low_context_threshold: Number(event.target.value)
-                      }
-                    })
-                  }
+                  value={config?.rag_flow.low_context_threshold ?? 0}
+                  onChange={(event) => onThresholdChange(event.target.value)}
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-cyan-600"
                 />
-              </label>
-            </div>
-          ) : null}
-        </section>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="low-context-threshold" className="text-xs font-medium text-slate-600">
+                    Threshold (0 - 1)
+                  </label>
+                  <input
+                    id="low-context-threshold"
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={config?.rag_flow.low_context_threshold ?? 0}
+                    className="h-10 w-24 rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    onChange={(event) => onThresholdChange(event.target.value)}
+                  />
+                </div>
+              </div>
+            </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nguồn RAG</p>
-          {config?.rag_sources?.length ? (
-            <ul className="mt-3 space-y-2">
-              {config.rag_sources.map((source) => (
-                <li key={source.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{source.name}</p>
-                      <p className="text-xs text-slate-600">
-                        id: {source.id} | category: {source.category}
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Flow Orchestration</p>
+                <h3 className="text-sm font-semibold text-slate-900">Toggle runtime features</h3>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {(["routing", "verification", "retrieval"] as const).map((groupKey) => (
+                  <section key={groupKey} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        {FLOW_GROUP_META[groupKey].label}
                       </p>
+                      <p className="text-xs text-slate-500">{FLOW_GROUP_META[groupKey].description}</p>
                     </div>
-                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                      Bật nguồn
-                      <input type="checkbox" checked={source.enabled} onChange={() => onToggleSource(source.id)} />
-                    </label>
-                  </div>
-                  <div className="mt-3">
-                    <label className="text-xs text-slate-600">Ưu tiên</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={source.priority}
-                      className="mt-1 w-24 rounded border border-slate-300 px-2 py-1 text-sm"
-                      onChange={(event) => onPriorityChange(source.id, event.target.value)}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm text-slate-600">Chưa có nguồn nào.</p>
-          )}
-        </section>
 
-        <button
-          type="button"
-          disabled={isSaving || !config}
-          onClick={onSave}
-          className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
-        >
-          {isSaving ? "Đang lưu..." : "Lưu cấu hình"}
-        </button>
+                    <div className="space-y-2">
+                      {groupedFlags[groupKey].map((flag) => {
+                        const checked = Boolean(config?.rag_flow[flag.key]);
+                        return (
+                          <label
+                            key={flag.key}
+                            className="flex min-h-11 cursor-pointer items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+                          >
+                            <span>
+                              <span className="block text-sm font-medium text-slate-900">{flag.label}</span>
+                              <span className="mt-0.5 block text-xs text-slate-500">{flag.hint}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-2 pt-0.5">
+                              <span
+                                className={`text-[11px] font-semibold uppercase tracking-wide ${
+                                  checked ? "text-emerald-700" : "text-slate-500"
+                                }`}
+                              >
+                                {checked ? "On" : "Off"}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => onToggleFlow(flag.key)}
+                                className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                              />
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </section>
+          </section>
+        </div>
       </div>
     </PageShell>
   );
