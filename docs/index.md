@@ -43,6 +43,8 @@
 - `docs/research/2026-03-29-competitive-chatflow-rag-ddi-webresearch.md`
 - `docs/research/2026-03-29-dify-style-flow-visualization-deepdive.md`
 - `docs/research/2026-03-29-kp3-landing-deepdive.md`
+- `docs/research/2026-03-29-vn-medical-pdf-source-catalog-phase1-part1-deepdive.md`
+- `docs/research/2026-03-29-rag-seed-execution-report.md`
 
 ### 2.4 Implementation Plan
 
