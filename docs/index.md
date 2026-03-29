@@ -39,6 +39,10 @@
 - `docs/research/deepdive-competitive-intelligence-plan.md`
 - `docs/research/competitive-landscape-deepdive-2026-03-25-v2.md`
 - `docs/research/competitive-uiux-selfmed-chatbot-deepdive-2026-03-25.md`
+- `docs/research/2026-03-29-clara-research-flow-deepdive.md`
+- `docs/research/2026-03-29-competitive-chatflow-rag-ddi-webresearch.md`
+- `docs/research/2026-03-29-dify-style-flow-visualization-deepdive.md`
+- `docs/research/2026-03-29-kp3-landing-deepdive.md`
 
 ### 2.4 Implementation Plan
 
@@ -61,6 +65,9 @@
 - `docs/implementation-plan/ship-plan-ddi-admin-frontend-rebuild-v1.md`
 - `docs/implementation-plan/runtime-alignment-gap-report-2026-03-25-v2.md`
 - `docs/implementation-plan/frontend-uiuxpromax-rebuild-execution-plan-v1.md`
+- `docs/implementation-plan/phase-01-research-flow-hardening-and-kp3-landing-plan.md`
+- `docs/implementation-plan/ultrawide-responsive-layout-deepdive-2026-03-29.md`
+- `docs/implementation-plan/phase-01-kp3-inspired-landing-refactor-2026-03-29.md`
 
 ## 3. Thứ tự đọc khuyến nghị
 

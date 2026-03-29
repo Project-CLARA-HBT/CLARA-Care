@@ -10,22 +10,31 @@ CLARA (Clinical Agent for Retrieval & Analysis) is a Vietnamese Medical AI Assis
 
 ```
 docs/
-├── proposal/          # Product specs, user stories, sprint plans
-│   ├── product_proposal.md              # Master spec (1270 lines, 12 sections + 6 appendices)
-│   ├── project_structure_and_sprints.md # Directory tree, tech stack, sprint plans, KPIs
-│   ├── personal_health_app.md           # Consumer health app design
-│   └── user_stories.md                  # All user stories with acceptance criteria
-├── research/          # Technical deep dives
-│   ├── technical_architecture_deep_dive.md  # 7-dimension architecture (2008 lines)
-│   ├── data_sources_and_rag_analysis.md     # 10+ data sources, RAG pipeline, cache strategy
-│   ├── fides_fact_checker.md                # FIDES verification pipeline
-│   ├── medical_slms_research.md             # Vietnamese SLM fine-tuning strategy
-│   └── market_research_global.md            # Competitive analysis
+├── architecture/
+│   ├── clara-platform-architecture.md
+│   ├── clara-runtime-and-routing.md
+│   └── clara-diagrams.html
+├── proposal/
+│   ├── clara-master-proposal.md
+│   ├── clara-research-proposal.md
+│   ├── clara-self-med-proposal.md
+│   └── feature-planning-and-roadmap.md
+├── research/
+│   ├── market-need-and-regulatory-research.md
+│   ├── multimodal-rag-and-data-connectors-research.md
+│   ├── medical-slm-and-safety-research.md
+│   └── risk-deep-dive-and-mitigation.md
+└── implementation-plan/
+    ├── phase-00-to-06-master-plan.md
+    ├── team-allocation-and-task-breakdown.md
+    ├── frontend-web-mobile-flutter-plan.md
+    ├── backend-rust-plan.md
+    └── metrics-gates-and-operating-model.md
 ```
 
 ## Planned Development Commands
 
-When source code is implemented, these are the expected commands (from `docs/proposal/project_structure_and_sprints.md`):
+When source code is implemented, these are the expected commands (aligned with `docs/implementation-plan/phase-00-to-06-master-plan.md`):
 
 ```bash
 # Setup
@@ -170,4 +179,3 @@ BYT (Bộ Y tế / Ministry of Health) protocols have special status:
 | ASR | Whisper Large v3 (VN fine-tuned) | 1.5B | Real-time |
 | Embeddings | BGE-M3 (multilingual) | 568M | <50ms |
 | Hybrid search α | 0.6 (dense-weighted) | — | — |
-
