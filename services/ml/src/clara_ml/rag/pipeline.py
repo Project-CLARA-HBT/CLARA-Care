@@ -8,6 +8,7 @@ from typing import Any, List, Protocol
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
 from clara_ml.rag.retriever import Document, InMemoryRetriever
+from clara_ml.rag.seed_documents import base_documents, load_seed_documents
 
 
 @dataclass
@@ -40,29 +41,12 @@ class RagPipelineP1:
         deepseek_model: str | None = None,
         deepseek_timeout_seconds: float | None = None,
     ) -> None:
-        self.retriever = retriever or InMemoryRetriever(
-            documents=[
-                Document(
-                    id="byt-001",
-                    text="Bo Y Te guidance on safe medicine use in older adults.",
-                    metadata={"source": "byt", "url": "https://moh.gov.vn/", "score": 0.0},
-                ),
-                Document(
-                    id="duoc-thu-001",
-                    text="National drug handbook warning for NSAID interactions.",
-                    metadata={"source": "duoc-thu", "url": "https://dav.gov.vn/", "score": 0.0},
-                ),
-                Document(
-                    id="pubmed-001",
-                    text="PubMed: medication adherence improves with reminders.",
-                    metadata={
-                        "source": "seed-pubmed",
-                        "url": "https://pubmed.ncbi.nlm.nih.gov/",
-                        "score": 0.0,
-                    },
-                ),
-            ]
-        )
+        seed_documents = load_seed_documents()
+        seed_by_id: dict[str, Document] = {doc.id: doc for doc in base_documents()}
+        for item in seed_documents:
+            seed_by_id[item.id] = item
+
+        self.retriever = retriever or InMemoryRetriever(documents=list(seed_by_id.values()))
         self._deepseek_api_key = (
             settings.deepseek_api_key if deepseek_api_key is None else deepseek_api_key
         )

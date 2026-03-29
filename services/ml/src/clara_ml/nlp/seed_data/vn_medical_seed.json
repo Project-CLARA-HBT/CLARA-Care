@@ -1,0 +1,806 @@
+[
+  {
+    "id": "vn-dt-02-e4cc5f18f14d",
+    "text": "Nguon: Bộ Y tế (quyết định ban hành) qua mirror pháp lý. Nhom: Dược thư Quốc gia (văn bản quyết định). Tai lieu tham chieu y khoa Viet Nam tu VN-DT-02. URL: https://cms.luatvietnam.vn/uploaded/others/2023/08/29/profile_luatvietnam_8.8.2023_2908150600.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://cms.luatvietnam.vn/uploaded/others/2023/08/29/profile_luatvietnam_8.8.2023_2908150600.pdf",
+      "score": 0.0,
+      "weight": 0.6,
+      "tags": [
+        "vn-medical",
+        "dược-thư-quốc-gia-(văn-bản-quyết-định)",
+        "vn-dt-02"
+      ],
+      "trust_tier": "tier_4",
+      "file_type": "pdf",
+      "source_id": "VN-DT-02",
+      "owner": "Bộ Y tế (quyết định ban hành) qua mirror pháp lý"
+    }
+  },
+  {
+    "id": "vn-moh-01-8038358264cd",
+    "text": "Nguon: Cục Quản lý Khám chữa bệnh (BYT). Nhom: Guideline chẩn đoán/điều trị. Tai lieu tham chieu y khoa Viet Nam tu VN-MOH-01. URL: https://kcb.vn/upload/2005611/20210723/H%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-ch%E1%BA%A9n-%C4%91o%C3%A1n-v%C3%A0-%C4%91i%E1%BB%81u-tr%E1%BB%8B-S%E1%BA%A3n-ph%E1%BB%A5-khoa.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://kcb.vn/upload/2005611/20210723/H%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-ch%E1%BA%A9n-%C4%91o%C3%A1n-v%C3%A0-%C4%91i%E1%BB%81u-tr%E1%BB%8B-S%E1%BA%A3n-ph%E1%BB%A5-khoa.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "guideline-chẩn-đoán/điều-trị",
+        "vn-moh-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-MOH-01",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)"
+    }
+  },
+  {
+    "id": "vn-moh-04-ea97f1b03e92",
+    "text": "Nguon: Cục Quản lý Khám chữa bệnh (BYT). Nhom: Guideline da liễu. Tai lieu tham chieu y khoa Viet Nam tu VN-MOH-04. URL: https://kcb.vn/upload/2005611/20210723//Huong-dan-chan-doan-dieu-tri-Da-lieu.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://kcb.vn/upload/2005611/20210723//Huong-dan-chan-doan-dieu-tri-Da-lieu.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "guideline-da-liễu",
+        "vn-moh-04"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-MOH-04",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)"
+    }
+  },
+  {
+    "id": "vn-moh-05-d1ca4d1c6a6d",
+    "text": "Nguon: Cục Quản lý Khám chữa bệnh (BYT). Nhom: Nhiễm khuẩn bệnh viện. Tai lieu tham chieu y khoa Viet Nam tu VN-MOH-05. URL: https://kcb.vn/upload/2005611/20210723//3.huong-dan-phong-ngua-chuan.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://kcb.vn/upload/2005611/20210723//3.huong-dan-phong-ngua-chuan.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "nhiễm-khuẩn-bệnh-viện",
+        "vn-moh-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-MOH-05",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)"
+    }
+  },
+  {
+    "id": "vn-moh-06-f18c3ead7c28",
+    "text": "Nguon: Cục Quản lý Khám chữa bệnh (BYT). Nhom: COVID guideline. Tai lieu tham chieu y khoa Viet Nam tu VN-MOH-06. URL: https://kcb.vn/upload/2005611/20220207//Huong-dan-co-so-thu-dung-COVID-mo-hinh-thap-3-tang_trinh-ky-25.8.signed.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://kcb.vn/upload/2005611/20220207//Huong-dan-co-so-thu-dung-COVID-mo-hinh-thap-3-tang_trinh-ky-25.8.signed.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "covid-guideline",
+        "vn-moh-06"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-MOH-06",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)"
+    }
+  },
+  {
+    "id": "vn-ydct-01-bec97baf7acd",
+    "text": "Nguon: Cục Quản lý Y Dược cổ truyền (BYT). Nhom: Văn bản + guideline YHCT. Tai lieu tham chieu y khoa Viet Nam tu VN-YDCT-01. URL: https://ydct.moh.gov.vn/static/files/uploads/bec97baf7acd25948bb814f6c5c2990f16f46ee453f0d23dd0b83fa8b85622ba.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://ydct.moh.gov.vn/static/files/uploads/bec97baf7acd25948bb814f6c5c2990f16f46ee453f0d23dd0b83fa8b85622ba.pdf",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "văn-bản-+-guideline-yhct",
+        "vn-ydct-01"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "pdf",
+      "source_id": "VN-YDCT-01",
+      "owner": "Cục Quản lý Y Dược cổ truyền (BYT)"
+    }
+  },
+  {
+    "id": "vn-ydct-02-bec97baf7acd",
+    "text": "Nguon: Cục Quản lý Y Dược cổ truyền (BYT). Nhom: Guideline YHCT tập II. Tai lieu tham chieu y khoa Viet Nam tu VN-YDCT-02. URL: https://ydct.moh.gov.vn/static/files/uploads/bec97baf7acd25948bb814f6c5c2990f16f46ee453f0d23dd0b83fa8b85622ba.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://ydct.moh.gov.vn/static/files/uploads/bec97baf7acd25948bb814f6c5c2990f16f46ee453f0d23dd0b83fa8b85622ba.pdf",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "guideline-yhct-tập-ii",
+        "vn-ydct-02"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "pdf",
+      "source_id": "VN-YDCT-02",
+      "owner": "Cục Quản lý Y Dược cổ truyền (BYT)"
+    }
+  },
+  {
+    "id": "vn-ydct-03-d01f9a27a150",
+    "text": "Nguon: Cục Quản lý Y Dược cổ truyền (BYT). Nhom: Quy trình kỹ thuật YHCT. Tai lieu tham chieu y khoa Viet Nam tu VN-YDCT-03. URL: https://ydct.moh.gov.vn/static/files/uploads/d01f9a27a150dd744baf023670052fe32fd2a04e7d657198c6fd790605154dfb.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://ydct.moh.gov.vn/static/files/uploads/d01f9a27a150dd744baf023670052fe32fd2a04e7d657198c6fd790605154dfb.pdf",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "quy-trình-kỹ-thuật-yhct",
+        "vn-ydct-03"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "pdf",
+      "source_id": "VN-YDCT-03",
+      "owner": "Cục Quản lý Y Dược cổ truyền (BYT)"
+    }
+  },
+  {
+    "id": "vn-mch-01-fadb485e93e3",
+    "text": "Nguon: Cục Bà mẹ và Trẻ em (BYT). Nhom: Văn bản hướng dẫn chuyên môn. Tai lieu tham chieu y khoa Viet Nam tu VN-MCH-01. URL: https://mch.moh.gov.vn/Content/Uploads/files/QD%20cong%20khai%20NS%20cua%20BMTE%20lan%206_signed.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://mch.moh.gov.vn/Content/Uploads/files/QD%20cong%20khai%20NS%20cua%20BMTE%20lan%206_signed.pdf",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "văn-bản-hướng-dẫn-chuyên-môn",
+        "vn-mch-01"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "pdf",
+      "source_id": "VN-MCH-01",
+      "owner": "Cục Bà mẹ và Trẻ em (BYT)"
+    }
+  },
+  {
+    "id": "vn-mch-02-179a8e059143",
+    "text": "Nguon: Cục Bà mẹ và Trẻ em (BYT). Nhom: Sàng lọc ung thư vú. Tai lieu tham chieu y khoa Viet Nam tu VN-MCH-02. URL: https://mch.moh.gov.vn/Content/Uploads/files/2-HD%20SL%20UTV_signed.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://mch.moh.gov.vn/Content/Uploads/files/2-HD%20SL%20UTV_signed.pdf",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "sàng-lọc-ung-thư-vú",
+        "vn-mch-02"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "pdf",
+      "source_id": "VN-MCH-02",
+      "owner": "Cục Bà mẹ và Trẻ em (BYT)"
+    }
+  },
+  {
+    "id": "vn-dav-01-e462455de301",
+    "text": "Nguon: Cục Quản lý Dược (BYT). Nhom: Thông báo chất lượng, công văn, thu hồi. Tai lieu tham chieu y khoa Viet Nam tu VN-DAV-01. URL: https://dav.gov.vn/upload/attach/2592015_18055_qld_cl.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://dav.gov.vn/upload/attach/2592015_18055_qld_cl.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "thông-báo-chất-lượng,-công-văn,-thu-hồi",
+        "vn-dav-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DAV-01",
+      "owner": "Cục Quản lý Dược (BYT)"
+    }
+  },
+  {
+    "id": "vn-dav-02-e462455de301",
+    "text": "Nguon: Cục Quản lý Dược (BYT). Nhom: Cảnh báo thuốc giả. Tai lieu tham chieu y khoa Viet Nam tu VN-DAV-02. URL: https://dav.gov.vn/upload/attach/2592015_18055_qld_cl.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://dav.gov.vn/upload/attach/2592015_18055_qld_cl.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "cảnh-báo-thuốc-giả",
+        "vn-dav-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DAV-02",
+      "owner": "Cục Quản lý Dược (BYT)"
+    }
+  },
+  {
+    "id": "vn-dav-03-91e330c3dce5",
+    "text": "Nguon: Cục Quản lý Dược (BYT). Nhom: Cảnh báo thuốc lưu hành trái phép. Tai lieu tham chieu y khoa Viet Nam tu VN-DAV-03. URL: https://dav.gov.vn/upload_images/files/1001_QLD_CL_signed.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://dav.gov.vn/upload_images/files/1001_QLD_CL_signed.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "cảnh-báo-thuốc-lưu-hành-trái-phép",
+        "vn-dav-03"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DAV-03",
+      "owner": "Cục Quản lý Dược (BYT)"
+    }
+  },
+  {
+    "id": "vn-dav-04-3d59b0a3e0a1",
+    "text": "Nguon: Cục Quản lý Dược (BYT). Nhom: Công bố GMP nước ngoài. Tai lieu tham chieu y khoa Viet Nam tu VN-DAV-04. URL: https://dav.gov.vn/upload_images/files/684_QLD_CL_signed.pdf",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://dav.gov.vn/upload_images/files/684_QLD_CL_signed.pdf",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "công-bố-gmp-nước-ngoài",
+        "vn-dav-04"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DAV-04",
+      "owner": "Cục Quản lý Dược (BYT)"
+    }
+  },
+  {
+    "id": "vn-diadr-02-44d40526da13",
+    "text": "Nguon: Trung tâm DI & ADR Quốc gia. Nhom: Bản tin Cảnh giác Dược. Tai lieu tham chieu y khoa Viet Nam tu VN-DIADR-02. URL: https://magazine.canhgiacduoc.org.vn/Volume/Download/71",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://magazine.canhgiacduoc.org.vn/Volume/Download/71",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "bản-tin-cảnh-giác-dược",
+        "vn-diadr-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DIADR-02",
+      "owner": "Trung tâm DI & ADR Quốc gia"
+    }
+  },
+  {
+    "id": "vn-diadr-03-e1715a5bbfa4",
+    "text": "Nguon: Trung tâm DI & ADR Quốc gia. Nhom: Bản tin Cảnh giác Dược. Tai lieu tham chieu y khoa Viet Nam tu VN-DIADR-03. URL: https://magazine.canhgiacduoc.org.vn/Volume/Download/72",
+    "metadata": {
+      "source": "vn_pdf",
+      "url": "https://magazine.canhgiacduoc.org.vn/Volume/Download/72",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "bản-tin-cảnh-giác-dược",
+        "vn-diadr-03"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "pdf",
+      "source_id": "VN-DIADR-03",
+      "owner": "Trung tâm DI & ADR Quốc gia"
+    }
+  },
+  {
+    "id": "vn-dt-01-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DT-01. Owner: Hội đồng Dược thư QG / BYT. Category: Dược thư Quốc gia. Entry URL: https://duocquocgia.com.vn/. Direct example: N/A (site trả `502` khi kiểm tra ngày 2026-03-29). Cadence: Không xác định do site gián đoạn. Notes: Nguồn gốc chính cho Dược thư; cần health-check định kỳ để tự động mở lại ingest khi site hoạt động lại",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://duocquocgia.com.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-dt-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DT-01",
+      "owner": "Hội đồng Dược thư QG / BYT",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-dt-03-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DT-03. Owner: Bộ Y tế (quyết định ban hành) qua mirror pháp lý. Category: Dược thư tuyến cơ sở. Entry URL: https://vbpl.ts24.com.vn/support/solutions/articles/16000042729-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-5539-q%C4%91-byt-d%C6%B0%E1%BB%A3c-th%C6%B0-qu%E1%BB%91c-gia-vi%E1%BB%87t-nam-d%C3%B9ng-cho-tuy%E1%BA%BFn-y-t%E1%BA%BF-c%C6%A1-s%E1%BB%9F-l%E1%BA%A7n-xu%E1%BA%A5t-b%E1%BA%A3n-th%E1%BB%A9-2. Direct example: URL chứa toàn văn quyết định (không phải bản PDF gốc BYT). Cadence: Ổn định tĩnh. Notes: Chỉ dùng để bootstrap metadata khi nguồn gốc BYT chưa truy xuất được",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://vbpl.ts24.com.vn/support/solutions/articles/16000042729-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-5539-q%C4%91-byt-d%C6%B0%E1%BB%A3c-th%C6%B0-qu%E1%BB%91c-gia-vi%E1%BB%87t-nam-d%C3%B9ng-cho-tuy%E1%BA%BFn-y-t%E1%BA%BF-c%C6%A1-s%E1%BB%9F-l%E1%BA%A7n-xu%E1%BA%A5t-b%E1%BA%A3n-th%E1%BB%A9-2",
+      "score": 0.0,
+      "weight": 0.6,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-dt-03"
+      ],
+      "trust_tier": "tier_4",
+      "file_type": "catalog",
+      "source_id": "VN-DT-03",
+      "owner": "Bộ Y tế (quyết định ban hành) qua mirror pháp lý",
+      "confidence": "partial"
+    }
+  },
+  {
+    "id": "vn-moh-02-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-MOH-02. Owner: Cục Quản lý Khám chữa bệnh (BYT). Category: Guideline sản phụ khoa. Entry URL: https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-va-dieu-tri-cac-benh-san-phu-khoa.html. Direct example: File list chứa: `/Hướng-dẫn-chẩn-đoán-và-điều-trị-Sản-phụ-khoa.pdf`. Cadence: Ít thay đổi, dạng archive. Notes: Crawl page + resolve link tương đối thành URL tuyệt đối",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-va-dieu-tri-cac-benh-san-phu-khoa.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-moh-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-MOH-02",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-moh-03-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-MOH-03. Owner: Cục Quản lý Khám chữa bệnh (BYT). Category: Guideline viêm gan B. Entry URL: https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-dieu-tri-benh-viem-gan-vi-rut-b.html. Direct example: File list chứa: `/Hướng-dẫn-chẩn-đoán-và-điều-trị-bệnh-viêm-gan-vi-rút-B.pdf`. Cadence: Ít thay đổi. Notes: Lấy metadata từ số QĐ-BYT hiển thị trên trang",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-dieu-tri-benh-viem-gan-vi-rut-b.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-moh-03"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-MOH-03",
+      "owner": "Cục Quản lý Khám chữa bệnh (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-moh-07-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-MOH-07. Owner: Cổng BYT (hạ tầng attach). Category: Tài liệu chuyên môn BYT (nhiều lĩnh vực). Entry URL: https://moh.gov.vn/. Direct example: Ví dụ: https://emohbackup.moh.gov.vn/publish/attach/getfile/35713. Cadence: Liên tục, ad-hoc. Notes: Endpoint `getfile/{id}` dùng tốt cho ingest theo id mapping",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://moh.gov.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-moh-07"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-MOH-07",
+      "owner": "Cổng BYT (hạ tầng attach)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-moh-08-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-MOH-08. Owner: Cổng BYT (hạ tầng attach). Category: Tài liệu chuyên môn BYT. Entry URL: https://emohbackup.moh.gov.vn/publish/attach/getfile/35703. Direct example: https://emohbackup.moh.gov.vn/publish/attach/getfile/35703. Cadence: Liên tục, ad-hoc. Notes: Cần crawler theo danh sách quyết định để tránh quét id tuần tự",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://emohbackup.moh.gov.vn/publish/attach/getfile/35703",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-moh-08"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-MOH-08",
+      "owner": "Cổng BYT (hạ tầng attach)",
+      "confidence": "partial"
+    }
+  },
+  {
+    "id": "vn-dav-05-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DAV-05. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc lưu hành. Entry URL: https://dichvucong.dav.gov.vn/congbothuoc/. Direct example: Export/web table. Cadence: Liên tục. Notes: Dùng làm nguồn chuẩn hóa legal status thuốc",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuoc/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-dav-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DAV-05",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-dav-06-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DAV-06. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc không kê đơn. Entry URL: https://dichvucong.dav.gov.vn/congbothuockhongkedon. Direct example: Export/web table. Cadence: Liên tục. Notes: Quan trọng cho luồng Self-Med OTC guardrail",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuockhongkedon",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-dav-06"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DAV-06",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-dav-07-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DAV-07. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc vi phạm chất lượng. Entry URL: https://dichvucong.dav.gov.vn/congbothuocvipham/index. Direct example: Export/web table. Cadence: Liên tục. Notes: Tạo blocklist theo số đăng ký/lô sản xuất",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuocvipham/index",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-dav-07"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DAV-07",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-diadr-01-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DIADR-01. Owner: Trung tâm DI & ADR Quốc gia. Category: Cổng thông tin chính. Entry URL: https://canhgiacduoc.org.vn/. Direct example: Nhiều bài có tệp đính kèm/điều hướng sang magazine. Cadence: Hàng tuần. Notes: Nguồn chính thống cho pharmacovigilance Việt Nam",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://canhgiacduoc.org.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-diadr-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DIADR-01",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-diadr-04-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DIADR-04. Owner: Trung tâm DI & ADR Quốc gia. Category: Chuyên mục bản tin quốc gia. Entry URL: https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/AnPham/BanTinQuocGia. Direct example: PDF theo số bản tin. Cadence: Theo số. Notes: Dùng crawl bổ sung khi magazine index lỗi",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/AnPham/BanTinQuocGia",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-diadr-04"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DIADR-04",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-diadr-05-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DIADR-05. Owner: Trung tâm DI & ADR Quốc gia. Category: Thông tin thuốc. Entry URL: https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc. Direct example: Bài + tài liệu tham khảo. Cadence: Hàng tuần. Notes: Gắn nhãn `drug_safety_vn` cho retrieval ưu tiên",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-diadr-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DIADR-05",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-diadr-06-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-DIADR-06. Owner: Trung tâm DI & ADR Quốc gia. Category: Báo cáo ADR trực tuyến. Entry URL: http://baocaoadr.vn/. Direct example: Form/portal nghiệp vụ (không crawl nội dung cá nhân). Cadence: Liên tục. Notes: Chỉ thu metadata public; không ingest dữ liệu cá nhân báo cáo ADR",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "http://baocaoadr.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-diadr-06"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "catalog",
+      "source_id": "VN-DIADR-06",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-01-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-01. Owner: Cục Y tế dự phòng (BYT). Category: Hướng dẫn dịch tễ + văn bản đính kèm. Entry URL: https://vncdc.gov.vn/. Direct example: Ví dụ PDF trực tiếp: https://vncdc.gov.vn/mediacenter/media/files/1012/09-2021/490_1631088059_21261386dbb2c9c0.pdf. Cadence: Ad-hoc theo dịch tễ. Notes: Cần parser khu vực danh sách tệp đính kèm trên bài",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://vncdc.gov.vn/",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-01"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-01",
+      "owner": "Cục Y tế dự phòng (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-02-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-02. Owner: Cục Y tế dự phòng (BYT). Category: Bài hướng dẫn có file đính kèm. Entry URL: https://vncdc.gov.vn/bo-y-te-ban-hanh-huong-dan-tam-thoi-kham-sang-loc-truoc-tiem-chung-vac-xin-phong-covid-19-nd16507.html. Direct example: Download link nằm trong bài. Cadence: Ad-hoc. Notes: Cần chống trùng lặp do nhiều bài trỏ cùng 1 PDF",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://vncdc.gov.vn/bo-y-te-ban-hanh-huong-dan-tam-thoi-kham-sang-loc-truoc-tiem-chung-vac-xin-phong-covid-19-nd16507.html",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-02"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-02",
+      "owner": "Cục Y tế dự phòng (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-03-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-03. Owner: Viện Sốt rét-KST-CT Quy Nhơn (BYT). Category: Hướng dẫn sốt rét. Entry URL: https://www.impe-qn.org.vn/van-ban-cua-bo-y-te/quyet-dinh-so-3377qd-byt-ngay-3082023-huong-dan-chan-doan-va-dieu-tri-benh-sot/ct/33/11734. Direct example: Ví dụ PDF trực tiếp (bản 2020): https://impe-qn.org.vn/impe-qn/vn/upload/info/file/1588918983040_huong%20dan%20chuan%20doan%20va%20dieu%20tri%20sot%20ret_file_pdf.pdf. Cadence: Ad-hoc. Notes: Nguồn chuyên ngành truyền nhiễm/ký sinh trùng, dùng bổ sung cho KCB",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://www.impe-qn.org.vn/van-ban-cua-bo-y-te/quyet-dinh-so-3377qd-byt-ngay-3082023-huong-dan-chan-doan-va-dieu-tri-benh-sot/ct/33/11734",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-03"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-03",
+      "owner": "Viện Sốt rét-KST-CT Quy Nhơn (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-04-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-04. Owner: Viện Sốt rét-KST-CT Quy Nhơn (BYT). Category: Hướng dẫn sốt rét 2020. Entry URL: https://www.impe-qn.org.vn/van-ban-cua-bo-y-te/quyet-dinh-so-2699qd-byt-ve-viec-huong-dan-chan-doan-dieu-tri-benh-sot-ret-nam/ctmb/33/11091. Direct example: Bài liệt kê 2 file đính kèm trực tiếp. Cadence: Thấp (archive). Notes: Dùng làm baseline lịch sử guideline thay thế theo version",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://www.impe-qn.org.vn/van-ban-cua-bo-y-te/quyet-dinh-so-2699qd-byt-ve-viec-huong-dan-chan-doan-dieu-tri-benh-sot-ret-nam/ctmb/33/11091",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-04"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-04",
+      "owner": "Viện Sốt rét-KST-CT Quy Nhơn (BYT)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-uni-01-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-UNI-01. Owner: Trường ĐH Dược Hà Nội (HUP). Category: Tạp chí Nghiên cứu Dược & TT thuốc (JPRDI). Entry URL: https://jprdi.vn/. Direct example: Bài mẫu: https://jprdi.vn/JP/article/view/171 (có nút tải PDF). Cadence: 6 số/năm (theo giới thiệu tạp chí). Notes: Nguồn học thuật dược chính thức, nên ingest metadata + PDF fulltext",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://jprdi.vn/",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-uni-01"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-UNI-01",
+      "owner": "Trường ĐH Dược Hà Nội (HUP)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-uni-02-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-UNI-02. Owner: Trường ĐH Dược Hà Nội (HUP). Category: Bài nghiên cứu dược. Entry URL: https://jprdi.vn/JP/article/view/315. Direct example: Tải PDF từ mục `Tải xuống` trong bài. Cadence: Theo số tạp chí. Notes: Cần parser OJS (`article/view`) để lấy direct PDF URL",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://jprdi.vn/JP/article/view/315",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-uni-02"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-UNI-02",
+      "owner": "Trường ĐH Dược Hà Nội (HUP)",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-hosp-01-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-HOSP-01. Owner: BV TWQĐ 108. Category: Journal of 108 - Clinical Medicine & Pharmacy. Entry URL: https://tcydls108.benhvien108.vn/index.php/YDLS. Direct example: Ví dụ trang PDF-view: https://tcydls108.benhvien108.vn/index.php/YDLS/article/view/1380/1218. Cadence: Liên tục theo số tạp chí. Notes: Nguồn bệnh viện tuyến cuối, hữu ích cho evidence nội địa",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://tcydls108.benhvien108.vn/index.php/YDLS",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-hosp-01"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-HOSP-01",
+      "owner": "BV TWQĐ 108",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-hosp-02-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-HOSP-02. Owner: BV TWQĐ 108. Category: OJS PDF viewer endpoint. Entry URL: https://tcydls108.benhvien108.vn/plugins/generic/pdfJsViewer/pdf.js/web/viewer.html?file=https%3A%2F%2Ftcydls108.benhvien108.vn%2Findex.php%2FYDLS%2Farticle%2Fdownload%2F4%2F4%2F. Direct example: URL chứa file PDF thực qua tham số `file=`. Cadence: Liên tục. Notes: Có thể tách URL PDF thật từ query param `file` để ingest trực tiếp",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://tcydls108.benhvien108.vn/plugins/generic/pdfJsViewer/pdf.js/web/viewer.html?file=https%3A%2F%2Ftcydls108.benhvien108.vn%2Findex.php%2FYDLS%2Farticle%2Fdownload%2F4%2F4%2F",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-hosp-02"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-HOSP-02",
+      "owner": "BV TWQĐ 108",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-uni-03-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-UNI-03. Owner: Trường ĐH Y Hà Nội. Category: Kho dữ liệu số HMU. Entry URL: https://dulieuso.hmu.edu.vn/. Direct example: Ví dụ item: https://dulieuso.hmu.edu.vn/handle/hmu/5726. Cadence: Liên tục. Notes: Nhiều file `Restricted Access`; chỉ ingest metadata khi chưa có quyền đọc PDF",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://dulieuso.hmu.edu.vn/",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-uni-03"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-UNI-03",
+      "owner": "Trường ĐH Y Hà Nội",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-uni-04-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-UNI-04. Owner: Trường ĐH Y Hà Nội. Category: HMU DSpace metadata archive. Entry URL: https://dulieuso.hmu.edu.vn/handle/hmu/4583. Direct example: PDF hiện trạng: `Restricted Access`. Cadence: Liên tục. Notes: Không bypass auth; lưu trạng thái quyền truy cập trong catalog",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://dulieuso.hmu.edu.vn/handle/hmu/4583",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-uni-04"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-UNI-04",
+      "owner": "Trường ĐH Y Hà Nội",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-05-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-05. Owner: Tạp chí Y học Việt Nam. Category: Journal issue + PDF theo bài/số. Entry URL: https://tapchiyhocvietnam.vn/index.php/vmj/issue/view/381. Direct example: Tải full issue (ví dụ): https://tapchiyhocvietnam.vn/index.php/vmj/issue/download/343/539. Cadence: Theo số (quan sát nhiều số/năm). Notes: Nguồn học thuật lớn, thích hợp ingestion quy mô batch",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://tapchiyhocvietnam.vn/index.php/vmj/issue/view/381",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-05"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-05",
+      "owner": "Tạp chí Y học Việt Nam",
+      "confidence": "verified"
+    }
+  },
+  {
+    "id": "vn-pub-06-catalog",
+    "text": "Registry source for VN medical RAG. Source ID: VN-PUB-06. Owner: BV Bạch Mai (site khoa). Category: Mirror guideline từ KCB. Entry URL: https://chanthuongvacotsong.bachmai.gov.vn/phac-do/. Direct example: Ví dụ file tương đối: `/Hướng-dẫn-phòng-ngừa-nhiễm-khuẩn-vết-mổ.pdf`. Cadence: Không ổn định (mirror nội bộ). Notes: Chỉ dùng làm nguồn dự phòng khi KCB lỗi; ưu tiên nguồn gốc KCB",
+    "metadata": {
+      "source": "vn_source_registry",
+      "url": "https://chanthuongvacotsong.bachmai.gov.vn/phac-do/",
+      "score": 0.0,
+      "weight": 0.8,
+      "tags": [
+        "vn-medical",
+        "catalog",
+        "vn-pub-06"
+      ],
+      "trust_tier": "tier_3",
+      "file_type": "catalog",
+      "source_id": "VN-PUB-06",
+      "owner": "BV Bạch Mai (site khoa)",
+      "confidence": "partial"
+    }
+  }
+]
