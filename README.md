@@ -79,9 +79,7 @@ make docker-app-down
 
 ## 7. CI Quality Gate
 
-Pipeline chính: `azure-pipelines.yml` (Azure DevOps)
-
-Workflow GitHub (nếu vẫn dùng song song): `.github/workflows/ci.yml`
+Workflow chính: `.github/workflows/ci.yml` (GitHub Actions)
 
 Trigger:
 
