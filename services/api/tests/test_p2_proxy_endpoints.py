@@ -67,7 +67,14 @@ def test_new_proxy_endpoints_success(
     )
 
     assert response.status_code == 200
-    assert response.json() == upstream_payload
+    response_payload = response.json()
+    if api_path == "/api/v1/careguard/analyze":
+        assert response_payload["ok"] is True
+        assert response_payload["endpoint"] == ml_path
+        assert response_payload["attribution"]["channel"] == "careguard"
+        assert response_payload["attribution"]["mode"] == "local_only"
+    else:
+        assert response_payload == upstream_payload
     assert str(captured["url"]).endswith(ml_path)
     expected_payload = dict(request_payload)
     if api_path == "/api/v1/research/tier2":

@@ -20,6 +20,70 @@ class ChatRequest(BaseModel):
     message: str
 
 
+def _normalize_citation_rows(citations_payload: Any) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    if not isinstance(citations_payload, list):
+        return rows
+
+    for idx, item in enumerate(citations_payload, start=1):
+        if isinstance(item, str):
+            source = item.strip()
+            if source:
+                rows.append({"source": source})
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        raw_source = item.get("source") or item.get("title") or item.get("id")
+        source = str(raw_source).strip() if raw_source is not None else ""
+        if not source:
+            source = f"reference-{idx}"
+        citation: dict[str, str] = {"source": source}
+
+        raw_url = item.get("url") or item.get("link")
+        if raw_url is not None:
+            url = str(raw_url).strip()
+            if url:
+                citation["url"] = url
+
+        rows.append(citation)
+    return rows
+
+
+def _build_chat_attribution(
+    ml_response: dict[str, Any],
+    rag_sources: list[dict[str, Any]],
+) -> dict[str, Any]:
+    active_sources: list[dict[str, str]] = []
+    for source in rag_sources:
+        if not isinstance(source, dict):
+            continue
+        if source.get("enabled") is False:
+            continue
+        source_id = str(source.get("id", "")).strip()
+        source_name = str(source.get("name", "")).strip()
+        if not source_id and not source_name:
+            continue
+        item: dict[str, str] = {
+            "id": source_id or source_name.lower().replace(" ", "_"),
+            "name": source_name or source_id,
+        }
+        raw_category = source.get("category")
+        if isinstance(raw_category, str) and raw_category.strip():
+            item["category"] = raw_category.strip()
+        active_sources.append(item)
+
+    citations = _normalize_citation_rows(ml_response.get("citations"))
+    return {
+        "channel": "chat",
+        "source_count": len(active_sources),
+        "citation_count": len(citations),
+        "sources": active_sources,
+        "citations": citations,
+    }
+
+
 def _safe_chat_fallback(message: str, role: str, reason: str) -> dict[str, Any]:
     return {
         "role": role,
@@ -91,6 +155,8 @@ def chat_placeholder(
     rag_flow = control_tower.rag_flow
     rag_sources = [item.model_dump() for item in control_tower.rag_sources]
     ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
+    if not isinstance(ml_response.get("citations"), list):
+        ml_response["citations"] = []
 
     reply = ml_response.get("answer")
     if not isinstance(reply, str):
@@ -115,6 +181,7 @@ def chat_placeholder(
         role=resolved_role,
         ml_response=ml_response,
     )
+    attribution = _build_chat_attribution(ml_response, rag_sources)
 
     return {
         "message": payload.message,
@@ -125,5 +192,7 @@ def chat_placeholder(
         "emergency": ml_response.get("emergency"),
         "model_used": ml_response.get("model_used"),
         "retrieved_ids": ml_response.get("retrieved_ids", []),
+        "attribution": attribution,
+        "citations": attribution["citations"],
         "ml": ml_response,
     }

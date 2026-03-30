@@ -53,6 +53,9 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert body["emergency"] is False
     assert body["model_used"] == "deepseek-v3.2"
     assert body["ml"]["retrieved_ids"] == ["doc-1"]
+    assert body["attribution"]["channel"] == "chat"
+    assert body["attribution"]["citation_count"] == 0
+    assert body["attribution"]["source_count"] >= 4
 
     assert str(captured["url"]).endswith("/v1/chat/routed")
     forwarded = captured["json"]
@@ -100,3 +103,5 @@ def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
     assert body["model_used"] == "api-safe-fallback-v1"
     assert "quá tải tạm thời" in body["reply"]
     assert body["ml"]["fallback_reason"].startswith("ml_unavailable:")
+    assert body["attribution"]["channel"] == "chat"
+    assert body["attribution"]["citation_count"] == 0

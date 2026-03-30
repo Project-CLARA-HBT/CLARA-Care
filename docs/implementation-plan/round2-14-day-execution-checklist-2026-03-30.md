@@ -294,13 +294,12 @@ Tiêu chí hoàn thành:
 - [ ] Nếu KPI dưới ngưỡng, ưu tiên sửa backend/safety trước UI polish.
 
 ## 9) P1 nếu còn thời gian
-- [ ] Thêm Update Medication endpoint (`PATCH /careguard/cabinet/items/{id}`).
-- [ ] Tăng coverage test cho flow mới.
-- [ ] Gắn source attribution rõ ràng vào payload chatbot/careguard.
+- [x] Thêm Update Medication endpoint (`PATCH /careguard/cabinet/items/{id}`).
+- [x] Tăng coverage test cho flow mới.
+- [x] Gắn source attribution rõ ràng vào payload chatbot/careguard.
 
 ## 10) P2 sau cuộc thi
 - [ ] Mobile native hoàn chỉnh.
 - [ ] Smart reminder scheduler.
 - [ ] Caregiver dashboard.
 - [ ] Encryption-at-rest và column-level encryption sâu hơn.
-

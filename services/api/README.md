@@ -2,6 +2,12 @@
 
 FastAPI backend skeleton for CLARA P0.
 
+## P1 Round-2 Additions
+
+- `PATCH /api/v1/careguard/cabinet/items/{item_id}`: cập nhật thuốc trong tủ thuốc (đổi tên thuốc, liều, số lượng, source, note, ...).
+- Chat payload (`POST /api/v1/chat`) có thêm `attribution` + `citations` để hiển thị nguồn rõ ràng.
+- Careguard payload (`POST /api/v1/careguard/analyze`, `POST /api/v1/careguard/cabinet/auto-ddi-check`) có thêm `attribution` + `citations`.
+
 ## Run
 
 ```bash

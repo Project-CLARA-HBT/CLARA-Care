@@ -141,6 +141,18 @@ class MedicineCabinetItemCreate(BaseModel):
     note: str = ""
 
 
+class MedicineCabinetItemUpdate(BaseModel):
+    drug_name: str | None = Field(default=None, min_length=1, max_length=255)
+    dosage: str | None = None
+    dosage_form: str | None = None
+    quantity: float | None = None
+    source: Literal["manual", "ocr", "barcode", "imported"] | None = None
+    rx_cui: str | None = None
+    ocr_confidence: float | None = None
+    expires_on: datetime | None = None
+    note: str | None = None
+
+
 class MedicineCabinetItemResponse(BaseModel):
     id: int
     drug_name: str

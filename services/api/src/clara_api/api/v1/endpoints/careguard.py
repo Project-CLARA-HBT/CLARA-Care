@@ -27,6 +27,7 @@ from clara_api.schemas import (
     CabinetScanTextResponse,
     MedicineCabinetItemCreate,
     MedicineCabinetItemResponse,
+    MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
 )
 
@@ -34,13 +35,30 @@ router = APIRouter()
 
 DRUG_ALIAS_MAP: dict[str, list[str]] = {
     "paracetamol": [
-        "paracetamol", "acetaminophen", "panadol", "panadol xanh", "hapacol", "efferalgan",
-        "paracetamol stada", "paracetamol dhg", "paracetamol mekophar", "acetamin",
-        "tylenol", "pamol", "adol", "pamin",
+        "paracetamol",
+        "acetaminophen",
+        "panadol",
+        "panadol xanh",
+        "hapacol",
+        "efferalgan",
+        "paracetamol stada",
+        "paracetamol dhg",
+        "paracetamol mekophar",
+        "acetamin",
+        "tylenol",
+        "pamol",
+        "adol",
+        "pamin",
     ],
     "paracetamol caffeine": [
-        "panadol extra", "paracetamol caffeine", "paracetamol + caffeine", "cafetin",
-        "efferalgan codein", "decolgen", "tiffy", "cảm xuyên hương",
+        "panadol extra",
+        "paracetamol caffeine",
+        "paracetamol + caffeine",
+        "cafetin",
+        "efferalgan codein",
+        "decolgen",
+        "tiffy",
+        "cảm xuyên hương",
     ],
     "ibuprofen": ["ibuprofen", "advil", "brufen", "motrin", "ibuprofen stella", "ibuprofen dhg"],
     "diclofenac": ["diclofenac", "voltaren", "cataflam", "diclofenac stada", "diclofenac dhg"],
@@ -72,7 +90,12 @@ DRUG_ALIAS_MAP: dict[str, list[str]] = {
     "pantoprazole": ["pantoprazole", "pantoloc", "pantozol", "pantoprazol stada"],
     "amoxicillin": ["amoxicillin", "amox", "amoxicillin stada", "amoxicillin dhg", "amoxil"],
     "amoxicillin clavulanate": [
-        "amoxicillin clavulanate", "augmentin", "klamentin", "bidiclav", "amoclav", "clavam",
+        "amoxicillin clavulanate",
+        "augmentin",
+        "klamentin",
+        "bidiclav",
+        "amoclav",
+        "clavam",
     ],
     "clarithromycin": ["clarithromycin", "klacid", "clarithromycin stada"],
     "erythromycin": ["erythromycin", "erythrocin", "erythromycin stella"],
@@ -182,6 +205,83 @@ def _to_item_response(item: MedicineItem) -> MedicineCabinetItemResponse:
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
+
+
+def _normalize_citation_rows(citations_payload: Any) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    if not isinstance(citations_payload, list):
+        return rows
+
+    for idx, item in enumerate(citations_payload, start=1):
+        if isinstance(item, str):
+            source = item.strip()
+            if source:
+                rows.append({"source": source})
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        raw_source = item.get("source") or item.get("title") or item.get("id")
+        source = str(raw_source).strip() if raw_source is not None else ""
+        if not source:
+            source = f"reference-{idx}"
+        citation: dict[str, str] = {"source": source}
+
+        raw_url = item.get("url") or item.get("link")
+        if raw_url is not None:
+            url = str(raw_url).strip()
+            if url:
+                citation["url"] = url
+
+        rows.append(citation)
+    return rows
+
+
+def _default_careguard_sources(external_ddi_enabled: bool) -> list[dict[str, str]]:
+    sources = [
+        {
+            "id": "local_rules",
+            "name": "CLARA Local DDI Rules",
+            "type": "deterministic",
+        }
+    ]
+    if external_ddi_enabled:
+        sources.extend(
+            [
+                {
+                    "id": "rxnorm",
+                    "name": "RxNorm (NLM)",
+                    "type": "knowledge_base",
+                },
+                {
+                    "id": "openfda",
+                    "name": "openFDA Drug Label",
+                    "type": "safety_signal",
+                },
+            ]
+        )
+    return sources
+
+
+def _attach_careguard_attribution(
+    payload: dict[str, Any],
+    *,
+    external_ddi_enabled: bool,
+) -> dict[str, Any]:
+    response = dict(payload)
+    citations = _normalize_citation_rows(response.get("citations"))
+    if "citations" not in response:
+        response["citations"] = citations
+    response["attribution"] = {
+        "channel": "careguard",
+        "mode": "external_plus_local" if external_ddi_enabled else "local_only",
+        "source_count": len(_default_careguard_sources(external_ddi_enabled)),
+        "citation_count": len(citations),
+        "sources": _default_careguard_sources(external_ddi_enabled),
+        "citations": citations,
+    }
+    return response
 
 
 def _require_user(
@@ -419,11 +519,15 @@ def get_cabinet(
 ) -> MedicineCabinetResponse:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
-    items = db.execute(
-        select(MedicineItem)
-        .where(MedicineItem.cabinet_id == cabinet.id)
-        .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
-    ).scalars().all()
+    items = (
+        db.execute(
+            select(MedicineItem)
+            .where(MedicineItem.cabinet_id == cabinet.id)
+            .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
+        )
+        .scalars()
+        .all()
+    )
     return MedicineCabinetResponse(
         cabinet_id=cabinet.id,
         label=cabinet.label,
@@ -467,6 +571,97 @@ def add_cabinet_item(
         note=payload.note.strip(),
         updated_at=datetime.now(tz=UTC),
     )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return _to_item_response(item)
+
+
+@router.patch("/cabinet/items/{item_id}", response_model=MedicineCabinetItemResponse)
+def update_cabinet_item(
+    item_id: int,
+    payload: MedicineCabinetItemUpdate,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> MedicineCabinetItemResponse:
+    user = _require_user(token, db)
+    cabinet = _get_or_create_cabinet(db, user.id)
+    item = db.execute(
+        select(MedicineItem).where(
+            MedicineItem.id == item_id,
+            MedicineItem.cabinet_id == cabinet.id,
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thuốc")
+
+    provided = set(payload.model_fields_set)
+    if not provided:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload cập nhật rỗng",
+        )
+
+    if "drug_name" in provided:
+        if payload.drug_name is None or not payload.drug_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tên thuốc không hợp lệ",
+            )
+        updated_name = payload.drug_name.strip()
+        _, normalized_name, mapped_rxcui = _resolve_dictionary_mapping(updated_name)
+        duplicate = db.execute(
+            select(MedicineItem).where(
+                MedicineItem.cabinet_id == cabinet.id,
+                MedicineItem.normalized_name == normalized_name,
+                MedicineItem.id != item.id,
+            )
+        ).scalar_one_or_none()
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Thuốc đã tồn tại trong tủ thuốc",
+            )
+        item.drug_name = updated_name
+        item.normalized_name = normalized_name
+        if "rx_cui" not in provided:
+            item.rx_cui = mapped_rxcui
+
+    if "dosage" in provided:
+        item.dosage = (payload.dosage or "").strip()
+    if "dosage_form" in provided:
+        item.dosage_form = (payload.dosage_form or "").strip()
+    if "quantity" in provided:
+        if payload.quantity is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Số lượng không hợp lệ",
+            )
+        item.quantity = payload.quantity
+    if "source" in provided:
+        if payload.source is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Nguồn nhập thuốc không hợp lệ",
+            )
+        item.source = payload.source
+    if "rx_cui" in provided:
+        rx_cui = (payload.rx_cui or "").strip()
+        if rx_cui:
+            item.rx_cui = rx_cui
+        elif "drug_name" in provided:
+            _, _, mapped_rxcui = _resolve_dictionary_mapping(item.drug_name)
+            item.rx_cui = mapped_rxcui
+        else:
+            item.rx_cui = ""
+    if "ocr_confidence" in provided:
+        item.ocr_confidence = payload.ocr_confidence
+    if "expires_on" in provided:
+        item.expires_on = payload.expires_on
+    if "note" in provided:
+        item.note = (payload.note or "").strip()
+
+    item.updated_at = datetime.now(tz=UTC)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -552,7 +747,9 @@ def import_detections(
     existing_names = set(
         db.execute(
             select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     inserted = 0
@@ -589,9 +786,13 @@ def run_auto_ddi_check(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
     control_tower = get_control_tower_config_service().load(db)
-    medication_names = db.execute(
-        select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
-    ).scalars().all()
+    medication_names = (
+        db.execute(
+            select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
+        )
+        .scalars()
+        .all()
+    )
 
     request_payload: dict[str, Any] = {
         "symptoms": payload.symptoms,
@@ -600,7 +801,11 @@ def run_auto_ddi_check(
         "allergies": payload.allergies,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
-    return proxy_ml_post("/v1/careguard/analyze", request_payload)
+    result = proxy_ml_post("/v1/careguard/analyze", request_payload)
+    return _attach_careguard_attribution(
+        result,
+        external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
+    )
 
 
 @router.post("/analyze")
@@ -613,4 +818,8 @@ def careguard_analyze(
     control_tower = get_control_tower_config_service().load(db)
     request_payload = dict(payload)
     request_payload["external_ddi_enabled"] = control_tower.careguard_runtime.external_ddi_enabled
-    return proxy_ml_post("/v1/careguard/analyze", request_payload)
+    result = proxy_ml_post("/v1/careguard/analyze", request_payload)
+    return _attach_careguard_attribution(
+        result,
+        external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
+    )
