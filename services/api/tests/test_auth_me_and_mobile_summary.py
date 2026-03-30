@@ -96,9 +96,17 @@ def test_mobile_summary_requires_token() -> None:
     assert response.status_code == 401
 
 
-def test_mobile_summary_forbidden_for_unsupported_role() -> None:
+def test_mobile_summary_allows_admin_with_safe_defaults() -> None:
     token = create_access_token(subject="admin@example.com", role="admin")
 
     response = client.get("/api/v1/mobile/summary", headers={"Authorization": f"Bearer {token}"})
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["role"] == "admin"
+    assert payload["feature_flags"] == {
+        "research": False,
+        "careguard": False,
+        "council": False,
+        "system_monitor": False,
+    }

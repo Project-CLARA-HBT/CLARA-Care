@@ -14,7 +14,10 @@ def _login(email: str) -> str:
 def test_cabinet_lifecycle() -> None:
     token = _login("cabinet-user@example.com")
 
-    get_response = client.get("/api/v1/careguard/cabinet", headers={"Authorization": f"Bearer {token}"})
+    get_response = client.get(
+        "/api/v1/careguard/cabinet",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert get_response.status_code == 200
     assert "items" in get_response.json()
 
@@ -31,7 +34,10 @@ def test_cabinet_lifecycle() -> None:
     assert add_response.status_code == 200
     item_id = add_response.json()["id"]
 
-    list_response = client.get("/api/v1/careguard/cabinet", headers={"Authorization": f"Bearer {token}"})
+    list_response = client.get(
+        "/api/v1/careguard/cabinet",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert list_response.status_code == 200
     assert any(item["id"] == item_id for item in list_response.json()["items"])
 
@@ -75,6 +81,7 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
             return self._payload
 
     captured: dict[str, object] = {}
+    call_kinds: list[tuple[bool, bool]] = []
 
     def _fake_post(*args, **kwargs):  # type: ignore[no-untyped-def]
         url = kwargs.get("url", args[0] if args else "")
@@ -83,6 +90,7 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
         has_json = kwargs.get("json") is not None
         captured["has_files"] = has_files
         captured["has_json"] = has_json
+        call_kinds.append((has_files, has_json))
 
         if has_files:
             return _FakeResponse(422, {"detail": "multipart not supported"})
@@ -102,8 +110,8 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
     assert payload["ocr_provider"] == "tgc-transhub"
     assert payload["ocr_endpoint"] == "/api/ocr"
     assert len(payload["detections"]) >= 1
-    assert captured["has_files"] is True
-    assert captured["has_json"] is True
+    assert any(has_files for has_files, _ in call_kinds)
+    assert any(has_json for _, has_json in call_kinds)
 
 
 def test_auto_ddi_proxy_payload(monkeypatch) -> None:

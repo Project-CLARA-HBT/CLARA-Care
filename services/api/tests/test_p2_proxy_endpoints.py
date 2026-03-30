@@ -56,7 +56,10 @@ def test_new_proxy_endpoints_success(
     assert response.status_code == 200
     assert response.json() == upstream_payload
     assert str(captured["url"]).endswith(ml_path)
-    assert captured["json"] == request_payload
+    expected_payload = dict(request_payload)
+    if api_path == "/api/v1/research/tier2":
+        expected_payload["role"] = "researcher"
+    assert captured["json"] == expected_payload
     assert float(captured["timeout"]) > 0
 
 

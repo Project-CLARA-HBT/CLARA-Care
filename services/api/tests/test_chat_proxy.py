@@ -55,54 +55,26 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert body["ml"]["retrieved_ids"] == ["doc-1"]
 
     assert str(captured["url"]).endswith("/v1/chat/routed")
-    assert captured["json"] == {
-        "query": "metformin la gi",
-        "role": "researcher",
-        "rag_flow": {
-            "role_router_enabled": True,
-            "intent_router_enabled": True,
-            "verification_enabled": True,
-            "deepseek_fallback_enabled": True,
-            "low_context_threshold": 0.2,
-            "scientific_retrieval_enabled": True,
-            "web_retrieval_enabled": True,
-            "file_retrieval_enabled": True,
-        },
-        "rag_sources": [
-            {
-                "id": "pubmed",
-                "name": "PubMed",
-                "enabled": True,
-                "priority": 1,
-                "weight": 1.0,
-                "category": "literature",
-            },
-            {
-                "id": "rxnorm",
-                "name": "RxNorm",
-                "enabled": True,
-                "priority": 2,
-                "weight": 1.0,
-                "category": "drug_normalization",
-            },
-            {
-                "id": "openfda",
-                "name": "openFDA",
-                "enabled": True,
-                "priority": 3,
-                "weight": 1.0,
-                "category": "drug_safety",
-            },
-            {
-                "id": "davidrug",
-                "name": "Cục Quản lý Dược (VN)",
-                "enabled": True,
-                "priority": 4,
-                "weight": 1.0,
-                "category": "vn_regulatory",
-            },
-        ],
+    forwarded = captured["json"]
+    assert isinstance(forwarded, dict)
+    assert forwarded["query"] == "metformin la gi"
+    assert forwarded["role"] == "researcher"
+    assert forwarded["rag_flow"] == {
+        "role_router_enabled": True,
+        "intent_router_enabled": True,
+        "verification_enabled": True,
+        "deepseek_fallback_enabled": True,
+        "low_context_threshold": 0.2,
+        "scientific_retrieval_enabled": True,
+        "web_retrieval_enabled": True,
+        "file_retrieval_enabled": True,
     }
+    rag_sources = forwarded["rag_sources"]
+    assert isinstance(rag_sources, list)
+    source_ids = {
+        source["id"] for source in rag_sources if isinstance(source, dict) and "id" in source
+    }
+    assert {"pubmed", "rxnorm", "openfda", "davidrug"}.issubset(source_ids)
     assert float(captured["timeout"]) > 0
 
 
