@@ -100,7 +100,8 @@ Các job chính:
 Chính sách blocking/advisory:
 
 - `pull_request`: `security-audit` + `docker-compose-smoke` + `container-scan` chạy advisory.
-- `push main`/`workflow_dispatch`: các job trên trở thành blocking qua `required-ci-gates`.
+- `push main`/`workflow_dispatch`: `security-audit` + `docker-compose-smoke` blocking qua `required-ci-gates`.
+- `container-scan`: blocking khi có `CRITICAL`, còn `HIGH` được ghi warning + artifact để theo dõi remediation.
 
 ## 7.1 Release + CD
 

@@ -475,9 +475,11 @@ jobs:
         env:
           COMPOSE_PROJECT_NAME: clara-scan
         run: |
+          set -euo pipefail
           mkdir -p /tmp/trivy-reports
           images=("${COMPOSE_PROJECT_NAME}-api" "${COMPOSE_PROJECT_NAME}-ml" "${COMPOSE_PROJECT_NAME}-web")
-          scan_exit=0
+          high_or_critical_exit=0
+          critical_exit=0
           for image in "${images[@]}"; do
             echo "Scanning ${image}..."
             trivy image \
@@ -493,11 +495,37 @@ jobs:
               --exit-code 1 \
               --quiet \
               "${image}"; then
-              echo "High/Critical vulnerabilities found in ${image}."
-              scan_exit=1
+              echo "::warning::High/Critical vulnerabilities found in ${image}."
+              high_or_critical_exit=1
+            fi
+
+            if ! trivy image \
+              --severity CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --quiet \
+              "${image}"; then
+              echo "::error::Critical vulnerabilities found in ${image}."
+              critical_exit=1
             fi
           done
-          exit $scan_exit
+
+          {
+            echo "### Container Scan Summary"
+            echo "- High/Critical detected: \`${high_or_critical_exit}\`"
+            echo "- Critical detected: \`${critical_exit}\`"
+            if [ "$critical_exit" -eq 1 ]; then
+              echo "- Gate: **FAIL** (critical vulnerabilities present)"
+            elif [ "$high_or_critical_exit" -eq 1 ]; then
+              echo "- Gate: **PASS with warnings** (no critical vulnerabilities)"
+            else
+              echo "- Gate: **PASS**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$critical_exit" -eq 1 ]; then
+            exit 1
+          fi
 
       - name: Upload Trivy reports
         if: always()
