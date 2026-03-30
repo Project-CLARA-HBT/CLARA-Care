@@ -82,3 +82,44 @@ def test_forgot_reset_and_change_password_flow() -> None:
         json={"email": email, "password": final_password},
     )
     assert login_final_response.status_code == 200
+
+
+def test_refresh_token_rotation_and_reuse_is_blocked() -> None:
+    email = f"user-{uuid4().hex[:8]}@example.com"
+    password = "secret123"
+
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": password, "full_name": "Rotate User", "role": "normal"},
+    )
+    assert register_response.status_code == 200
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert login_response.status_code == 200
+    refresh_1 = login_response.json()["refresh_token"]
+    access_1 = login_response.json()["access_token"]
+    assert refresh_1
+    assert access_1
+
+    refresh_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_1})
+    assert refresh_response.status_code == 200
+    refresh_2 = refresh_response.json()["refresh_token"]
+    access_2 = refresh_response.json()["access_token"]
+    assert refresh_2
+    assert refresh_2 != refresh_1
+    assert access_2
+
+    reused_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_1})
+    assert reused_response.status_code == 401
+
+    logout_response = client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {access_2}"},
+    )
+    assert logout_response.status_code == 200
+
+    revoked_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_2})
+    assert revoked_response.status_code == 401

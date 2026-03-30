@@ -40,6 +40,7 @@ class Settings(BaseSettings):
         default="change-me", min_length=8, validation_alias="JWT_SECRET_KEY"
     )
     jwt_algorithm: str = "HS256"
+    jwt_issuer: str = Field(default="clara-api", validation_alias="JWT_ISSUER")
     jwt_access_minutes: int = Field(default=30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     jwt_refresh_minutes: int = Field(default=43200, validation_alias="REFRESH_TOKEN_EXPIRE_MINUTES")
     auth_auto_provision_users: bool = Field(

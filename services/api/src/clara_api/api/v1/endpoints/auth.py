@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.auth_email import dispatch_action_email, should_expose_action_token_preview
@@ -97,8 +97,25 @@ def _issue_action_token(
     token_type: str,
     ttl_minutes: int,
 ) -> str:
+    now = datetime.now(tz=UTC)
+    existing_tokens = (
+        db.execute(
+            select(AuthToken).where(
+                AuthToken.user_id == user_id,
+                AuthToken.token_type == token_type,
+                AuthToken.used_at.is_(None),
+                AuthToken.expires_at >= now,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for token in existing_tokens:
+        token.used_at = now
+        db.add(token)
+
     raw_token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(tz=UTC) + timedelta(minutes=ttl_minutes)
+    expires_at = now + timedelta(minutes=ttl_minutes)
     db.add(
         AuthToken(
             user_id=user_id,
@@ -147,6 +164,13 @@ def _issue_refresh_session_token(db: Session, *, user: User) -> str:
     return raw_token
 
 
+def _resolve_auto_provision_role(email: str) -> str:
+    inferred = _infer_role_from_email(email)
+    if inferred == "admin":
+        return "normal"
+    return inferred
+
+
 def _consume_refresh_session_token(db: Session, *, raw_token: str) -> AuthToken | None:
     return _consume_action_token(db, raw_token=raw_token, token_type="refresh_jwt")
 
@@ -170,6 +194,20 @@ def _revoke_refresh_sessions(db: Session, *, user_id: int) -> int:
         db.add(row)
     db.commit()
     return len(rows)
+
+
+def _cleanup_auth_tokens(db: Session) -> None:
+    now = datetime.now(tz=UTC)
+    retention_cutoff = now - timedelta(days=30)
+    db.execute(
+        delete(AuthToken).where(
+            or_(
+                AuthToken.expires_at < now,
+                and_(AuthToken.used_at.is_not(None), AuthToken.used_at < retention_cutoff),
+            )
+        )
+    )
+    db.commit()
 
 
 def _extract_client_ip(request: Request) -> str:
@@ -296,6 +334,7 @@ def login(
     request: Request,
     db: Session = Depends(get_db),
 ) -> LoginResponse:
+    _cleanup_auth_tokens(db)
     if not payload.password:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Thiếu mật khẩu")
 
@@ -315,7 +354,7 @@ def login(
         settings.auth_auto_provision_users and settings.environment.lower() != "production"
     )
     if user is None and auto_provision_enabled:
-        inferred_role = _infer_role_from_email(normalized_email)
+        inferred_role = _resolve_auto_provision_role(normalized_email)
         user = User(
             email=normalized_email,
             hashed_password=hash_password(payload.password),
@@ -362,6 +401,7 @@ def login(
 
 @router.post("/refresh", response_model=LoginResponse)
 def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -> LoginResponse:
+    _cleanup_auth_tokens(db)
     settings = get_settings()
     token_payload = decode_refresh_token(payload.refresh_token)
     session_token = _consume_refresh_session_token(db, raw_token=payload.refresh_token)

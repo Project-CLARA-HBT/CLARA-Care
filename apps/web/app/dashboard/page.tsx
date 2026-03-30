@@ -29,6 +29,14 @@ type QuickAction = {
   detail: string;
 };
 
+type TodayTask = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "normal" | "warn" | "critical";
+  href: string;
+};
+
 const ROLE_LABELS: Record<UserRole, string> = {
   normal: "Người dùng cá nhân",
   researcher: "Nhà nghiên cứu",
@@ -165,6 +173,56 @@ export default function DashboardPage() {
     if ((missingDosageCount ?? 0) > 0) count += missingDosageCount ?? 0;
     return count;
   }, [cabinetCount, expiringSoonCount, expiredCount, missingDosageCount]);
+
+  const todayTasks = useMemo<TodayTask[]>(() => {
+    const tasks: TodayTask[] = [];
+    if ((expiredCount ?? 0) > 0) {
+      tasks.push({
+        id: "expired",
+        title: `Loại bỏ ${expiredCount} thuốc đã hết hạn`,
+        detail: "Dọn ngay để tránh nhầm thuốc trong lần dùng tiếp theo.",
+        tone: "critical",
+        href: "/selfmed"
+      });
+    }
+    if ((expiringSoonCount ?? 0) > 0) {
+      tasks.push({
+        id: "expiring",
+        title: `Rà soát ${expiringSoonCount} thuốc sắp hết hạn`,
+        detail: "Chuẩn bị thay thế để không gián đoạn điều trị.",
+        tone: "warn",
+        href: "/selfmed"
+      });
+    }
+    if ((cabinetCount ?? 0) >= 2) {
+      tasks.push({
+        id: "ddi",
+        title: "Chạy kiểm tra tương tác DDI hôm nay",
+        detail: "Kiểm tra nhanh các cặp nguy cơ cao trước khi dùng thuốc.",
+        tone: "normal",
+        href: "/careguard"
+      });
+    }
+    if ((missingDosageCount ?? 0) > 0) {
+      tasks.push({
+        id: "dosage",
+        title: `Bổ sung liều dùng cho ${missingDosageCount} thuốc`,
+        detail: "Dữ liệu đầy đủ giúp pipeline DDI và advisor chính xác hơn.",
+        tone: "warn",
+        href: "/selfmed"
+      });
+    }
+    if (tasks.length === 0) {
+      tasks.push({
+        id: "calm",
+        title: "Hôm nay hệ thống ổn định",
+        detail: "Bạn có thể tiếp tục cập nhật dữ liệu mới hoặc chạy research chuyên sâu.",
+        tone: "normal",
+        href: "/research"
+      });
+    }
+    return tasks.slice(0, 4);
+  }, [cabinetCount, expiredCount, expiringSoonCount, missingDosageCount]);
 
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
@@ -447,6 +505,39 @@ export default function DashboardPage() {
               </div>
             </section>
           </aside>
+        </section>
+
+        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Hôm nay cần xử lý</p>
+              <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Today Plan</h3>
+            </div>
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+              {todayTasks.length} mục
+            </span>
+          </div>
+
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {todayTasks.map((task) => {
+              const toneClass =
+                task.tone === "critical"
+                  ? "border-rose-200 bg-rose-50"
+                  : task.tone === "warn"
+                    ? "border-amber-200 bg-amber-50"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
+              return (
+                <Link
+                  key={task.id}
+                  href={task.href}
+                  className={`rounded-xl border px-3 py-2 transition hover:-translate-y-0.5 hover:border-[color:var(--shell-border-strong)] ${toneClass}`}
+                >
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{task.title}</p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">{task.detail}</p>
+                </Link>
+              );
+            })}
+          </div>
         </section>
 
         {alerts.length > 0 ? (
