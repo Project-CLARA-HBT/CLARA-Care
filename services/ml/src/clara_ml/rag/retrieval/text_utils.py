@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any, Sequence
 
 from .domain import Document, TRUST_TIER_FACTOR
@@ -74,24 +75,94 @@ def first_text(*values: Any) -> str:
     return ""
 
 
+def _ascii_fold(text: str) -> str:
+    normalized = unicodedata.normalize("NFD", text)
+    without_marks = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+    return without_marks.lower()
+
+
 def query_terms(query: str) -> list[str]:
-    tokens = re.findall(r"[0-9a-zA-ZÀ-ỹ]{3,}", query.lower())
+    lowered = query.lower()
+    folded = _ascii_fold(query)
+    tokens = re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", lowered)
     stopwords = {
         "cho",
         "cua",
         "voi",
         "nhung",
         "benh",
-        "tim",
-        "mach",
         "dieu",
         "tri",
         "nguoi",
         "sanh",
+        "la",
+        "va",
+        "hay",
+        "nao",
     }
     filtered = [token for token in tokens if token not in stopwords]
-    filtered.sort(key=len, reverse=True)
-    return filtered[:3]
+
+    expanded: list[str] = list(filtered)
+    expansions: dict[str, list[str]] = {
+        "dash": [
+            "dash diet",
+            "dietary approaches to stop hypertension",
+            "hypertension diet",
+        ],
+        "mediterranean": [
+            "mediterranean diet",
+            "med diet cardiovascular",
+            "olive oil cardiovascular outcomes",
+        ],
+        "tim mach": [
+            "cardiovascular",
+            "heart disease",
+            "cvd prevention",
+        ],
+        "huyet ap": [
+            "blood pressure",
+            "hypertension",
+            "systolic pressure",
+        ],
+        "dai thao duong": [
+            "diabetes",
+            "type 2 diabetes",
+            "glycemic control",
+        ],
+        "cholesterol": [
+            "lipid profile",
+            "ldl cholesterol",
+            "dyslipidemia",
+        ],
+    }
+
+    for marker, extra_terms in expansions.items():
+        if marker in lowered or marker in folded:
+            expanded.extend(extra_terms)
+
+    if ("dia trung hai" in folded or "địa trung hải" in lowered) and "mediterranean diet" not in expanded:
+        expanded.extend(["mediterranean diet", "mediterranean dietary pattern"])
+
+    if "dash" in lowered and "mediterranean" in lowered:
+        expanded.extend(
+            [
+                "dash vs mediterranean diet",
+                "diet comparison cardiovascular outcomes",
+                "hypertension diet comparative trial",
+            ]
+        )
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for token in expanded:
+        clean = token.strip().lower()
+        if len(clean) < 2 or clean in seen:
+            continue
+        seen.add(clean)
+        deduped.append(clean)
+
+    deduped.sort(key=len, reverse=True)
+    return deduped[:8]
 
 
 def tag_relevance_factor(query: str, tags: Any) -> float:

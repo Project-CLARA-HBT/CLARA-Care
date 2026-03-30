@@ -154,3 +154,33 @@ File mẫu Nginx: `deploy/nginx/clara.thiennn.icu.conf`
 - `/` -> `127.0.0.1:3100` (web)
 - `/api/` -> `127.0.0.1:8100` (api)
 - `/ml/` -> `127.0.0.1:8110` (ml)
+
+## 11. Redeploy + Smoke one-shot
+
+Để tránh lỗi thiếu biến môi trường khi deploy thủ công, dùng script:
+
+```bash
+scripts/deploy/redeploy_app_stack.sh /opt/clara-care
+```
+
+Script sẽ:
+
+- Luôn dùng `--env-file /opt/clara-care/.env` khi chạy `docker compose`.
+- Build + restart `api`, `ml`, `web`.
+- Chạy health checks cho API/ML/Web.
+- Chạy smoke test cho 3 flow chính:
+  - `chat/routed`
+  - `research/tier2` (deep mode, có `evidence_search` + `evidence_index`)
+  - `careguard/analyze`
+
+Nếu muốn bỏ điều kiện bắt buộc DeepSeek (ví dụ môi trường test không có key):
+
+```bash
+REQUIRE_DEEPSEEK=false scripts/deploy/redeploy_app_stack.sh /opt/clara-care
+```
+
+Nếu muốn chạy verify nhanh mà không build image lại:
+
+```bash
+SKIP_BUILD=true scripts/deploy/redeploy_app_stack.sh /opt/clara-care
+```
