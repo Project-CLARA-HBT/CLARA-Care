@@ -395,3 +395,47 @@ flowchart LR
 ### Phụ lục 3: Hệ thống website CLARA
 
 ### Phụ lục 4: Mã QR website CLARA
+
+### Phụ lục 5: Sơ đồ CLARA ADE - CLARA Agentic Document Extraction (bám sát codebase ADE)
+
+```mermaid
+flowchart TD
+    U["Ứng dụng gọi ADE\n(Web/Mobile/API trung gian)"] --> R{"Chọn API CLARA ADE"}
+
+    R -->|POST /api/export| EX["Bộ xử lý xuất tài liệu"]
+    R -->|POST /api/extract| XT["Bộ xử lý trích xuất cấu trúc"]
+    R -->|POST /api/jobs| JQ["Tạo tác vụ nền"]
+    R -->|GET /api/jobs hoặc /api/jobs/:job_id| JS["Theo dõi trạng thái tác vụ"]
+
+    EX --> IN1["Nhận multipart:\nfile, target_lang, output_format,\nlayout_mode, instruction"]
+    IN1 --> T1{"Loại đầu vào"}
+    T1 -->|DOCX| D1["Luồng DOCX:\nphân tích bố cục -> dịch -> dựng DOCX"]
+    T1 -->|PDF/Ảnh| P1["Tách trang thành ảnh"]
+
+    P1 --> P2["CLARA ADE tiền xử lý:\nnhiều biến thể ảnh (khử nhiễu,\nnhị phân, tăng tương phản, upscale)"]
+    P2 --> P3["Nhận dạng ADE theo biến thể"]
+    P3 --> P4["Chấm điểm chất lượng ADE\n(chữ, độ tin cậy, bố cục, bảng)"]
+    P4 --> P5["Chọn kết quả tốt nhất theo trang\n(bộ chọn block ADE tốt nhất)"]
+    P5 --> P6{"Chiến lược tinh chỉnh"}
+    P6 -->|ADEX/Agentic| A1["refine_adex_translations"]
+    P6 -->|CORTEX| C1["refine_cortex_translations"]
+    P6 -->|HYBRID| H1["merge_hybrid_page_translations"]
+    A1 --> POST1{"Bật AGENTIC_ADE+ ?"}
+    C1 --> POST1
+    H1 --> POST1
+    POST1 -->|Có| PPLUS["apply_agentic_ade_plus_postprocess"]
+    POST1 -->|Không| B1["Dựng tài liệu đầu ra"]
+    PPLUS --> B1
+    D1 --> B1
+    B1 --> O1["Trả tệp đầu ra:\nDOCX hoặc PDF có lớp văn bản"]
+
+    XT --> IN2["Nhận multipart: file"]
+    IN2 --> X1["Tách PDF thành ảnh trang"]
+    X1 --> X2["Mỗi trang: ưu tiên text layer,\nthiếu thì dùng CLARA ADE blocks,\nkhông có blocks thì fallback văn bản ADE"]
+    X2 --> X3["Tổng hợp ExtractionResult:\nchunks, fields, elements, particles,\ngraph ADE, warnings"]
+    X3 --> O2["Trả JSON trích xuất"]
+
+    JQ --> J1["Đưa yêu cầu vào hàng đợi tác vụ nền"]
+    J1 --> O3["job_id"]
+    JS --> O4["Danh sách/trạng thái/kết quả tác vụ"]
+```
