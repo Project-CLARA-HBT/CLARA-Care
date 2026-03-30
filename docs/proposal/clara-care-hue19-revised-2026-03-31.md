@@ -258,7 +258,7 @@ sequenceDiagram
     participant A as API Service (FastAPI /api/v1)
     participant DB as PostgreSQL
     participant ML as ML Service (FastAPI /v1)
-    participant OCR as TGC OCR Service
+    participant OCR as CLARA Agentic Document Extraction service
     participant EXT as External Medical APIs
     participant LLM as DeepSeek Chat API
 
@@ -350,7 +350,7 @@ flowchart LR
 
     subgraph EXT["External Services"]
       DeepSeek["DeepSeek /chat/completions"]
-      OCR["TGC OCR service"]
+      OCR["CLARA Agentic Document Extraction service"]
       DrugAPI["RxNav + openFDA"]
       LitAPI["PubMed, EuropePMC, OpenAlex,\nCrossref, ClinicalTrials, DailyMed,\nSemantic Scholar, SearXNG"]
     end
