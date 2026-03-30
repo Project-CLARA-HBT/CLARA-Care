@@ -37,7 +37,7 @@ Từ đó, nhóm xây dựng CLARA-Care như một nền tảng hỗ trợ gồm
 #### 3.2 Tính sáng tạo
 - Kết hợp lớp an toàn nhiều tầng: legal guard, kiểm tra tín hiệu rủi ro, lọc dữ liệu nhạy cảm, fallback.
 - Mô hình cảnh báo tương tác thuốc lai: local rules + nguồn bên ngoài (khi khả dụng).
-- Tích hợp OCR toa thuốc trong luồng quản lý tủ thuốc gia đình.
+- Tích hợp ADE toa thuốc trong luồng quản lý tủ thuốc gia đình.
 - Không định vị như chatbot tự do, mà là công cụ hỗ trợ tham khảo có kiểm soát rủi ro.
 
 ### 4. Khả năng áp dụng của sản phẩm
@@ -168,7 +168,7 @@ Lưu ý: ở bản hiện tại phục vụ cuộc thi, chưa tuyên bố produc
 - Luồng cảnh báo tương tác thuốc theo mô hình lai: local rules + nguồn ngoài khi khả dụng.
 - RAG mức cơ bản với trích dẫn/fallback metadata cho một số response trọng yếu.
 - Hệ thống quản lý người dùng, phân quyền và JWT access/refresh token.
-- Quản lý tủ thuốc gia đình và OCR toa thuốc ở mức phục vụ demo nghiệp vụ.
+- Quản lý tủ thuốc gia đình và ADE toa thuốc ở mức phục vụ demo nghiệp vụ.
 
 #### 6.2 Đang làm (đã có nền nhưng chưa hoàn thiện production)
 - Củng cố chất lượng parser tài liệu nghiên cứu (đặc biệt PDF/image dài và cấu trúc phức tạp).
@@ -193,7 +193,7 @@ Lưu ý: ở bản hiện tại phục vụ cuộc thi, chưa tuyên bố produc
 - **Giảm thiểu:** chuẩn hóa tên thuốc theo từ điển thuốc, áp dụng fuzzy matching có ngưỡng, cảnh báo “thiếu dữ liệu” thay vì kết luận an toàn.
 
 #### 7.3 Rủi ro dữ liệu người dùng nhập sai
-- **Rủi ro:** người dùng nhập sai triệu chứng, sai lịch dùng thuốc, ảnh toa mờ làm OCR sai.
+- **Rủi ro:** người dùng nhập sai triệu chứng, sai lịch dùng thuốc, ảnh toa mờ làm ADE nhận dạng sai.
 - **Giảm thiểu:** bắt buộc bước xác nhận lại dữ liệu trước khi phân tích; đánh dấu trường “độ tin cậy thấp”; ưu tiên khuyến nghị đi khám khi thông tin không nhất quán.
 
 #### 7.4 Rủi ro outage dịch vụ ngoài hoặc hệ thống nội bộ
@@ -238,7 +238,7 @@ Lưu ý: ở bản hiện tại phục vụ cuộc thi, chưa tuyên bố produc
 | 6 | PHR | Personal Health Record | Sổ tay sức khỏe cá nhân do người dùng tự khai báo |
 | 7 | LLM | Large Language Model | Mô hình ngôn ngữ lớn |
 | 8 | ML | Machine Learning | Học máy |
-| 9 | OCR | Optical Character Recognition | Nhận dạng ký tự quang học |
+| 9 | ADE | Agentic Document Extraction | Trích xuất tài liệu theo quy trình tác tử |
 | 10 | PII | Personally Identifiable Information | Dữ liệu định danh cá nhân |
 | 11 | RAG | Retrieval-Augmented Generation | Sinh văn bản tăng cường truy xuất |
 | 12 | RxNorm | - | Hệ thống danh pháp chuẩn hóa thuốc |
@@ -249,108 +249,108 @@ Lưu ý: ở bản hiện tại phục vụ cuộc thi, chưa tuyên bố produc
 ## PHỤ LỤC
 
 ### Phụ lục 1: Sơ đồ luồng hoạt động tổng thể CLARA
-(API Service, ML Service, Mobile App)
+(Dịch vụ API, Dịch vụ ML, Ứng dụng di động)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant M as Mobile App (Flutter)
-    participant A as API Service (FastAPI /api/v1)
-    participant DB as PostgreSQL
-    participant ML as ML Service (FastAPI /v1)
-    participant OCR as CLARA Agentic Document Extraction service
-    participant EXT as External Medical APIs
-    participant LLM as DeepSeek Chat API
+    participant M as Ứng dụng di động (Flutter)
+    participant A as Dịch vụ API (FastAPI /api/v1)
+    participant DB as Cơ sở dữ liệu PostgreSQL
+    participant ML as Dịch vụ ML (FastAPI /v1)
+    participant ADE as Dịch vụ CLARA Agentic Document Extraction
+    participant EXT as API y khoa bên ngoài
+    participant LLM as API trò chuyện DeepSeek
 
     M->>A: POST /api/v1/auth/login
-    A->>DB: Validate user + role
+    A->>DB: Xác thực người dùng + vai trò
     A-->>M: access_token + refresh_token + role
 
     M->>A: GET /api/v1/mobile/summary
-    A-->>M: feature_flags + quick_links
+    A-->>M: cờ tính năng + liên kết nhanh
 
     rect rgba(230,245,255,0.35)
-    Note over M,ML: Research Tier2 flow
+    Note over M,ML: Luồng Nghiên cứu Tier2
     M->>A: POST /api/v1/research/tier2
-    A->>DB: Load user + knowledge sources/documents
-    A->>A: Merge uploaded_file_ids -> uploaded_documents (memory + DB)
+    A->>DB: Nạp người dùng + nguồn tri thức/tài liệu
+    A->>A: Ghép uploaded_file_ids thành uploaded_documents (bộ nhớ + CSDL)
     A->>ML: POST /v1/research/tier2
-    ML->>ML: Planner + Role/Intent routing + RagPipelineP1
-    opt Scientific/Web retrieval enabled
+    ML->>ML: Lập kế hoạch + định tuyến Vai trò/Ý định + RagPipelineP1
+    opt Bật truy xuất khoa học/web
         ML->>EXT: PubMed/EuropePMC/OpenAlex/Crossref/ClinicalTrials/openFDA/DailyMed/SemanticScholar/SearXNG
-        EXT-->>ML: Retrieved evidence
+        EXT-->>ML: Bằng chứng truy xuất
     end
-    ML->>LLM: Generate/summarize answer (when available)
-    LLM-->>ML: Response
-    ML-->>A: answer + citations + flow_events + telemetry
-    A-->>M: normalized tier2 response (fail-soft if needed)
+    ML->>LLM: Sinh/tóm tắt câu trả lời (khi khả dụng)
+    LLM-->>ML: Phản hồi
+    ML-->>A: câu trả lời + trích dẫn + sự kiện luồng + dữ liệu đo xa
+    A-->>M: phản hồi tier2 đã chuẩn hóa (suy giảm an toàn khi cần)
     end
 
     rect rgba(235,255,240,0.35)
-    Note over M,ML: CareGuard flow
+    Note over M,ML: Luồng CareGuard
     M->>A: POST /api/v1/careguard/analyze
-    A->>DB: Ensure medical disclaimer consent
-    A->>DB: Load control_tower.careguard_runtime
-    A->>ML: POST /v1/careguard/analyze (external_ddi_enabled)
-    opt external_ddi_enabled = true
+    A->>DB: Kiểm tra đồng ý miễn trừ y khoa
+    A->>DB: Nạp cấu hình control_tower.careguard_runtime
+    A->>ML: POST /v1/careguard/analyze (cờ external_ddi_enabled)
+    opt Khi external_ddi_enabled = true
         ML->>EXT: RxNav + openFDA
-        EXT-->>ML: DDI context/evidence
+        EXT-->>ML: Ngữ cảnh/bằng chứng DDI
     end
-    ML-->>A: risk_tier + ddi_alerts + recommendation
-    A-->>M: response + attribution
+    ML-->>A: mức rủi ro + cảnh báo DDI + khuyến nghị
+    A-->>M: phản hồi + truy vết nguồn
     end
 
     M->>A: POST /api/v1/careguard/cabinet/scan-file
-    A->>OCR: Multipart OCR request (TGC_OCR_ENDPOINTS)
-    OCR-->>A: extracted_text
-    A-->>M: detections + ocr_provider + ocr_endpoint
+    A->>ADE: Gửi yêu cầu ADE multipart (các endpoint ADE đã cấu hình)
+    ADE-->>A: văn bản ADE đã trích xuất
+    A-->>M: danh sách phát hiện + nguồn ADE + endpoint ADE
 ```
 
-### Phụ lục 2: Sơ đồ kiến trúc hệ thống và tích hợp Web Client
+### Phụ lục 2: Sơ đồ kiến trúc hệ thống và tích hợp ứng dụng web
 (Routing qua chat/research/careguard/council/scribe và kết nối dịch vụ ngoài)
 
 ```mermaid
 flowchart LR
-    subgraph WEB["Web Client (Next.js - apps/web)"]
-      WAuth["Auth UI + JWT refresh interceptor"]
-      WResearch["/research\nTier1: POST /chat\nTier2: POST /research/tier2\nUpload: /research/upload-file"]
-      WSelfMed["/selfmed + /careguard\nCabinet CRUD + scan + auto-ddi-check"]
+    subgraph WEB["Ứng dụng Web (Next.js - apps/web)"]
+      WAuth["Giao diện xác thực + interceptor làm mới JWT"]
+      WResearch["/research\nTầng 1: POST /chat\nTầng 2: POST /research/tier2\nTải tệp: /research/upload-file"]
+      WSelfMed["/selfmed + /careguard\nthêm/sửa/xóa tủ thuốc + quét + tự kiểm tra DDI"]
       WCouncil["/council\nPOST /council/run"]
       WScribe["/scribe\nPOST /scribe/soap"]
       WAdmin["/admin\n/system/control-tower/*\n/system/flow-events*"]
     end
 
-    subgraph API["API Service (FastAPI - services/api)"]
-      AMW["Middleware:\nAuthContext + RateLimit + Metrics + CORS"]
-      ARouter["/api/v1 router:\nauth, mobile, chat, research,\ncareguard, council, scribe, system"]
-      ACT["Control Tower Config Service\n(load/save from system_settings)"]
-      AFlow["Chat Flow Event Persister\n-> in-memory FlowEventStore + SSE stream"]
+    subgraph API["Dịch vụ API (FastAPI - services/api)"]
+      AMW["Lớp trung gian:\nNgữ cảnh xác thực + giới hạn tần suất + đo lường + CORS"]
+      ARouter["Bộ định tuyến /api/v1:\nauth, mobile, chat, research,\ncareguard, council, scribe, system"]
+      ACT["Dịch vụ cấu hình Control Tower\n(đọc/ghi từ system_settings)"]
+      AFlow["Bộ ghi sự kiện luồng chat\n-> FlowEventStore trong bộ nhớ + luồng SSE"]
     end
 
-    subgraph ML["ML Service (FastAPI - services/ml)"]
+    subgraph ML["Dịch vụ ML (FastAPI - services/ml)"]
       MChat["/v1/chat/routed"]
       MResearch["/v1/research/tier2"]
       MCare["/v1/careguard/analyze"]
       MCouncil["/v1/council/run"]
       MScribe["/v1/scribe/soap"]
-      MRoute["P1RoleIntentRouter"]
-      MGuard["Legal hard guard + PII redaction + emergency fastpath"]
-      MRag["RagPipelineP1 + Fides-lite verifier"]
-      MInMem["InMemoryRetriever\n(seed docs + uploaded docs + rag sources)"]
-      MCareAgent["CareGuard agent\n(local DDI rules + risk scoring)"]
-      MCouncilAgent["Council rule-based multi-specialist simulation"]
-      MScribeAgent["Scribe SOAP skeleton parser"]
+      MRoute["Bộ định tuyến Vai trò/Ý định P1"]
+      MGuard["Chặn pháp lý cứng + ẩn PII + nhánh khẩn cấp"]
+      MRag["RagPipelineP1 + bộ kiểm chứng Fides-lite"]
+      MInMem["InMemoryRetriever\n(tài liệu khởi tạo + tài liệu tải lên + nguồn RAG)"]
+      MCareAgent["Tác tử CareGuard\n(luật DDI cục bộ + chấm điểm rủi ro)"]
+      MCouncilAgent["Mô phỏng hội chẩn đa chuyên khoa dựa trên luật"]
+      MScribeAgent["Bộ phân tích SOAP khung sườn"]
     end
 
-    subgraph DATA["Data & State"]
+    subgraph DATA["Dữ liệu & Trạng thái"]
       PG["PostgreSQL\nusers, consents, medicine_cabinets,\nknowledge_sources/documents, system_settings"]
-      Mem["In-memory stores\nuploaded_research_files, flow_event_store"]
-      Infra["Infra readiness (docker):\nRedis, Milvus, Elasticsearch, Neo4j\n(chưa là retrieval lõi runtime)"]
+      Mem["Kho trong bộ nhớ\nuploaded_research_files, flow_event_store"]
+      Infra["Hạ tầng sẵn sàng (docker):\nRedis, Milvus, Elasticsearch, Neo4j\n(chưa là retrieval lõi runtime)"]
     end
 
-    subgraph EXT["External Services"]
+    subgraph EXT["Dịch vụ bên ngoài"]
       DeepSeek["DeepSeek /chat/completions"]
-      OCR["CLARA Agentic Document Extraction service"]
+      ADE["Dịch vụ CLARA Agentic Document Extraction"]
       DrugAPI["RxNav + openFDA"]
       LitAPI["PubMed, EuropePMC, OpenAlex,\nCrossref, ClinicalTrials, DailyMed,\nSemantic Scholar, SearXNG"]
     end
@@ -368,12 +368,12 @@ flowchart LR
     ARouter --> PG
     ARouter --> Mem
 
-    ARouter -->|proxy /v1/chat/routed| MChat
-    ARouter -->|proxy /v1/research/tier2| MResearch
-    ARouter -->|proxy /v1/careguard/analyze| MCare
-    ARouter -->|proxy /v1/council/run| MCouncil
-    ARouter -->|proxy /v1/scribe/soap| MScribe
-    ARouter -->|scan-file OCR| OCR
+    ARouter -->|chuyển tiếp /v1/chat/routed| MChat
+    ARouter -->|chuyển tiếp /v1/research/tier2| MResearch
+    ARouter -->|chuyển tiếp /v1/careguard/analyze| MCare
+    ARouter -->|chuyển tiếp /v1/council/run| MCouncil
+    ARouter -->|chuyển tiếp /v1/scribe/soap| MScribe
+    ARouter -->|quét tệp ADE| ADE
 
     MChat --> MGuard --> MRoute --> MRag
     MResearch --> MRoute --> MRag
@@ -388,8 +388,8 @@ flowchart LR
 
     ACT --> PG
     MInMem --> Mem
-    ARouter -. infra-ready .-> Infra
-    MChat -. infra-ready .-> Infra
+    ARouter -. sẵn sàng hạ tầng .-> Infra
+    MChat -. sẵn sàng hạ tầng .-> Infra
 ```
 
 ### Phụ lục 3: Hệ thống website CLARA
