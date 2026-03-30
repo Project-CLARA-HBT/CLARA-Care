@@ -211,7 +211,8 @@ class RagPipelineP1:
         context = "\n".join(cls._format_doc_context(doc) for doc in docs)
         return (
             "Answer using only retrieved context.\n"
-            "If context is insufficient, still provide a concise safe answer using general medical knowledge.\n"
+            "If context is insufficient, still provide a concise safe answer "
+            "using general medical knowledge.\n"
             "Do not answer that there is no context; provide useful next steps safely.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
@@ -224,7 +225,8 @@ class RagPipelineP1:
             "Retrieved context is empty or irrelevant.\n"
             "Provide a useful, concise, safety-first answer in Vietnamese.\n"
             "Do not claim you cannot answer due to missing context.\n"
-            "If the query is comparative (e.g., compares diets/treatments), provide a balanced comparison and practical decision criteria.\n"
+            "If the query is comparative (e.g., compares diets/treatments), "
+            "provide a balanced comparison and practical decision criteria.\n"
             "Only include urgent warning signs when the query is about symptoms or acute risk.\n"
             "Suggest consulting a clinician when needed.\n"
             f"User query: {query}"
@@ -235,12 +237,15 @@ class RagPipelineP1:
         if docs:
             source_ids = ", ".join(doc.id for doc in docs[:3])
             return (
-                "Thong tin hien co cho thay can danh gia theo muc tieu dieu tri, benh nen va thuoc dang dung. "
+                "Thong tin hien co cho thay can danh gia theo muc tieu dieu tri, "
+                "benh nen va thuoc dang dung. "
                 f"Nguon tham chieu gan nhat: {source_ids}. "
-                "Ban nen theo doi trieu chung bat thuong, tranh tu y tang lieu, va trao doi bac si/duoc si de ca nhan hoa khuyen nghi."
+                "Ban nen theo doi trieu chung bat thuong, tranh tu y tang lieu, "
+                "va trao doi bac si/duoc si de ca nhan hoa khuyen nghi."
             )
         return (
-            "Voi cau hoi nay, ban co the ap dung nguyen tac an toan: dung thuoc dung lieu, theo doi trieu chung bat thuong, "
+            "Voi cau hoi nay, ban co the ap dung nguyen tac an toan: "
+            "dung thuoc dung lieu, theo doi trieu chung bat thuong, "
             "va uu tien tham van bac si neu co benh nen hoac dang dung nhieu thuoc."
         )
 
@@ -315,6 +320,7 @@ class RagPipelineP1:
         rag_sources: object = None,
         uploaded_documents: object = None,
         planner_hints: dict[str, Any] | None = None,
+        generation_enabled: bool = True,
     ) -> RagResult:
         run_started = perf_counter()
         planner_active = isinstance(planner_hints, dict) and bool(planner_hints)
@@ -331,6 +337,7 @@ class RagPipelineP1:
             "planner_hints": normalized_hints,
             "internal_top_k": internal_top_k,
             "hybrid_top_k": hybrid_top_k,
+            "evidence_search_enforced": bool(settings.rag_force_search_index),
             "external_attempted": False,
             "relevance": 0.0,
             "documents": [],
@@ -363,14 +370,126 @@ class RagPipelineP1:
                 payload={"top_k": internal_top_k},
             )
         )
-        docs = self.retriever.retrieve_internal(
-            query,
-            top_k=internal_top_k,
-            file_retrieval_enabled=file_retrieval_enabled,
-            rag_sources=rag_sources,
-            uploaded_documents=uploaded_documents,
+        flow_events.append(
+            self._flow_event(
+                stage="evidence_search",
+                status="started",
+                docs=[],
+                note="Evidence search phase started (internal corpus).",
+                component="retrieval",
+                payload={"phase": "internal", "top_k": internal_top_k},
+            )
         )
+        docs: List[Document] = []
+        try:
+            docs = self.retriever.retrieve_internal(
+                query,
+                top_k=internal_top_k,
+                file_retrieval_enabled=file_retrieval_enabled,
+                rag_sources=rag_sources,
+                uploaded_documents=uploaded_documents,
+            )
+        except Exception as exc:
+            retrieval_trace["internal_error"] = exc.__class__.__name__
+            flow_events.append(
+                self._flow_event(
+                    stage="internal_retrieval",
+                    status="error",
+                    docs=[],
+                    note=f"Internal retrieval failed: {exc.__class__.__name__}.",
+                    component="retrieval",
+                    payload={"error": exc.__class__.__name__},
+                )
+            )
+            flow_events.append(
+                self._flow_event(
+                    stage="evidence_search",
+                    status="warning",
+                    docs=[],
+                    note="Evidence search degraded; no internal context available.",
+                    component="retrieval",
+                    payload={"phase": "internal", "error": exc.__class__.__name__},
+                )
+            )
+            flow_events.append(
+                self._flow_event(
+                    stage="evidence_index",
+                    status="completed",
+                    docs=[],
+                    note="Evidence index completed with zero candidate documents.",
+                    component="retrieval",
+                    payload={"phase": "internal", "selected_count": 0},
+                )
+            )
         retrieval_trace["internal"] = self._extract_retriever_trace(self.retriever)
+        internal_trace = (
+            retrieval_trace["internal"] if isinstance(retrieval_trace["internal"], dict) else {}
+        )
+        internal_search = (
+            internal_trace.get("search_phase")
+            if isinstance(internal_trace.get("search_phase"), dict)
+            else {}
+        )
+        internal_index = (
+            internal_trace.get("index_phase")
+            if isinstance(internal_trace.get("index_phase"), dict)
+            else {}
+        )
+        retrieval_trace["search_phase"] = internal_search
+        retrieval_trace["index_phase"] = internal_index
+        retrieval_trace["search_plan"] = {
+            "query": query,
+            "query_terms": internal_search.get("query_terms", []),
+            "top_k": internal_top_k,
+            "phase": "internal",
+            "total_candidates": internal_search.get("total_candidates", len(docs)),
+            "duration_ms": internal_search.get("duration_ms"),
+        }
+        retrieval_trace["source_attempts"] = internal_search.get("connectors_attempted", [])
+        retrieval_trace["index_summary"] = {
+            "before_dedupe_count": internal_index.get("before_dedupe_count"),
+            "after_dedupe_count": internal_index.get("after_dedupe_count"),
+            "selected_count": internal_index.get("selected_count"),
+            "duration_ms": internal_index.get("duration_ms"),
+        }
+        retrieval_trace["crawl_summary"] = {}
+        flow_events.append(
+            self._flow_event(
+                stage="evidence_search",
+                status="completed",
+                docs=docs,
+                note=(
+                    f"Evidence search completed with "
+                    f"{int(internal_search.get('total_candidates') or len(docs))} candidate(s)."
+                ),
+                component="retrieval",
+                payload={"phase": "internal", **internal_search},
+            )
+        )
+        flow_events.append(
+            self._flow_event(
+                stage="evidence_index",
+                status="started",
+                docs=docs,
+                note="Evidence index/rerank started.",
+                component="retrieval",
+                payload={"phase": "internal", "top_k": internal_top_k},
+            )
+        )
+        flow_events.append(
+            self._flow_event(
+                stage="evidence_index",
+                status="completed",
+                docs=docs,
+                note=(
+                    "Evidence index completed with "
+                    f"{int(internal_index.get('selected_count') or len(docs))} "
+                    "selected document(s)."
+                ),
+                component="retrieval",
+                payload={"phase": "internal", **internal_index},
+            )
+        )
         flow_events.append(
             self._flow_event(
                 stage="internal_retrieval",
@@ -399,10 +518,28 @@ class RagPipelineP1:
                     stage="external_scientific_retrieval",
                     status="started",
                     docs=docs,
-                    note="Low context detected; expanding retrieval via external medical connectors.",
+                    note=(
+                        "Low context detected; expanding retrieval via external "
+                        "medical connectors."
+                    ),
                     component="retrieval",
                     payload={
                         "top_k": hybrid_top_k,
+                        "web_retrieval_enabled": web_retrieval_enabled,
+                    },
+                )
+            )
+            flow_events.append(
+                self._flow_event(
+                    stage="evidence_search",
+                    status="started",
+                    docs=docs,
+                    note="Evidence search phase started (hybrid external connectors).",
+                    component="retrieval",
+                    payload={
+                        "phase": "hybrid_external",
+                        "top_k": hybrid_top_k,
+                        "scientific_retrieval_enabled": True,
                         "web_retrieval_enabled": web_retrieval_enabled,
                     },
                 )
@@ -418,14 +555,89 @@ class RagPipelineP1:
                     uploaded_documents=uploaded_documents,
                 )
                 retrieval_trace["hybrid"] = self._extract_retriever_trace(self.retriever)
+                hybrid_trace = (
+                    retrieval_trace["hybrid"] if isinstance(retrieval_trace["hybrid"], dict) else {}
+                )
+                hybrid_search = (
+                    hybrid_trace.get("search_phase")
+                    if isinstance(hybrid_trace.get("search_phase"), dict)
+                    else {}
+                )
+                hybrid_index = (
+                    hybrid_trace.get("index_phase")
+                    if isinstance(hybrid_trace.get("index_phase"), dict)
+                    else {}
+                )
+                retrieval_trace["search_phase"] = hybrid_search
+                retrieval_trace["index_phase"] = hybrid_index
+                retrieval_trace["search_plan"] = {
+                    "query": query,
+                    "query_terms": hybrid_search.get("query_terms", []),
+                    "top_k": hybrid_top_k,
+                    "phase": "hybrid_external",
+                    "total_candidates": hybrid_search.get("total_candidates", len(docs)),
+                    "duration_ms": hybrid_search.get("duration_ms"),
+                }
+                retrieval_trace["source_attempts"] = hybrid_search.get("connectors_attempted", [])
+                retrieval_trace["index_summary"] = {
+                    "before_dedupe_count": hybrid_index.get("before_dedupe_count"),
+                    "after_dedupe_count": hybrid_index.get("after_dedupe_count"),
+                    "selected_count": hybrid_index.get("selected_count"),
+                    "duration_ms": hybrid_index.get("duration_ms"),
+                }
+                retrieval_trace["crawl_summary"] = (
+                    hybrid_search.get("crawl_summary")
+                    if isinstance(hybrid_search.get("crawl_summary"), dict)
+                    else {}
+                )
                 relevance_score = self._context_relevance(query, docs)
                 retrieval_trace["relevance"] = round(float(relevance_score), 4)
+                hybrid_candidate_count = int(
+                    hybrid_search.get("total_candidates") or len(docs)
+                )
+                flow_events.append(
+                    self._flow_event(
+                        stage="evidence_search",
+                        status="completed",
+                        docs=docs,
+                        note=f"Hybrid evidence search completed with {hybrid_candidate_count} candidate(s).",
+                        component="retrieval",
+                        payload={"phase": "hybrid_external", **hybrid_search},
+                    )
+                )
+                flow_events.append(
+                    self._flow_event(
+                        stage="evidence_index",
+                        status="started",
+                        docs=docs,
+                        note="Hybrid evidence index/rerank started.",
+                        component="retrieval",
+                        payload={"phase": "hybrid_external", "top_k": hybrid_top_k},
+                    )
+                )
+                flow_events.append(
+                    self._flow_event(
+                        stage="evidence_index",
+                        status="completed",
+                        docs=docs,
+                        note=(
+                            "Hybrid evidence index completed with "
+                            f"{int(hybrid_index.get('selected_count') or len(docs))} "
+                            "selected document(s)."
+                        ),
+                        component="retrieval",
+                        payload={"phase": "hybrid_external", **hybrid_index},
+                    )
+                )
                 flow_events.append(
                     self._flow_event(
                         stage="external_scientific_retrieval",
                         status="completed",
                         docs=docs,
-                        note=f"External retrieval merged; {len(docs)} document(s) retained after re-ranking.",
+                        note=(
+                            "External retrieval merged; "
+                            f"{len(docs)} document(s) retained after re-ranking."
+                        ),
                         component="retrieval",
                         payload={"top_docs": self._trace_doc_rows(docs)},
                     )
@@ -434,6 +646,56 @@ class RagPipelineP1:
                 used_stages.append("external_scientific_retrieval_error")
                 retrieval_trace["hybrid"] = self._extract_retriever_trace(self.retriever)
                 retrieval_trace["hybrid_error"] = exc.__class__.__name__
+                hybrid_trace = (
+                    retrieval_trace["hybrid"] if isinstance(retrieval_trace["hybrid"], dict) else {}
+                )
+                retrieval_trace["search_phase"] = (
+                    hybrid_trace.get("search_phase")
+                    if isinstance(hybrid_trace.get("search_phase"), dict)
+                    else {}
+                )
+                retrieval_trace["index_phase"] = (
+                    hybrid_trace.get("index_phase")
+                    if isinstance(hybrid_trace.get("index_phase"), dict)
+                    else {}
+                )
+                retrieval_trace["search_plan"] = {
+                    "query": query,
+                    "query_terms": [],
+                    "top_k": hybrid_top_k,
+                    "phase": "hybrid_external",
+                    "total_candidates": len(docs),
+                }
+                retrieval_trace["source_attempts"] = []
+                retrieval_trace["index_summary"] = {
+                    "before_dedupe_count": len(docs),
+                    "after_dedupe_count": len(docs),
+                    "selected_count": len(docs),
+                }
+                retrieval_trace["crawl_summary"] = {}
+                flow_events.append(
+                    self._flow_event(
+                        stage="evidence_search",
+                        status="warning",
+                        docs=docs,
+                        note=(
+                            "Hybrid evidence search degraded due to retrieval error. "
+                            f"error={exc.__class__.__name__}"
+                        ),
+                        component="retrieval",
+                        payload={"phase": "hybrid_external", "error": exc.__class__.__name__},
+                    )
+                )
+                flow_events.append(
+                    self._flow_event(
+                        stage="evidence_index",
+                        status="completed",
+                        docs=docs,
+                        note="Evidence index completed with currently available context.",
+                        component="retrieval",
+                        payload={"phase": "hybrid_external", "selected_count": len(docs)},
+                    )
+                )
                 flow_events.append(
                     self._flow_event(
                         stage="external_scientific_retrieval",
@@ -453,6 +715,49 @@ class RagPipelineP1:
         retrieval_trace["external_attempted"] = external_attempted
         retrieval_trace["documents"] = self._trace_doc_rows(docs, limit=8)
         retrieval_trace["document_count"] = len(docs)
+        active_trace = (
+            retrieval_trace.get("hybrid")
+            if isinstance(retrieval_trace.get("hybrid"), dict)
+            else retrieval_trace.get("internal")
+        )
+        active_trace = active_trace if isinstance(active_trace, dict) else {}
+        retrieval_trace["search_plan"] = (
+            active_trace.get("search_plan")
+            if isinstance(active_trace.get("search_plan"), dict)
+            else {
+                "query": query,
+                "keywords": sorted(self._tokenize(query)),
+                "top_k": hybrid_top_k if external_attempted else internal_top_k,
+                "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
+                "web_retrieval_enabled": bool(web_retrieval_enabled),
+                "file_retrieval_enabled": bool(file_retrieval_enabled),
+            }
+        )
+        source_attempts = active_trace.get("source_attempts")
+        if isinstance(source_attempts, list):
+            retrieval_trace["source_attempts"] = source_attempts
+        else:
+            search_phase = (
+                active_trace.get("search_phase")
+                if isinstance(active_trace.get("search_phase"), dict)
+                else {}
+            )
+            retrieval_trace["source_attempts"] = search_phase.get("connectors_attempted", [])
+
+        retrieval_trace["index_summary"] = (
+            active_trace.get("index_summary")
+            if isinstance(active_trace.get("index_summary"), dict)
+            else {
+                "before_dedupe": len(docs),
+                "after_dedupe": len(docs),
+                "selected_count": len(docs),
+            }
+        )
+        retrieval_trace["crawl_summary"] = (
+            active_trace.get("crawl_summary")
+            if isinstance(active_trace.get("crawl_summary"), dict)
+            else {}
+        )
 
         def _build_result(
             *,
@@ -470,7 +775,9 @@ class RagPipelineP1:
                 planner_hints=normalized_hints,
                 retrieval_trace=retrieval_trace,
             )
-            context_debug["pipeline_duration_ms"] = round((perf_counter() - run_started) * 1000.0, 3)
+            context_debug["pipeline_duration_ms"] = round(
+                (perf_counter() - run_started) * 1000.0, 3
+            )
             trace = {
                 "planner": {
                     "query_focus": normalized_hints.get("query_focus"),
@@ -492,6 +799,27 @@ class RagPipelineP1:
                 trace=trace,
             )
 
+        if not generation_enabled:
+            used_stages.append("retrieval_only")
+            flow_events.append(
+                self._flow_event(
+                    stage="llm_generation",
+                    status="skipped",
+                    docs=docs,
+                    note="Generation disabled for retrieval-only pass.",
+                    component="generation",
+                    payload={"generation_enabled": False},
+                )
+            )
+            return _build_result(
+                answer=self._safe_helpful_answer(query, docs),
+                model_used="retrieval-only-v1",
+                generation_trace={
+                    "mode": "retrieval_only",
+                    "generation_enabled": False,
+                },
+            )
+
         if self._llm_client and self._deepseek_api_key:
             try:
                 if not has_relevant_context and not deepseek_fallback_enabled:
@@ -501,9 +829,15 @@ class RagPipelineP1:
                             stage="answer_synthesis",
                             status="completed",
                             docs=docs,
-                            note="Low-context fallback disabled; returned deterministic local synthesis.",
+                            note=(
+                                "Low-context fallback disabled; returned "
+                                "deterministic local synthesis."
+                            ),
                             component="generation",
-                            payload={"fallback_mode": "forced_local", "has_relevant_context": False},
+                            payload={
+                                "fallback_mode": "forced_local",
+                                "has_relevant_context": False,
+                            },
                         )
                     )
                     answer = self._postprocess_answer(

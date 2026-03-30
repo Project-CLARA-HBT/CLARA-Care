@@ -16,7 +16,12 @@ import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel
 import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
 import UploadedFilesPanel from "@/components/research/uploaded-files-panel";
 
-type FlowTimelineMode = "idle" | "flow-events" | "metadata-stages" | "local-fallback";
+type FlowTimelineMode =
+  | "idle"
+  | "flow-events"
+  | "metadata-stages"
+  | "local-fallback"
+  | "server-await";
 type MobileTab = "flow" | "telemetry" | "evidence" | "sources" | "uploads" | "debug";
 
 type ResearchRightRailProps = {
@@ -66,8 +71,10 @@ type ResearchRightRailProps = {
     pipeline?: string;
     telemetryKeywordCount?: number;
     telemetryDocCount?: number;
+    telemetrySourceAttemptCount?: number;
     telemetryErrorCount?: number;
     telemetryTopError?: string;
+    crawlDomainCount?: number;
   };
 };
 

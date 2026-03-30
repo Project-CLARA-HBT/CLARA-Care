@@ -78,6 +78,10 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="RAG_EXTERNAL_CONNECTORS_ENABLED",
     )
+    rag_force_search_index: bool = Field(
+        default=True,
+        validation_alias="RAG_FORCE_SEARCH_INDEX",
+    )
     searxng_base_url: str = Field(
         default="",
         validation_alias="SEARXNG_BASE_URL",
@@ -85,6 +89,66 @@ class Settings(BaseSettings):
     searxng_timeout_seconds: float = Field(
         default=3.0,
         validation_alias="SEARXNG_TIMEOUT_SECONDS",
+    )
+    searxng_crawl_enabled: bool = Field(
+        default=True,
+        validation_alias="SEARXNG_CRAWL_ENABLED",
+    )
+    searxng_crawl_top_k: int = Field(
+        default=2,
+        validation_alias="SEARXNG_CRAWL_TOP_K",
+        ge=0,
+        le=8,
+    )
+    searxng_crawl_timeout_seconds: float = Field(
+        default=2.0,
+        validation_alias="SEARXNG_CRAWL_TIMEOUT_SECONDS",
+    )
+    searxng_crawl_allowed_domains: str = Field(
+        default="",
+        validation_alias="SEARXNG_CRAWL_ALLOWED_DOMAINS",
+    )
+    semantic_scholar_timeout_seconds: float = Field(
+        default=3.0,
+        validation_alias="SEMANTIC_SCHOLAR_TIMEOUT_SECONDS",
+    )
+    semantic_scholar_max_results: int = Field(
+        default=3,
+        validation_alias="SEMANTIC_SCHOLAR_MAX_RESULTS",
+        ge=1,
+        le=20,
+    )
+    web_crawl_enabled: bool = Field(
+        default=True,
+        validation_alias="WEB_CRAWL_ENABLED",
+    )
+    web_crawl_timeout_seconds: float = Field(
+        default=1.5,
+        validation_alias="WEB_CRAWL_TIMEOUT_SECONDS",
+    )
+    web_crawl_max_pages: int = Field(
+        default=3,
+        validation_alias="WEB_CRAWL_MAX_PAGES",
+        ge=1,
+        le=10,
+    )
+    web_crawl_max_chars: int = Field(
+        default=1200,
+        validation_alias="WEB_CRAWL_MAX_CHARS",
+        ge=300,
+        le=8000,
+    )
+    web_crawl_allowed_domains: str = Field(
+        default=(
+            "who.int,nih.gov,ncbi.nlm.nih.gov,pubmed.ncbi.nlm.nih.gov,"
+            "open.fda.gov,fda.gov,dailymed.nlm.nih.gov,"
+            "clinicaltrials.gov,ema.europa.eu,bmj.com,thelancet.com"
+        ),
+        validation_alias="WEB_CRAWL_ALLOWED_DOMAINS",
+    )
+    evidence_search_enforced: bool = Field(
+        default=True,
+        validation_alias="EVIDENCE_SEARCH_ENFORCED",
     )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

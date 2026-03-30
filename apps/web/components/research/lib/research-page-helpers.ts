@@ -1,5 +1,4 @@
 import { ResearchFlowStage, UploadedResearchFile } from "@/lib/research";
-import { LOCAL_FLOW_BLUEPRINT } from "@/components/research/lib/research-page-constants";
 import { ConversationItem, FlowVisibilityMode, ResearchResult, Tier2Result } from "@/components/research/lib/research-page-types";
 
 export function mergeUploadedFiles(current: UploadedResearchFile[], incoming: UploadedResearchFile[]): UploadedResearchFile[] {
@@ -32,43 +31,30 @@ export function resolveFlowModeFromResult(result: Tier2Result): FlowVisibilityMo
   return "idle";
 }
 
-export function buildLocalFlowStages(activeIndex: number, terminalStatus?: "completed" | "failed"): ResearchFlowStage[] {
-  const cappedIndex = Math.max(0, Math.min(activeIndex, LOCAL_FLOW_BLUEPRINT.length - 1));
-
-  return LOCAL_FLOW_BLUEPRINT.map((stage, index) => {
-    let status: ResearchFlowStage["status"] = "pending";
-    if (index < cappedIndex) status = "completed";
-    if (index === cappedIndex) status = terminalStatus ?? "in_progress";
-    if (terminalStatus === "completed" && index <= cappedIndex) status = "completed";
-    if (terminalStatus === "failed" && index < cappedIndex) status = "completed";
-
-    return {
-      ...stage,
-      status,
-      source: "local"
-    };
-  });
-}
-
 export function markTimelineFailed(stages: ResearchFlowStage[]): ResearchFlowStage[] {
   if (!stages.length) {
-    return buildLocalFlowStages(0, "failed");
+    return [
+      {
+        id: "server_processing",
+        label: "Server processing",
+        detail: "Không thể hoàn tất xử lý từ backend cho phiên nghiên cứu này.",
+        status: "failed",
+        source: "local"
+      }
+    ];
   }
 
-  const activeIndex = stages.findIndex((stage) => stage.status === "in_progress");
-  if (activeIndex >= 0) {
-    return stages.map((stage, index) => (index === activeIndex ? { ...stage, status: "failed" } : stage));
+  const inProgressIndex = stages.findIndex((stage) => stage.status === "in_progress");
+  if (inProgressIndex >= 0) {
+    return stages.map((stage, index) => (index === inProgressIndex ? { ...stage, status: "failed" } : stage));
   }
 
-  const lastCompletedIndex = stages.reduce((acc, stage, index) => {
-    if (stage.status === "completed") return index;
-    return acc;
-  }, 0);
+  const latestNonCompletedIndex = [...stages].reverse().findIndex((stage) => stage.status !== "completed");
+  const failedIndex = latestNonCompletedIndex === -1 ? stages.length - 1 : stages.length - 1 - latestNonCompletedIndex;
 
   return stages.map((stage, index) => {
-    if (index < lastCompletedIndex) return stage;
-    if (index === lastCompletedIndex) return { ...stage, status: "failed" };
-    return stage;
+    if (index !== failedIndex) return stage;
+    return { ...stage, status: "failed" };
   });
 }
 

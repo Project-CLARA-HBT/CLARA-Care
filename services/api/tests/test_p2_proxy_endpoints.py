@@ -226,10 +226,152 @@ def test_research_tier2_returns_fail_soft_payload_with_retry(
     assert response.status_code == 200
     payload = response.json()
     assert payload["fallback"] is True
-    assert payload["metadata"] == {}
+    assert payload["metadata"]["research_mode"] == "fast"
+    assert payload["metadata"]["deep_pass_count"] == 0
     assert payload["citations"] == []
     assert payload["fallback_reason"] == "ConnectError"
     assert call_count["count"] == 2
+
+
+def test_research_tier2_fail_soft_keeps_deep_mode_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    call_count = {"count": 0}
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> object:
+        call_count["count"] += 1
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "deep mode fail soft", "research_mode": "deep"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["fallback"] is True
+    assert payload["research_mode"] == "deep"
+    assert payload["deep_pass_count"] == 0
+    assert payload["metadata"]["research_mode"] == "deep"
+    assert payload["metadata"]["deep_pass_count"] == 0
+    assert payload["fallback_reason"] == "ConnectError"
+    assert call_count["count"] == 2
+
+
+def test_research_tier2_forwards_research_mode_to_ml(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"answer": "ok", "metadata": {"research_mode": "deep", "deep_pass_count": 2}}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "deep reasoning test", "research_mode": "deep"},
+    )
+
+    assert response.status_code == 200
+    assert str(captured["url"]).endswith("/v1/research/tier2")
+    forwarded = captured["json"]
+    assert isinstance(forwarded, dict)
+    assert forwarded["research_mode"] == "deep"
+    assert forwarded["role"] == "researcher"
+
+
+def test_research_tier2_normalize_preserves_new_telemetry_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    upstream_payload = {
+        "answer": "ok",
+        "metadata": {
+            "research_mode": "deep",
+            "deep_pass_count": 2,
+            "flow_events": [
+                {
+                    "stage": "deep_retrieval_pass",
+                    "status": "completed",
+                    "payload": {"docs_found": ["doc-a"], "source_errors": {"openfda": ["timeout"]}},
+                },
+                {"stage": "answer_synthesis", "status": "completed"},
+            ],
+            "telemetry": {
+                "research_mode": "deep",
+                "search_plan": {
+                    "query": "normalize telemetry contract",
+                    "query_terms": ["normalize", "telemetry", "contract"],
+                    "top_k": 5,
+                },
+                "source_attempts": [
+                    {"source": "pubmed", "status": "completed", "attempt": 1},
+                    {"source": "openfda", "status": "timeout", "attempt": 1},
+                ],
+                "index_summary": {
+                    "indexed_docs": 14,
+                    "selected_docs": 5,
+                    "selected_sources": {"pubmed": 3, "dailymed": 2},
+                },
+                "custom_field": {"keep": True},
+                "crawl_summary": {"pages_requested": 3, "pages_crawled": 2, "domains": ["nih.gov"]},
+            },
+            "context_debug": {
+                "retrieval_trace": {"retrieved_count": 5},
+                "source_errors": {"openfda": ["timeout"]},
+            },
+        },
+    }
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return upstream_payload
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "normalize telemetry contract", "research_mode": "deep"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    telemetry = payload["telemetry"]
+    assert telemetry["research_mode"] == "deep"
+    assert telemetry["search_plan"]["query_terms"] == ["normalize", "telemetry", "contract"]
+    assert telemetry["source_attempts"][1]["source"] == "openfda"
+    assert telemetry["index_summary"]["indexed_docs"] == 14
+    assert telemetry["index_summary"]["selected_docs"] == 5
+    assert telemetry["crawl_summary"]["pages_crawled"] == 2
+    assert telemetry["custom_field"] == {"keep": True}
+    assert payload["source_errors"] == {"openfda": ["timeout"]}
+    assert isinstance(payload.get("flow_events"), list)
+    assert payload["flow_events"][0]["stage"] == "deep_retrieval_pass"
 
 
 def test_research_tier2_exposes_telemetry_details_from_context_debug(

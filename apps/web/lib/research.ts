@@ -1,6 +1,7 @@
 import api from "@/lib/http-client";
 
 export type ResearchTier = "tier1" | "tier2";
+export type ResearchExecutionMode = "fast" | "deep";
 
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
 export const RESEARCH_TIER2_TIMEOUT_MS = 120000;
@@ -56,11 +57,15 @@ export type ResearchTier2DebugMeta = {
   pipeline?: string;
   responseStyle?: string;
   sourceMode?: string;
+  researchMode?: string;
+  deepPassCount?: number;
   stageCount: number;
   flowEventCount: number;
   telemetryKeywordCount: number;
   telemetryDocCount: number;
+  telemetrySourceAttemptCount: number;
   telemetryErrorCount: number;
+  crawlDomainCount: number;
   routing?: ResearchTier2RoutingHint;
 };
 
@@ -87,8 +92,49 @@ export type ResearchTier2SourceReasoning = {
   error?: string;
 };
 
+export type ResearchTier2SearchPlan = {
+  query?: string;
+  researchMode?: string;
+  topK?: number;
+  totalCandidates?: number;
+  durationMs?: number;
+  keywords: string[];
+  subqueries: string[];
+  connectors: string[];
+};
+
+export type ResearchTier2SourceAttempt = {
+  source: string;
+  status?: string;
+  documents?: number;
+  error?: string;
+  durationMs?: number;
+  query?: string;
+  subquery?: string;
+  passIndex?: number;
+};
+
+export type ResearchTier2IndexSummary = {
+  beforeDedupe?: number;
+  afterDedupe?: number;
+  selectedCount?: number;
+  durationMs?: number;
+};
+
+export type ResearchTier2CrawlSummary = {
+  enabled?: boolean;
+  attempted?: number;
+  success?: number;
+  domains: string[];
+  durationMs?: number;
+};
+
 export type ResearchTier2Telemetry = {
   keywords: string[];
+  searchPlan: ResearchTier2SearchPlan;
+  sourceAttempts: ResearchTier2SourceAttempt[];
+  indexSummary: ResearchTier2IndexSummary;
+  crawlSummary: ResearchTier2CrawlSummary;
   docs: ResearchTier2TelemetryDocument[];
   scores: ResearchTier2TelemetryScore[];
   sourceReasoning: ResearchTier2SourceReasoning[];
@@ -132,6 +178,8 @@ export type ResearchTier2Result = {
   };
   policyAction?: "allow" | "warn";
   fallbackUsed?: boolean;
+  researchMode?: string;
+  deepPassCount?: number;
 };
 
 export type UploadedResearchFile = {
@@ -174,6 +222,39 @@ export type KnowledgeSourceDocument = {
   preview: string;
   token_count: number;
   is_active: boolean;
+};
+
+export type SourceHubSourceKey = "pubmed" | "rxnorm" | "openfda" | "davidrug";
+
+export type SourceHubCatalogEntry = {
+  key: SourceHubSourceKey;
+  label: string;
+  description: string;
+  docs_url?: string;
+  default_query?: string;
+  supports_live_sync: boolean;
+};
+
+export type SourceHubRecord = {
+  id: string;
+  source: SourceHubSourceKey;
+  title: string;
+  url?: string;
+  snippet?: string;
+  external_id?: string;
+  query?: string;
+  published_at?: string;
+  synced_at?: string;
+  metadata: Record<string, unknown>;
+};
+
+export type SourceHubSyncResult = {
+  source: SourceHubSourceKey;
+  query: string;
+  fetched: number;
+  stored: number;
+  records: SourceHubRecord[];
+  warnings: string[];
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -825,6 +906,121 @@ function dedupeTelemetrySourceReasoning(items: ResearchTier2SourceReasoning[]): 
   return results;
 }
 
+function parseSearchPlan(value: unknown): ResearchTier2SearchPlan {
+  const record = asRecord(value) ?? {};
+  const rawConnectors =
+    record.connectors ??
+    record.connector_list ??
+    record.sources ??
+    record.provider_list ??
+    record.providers;
+  const rawSubqueries = record.subqueries ?? record.sub_queries ?? record.queries;
+  return {
+    query: asText(record.query) ?? asText(record.topic),
+    researchMode:
+      asText(record.research_mode) ?? asText(record.researchMode) ?? asText(record.mode),
+    topK: asNumber(record.top_k) ?? asNumber(record.topK),
+    totalCandidates: asNumber(record.total_candidates) ?? asNumber(record.totalCandidates),
+    durationMs: asNumber(record.duration_ms) ?? asNumber(record.durationMs),
+    keywords: parseKeywordList(
+      record.keywords ?? record.query_keywords ?? record.keyword_list ?? record.query_terms
+    ),
+    subqueries: parseKeywordList(rawSubqueries),
+    connectors: parseKeywordList(rawConnectors)
+  };
+}
+
+function parseSourceAttempt(value: unknown): ResearchTier2SourceAttempt | null {
+  const item = asRecord(value);
+  if (!item) return null;
+  const source =
+    asText(item.source) ??
+    asText(item.provider) ??
+    asText(item.connector) ??
+    asText(item.name);
+  if (!source) return null;
+  return {
+    source,
+    status: asText(item.status),
+    documents: asNumber(item.documents) ?? asNumber(item.doc_count),
+    error:
+      asText(item.error) ??
+      asText(item.error_code) ??
+      asText(item.error_message) ??
+      asText(item.failure_reason),
+    durationMs: asNumber(item.duration_ms) ?? asNumber(item.durationMs),
+    query: asText(item.query),
+    subquery: asText(item.subquery),
+    passIndex: asNumber(item.pass_index) ?? asNumber(item.passIndex)
+  };
+}
+
+function parseSourceAttempts(value: unknown): ResearchTier2SourceAttempt[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => parseSourceAttempt(item))
+      .filter((item): item is ResearchTier2SourceAttempt => Boolean(item));
+  }
+  const single = parseSourceAttempt(value);
+  return single ? [single] : [];
+}
+
+function dedupeSourceAttempts(items: ResearchTier2SourceAttempt[]): ResearchTier2SourceAttempt[] {
+  const seen = new Set<string>();
+  const results: ResearchTier2SourceAttempt[] = [];
+  items.forEach((item) => {
+    const key = [
+      item.source,
+      item.status ?? "",
+      item.query ?? "",
+      item.subquery ?? "",
+      String(item.passIndex ?? ""),
+      String(item.documents ?? "")
+    ].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    results.push(item);
+  });
+  return results;
+}
+
+function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
+  const item = asRecord(value) ?? {};
+  return {
+    beforeDedupe:
+      asNumber(item.before_dedupe) ??
+      asNumber(item.before_dedupe_count) ??
+      asNumber(item.beforeDedupe),
+    afterDedupe:
+      asNumber(item.after_dedupe) ??
+      asNumber(item.after_dedupe_count) ??
+      asNumber(item.afterDedupe),
+    selectedCount:
+      asNumber(item.selected_count) ??
+      asNumber(item.selected_documents_count) ??
+      asNumber(item.selectedCount),
+    durationMs: asNumber(item.duration_ms) ?? asNumber(item.durationMs)
+  };
+}
+
+function parseCrawlSummary(value: unknown): ResearchTier2CrawlSummary {
+  const item = asRecord(value) ?? {};
+  return {
+    enabled: typeof item.enabled === "boolean" ? item.enabled : undefined,
+    attempted:
+      asNumber(item.attempted) ??
+      asNumber(item.pages_requested) ??
+      asNumber(item.pages_attempted) ??
+      asNumber(item.pagesAttempted),
+    success:
+      asNumber(item.success) ??
+      asNumber(item.pages_crawled) ??
+      asNumber(item.pagesCrawled),
+    domains: parseKeywordList(item.domains ?? item.domain_list ?? item.hosts),
+    durationMs: asNumber(item.duration_ms) ?? asNumber(item.durationMs)
+  };
+}
+
 function parseTelemetryErrors(value: unknown): string[] {
   const text = asText(value);
   if (text) return [text];
@@ -895,13 +1091,19 @@ export async function uploadResearchFile(file: File): Promise<ResearchUploadResu
 
 export async function runResearchTier2(
   query: string,
-  options?: { uploadedFileIds?: string[]; sourceIds?: number[] }
+  options?: {
+    uploadedFileIds?: string[];
+    sourceIds?: number[];
+    researchMode?: ResearchExecutionMode;
+  }
 ): Promise<ResearchTier2RawResponse> {
   const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
   const sourceIds = Array.from(
     new Set((options?.sourceIds ?? []).filter((item) => Number.isFinite(item) && item > 0).map((item) => Math.trunc(item)))
   );
   const payload: Record<string, unknown> = { query, message: query };
+  const researchMode = options?.researchMode === "deep" ? "deep" : "fast";
+  payload.research_mode = researchMode;
 
   if (uploadedFileIds.length) {
     payload.uploaded_file_ids = uploadedFileIds;
@@ -943,6 +1145,37 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       "intent_keywords",
       "keyword_hits",
       "keyword_scores"
+    ])
+  );
+  const searchPlan = parseSearchPlan(
+    pickFromRecords(telemetryRecords, [
+      "search_plan",
+      "search_trace",
+      "query_plan"
+    ])
+  );
+  const sourceAttempts = dedupeSourceAttempts(
+    parseSourceAttempts(
+      pickFromRecords(telemetryRecords, [
+        "source_attempts",
+        "connector_attempts",
+        "provider_events",
+        "retrieval_attempts"
+      ])
+    )
+  );
+  const indexSummary = parseIndexSummary(
+    pickFromRecords(telemetryRecords, [
+      "index_summary",
+      "rerank_summary",
+      "ranking_summary"
+    ])
+  );
+  const crawlSummary = parseCrawlSummary(
+    pickFromRecords(telemetryRecords, [
+      "crawl_summary",
+      "web_crawl_summary",
+      "crawl_trace"
     ])
   );
   const docs = dedupeTelemetryDocs(
@@ -1026,6 +1259,10 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   ]);
   const telemetry: ResearchTier2Telemetry = {
     keywords,
+    searchPlan,
+    sourceAttempts,
+    indexSummary,
+    crawlSummary,
     docs,
     scores,
     sourceReasoning,
@@ -1077,11 +1314,17 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       pipeline: asText(metadata.pipeline),
       responseStyle: asText(metadata.response_style),
       sourceMode: asText(metadata.source_mode),
+      researchMode: asText(metadata.research_mode) ?? asText((data as Record<string, unknown>).research_mode),
+      deepPassCount:
+        asNumber(metadata.deep_pass_count) ??
+        asNumber((data as Record<string, unknown>).deep_pass_count),
       stageCount: flowStages.length,
       flowEventCount: flowEvents.length,
       telemetryKeywordCount: telemetry.keywords.length,
       telemetryDocCount: telemetry.docs.length,
+      telemetrySourceAttemptCount: telemetry.sourceAttempts.length,
       telemetryErrorCount: telemetry.errors.length,
+      crawlDomainCount: telemetry.crawlSummary.domains.length,
       routing: parseRoutingHint(
         pickFromRecords(telemetryRecords, ["routing", "route_hint", "router"]) ?? metadata.routing
       )
@@ -1089,7 +1332,13 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     telemetry,
     verificationStatus,
     policyAction,
-    fallbackUsed
+    fallbackUsed,
+    researchMode:
+      asText(metadata.research_mode) ??
+      asText((data as Record<string, unknown>).research_mode),
+    deepPassCount:
+      asNumber(metadata.deep_pass_count) ??
+      asNumber((data as Record<string, unknown>).deep_pass_count)
   };
 }
 
@@ -1124,6 +1373,52 @@ function parseKnowledgeSourceDocument(item: unknown): KnowledgeSourceDocument | 
     preview: asText(value.preview) ?? "",
     token_count: Math.trunc(asNumber(value.token_count) ?? 0),
     is_active: Boolean(value.is_active ?? true),
+  };
+}
+
+function parseSourceHubKey(value: unknown): SourceHubSourceKey | null {
+  const text = asText(value)?.toLowerCase();
+  if (text === "pubmed" || text === "rxnorm" || text === "openfda" || text === "davidrug") {
+    return text;
+  }
+  return null;
+}
+
+function parseSourceHubCatalogEntry(item: unknown): SourceHubCatalogEntry | null {
+  const value = asRecord(item);
+  if (!value) return null;
+  const key = parseSourceHubKey(value.key);
+  const label = asText(value.label);
+  const description = asText(value.description);
+  if (!key || !label || !description) return null;
+  return {
+    key,
+    label,
+    description,
+    docs_url: asText(value.docs_url),
+    default_query: asText(value.default_query),
+    supports_live_sync: Boolean(value.supports_live_sync ?? true)
+  };
+}
+
+function parseSourceHubRecord(item: unknown): SourceHubRecord | null {
+  const value = asRecord(item);
+  if (!value) return null;
+  const id = asId(value.id);
+  const source = parseSourceHubKey(value.source);
+  const title = asText(value.title);
+  if (!id || !source || !title) return null;
+  return {
+    id,
+    source,
+    title,
+    url: asText(value.url),
+    snippet: asText(value.snippet),
+    external_id: asText(value.external_id),
+    query: asText(value.query),
+    published_at: asText(value.published_at),
+    synced_at: asText(value.synced_at),
+    metadata: asRecord(value.metadata) ?? {}
   };
 }
 
@@ -1174,4 +1469,48 @@ export async function setKnowledgeDocumentStatus(documentId: number, isActive: b
   const parsed = parseKnowledgeSourceDocument(response.data);
   if (!parsed) throw new Error("Không thể cập nhật trạng thái document.");
   return parsed;
+}
+
+export async function listSourceHubCatalog(): Promise<SourceHubCatalogEntry[]> {
+  const response = await api.get<{ sources?: unknown }>("/research/source-hub/catalog");
+  return parseList(asRecord(response.data)?.sources, parseSourceHubCatalogEntry);
+}
+
+export async function listSourceHubRecords(params?: {
+  source?: SourceHubSourceKey | "all";
+  query?: string;
+  limit?: number;
+}): Promise<SourceHubRecord[]> {
+  const response = await api.get<{ records?: unknown }>("/research/source-hub/records", {
+    params: {
+      source: params?.source,
+      query: params?.query,
+      limit: params?.limit
+    }
+  });
+  return parseList(asRecord(response.data)?.records, parseSourceHubRecord);
+}
+
+export async function syncSourceHub(payload: {
+  source: SourceHubSourceKey;
+  query: string;
+  limit?: number;
+}): Promise<SourceHubSyncResult> {
+  const response = await api.post<unknown>("/research/source-hub/sync", payload);
+  const data = asRecord(response.data);
+  const source = parseSourceHubKey(data?.source);
+  const query = asText(data?.query) ?? payload.query;
+  if (!source) throw new Error("Không thể đồng bộ nguồn dữ liệu.");
+
+  return {
+    source,
+    query,
+    fetched: Math.trunc(asNumber(data?.fetched) ?? 0),
+    stored: Math.trunc(asNumber(data?.stored) ?? 0),
+    records: parseList(data?.records, parseSourceHubRecord),
+    warnings: parseList(data?.warnings, (item) => {
+      const text = asText(item);
+      return text ? text : null;
+    })
+  };
 }

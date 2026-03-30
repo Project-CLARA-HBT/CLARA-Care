@@ -1,6 +1,11 @@
 import { ResearchFlowEvent, ResearchFlowStage, ResearchFlowStageStatus } from "@/lib/research";
 
-type FlowTimelineMode = "idle" | "flow-events" | "metadata-stages" | "local-fallback";
+type FlowTimelineMode =
+  | "idle"
+  | "flow-events"
+  | "metadata-stages"
+  | "local-fallback"
+  | "server-await";
 
 type FlowTimelinePanelProps = {
   stages: ResearchFlowStage[];
@@ -65,7 +70,8 @@ function normalizeStatus(status?: string): ResearchFlowStageStatus {
 function resolveModeLabel(mode: FlowTimelineMode): string {
   if (mode === "flow-events") return "Realtime flow events";
   if (mode === "metadata-stages") return "Server stage summary";
-  if (mode === "local-fallback") return "Client-side simulation";
+  if (mode === "local-fallback") return "Legacy local fallback";
+  if (mode === "server-await") return "Server reasoning in progress";
   return "Waiting";
 }
 
@@ -85,6 +91,18 @@ function formatPayloadPreview(payload?: Record<string, unknown>): string {
   }
   if (typeof payload.source_count === "number") {
     parts.push(`source_count=${payload.source_count}`);
+  }
+  if (typeof payload.total_candidates === "number") {
+    parts.push(`candidates=${payload.total_candidates}`);
+  }
+  if (typeof payload.selected_count === "number") {
+    parts.push(`selected=${payload.selected_count}`);
+  }
+  if (typeof payload.pass_index === "number") {
+    parts.push(`pass=${payload.pass_index}`);
+  }
+  if (typeof payload.phase === "string") {
+    parts.push(`phase=${payload.phase}`);
   }
   if (Array.isArray(payload.top_docs) && payload.top_docs.length > 0) {
     parts.push(`top_docs=${payload.top_docs.length}`);
@@ -163,7 +181,7 @@ export default function FlowTimelinePanel({
       ) : (
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
           {isProcessing
-            ? "Đang khởi tạo timeline..."
+            ? "Server đang xử lý. Timeline sẽ hiển thị khi backend trả flow events/stages thật."
             : "Backend chưa trả telemetry flow cho phiên này, nên không hiển thị stage giả lập sau khi hoàn tất."}
         </p>
       )}

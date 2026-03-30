@@ -19,11 +19,21 @@ import PageShell from "@/components/ui/page-shell";
 import { UserRole, getRole } from "@/lib/auth-store";
 import { ChatResponse, getChatIntentDebug, getChatReply } from "@/lib/chat";
 import api from "@/lib/http-client";
-import { ResearchFlowEvent, ResearchFlowStage, ResearchTier, Tier2Citation, Tier2Step, normalizeResearchTier2, runResearchTier2 } from "@/lib/research";
+import {
+  ResearchExecutionMode,
+  ResearchFlowEvent,
+  ResearchFlowStage,
+  ResearchTier,
+  Tier2Citation,
+  Tier2Step,
+  normalizeResearchTier2,
+  runResearchTier2
+} from "@/lib/research";
 
 export default function ResearchPage() {
   const [role, setRole] = useState<UserRole>("normal");
   const [selectedTier, setSelectedTier] = useState<ResearchTier>("tier1");
+  const [selectedResearchMode, setSelectedResearchMode] = useState<ResearchExecutionMode>("fast");
   const [query, setQuery] = useState("");
   const [lastQuery, setLastQuery] = useState("");
   const [result, setResult] = useState<ResearchResult | null>(null);
@@ -63,6 +73,16 @@ export default function ResearchPage() {
     () =>
       activeTier2Result?.telemetry ?? {
         keywords: [],
+        searchPlan: {
+          keywords: [],
+          subqueries: [],
+          connectors: []
+        },
+        sourceAttempts: [],
+        indexSummary: {},
+        crawlSummary: {
+          domains: []
+        },
         docs: [],
         scores: [],
         sourceReasoning: [],
@@ -127,11 +147,12 @@ export default function ResearchPage() {
 
         nextResult = { tier: "tier1", answer, debug: getChatIntentDebug(response.data) };
       } else {
-        flow.startLocalFlowSimulation();
+        flow.startServerProcessing();
 
         const response = await runResearchTier2(message, {
           uploadedFileIds: uploads.uploadedFileIds,
-          sourceIds: sources.selectedSourceIds
+          sourceIds: sources.selectedSourceIds,
+          researchMode: selectedResearchMode
         });
         const normalized = normalizeResearchTier2(response);
         if (!normalized.answer && !normalized.citations.length) {
@@ -172,7 +193,7 @@ export default function ResearchPage() {
       }
       setError(submitError instanceof Error ? submitError.message : "Không thể gửi câu hỏi.");
     } finally {
-      flow.stopLocalFlowSimulation();
+      flow.stopServerProcessing();
       setIsSubmitting(false);
     }
   };
@@ -225,6 +246,8 @@ export default function ResearchPage() {
             onUploadInputChange={uploads.onUploadInputChange}
             onQueryChange={setQuery}
             onSelectTier={setSelectedTier}
+            selectedResearchMode={selectedResearchMode}
+            onSelectResearchMode={setSelectedResearchMode}
             lastQuery={lastQuery}
             result={result}
             showDebugHints={showDebugHints}
@@ -283,8 +306,10 @@ export default function ResearchPage() {
               pipeline: activeTier2Result?.debug.pipeline,
               telemetryKeywordCount: activeTier2Result?.debug.telemetryKeywordCount ?? activeTelemetry.keywords.length,
               telemetryDocCount: activeTier2Result?.debug.telemetryDocCount ?? activeTelemetry.docs.length,
+              telemetrySourceAttemptCount: activeTelemetry.sourceAttempts.length,
               telemetryErrorCount: activeTier2Result?.debug.telemetryErrorCount ?? activeTelemetry.errors.length,
-              telemetryTopError: activeTelemetry.errors[0]
+              telemetryTopError: activeTelemetry.errors[0],
+              crawlDomainCount: activeTelemetry.crawlSummary.domains.length
             }}
           />
         </aside>

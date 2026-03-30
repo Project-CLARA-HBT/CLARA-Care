@@ -1,9 +1,11 @@
 import math
+import re
 from datetime import UTC, datetime
 from threading import Lock
 from typing import Any
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,7 +13,7 @@ from sqlalchemy.orm import Session
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import KnowledgeDocument, KnowledgeSource, User
+from clara_api.db.models import KnowledgeDocument, KnowledgeSource, SystemSetting, User
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     KnowledgeDocumentResponse,
@@ -19,6 +21,12 @@ from clara_api.schemas import (
     KnowledgeSourceCreateRequest,
     KnowledgeSourceResponse,
     KnowledgeSourceUpdateRequest,
+    SourceHubCatalogEntry,
+    SourceHubRecord,
+    SourceHubRecordsResponse,
+    SourceHubSourceKey,
+    SourceHubSyncRequest,
+    SourceHubSyncResponse,
 )
 
 router = APIRouter()
@@ -37,6 +45,9 @@ _TEXT_FILE_EXTENSIONS = {
     ".yml",
 }
 _IMAGE_FILE_EXTENSIONS = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
+_SOURCE_HUB_SETTING_KEY = "source_hub_records_v1"
+_SOURCE_HUB_MAX_RECORDS = 500
+_SOURCE_HUB_TIMEOUT_SECONDS = 12.0
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
@@ -290,21 +301,35 @@ def _extract_source_ids(payload: dict[str, Any]) -> list[int]:
     return parsed
 
 
+def _coerce_research_mode(payload: dict[str, Any]) -> str:
+    raw_mode = str(payload.get("research_mode") or payload.get("mode") or "fast").strip().lower()
+    if raw_mode in {"deep", "deep_research", "long"}:
+        return "deep"
+    return "fast"
+
+
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    research_mode = _coerce_research_mode(payload)
     fallback_answer = (
         "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
-        "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, đối chiếu tương tác thuốc quan trọng, "
+        "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
+        "đối chiếu tương tác thuốc quan trọng, "
         "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
     )
     return {
         "answer": fallback_answer,
         "summary": fallback_answer,
-        "metadata": {},
+        "metadata": {
+            "research_mode": research_mode,
+            "deep_pass_count": 0,
+        },
         "context_debug": {},
         "flow_events": [],
         "citations": [],
         "fallback": True,
         "source_mode": payload.get("source_mode"),
+        "research_mode": research_mode,
+        "deep_pass_count": 0,
     }
 
 
@@ -379,6 +404,57 @@ def _build_tier2_telemetry(
         )
         if keywords is not None:
             telemetry["keywords"] = keywords
+
+    if "search_plan" not in telemetry:
+        search_plan = _first_value(
+            sources,
+            keys=("search_plan", "search_trace", "query_plan"),
+        )
+        if search_plan is None and isinstance(retrieval_trace, dict):
+            search_plan = retrieval_trace.get("search_plan")
+        if search_plan is not None:
+            telemetry["search_plan"] = search_plan
+
+    if "source_attempts" not in telemetry:
+        source_attempts = _first_value(
+            sources,
+            keys=(
+                "source_attempts",
+                "connector_attempts",
+                "provider_events",
+                "retrieval_attempts",
+            ),
+        )
+        if source_attempts is None and isinstance(retriever_debug, dict):
+            source_attempts = retriever_debug.get("source_attempts")
+            if source_attempts is None:
+                source_attempts = retriever_debug.get("provider_events")
+        if source_attempts is not None:
+            telemetry["source_attempts"] = source_attempts
+
+    if "index_summary" not in telemetry:
+        index_summary = _first_value(
+            sources,
+            keys=("index_summary", "rerank_summary", "ranking_summary"),
+        )
+        if index_summary is None and isinstance(retrieval_trace, dict):
+            index_summary = retrieval_trace.get("index_summary")
+        if index_summary is None and isinstance(retriever_debug, dict):
+            index_summary = retriever_debug.get("index_summary")
+        if index_summary is not None:
+            telemetry["index_summary"] = index_summary
+
+    if "crawl_summary" not in telemetry:
+        crawl_summary = _first_value(
+            sources,
+            keys=("crawl_summary", "web_crawl_summary", "crawl_trace"),
+        )
+        if crawl_summary is None and isinstance(retrieval_trace, dict):
+            crawl_summary = retrieval_trace.get("crawl_summary")
+        if crawl_summary is None and isinstance(retriever_debug, dict):
+            crawl_summary = retriever_debug.get("crawl_summary")
+        if crawl_summary is not None:
+            telemetry["crawl_summary"] = crawl_summary
 
     if "docs" not in telemetry:
         docs = _first_value(
@@ -512,6 +588,361 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
         normalized["telemetry"] = telemetry
 
     return normalized
+
+
+_SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
+    SourceHubCatalogEntry(
+        key="pubmed",
+        label="PubMed",
+        description="NCBI PubMed biomedical literature via E-utilities",
+        docs_url="https://www.ncbi.nlm.nih.gov/books/NBK25501/",
+        default_query="diabetes type 2 guideline",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="rxnorm",
+        label="RxNorm",
+        description="NLM RxNorm normalized clinical drug names via RxNav",
+        docs_url="https://lhncbc.nlm.nih.gov/RxNav/APIs/index.html",
+        default_query="metformin",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="openfda",
+        label="openFDA",
+        description="US FDA drug label and safety data",
+        docs_url="https://open.fda.gov/apis/",
+        default_query="statin",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="davidrug",
+        label="DAVIDrug",
+        description="Cục Quản lý Dược Việt Nam (public web data fallback)",
+        docs_url="https://dichvucong.dav.gov.vn/congbothuoc/index",
+        default_query="paracetamol",
+        supports_live_sync=True,
+    ),
+)
+
+
+def _source_hub_setting_key(owner_user_id: int) -> str:
+    return f"{_SOURCE_HUB_SETTING_KEY}:{owner_user_id}"
+
+
+def _to_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    return ""
+
+
+def _normalize_source_hub_record(record: dict[str, Any]) -> SourceHubRecord | None:
+    source = _to_text(record.get("source")).lower()
+    if source not in {"pubmed", "rxnorm", "openfda", "davidrug"}:
+        return None
+    title = _to_text(record.get("title"))
+    if not title:
+        return None
+
+    record_id = _to_text(record.get("id")) or str(uuid4())
+    metadata_raw = record.get("metadata")
+    metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
+
+    return SourceHubRecord(
+        id=record_id,
+        source=source,  # type: ignore[arg-type]
+        title=title,
+        url=_to_text(record.get("url")) or None,
+        snippet=_to_text(record.get("snippet")) or None,
+        external_id=_to_text(record.get("external_id")) or None,
+        query=_to_text(record.get("query")) or None,
+        published_at=_to_text(record.get("published_at")) or None,
+        synced_at=_to_text(record.get("synced_at")) or None,
+        metadata=metadata,
+    )
+
+
+def _load_source_hub_records(db: Session, owner_user_id: int) -> list[SourceHubRecord]:
+    setting = db.execute(
+        select(SystemSetting).where(SystemSetting.key == _source_hub_setting_key(owner_user_id))
+    ).scalar_one_or_none()
+    if not setting or not isinstance(setting.value_json, dict):
+        return []
+
+    raw_records = setting.value_json.get("records")
+    if not isinstance(raw_records, list):
+        return []
+
+    parsed: list[SourceHubRecord] = []
+    for item in raw_records:
+        if not isinstance(item, dict):
+            continue
+        normalized = _normalize_source_hub_record(item)
+        if normalized is not None:
+            parsed.append(normalized)
+    return parsed
+
+
+def _save_source_hub_records(
+    db: Session, owner_user_id: int, records: list[SourceHubRecord]
+) -> None:
+    key = _source_hub_setting_key(owner_user_id)
+    setting = db.execute(select(SystemSetting).where(SystemSetting.key == key)).scalar_one_or_none()
+    payload = {
+        "records": [record.model_dump() for record in records[:_SOURCE_HUB_MAX_RECORDS]],
+        "updated_at": datetime.now(tz=UTC).isoformat(),
+    }
+    if setting is None:
+        setting = SystemSetting(key=key, value_json=payload, value_text="")
+    else:
+        setting.value_json = payload
+    db.add(setting)
+    db.commit()
+
+
+def _merge_source_hub_records(
+    existing: list[SourceHubRecord], incoming: list[SourceHubRecord]
+) -> list[SourceHubRecord]:
+    dedup: dict[str, SourceHubRecord] = {}
+    for item in [*incoming, *existing]:
+        dedup[item.id] = item
+
+    merged = sorted(
+        dedup.values(),
+        key=lambda record: record.synced_at or "",
+        reverse=True,
+    )
+    return merged[:_SOURCE_HUB_MAX_RECORDS]
+
+
+def _http_get_json(url: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    with httpx.Client(timeout=_SOURCE_HUB_TIMEOUT_SECONDS) as client:
+        response = client.get(url, params=params)
+    response.raise_for_status()
+    payload = response.json()
+    return payload if isinstance(payload, dict) else {}
+
+
+def _http_get_text(url: str, *, params: dict[str, Any] | None = None) -> str:
+    with httpx.Client(timeout=_SOURCE_HUB_TIMEOUT_SECONDS) as client:
+        response = client.get(url, params=params)
+    response.raise_for_status()
+    return response.text
+
+
+def _fetch_pubmed_records(
+    query: str, limit: int, synced_at: str
+) -> tuple[list[SourceHubRecord], list[str]]:
+    warnings: list[str] = []
+    search = _http_get_json(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        params={"db": "pubmed", "term": query, "retmax": limit, "retmode": "json"},
+    )
+    search_result = search.get("esearchresult")
+    if not isinstance(search_result, dict):
+        return [], ["PubMed trả dữ liệu không đúng định dạng esearchresult."]
+
+    id_list_raw = search_result.get("idlist")
+    id_list = (
+        [str(item).strip() for item in id_list_raw if str(item).strip()]
+        if isinstance(id_list_raw, list)
+        else []
+    )
+    if not id_list:
+        return [], ["PubMed không có kết quả phù hợp cho query hiện tại."]
+
+    summary = _http_get_json(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
+        params={"db": "pubmed", "id": ",".join(id_list[:limit]), "retmode": "json"},
+    )
+    result = summary.get("result")
+    if not isinstance(result, dict):
+        return [], ["PubMed không trả được summary chi tiết."]
+
+    uids_raw = result.get("uids")
+    uids = (
+        [str(item).strip() for item in uids_raw if str(item).strip()]
+        if isinstance(uids_raw, list)
+        else []
+    )
+
+    records: list[SourceHubRecord] = []
+    for uid in uids[:limit]:
+        item = result.get(uid)
+        if not isinstance(item, dict):
+            continue
+        title = _to_text(item.get("title"))
+        if not title:
+            continue
+        journal = _to_text(item.get("fulljournalname")) or _to_text(item.get("source"))
+        pubdate = _to_text(item.get("pubdate"))
+        snippet = " | ".join(part for part in [journal, pubdate] if part).strip()
+        records.append(
+            SourceHubRecord(
+                id=f"pubmed:{uid}",
+                source="pubmed",
+                title=title,
+                url=f"https://pubmed.ncbi.nlm.nih.gov/{uid}/",
+                snippet=snippet or None,
+                external_id=uid,
+                query=query,
+                published_at=pubdate or None,
+                synced_at=synced_at,
+                metadata={
+                    "authors": item.get("authors"),
+                    "pubtype": item.get("pubtype"),
+                    "doi": item.get("elocationid"),
+                },
+            )
+        )
+
+    if not records:
+        warnings.append("PubMed trả về bản ghi rỗng sau bước summary.")
+    return records, warnings
+
+
+def _fetch_rxnorm_records(
+    query: str, limit: int, synced_at: str
+) -> tuple[list[SourceHubRecord], list[str]]:
+    warnings: list[str] = []
+    payload = _http_get_json(
+        "https://rxnav.nlm.nih.gov/REST/approximateTerm.json",
+        params={"term": query, "maxEntries": limit},
+    )
+    group = payload.get("approximateGroup")
+    if not isinstance(group, dict):
+        return [], ["RxNorm không trả về approximateGroup."]
+    candidates = group.get("candidate")
+    if not isinstance(candidates, list) or not candidates:
+        return [], ["RxNorm không có candidate cho query này."]
+
+    records: list[SourceHubRecord] = []
+    for index, item in enumerate(candidates[:limit]):
+        if not isinstance(item, dict):
+            continue
+        rxcui = _to_text(item.get("rxcui"))
+        rank = _to_text(item.get("rank"))
+        score = _to_text(item.get("score"))
+        name = _to_text(item.get("name")) or f"RxNorm candidate {index + 1}"
+        records.append(
+            SourceHubRecord(
+                id=f"rxnorm:{rxcui or index}",
+                source="rxnorm",
+                title=name,
+                url=f"https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm={rxcui}"
+                if rxcui
+                else None,
+                snippet=f"rxcui={rxcui or '-'} | score={score or '-'} | rank={rank or '-'}",
+                external_id=rxcui or None,
+                query=query,
+                published_at=None,
+                synced_at=synced_at,
+                metadata=item,
+            )
+        )
+
+    return records, warnings
+
+
+def _fetch_openfda_records(
+    query: str, limit: int, synced_at: str
+) -> tuple[list[SourceHubRecord], list[str]]:
+    warnings: list[str] = []
+    escaped = query.replace('"', '\\"')
+    payload = _http_get_json(
+        "https://api.fda.gov/drug/label.json",
+        params={"search": f'openfda.brand_name:"{escaped}"', "limit": limit},
+    )
+    results = payload.get("results")
+    if not isinstance(results, list) or not results:
+        return [], ["openFDA không có kết quả cho query này."]
+
+    records: list[SourceHubRecord] = []
+    for index, item in enumerate(results[:limit]):
+        if not isinstance(item, dict):
+            continue
+        openfda = item.get("openfda")
+        openfda_obj = openfda if isinstance(openfda, dict) else {}
+        brand_names = openfda_obj.get("brand_name")
+        title = (
+            _to_text(brand_names[0]) if isinstance(brand_names, list) and brand_names else ""
+        ) or f"openFDA label {index + 1}"
+        set_id_list = openfda_obj.get("set_id")
+        set_id = _to_text(set_id_list[0]) if isinstance(set_id_list, list) and set_id_list else ""
+        purpose = item.get("purpose")
+        warning_text = item.get("warnings")
+        snippet = _to_text(purpose[0]) if isinstance(purpose, list) and purpose else ""
+        if not snippet:
+            snippet = (
+                _to_text(warning_text[0]) if isinstance(warning_text, list) and warning_text else ""
+            )
+        records.append(
+            SourceHubRecord(
+                id=f"openfda:{set_id or index}",
+                source="openfda",
+                title=title,
+                url=None,
+                snippet=snippet[:280] or None,
+                external_id=set_id or None,
+                query=query,
+                published_at=None,
+                synced_at=synced_at,
+                metadata={"openfda": openfda_obj},
+            )
+        )
+    return records, warnings
+
+
+def _fetch_davidrug_records(
+    query: str, limit: int, synced_at: str
+) -> tuple[list[SourceHubRecord], list[str]]:
+    warnings: list[str] = []
+    html = _http_get_text(
+        "https://dichvucong.dav.gov.vn/congbothuoc/index",
+        params={"keyword": query},
+    )
+
+    title_match = re.search(r"<title>(.*?)</title>", html, flags=re.IGNORECASE | re.DOTALL)
+    page_title = re.sub(r"\s+", " ", title_match.group(1)).strip() if title_match else "DAVIDrug"
+    query_pattern = re.compile(re.escape(query), flags=re.IGNORECASE)
+    matches_count = len(query_pattern.findall(html))
+
+    snippet = f"Trang: {page_title}. Số lần xuất hiện chuỗi query trong HTML: {matches_count}."
+    if matches_count == 0:
+        warnings.append(
+            "DAVIDrug không trả kết quả có cấu trúc; hiện lưu snapshot HTML để theo dõi."
+        )
+
+    record = SourceHubRecord(
+        id=f"davidrug:{hash((query, synced_at))}",
+        source="davidrug",
+        title=f"DAVIDrug snapshot - {query}",
+        url="https://dichvucong.dav.gov.vn/congbothuoc/index",
+        snippet=snippet,
+        external_id=None,
+        query=query,
+        published_at=None,
+        synced_at=synced_at,
+        metadata={"html_length": len(html), "query_hits": matches_count},
+    )
+    return [record][:limit], warnings
+
+
+def _fetch_source_hub_records(
+    source: SourceHubSourceKey, query: str, limit: int
+) -> tuple[list[SourceHubRecord], list[str]]:
+    synced_at = datetime.now(tz=UTC).isoformat()
+    if source == "pubmed":
+        return _fetch_pubmed_records(query, limit, synced_at)
+    if source == "rxnorm":
+        return _fetch_rxnorm_records(query, limit, synced_at)
+    if source == "openfda":
+        return _fetch_openfda_records(query, limit, synced_at)
+    if source == "davidrug":
+        return _fetch_davidrug_records(query, limit, synced_at)
+    return [], [f"Nguồn không được hỗ trợ: {source}"]
 
 
 @router.get("/knowledge-sources")
@@ -777,3 +1208,99 @@ def research_tier2(
         fail_soft_payload=_research_tier2_fallback_payload(payload),
     )
     return _normalize_tier2_response(response)
+
+
+@router.get("/source-hub/catalog")
+def source_hub_catalog(
+    token: TokenPayload = Depends(require_roles("researcher", "doctor", "admin")),
+) -> dict[str, list[SourceHubCatalogEntry]]:
+    _ = token
+    return {"sources": list(_SOURCE_HUB_CATALOG)}
+
+
+@router.get("/source-hub/records")
+def source_hub_records(
+    source: str = "all",
+    query: str = "",
+    limit: int = 80,
+    token: TokenPayload = Depends(require_roles("researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> SourceHubRecordsResponse:
+    user = _get_user_by_token(db, token)
+    items = _load_source_hub_records(db, user.id)
+
+    normalized_source = source.strip().lower()
+    if normalized_source and normalized_source != "all":
+        items = [item for item in items if item.source == normalized_source]
+
+    normalized_query = query.strip().lower()
+    if normalized_query:
+        items = [
+            item
+            for item in items
+            if normalized_query in (item.title or "").lower()
+            or normalized_query in (item.snippet or "").lower()
+            or normalized_query in (item.query or "").lower()
+        ]
+
+    safe_limit = max(1, min(500, limit))
+    return SourceHubRecordsResponse(records=items[:safe_limit])
+
+
+@router.post("/source-hub/sync")
+def source_hub_sync(
+    payload: SourceHubSyncRequest,
+    token: TokenPayload = Depends(require_roles("researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> SourceHubSyncResponse:
+    user = _get_user_by_token(db, token)
+    query = payload.query.strip()
+    if not query:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Query không được rỗng."
+        )
+
+    safe_limit = max(3, min(30, int(payload.limit)))
+    try:
+        records, warnings = _fetch_source_hub_records(payload.source, query, safe_limit)
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Timeout khi đồng bộ dữ liệu từ nguồn ngoài.",
+        ) from None
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Lỗi nguồn ngoài ({exc.response.status_code}) khi sync {payload.source}.",
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Không thể sync nguồn {payload.source}: {exc}",
+        ) from exc
+
+    # Ensure query/sync metadata always present even if source omitted them.
+    synced_at = datetime.now(tz=UTC).isoformat()
+    normalized_records = [
+        SourceHubRecord(
+            **{
+                **record.model_dump(),
+                "query": record.query or query,
+                "synced_at": record.synced_at or synced_at,
+            }
+        )
+        for record in records
+    ]
+
+    existing = _load_source_hub_records(db, user.id)
+    merged = _merge_source_hub_records(existing, normalized_records)
+    _save_source_hub_records(db, user.id, merged)
+
+    return SourceHubSyncResponse(
+        source=payload.source,
+        query=query,
+        fetched=len(normalized_records),
+        stored=len(merged),
+        records=normalized_records,
+        warnings=warnings,
+    )

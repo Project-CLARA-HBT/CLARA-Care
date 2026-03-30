@@ -18,6 +18,8 @@ export default function TelemetryDetailsPanel({
 }: TelemetryDetailsPanelProps) {
   const hasData =
     telemetry.keywords.length > 0 ||
+    telemetry.searchPlan.subqueries.length > 0 ||
+    telemetry.sourceAttempts.length > 0 ||
     telemetry.docs.length > 0 ||
     telemetry.scores.length > 0 ||
     telemetry.sourceReasoning.length > 0 ||
@@ -64,6 +66,133 @@ export default function TelemetryDetailsPanel({
                 {keyword}
               </span>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {(telemetry.searchPlan.query ||
+        telemetry.searchPlan.subqueries.length > 0 ||
+        telemetry.searchPlan.connectors.length > 0) ? (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+            Search Plan
+          </p>
+          {telemetry.searchPlan.query ? (
+            <p className="text-xs text-slate-700 dark:text-slate-200">
+              query: <span className="font-medium">{telemetry.searchPlan.query}</span>
+            </p>
+          ) : null}
+          {telemetry.searchPlan.researchMode ? (
+            <p className="text-xs text-slate-700 dark:text-slate-200">
+              mode: <span className="font-medium">{telemetry.searchPlan.researchMode}</span>
+            </p>
+          ) : null}
+          {telemetry.searchPlan.topK !== undefined ? (
+            <p className="text-xs text-slate-700 dark:text-slate-200">
+              top_k: <span className="font-medium">{formatScore(telemetry.searchPlan.topK)}</span>
+            </p>
+          ) : null}
+          {telemetry.searchPlan.totalCandidates !== undefined ? (
+            <p className="text-xs text-slate-700 dark:text-slate-200">
+              total_candidates:{" "}
+              <span className="font-medium">
+                {formatScore(telemetry.searchPlan.totalCandidates)}
+              </span>
+            </p>
+          ) : null}
+          {telemetry.searchPlan.durationMs !== undefined ? (
+            <p className="text-xs text-slate-700 dark:text-slate-200">
+              duration_ms:{" "}
+              <span className="font-medium">{formatScore(telemetry.searchPlan.durationMs)}</span>
+            </p>
+          ) : null}
+          {telemetry.searchPlan.subqueries.length ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+              <p className="font-semibold">subqueries:</p>
+              <ul className="mt-1 space-y-0.5">
+                {telemetry.searchPlan.subqueries.slice(0, 8).map((subquery, index) => (
+                  <li key={`${subquery}-${index}`}>- {subquery}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {telemetry.searchPlan.connectors.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {telemetry.searchPlan.connectors.map((connector) => (
+                <span
+                  key={connector}
+                  className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+                >
+                  {connector}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {telemetry.sourceAttempts.length ? (
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+            Source Attempts
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {telemetry.sourceAttempts.slice(0, 12).map((attempt, index) => (
+              <li
+                key={`${attempt.source}-${attempt.status ?? "status"}-${index}`}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+              >
+                <span className="font-semibold">{attempt.source}</span>
+                {attempt.status ? ` · ${attempt.status}` : ""}
+                {attempt.documents !== undefined ? ` · docs ${formatScore(attempt.documents)}` : ""}
+                {attempt.durationMs !== undefined ? ` · ${formatScore(attempt.durationMs)}ms` : ""}
+                {attempt.passIndex !== undefined ? ` · pass ${formatScore(attempt.passIndex)}` : ""}
+                {attempt.error ? ` · error ${attempt.error}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {(telemetry.indexSummary.beforeDedupe !== undefined ||
+        telemetry.indexSummary.afterDedupe !== undefined ||
+        telemetry.indexSummary.selectedCount !== undefined ||
+        telemetry.crawlSummary.attempted !== undefined ||
+        telemetry.crawlSummary.success !== undefined ||
+        telemetry.crawlSummary.domains.length > 0) ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+            <p className="font-semibold">Index Summary</p>
+            {telemetry.indexSummary.beforeDedupe !== undefined ? (
+              <p>before_dedupe: {formatScore(telemetry.indexSummary.beforeDedupe)}</p>
+            ) : null}
+            {telemetry.indexSummary.afterDedupe !== undefined ? (
+              <p>after_dedupe: {formatScore(telemetry.indexSummary.afterDedupe)}</p>
+            ) : null}
+            {telemetry.indexSummary.selectedCount !== undefined ? (
+              <p>selected: {formatScore(telemetry.indexSummary.selectedCount)}</p>
+            ) : null}
+            {telemetry.indexSummary.durationMs !== undefined ? (
+              <p>duration_ms: {formatScore(telemetry.indexSummary.durationMs)}</p>
+            ) : null}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+            <p className="font-semibold">Crawl Summary</p>
+            {telemetry.crawlSummary.enabled !== undefined ? (
+              <p>enabled: {String(telemetry.crawlSummary.enabled)}</p>
+            ) : null}
+            {telemetry.crawlSummary.attempted !== undefined ? (
+              <p>attempted: {formatScore(telemetry.crawlSummary.attempted)}</p>
+            ) : null}
+            {telemetry.crawlSummary.success !== undefined ? (
+              <p>success: {formatScore(telemetry.crawlSummary.success)}</p>
+            ) : null}
+            {telemetry.crawlSummary.durationMs !== undefined ? (
+              <p>duration_ms: {formatScore(telemetry.crawlSummary.durationMs)}</p>
+            ) : null}
+            {telemetry.crawlSummary.domains.length ? (
+              <p>domains: {telemetry.crawlSummary.domains.join(", ")}</p>
+            ) : null}
           </div>
         </div>
       ) : null}

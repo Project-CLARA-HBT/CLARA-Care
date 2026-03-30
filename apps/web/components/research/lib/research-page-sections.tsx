@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, RefObject } from "react";
 import MarkdownAnswer from "@/components/research/markdown-answer";
 import { ResearchResult } from "@/components/research/lib/research-page-types";
-import { ResearchTier, Tier2Step } from "@/lib/research";
+import { ResearchExecutionMode, ResearchTier, Tier2Step } from "@/lib/research";
 
 type ResearchWorkspaceHeaderProps = {
   roleLabel: string;
@@ -49,6 +49,8 @@ type ResearchMainCardProps = {
   onUploadInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onQueryChange: (value: string) => void;
   onSelectTier: (tier: ResearchTier) => void;
+  selectedResearchMode: ResearchExecutionMode;
+  onSelectResearchMode: (mode: ResearchExecutionMode) => void;
 
   lastQuery: string;
   result: ResearchResult | null;
@@ -66,6 +68,8 @@ export function ResearchMainCard({
   onUploadInputChange,
   onQueryChange,
   onSelectTier,
+  selectedResearchMode,
+  onSelectResearchMode,
   lastQuery,
   result,
   showDebugHints,
@@ -103,8 +107,9 @@ export function ResearchMainCard({
                 <button
                   type="button"
                   onClick={() => onSelectTier("tier1")}
+                  disabled={isSubmitting}
                   className={[
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier1"
                       ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
                       : "text-slate-600 dark:text-slate-300"
@@ -115,8 +120,9 @@ export function ResearchMainCard({
                 <button
                   type="button"
                   onClick={() => onSelectTier("tier2")}
+                  disabled={isSubmitting}
                   className={[
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier2"
                       ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
                       : "text-slate-600 dark:text-slate-300"
@@ -125,6 +131,38 @@ export function ResearchMainCard({
                   Chuyên sâu
                 </button>
               </fieldset>
+
+              {selectedTier === "tier2" ? (
+                <fieldset className="inline-flex rounded-full border border-sky-300 bg-sky-50 p-1 dark:border-sky-700 dark:bg-sky-950/30">
+                  <legend className="sr-only">Chọn mức research</legend>
+                  <button
+                    type="button"
+                    onClick={() => onSelectResearchMode("fast")}
+                    disabled={isSubmitting}
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                      selectedResearchMode === "fast"
+                        ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                        : "text-sky-700 dark:text-sky-300"
+                    ].join(" ")}
+                  >
+                    Fast research
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectResearchMode("deep")}
+                    disabled={isSubmitting}
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                      selectedResearchMode === "deep"
+                        ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                        : "text-sky-700 dark:text-sky-300"
+                    ].join(" ")}
+                  >
+                    Deep research
+                  </button>
+                </fieldset>
+              ) : null}
             </div>
 
             <button
@@ -159,7 +197,9 @@ export function ResearchMainCard({
           <article className="rounded-3xl border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm text-sky-800 dark:border-sky-700 dark:bg-sky-950/30 dark:text-sky-200">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
-              CLARA đang tổng hợp phản hồi và cập nhật timeline xử lý...
+              {selectedTier === "tier2"
+                ? `Server đang xử lý research mode: ${selectedResearchMode.toUpperCase()}. Timeline sẽ cập nhật theo flow thật từ backend.`
+                : "CLARA đang tổng hợp trả lời nhanh..."}
             </span>
           </article>
         ) : null}

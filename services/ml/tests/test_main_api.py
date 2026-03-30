@@ -221,7 +221,97 @@ def test_research_tier2_returns_progressive_schema():
     assert isinstance(body["metadata"].get("planner_trace"), dict)
     assert isinstance(body["metadata"].get("retrieval_trace"), dict)
     assert isinstance(body["metadata"].get("verifier_trace"), dict)
+    assert isinstance(body["telemetry"].get("search_plan"), dict)
+    assert isinstance(body["telemetry"].get("index_summary"), dict)
+    assert isinstance(body["telemetry"].get("source_attempts"), list)
     assert body["metadata"]["verification_status"]["verdict"] in {"pass", "warn", "fail"}
+    assert any(event.get("stage") == "evidence_search" for event in body["flow_events"])
+    assert any(event.get("stage") == "evidence_index" for event in body["flow_events"])
+
+
+def test_research_tier2_flow_search_index_events_precede_synthesis():
+    response = client.post(
+        "/v1/research/tier2",
+        json={
+            "query": "Compare evidence for aspirin + ibuprofen bleeding risk in older adults.",
+            "research_mode": "deep",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    events = body.get("flow_events", [])
+    assert isinstance(events, list)
+    assert len(events) > 0
+
+    synthesis_indices = [
+        idx
+        for idx, event in enumerate(events)
+        if str(event.get("stage", "")).strip().lower() == "answer_synthesis"
+    ]
+    assert synthesis_indices, "Missing answer_synthesis event in tier2 flow."
+    first_synthesis_index = synthesis_indices[0]
+
+    retrieval_like_indices = [
+        idx
+        for idx, event in enumerate(events)
+        if any(
+            token in str(event.get("stage", "")).strip().lower()
+            for token in ("search", "retrieval", "index")
+        )
+    ]
+    assert retrieval_like_indices, "Missing retrieval/search/index events in tier2 flow."
+    assert max(retrieval_like_indices) < first_synthesis_index
+
+
+def test_research_tier2_deep_mode_returns_multi_pass_telemetry():
+    response = client.post(
+        "/v1/research/tier2",
+        json={
+            "query": "Compare evidence for aspirin + ibuprofen bleeding risk in older adults.",
+            "research_mode": "deep",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["research_mode"] == "deep"
+    assert body["metadata"]["research_mode"] == "deep"
+    assert body["metadata"]["pipeline"] == "p2-research-tier2-deep-v1"
+    assert body["deep_pass_count"] >= 1
+    assert body["metadata"]["deep_pass_count"] >= 1
+    assert body["telemetry"]["scores"]["deep_pass_count"] >= 1
+    assert any(
+        event.get("stage") == "deep_research" and event.get("status") == "completed"
+        for event in body.get("flow_events", [])
+    )
+    assert any(
+        event.get("stage") == "deep_retrieval_pass" and event.get("status") == "completed"
+        for event in body.get("flow_events", [])
+    )
+    assert any(
+        event.get("stage") == "deep_retrieval_pass"
+        and event.get("status") == "completed"
+        and isinstance(event.get("payload"), dict)
+        and "docs_found" in event["payload"]
+        and "source_errors" in event["payload"]
+        for event in body.get("flow_events", [])
+    )
+    source_attempts = body["telemetry"].get("source_attempts")
+    if source_attempts is None:
+        source_attempts = body["telemetry"].get("deep_pass_summaries")
+    assert isinstance(source_attempts, list)
+    assert len(source_attempts) >= 1
+
+    index_summary = body["telemetry"].get("index_summary")
+    if index_summary is None:
+        retrieval_trace = body.get("retrieval_trace", {})
+        index_summary = {
+            "retrieved_count": retrieval_trace.get("retrieved_count"),
+            "source_counts": retrieval_trace.get("source_counts"),
+        }
+    assert isinstance(index_summary, dict)
+    assert "retrieved_count" in index_summary
+    assert "source_counts" in index_summary
 
 
 def test_careguard_analyze_returns_risk_and_alerts():

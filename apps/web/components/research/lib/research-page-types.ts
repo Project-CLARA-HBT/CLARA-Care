@@ -20,4 +20,8 @@ export type ConversationItem = {
   createdAt: number;
 };
 
-export type FlowVisibilityMode = "idle" | "flow-events" | "metadata-stages" | "local-fallback";
+export type FlowVisibilityMode =
+  | "idle"
+  | "flow-events"
+  | "metadata-stages"
+  | "local-fallback";
