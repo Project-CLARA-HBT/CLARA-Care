@@ -33,6 +33,11 @@ Tiêu chí hoàn thành:
 - [x] Có tài liệu contract thống nhất, không mâu thuẫn giữa API/ML/Web.
 - [x] Có quy ước tương thích ngược (`attribution` singular -> `attributions` canonical).
 
+Cập nhật triển khai thực tế (30/03/2026 - buổi tối):
+- [x] Nâng cấp landing page theo hướng hiện đại hơn với motif y tế + kết nối dữ liệu (`clara-medical-visual`, `clara-data-orbit`), thay icon/nhấn thị giác thay cho emoji.
+- [x] Sửa lỗi giao diện: tăng line-height/letter-spacing cho tiêu đề lớn, dọn duplicate CSS selector gây override khó kiểm soát, sửa tương phản vùng sáng khi dark mode.
+- [x] Deploy frontend lên server `36.50.26.18` (docker compose rebuild service `web`), kiểm tra container chạy ổn và `HTTP 200` tại `http://127.0.0.1:3100/`.
+
 ## Ngày 2 (31/03/2026) - Migration DB + Model Consent
 Mục tiêu: Có lưu vết consent dạng persistent.
 - [ ] Tạo migration mới: `20260330_0004_consent_audit_medication_update.py`.

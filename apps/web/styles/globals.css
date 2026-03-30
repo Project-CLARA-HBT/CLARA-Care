@@ -378,16 +378,16 @@ html[data-theme="dark"] .text-slate-500 {
 .clara-display-title {
   font-family: var(--font-display);
   font-size: clamp(2.9rem, 11.2vw, 9rem);
-  line-height: 0.86;
-  letter-spacing: -0.018em;
+  line-height: 0.97;
+  letter-spacing: -0.006em;
   text-wrap: balance;
 }
 
 .clara-sub-display {
   font-family: var(--font-display);
   font-size: clamp(2rem, 6.4vw, 5.85rem);
-  line-height: 0.9;
-  letter-spacing: -0.015em;
+  line-height: 1.03;
+  letter-spacing: -0.003em;
   text-wrap: balance;
 }
 
@@ -421,6 +421,344 @@ html[data-theme="dark"] .text-slate-500 {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     0 40px 90px -58px rgba(37, 99, 235, 0.94);
+}
+
+.clara-medical-band {
+  background:
+    radial-gradient(60rem 28rem at 12% 6%, rgba(37, 99, 235, 0.14), transparent 62%),
+    radial-gradient(52rem 24rem at 88% 0%, rgba(14, 165, 233, 0.16), transparent 58%),
+    linear-gradient(180deg, #eef4ff 0%, #e8f0ff 54%, #edf5ff 100%);
+}
+
+.clara-medical-band-soft {
+  background:
+    radial-gradient(56rem 30rem at 78% -8%, rgba(56, 189, 248, 0.16), transparent 60%),
+    radial-gradient(42rem 20rem at 16% 100%, rgba(37, 99, 235, 0.12), transparent 62%),
+    linear-gradient(180deg, #f2f7ff 0%, #eaf2ff 100%);
+}
+
+.clara-medical-panel,
+.clara-medical-card {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(240, 248, 255, 0.88)),
+    radial-gradient(120% 100% at 100% 0%, rgba(37, 99, 235, 0.12), transparent 55%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 24px 58px -42px rgba(37, 99, 235, 0.45);
+}
+
+.clara-med-heading {
+  color: #0b234a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.clara-med-copy {
+  color: #2c4b73;
+  max-width: 62ch;
+  margin-inline: auto;
+}
+
+.clara-med-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(186, 230, 253, 0.55));
+  color: #12407a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.clara-rating-pill {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.34), rgba(2, 6, 23, 0.46));
+  padding: 0.36rem 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(219, 234, 254, 0.95);
+}
+
+.clara-star-icon {
+  color: #67e8f9;
+  filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.35));
+}
+
+.clara-play-button {
+  isolation: isolate;
+}
+
+.clara-play-button::after {
+  content: "";
+  position: absolute;
+  inset: -0.65rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.35);
+  animation: clara-pulse-ring 2.2s ease-out infinite;
+  z-index: -1;
+}
+
+@keyframes clara-pulse-ring {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.98);
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.34);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.06);
+    box-shadow: 0 0 0 13px rgba(56, 189, 248, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+.clara-medical-bullet {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.clara-medical-bullet::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(56, 189, 248, 0.58);
+  background:
+    linear-gradient(90deg, transparent 42%, rgba(56, 189, 248, 0.92) 42%, rgba(56, 189, 248, 0.92) 58%, transparent 58%),
+    linear-gradient(180deg, transparent 42%, rgba(56, 189, 248, 0.92) 42%, rgba(56, 189, 248, 0.92) 58%, transparent 58%),
+    linear-gradient(145deg, rgba(8, 47, 122, 0.26), rgba(2, 132, 199, 0.12));
+  box-shadow: 0 0 0 4px rgba(186, 230, 253, 0.18);
+}
+
+.clara-medical-visual {
+  position: relative;
+  width: clamp(13rem, 28vw, 20rem);
+  aspect-ratio: 1;
+}
+
+.clara-med-core {
+  position: absolute;
+  inset: 21%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.92), rgba(125, 211, 252, 0.55) 35%, rgba(29, 78, 216, 0.86) 100%);
+  box-shadow:
+    inset -16px -14px 28px rgba(8, 47, 122, 0.45),
+    0 20px 40px -28px rgba(30, 64, 175, 0.85),
+    0 0 42px rgba(14, 165, 233, 0.4);
+}
+
+.clara-med-ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.52);
+}
+
+.clara-med-ring-a {
+  inset: 9%;
+  transform: rotate(10deg);
+}
+
+.clara-med-ring-b {
+  inset: 3%;
+  border-color: rgba(37, 99, 235, 0.34);
+  transform: rotate(-16deg);
+}
+
+.clara-med-cross {
+  position: absolute;
+  top: 18%;
+  right: 11%;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(160deg, rgba(14, 116, 255, 0.96), rgba(8, 145, 178, 0.96));
+  box-shadow: 0 10px 24px -14px rgba(2, 132, 199, 0.86);
+}
+
+.clara-med-cross::before,
+.clara-med-cross::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.clara-med-cross::before {
+  top: 50%;
+  left: 24%;
+  right: 24%;
+  height: 0.27rem;
+  transform: translateY(-50%);
+  border-radius: 999px;
+}
+
+.clara-med-cross::after {
+  left: 50%;
+  top: 24%;
+  bottom: 24%;
+  width: 0.27rem;
+  transform: translateX(-50%);
+  border-radius: 999px;
+}
+
+.clara-med-node {
+  position: absolute;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: #0ea5e9;
+  box-shadow: 0 0 0 5px rgba(186, 230, 253, 0.4);
+}
+
+.clara-med-node-a {
+  left: 8%;
+  top: 39%;
+}
+
+.clara-med-node-b {
+  right: 6%;
+  top: 45%;
+}
+
+.clara-med-node-c {
+  left: 24%;
+  bottom: 6%;
+}
+
+.clara-med-node-d {
+  right: 20%;
+  bottom: 11%;
+}
+
+.clara-data-orbit {
+  position: relative;
+  width: clamp(5.6rem, 14vw, 7.4rem);
+  aspect-ratio: 1;
+}
+
+.clara-data-orbit-core {
+  position: absolute;
+  inset: 24%;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.92), rgba(96, 165, 250, 0.94) 70%, rgba(30, 64, 175, 0.98));
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.52);
+}
+
+.clara-data-orbit-link {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42%;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.88));
+}
+
+.clara-data-orbit-link::after {
+  content: "";
+  position: absolute;
+  right: -0.35rem;
+  top: 50%;
+  width: 0.66rem;
+  height: 0.66rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: #0284c7;
+  box-shadow: 0 0 0 5px rgba(186, 230, 253, 0.42);
+}
+
+.clara-data-orbit-link-a {
+  transform: translate(-50%, -50%) rotate(20deg);
+}
+
+.clara-data-orbit-link-b {
+  transform: translate(-50%, -50%) rotate(138deg);
+}
+
+.clara-data-orbit-link-c {
+  transform: translate(-50%, -50%) rotate(264deg);
+}
+
+html.dark .clara-medical-band,
+html.dark .clara-medical-band-soft,
+html[data-theme="dark"] .clara-medical-band,
+html[data-theme="dark"] .clara-medical-band-soft {
+  color: #0f172a;
+}
+
+html.dark .clara-medical-panel,
+html.dark .clara-medical-card,
+html[data-theme="dark"] .clara-medical-panel,
+html[data-theme="dark"] .clara-medical-card {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(240, 248, 255, 0.88)),
+    radial-gradient(120% 100% at 100% 0%, rgba(37, 99, 235, 0.12), transparent 55%);
+}
+
+html.dark .clara-medical-band .text-slate-900,
+html.dark .clara-medical-band-soft .text-slate-900,
+html[data-theme="dark"] .clara-medical-band .text-slate-900,
+html[data-theme="dark"] .clara-medical-band-soft .text-slate-900 {
+  color: #0f172a !important;
+}
+
+html.dark .clara-medical-band .text-slate-800,
+html.dark .clara-medical-band-soft .text-slate-800,
+html[data-theme="dark"] .clara-medical-band .text-slate-800,
+html[data-theme="dark"] .clara-medical-band-soft .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html.dark .clara-medical-band .text-slate-700,
+html.dark .clara-medical-band-soft .text-slate-700,
+html[data-theme="dark"] .clara-medical-band .text-slate-700,
+html[data-theme="dark"] .clara-medical-band-soft .text-slate-700 {
+  color: #334155 !important;
+}
+
+html.dark .clara-medical-band .text-slate-600,
+html.dark .clara-medical-band-soft .text-slate-600,
+html[data-theme="dark"] .clara-medical-band .text-slate-600,
+html[data-theme="dark"] .clara-medical-band-soft .text-slate-600 {
+  color: #475569 !important;
+}
+
+html.dark .clara-medical-band .text-slate-500,
+html.dark .clara-medical-band-soft .text-slate-500,
+html[data-theme="dark"] .clara-medical-band .text-slate-500,
+html[data-theme="dark"] .clara-medical-band-soft .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.dark .clara-medical-band .bg-white,
+html.dark .clara-medical-band-soft .bg-white,
+html[data-theme="dark"] .clara-medical-band .bg-white,
+html[data-theme="dark"] .clara-medical-band-soft .bg-white {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark .clara-medical-band .bg-slate-50,
+html.dark .clara-medical-band-soft .bg-slate-50,
+html[data-theme="dark"] .clara-medical-band .bg-slate-50,
+html[data-theme="dark"] .clara-medical-band-soft .bg-slate-50 {
+  background-color: #f8fafc !important;
 }
 
 .clara-section,
@@ -472,6 +810,11 @@ html[data-theme="dark"] .text-slate-500 {
 }
 
 @media (max-width: 640px) {
+  .clara-rating-pill {
+    font-size: 0.76rem;
+    padding: 0.32rem 0.65rem;
+  }
+
   .clara-grid-overlay {
     background-size: 26px 26px;
   }
@@ -482,12 +825,12 @@ html[data-theme="dark"] .text-slate-500 {
 
   .clara-display-title {
     font-size: clamp(2.4rem, 14.5vw, 4.2rem);
-    line-height: 0.88;
+    line-height: 1;
   }
 
   .clara-sub-display {
     font-size: clamp(1.8rem, 11vw, 3.1rem);
-    line-height: 0.92;
+    line-height: 1.04;
   }
 
   .clara-copy-rhythm {
