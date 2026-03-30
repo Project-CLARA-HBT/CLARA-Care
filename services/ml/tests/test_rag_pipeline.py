@@ -1,6 +1,7 @@
 from clara_ml.llm.deepseek_client import DeepSeekResponse
 from clara_ml.rag.langchain_adapter import build_prompt
 from clara_ml.rag.pipeline import RagPipelineP0
+from clara_ml.rag.retriever import Document
 
 
 def test_rag_pipeline_returns_sources_and_answer():
@@ -40,6 +41,38 @@ class _SuccessfulClient:
         return DeepSeekResponse(content="provider-answer", model="deepseek-v3.2")
 
 
+class _ExternalFailureRetriever:
+    def retrieve_internal(
+        self,
+        query: str,
+        top_k: int = 3,
+        *,
+        file_retrieval_enabled: bool = True,
+        rag_sources: object = None,
+        uploaded_documents: object = None,
+    ) -> list[Document]:
+        return [
+            Document(
+                id="internal-1",
+                text="Warfarin can interact with NSAIDs and increase bleeding risk.",
+                metadata={"source": "internal", "url": "", "score": 0.0},
+            )
+        ]
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 3,
+        *,
+        scientific_retrieval_enabled: bool = False,
+        web_retrieval_enabled: bool = False,
+        file_retrieval_enabled: bool = True,
+        rag_sources: object = None,
+        uploaded_documents: object = None,
+    ) -> list[Document]:
+        raise TimeoutError("external connectors busy")
+
+
 def test_rag_pipeline_uses_provider_when_key_exists():
     pipe = RagPipelineP0(
         deepseek_api_key="test-key",
@@ -58,3 +91,24 @@ def test_rag_pipeline_fallback_when_deepseek_fails():
     result = pipe.run("canh bao tuong tac nsaid")
     assert result.model_used == "local-synth-v1"
     assert "Sources=[" in result.answer
+
+
+def test_rag_pipeline_survives_external_retrieval_exception():
+    pipe = RagPipelineP0(
+        deepseek_api_key="test-key",
+        llm_client=_SuccessfulClient(),
+        retriever=_ExternalFailureRetriever(),
+    )
+    result = pipe.run(
+        "canh bao warfarin va ibuprofen",
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=False,
+        file_retrieval_enabled=True,
+    )
+
+    assert result.answer == "provider-answer"
+    assert result.model_used == "deepseek-v3.2"
+    assert any(
+        event.get("stage") == "external_scientific_retrieval" and event.get("status") == "error"
+        for event in result.flow_events
+    )

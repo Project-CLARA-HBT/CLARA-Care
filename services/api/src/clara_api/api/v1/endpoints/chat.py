@@ -20,6 +20,12 @@ class ChatRequest(BaseModel):
     message: str
 
 
+_SAFE_MODE_NOTICE = (
+    "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
+    "Tạm thời dùng chế độ an toàn để phản hồi nhanh."
+)
+
+
 def _normalize_citation_rows(citations_payload: Any) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     if not isinstance(citations_payload, list):
@@ -102,6 +108,59 @@ def _safe_chat_fallback(message: str, role: str, reason: str) -> dict[str, Any]:
     }
 
 
+def _decorate_safe_mode_answer(answer: str) -> str:
+    cleaned = answer.strip()
+    if not cleaned:
+        return _SAFE_MODE_NOTICE
+    return f"{_SAFE_MODE_NOTICE}\n\n{cleaned}"
+
+
+def _post_to_ml(url: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
+    response = httpx.post(url, json=payload, timeout=timeout_seconds)
+    if response.status_code >= 500:
+        raise httpx.HTTPStatusError(
+            f"ML upstream 5xx: {response.status_code}",
+            request=response.request,
+            response=response,
+        )
+    if response.status_code >= 400:
+        raise httpx.HTTPStatusError(
+            f"ML upstream 4xx: {response.status_code}",
+            request=response.request,
+            response=response,
+        )
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ValueError("ml_unexpected_payload")
+    return data
+
+
+def _safe_mode_payload(
+    message: str,
+    role: str,
+    rag_flow: RagFlowConfig,
+    rag_sources: list[dict[str, Any]],
+) -> dict[str, Any]:
+    base_flow = rag_flow.model_dump()
+    base_flow.update(
+        {
+            "verification_enabled": False,
+            "deepseek_fallback_enabled": True,
+            "scientific_retrieval_enabled": False,
+            "web_retrieval_enabled": False,
+            "file_retrieval_enabled": True,
+            # Force low-context branch to avoid waiting for heavy retrieval branches.
+            "low_context_threshold": 1.0,
+        }
+    )
+    return {
+        "query": message,
+        "role": role,
+        "rag_flow": base_flow,
+        "rag_sources": rag_sources,
+    }
+
+
 def _call_ml_service(
     message: str,
     role: str,
@@ -116,32 +175,62 @@ def _call_ml_service(
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
     }
+    safe_mode_timeout = max(3.0, min(settings.ml_service_timeout_seconds, 12.0))
 
+    primary_reason = ""
     try:
-        response = httpx.post(
-            url, json=request_payload, timeout=settings.ml_service_timeout_seconds
-        )
+        data = _post_to_ml(url, request_payload, settings.ml_service_timeout_seconds)
+        return data
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-        return _safe_chat_fallback(message, role, reason=f"ml_unavailable:{exc.__class__.__name__}")
+        primary_reason = f"ml_unavailable:{exc.__class__.__name__}"
     except httpx.HTTPError as exc:
-        return _safe_chat_fallback(message, role, reason=f"ml_http_error:{exc.__class__.__name__}")
-
-    if response.status_code >= 500:
-        return _safe_chat_fallback(message, role, reason=f"ml_upstream_5xx:{response.status_code}")
-    if response.status_code >= 400:
-        return _safe_chat_fallback(message, role, reason=f"ml_upstream_4xx:{response.status_code}")
-
-    try:
-        data = response.json()
+        status = exc.response.status_code if exc.response is not None else None
+        if status is None:
+            primary_reason = f"ml_http_error:{exc.__class__.__name__}"
+        elif status >= 500:
+            primary_reason = f"ml_upstream_5xx:{status}"
+        else:
+            primary_reason = f"ml_upstream_4xx:{status}"
     except ValueError as exc:
-        return _safe_chat_fallback(
-            message, role, reason=f"ml_invalid_json:{exc.__class__.__name__}"
+        primary_reason = f"ml_invalid_json:{exc.__class__.__name__}"
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        primary_reason = f"ml_unexpected_exception:{exc.__class__.__name__}"
+
+    safe_mode_reason = ""
+    try:
+        safe_mode_data = _post_to_ml(
+            url,
+            _safe_mode_payload(message, role, rag_flow, rag_sources),
+            safe_mode_timeout,
         )
+        answer = safe_mode_data.get("answer")
+        if isinstance(answer, str):
+            safe_mode_data["answer"] = _decorate_safe_mode_answer(answer)
+        safe_mode_data["safe_mode_used"] = True
+        safe_mode_data["fallback_reason"] = f"{primary_reason};safe_mode_recovered"
+        model_used = safe_mode_data.get("model_used")
+        if not isinstance(model_used, str) or not model_used.strip():
+            safe_mode_data["model_used"] = "deepseek-v3.2-safe-mode"
+        return safe_mode_data
+    except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
+        safe_mode_reason = f"safe_mode_unavailable:{exc.__class__.__name__}"
+    except httpx.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else None
+        if status is None:
+            safe_mode_reason = f"safe_mode_http_error:{exc.__class__.__name__}"
+        elif status >= 500:
+            safe_mode_reason = f"safe_mode_upstream_5xx:{status}"
+        else:
+            safe_mode_reason = f"safe_mode_upstream_4xx:{status}"
+    except ValueError as exc:
+        safe_mode_reason = f"safe_mode_invalid_json:{exc.__class__.__name__}"
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        safe_mode_reason = f"safe_mode_unexpected_exception:{exc.__class__.__name__}"
 
-    if not isinstance(data, dict):
-        return _safe_chat_fallback(message, role, reason="ml_unexpected_payload")
-
-    return data
+    composed_reason = primary_reason
+    if safe_mode_reason:
+        composed_reason = f"{primary_reason};{safe_mode_reason}"
+    return _safe_chat_fallback(message, role, reason=composed_reason)
 
 
 @router.post("/")

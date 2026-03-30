@@ -272,23 +272,37 @@ class RagPipelineP1:
                     note="Low context detected; expanding retrieval via external medical connectors.",
                 )
             )
-            docs = self.retriever.retrieve(
-                query,
-                scientific_retrieval_enabled=True,
-                web_retrieval_enabled=web_retrieval_enabled,
-                file_retrieval_enabled=file_retrieval_enabled,
-                rag_sources=rag_sources,
-                uploaded_documents=uploaded_documents,
-            )
-            relevance_score = self._context_relevance(query, docs)
-            flow_events.append(
-                self._flow_event(
-                    stage="external_scientific_retrieval",
-                    status="completed",
-                    docs=docs,
-                    note=f"External retrieval merged; {len(docs)} document(s) retained after re-ranking.",
+            try:
+                docs = self.retriever.retrieve(
+                    query,
+                    scientific_retrieval_enabled=True,
+                    web_retrieval_enabled=web_retrieval_enabled,
+                    file_retrieval_enabled=file_retrieval_enabled,
+                    rag_sources=rag_sources,
+                    uploaded_documents=uploaded_documents,
                 )
-            )
+                relevance_score = self._context_relevance(query, docs)
+                flow_events.append(
+                    self._flow_event(
+                        stage="external_scientific_retrieval",
+                        status="completed",
+                        docs=docs,
+                        note=f"External retrieval merged; {len(docs)} document(s) retained after re-ranking.",
+                    )
+                )
+            except Exception as exc:
+                used_stages.append("external_scientific_retrieval_error")
+                flow_events.append(
+                    self._flow_event(
+                        stage="external_scientific_retrieval",
+                        status="error",
+                        docs=docs,
+                        note=(
+                            "External retrieval failed; falling back to available context. "
+                            f"error={exc.__class__.__name__}"
+                        ),
+                    )
+                )
 
         has_relevant_context = relevance_score >= threshold
         ids = [d.id for d in docs]

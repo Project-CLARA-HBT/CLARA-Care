@@ -143,6 +143,46 @@ def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
     assert "không có thẩm quyền kê đơn" in body["answer"].lower()
 
 
+def test_routed_chat_infer_recovers_with_degraded_mode(monkeypatch: pytest.MonkeyPatch):
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+
+    original_run = rag_pipeline.run
+    state = {"calls": 0}
+
+    def _flaky_run(*args, **kwargs):
+        state["calls"] += 1
+        if state["calls"] == 1:
+            raise TimeoutError("external retrieval timeout")
+        return RagResult(
+            query=str(args[0]) if args else "query",
+            retrieved_ids=["internal-1"],
+            answer="degraded-answer",
+            model_used="deepseek-v3.2",
+            retrieved_context=[],
+            context_debug={},
+            flow_events=[],
+        )
+
+    monkeypatch.setattr(rag_pipeline, "run", _flaky_run)
+    try:
+        response = client.post(
+            "/v1/chat/routed",
+            json={"query": "toi bi dau da day khi dung warfarin"},
+        )
+    finally:
+        monkeypatch.setattr(rag_pipeline, "run", original_run)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == "degraded-answer"
+    assert body["model_used"] == "deepseek-v3.2"
+    assert any(
+        event.get("stage") == "degraded_recovery" and event.get("status") == "completed"
+        for event in body["flow_events"]
+    )
+
+
 def test_research_tier2_returns_progressive_schema():
     response = client.post(
         "/v1/research/tier2",

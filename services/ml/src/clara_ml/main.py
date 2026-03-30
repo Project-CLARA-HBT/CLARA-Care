@@ -294,16 +294,32 @@ def routed_chat_infer(payload: dict) -> dict:
         route.intent = default_by_role.get(route.role, "symptom_triage")
         route.confidence = min(route.confidence, 0.6)
 
-    rag_result = rag_pipeline.run(
-        pii.redacted_text,
-        low_context_threshold=low_context_threshold,
-        deepseek_fallback_enabled=deepseek_fallback_enabled,
-        scientific_retrieval_enabled=scientific_retrieval_enabled,
-        web_retrieval_enabled=web_retrieval_enabled,
-        file_retrieval_enabled=file_retrieval_enabled,
-        rag_sources=rag_sources,
-        uploaded_documents=uploaded_documents,
-    )
+    degraded_mode = False
+    degraded_reason = ""
+    try:
+        rag_result = rag_pipeline.run(
+            pii.redacted_text,
+            low_context_threshold=low_context_threshold,
+            deepseek_fallback_enabled=deepseek_fallback_enabled,
+            scientific_retrieval_enabled=scientific_retrieval_enabled,
+            web_retrieval_enabled=web_retrieval_enabled,
+            file_retrieval_enabled=file_retrieval_enabled,
+            rag_sources=rag_sources,
+            uploaded_documents=uploaded_documents,
+        )
+    except Exception as exc:
+        degraded_mode = True
+        degraded_reason = exc.__class__.__name__
+        rag_result = rag_pipeline.run(
+            pii.redacted_text,
+            low_context_threshold=low_context_threshold,
+            deepseek_fallback_enabled=True,
+            scientific_retrieval_enabled=False,
+            web_retrieval_enabled=False,
+            file_retrieval_enabled=file_retrieval_enabled,
+            rag_sources=rag_sources,
+            uploaded_documents=uploaded_documents,
+        )
     factcheck = (
         run_fides_lite(answer=rag_result.answer, retrieved_context=rag_result.retrieved_context)
         if verification_enabled
@@ -318,6 +334,18 @@ def routed_chat_infer(payload: dict) -> dict:
         )
 
     flow_events = list(rag_result.flow_events)
+    if degraded_mode:
+        flow_events.append(
+            _flow_event(
+                stage="degraded_recovery",
+                status="completed",
+                source_count=len(rag_result.retrieved_ids),
+                note=(
+                    "Recovered from routed pipeline error by disabling external retrieval "
+                    f"and verification-heavy path. error={degraded_reason}"
+                ),
+            )
+        )
     if verification_enabled:
         if factcheck is not None:
             flow_events.append(
