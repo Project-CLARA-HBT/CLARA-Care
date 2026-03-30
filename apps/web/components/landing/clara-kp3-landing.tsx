@@ -89,21 +89,22 @@ export default function ClaraKp3Landing() {
   return (
     <main className="clara-shell relative overflow-hidden text-slate-100">
       <div className="clara-grid-overlay pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+      <div className="clara-ambient-layers pointer-events-none absolute inset-0" aria-hidden="true" />
 
       <SectionContainer className="relative z-10 pt-6">
-        <header className="z-30 flex flex-col gap-3 rounded-2xl border border-blue-400/25 bg-[#07122a]/82 px-4 py-3 backdrop-blur min-[641px]:max-[1024px]:flex-row min-[641px]:max-[1024px]:items-center min-[641px]:max-[1024px]:justify-between min-[1025px]:max-[1535px]:flex-row min-[1025px]:max-[1535px]:items-center min-[1025px]:max-[1535px]:justify-between min-[1025px]:max-[1535px]:px-6 min-[1025px]:max-[1535px]:py-4 min-[1536px]:flex-row min-[1536px]:items-center min-[1536px]:justify-between min-[1536px]:px-8 min-[1536px]:py-5">
+        <header className="clara-nav-frame z-30 flex flex-col gap-3 rounded-2xl border border-blue-400/25 bg-[#07122a]/82 px-4 py-3 backdrop-blur min-[641px]:max-[1024px]:flex-row min-[641px]:max-[1024px]:items-center min-[641px]:max-[1024px]:justify-between min-[1025px]:max-[1535px]:flex-row min-[1025px]:max-[1535px]:items-center min-[1025px]:max-[1535px]:justify-between min-[1025px]:max-[1535px]:px-6 min-[1025px]:max-[1535px]:py-4 min-[1536px]:flex-row min-[1536px]:items-center min-[1536px]:justify-between min-[1536px]:px-8 min-[1536px]:py-5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200">CLARA.CARE</p>
             <p className="text-sm text-slate-300">Clinical Agent for Retrieval & Analysis</p>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 text-xs font-semibold min-[641px]:max-[1024px]:w-auto min-[641px]:max-[1024px]:text-sm min-[1025px]:max-[1535px]:w-auto min-[1025px]:max-[1535px]:gap-3 min-[1025px]:max-[1535px]:text-sm min-[1536px]:w-auto min-[1536px]:gap-4">
-            <Link href="/huong-dan" className="rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
+            <Link href="/huong-dan" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
               Hướng dẫn
             </Link>
-            <Link href="/research" className="rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
+            <Link href="/research" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
               CLARA Research
             </Link>
-            <Link href="/selfmed" className="rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
+            <Link href="/selfmed" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
               CLARA Self-Med
             </Link>
             <NeonButton href="/register">Bắt đầu miễn phí</NeonButton>
@@ -113,6 +114,14 @@ export default function ClaraKp3Landing() {
 
       <SectionContainer className="relative z-10 mt-5 pb-12 min-[641px]:max-[1024px]:mt-8 min-[641px]:max-[1024px]:pb-16 min-[1025px]:max-[1535px]:mt-10 min-[1025px]:max-[1535px]:pb-24 min-[1536px]:mt-12 min-[1536px]:pb-28">
         <article className="clara-wave-top clara-hero-panel relative overflow-hidden rounded-[1.5rem] border border-blue-300/20 px-4 py-8 min-[641px]:max-[1024px]:rounded-[2rem] min-[641px]:max-[1024px]:px-8 min-[641px]:max-[1024px]:py-14 min-[1025px]:max-[1535px]:px-12 min-[1025px]:max-[1535px]:py-20 min-[1536px]:rounded-[2.5rem] min-[1536px]:px-16 min-[1536px]:py-24">
+          <div className="clara-hero-constellation" aria-hidden="true">
+            <span className="clara-const-node clara-const-node-a" />
+            <span className="clara-const-node clara-const-node-b" />
+            <span className="clara-const-node clara-const-node-c" />
+            <span className="clara-const-node clara-const-node-d" />
+            <span className="clara-const-link clara-const-link-a" />
+            <span className="clara-const-link clara-const-link-b" />
+          </div>
           <div className="mx-auto max-w-5xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-200">Hệ sinh thái AI y tế có kiểm soát</p>
             <h1 className="clara-display-title mt-4 text-[2.6rem] font-black uppercase text-white min-[641px]:max-[1024px]:text-[4.8rem] min-[1025px]:max-[1535px]:text-[6.7rem] min-[1536px]:text-[8.4rem]">
@@ -141,7 +150,7 @@ export default function ClaraKp3Landing() {
 
           <div className="mt-10 grid gap-3 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4 min-[1536px]:gap-5">
             {HERO_METRICS.map((item) => (
-              <div key={item.label} className="clara-kpi-card rounded-2xl border border-blue-300/25 bg-[#091431]/88 p-4 text-left min-h-[116px] min-[641px]:max-[1024px]:min-h-[138px] min-[1025px]:max-[1535px]:min-h-[152px] min-[1536px]:min-h-[168px] md:p-5">
+              <div key={item.label} className="clara-kpi-card clara-glass-panel rounded-2xl border border-blue-300/25 bg-[#091431]/88 p-4 text-left min-h-[116px] min-[641px]:max-[1024px]:min-h-[138px] min-[1025px]:max-[1535px]:min-h-[152px] min-[1536px]:min-h-[168px] md:p-5">
                 <p className="text-3xl font-black text-white">{item.value}</p>
                 <p className="mt-2 text-sm leading-6 text-blue-100/90">{item.label}</p>
               </div>
@@ -268,19 +277,19 @@ export default function ClaraKp3Landing() {
             </p>
 
             <div className="mt-8 grid gap-3 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
-              <div className="clara-stat-card rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
+              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
                 <p className="text-sm text-blue-200">Citation Coverage</p>
                 <p className="mt-2 text-5xl font-black text-white">90%+</p>
               </div>
-              <div className="clara-stat-card rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
+              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
                 <p className="text-sm text-blue-200">DDI Critical Detection</p>
                 <p className="mt-2 text-5xl font-black text-white">Realtime</p>
               </div>
-              <div className="clara-stat-card rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
+              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
                 <p className="text-sm text-blue-200">Control Tower</p>
                 <p className="mt-2 text-5xl font-black text-white">Audit</p>
               </div>
-              <div className="clara-stat-card rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
+              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
                 <p className="text-sm text-blue-200">Data Privacy</p>
                 <p className="mt-2 text-5xl font-black text-white">PII/PHI</p>
               </div>
@@ -449,7 +458,7 @@ export default function ClaraKp3Landing() {
           </h2>
           <div className="mt-8 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
             {OFFICES.map((office) => (
-              <article key={office.city} className="flex h-full min-h-[180px] flex-col rounded-3xl border border-blue-300/20 bg-[#081833]/90 p-5 text-center min-[641px]:max-[1024px]:min-h-[210px] min-[1025px]:max-[1535px]:min-h-[240px] min-[1536px]:min-h-[260px]">
+              <article key={office.city} className="clara-glass-panel flex h-full min-h-[180px] flex-col rounded-3xl border border-blue-300/20 bg-[#081833]/90 p-5 text-center min-[641px]:max-[1024px]:min-h-[210px] min-[1025px]:max-[1535px]:min-h-[240px] min-[1536px]:min-h-[260px]">
                 <p className="text-3xl font-black text-blue-200">{office.city}</p>
                 <p className="mt-3 flex-1 text-sm leading-7 text-slate-300">{office.detail}</p>
               </article>
