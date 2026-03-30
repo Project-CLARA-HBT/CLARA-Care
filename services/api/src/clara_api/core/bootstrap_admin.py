@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.core.config import Settings
 from clara_api.core.passwords import hash_password
 from clara_api.db.models import User
+
+logger = logging.getLogger(__name__)
+
+
+def _is_weak_bootstrap_password(password: str) -> bool:
+    weak_defaults = {"wrongpass", "change-me", "admin", "admin123", "password"}
+    if password in weak_defaults:
+        return True
+    if len(password) < 12:
+        return True
+    has_alpha = any(char.isalpha() for char in password)
+    has_digit = any(char.isdigit() for char in password)
+    return not (has_alpha and has_digit)
 
 
 def ensure_bootstrap_admin(db: Session, settings: Settings) -> None:
@@ -15,6 +29,11 @@ def ensure_bootstrap_admin(db: Session, settings: Settings) -> None:
     email = settings.auth_bootstrap_admin_email.strip().lower()
     password = settings.auth_bootstrap_admin_password
     if not email or "@" not in email or not password:
+        return
+    if settings.environment.lower() == "production" and _is_weak_bootstrap_password(password):
+        logger.warning(
+            "Skip bootstrap admin setup in production because bootstrap password is weak."
+        )
         return
 
     user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()

@@ -362,6 +362,7 @@ def login(
 
 @router.post("/refresh", response_model=LoginResponse)
 def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -> LoginResponse:
+    settings = get_settings()
     token_payload = decode_refresh_token(payload.refresh_token)
     session_token = _consume_refresh_session_token(db, raw_token=payload.refresh_token)
     if not session_token:
@@ -384,6 +385,11 @@ def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tài khoản đang bị khóa hoặc chưa sẵn sàng",
+        )
+    if settings.auth_require_email_verification and not user.is_email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email chưa được xác thực",
         )
 
     role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
