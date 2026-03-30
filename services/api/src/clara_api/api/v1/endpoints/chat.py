@@ -282,6 +282,27 @@ def chat_placeholder(
     rag_flow = control_tower.rag_flow
     rag_sources = [item.model_dump() for item in control_tower.rag_sources]
     ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
+    model_used = ml_response.get("model_used")
+    if isinstance(model_used, str) and model_used.startswith("local-synth"):
+        ml_response["upstream_model_used"] = model_used
+        if _is_general_greeting(payload.message):
+            ml_response["answer"] = (
+                "Chào bạn, CLARA đang sẵn sàng. "
+                "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc để mình hỗ trợ."
+            )
+            ml_response["model_used"] = "api-safe-smalltalk-v1"
+        else:
+            ml_response["answer"] = (
+                "Hệ thống đang ưu tiên chế độ an toàn do phản hồi từ mô hình nền chưa ổn định. "
+                "Bạn vui lòng thử lại sau ít phút. Nếu có dấu hiệu nặng hoặc bệnh nền, "
+                "hãy liên hệ bác sĩ/duợc sĩ ngay."
+            )
+            ml_response["model_used"] = "api-local-synth-guard-v1"
+        ml_response["safe_mode_used"] = True
+        ml_response["fallback_reason"] = str(
+            ml_response.get("fallback_reason") or "ml_local_synthesis_guard"
+        )
+
     if not isinstance(ml_response.get("citations"), list):
         ml_response["citations"] = []
 
