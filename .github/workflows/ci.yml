@@ -385,7 +385,18 @@ jobs:
 
       - name: Docker compose build smoke
         run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.app.yml build api ml web
+          attempt=1
+          max_attempts=3
+          until docker compose --env-file .env -f deploy/docker/docker-compose.app.yml build api ml web; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Docker compose smoke build failed after ${max_attempts} attempts."
+              exit 1
+            fi
+            sleep_seconds=$((attempt * 15))
+            echo "Retry docker compose build in ${sleep_seconds}s (attempt $((attempt + 1))/${max_attempts})..."
+            sleep "${sleep_seconds}"
+            attempt=$((attempt + 1))
+          done
 
       - name: Docker compose config validate
         run: |
