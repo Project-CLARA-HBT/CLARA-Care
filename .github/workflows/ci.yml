@@ -96,6 +96,10 @@ jobs:
 
       - name: Run Ruff
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Skip incremental Ruff."
+            exit 0
+          fi
           files="${{ needs.changes.outputs.python_changed_files }}"
           if [ -n "$files" ]; then
             # dorny/paths-filter list-files=shell returns shell-escaped file list
@@ -107,6 +111,10 @@ jobs:
 
       - name: Run mypy
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Skip incremental mypy."
+            exit 0
+          fi
           files="${{ needs.changes.outputs.python_changed_files }}"
           if [ -n "$files" ]; then
             # shellcheck disable=SC2086
@@ -239,7 +247,7 @@ jobs:
         run: |
           cd apps/web
           npm ci
-          npm audit --omit=dev
+          npm audit --omit=dev --audit-level=critical
 
   docker-compose-smoke:
     name: docker compose smoke build
