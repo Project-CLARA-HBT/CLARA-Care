@@ -125,6 +125,62 @@ print(f"careguard_sources={metadata.get('source_used')}")
 PY
 }
 
+smoke_auth() {
+  local api_url="http://127.0.0.1:8100/api/v1"
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "${tmp_dir}"' RETURN
+
+  local email="mobile-smoke-$(date +%s)@example.com"
+  local password="secret123"
+
+  curl -fsS -c "${tmp_dir}/cookies.txt" \
+    -X POST "${api_url}/auth/login" \
+    -H 'Content-Type: application/json' \
+    -d "{\"email\":\"${email}\",\"password\":\"${password}\"}" > "${tmp_dir}/login.json"
+
+  curl -fsS -b "${tmp_dir}/cookies.txt" \
+    "${api_url}/auth/me" > "${tmp_dir}/me.json"
+
+  curl -fsS -b "${tmp_dir}/cookies.txt" \
+    -X POST "${api_url}/auth/refresh" \
+    -H 'Content-Type: application/json' \
+    -d '{}' > "${tmp_dir}/refresh.json"
+
+  TMP_DIR="${tmp_dir}" python3 - <<'PY'
+import json
+import os
+import sys
+
+tmp_dir = os.environ["TMP_DIR"]
+with open(f"{tmp_dir}/login.json", "r", encoding="utf-8") as file_obj:
+    login_payload = json.load(file_obj)
+with open(f"{tmp_dir}/me.json", "r", encoding="utf-8") as file_obj:
+    me_payload = json.load(file_obj)
+with open(f"{tmp_dir}/refresh.json", "r", encoding="utf-8") as file_obj:
+    refresh_payload = json.load(file_obj)
+
+errors = []
+if not login_payload.get("access_token"):
+    errors.append("missing access_token from login")
+if not login_payload.get("refresh_token"):
+    errors.append("missing refresh_token from login")
+if not me_payload.get("subject"):
+    errors.append("auth/me did not resolve subject via cookie")
+if not refresh_payload.get("access_token"):
+    errors.append("refresh without body token did not issue access_token")
+
+if errors:
+    print("[smoke-auth] FAILED")
+    for item in errors:
+        print(f"- {item}")
+    sys.exit(1)
+
+print("[smoke-auth] OK")
+print(f"subject={me_payload.get('subject')}")
+PY
+}
+
 cd "${ROOT_DIR}"
 
 echo "[deploy] using env file: ${ENV_FILE}"
@@ -148,5 +204,6 @@ if [[ "${REQUIRE_DEEPSEEK}" == "true" ]]; then
 fi
 
 smoke_ml
+smoke_auth
 
 echo "[deploy] completed successfully"

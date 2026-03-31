@@ -64,7 +64,56 @@ def test_auth_me_returns_subject_and_role() -> None:
     assert payload["role"] == "researcher"
 
 
+def test_login_sets_auth_cookies_and_me_accepts_cookie() -> None:
+    email = "cookie-user@example.com"
+    login_response = client.post("/api/v1/auth/login", json={"email": email, "password": "secret"})
+    assert login_response.status_code == 200
+    set_cookie = login_response.headers.get("set-cookie", "")
+    assert "clara_access_token=" in set_cookie
+    assert "clara_refresh_token=" in set_cookie
+    assert "HttpOnly" in set_cookie
+
+    cookie_client = TestClient(app)
+    cookie_client.cookies.update(login_response.cookies)
+    me_response = cookie_client.get("/api/v1/auth/me")
+    assert me_response.status_code == 200
+    assert me_response.json()["subject"] == email
+
+
+def test_refresh_accepts_cookie_without_request_body() -> None:
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "cookie-refresh@example.com", "password": "secret"},
+    )
+    assert login_response.status_code == 200
+
+    cookie_client = TestClient(app)
+    cookie_client.cookies.update(login_response.cookies)
+    refresh_response = cookie_client.post("/api/v1/auth/refresh", json={})
+    assert refresh_response.status_code == 200
+    assert refresh_response.json()["access_token"]
+
+
+def test_logout_clears_auth_cookies() -> None:
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "cookie-logout@example.com", "password": "secret"},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    logout_response = client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert logout_response.status_code == 200
+    set_cookie = logout_response.headers.get("set-cookie", "")
+    assert "clara_access_token=\"\"" in set_cookie or "clara_access_token=;" in set_cookie
+    assert "clara_refresh_token=\"\"" in set_cookie or "clara_refresh_token=;" in set_cookie
+
+
 def test_auth_me_requires_token() -> None:
+    client.cookies.clear()
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401
 
@@ -129,6 +178,7 @@ def test_mobile_summary_success_by_role(
 
 
 def test_mobile_summary_requires_token() -> None:
+    client.cookies.clear()
     response = client.get("/api/v1/mobile/summary")
     assert response.status_code == 401
 

@@ -37,7 +37,15 @@ export default function LoginPage() {
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       setStoredRole(nextRole);
-      router.push("/dashboard");
+      const nextPath =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null;
+      if (nextPath && nextPath.startsWith("/")) {
+        router.push(nextPath);
+      } else {
+        router.push("/dashboard");
+      }
     } catch (submitError) {
       const fallbackMessage = "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
       if (submitError instanceof Error && submitError.message) {

@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from threading import Lock
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
@@ -18,8 +18,8 @@ from clara_api.core.consent import (
     get_latest_user_consent,
     required_medical_disclaimer_version,
 )
-from clara_api.core.passwords import hash_password, verify_password
 from clara_api.core.login_guard import login_guard
+from clara_api.core.passwords import hash_password, verify_password
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import (
     TokenPayload,
@@ -210,6 +210,79 @@ def _cleanup_auth_tokens(db: Session) -> None:
     db.commit()
 
 
+def _resolve_cookie_samesite(raw_value: str) -> str:
+    normalized = raw_value.strip().lower()
+    if normalized in {"lax", "strict", "none"}:
+        return normalized
+    return "lax"
+
+
+def _set_auth_cookies(
+    response: Response,
+    *,
+    access_token: str,
+    refresh_token: str,
+) -> None:
+    settings = get_settings()
+    secure = bool(settings.auth_cookie_secure)
+    same_site = _resolve_cookie_samesite(settings.auth_cookie_samesite)
+    domain = settings.auth_cookie_domain.strip() or None
+    path = settings.auth_cookie_path.strip() or "/"
+    response.set_cookie(
+        key=settings.auth_cookie_access_name,
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite=same_site,
+        domain=domain,
+        path=path,
+        max_age=int(settings.jwt_access_minutes * 60),
+    )
+    response.set_cookie(
+        key=settings.auth_cookie_refresh_name,
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite=same_site,
+        domain=domain,
+        path=path,
+        max_age=int(settings.jwt_refresh_minutes * 60),
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    settings = get_settings()
+    domain = settings.auth_cookie_domain.strip() or None
+    path = settings.auth_cookie_path.strip() or "/"
+    response.delete_cookie(
+        key=settings.auth_cookie_access_name,
+        domain=domain,
+        path=path,
+    )
+    response.delete_cookie(
+        key=settings.auth_cookie_refresh_name,
+        domain=domain,
+        path=path,
+    )
+
+
+def _extract_refresh_token(
+    *,
+    request: Request,
+    payload: RefreshTokenRequest | None,
+) -> str:
+    if payload and payload.refresh_token:
+        return payload.refresh_token
+    cookie_key = get_settings().auth_cookie_refresh_name
+    raw = request.cookies.get(cookie_key, "").strip()
+    if raw:
+        return raw
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Thiếu refresh token",
+    )
+
+
 def _extract_client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for", "").strip()
     if forwarded:
@@ -332,6 +405,7 @@ def verify_email(
 def login(
     payload: LoginRequest,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ) -> LoginResponse:
     _cleanup_auth_tokens(db)
@@ -392,6 +466,7 @@ def login(
 
     token = create_access_token(subject=user.email, role=user.role)
     refresh_token = _issue_refresh_session_token(db, user=user)
+    _set_auth_cookies(response, access_token=token, refresh_token=refresh_token)
     return LoginResponse(
         access_token=token,
         refresh_token=refresh_token,
@@ -400,12 +475,19 @@ def login(
 
 
 @router.post("/refresh", response_model=LoginResponse)
-def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -> LoginResponse:
+def refresh_token(
+    request: Request,
+    response: Response,
+    payload: RefreshTokenRequest | None = Body(default=None),
+    db: Session = Depends(get_db),
+) -> LoginResponse:
     _cleanup_auth_tokens(db)
     settings = get_settings()
-    token_payload = decode_refresh_token(payload.refresh_token)
-    session_token = _consume_refresh_session_token(db, raw_token=payload.refresh_token)
+    raw_refresh_token = _extract_refresh_token(request=request, payload=payload)
+    token_payload = decode_refresh_token(raw_refresh_token)
+    session_token = _consume_refresh_session_token(db, raw_token=raw_refresh_token)
     if not session_token:
+        _clear_auth_cookies(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token không hợp lệ hoặc đã bị thu hồi",
@@ -435,6 +517,7 @@ def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -
     role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
     access_token = create_access_token(subject=user.email, role=role)
     refresh_token = _issue_refresh_session_token(db, user=user)
+    _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
     return LoginResponse(access_token=access_token, refresh_token=refresh_token, role=role)
 
 
@@ -579,6 +662,7 @@ def change_password(
 
 @router.post("/logout")
 def logout(
+    response: Response,
     token_payload: TokenPayload = Depends(get_current_token),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
@@ -586,6 +670,7 @@ def logout(
     revoked_count = 0
     if user:
         revoked_count = _revoke_refresh_sessions(db, user_id=user.id)
+    _clear_auth_cookies(response)
     return {"logged_out": True, "revoked_refresh_sessions": revoked_count}
 
 

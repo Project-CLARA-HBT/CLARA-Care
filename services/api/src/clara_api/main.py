@@ -21,11 +21,23 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
-raw_origins = [origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()]
+raw_origins = [
+    origin.strip()
+    for origin in settings.cors_allowed_origins.split(",")
+    if origin.strip()
+]
 cors_allow_all_origins = "*" in raw_origins
 cors_origins = ["*"] if cors_allow_all_origins else raw_origins
-cors_methods = [method.strip().upper() for method in settings.cors_allowed_methods.split(",") if method.strip()]
-cors_headers = [header.strip() for header in settings.cors_allowed_headers.split(",") if header.strip()]
+cors_methods = [
+    method.strip().upper()
+    for method in settings.cors_allowed_methods.split(",")
+    if method.strip()
+]
+cors_headers = [
+    header.strip()
+    for header in settings.cors_allowed_headers.split(",")
+    if header.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +53,11 @@ app.add_middleware(APIMetricsMiddleware)
 
 @app.on_event("startup")
 def init_db_schema() -> None:
+    if settings.environment.lower() == "production":
+        if settings.jwt_secret_key.strip() == "change-me":
+            raise RuntimeError("JWT_SECRET_KEY must be configured in production.")
+        if not settings.auth_cookie_secure:
+            raise RuntimeError("AUTH_COOKIE_SECURE must be true in production.")
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
@@ -73,7 +90,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     response.headers.setdefault("Cache-Control", "no-store")
     if request.url.scheme == "https":
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
     return response
 
 

@@ -12,7 +12,8 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? fallbackBaseUrl;
 
 const api = axios.create({
   baseURL: apiBaseUrl,
-  timeout: DEFAULT_TIMEOUT_MS
+  timeout: DEFAULT_TIMEOUT_MS,
+  withCredentials: true
 });
 
 api.interceptors.request.use((config) => {
@@ -27,21 +28,19 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<{ detail?: string }>) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const requestUrl = String(originalRequest?.url ?? "");
+    const isAuthRefreshCall = requestUrl.includes("/auth/refresh");
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRefreshCall) {
       originalRequest._retry = true;
       const refreshToken = getRefreshToken();
-
-      if (!refreshToken) {
-        clearTokens();
-        return Promise.reject(new Error("Phiên đăng nhập đã hết hạn."));
-      }
+      const payload = refreshToken ? { refresh_token: refreshToken } : {};
 
       try {
         const refreshResponse = await axios.post(
           `${apiBaseUrl}/auth/refresh`,
-          { refresh_token: refreshToken },
-          { timeout: REFRESH_TIMEOUT_MS }
+          payload,
+          { timeout: REFRESH_TIMEOUT_MS, withCredentials: true }
         );
 
         const nextAccessToken = refreshResponse.data?.access_token as string | undefined;
@@ -58,6 +57,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         clearTokens();
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+          const next = `${window.location.pathname}${window.location.search}`;
+          window.location.href = `/login?next=${encodeURIComponent(next)}`;
+        }
         return Promise.reject(new Error("Không thể làm mới phiên đăng nhập."));
       }
     }

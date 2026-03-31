@@ -43,6 +43,18 @@ class Settings(BaseSettings):
     jwt_issuer: str = Field(default="clara-api", validation_alias="JWT_ISSUER")
     jwt_access_minutes: int = Field(default=30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     jwt_refresh_minutes: int = Field(default=43200, validation_alias="REFRESH_TOKEN_EXPIRE_MINUTES")
+    auth_cookie_access_name: str = Field(
+        default="clara_access_token",
+        validation_alias="AUTH_COOKIE_ACCESS_NAME",
+    )
+    auth_cookie_refresh_name: str = Field(
+        default="clara_refresh_token",
+        validation_alias="AUTH_COOKIE_REFRESH_NAME",
+    )
+    auth_cookie_secure: bool = Field(default=False, validation_alias="AUTH_COOKIE_SECURE")
+    auth_cookie_samesite: str = Field(default="lax", validation_alias="AUTH_COOKIE_SAMESITE")
+    auth_cookie_domain: str = Field(default="", validation_alias="AUTH_COOKIE_DOMAIN")
+    auth_cookie_path: str = Field(default="/", validation_alias="AUTH_COOKIE_PATH")
     auth_auto_provision_users: bool = Field(
         default=True, validation_alias="AUTH_AUTO_PROVISION_USERS"
     )
