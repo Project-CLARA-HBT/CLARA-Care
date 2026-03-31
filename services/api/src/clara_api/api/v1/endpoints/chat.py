@@ -222,13 +222,13 @@ def _call_ml_service(
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
         primary_reason = f"ml_unavailable:{exc.__class__.__name__}"
     except httpx.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else None
-        if status is None:
+        upstream_status = exc.response.status_code if exc.response is not None else None
+        if upstream_status is None:
             primary_reason = f"ml_http_error:{exc.__class__.__name__}"
-        elif status >= 500:
-            primary_reason = f"ml_upstream_5xx:{status}"
+        elif upstream_status >= 500:
+            primary_reason = f"ml_upstream_5xx:{upstream_status}"
         else:
-            primary_reason = f"ml_upstream_4xx:{status}"
+            primary_reason = f"ml_upstream_4xx:{upstream_status}"
     except ValueError as exc:
         primary_reason = f"ml_invalid_json:{exc.__class__.__name__}"
     except Exception as exc:  # pragma: no cover - defensive fallback
@@ -259,13 +259,13 @@ def _call_ml_service(
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
         safe_mode_reason = f"safe_mode_unavailable:{exc.__class__.__name__}"
     except httpx.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else None
-        if status is None:
+        upstream_status = exc.response.status_code if exc.response is not None else None
+        if upstream_status is None:
             safe_mode_reason = f"safe_mode_http_error:{exc.__class__.__name__}"
-        elif status >= 500:
-            safe_mode_reason = f"safe_mode_upstream_5xx:{status}"
+        elif upstream_status >= 500:
+            safe_mode_reason = f"safe_mode_upstream_5xx:{upstream_status}"
         else:
-            safe_mode_reason = f"safe_mode_upstream_4xx:{status}"
+            safe_mode_reason = f"safe_mode_upstream_4xx:{upstream_status}"
     except ValueError as exc:
         safe_mode_reason = f"safe_mode_invalid_json:{exc.__class__.__name__}"
     except Exception as exc:  # pragma: no cover - defensive fallback
