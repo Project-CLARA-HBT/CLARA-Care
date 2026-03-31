@@ -2,7 +2,7 @@
 
 Mục tiêu:
 - Mở rộng corpus RAG theo hướng thực dụng cho câu hỏi an toàn thuốc, DDI, nhãn thuốc, cảnh báo hậu mãi và guideline chính thống.
-- Chỉ đụng `docs/data/indexing`.
+- Chỉ đụng `docs/research/data`.
 - Không thay đổi retrieval/ranking logic hiện tại.
 
 ## 1. Thành phần pack
