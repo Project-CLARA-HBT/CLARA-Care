@@ -13,6 +13,9 @@ CRON_LINE="${SCHEDULE} ${SCRIPT_PATH} --max-used-pct ${MAX_USED_PCT} --min-free-
 tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
 
+mkdir -p "$(dirname "$LOG_FILE")"
+touch "$LOG_FILE"
+
 crontab -l 2>/dev/null | grep -v "${MARKER}" >"$tmp_file" || true
 echo "$CRON_LINE" >>"$tmp_file"
 crontab "$tmp_file"
