@@ -74,12 +74,63 @@ class RagPipelineP1:
 
     @staticmethod
     def _local_synthesis(query: str, docs: List[Document]) -> str:
-        sources = ", ".join(doc.id for doc in docs) if docs else "none"
-        snippets = " | ".join(f"{doc.id}: {doc.text}" for doc in docs)
+        def _compact(text: str, max_len: int = 180) -> str:
+            clean = " ".join(str(text or "").split()).strip()
+            if len(clean) <= max_len:
+                return clean
+            return f"{clean[: max_len - 3]}..."
+
+        if not docs:
+            return (
+                "## Kết luận nhanh\n"
+                "Hệ thống đang ở chế độ an toàn cục bộ và chưa có bằng chứng truy xuất đủ mạnh cho câu hỏi này.\n\n"
+                "## Phân tích chi tiết\n"
+                "- Chưa tìm thấy ngữ cảnh đủ liên quan trong phiên hiện tại.\n"
+                "- Đây là phản hồi fallback để tránh trả về lỗi hệ thống.\n\n"
+                "## Khuyến nghị an toàn\n"
+                "- Ưu tiên đối chiếu nguồn chính thống (nhãn thuốc, guideline, bác sĩ/dược sĩ).\n"
+                "- Không tự ý kê đơn hoặc chỉnh liều khi chưa có tư vấn chuyên môn.\n\n"
+                "## Nguồn tham chiếu\n"
+                "- [LOCAL_FALLBACK_V1] No retrieved evidence."
+            )
+
+        rows: list[str] = []
+        refs: list[str] = []
+        for idx, doc in enumerate(docs[:6], start=1):
+            metadata = doc.metadata or {}
+            source = str(metadata.get("source") or "unknown")
+            url = str(metadata.get("url") or "")
+            summary = _compact(doc.text)
+            summary_safe = summary.replace("|", "\\|")
+            rows.append(
+                f"| {idx} | `{doc.id}` | {source} | {summary_safe} |"
+            )
+            if url.startswith("http://") or url.startswith("https://"):
+                refs.append(f"- [{doc.id}] {url}")
+            else:
+                refs.append(f"- [{doc.id}] source={source}")
+
+        table = "\n".join(
+            [
+                "| # | ID | Source | Summary |",
+                "|---|---|---|---|",
+                *rows,
+            ]
+        )
+        references = "\n".join(refs)
         return (
-            "LOCAL_FALLBACK_V1 | "
-            f"Trả lời tạm thời (local): query='{query}'. "
-            f"Sources=[{sources}]. Summary={snippets}"
+            "## Kết luận nhanh\n"
+            "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.\n\n"
+            "## Phân tích chi tiết\n"
+            f"- Query: `{query}`\n"
+            "- Dưới đây là ngữ cảnh đã truy xuất và rút gọn ở chế độ cục bộ:\n\n"
+            f"{table}\n\n"
+            "## Khuyến nghị an toàn\n"
+            "- Ưu tiên kiểm chứng chéo bằng nguồn chính thống trước khi áp dụng vào quyết định y khoa.\n"
+            "- Nếu có bệnh nền/đa thuốc/dấu hiệu nặng, cần trao đổi bác sĩ ngay.\n\n"
+            "## Nguồn tham chiếu\n"
+            f"{references}\n\n"
+            "<!-- LOCAL_FALLBACK_V1 -->"
         )
 
     @staticmethod

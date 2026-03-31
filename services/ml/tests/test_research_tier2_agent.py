@@ -84,3 +84,17 @@ def test_run_research_tier2_falls_back_to_merged_context_when_ddi_filter_empty(
     assert len(citations) >= 1
     assert citations[0].get("source") != "system_fallback"
     assert result.get("fallback_used") is False
+
+
+def test_build_planner_hints_enables_web_retrieval_for_fast_ddi_query():
+    hints = tier2._build_planner_hints(
+        topic="Tương tác warfarin với ibuprofen ở người cao tuổi",
+        source_mode=None,
+        route_role="researcher",
+        route_intent="evidence_review",
+        uploaded_documents=[],
+        rag_sources=[],
+        research_mode="fast",
+    )
+    assert hints["scientific_retrieval_enabled"] is True
+    assert hints["web_retrieval_enabled"] is True

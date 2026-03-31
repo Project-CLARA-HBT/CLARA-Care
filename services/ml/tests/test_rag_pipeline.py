@@ -90,7 +90,8 @@ def test_rag_pipeline_fallback_when_deepseek_fails():
     )
     result = pipe.run("canh bao tuong tac nsaid")
     assert result.model_used == "local-synth-v1"
-    assert "Sources=[" in result.answer
+    assert "LOCAL_FALLBACK_V1" in result.answer
+    assert "## Kết luận nhanh" in result.answer
 
 
 def test_rag_pipeline_survives_external_retrieval_exception():

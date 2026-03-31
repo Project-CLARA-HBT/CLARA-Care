@@ -23,6 +23,7 @@ class InMemoryRetriever:
         "clinicaltrials",
         "openfda",
         "dailymed",
+        "rxnorm",
     }
     _WEB_PROVIDERS = {"searxng", "searxng-crawl", "web_crawl"}
 

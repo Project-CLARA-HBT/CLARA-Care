@@ -148,6 +148,8 @@ def _build_planner_hints(
     research_mode: str,
 ) -> dict[str, Any]:
     normalized_topic = topic.lower()
+    query_profile = analyze_query_profile(topic)
+    is_ddi_query = bool(query_profile.get("is_ddi_query"))
     has_uploaded = bool(uploaded_documents)
     has_knowledge_sources = isinstance(rag_sources, list) and len(rag_sources) > 0
     evidence_query = any(
@@ -189,6 +191,7 @@ def _build_planner_hints(
         target_pass_count = 8 if evidence_query else 7
     else:
         target_pass_count = 1
+    web_enabled = bool(deep_mode or evidence_query or is_ddi_query)
 
     return {
         "internal_top_k": max(1, min(12, internal_top_k)),
@@ -200,7 +203,7 @@ def _build_planner_hints(
         "source_mode": source_mode or "default",
         "low_context_threshold": 0.12 if has_uploaded else 0.15,
         "scientific_retrieval_enabled": True,
-        "web_retrieval_enabled": deep_mode,
+        "web_retrieval_enabled": web_enabled,
         "file_retrieval_enabled": True,
         "research_mode": research_mode,
         "deep_pass_count": target_pass_count,

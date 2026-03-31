@@ -1,0 +1,146 @@
+[
+  {
+    "id": "registry-vn-dav-01",
+    "source": "vn_source_registry",
+    "title": "Cục Quản lý Dược Việt Nam - Công bố thuốc lưu hành",
+    "text": "Nguồn chuẩn để kiểm tra số đăng ký, tình trạng lưu hành, hoạt chất và cảnh báo chất lượng thuốc tại Việt Nam.",
+    "url": "https://dichvucong.dav.gov.vn/congbothuoc/index",
+    "trust_tier": "tier_1",
+    "tags": ["vn", "dav", "drug_registry", "legal_status", "active_ingredient", "ddi"]
+  },
+  {
+    "id": "registry-vn-dav-02",
+    "source": "vn_source_registry",
+    "title": "Cục Quản lý Dược Việt Nam - Thuốc không kê đơn",
+    "text": "Danh mục công bố thuốc không kê đơn hỗ trợ tự điều trị an toàn và cảnh báo sử dụng thuốc OTC.",
+    "url": "https://dichvucong.dav.gov.vn/congbothuockhongkedon",
+    "trust_tier": "tier_1",
+    "tags": ["vn", "otc", "selfmed", "drug_safety"]
+  },
+  {
+    "id": "registry-vn-diadr-01",
+    "source": "vn_source_registry",
+    "title": "Trung tâm DI & ADR Quốc gia - Cảnh giác dược",
+    "text": "Nguồn cảnh giác dược quốc gia: cảnh báo phản ứng có hại, tín hiệu an toàn và khuyến cáo sử dụng thuốc.",
+    "url": "https://canhgiacduoc.org.vn/",
+    "trust_tier": "tier_1",
+    "tags": ["vn", "adr", "pharmacovigilance", "drug_safety"]
+  },
+  {
+    "id": "registry-vn-moh-01",
+    "source": "vn_source_registry",
+    "title": "Bộ Y tế Việt Nam - Hướng dẫn chuyên môn",
+    "text": "Nguồn hướng dẫn chẩn đoán và điều trị chính thống từ Bộ Y tế, dùng để grounding cho trả lời y khoa.",
+    "url": "https://kcb.vn/thu-vien-tai-lieu",
+    "trust_tier": "tier_1",
+    "tags": ["vn", "guideline", "evidence_based_medicine", "safety"]
+  },
+  {
+    "id": "registry-int-pubmed-01",
+    "source": "pubmed",
+    "title": "PubMed Biomedical Literature",
+    "text": "Nguồn literature y sinh trọng yếu cho systematic review, DDI, adverse events và evidence synthesis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "pubmed", "literature", "systematic_review", "ddi"]
+  },
+  {
+    "id": "registry-int-europepmc-01",
+    "source": "europepmc",
+    "title": "Europe PMC",
+    "text": "Nguồn literature bổ sung PubMed, hỗ trợ truy xuất bài báo y sinh và tóm tắt bằng chứng.",
+    "url": "https://www.ebi.ac.uk/europepmc/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "europepmc", "literature", "evidence"]
+  },
+  {
+    "id": "registry-int-clinicaltrials-01",
+    "source": "clinicaltrials",
+    "title": "ClinicalTrials.gov",
+    "text": "Nguồn registry thử nghiệm lâm sàng để kiểm chứng thiết kế nghiên cứu, đối tượng và kết cục.",
+    "url": "https://clinicaltrials.gov/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "clinical_trials", "trial_registry", "evidence"]
+  },
+  {
+    "id": "registry-int-openfda-01",
+    "source": "openfda",
+    "title": "openFDA Drug Label",
+    "text": "Nhãn thuốc chính thức từ FDA: boxed warning, contraindication, adverse reactions và medication guide.",
+    "url": "https://open.fda.gov/apis/drug/label/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "fda", "label", "contraindication", "adverse_reaction", "ddi"]
+  },
+  {
+    "id": "registry-int-dailymed-01",
+    "source": "dailymed",
+    "title": "DailyMed Structured Product Labels",
+    "text": "Nguồn SPL chính thức giúp giải thích hướng dẫn dùng thuốc, cảnh báo tương tác và thận trọng.",
+    "url": "https://dailymed.nlm.nih.gov/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "dailymed", "label", "drug_information", "ddi"]
+  },
+  {
+    "id": "registry-int-rxnorm-01",
+    "source": "rxnorm",
+    "title": "RxNorm Drug Normalization",
+    "text": "Nguồn chuẩn hóa tên thuốc và hoạt chất giúp map biệt dược sang chuẩn dùng trong kiểm tra tương tác.",
+    "url": "https://lhncbc.nlm.nih.gov/RxNav/APIs/index.html",
+    "trust_tier": "tier_1",
+    "tags": ["global", "rxnorm", "normalization", "active_ingredient", "mapping"]
+  },
+  {
+    "id": "registry-int-who-01",
+    "source": "who",
+    "title": "WHO Essential Medicines",
+    "text": "Danh mục thuốc thiết yếu của WHO, hữu ích cho chuẩn hóa khuyến nghị và mức độ ưu tiên thuốc.",
+    "url": "https://www.who.int/groups/expert-committee-on-selection-and-use-of-essential-medicines/essential-medicines-lists",
+    "trust_tier": "tier_1",
+    "tags": ["global", "who", "essential_medicines", "guideline"]
+  },
+  {
+    "id": "registry-int-cdc-01",
+    "source": "cdc",
+    "title": "CDC Medication Safety",
+    "text": "Nguồn giáo dục an toàn thuốc và phòng ngừa sai sót dùng thuốc cho cộng đồng và cơ sở chăm sóc sức khỏe.",
+    "url": "https://www.cdc.gov/medicationsafety/",
+    "trust_tier": "tier_1",
+    "tags": ["global", "cdc", "medication_safety", "patient_safety"]
+  },
+  {
+    "id": "registry-int-nice-01",
+    "source": "nice",
+    "title": "NICE Medicines and Prescribing",
+    "text": "Khuyến cáo NICE về kê đơn và sử dụng thuốc an toàn, hỗ trợ kiểm chứng thực hành dựa trên bằng chứng.",
+    "url": "https://www.nice.org.uk/guidance/conditions-and-diseases/medicines-and-prescribing",
+    "trust_tier": "tier_1",
+    "tags": ["global", "nice", "prescribing", "guideline", "evidence"]
+  },
+  {
+    "id": "registry-int-ema-01",
+    "source": "ema",
+    "title": "EMA Pharmacovigilance Referrals",
+    "text": "Nguồn cảnh báo hậu mãi của EMA về hạn chế, thu hồi hoặc thay đổi thông tin an toàn thuốc.",
+    "url": "https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/referrals",
+    "trust_tier": "tier_1",
+    "tags": ["global", "ema", "pharmacovigilance", "drug_safety_alert"]
+  },
+  {
+    "id": "registry-int-mhra-01",
+    "source": "mhra",
+    "title": "MHRA Drug Safety Update",
+    "text": "Bản tin cập nhật an toàn thuốc từ MHRA giúp đối chiếu cảnh báo quốc tế.",
+    "url": "https://www.gov.uk/drug-safety-update",
+    "trust_tier": "tier_1",
+    "tags": ["global", "mhra", "drug_safety", "alert"]
+  },
+  {
+    "id": "registry-int-medlineplus-01",
+    "source": "medlineplus",
+    "title": "MedlinePlus Drug Information",
+    "text": "Nguồn thông tin thuốc thân thiện cho bệnh nhân: cách dùng, tác dụng phụ và lưu ý an toàn.",
+    "url": "https://medlineplus.gov/druginformation.html",
+    "trust_tier": "tier_2",
+    "tags": ["global", "patient_friendly", "drug_information", "safety"]
+  }
+]

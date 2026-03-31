@@ -26,6 +26,7 @@ class ExternalSourceGateway:
     CLINICALTRIALS_V2_URL = "https://clinicaltrials.gov/api/v2/studies"
     OPENFDA_LABEL_URL = "https://api.fda.gov/drug/label.json"
     DAILYMED_DRUGNAME_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v1/drugname"
+    RXNAV_APPROXIMATE_TERM_URL = "https://rxnav.nlm.nih.gov/REST/approximateTerm.json"
     SEMANTIC_SCHOLAR_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
 
     @staticmethod
@@ -135,12 +136,101 @@ class ExternalSourceGateway:
             return " AND ".join(meds[:3])
         return " ".join(meds[:3])
 
+    @classmethod
+    def _ddi_query_phrase(cls, profile: dict[str, Any]) -> str:
+        primary = str(profile.get("primary_drug") or "").strip()
+        if not primary:
+            return ""
+        co_drugs = [
+            str(item).strip()
+            for item in profile.get("co_drugs", [])
+            if str(item).strip()
+        ][:5]
+        if not co_drugs:
+            co_drugs = ["ibuprofen", "naproxen", "diclofenac", "aspirin", "paracetamol"]
+        co_clause = " OR ".join(co_drugs)
+        return f"{primary} ({co_clause}) drug interaction bleeding INR adverse event"
+
+    @classmethod
+    def _provider_query(cls, query: str, profile: dict[str, Any], *, provider: str) -> str:
+        normalized_provider = provider.strip().lower()
+        if normalized_provider == "pubmed":
+            return cls._build_pubmed_query(query, profile)
+        if normalized_provider == "europepmc":
+            return cls._build_europe_pmc_query(query, profile)
+        if normalized_provider == "clinicaltrials":
+            return cls._clinical_trials_query(query, profile)
+        if bool(profile.get("is_ddi_query")):
+            ddi_phrase = cls._ddi_query_phrase(profile)
+            if ddi_phrase:
+                return ddi_phrase
+        return query
+
+    @staticmethod
+    def _tokenize(text: str) -> set[str]:
+        return {token for token in re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", text.lower()) if token}
+
+    @classmethod
+    def _is_ddi_evidence_document(cls, profile: dict[str, Any], document: Document) -> bool:
+        primary = str(profile.get("primary_drug") or "").strip().lower()
+        if not primary:
+            return True
+        co_drugs = {
+            str(item).strip().lower()
+            for item in profile.get("co_drugs", [])
+            if str(item).strip()
+        }
+        interaction_terms = {
+            "interaction",
+            "ddi",
+            "contraindication",
+            "bleeding",
+            "inr",
+            "adverse",
+            "warning",
+            "risk",
+            "toxicity",
+            "hemorrhage",
+        }
+        trusted_label_sources = {"openfda", "dailymed", "rxnorm", "rxnav"}
+
+        metadata = document.metadata if isinstance(document.metadata, dict) else {}
+        source_name = str(metadata.get("source") or "").strip().lower()
+        haystack = " ".join(
+            [
+                str(document.id or ""),
+                str(document.text or ""),
+                source_name,
+                str(metadata.get("url") or ""),
+            ]
+        )
+        tokens = cls._tokenize(haystack)
+        if primary not in tokens:
+            return False
+        has_codrug = bool(co_drugs.intersection(tokens))
+        has_interaction = bool(interaction_terms.intersection(tokens))
+        if has_codrug or has_interaction:
+            return True
+        if source_name in trusted_label_sources:
+            return True
+        return False
+
+    @classmethod
+    def _filter_ddi_documents(
+        cls, *, profile: dict[str, Any], documents: list[Document]
+    ) -> list[Document]:
+        if not bool(profile.get("is_ddi_query")):
+            return documents
+        return [doc for doc in documents if cls._is_ddi_evidence_document(profile, doc)]
+
     def retrieve_pubmed(self, query: str, *, top_k: int, timeout_seconds: float) -> list[Document]:
         if top_k <= 0:
             return []
 
         profile = analyze_query_profile(query)
-        query_for_provider = self._build_pubmed_query(query, profile)
+        query_for_provider = (
+            query if "[Title/Abstract]" in query else self._build_pubmed_query(query, profile)
+        )
         search_url = f"{self.PUBMED_ESEARCH_URL}?" + urlencode(
             {
                 "db": "pubmed",
@@ -207,7 +297,11 @@ class ExternalSourceGateway:
             return []
 
         profile = analyze_query_profile(query)
-        query_for_provider = self._build_europe_pmc_query(query, profile)
+        query_for_provider = (
+            query
+            if "drug interaction" in query.lower() and "bleeding" in query.lower()
+            else self._build_europe_pmc_query(query, profile)
+        )
         search_url = f"{self.EUROPEPMC_SEARCH_URL}?" + urlencode(
             {
                 "query": query_for_provider,
@@ -259,9 +353,11 @@ class ExternalSourceGateway:
         if top_k <= 0:
             return []
 
+        profile = analyze_query_profile(query)
+        query_for_provider = self._provider_query(query, profile, provider="openalex")
         search_url = f"{self.OPENALEX_WORKS_URL}?" + urlencode(
             {
-                "search": query,
+                "search": query_for_provider,
                 "per-page": str(top_k),
                 "sort": "relevance_score:desc",
             }
@@ -308,8 +404,10 @@ class ExternalSourceGateway:
         if top_k <= 0:
             return []
 
+        profile = analyze_query_profile(query)
+        query_for_provider = self._provider_query(query, profile, provider="crossref")
         search_url = f"{self.CROSSREF_WORKS_URL}?" + urlencode(
-            {"query.bibliographic": query, "rows": str(top_k), "sort": "relevance"}
+            {"query.bibliographic": query_for_provider, "rows": str(top_k), "sort": "relevance"}
         )
         payload = self._fetch_json(search_url, timeout_seconds)
         if not isinstance(payload, dict):
@@ -536,6 +634,75 @@ class ExternalSourceGateway:
 
         return docs
 
+    def retrieve_rxnorm(self, query: str, *, top_k: int, timeout_seconds: float) -> list[Document]:
+        if top_k <= 0:
+            return []
+
+        profile = analyze_query_profile(query)
+        term_candidates = self._medication_terms(query, profile)
+        if not term_candidates:
+            return []
+
+        docs: list[Document] = []
+        seen_ids: set[str] = set()
+        max_entries = max(3, min(top_k, 10))
+        for term in term_candidates[: max(top_k * 2, 4)]:
+            payload = self._fetch_json(
+                f"{self.RXNAV_APPROXIMATE_TERM_URL}?{urlencode({'term': term, 'maxEntries': str(max_entries)})}",
+                timeout_seconds,
+            )
+            if not isinstance(payload, dict):
+                continue
+
+            group = payload.get("approximateGroup")
+            group_obj = group if isinstance(group, dict) else {}
+            candidates = group_obj.get("candidate")
+            rows = candidates if isinstance(candidates, list) else []
+            for index, item in enumerate(rows, start=1):
+                if not isinstance(item, dict):
+                    continue
+                rxcui = first_text(item.get("rxcui"))
+                name = first_text(item.get("name"))
+                score = first_text(item.get("score"))
+                rank = first_text(item.get("rank"))
+                if not rxcui and not name:
+                    continue
+                canonical_id = (rxcui or name).strip().lower()
+                if canonical_id in seen_ids:
+                    continue
+                seen_ids.add(canonical_id)
+
+                title = first_text(name, f"RxNorm candidate {index}")
+                text = ". ".join(
+                    part
+                    for part in [
+                        title,
+                        f"RxCUI {rxcui}" if rxcui else "",
+                        f"score {score}" if score else "",
+                        f"rank {rank}" if rank else "",
+                    ]
+                    if part
+                )
+                docs.append(
+                    Document(
+                        id=f"rxnorm-{rxcui or len(docs) + 1}",
+                        text=text,
+                        metadata={
+                            "source": "rxnorm",
+                            "url": (
+                                f"https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm={rxcui}"
+                                if rxcui
+                                else "https://lhncbc.nlm.nih.gov/RxNav/APIs/index.html"
+                            ),
+                            "score": 0.0,
+                        },
+                    )
+                )
+                if len(docs) >= top_k:
+                    return docs
+
+        return docs
+
     def retrieve_semantic_scholar(
         self,
         query: str,
@@ -546,9 +713,11 @@ class ExternalSourceGateway:
         if top_k <= 0:
             return []
 
+        profile = analyze_query_profile(query)
+        query_for_provider = self._provider_query(query, profile, provider="semantic_scholar")
         search_url = f"{self.SEMANTIC_SCHOLAR_SEARCH_URL}?" + urlencode(
             {
-                "query": query,
+                "query": query_for_provider,
                 "limit": str(top_k),
                 "fields": "title,year,url,externalIds,journal,venue",
             }
@@ -902,6 +1071,7 @@ class ExternalSourceGateway:
             [
                 "openfda",
                 "dailymed",
+                "rxnorm",
                 "pubmed",
                 "europepmc",
                 "clinicaltrials",
@@ -912,6 +1082,7 @@ class ExternalSourceGateway:
                 "pubmed",
                 "europepmc",
                 "semantic_scholar",
+                "rxnorm",
                 "openalex",
                 "crossref",
                 "clinicaltrials",
@@ -923,23 +1094,63 @@ class ExternalSourceGateway:
         else:
             provider_order = base_order
 
+        provider_queries = {
+            "pubmed": self._provider_query(query, profile, provider="pubmed"),
+            "europepmc": self._provider_query(query, profile, provider="europepmc"),
+            "semantic_scholar": self._provider_query(query, profile, provider="semantic_scholar"),
+            "openalex": self._provider_query(query, profile, provider="openalex"),
+            "crossref": self._provider_query(query, profile, provider="crossref"),
+            "clinicaltrials": self._provider_query(query, profile, provider="clinicaltrials"),
+            "openfda": self._provider_query(query, profile, provider="openfda"),
+            "dailymed": self._provider_query(query, profile, provider="dailymed"),
+            "rxnorm": self._provider_query(query, profile, provider="rxnorm"),
+        }
         provider_map: dict[str, Any] = {
-            "pubmed": lambda: self.retrieve_pubmed(query, top_k=top_k, timeout_seconds=timeout_seconds),
+            "pubmed": lambda: self.retrieve_pubmed(
+                provider_queries["pubmed"],
+                top_k=top_k,
+                timeout_seconds=timeout_seconds,
+            ),
             "europepmc": lambda: self.retrieve_europe_pmc(
-                query, top_k=top_k, timeout_seconds=timeout_seconds
+                provider_queries["europepmc"],
+                top_k=top_k,
+                timeout_seconds=timeout_seconds,
             ),
             "semantic_scholar": lambda: self.retrieve_semantic_scholar(
-                query,
+                provider_queries["semantic_scholar"],
                 top_k=min(top_k, settings.semantic_scholar_max_results),
                 timeout_seconds=settings.semantic_scholar_timeout_seconds,
             ),
-            "openalex": lambda: self.retrieve_openalex(query, top_k=top_k, timeout_seconds=timeout_seconds),
-            "crossref": lambda: self.retrieve_crossref(query, top_k=top_k, timeout_seconds=timeout_seconds),
-            "clinicaltrials": lambda: self.retrieve_clinicaltrials(
-                query, top_k=top_k, timeout_seconds=timeout_seconds
+            "openalex": lambda: self.retrieve_openalex(
+                provider_queries["openalex"],
+                top_k=top_k,
+                timeout_seconds=timeout_seconds,
             ),
-            "openfda": lambda: self.retrieve_openfda(query, top_k=top_k, timeout_seconds=timeout_seconds),
-            "dailymed": lambda: self.retrieve_dailymed(query, top_k=top_k, timeout_seconds=timeout_seconds),
+            "crossref": lambda: self.retrieve_crossref(
+                provider_queries["crossref"],
+                top_k=top_k,
+                timeout_seconds=timeout_seconds,
+            ),
+            "clinicaltrials": lambda: self.retrieve_clinicaltrials(
+                provider_queries["clinicaltrials"],
+                top_k=top_k,
+                timeout_seconds=max(timeout_seconds, 3.5),
+            ),
+            "openfda": lambda: self.retrieve_openfda(
+                provider_queries["openfda"],
+                top_k=top_k,
+                timeout_seconds=max(timeout_seconds, 3.0),
+            ),
+            "dailymed": lambda: self.retrieve_dailymed(
+                provider_queries["dailymed"],
+                top_k=top_k,
+                timeout_seconds=max(timeout_seconds, 3.0),
+            ),
+            "rxnorm": lambda: self.retrieve_rxnorm(
+                provider_queries["rxnorm"],
+                top_k=top_k,
+                timeout_seconds=max(timeout_seconds, 3.0),
+            ),
         }
         tasks: list[tuple[str, Any]] = [
             (provider_name, provider_map[provider_name]) for provider_name in provider_order
@@ -974,7 +1185,8 @@ class ExternalSourceGateway:
                         "invalid_result_type",
                         (perf_counter() - started) * 1000.0,
                     )
-                return provider_name, result, None, (perf_counter() - started) * 1000.0
+                filtered = self._filter_ddi_documents(profile=profile, documents=result)
+                return provider_name, filtered, None, (perf_counter() - started) * 1000.0
             except Exception as exc:
                 return (
                     provider_name,
@@ -1004,6 +1216,7 @@ class ExternalSourceGateway:
                                 "error": exc.__class__.__name__,
                                 "duration_ms": 0.0,
                                 "documents": 0,
+                                "query": provider_queries.get(provider_name, query),
                             }
                         )
                         continue
@@ -1017,6 +1230,7 @@ class ExternalSourceGateway:
                             "error": error_name,
                             "duration_ms": round(float(duration_ms), 3),
                             "documents": len(result),
+                            "query": provider_queries.get(name, query),
                         }
                     )
             except FuturesTimeoutError:
@@ -1031,6 +1245,7 @@ class ExternalSourceGateway:
                             "error": "TimeoutError",
                             "duration_ms": round(max(timeout_seconds * 1000.0, 1.0), 3),
                             "documents": 0,
+                            "query": provider_queries.get(provider_name, query),
                         }
                     )
 
