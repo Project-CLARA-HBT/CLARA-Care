@@ -322,6 +322,15 @@ def _research_fail_soft_payload(
                     "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
                 }
             ],
+            "sources": [
+                {
+                    "id": "fallback-safe-1",
+                    "title": "Safety fallback notice",
+                    "source": "system_fallback",
+                    "url": "",
+                    "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
+                }
+            ],
             "metadata": {
                 "query": query,
                 "policy_action": "warn",

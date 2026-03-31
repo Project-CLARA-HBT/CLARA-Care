@@ -1202,6 +1202,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "deep_research_profiles": deep_research_profiles,
         "deep_research_methodology": deep_research_method,
     }
+    citations_payload = [asdict(item) for item in citations]
 
     return {
         "metadata": {
@@ -1270,7 +1271,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "research_mode": research_mode,
         "deep_pass_count": len(deep_pass_summaries),
         "plan_steps": [asdict(step) for step in plan_steps],
-        "citations": [asdict(item) for item in citations],
+        "citations": citations_payload,
+        # Backward-compat alias for clients still expecting `sources`.
+        "sources": citations_payload,
         "answer": answer_markdown,
         "answer_markdown": answer_markdown,
         "answer_format": "markdown",

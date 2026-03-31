@@ -212,6 +212,9 @@ def test_research_tier2_returns_progressive_schema():
     assert len(body["plan_steps"]) >= 3
     assert isinstance(body["citations"], list)
     assert len(body["citations"]) >= 1
+    assert isinstance(body.get("sources"), list)
+    assert len(body["sources"]) >= 1
+    assert body["sources"] == body["citations"]
     assert isinstance(body["answer"], str)
     assert body["answer"]
     assert isinstance(body.get("flow_events"), list)
@@ -282,6 +285,8 @@ def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPa
     assert body["fallback_reason"] == "RuntimeError"
     assert isinstance(body.get("answer_markdown"), str)
     assert "kết luận nhanh" in body["answer_markdown"].lower()
+    assert isinstance(body.get("sources"), list)
+    assert len(body["sources"]) >= 1
     assert isinstance(body.get("flow_events"), list)
     assert any(event.get("stage") == "fallback_response" for event in body["flow_events"])
 
