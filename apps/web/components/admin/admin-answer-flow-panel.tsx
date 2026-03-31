@@ -72,9 +72,9 @@ export default function AdminAnswerFlowPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Answer Flow Block</p>
-            <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Flow Visualizer kiểu Dify cho CLARA Research</h3>
+            <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">CLARA Research Flow Visualizer</h3>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-              Visualize toàn bộ pipeline: input, routing, retrieval, verification, policy gate và fallback.
+              Bản đồ runtime cho pipeline research thật: session guard, legal hard guard, planner, deep research, retrieval, verification và responder.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -205,7 +205,7 @@ export default function AdminAnswerFlowPanel() {
             </div>
 
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Dify Debug Preview</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Research Debug Preview</p>
               <h4 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Debugger luồng trả lời theo thời gian thực</h4>
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                 Mô phỏng các nhánh route/retrieve/verify/policy và xem khi nào nhánh fallback được kích hoạt trước khi publish.

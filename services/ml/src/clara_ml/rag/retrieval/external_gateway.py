@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 from clara_ml.config import settings
 
 from .domain import Document
-from .text_utils import clean_text, first_text, query_terms
+from .text_utils import analyze_query_profile, clean_text, first_text, query_terms
 
 
 class ExternalSourceGateway:
@@ -101,13 +101,15 @@ class ExternalSourceGateway:
         if top_k <= 0:
             return []
 
+        profile = analyze_query_profile(query)
+        query_for_provider = self._build_pubmed_query(query, profile)
         search_url = f"{self.PUBMED_ESEARCH_URL}?" + urlencode(
             {
                 "db": "pubmed",
                 "retmode": "json",
                 "retmax": str(top_k),
                 "sort": "relevance",
-                "term": query,
+                "term": query_for_provider,
             }
         )
         search_payload = self._fetch_json(search_url, timeout_seconds)
@@ -166,9 +168,11 @@ class ExternalSourceGateway:
         if top_k <= 0:
             return []
 
+        profile = analyze_query_profile(query)
+        query_for_provider = self._build_europe_pmc_query(query, profile)
         search_url = f"{self.EUROPEPMC_SEARCH_URL}?" + urlencode(
             {
-                "query": query,
+                "query": query_for_provider,
                 "format": "json",
                 "pageSize": str(top_k),
                 "resultType": "core",
@@ -964,3 +968,46 @@ class ExternalSourceGateway:
             )
 
         return docs
+
+    @staticmethod
+    def _build_pubmed_query(query: str, profile: dict[str, Any]) -> str:
+        if not profile.get("is_ddi_query"):
+            return query
+
+        primary = str(profile.get("primary_drug") or "").strip()
+        co_drugs = [
+            str(item).strip()
+            for item in profile.get("co_drugs", [])
+            if str(item).strip()
+        ][:8]
+        if not primary:
+            return query
+        if not co_drugs:
+            co_drugs = ["ibuprofen", "naproxen", "diclofenac", "aspirin", "paracetamol", "nsaid"]
+
+        co_clause = " OR ".join(f"{item}[Title/Abstract]" for item in co_drugs)
+        return (
+            f"({primary}[Title/Abstract]) AND ({co_clause}) AND "
+            "(drug interaction[Title/Abstract] OR bleeding[Title/Abstract] "
+            "OR INR[Title/Abstract] OR adverse event[Title/Abstract])"
+        )
+
+    @staticmethod
+    def _build_europe_pmc_query(query: str, profile: dict[str, Any]) -> str:
+        if not profile.get("is_ddi_query"):
+            return query
+        primary = str(profile.get("primary_drug") or "").strip()
+        co_drugs = [
+            str(item).strip()
+            for item in profile.get("co_drugs", [])
+            if str(item).strip()
+        ][:6]
+        if not primary:
+            return query
+        if not co_drugs:
+            co_drugs = ["ibuprofen", "naproxen", "diclofenac", "aspirin", "paracetamol", "nsaid"]
+        co_clause = " OR ".join(co_drugs)
+        return (
+            f"({primary}) AND ({co_clause}) AND "
+            "(drug interaction OR bleeding OR INR OR adverse event)"
+        )

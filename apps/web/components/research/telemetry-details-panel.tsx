@@ -154,15 +154,21 @@ export default function TelemetryDetailsPanel({
         </div>
       ) : null}
 
-      {(telemetry.indexSummary.beforeDedupe !== undefined ||
+      {(telemetry.indexSummary.retrievedCount !== undefined ||
+        telemetry.indexSummary.beforeDedupe !== undefined ||
         telemetry.indexSummary.afterDedupe !== undefined ||
         telemetry.indexSummary.selectedCount !== undefined ||
+        (telemetry.indexSummary.sourceCounts &&
+          Object.keys(telemetry.indexSummary.sourceCounts).length > 0) ||
         telemetry.crawlSummary.attempted !== undefined ||
         telemetry.crawlSummary.success !== undefined ||
         telemetry.crawlSummary.domains.length > 0) ? (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
             <p className="font-semibold">Index Summary</p>
+            {telemetry.indexSummary.retrievedCount !== undefined ? (
+              <p>retrieved_count: {formatScore(telemetry.indexSummary.retrievedCount)}</p>
+            ) : null}
             {telemetry.indexSummary.beforeDedupe !== undefined ? (
               <p>before_dedupe: {formatScore(telemetry.indexSummary.beforeDedupe)}</p>
             ) : null}
@@ -174,6 +180,15 @@ export default function TelemetryDetailsPanel({
             ) : null}
             {telemetry.indexSummary.durationMs !== undefined ? (
               <p>duration_ms: {formatScore(telemetry.indexSummary.durationMs)}</p>
+            ) : null}
+            {telemetry.indexSummary.sourceCounts &&
+            Object.keys(telemetry.indexSummary.sourceCounts).length ? (
+              <p>
+                source_counts:{" "}
+                {Object.entries(telemetry.indexSummary.sourceCounts)
+                  .map(([key, value]) => `${key}:${formatScore(value)}`)
+                  .join(", ")}
+              </p>
             ) : null}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">

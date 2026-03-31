@@ -18,6 +18,59 @@ type MermaidBlockProps = {
   code: string;
 };
 
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["http:", "https:"]);
+const CHART_SPEC_LANGUAGES = new Set(["chart", "chart-spec", "vega-lite", "echarts-option", "json", "yaml", "yml"]);
+
+function sanitizeHref(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  const trimmed = href.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed, "https://clara.local");
+    if (!ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function sanitizeMermaidSvg(svg: string): string {
+  if (typeof window === "undefined" || typeof window.DOMParser === "undefined") {
+    return svg;
+  }
+
+  try {
+    const parser = new window.DOMParser();
+    const parsed = parser.parseFromString(svg, "image/svg+xml");
+
+    parsed.querySelectorAll("script, foreignObject, iframe, object, embed").forEach((node) => {
+      node.remove();
+    });
+
+    parsed.querySelectorAll("*").forEach((element) => {
+      for (const attr of Array.from(element.attributes)) {
+        const name = attr.name.toLowerCase();
+        const value = attr.value.trim().toLowerCase();
+
+        if (name.startsWith("on")) {
+          element.removeAttribute(attr.name);
+          continue;
+        }
+
+        if ((name === "href" || name === "xlink:href") && (value.startsWith("javascript:") || value.startsWith("data:"))) {
+          element.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    return parsed.documentElement.outerHTML || "";
+  } catch {
+    return "";
+  }
+}
+
 function MermaidBlock({ code }: MermaidBlockProps) {
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -38,7 +91,11 @@ function MermaidBlock({ code }: MermaidBlockProps) {
         const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
         const renderResult = await mermaid.render(id, code);
         if (!cancelled) {
-          setSvg(renderResult.svg);
+          const sanitized = sanitizeMermaidSvg(renderResult.svg);
+          if (!sanitized) {
+            throw new Error("Mermaid SVG output is empty after sanitization.");
+          }
+          setSvg(sanitized);
           setError("");
         }
       } catch (cause) {
@@ -102,36 +159,44 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
     <div className="prose prose-slate max-w-none dark:prose-invert prose-p:leading-7 prose-li:leading-7 prose-headings:tracking-tight">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        skipHtml
         components={{
           a: ({ href, children, ...props }) => {
             const text =
               Array.isArray(children) && typeof children[0] === "string" ? children[0] : "";
             const citationMatch = text.match(/^\[(\d+)\]$/);
             const citation = citationMatch ? citationMap[citationMatch[1]] : undefined;
-            const resolvedHref = href || citation?.url || "#";
+            const resolvedHref = sanitizeHref(href) ?? sanitizeHref(citation?.url) ?? "#";
             const external = resolvedHref.startsWith("http://") || resolvedHref.startsWith("https://");
             return (
               <a
                 {...props}
                 href={resolvedHref}
                 target={external ? "_blank" : undefined}
-                rel={external ? "noreferrer" : undefined}
+                rel={external ? "noreferrer noopener nofollow" : undefined}
                 title={citation?.title}
               >
                 {children}
               </a>
             );
           },
-          code: ({ className, children, ...props }) => {
-            const code = String(children).replace(/\n$/, "");
+          code: ({ className, children, node, ...props }) => {
+            const rawCode = String(children);
+            const code = rawCode.replace(/\n$/, "");
             const language = className?.replace("language-", "").trim().toLowerCase();
-            const inline = !className;
+            const startLine =
+              typeof node?.position?.start?.line === "number" ? node.position.start.line : undefined;
+            const endLine =
+              typeof node?.position?.end?.line === "number" ? node.position.end.line : undefined;
+            const spansMultipleLines =
+              typeof startLine === "number" && typeof endLine === "number" && endLine > startLine;
+            const isInline = !className && !spansMultipleLines && !rawCode.includes("\n");
 
-            if (!inline && language === "mermaid") {
+            if (!isInline && language === "mermaid") {
               return <MermaidBlock code={code} />;
             }
 
-            if (inline) {
+            if (isInline) {
               return (
                 <code
                   {...props}
@@ -142,8 +207,14 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
               );
             }
 
+            const isChartSpec = language ? CHART_SPEC_LANGUAGES.has(language) : false;
             return (
               <pre className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-900 p-3 text-slate-100 dark:border-slate-700">
+                {isChartSpec ? (
+                  <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-slate-300">
+                    chart spec · {language}
+                  </div>
+                ) : null}
                 <code {...props} className={className}>
                   {code}
                 </code>

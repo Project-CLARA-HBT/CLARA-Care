@@ -31,8 +31,8 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             (
-                r"(k[êe]\s*đ[ơo]n|prescrib(?:e|ing)?|đ[ơo]n\s*thu[oố]c|"
-                r"toa\s*thu[oố]c|thu[oố]c\s*tr[ịi])"
+                r"(k[êe]\s*đ[ơo]n|đ[ơo]n\s*thu[oố]c|toa\s*thu[oố]c|"
+                r"thu[oố]c\s*tr[ịi]|\bprescribe\b|\bprescription\b)"
             ),
             flags=re.IGNORECASE,
         ),
@@ -56,6 +56,24 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
         "dosage_request",
     ),
 ]
+_RESEARCH_CONTEXT_PATTERN = re.compile(
+    (
+        r"(evaluate|evidence|systematic\s+review|meta-analysis|guideline|trial|rct|"
+        r"co[-\s]?prescribing|risk|outcome|compare|analysis|mechanism|pharmacology|"
+        r"literature|review|clinical\s+question|study)"
+    ),
+    flags=re.IGNORECASE,
+)
+_DIRECT_PATIENT_REQUEST_PATTERN = re.compile(
+    (
+        r"(k[êe]\s*đ[ơo]n\s*cho\s*t[ôo]i|t[ôo]i\s*n[eê]n\s*u[ốo]ng|"
+        r"cho\s*t[ôo]i\s*li[ềe]u|u[ốo]ng\s*m[ấa]y\s*vi[eê]n|"
+        r"gi[uú]p\s*t[ôo]i\s*ch[ẩa]n\s*đo[aá]n|t[ôo]i\s*b[iị]\s*g[iì]|"
+        r"prescribe\s+(me|for\s+me)|what\s+should\s+i\s+take|dose\s+for\s+me|"
+        r"diagnose\s+me)"
+    ),
+    flags=re.IGNORECASE,
+)
 _GREETING_HINTS: tuple[str, ...] = (
     "hi",
     "hello",
@@ -132,12 +150,21 @@ def _is_general_greeting(query: str) -> bool:
     return any(hint in normalized for hint in _GREETING_HINTS)
 
 
-def _detect_legal_guard_violation(query: str) -> str | None:
+def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str | None:
     normalized = query.strip().lower()
     if not normalized:
         return None
+    research_context = bool(_RESEARCH_CONTEXT_PATTERN.search(normalized))
+    direct_patient_request = bool(_DIRECT_PATIENT_REQUEST_PATTERN.search(normalized))
     for pattern, reason in _LEGAL_GUARD_PATTERNS:
         if pattern.search(normalized):
+            if (
+                channel == "research"
+                and research_context
+                and not direct_patient_request
+                and reason in {"prescription_request", "diagnosis_request", "dosage_request"}
+            ):
+                continue
             return reason
     return None
 
@@ -253,7 +280,7 @@ def rag_poc(payload: dict) -> dict:
 def routed_chat_infer(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
-    legal_guard_reason = _detect_legal_guard_violation(query)
+    legal_guard_reason = _detect_legal_guard_violation(query, channel="chat")
     if legal_guard_reason:
         return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
 
@@ -508,7 +535,7 @@ def routed_chat_infer(payload: dict) -> dict:
 def research_tier2(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
-    legal_guard_reason = _detect_legal_guard_violation(query)
+    legal_guard_reason = _detect_legal_guard_violation(query, channel="research")
     if legal_guard_reason:
         return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
     result = run_research_tier2(payload)

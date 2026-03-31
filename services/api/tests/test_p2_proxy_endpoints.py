@@ -91,6 +91,20 @@ def test_new_proxy_endpoints_success(
     expected_payload = dict(request_payload)
     if api_path == "/api/v1/research/tier2":
         expected_payload["role"] = "researcher"
+        expected_payload["answer_format"] = "markdown"
+        expected_payload["response_format"] = "markdown"
+        expected_payload["render_hints"] = {
+            "markdown": True,
+            "tables": True,
+            "mermaid": True,
+            "chart_spec_fences": [
+                "chart-spec",
+                "vega-lite",
+                "echarts-option",
+                "json",
+                "yaml",
+            ],
+        }
     if api_path == "/api/v1/careguard/analyze":
         expected_payload["external_ddi_enabled"] = False
     assert captured["json"] == expected_payload

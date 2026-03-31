@@ -67,6 +67,18 @@ _IMAGE_FILE_EXTENSIONS = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tif
 _SOURCE_HUB_SETTING_KEY = "source_hub_records_v1"
 _SOURCE_HUB_MAX_RECORDS = 500
 _SOURCE_HUB_TIMEOUT_SECONDS = 12.0
+_DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
+    "markdown": True,
+    "tables": True,
+    "mermaid": True,
+    "chart_spec_fences": [
+        "chart-spec",
+        "vega-lite",
+        "echarts-option",
+        "json",
+        "yaml",
+    ],
+}
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
@@ -389,18 +401,35 @@ def _coerce_research_mode(payload: dict[str, Any]) -> str:
 
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
     research_mode = _coerce_research_mode(payload)
-    fallback_answer = (
+    fallback_answer_text = (
         "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
         "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
         "đối chiếu tương tác thuốc quan trọng, "
         "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
     )
+    fallback_answer_markdown = (
+        "## Kết luận nhanh\n"
+        f"{fallback_answer_text}\n\n"
+        "## Phân tích chi tiết\n"
+        "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, nên câu trả lời này dùng chế độ an toàn.\n"
+        "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
+        "## Khuyến nghị an toàn\n"
+        "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
+        "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng.\n\n"
+        "## Nguồn tham chiếu\n"
+        "- [1] Hệ thống không truy xuất được nguồn RAG trong phiên hiện tại."
+    )
     return {
-        "answer": fallback_answer,
-        "summary": fallback_answer,
+        "answer": fallback_answer_markdown,
+        "answer_markdown": fallback_answer_markdown,
+        "summary": fallback_answer_text,
+        "answer_format": "markdown",
+        "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
         "metadata": {
             "research_mode": research_mode,
             "deep_pass_count": 0,
+            "answer_format": "markdown",
+            "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
         },
         "context_debug": {},
         "flow_events": [],
@@ -665,6 +694,19 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if telemetry is not None:
         normalized["telemetry"] = telemetry
+
+    answer_markdown = normalized.get("answer_markdown")
+    if not isinstance(answer_markdown, str) or not answer_markdown.strip():
+        for key in ("answer", "summary", "message"):
+            candidate = normalized.get(key)
+            if isinstance(candidate, str) and candidate.strip():
+                normalized["answer_markdown"] = candidate
+                break
+
+    if not isinstance(normalized.get("answer_format"), str):
+        normalized["answer_format"] = "markdown"
+    if not isinstance(normalized.get("render_hints"), dict):
+        normalized["render_hints"] = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
 
     return normalized
 
@@ -1519,6 +1561,17 @@ def research_tier2(
     user = _get_user_by_token(db, token)
 
     upstream_payload = dict(payload)
+    upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
+    upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
+    incoming_render_hints = upstream_payload.get("render_hints")
+    if isinstance(incoming_render_hints, dict):
+        merged_render_hints = {
+            **_DEFAULT_MARKDOWN_RENDER_HINTS,
+            **incoming_render_hints,
+        }
+    else:
+        merged_render_hints = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
+    upstream_payload["render_hints"] = merged_render_hints
     transient_documents = _build_uploaded_documents(payload.get("uploaded_file_ids"))
     source_ids = _extract_source_ids(payload)
     source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)

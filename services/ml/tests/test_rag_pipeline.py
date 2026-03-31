@@ -8,7 +8,7 @@ def test_rag_pipeline_returns_sources_and_answer():
     pipe = RagPipelineP0(deepseek_api_key="")
     result = pipe.run("canh bao tuong tac thuoc")
     assert len(result.retrieved_ids) > 0
-    assert "Tra loi" in result.answer
+    assert "LOCAL_FALLBACK_V1" in result.answer
     assert result.model_used == "local-synth-v1"
 
 

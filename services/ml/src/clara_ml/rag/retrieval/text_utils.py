@@ -81,6 +81,15 @@ def _ascii_fold(text: str) -> str:
     return without_marks.lower()
 
 
+def _tokenize_terms(text: str) -> set[str]:
+    lowered = text.lower()
+    folded = _ascii_fold(text)
+    raw = re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", lowered)
+    terms: set[str] = set(raw)
+    terms.update(re.findall(r"[0-9a-z]{2,}", folded))
+    return {item for item in terms if item}
+
+
 def query_terms(query: str) -> list[str]:
     lowered = query.lower()
     folded = _ascii_fold(query)
@@ -134,6 +143,53 @@ def query_terms(query: str) -> list[str]:
             "ldl cholesterol",
             "dyslipidemia",
         ],
+        "tuong tac": [
+            "drug interaction",
+            "drug-drug interaction",
+            "ddi",
+            "adverse interaction",
+            "contraindication",
+        ],
+        "drug interaction": [
+            "drug-drug interaction",
+            "ddi",
+            "contraindication",
+        ],
+        "warfarin": [
+            "warfarin",
+            "coumadin",
+            "inr bleeding risk",
+            "anticoagulant interaction",
+        ],
+        "giam dau": [
+            "painkiller",
+            "analgesic",
+            "nsaid",
+            "ibuprofen",
+            "naproxen",
+            "diclofenac",
+            "aspirin",
+            "acetaminophen",
+            "paracetamol",
+        ],
+        "thuoc giam dau": [
+            "painkiller",
+            "analgesic",
+            "nsaid",
+            "ibuprofen",
+            "naproxen",
+            "diclofenac",
+            "aspirin",
+            "acetaminophen",
+            "paracetamol",
+        ],
+        "nsaid": [
+            "ibuprofen",
+            "naproxen",
+            "diclofenac",
+            "aspirin",
+            "nonsteroidal anti-inflammatory",
+        ],
     }
 
     for marker, extra_terms in expansions.items():
@@ -152,6 +208,33 @@ def query_terms(query: str) -> list[str]:
             ]
         )
 
+    if "warfarin" in lowered and any(
+        marker in folded
+        for marker in (
+            "tuong tac",
+            "drug interaction",
+            "ddi",
+            "giam dau",
+            "thuoc giam dau",
+            "painkiller",
+            "analgesic",
+            "nsaid",
+            "ibuprofen",
+            "naproxen",
+            "diclofenac",
+            "aspirin",
+            "paracetamol",
+            "acetaminophen",
+        )
+    ):
+        expanded.extend(
+            [
+                "warfarin nsaid interaction",
+                "warfarin ibuprofen bleeding risk",
+                "warfarin analgesic interaction inr",
+            ]
+        )
+
     deduped: list[str] = []
     seen: set[str] = set()
     for token in expanded:
@@ -163,6 +246,56 @@ def query_terms(query: str) -> list[str]:
 
     deduped.sort(key=len, reverse=True)
     return deduped[:8]
+
+
+def analyze_query_profile(query: str) -> dict[str, Any]:
+    lowered = query.lower()
+    folded = _ascii_fold(query)
+    terms = _tokenize_terms(query)
+    interaction_signals = {
+        "tuong",
+        "tac",
+        "tuongtac",
+        "interaction",
+        "ddi",
+        "contraindication",
+        "bleeding",
+        "inr",
+    }
+    medication_aliases: dict[str, tuple[str, ...]] = {
+        "warfarin": ("warfarin", "coumadin"),
+        "ibuprofen": ("ibuprofen",),
+        "naproxen": ("naproxen",),
+        "diclofenac": ("diclofenac",),
+        "aspirin": ("aspirin",),
+        "paracetamol": ("paracetamol", "acetaminophen"),
+        "nsaid": ("nsaid", "nonsteroidal"),
+    }
+
+    normalized_drugs: list[str] = []
+    for canonical, aliases in medication_aliases.items():
+        if any(alias in terms for alias in aliases):
+            normalized_drugs.append(canonical)
+
+    is_ddi_query = bool(terms.intersection(interaction_signals)) and bool(normalized_drugs)
+    if "tuong tac" in folded and normalized_drugs:
+        is_ddi_query = True
+    if "drug interaction" in lowered and normalized_drugs:
+        is_ddi_query = True
+
+    primary_drug = "warfarin" if "warfarin" in normalized_drugs else (normalized_drugs[0] if normalized_drugs else "")
+    co_drugs = [item for item in normalized_drugs if item != primary_drug]
+    if is_ddi_query and primary_drug == "warfarin" and not co_drugs:
+        co_drugs = ["ibuprofen", "naproxen", "diclofenac", "aspirin", "paracetamol", "nsaid"]
+
+    return {
+        "query": query,
+        "query_terms": query_terms(query),
+        "is_ddi_query": is_ddi_query,
+        "primary_drug": primary_drug,
+        "co_drugs": co_drugs,
+        "interaction_signals": sorted(list(interaction_signals.intersection(terms))),
+    }
 
 
 def tag_relevance_factor(query: str, tags: Any) -> float:

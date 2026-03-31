@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
+from clara_ml.rag.retrieval.text_utils import analyze_query_profile
 from clara_ml.rag.retriever import Document, InMemoryRetriever
 from clara_ml.rag.seed_documents import base_documents, load_seed_documents
 
@@ -71,6 +72,7 @@ class RagPipelineP1:
         sources = ", ".join(doc.id for doc in docs) if docs else "none"
         snippets = " | ".join(f"{doc.id}: {doc.text}" for doc in docs)
         return (
+            "LOCAL_FALLBACK_V1 | "
             f"Trả lời tạm thời (local): query='{query}'. "
             f"Sources=[{sources}]. Summary={snippets}"
         )
@@ -110,6 +112,50 @@ class RagPipelineP1:
                 }
             )
         return rows
+
+    def _build_index_summary(
+        self,
+        docs: List[Document],
+        *,
+        before_dedupe_count: Any = None,
+        after_dedupe_count: Any = None,
+        selected_count: Any = None,
+        duration_ms: Any = None,
+    ) -> dict[str, Any]:
+        def _as_int(value: Any, default: int) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        before = _as_int(before_dedupe_count, len(docs))
+        after = _as_int(after_dedupe_count, len(docs))
+        selected = _as_int(selected_count, len(docs))
+        parsed_duration: float | None = None
+        try:
+            if duration_ms is not None:
+                parsed_duration = round(float(duration_ms), 3)
+        except (TypeError, ValueError):
+            parsed_duration = None
+
+        return {
+            "retrieved_count": len(docs),
+            "source_counts": self._source_counts(docs),
+            "before_dedupe_count": before,
+            "after_dedupe_count": after,
+            "before_dedupe": before,
+            "after_dedupe": after,
+            "selected_count": selected,
+            "duration_ms": parsed_duration,
+        }
+
+    def _should_force_external_retrieval(self, query: str, docs: List[Document]) -> bool:
+        profile = analyze_query_profile(query)
+        if bool(profile.get("is_ddi_query")):
+            return True
+        if len(docs) < 2:
+            return True
+        return len(self._source_counts(docs)) <= 1
 
     @staticmethod
     def _normalize_planner_hints(hints: object) -> dict[str, Any]:
@@ -183,6 +229,49 @@ class RagPipelineP1:
         query_tokens = self._tokenize(query)
         if not query_tokens or not docs:
             return 0.0
+        profile = analyze_query_profile(query)
+        if bool(profile.get("is_ddi_query")):
+            primary = str(profile.get("primary_drug") or "").strip().lower()
+            co_drugs = {
+                str(item).strip().lower()
+                for item in profile.get("co_drugs", [])
+                if str(item).strip()
+            }
+            interaction_terms = {
+                "interaction",
+                "ddi",
+                "contraindication",
+                "bleeding",
+                "inr",
+                "adverse",
+                "warning",
+                "risk",
+            }
+            best_score = 0.0
+            for doc in docs:
+                haystack = " ".join(
+                    [
+                        doc.text,
+                        str((doc.metadata or {}).get("source") or ""),
+                        str(doc.id or ""),
+                    ]
+                )
+                doc_tokens = self._tokenize(haystack)
+                if not doc_tokens:
+                    continue
+                has_primary = bool(primary) and primary in doc_tokens
+                has_codrug = bool(co_drugs.intersection(doc_tokens))
+                has_interaction = bool(interaction_terms.intersection(doc_tokens))
+                if has_primary and has_codrug:
+                    score = 0.78 + (0.12 if has_interaction else 0.0)
+                elif has_primary and has_interaction:
+                    score = 0.12
+                elif has_primary or has_codrug:
+                    score = 0.06
+                else:
+                    score = 0.0
+                best_score = max(best_score, min(score, 1.0))
+            return best_score
         best_score = 0.0
         for doc in docs:
             doc_tokens = self._tokenize(doc.text)
@@ -217,14 +306,16 @@ class RagPipelineP1:
             "Use retrieved context as primary evidence and avoid unsupported claims.\n"
             "If context is weak, provide a conservative safety-first answer with clear uncertainty.\n"
             "Do not say 'no context'; still provide practical next steps safely.\n"
-            "Output MUST be valid GitHub-Flavored Markdown (GFM) in Vietnamese.\n"
-            "Response structure:\n"
+            "Output MUST be valid GitHub-Flavored Markdown (GFM) in Vietnamese, no HTML.\n"
+            "Do not wrap the full response in a single code fence.\n"
+            "Response structure must include, in this order:\n"
             "1) ## Kết luận nhanh\n"
             "2) ## Phân tích chi tiết\n"
             "3) ## Khuyến nghị an toàn\n"
             "4) ## Nguồn tham chiếu\n"
             "If comparing >=2 options, include a Markdown table with columns: Tiêu chí | Phương án A | Phương án B | Ghi chú.\n"
-            "If explaining process/flow/decision path, include a mermaid flowchart block.\n"
+            "If explaining process/flow/decision path, include a fenced mermaid flowchart block.\n"
+            "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
             "Cite evidence inline with source ids like [source-id].\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
@@ -238,8 +329,11 @@ class RagPipelineP1:
             "Do not refuse solely due to missing context.\n"
             "Be explicit about uncertainty and avoid diagnostic/prescription overreach.\n"
             "If comparative question, provide balanced criteria and a Markdown table.\n"
-            "If process/workflow explanation is needed, include mermaid flowchart.\n"
-            "Output MUST be valid GitHub-Flavored Markdown (GFM).\n"
+            "If process/workflow explanation is needed, include fenced mermaid flowchart.\n"
+            "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
+            "Output MUST be valid GitHub-Flavored Markdown (GFM), no HTML.\n"
+            "Do not wrap the full response in a single code fence.\n"
+            "Response must include headings in this order: ## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu.\n"
             f"User query: {query}"
         )
 
@@ -458,12 +552,13 @@ class RagPipelineP1:
             "duration_ms": internal_search.get("duration_ms"),
         }
         retrieval_trace["source_attempts"] = internal_search.get("connectors_attempted", [])
-        retrieval_trace["index_summary"] = {
-            "before_dedupe_count": internal_index.get("before_dedupe_count"),
-            "after_dedupe_count": internal_index.get("after_dedupe_count"),
-            "selected_count": internal_index.get("selected_count"),
-            "duration_ms": internal_index.get("duration_ms"),
-        }
+        retrieval_trace["index_summary"] = self._build_index_summary(
+            docs,
+            before_dedupe_count=internal_index.get("before_dedupe_count"),
+            after_dedupe_count=internal_index.get("after_dedupe_count"),
+            selected_count=internal_index.get("selected_count"),
+            duration_ms=internal_index.get("duration_ms"),
+        )
         retrieval_trace["crawl_summary"] = {}
         flow_events.append(
             self._flow_event(
@@ -517,9 +612,15 @@ class RagPipelineP1:
         retrieval_trace["relevance"] = round(float(relevance_score), 4)
         low_context_before_external = relevance_score < threshold
         retrieval_trace["low_context_before_external"] = low_context_before_external
+        should_force_external = (
+            scientific_retrieval_enabled
+            and settings.rag_external_connectors_enabled
+            and self._should_force_external_retrieval(query, docs)
+        )
+        retrieval_trace["should_force_external"] = should_force_external
 
         if (
-            low_context_before_external
+            (low_context_before_external or should_force_external)
             and scientific_retrieval_enabled
             and settings.rag_external_connectors_enabled
         ):
@@ -531,13 +632,15 @@ class RagPipelineP1:
                     status="started",
                     docs=docs,
                     note=(
-                        "Low context detected; expanding retrieval via external "
+                        "Need external corroboration; expanding retrieval via external "
                         "medical connectors."
                     ),
                     component="retrieval",
                     payload={
                         "top_k": hybrid_top_k,
                         "web_retrieval_enabled": web_retrieval_enabled,
+                        "low_context_before_external": low_context_before_external,
+                        "should_force_external": should_force_external,
                     },
                 )
             )
@@ -591,12 +694,13 @@ class RagPipelineP1:
                     "duration_ms": hybrid_search.get("duration_ms"),
                 }
                 retrieval_trace["source_attempts"] = hybrid_search.get("connectors_attempted", [])
-                retrieval_trace["index_summary"] = {
-                    "before_dedupe_count": hybrid_index.get("before_dedupe_count"),
-                    "after_dedupe_count": hybrid_index.get("after_dedupe_count"),
-                    "selected_count": hybrid_index.get("selected_count"),
-                    "duration_ms": hybrid_index.get("duration_ms"),
-                }
+                retrieval_trace["index_summary"] = self._build_index_summary(
+                    docs,
+                    before_dedupe_count=hybrid_index.get("before_dedupe_count"),
+                    after_dedupe_count=hybrid_index.get("after_dedupe_count"),
+                    selected_count=hybrid_index.get("selected_count"),
+                    duration_ms=hybrid_index.get("duration_ms"),
+                )
                 retrieval_trace["crawl_summary"] = (
                     hybrid_search.get("crawl_summary")
                     if isinstance(hybrid_search.get("crawl_summary"), dict)
@@ -679,11 +783,12 @@ class RagPipelineP1:
                     "total_candidates": len(docs),
                 }
                 retrieval_trace["source_attempts"] = []
-                retrieval_trace["index_summary"] = {
-                    "before_dedupe_count": len(docs),
-                    "after_dedupe_count": len(docs),
-                    "selected_count": len(docs),
-                }
+                retrieval_trace["index_summary"] = self._build_index_summary(
+                    docs,
+                    before_dedupe_count=len(docs),
+                    after_dedupe_count=len(docs),
+                    selected_count=len(docs),
+                )
                 retrieval_trace["crawl_summary"] = {}
                 flow_events.append(
                     self._flow_event(
@@ -756,14 +861,23 @@ class RagPipelineP1:
             )
             retrieval_trace["source_attempts"] = search_phase.get("connectors_attempted", [])
 
-        retrieval_trace["index_summary"] = (
+        active_index_summary = (
             active_trace.get("index_summary")
             if isinstance(active_trace.get("index_summary"), dict)
-            else {
-                "before_dedupe": len(docs),
-                "after_dedupe": len(docs),
-                "selected_count": len(docs),
-            }
+            else {}
+        )
+        retrieval_trace["index_summary"] = self._build_index_summary(
+            docs,
+            before_dedupe_count=active_index_summary.get(
+                "before_dedupe_count",
+                active_index_summary.get("before_dedupe"),
+            ),
+            after_dedupe_count=active_index_summary.get(
+                "after_dedupe_count",
+                active_index_summary.get("after_dedupe"),
+            ),
+            selected_count=active_index_summary.get("selected_count"),
+            duration_ms=active_index_summary.get("duration_ms"),
         )
         retrieval_trace["crawl_summary"] = (
             active_trace.get("crawl_summary")
@@ -895,8 +1009,12 @@ class RagPipelineP1:
                     system_prompt=(
                         "You are CLARA clinical assistant. "
                         "Be concise, safe, and citation-grounded. "
-                        "Return GFM markdown. Use markdown table for comparisons. "
-                        "Use mermaid flowchart only when process explanation is needed. "
+                        "Return GFM markdown with these sections: "
+                        "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
+                        "Use markdown table for comparisons. "
+                        "Use fenced mermaid flowchart only when process explanation is needed. "
+                        "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
+                        "Do not output HTML. "
                         "Do not prescribe dosage or diagnose."
                     ),
                 )

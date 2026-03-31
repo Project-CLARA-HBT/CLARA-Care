@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+import re
 from time import perf_counter
 from typing import Any
 
+from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.rag.pipeline import RagPipelineP1
-from clara_ml.rag.retrieval.text_utils import query_terms
+from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.routing import P1RoleIntentRouter
 
 router = P1RoleIntentRouter()
@@ -27,6 +29,14 @@ class Citation:
     title: str
     url: str
     relevance: str
+
+
+_REQUIRED_MARKDOWN_HEADINGS = (
+    "## Kết luận nhanh",
+    "## Phân tích chi tiết",
+    "## Khuyến nghị an toàn",
+    "## Nguồn tham chiếu",
+)
 
 
 def _now_iso() -> str:
@@ -142,7 +152,18 @@ def _build_planner_hints(
     has_knowledge_sources = isinstance(rag_sources, list) and len(rag_sources) > 0
     evidence_query = any(
         token in normalized_topic
-        for token in {"evidence", "guideline", "meta-analysis", "rct", "systematic"}
+        for token in {
+            "evidence",
+            "guideline",
+            "meta-analysis",
+            "rct",
+            "systematic",
+            "interaction",
+            "drug-drug",
+            "ddi",
+            "contraindication",
+            "polypharmacy",
+        }
     )
 
     reason_codes: list[str] = ["tier2_standard_flow"]
@@ -445,6 +466,7 @@ def _normalize_retrieval_events(
 def _build_deep_subqueries(topic: str, keywords: list[str], pass_count: int) -> list[str]:
     cleaned_keywords = [item.strip() for item in keywords if isinstance(item, str) and item.strip()]
     keyword_hint = " ".join(cleaned_keywords[:4]).strip()
+    query_profile = analyze_query_profile(topic)
     base = [
         topic,
         f"{topic} guideline recommendations and first-line safety considerations",
@@ -454,6 +476,21 @@ def _build_deep_subqueries(topic: str, keywords: list[str], pass_count: int) -> 
         f"{topic} contradictory findings limitations and uncertainty analysis",
         f"{topic} clinical decision criteria patient-centered recommendation framework",
     ]
+    if query_profile.get("is_ddi_query"):
+        primary = str(query_profile.get("primary_drug") or "index drug").strip()
+        co_drugs = query_profile.get("co_drugs", [])
+        co_block = (
+            ", ".join(str(item) for item in co_drugs[:4])
+            if isinstance(co_drugs, list) and co_drugs
+            else "common analgesics"
+        )
+        base.extend(
+            [
+                f"{primary} interaction with {co_block} bleeding risk INR safety",
+                f"{primary} contraindication mechanism management with {co_block}",
+                f"{primary} painkiller interaction systematic review meta-analysis",
+            ]
+        )
     if keyword_hint:
         base.extend(
             [
@@ -557,6 +594,99 @@ def _merge_retrieved_context(
     return merged
 
 
+def _is_drug_interaction_query(topic: str) -> bool:
+    return bool(analyze_query_profile(topic).get("is_ddi_query"))
+
+
+def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not _is_drug_interaction_query(topic):
+        return rows
+
+    profile = analyze_query_profile(topic)
+    primary = str(profile.get("primary_drug") or "").strip().lower()
+    co_drugs = {
+        str(item).strip().lower()
+        for item in profile.get("co_drugs", [])
+        if str(item).strip()
+    }
+    interaction_terms = {"interaction", "ddi", "bleeding", "inr", "contraindication", "adverse"}
+    filtered: list[dict[str, Any]] = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        haystack = " ".join(
+            [
+                str(row.get("title") or ""),
+                str(row.get("text") or ""),
+                str(row.get("source") or ""),
+                str(row.get("id") or ""),
+            ]
+        ).lower()
+        tokens = {token for token in re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", haystack) if token}
+        if primary and primary not in tokens:
+            continue
+
+        overlap = 0
+        if primary and primary in tokens:
+            overlap += 1
+        if co_drugs.intersection(tokens):
+            overlap += 1
+        if interaction_terms.intersection(tokens):
+            overlap += 1
+        if overlap < 2:
+            continue
+        filtered.append(row)
+
+    return filtered
+
+
+def _has_markdown_heading(content: str, heading: str) -> bool:
+    pattern = re.compile(rf"^\s*{re.escape(heading)}\s*$", flags=re.IGNORECASE | re.MULTILINE)
+    return bool(pattern.search(content))
+
+
+def _citation_markdown_lines(citations: list[Citation]) -> list[str]:
+    if not citations:
+        return ["- [1] Chưa có nguồn tham chiếu cụ thể trong phản hồi hiện tại."]
+
+    rows: list[str] = []
+    for index, citation in enumerate(citations[:12], start=1):
+        title = _first_nonempty_text(citation.title, citation.source, citation.source_id, f"Nguồn {index}")
+        url = _safe_url(citation.url)
+        if url:
+            rows.append(f"- [{index}] {title} ({url})")
+        else:
+            rows.append(f"- [{index}] {title}")
+    return rows
+
+
+def _ensure_markdown_structure(answer: str, citations: list[Citation]) -> str:
+    cleaned = str(answer or "").strip()
+    if not cleaned:
+        cleaned = "Chưa có nội dung trả lời chuyên sâu."
+
+    if all(_has_markdown_heading(cleaned, heading) for heading in _REQUIRED_MARKDOWN_HEADINGS):
+        return cleaned
+
+    analysis_block = cleaned
+    if "\n" not in analysis_block:
+        analysis_block = f"- {analysis_block}"
+
+    citations_block = "\n".join(_citation_markdown_lines(citations))
+    return (
+        "## Kết luận nhanh\n"
+        f"{cleaned}\n\n"
+        "## Phân tích chi tiết\n"
+        f"{analysis_block}\n\n"
+        "## Khuyến nghị an toàn\n"
+        "- Không tự ý kê đơn hoặc điều chỉnh liều nếu chưa có tư vấn chuyên môn.\n"
+        "- Ưu tiên xác minh lại thông tin với bác sĩ/dược sĩ khi có bệnh nền hoặc đa thuốc.\n\n"
+        "## Nguồn tham chiếu\n"
+        f"{citations_block}"
+    )
+
+
 def run_research_tier2(payload: dict[str, Any]) -> dict:
     topic = _normalize_topic(payload)
     research_mode = _normalize_research_mode(payload)
@@ -615,6 +745,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     ]
 
     pipeline = RagPipelineP1()
+    strict_deepseek_required = bool(
+        payload.get("strict_deepseek_required", settings.deepseek_required)
+    )
+    deepseek_fallback_enabled = not strict_deepseek_required
     deep_pass_count = _resolve_deep_pass_count(
         payload,
         int(planner_hints.get("deep_pass_count", 1)),
@@ -694,7 +828,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             pass_result = pipeline.run(
                 subquery,
                 low_context_threshold=float(planner_hints["low_context_threshold"]),
-                deepseek_fallback_enabled=True,
+                deepseek_fallback_enabled=deepseek_fallback_enabled,
                 scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
                 web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
                 file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
@@ -709,6 +843,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     ],
                 },
                 generation_enabled=False,
+                strict_deepseek_required=strict_deepseek_required,
             )
             pass_trace = (
                 pass_result.trace.get("retrieval")
@@ -805,7 +940,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_result = pipeline.run(
         topic,
         low_context_threshold=float(planner_hints["low_context_threshold"]),
-        deepseek_fallback_enabled=True,
+        deepseek_fallback_enabled=deepseek_fallback_enabled,
         scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
         web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
         file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
@@ -813,7 +948,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         uploaded_documents=uploaded_documents,
         planner_hints=planner_hints,
         generation_enabled=True,
+        strict_deepseek_required=strict_deepseek_required,
     )
+    if strict_deepseek_required and (
+        rag_result.model_used.startswith("local-synth")
+        or "fallback" in rag_result.model_used.lower()
+    ):
+        raise RuntimeError("tier2_deepseek_required_violation")
     retrieval_trace = _build_retrieval_trace(rag_result=rag_result, planner_hints=planner_hints)
     if research_mode == "deep":
         retrieval_trace["deep_pass_summaries"] = deep_pass_summaries
@@ -821,13 +962,18 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     flow_events.extend(_normalize_retrieval_events(rag_result.flow_events))
 
     merged_context = _merge_retrieved_context(rag_result.retrieved_context, deep_pass_contexts)
-    citations = _build_citations(topic, merged_context, uploaded_documents)
+    filtered_context = _filter_context_for_topic(topic, merged_context)
+    effective_context = (
+        filtered_context if filtered_context or _is_drug_interaction_query(topic) else merged_context
+    )
+    citations = _build_citations(topic, effective_context, uploaded_documents)
     fallback_used = (
         rag_result.model_used.startswith("local-synth")
         or "fallback" in rag_result.model_used.lower()
     )
 
-    factcheck_result = run_fides_lite(answer=rag_result.answer, retrieved_context=merged_context)
+    answer_markdown = _ensure_markdown_structure(rag_result.answer, citations)
+    factcheck_result = run_fides_lite(answer=answer_markdown, retrieved_context=effective_context)
     policy_action = "allow" if factcheck_result.verdict == "pass" else "warn"
     verification_state = "verified" if policy_action == "allow" else "warning"
     verifier_trace = _build_verifier_trace(
@@ -901,7 +1047,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         if any(str(event.get("status", "")).lower() in {"error", "failed"} for event in flow_events)
         else "completed"
     )
-    answer_status = "warning" if fallback_used else "completed"
+    effective_fallback_used = False if strict_deepseek_required else fallback_used
+    answer_status = "warning" if effective_fallback_used else "completed"
     trace_bundle = {
         "planner": planner_trace,
         "retrieval": retrieval_trace,
@@ -982,6 +1129,31 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         if isinstance(retrieval_trace.get("index_summary"), dict)
         else {}
     )
+    index_summary = {
+        **index_summary,
+        "retrieved_count": index_summary.get("retrieved_count", retrieval_trace.get("retrieved_count")),
+        "source_counts": index_summary.get("source_counts", retrieval_trace.get("source_counts", {})),
+        "before_dedupe_count": index_summary.get(
+            "before_dedupe_count",
+            index_summary.get("before_dedupe", retrieval_trace.get("retrieved_count")),
+        ),
+        "after_dedupe_count": index_summary.get(
+            "after_dedupe_count",
+            index_summary.get("after_dedupe", retrieval_trace.get("retrieved_count")),
+        ),
+        "before_dedupe": index_summary.get(
+            "before_dedupe",
+            index_summary.get("before_dedupe_count", retrieval_trace.get("retrieved_count")),
+        ),
+        "after_dedupe": index_summary.get(
+            "after_dedupe",
+            index_summary.get("after_dedupe_count", retrieval_trace.get("retrieved_count")),
+        ),
+        "selected_count": index_summary.get(
+            "selected_count",
+            retrieval_trace.get("retrieved_count"),
+        ),
+    }
     crawl_summary = (
         retrieval_trace.get("crawl_summary")
         if isinstance(retrieval_trace.get("crawl_summary"), dict)
@@ -1001,7 +1173,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "source_attempts": source_attempts,
         "index_summary": index_summary,
         "crawl_summary": crawl_summary,
-        "docs": merged_context,
+        "docs": effective_context,
         "scores": {
             "relevance": rag_result.context_debug.get("relevance")
             if isinstance(rag_result.context_debug, dict)
@@ -1041,7 +1213,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 {"name": "verification", "status": verification_state},
                 {"name": "citation_selection", "status": "completed"},
             ],
-            "fallback_used": fallback_used,
+            "fallback_used": effective_fallback_used,
             "source_mode": source_mode,
             "research_mode": research_mode,
             "deep_pass_count": len(deep_pass_summaries),
@@ -1061,6 +1233,19 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "confidence": route.confidence,
                 "emergency": route.emergency,
             },
+            "answer_format": "markdown",
+            "render_hints": {
+                "markdown": True,
+                "tables": True,
+                "mermaid": True,
+                "chart_spec_fences": [
+                    "chart-spec",
+                    "vega-lite",
+                    "echarts-option",
+                    "json",
+                    "yaml",
+                ],
+            },
         },
         "context_debug": rag_result.context_debug,
         "flow_events": flow_events,
@@ -1071,10 +1256,24 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "telemetry": telemetry,
         "policy_action": policy_action,
         "verification_status": verification_status,
-        "fallback_used": fallback_used,
+        "fallback_used": effective_fallback_used,
         "research_mode": research_mode,
         "deep_pass_count": len(deep_pass_summaries),
         "plan_steps": [asdict(step) for step in plan_steps],
         "citations": [asdict(item) for item in citations],
-        "answer": rag_result.answer,
+        "answer": answer_markdown,
+        "answer_markdown": answer_markdown,
+        "answer_format": "markdown",
+        "render_hints": {
+            "markdown": True,
+            "tables": True,
+            "mermaid": True,
+            "chart_spec_fences": [
+                "chart-spec",
+                "vega-lite",
+                "echarts-option",
+                "json",
+                "yaml",
+            ],
+        },
     }

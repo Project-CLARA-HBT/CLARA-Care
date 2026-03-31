@@ -115,6 +115,8 @@ export type ResearchTier2SourceAttempt = {
 };
 
 export type ResearchTier2IndexSummary = {
+  retrievedCount?: number;
+  sourceCounts?: Record<string, number>;
   beforeDedupe?: number;
   afterDedupe?: number;
   selectedCount?: number;
@@ -143,8 +145,12 @@ export type ResearchTier2Telemetry = {
 
 export type ResearchTier2RawResponse = {
   answer?: string;
+  answer_markdown?: string;
+  answer_md?: string;
   summary?: string;
   message?: string;
+  answer_format?: string;
+  render_hints?: unknown;
   citations?: unknown;
   sources?: unknown;
   steps?: unknown;
@@ -1004,7 +1010,19 @@ function dedupeSourceAttempts(items: ResearchTier2SourceAttempt[]): ResearchTier
 
 function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
   const item = asRecord(value) ?? {};
+  const sourceCountsRecord = asRecord(item.source_counts) ?? asRecord(item.sourceCounts);
+  const sourceCounts = sourceCountsRecord
+    ? Object.fromEntries(
+        Object.entries(sourceCountsRecord)
+          .map(([key, raw]) => [key, asNumber(raw)])
+          .filter(([, raw]) => raw !== undefined)
+      )
+    : undefined;
   return {
+    retrievedCount:
+      asNumber(item.retrieved_count) ??
+      asNumber(item.retrievedCount),
+    sourceCounts,
     beforeDedupe:
       asNumber(item.before_dedupe) ??
       asNumber(item.before_dedupe_count) ??
@@ -1122,6 +1140,14 @@ export async function runResearchTier2(
   const payload: Record<string, unknown> = { query, message: query };
   const researchMode = options?.researchMode === "deep" ? "deep" : "fast";
   payload.research_mode = researchMode;
+  payload.answer_format = "markdown";
+  payload.response_format = "markdown";
+  payload.render_hints = {
+    markdown: true,
+    tables: true,
+    mermaid: true,
+    chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
+  };
 
   if (uploadedFileIds.length) {
     payload.uploaded_file_ids = uploadedFileIds;
@@ -1137,9 +1163,16 @@ export async function runResearchTier2(
 }
 
 export function normalizeResearchTier2(data: ResearchTier2RawResponse): ResearchTier2Result {
-  const answer = asText(data.answer) ?? asText(data.summary) ?? asText(data.message) ?? "";
-  const citations = parseList(data.citations ?? data.sources, parseCitation);
   const metadata = asRecord(data.metadata) ?? {};
+  const answer =
+    asText(data.answer_markdown) ??
+    asText(data.answer_md) ??
+    asText(metadata.answer_markdown) ??
+    asText(data.answer) ??
+    asText(data.summary) ??
+    asText(data.message) ??
+    "";
+  const citations = parseList(data.citations ?? data.sources, parseCitation);
   const contextDebug = asRecord(data.context_debug) ?? asRecord(metadata.context_debug);
   const telemetryRecord =
     asRecord(data.telemetry) ??
