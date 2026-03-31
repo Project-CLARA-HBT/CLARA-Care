@@ -20,9 +20,18 @@ class InteractionRule:
 _LOCAL_DDI_RULES_PATH = (
     Path(__file__).resolve().parent.parent / "nlp" / "seed_data" / "careguard_ddi_rules.v1.json"
 )
+_VN_DRUG_DICTIONARY_PATH = (
+    Path(__file__).resolve().parent.parent / "nlp" / "seed_data" / "vn_drug_dictionary.json"
+)
 _LOCAL_DDI_RULES_CACHE_MTIME_NS: int | None = None
 _LOCAL_DDI_RULES_CACHE_VERSION: str = "unknown"
 _LOCAL_DDI_RULES_CACHE_RULES: list[InteractionRule] = []
+_VN_DICTIONARY_CACHE_MTIME_NS: int | None = None
+_VN_DICTIONARY_CACHE_VERSION: str = "unknown"
+_VN_DICTIONARY_RECORD_COUNT: int = 0
+_VN_DICTIONARY_ALIAS_LOOKUP: dict[str, str] = {}
+_VN_DICTIONARY_ACTIVE_INGREDIENTS: dict[str, list[str]] = {}
+_VN_DICTIONARY_RXCUI_MAP: dict[str, str] = {}
 
 _CRITICAL_SYMPTOMS = {
     "chest pain",
@@ -58,6 +67,12 @@ def _normalize_text_list(value: object) -> list[str]:
                 normalized.append(item.strip().lower())
         return normalized
     return []
+
+
+def _normalize_text_token(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.strip().lower().split())
 
 
 def _normalize_severity(value: object) -> str:
@@ -116,6 +131,125 @@ def _load_local_ddi_rules() -> tuple[list[InteractionRule], str]:
     _LOCAL_DDI_RULES_CACHE_RULES = parsed_rules
     _LOCAL_DDI_RULES_CACHE_VERSION = version
     return _LOCAL_DDI_RULES_CACHE_RULES, _LOCAL_DDI_RULES_CACHE_VERSION
+
+
+def _load_vn_drug_dictionary() -> tuple[str, int]:
+    global _VN_DICTIONARY_CACHE_MTIME_NS
+    global _VN_DICTIONARY_CACHE_VERSION
+    global _VN_DICTIONARY_RECORD_COUNT
+    global _VN_DICTIONARY_ALIAS_LOOKUP
+    global _VN_DICTIONARY_ACTIVE_INGREDIENTS
+    global _VN_DICTIONARY_RXCUI_MAP
+
+    try:
+        mtime_ns = _VN_DRUG_DICTIONARY_PATH.stat().st_mtime_ns
+    except OSError:
+        return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+    if _VN_DICTIONARY_CACHE_MTIME_NS == mtime_ns and _VN_DICTIONARY_ALIAS_LOOKUP:
+        return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+    try:
+        payload = json.loads(_VN_DRUG_DICTIONARY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+    raw_records = payload.get("records")
+    if not isinstance(raw_records, list):
+        return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+    alias_lookup: dict[str, str] = {}
+    active_ingredients_by_canonical: dict[str, list[str]] = {}
+    rxcui_by_canonical: dict[str, str] = {}
+    parsed_count = 0
+
+    for record in raw_records:
+        if not isinstance(record, dict):
+            continue
+        brand = _normalize_text_token(record.get("brand_vn"))
+        canonical = _normalize_text_token(record.get("normalized_name"))
+        if not brand or not canonical:
+            continue
+
+        alias_lookup[brand] = canonical
+        parsed_count += 1
+
+        normalized_actives: list[str] = []
+        raw_actives = record.get("active_ingredients")
+        if isinstance(raw_actives, list):
+            for raw_active in raw_actives:
+                normalized_active = _normalize_text_token(raw_active)
+                if normalized_active and normalized_active not in normalized_actives:
+                    normalized_actives.append(normalized_active)
+        if not normalized_actives:
+            normalized_actives = [canonical]
+        active_ingredients_by_canonical.setdefault(canonical, normalized_actives)
+
+        rxcui = str(record.get("rxcui") or "").strip()
+        if rxcui:
+            rxcui_by_canonical.setdefault(canonical, rxcui)
+
+    if not alias_lookup:
+        return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+    version = (
+        str(payload.get("version") or _VN_DRUG_DICTIONARY_PATH.stem).strip()
+        or "unknown"
+    )
+    _VN_DICTIONARY_CACHE_MTIME_NS = mtime_ns
+    _VN_DICTIONARY_CACHE_VERSION = version
+    _VN_DICTIONARY_RECORD_COUNT = parsed_count
+    _VN_DICTIONARY_ALIAS_LOOKUP = alias_lookup
+    _VN_DICTIONARY_ACTIVE_INGREDIENTS = active_ingredients_by_canonical
+    _VN_DICTIONARY_RXCUI_MAP = rxcui_by_canonical
+    return _VN_DICTIONARY_CACHE_VERSION, _VN_DICTIONARY_RECORD_COUNT
+
+
+def _normalize_medications_with_vn_dictionary(
+    medications: list[str],
+) -> tuple[list[str], dict[str, Any]]:
+    version, record_count = _load_vn_drug_dictionary()
+    if not medications:
+        return [], {
+            "version": version,
+            "record_count": record_count,
+            "mapped_count": 0,
+            "mapped_items": [],
+        }
+
+    mapped_items: list[dict[str, str]] = []
+    normalized_medications: list[str] = []
+    seen: set[str] = set()
+
+    for medication in medications:
+        input_token = _normalize_text_token(medication)
+        if not input_token:
+            continue
+        canonical = _VN_DICTIONARY_ALIAS_LOOKUP.get(input_token, input_token)
+        active_ingredients = _VN_DICTIONARY_ACTIVE_INGREDIENTS.get(canonical, [canonical])
+
+        if canonical != input_token:
+            mapped_items.append(
+                {
+                    "input": input_token,
+                    "normalized_name": canonical,
+                    "rxcui": _VN_DICTIONARY_RXCUI_MAP.get(canonical, ""),
+                }
+            )
+
+        for candidate in [canonical, *active_ingredients]:
+            normalized_candidate = _normalize_text_token(candidate)
+            if not normalized_candidate or normalized_candidate in seen:
+                continue
+            seen.add(normalized_candidate)
+            normalized_medications.append(normalized_candidate)
+
+    return normalized_medications, {
+        "version": version,
+        "record_count": record_count,
+        "mapped_count": len(mapped_items),
+        "mapped_items": mapped_items[:20],
+    }
 
 
 def _as_bool(value: object, default: bool) -> bool:
@@ -371,7 +505,8 @@ def _recommendation_for(
 
 def run_careguard_analyze(payload: dict) -> dict:
     symptoms = _normalize_text_list(payload.get("symptoms"))
-    medications = _normalize_text_list(payload.get("medications"))
+    raw_medications = _normalize_text_list(payload.get("medications"))
+    medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(raw_medications)
     allergies = _normalize_text_list(payload.get("allergies"))
     labs = payload.get("labs")
 
@@ -436,6 +571,10 @@ def run_careguard_analyze(payload: dict) -> dict:
             "external_ddi_enabled": external_ddi_enabled,
             "external_ddi_flag_source": external_ddi_flag_source,
             "local_ddi_rules_version": local_ddi_rules_version,
+            "vn_dictionary_version": vn_dictionary_metadata["version"],
+            "vn_dictionary_record_count": vn_dictionary_metadata["record_count"],
+            "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
+            "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
             "source_used": source_used,
             "source_errors": source_errors,
         },

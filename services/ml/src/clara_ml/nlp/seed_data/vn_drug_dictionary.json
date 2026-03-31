@@ -1,0 +1,1764 @@
+{
+  "version": "vn-drug-dictionary-2026-03-31",
+  "record_count": 217,
+  "records": [
+    {
+      "brand_vn": "allopurinol",
+      "normalized_name": "allopurinol",
+      "active_ingredients": [
+        "allopurinol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "zyloric",
+      "normalized_name": "allopurinol",
+      "active_ingredients": [
+        "allopurinol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "allopurinol stada",
+      "normalized_name": "allopurinol",
+      "active_ingredients": [
+        "allopurinol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "amiodarone",
+      "normalized_name": "amiodarone",
+      "active_ingredients": [
+        "amiodarone"
+      ],
+      "rxcui": "703"
+    },
+    {
+      "brand_vn": "cordarone",
+      "normalized_name": "amiodarone",
+      "active_ingredients": [
+        "amiodarone"
+      ],
+      "rxcui": "703"
+    },
+    {
+      "brand_vn": "amiodaron stella",
+      "normalized_name": "amiodarone",
+      "active_ingredients": [
+        "amiodarone"
+      ],
+      "rxcui": "703"
+    },
+    {
+      "brand_vn": "amlodipine",
+      "normalized_name": "amlodipine",
+      "active_ingredients": [
+        "amlodipine"
+      ],
+      "rxcui": "17767"
+    },
+    {
+      "brand_vn": "norvasc",
+      "normalized_name": "amlodipine",
+      "active_ingredients": [
+        "amlodipine"
+      ],
+      "rxcui": "17767"
+    },
+    {
+      "brand_vn": "amlodipin stada",
+      "normalized_name": "amlodipine",
+      "active_ingredients": [
+        "amlodipine"
+      ],
+      "rxcui": "17767"
+    },
+    {
+      "brand_vn": "amlodipin dhg",
+      "normalized_name": "amlodipine",
+      "active_ingredients": [
+        "amlodipine"
+      ],
+      "rxcui": "17767"
+    },
+    {
+      "brand_vn": "amoxicillin",
+      "normalized_name": "amoxicillin",
+      "active_ingredients": [
+        "amoxicillin"
+      ],
+      "rxcui": "723"
+    },
+    {
+      "brand_vn": "amox",
+      "normalized_name": "amoxicillin",
+      "active_ingredients": [
+        "amoxicillin"
+      ],
+      "rxcui": "723"
+    },
+    {
+      "brand_vn": "amoxicillin stada",
+      "normalized_name": "amoxicillin",
+      "active_ingredients": [
+        "amoxicillin"
+      ],
+      "rxcui": "723"
+    },
+    {
+      "brand_vn": "amoxicillin dhg",
+      "normalized_name": "amoxicillin",
+      "active_ingredients": [
+        "amoxicillin"
+      ],
+      "rxcui": "723"
+    },
+    {
+      "brand_vn": "amoxil",
+      "normalized_name": "amoxicillin",
+      "active_ingredients": [
+        "amoxicillin"
+      ],
+      "rxcui": "723"
+    },
+    {
+      "brand_vn": "amoxicillin clavulanate",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "augmentin",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "klamentin",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "bidiclav",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "amoclav",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "clavam",
+      "normalized_name": "amoxicillin clavulanate",
+      "active_ingredients": [
+        "amoxicillin",
+        "clavulanic acid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "apixaban",
+      "normalized_name": "apixaban",
+      "active_ingredients": [
+        "apixaban"
+      ],
+      "rxcui": "1364430"
+    },
+    {
+      "brand_vn": "eliquis",
+      "normalized_name": "apixaban",
+      "active_ingredients": [
+        "apixaban"
+      ],
+      "rxcui": "1364430"
+    },
+    {
+      "brand_vn": "aspirin",
+      "normalized_name": "aspirin",
+      "active_ingredients": [
+        "aspirin"
+      ],
+      "rxcui": "1191"
+    },
+    {
+      "brand_vn": "aspirin cardio",
+      "normalized_name": "aspirin",
+      "active_ingredients": [
+        "aspirin"
+      ],
+      "rxcui": "1191"
+    },
+    {
+      "brand_vn": "aspirin protect",
+      "normalized_name": "aspirin",
+      "active_ingredients": [
+        "aspirin"
+      ],
+      "rxcui": "1191"
+    },
+    {
+      "brand_vn": "aspilet",
+      "normalized_name": "aspirin",
+      "active_ingredients": [
+        "aspirin"
+      ],
+      "rxcui": "1191"
+    },
+    {
+      "brand_vn": "baby aspirin",
+      "normalized_name": "aspirin",
+      "active_ingredients": [
+        "aspirin"
+      ],
+      "rxcui": "1191"
+    },
+    {
+      "brand_vn": "atorvastatin",
+      "normalized_name": "atorvastatin",
+      "active_ingredients": [
+        "atorvastatin"
+      ],
+      "rxcui": "83367"
+    },
+    {
+      "brand_vn": "lipitor",
+      "normalized_name": "atorvastatin",
+      "active_ingredients": [
+        "atorvastatin"
+      ],
+      "rxcui": "83367"
+    },
+    {
+      "brand_vn": "atorvastatin stada",
+      "normalized_name": "atorvastatin",
+      "active_ingredients": [
+        "atorvastatin"
+      ],
+      "rxcui": "83367"
+    },
+    {
+      "brand_vn": "atorvastatin dhg",
+      "normalized_name": "atorvastatin",
+      "active_ingredients": [
+        "atorvastatin"
+      ],
+      "rxcui": "83367"
+    },
+    {
+      "brand_vn": "azathioprine",
+      "normalized_name": "azathioprine",
+      "active_ingredients": [
+        "azathioprine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "imuran",
+      "normalized_name": "azathioprine",
+      "active_ingredients": [
+        "azathioprine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "bisoprolol",
+      "normalized_name": "bisoprolol",
+      "active_ingredients": [
+        "bisoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "concor",
+      "normalized_name": "bisoprolol",
+      "active_ingredients": [
+        "bisoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "bisoprolol stada",
+      "normalized_name": "bisoprolol",
+      "active_ingredients": [
+        "bisoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "bisoprolol hasan",
+      "normalized_name": "bisoprolol",
+      "active_ingredients": [
+        "bisoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "cetirizine",
+      "normalized_name": "cetirizine",
+      "active_ingredients": [
+        "cetirizine"
+      ],
+      "rxcui": "20610"
+    },
+    {
+      "brand_vn": "zyrtec",
+      "normalized_name": "cetirizine",
+      "active_ingredients": [
+        "cetirizine"
+      ],
+      "rxcui": "20610"
+    },
+    {
+      "brand_vn": "cetirizin stada",
+      "normalized_name": "cetirizine",
+      "active_ingredients": [
+        "cetirizine"
+      ],
+      "rxcui": "20610"
+    },
+    {
+      "brand_vn": "cetirizin dhg",
+      "normalized_name": "cetirizine",
+      "active_ingredients": [
+        "cetirizine"
+      ],
+      "rxcui": "20610"
+    },
+    {
+      "brand_vn": "cimetidine",
+      "normalized_name": "cimetidine",
+      "active_ingredients": [
+        "cimetidine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "tagamet",
+      "normalized_name": "cimetidine",
+      "active_ingredients": [
+        "cimetidine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "ciprofloxacin",
+      "normalized_name": "ciprofloxacin",
+      "active_ingredients": [
+        "ciprofloxacin"
+      ],
+      "rxcui": "2551"
+    },
+    {
+      "brand_vn": "cipro",
+      "normalized_name": "ciprofloxacin",
+      "active_ingredients": [
+        "ciprofloxacin"
+      ],
+      "rxcui": "2551"
+    },
+    {
+      "brand_vn": "ciprobay",
+      "normalized_name": "ciprofloxacin",
+      "active_ingredients": [
+        "ciprofloxacin"
+      ],
+      "rxcui": "2551"
+    },
+    {
+      "brand_vn": "ciprofloxacin stada",
+      "normalized_name": "ciprofloxacin",
+      "active_ingredients": [
+        "ciprofloxacin"
+      ],
+      "rxcui": "2551"
+    },
+    {
+      "brand_vn": "clarithromycin",
+      "normalized_name": "clarithromycin",
+      "active_ingredients": [
+        "clarithromycin"
+      ],
+      "rxcui": "21212"
+    },
+    {
+      "brand_vn": "klacid",
+      "normalized_name": "clarithromycin",
+      "active_ingredients": [
+        "clarithromycin"
+      ],
+      "rxcui": "21212"
+    },
+    {
+      "brand_vn": "clarithromycin stada",
+      "normalized_name": "clarithromycin",
+      "active_ingredients": [
+        "clarithromycin"
+      ],
+      "rxcui": "21212"
+    },
+    {
+      "brand_vn": "clopidogrel",
+      "normalized_name": "clopidogrel",
+      "active_ingredients": [
+        "clopidogrel"
+      ],
+      "rxcui": "32968"
+    },
+    {
+      "brand_vn": "plavix",
+      "normalized_name": "clopidogrel",
+      "active_ingredients": [
+        "clopidogrel"
+      ],
+      "rxcui": "32968"
+    },
+    {
+      "brand_vn": "clopidogrel stada",
+      "normalized_name": "clopidogrel",
+      "active_ingredients": [
+        "clopidogrel"
+      ],
+      "rxcui": "32968"
+    },
+    {
+      "brand_vn": "clopidogrel dhg",
+      "normalized_name": "clopidogrel",
+      "active_ingredients": [
+        "clopidogrel"
+      ],
+      "rxcui": "32968"
+    },
+    {
+      "brand_vn": "diazepam",
+      "normalized_name": "diazepam",
+      "active_ingredients": [
+        "diazepam"
+      ],
+      "rxcui": "3322"
+    },
+    {
+      "brand_vn": "valium",
+      "normalized_name": "diazepam",
+      "active_ingredients": [
+        "diazepam"
+      ],
+      "rxcui": "3322"
+    },
+    {
+      "brand_vn": "seduxen",
+      "normalized_name": "diazepam",
+      "active_ingredients": [
+        "diazepam"
+      ],
+      "rxcui": "3322"
+    },
+    {
+      "brand_vn": "diazepam stella",
+      "normalized_name": "diazepam",
+      "active_ingredients": [
+        "diazepam"
+      ],
+      "rxcui": "3322"
+    },
+    {
+      "brand_vn": "diclofenac",
+      "normalized_name": "diclofenac",
+      "active_ingredients": [
+        "diclofenac"
+      ],
+      "rxcui": "3355"
+    },
+    {
+      "brand_vn": "voltaren",
+      "normalized_name": "diclofenac",
+      "active_ingredients": [
+        "diclofenac"
+      ],
+      "rxcui": "3355"
+    },
+    {
+      "brand_vn": "cataflam",
+      "normalized_name": "diclofenac",
+      "active_ingredients": [
+        "diclofenac"
+      ],
+      "rxcui": "3355"
+    },
+    {
+      "brand_vn": "diclofenac stada",
+      "normalized_name": "diclofenac",
+      "active_ingredients": [
+        "diclofenac"
+      ],
+      "rxcui": "3355"
+    },
+    {
+      "brand_vn": "diclofenac dhg",
+      "normalized_name": "diclofenac",
+      "active_ingredients": [
+        "diclofenac"
+      ],
+      "rxcui": "3355"
+    },
+    {
+      "brand_vn": "digoxin",
+      "normalized_name": "digoxin",
+      "active_ingredients": [
+        "digoxin"
+      ],
+      "rxcui": "3407"
+    },
+    {
+      "brand_vn": "lanoxin",
+      "normalized_name": "digoxin",
+      "active_ingredients": [
+        "digoxin"
+      ],
+      "rxcui": "3407"
+    },
+    {
+      "brand_vn": "erythromycin",
+      "normalized_name": "erythromycin",
+      "active_ingredients": [
+        "erythromycin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "erythrocin",
+      "normalized_name": "erythromycin",
+      "active_ingredients": [
+        "erythromycin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "erythromycin stella",
+      "normalized_name": "erythromycin",
+      "active_ingredients": [
+        "erythromycin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "esomeprazole",
+      "normalized_name": "esomeprazole",
+      "active_ingredients": [
+        "esomeprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "nexium",
+      "normalized_name": "esomeprazole",
+      "active_ingredients": [
+        "esomeprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "esomeprazol stada",
+      "normalized_name": "esomeprazole",
+      "active_ingredients": [
+        "esomeprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "fluconazole",
+      "normalized_name": "fluconazole",
+      "active_ingredients": [
+        "fluconazole"
+      ],
+      "rxcui": "4450"
+    },
+    {
+      "brand_vn": "diflucan",
+      "normalized_name": "fluconazole",
+      "active_ingredients": [
+        "fluconazole"
+      ],
+      "rxcui": "4450"
+    },
+    {
+      "brand_vn": "fluconazole stada",
+      "normalized_name": "fluconazole",
+      "active_ingredients": [
+        "fluconazole"
+      ],
+      "rxcui": "4450"
+    },
+    {
+      "brand_vn": "fluconazole dhg",
+      "normalized_name": "fluconazole",
+      "active_ingredients": [
+        "fluconazole"
+      ],
+      "rxcui": "4450"
+    },
+    {
+      "brand_vn": "fluoxetine",
+      "normalized_name": "fluoxetine",
+      "active_ingredients": [
+        "fluoxetine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "prozac",
+      "normalized_name": "fluoxetine",
+      "active_ingredients": [
+        "fluoxetine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "fluoxetin stada",
+      "normalized_name": "fluoxetine",
+      "active_ingredients": [
+        "fluoxetine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "furosemide",
+      "normalized_name": "furosemide",
+      "active_ingredients": [
+        "furosemide"
+      ],
+      "rxcui": "4603"
+    },
+    {
+      "brand_vn": "lasix",
+      "normalized_name": "furosemide",
+      "active_ingredients": [
+        "furosemide"
+      ],
+      "rxcui": "4603"
+    },
+    {
+      "brand_vn": "furosemid stada",
+      "normalized_name": "furosemide",
+      "active_ingredients": [
+        "furosemide"
+      ],
+      "rxcui": "4603"
+    },
+    {
+      "brand_vn": "furosemid dhg",
+      "normalized_name": "furosemide",
+      "active_ingredients": [
+        "furosemide"
+      ],
+      "rxcui": "4603"
+    },
+    {
+      "brand_vn": "gliclazide",
+      "normalized_name": "gliclazide",
+      "active_ingredients": [
+        "gliclazide"
+      ],
+      "rxcui": "4815"
+    },
+    {
+      "brand_vn": "diamicron",
+      "normalized_name": "gliclazide",
+      "active_ingredients": [
+        "gliclazide"
+      ],
+      "rxcui": "4815"
+    },
+    {
+      "brand_vn": "gliclazid stada",
+      "normalized_name": "gliclazide",
+      "active_ingredients": [
+        "gliclazide"
+      ],
+      "rxcui": "4815"
+    },
+    {
+      "brand_vn": "glimepiride",
+      "normalized_name": "glimepiride",
+      "active_ingredients": [
+        "glimepiride"
+      ],
+      "rxcui": "25789"
+    },
+    {
+      "brand_vn": "amaryl",
+      "normalized_name": "glimepiride",
+      "active_ingredients": [
+        "glimepiride"
+      ],
+      "rxcui": "25789"
+    },
+    {
+      "brand_vn": "glimepirid stada",
+      "normalized_name": "glimepiride",
+      "active_ingredients": [
+        "glimepiride"
+      ],
+      "rxcui": "25789"
+    },
+    {
+      "brand_vn": "ibuprofen",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "advil",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "brufen",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "motrin",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "ibuprofen stella",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "ibuprofen dhg",
+      "normalized_name": "ibuprofen",
+      "active_ingredients": [
+        "ibuprofen"
+      ],
+      "rxcui": "5640"
+    },
+    {
+      "brand_vn": "insulin",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "insulatard",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "novorapid",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "humalog",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "mixtard",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "lantus",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "levemir",
+      "normalized_name": "insulin",
+      "active_ingredients": [
+        "insulin"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "ketoconazole",
+      "normalized_name": "ketoconazole",
+      "active_ingredients": [
+        "ketoconazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "nizoral",
+      "normalized_name": "ketoconazole",
+      "active_ingredients": [
+        "ketoconazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "ketoconazol stada",
+      "normalized_name": "ketoconazole",
+      "active_ingredients": [
+        "ketoconazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "linezolid",
+      "normalized_name": "linezolid",
+      "active_ingredients": [
+        "linezolid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "zyvox",
+      "normalized_name": "linezolid",
+      "active_ingredients": [
+        "linezolid"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "lisinopril",
+      "normalized_name": "lisinopril",
+      "active_ingredients": [
+        "lisinopril"
+      ],
+      "rxcui": "29046"
+    },
+    {
+      "brand_vn": "zestril",
+      "normalized_name": "lisinopril",
+      "active_ingredients": [
+        "lisinopril"
+      ],
+      "rxcui": "29046"
+    },
+    {
+      "brand_vn": "lisinopril stada",
+      "normalized_name": "lisinopril",
+      "active_ingredients": [
+        "lisinopril"
+      ],
+      "rxcui": "29046"
+    },
+    {
+      "brand_vn": "loratadine",
+      "normalized_name": "loratadine",
+      "active_ingredients": [
+        "loratadine"
+      ],
+      "rxcui": "28889"
+    },
+    {
+      "brand_vn": "claritin",
+      "normalized_name": "loratadine",
+      "active_ingredients": [
+        "loratadine"
+      ],
+      "rxcui": "28889"
+    },
+    {
+      "brand_vn": "loratadin stada",
+      "normalized_name": "loratadine",
+      "active_ingredients": [
+        "loratadine"
+      ],
+      "rxcui": "28889"
+    },
+    {
+      "brand_vn": "loratadin dhg",
+      "normalized_name": "loratadine",
+      "active_ingredients": [
+        "loratadine"
+      ],
+      "rxcui": "28889"
+    },
+    {
+      "brand_vn": "allerclear",
+      "normalized_name": "loratadine",
+      "active_ingredients": [
+        "loratadine"
+      ],
+      "rxcui": "28889"
+    },
+    {
+      "brand_vn": "losartan",
+      "normalized_name": "losartan",
+      "active_ingredients": [
+        "losartan"
+      ],
+      "rxcui": "52175"
+    },
+    {
+      "brand_vn": "cozaar",
+      "normalized_name": "losartan",
+      "active_ingredients": [
+        "losartan"
+      ],
+      "rxcui": "52175"
+    },
+    {
+      "brand_vn": "losartan stada",
+      "normalized_name": "losartan",
+      "active_ingredients": [
+        "losartan"
+      ],
+      "rxcui": "52175"
+    },
+    {
+      "brand_vn": "losartan dhg",
+      "normalized_name": "losartan",
+      "active_ingredients": [
+        "losartan"
+      ],
+      "rxcui": "52175"
+    },
+    {
+      "brand_vn": "metformin",
+      "normalized_name": "metformin",
+      "active_ingredients": [
+        "metformin"
+      ],
+      "rxcui": "6809"
+    },
+    {
+      "brand_vn": "glucophage",
+      "normalized_name": "metformin",
+      "active_ingredients": [
+        "metformin"
+      ],
+      "rxcui": "6809"
+    },
+    {
+      "brand_vn": "metformin stada",
+      "normalized_name": "metformin",
+      "active_ingredients": [
+        "metformin"
+      ],
+      "rxcui": "6809"
+    },
+    {
+      "brand_vn": "metformin dhg",
+      "normalized_name": "metformin",
+      "active_ingredients": [
+        "metformin"
+      ],
+      "rxcui": "6809"
+    },
+    {
+      "brand_vn": "metformin hasan",
+      "normalized_name": "metformin",
+      "active_ingredients": [
+        "metformin"
+      ],
+      "rxcui": "6809"
+    },
+    {
+      "brand_vn": "methotrexate",
+      "normalized_name": "methotrexate",
+      "active_ingredients": [
+        "methotrexate"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "methotrexat ebewe",
+      "normalized_name": "methotrexate",
+      "active_ingredients": [
+        "methotrexate"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "methotrexat",
+      "normalized_name": "methotrexate",
+      "active_ingredients": [
+        "methotrexate"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "metoprolol",
+      "normalized_name": "metoprolol",
+      "active_ingredients": [
+        "metoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "betaloc",
+      "normalized_name": "metoprolol",
+      "active_ingredients": [
+        "metoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "metoprolol stella",
+      "normalized_name": "metoprolol",
+      "active_ingredients": [
+        "metoprolol"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "naproxen",
+      "normalized_name": "naproxen",
+      "active_ingredients": [
+        "naproxen"
+      ],
+      "rxcui": "7258"
+    },
+    {
+      "brand_vn": "naprosyn",
+      "normalized_name": "naproxen",
+      "active_ingredients": [
+        "naproxen"
+      ],
+      "rxcui": "7258"
+    },
+    {
+      "brand_vn": "nalgesin",
+      "normalized_name": "naproxen",
+      "active_ingredients": [
+        "naproxen"
+      ],
+      "rxcui": "7258"
+    },
+    {
+      "brand_vn": "naproxen stada",
+      "normalized_name": "naproxen",
+      "active_ingredients": [
+        "naproxen"
+      ],
+      "rxcui": "7258"
+    },
+    {
+      "brand_vn": "nitroglycerin",
+      "normalized_name": "nitroglycerin",
+      "active_ingredients": [
+        "nitroglycerin"
+      ],
+      "rxcui": "4917"
+    },
+    {
+      "brand_vn": "nitromint",
+      "normalized_name": "nitroglycerin",
+      "active_ingredients": [
+        "nitroglycerin"
+      ],
+      "rxcui": "4917"
+    },
+    {
+      "brand_vn": "nitrostat",
+      "normalized_name": "nitroglycerin",
+      "active_ingredients": [
+        "nitroglycerin"
+      ],
+      "rxcui": "4917"
+    },
+    {
+      "brand_vn": "omeprazole",
+      "normalized_name": "omeprazole",
+      "active_ingredients": [
+        "omeprazole"
+      ],
+      "rxcui": "7646"
+    },
+    {
+      "brand_vn": "losec",
+      "normalized_name": "omeprazole",
+      "active_ingredients": [
+        "omeprazole"
+      ],
+      "rxcui": "7646"
+    },
+    {
+      "brand_vn": "omeprazol stada",
+      "normalized_name": "omeprazole",
+      "active_ingredients": [
+        "omeprazole"
+      ],
+      "rxcui": "7646"
+    },
+    {
+      "brand_vn": "omeprazol dhg",
+      "normalized_name": "omeprazole",
+      "active_ingredients": [
+        "omeprazole"
+      ],
+      "rxcui": "7646"
+    },
+    {
+      "brand_vn": "pantoprazole",
+      "normalized_name": "pantoprazole",
+      "active_ingredients": [
+        "pantoprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "pantoloc",
+      "normalized_name": "pantoprazole",
+      "active_ingredients": [
+        "pantoprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "pantozol",
+      "normalized_name": "pantoprazole",
+      "active_ingredients": [
+        "pantoprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "pantoprazol stada",
+      "normalized_name": "pantoprazole",
+      "active_ingredients": [
+        "pantoprazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "paracetamol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "acetaminophen",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "panadol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "panadol xanh",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "hapacol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "efferalgan",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "paracetamol stada",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "paracetamol dhg",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "paracetamol mekophar",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "acetamin",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "tylenol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "pamol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "adol",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "pamin",
+      "normalized_name": "paracetamol",
+      "active_ingredients": [
+        "paracetamol"
+      ],
+      "rxcui": "161"
+    },
+    {
+      "brand_vn": "paracetamol caffeine",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "panadol extra",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "paracetamol + caffeine",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "cafetin",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "efferalgan codein",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "decolgen",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "tiffy",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "cảm xuyên hương",
+      "normalized_name": "paracetamol caffeine",
+      "active_ingredients": [
+        "paracetamol",
+        "caffeine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "potassium chloride",
+      "normalized_name": "potassium chloride",
+      "active_ingredients": [
+        "potassium chloride"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "kali clorid",
+      "normalized_name": "potassium chloride",
+      "active_ingredients": [
+        "potassium chloride"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "kcl",
+      "normalized_name": "potassium chloride",
+      "active_ingredients": [
+        "potassium chloride"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "kaliorid",
+      "normalized_name": "potassium chloride",
+      "active_ingredients": [
+        "potassium chloride"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "prednisone",
+      "normalized_name": "prednisone",
+      "active_ingredients": [
+        "prednisone",
+        "prednisolone"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "prednisolon",
+      "normalized_name": "prednisone",
+      "active_ingredients": [
+        "prednisone",
+        "prednisolone"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "medrol",
+      "normalized_name": "prednisone",
+      "active_ingredients": [
+        "prednisone",
+        "prednisolone"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "methylprednisolone",
+      "normalized_name": "prednisone",
+      "active_ingredients": [
+        "prednisone",
+        "prednisolone"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "rivaroxaban",
+      "normalized_name": "rivaroxaban",
+      "active_ingredients": [
+        "rivaroxaban"
+      ],
+      "rxcui": "1114195"
+    },
+    {
+      "brand_vn": "xarelto",
+      "normalized_name": "rivaroxaban",
+      "active_ingredients": [
+        "rivaroxaban"
+      ],
+      "rxcui": "1114195"
+    },
+    {
+      "brand_vn": "rosuvastatin",
+      "normalized_name": "rosuvastatin",
+      "active_ingredients": [
+        "rosuvastatin"
+      ],
+      "rxcui": "301542"
+    },
+    {
+      "brand_vn": "crestor",
+      "normalized_name": "rosuvastatin",
+      "active_ingredients": [
+        "rosuvastatin"
+      ],
+      "rxcui": "301542"
+    },
+    {
+      "brand_vn": "rosuvastatin stada",
+      "normalized_name": "rosuvastatin",
+      "active_ingredients": [
+        "rosuvastatin"
+      ],
+      "rxcui": "301542"
+    },
+    {
+      "brand_vn": "rosuvastatin dhg",
+      "normalized_name": "rosuvastatin",
+      "active_ingredients": [
+        "rosuvastatin"
+      ],
+      "rxcui": "301542"
+    },
+    {
+      "brand_vn": "sertraline",
+      "normalized_name": "sertraline",
+      "active_ingredients": [
+        "sertraline"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "zoloft",
+      "normalized_name": "sertraline",
+      "active_ingredients": [
+        "sertraline"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "sertralin stada",
+      "normalized_name": "sertraline",
+      "active_ingredients": [
+        "sertraline"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "sildenafil",
+      "normalized_name": "sildenafil",
+      "active_ingredients": [
+        "sildenafil"
+      ],
+      "rxcui": "136411"
+    },
+    {
+      "brand_vn": "viagra",
+      "normalized_name": "sildenafil",
+      "active_ingredients": [
+        "sildenafil"
+      ],
+      "rxcui": "136411"
+    },
+    {
+      "brand_vn": "sildenafil stada",
+      "normalized_name": "sildenafil",
+      "active_ingredients": [
+        "sildenafil"
+      ],
+      "rxcui": "136411"
+    },
+    {
+      "brand_vn": "simvastatin",
+      "normalized_name": "simvastatin",
+      "active_ingredients": [
+        "simvastatin"
+      ],
+      "rxcui": "36567"
+    },
+    {
+      "brand_vn": "zocor",
+      "normalized_name": "simvastatin",
+      "active_ingredients": [
+        "simvastatin"
+      ],
+      "rxcui": "36567"
+    },
+    {
+      "brand_vn": "simvastatin stada",
+      "normalized_name": "simvastatin",
+      "active_ingredients": [
+        "simvastatin"
+      ],
+      "rxcui": "36567"
+    },
+    {
+      "brand_vn": "simvastatin dhg",
+      "normalized_name": "simvastatin",
+      "active_ingredients": [
+        "simvastatin"
+      ],
+      "rxcui": "36567"
+    },
+    {
+      "brand_vn": "spironolactone",
+      "normalized_name": "spironolactone",
+      "active_ingredients": [
+        "spironolactone"
+      ],
+      "rxcui": "9997"
+    },
+    {
+      "brand_vn": "aldactone",
+      "normalized_name": "spironolactone",
+      "active_ingredients": [
+        "spironolactone"
+      ],
+      "rxcui": "9997"
+    },
+    {
+      "brand_vn": "spironolacton stada",
+      "normalized_name": "spironolactone",
+      "active_ingredients": [
+        "spironolactone"
+      ],
+      "rxcui": "9997"
+    },
+    {
+      "brand_vn": "tacrolimus",
+      "normalized_name": "tacrolimus",
+      "active_ingredients": [
+        "tacrolimus"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "prograf",
+      "normalized_name": "tacrolimus",
+      "active_ingredients": [
+        "tacrolimus"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "tizanidine",
+      "normalized_name": "tizanidine",
+      "active_ingredients": [
+        "tizanidine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "sirdalud",
+      "normalized_name": "tizanidine",
+      "active_ingredients": [
+        "tizanidine"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "tramadol",
+      "normalized_name": "tramadol",
+      "active_ingredients": [
+        "tramadol"
+      ],
+      "rxcui": "10689"
+    },
+    {
+      "brand_vn": "ultram",
+      "normalized_name": "tramadol",
+      "active_ingredients": [
+        "tramadol"
+      ],
+      "rxcui": "10689"
+    },
+    {
+      "brand_vn": "tramadol stada",
+      "normalized_name": "tramadol",
+      "active_ingredients": [
+        "tramadol"
+      ],
+      "rxcui": "10689"
+    },
+    {
+      "brand_vn": "tramadol dhg",
+      "normalized_name": "tramadol",
+      "active_ingredients": [
+        "tramadol"
+      ],
+      "rxcui": "10689"
+    },
+    {
+      "brand_vn": "trimethoprim",
+      "normalized_name": "trimethoprim",
+      "active_ingredients": [
+        "trimethoprim",
+        "sulfamethoxazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "cotrimoxazole",
+      "normalized_name": "trimethoprim",
+      "active_ingredients": [
+        "trimethoprim",
+        "sulfamethoxazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "bactrim",
+      "normalized_name": "trimethoprim",
+      "active_ingredients": [
+        "trimethoprim",
+        "sulfamethoxazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "septrin",
+      "normalized_name": "trimethoprim",
+      "active_ingredients": [
+        "trimethoprim",
+        "sulfamethoxazole"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "verapamil",
+      "normalized_name": "verapamil",
+      "active_ingredients": [
+        "verapamil"
+      ],
+      "rxcui": "11170"
+    },
+    {
+      "brand_vn": "isoptin",
+      "normalized_name": "verapamil",
+      "active_ingredients": [
+        "verapamil"
+      ],
+      "rxcui": "11170"
+    },
+    {
+      "brand_vn": "vitamin c",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "ascorbic acid",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "vitamin-c",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "ceelin",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "upsavit c",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "redoxon",
+      "normalized_name": "vitamin c",
+      "active_ingredients": [
+        "vitamin c"
+      ],
+      "rxcui": ""
+    },
+    {
+      "brand_vn": "warfarin",
+      "normalized_name": "warfarin",
+      "active_ingredients": [
+        "warfarin"
+      ],
+      "rxcui": "11289"
+    },
+    {
+      "brand_vn": "coumadin",
+      "normalized_name": "warfarin",
+      "active_ingredients": [
+        "warfarin"
+      ],
+      "rxcui": "11289"
+    },
+    {
+      "brand_vn": "warfarex",
+      "normalized_name": "warfarin",
+      "active_ingredients": [
+        "warfarin"
+      ],
+      "rxcui": "11289"
+    }
+  ]
+}

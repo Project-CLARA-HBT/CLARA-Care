@@ -84,6 +84,9 @@ export default function SelfMedPage() {
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
                   Mỗi màn hình chỉ xử lý một nhiệm vụ để tránh rối: thêm thuốc ở trang riêng, DDI ở trang riêng.
                 </p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+                  Dữ liệu ở đây và tại <Link href="/careguard" className="font-semibold text-cyan-300 underline underline-offset-2">/careguard</Link> dùng chung một backend truth, không dùng localStorage làm nguồn chính.
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">

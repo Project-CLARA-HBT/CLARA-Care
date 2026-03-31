@@ -18,6 +18,8 @@ from clara_api.core.attribution import (
     normalize_source_used,
 )
 from clara_api.core.config import get_settings
+from clara_api.core.control_tower import get_control_tower_config_service
+from clara_api.core.control_tower.defaults import get_default_control_tower_config
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -82,6 +84,17 @@ _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
+
+
+def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    try:
+        control_tower = get_control_tower_config_service().load(db)
+        return control_tower.rag_flow.model_dump(), [
+            item.model_dump() for item in control_tower.rag_sources
+        ]
+    except Exception:  # pragma: no cover - defensive path for runtime resilience
+        fallback = get_default_control_tower_config()
+        return fallback.rag_flow.model_dump(), [item.model_dump() for item in fallback.rag_sources]
 
 
 def _guess_extension(filename: str) -> str:
@@ -411,7 +424,8 @@ def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "## Kết luận nhanh\n"
         f"{fallback_answer_text}\n\n"
         "## Phân tích chi tiết\n"
-        "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, nên câu trả lời này dùng chế độ an toàn.\n"
+        "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, "
+        "nên câu trả lời này dùng chế độ an toàn.\n"
         "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
         "## Khuyến nghị an toàn\n"
         "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
@@ -841,7 +855,7 @@ def _source_hub_setting_key(owner_user_id: int) -> str:
 def _to_text(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return str(value)
     return ""
 
@@ -1580,6 +1594,17 @@ def research_tier2(
     if uploaded_documents or payload.get("source_mode") in {"uploaded_files", "knowledge_sources"}:
         upstream_payload["uploaded_documents"] = uploaded_documents
     upstream_payload["role"] = token.role
+    runtime_rag_flow, runtime_rag_sources = _load_research_rag_runtime(db)
+
+    incoming_rag_flow = upstream_payload.get("rag_flow")
+    if isinstance(incoming_rag_flow, dict):
+        upstream_payload["rag_flow"] = {**runtime_rag_flow, **incoming_rag_flow}
+    else:
+        upstream_payload["rag_flow"] = runtime_rag_flow
+
+    incoming_rag_sources = upstream_payload.get("rag_sources")
+    if not isinstance(incoming_rag_sources, list):
+        upstream_payload["rag_sources"] = runtime_rag_sources
 
     response = proxy_ml_post(
         "/v1/research/tier2",

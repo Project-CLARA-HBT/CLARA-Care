@@ -85,6 +85,7 @@ _GREETING_HINTS: tuple[str, ...] = (
     "good afternoon",
     "good evening",
 )
+_VALID_POLICY_ACTIONS = {"allow", "warn", "block", "escalate"}
 
 
 def _now_iso() -> str:
@@ -169,35 +170,89 @@ def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str |
     return None
 
 
+def _normalize_policy_action(value: object, *, default: str) -> str:
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _VALID_POLICY_ACTIONS:
+            return normalized
+    return default
+
+
+def _ensure_policy_contract(payload: dict[str, object], *, default_action: str) -> dict[str, object]:
+    body = dict(payload)
+    policy_action = _normalize_policy_action(body.get("policy_action"), default=default_action)
+    body["policy_action"] = policy_action
+    metadata_raw = body.get("metadata")
+    metadata = dict(metadata_raw) if isinstance(metadata_raw, dict) else {}
+    metadata["policy_action"] = policy_action
+    body["metadata"] = metadata
+    return body
+
+
 def _legal_guard_refusal(*, role_hint: str | None, reason: str) -> dict[str, object]:
     safe_role = (
         role_hint
         if role_hint in {"normal", "researcher", "doctor", "admin"}
         else "normal"
     )
-    return {
-        "role": safe_role,
-        "intent": "medical_policy_refusal",
-        "confidence": 1.0,
-        "emergency": False,
-        "answer": (
-            "CLARA không có thẩm quyền kê đơn, chẩn đoán, hoặc chỉ định liều dùng. "
-            "Tôi chỉ có thể giải thích tương tác thuốc và thông tin an toàn sử dụng "
-            "từ nguồn tham khảo. "
-            "Vui lòng liên hệ bác sĩ hoặc dược sĩ để được chỉ định phù hợp."
-        ),
-        "retrieved_ids": [],
-        "model_used": "legal-hard-guard-v1",
-        "flow_events": [
-            _flow_event(
-                stage="legal_guard",
-                status="blocked",
-                source_count=0,
-                note=f"Blocked by hard policy: {reason}",
-            )
-        ],
-        "guard_reason": reason,
-    }
+    return _ensure_policy_contract(
+        {
+            "role": safe_role,
+            "intent": "medical_policy_refusal",
+            "confidence": 1.0,
+            "emergency": False,
+            "answer": (
+                "CLARA không có thẩm quyền kê đơn, chẩn đoán, hoặc chỉ định liều dùng. "
+                "Tôi chỉ có thể giải thích tương tác thuốc và thông tin an toàn sử dụng "
+                "từ nguồn tham khảo. "
+                "Vui lòng liên hệ bác sĩ hoặc dược sĩ để được chỉ định phù hợp."
+            ),
+            "retrieved_ids": [],
+            "model_used": "legal-hard-guard-v1",
+            "flow_events": [
+                _flow_event(
+                    stage="legal_guard",
+                    status="blocked",
+                    source_count=0,
+                    note=f"Blocked by hard policy: {reason}",
+                )
+            ],
+            "guard_reason": reason,
+        },
+        default_action="block",
+    )
+
+
+def _research_emergency_escalation(*, role_hint: str | None) -> dict[str, object]:
+    safe_role = (
+        role_hint
+        if role_hint in {"normal", "researcher", "doctor", "admin"}
+        else "normal"
+    )
+    return _ensure_policy_contract(
+        {
+            "role": safe_role,
+            "intent": "emergency_triage",
+            "confidence": 1.0,
+            "emergency": True,
+            "answer": (
+                "CLARA phát hiện mô tả có dấu hiệu cấp cứu. "
+                "Research mode không phù hợp cho tình huống này. "
+                "Vui lòng gọi cấp cứu hoặc đến cơ sở y tế gần nhất ngay."
+            ),
+            "retrieved_ids": [],
+            "model_used": "research-emergency-guard-v1",
+            "flow_events": [
+                _flow_event(
+                    stage="emergency_guard",
+                    status="escalated",
+                    source_count=0,
+                    note="Emergency symptoms detected in research flow; escalated immediately.",
+                )
+            ],
+        },
+        default_action="escalate",
+    )
 
 
 def _research_fail_soft_payload(
@@ -229,53 +284,56 @@ def _research_fail_soft_payload(
         "## Nguồn tham chiếu\n"
         "- [1] Fallback an toàn khi upstream RAG/LLM không sẵn sàng."
     )
-    return {
-        "role": safe_role,
-        "intent": "general_guidance",
-        "confidence": 0.35,
-        "emergency": False,
-        "answer": fallback_markdown,
-        "answer_markdown": fallback_markdown,
-        "summary": fallback_text,
-        "answer_format": "markdown",
-        "policy_action": "warn",
-        "fallback": True,
-        "fallback_reason": reason,
-        "model_used": "ml-safe-fallback-v1",
-        "retrieved_ids": [],
-        "flow_events": [
-            _flow_event(
-                stage="rag_generation",
-                status="failed",
-                source_count=0,
-                note=f"Upstream generation failed: {reason}",
-            ),
-            _flow_event(
-                stage="fallback_response",
-                status="completed",
-                source_count=0,
-                note="Returned safe markdown fallback instead of 500.",
-            ),
-        ],
-        "citations": [
-            {
-                "id": "fallback-safe-1",
-                "title": "Safety fallback notice",
-                "source": "system_fallback",
-                "url": "",
-                "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
-            }
-        ],
-        "metadata": {
-            "query": query,
+    return _ensure_policy_contract(
+        {
+            "role": safe_role,
+            "intent": "general_guidance",
+            "confidence": 0.35,
+            "emergency": False,
+            "answer": fallback_markdown,
+            "answer_markdown": fallback_markdown,
+            "summary": fallback_text,
+            "answer_format": "markdown",
             "policy_action": "warn",
-            "fallback_used": True,
-            "source_errors": {"upstream": [reason]},
-            "attributions": ["fallback-safe-1"],
-            "research_mode": "fast",
-            "deep_pass_count": 0,
+            "fallback": True,
+            "fallback_reason": reason,
+            "model_used": "ml-safe-fallback-v1",
+            "retrieved_ids": [],
+            "flow_events": [
+                _flow_event(
+                    stage="rag_generation",
+                    status="failed",
+                    source_count=0,
+                    note=f"Upstream generation failed: {reason}",
+                ),
+                _flow_event(
+                    stage="fallback_response",
+                    status="completed",
+                    source_count=0,
+                    note="Returned safe markdown fallback instead of 500.",
+                ),
+            ],
+            "citations": [
+                {
+                    "id": "fallback-safe-1",
+                    "title": "Safety fallback notice",
+                    "source": "system_fallback",
+                    "url": "",
+                    "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
+                }
+            ],
+            "metadata": {
+                "query": query,
+                "policy_action": "warn",
+                "fallback_used": True,
+                "source_errors": {"upstream": [reason]},
+                "attributions": ["fallback-safe-1"],
+                "research_mode": "fast",
+                "deep_pass_count": 0,
+            },
         },
-    }
+        default_action="warn",
+    )
 
 
 @app.middleware("http")
@@ -384,35 +442,38 @@ def routed_chat_infer(payload: dict) -> dict:
     route = router.route(pii.redacted_text, role_hint=role_hint)
 
     if route.emergency:
-        return {
-            "role": route.role,
-            "intent": route.intent,
-            "confidence": route.confidence,
-            "emergency": True,
-            "answer": (
-                "Possible emergency detected. Call local emergency services immediately "
-                "or go to the nearest ER."
-            ),
-            "retrieved_ids": [],
-            "model_used": "emergency-fastpath-v1",
-            "flow_events": [
-                _flow_event(
-                    stage="emergency_fastpath",
-                    status="completed",
-                    source_count=0,
-                    note="Emergency route triggered; retrieval and generation bypassed.",
-                )
-            ],
-            "flow_applied": {
-                "role_router_enabled": role_router_enabled,
-                "intent_router_enabled": intent_router_enabled,
-                "deepseek_fallback_enabled": deepseek_fallback_enabled,
-                "low_context_threshold": low_context_threshold,
-                "scientific_retrieval_enabled": scientific_retrieval_enabled,
-                "web_retrieval_enabled": web_retrieval_enabled,
-                "file_retrieval_enabled": file_retrieval_enabled,
+        return _ensure_policy_contract(
+            {
+                "role": route.role,
+                "intent": route.intent,
+                "confidence": route.confidence,
+                "emergency": True,
+                "answer": (
+                    "Possible emergency detected. Call local emergency services immediately "
+                    "or go to the nearest ER."
+                ),
+                "retrieved_ids": [],
+                "model_used": "emergency-fastpath-v1",
+                "flow_events": [
+                    _flow_event(
+                        stage="emergency_fastpath",
+                        status="completed",
+                        source_count=0,
+                        note="Emergency route triggered; retrieval and generation bypassed.",
+                    )
+                ],
+                "flow_applied": {
+                    "role_router_enabled": role_router_enabled,
+                    "intent_router_enabled": intent_router_enabled,
+                    "deepseek_fallback_enabled": deepseek_fallback_enabled,
+                    "low_context_threshold": low_context_threshold,
+                    "scientific_retrieval_enabled": scientific_retrieval_enabled,
+                    "web_retrieval_enabled": web_retrieval_enabled,
+                    "file_retrieval_enabled": file_retrieval_enabled,
+                },
             },
-        }
+            default_action="escalate",
+        )
 
     if not role_router_enabled:
         route.role = (
@@ -435,41 +496,44 @@ def routed_chat_infer(payload: dict) -> dict:
         and not settings.deepseek_required
         and deepseek_fallback_enabled
     ):
-        return {
-            "role": route.role,
-            "intent": route.intent,
-            "confidence": route.confidence,
-            "emergency": False,
-            "answer": (
-                "Chào bạn, mình là CLARA. "
-                "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc "
-                "để mình hỗ trợ an toàn."
-            ),
-            "retrieved_ids": [],
-            "model_used": "smalltalk-fastpath-v1",
-            "flow_events": [
-                _flow_event(
-                    stage="smalltalk_fastpath",
-                    status="completed",
-                    source_count=0,
-                    note="Greeting intent detected; bypassed retrieval and generation.",
-                )
-            ],
-            "flow_applied": {
-                "role_router_enabled": role_router_enabled,
-                "intent_router_enabled": intent_router_enabled,
-                "verification_enabled": verification_enabled,
-                "deepseek_fallback_enabled": deepseek_fallback_enabled,
-                "low_context_threshold": low_context_threshold,
-                "scientific_retrieval_enabled": False,
-                "web_retrieval_enabled": False,
-                "file_retrieval_enabled": False,
-                "rag_sources_count": len(rag_sources),
-                "uploaded_documents_count": len(uploaded_documents),
-                "retrieval_profile": "smalltalk_fastpath",
-                "query_token_count": _query_token_count(pii.redacted_text),
+        return _ensure_policy_contract(
+            {
+                "role": route.role,
+                "intent": route.intent,
+                "confidence": route.confidence,
+                "emergency": False,
+                "answer": (
+                    "Chào bạn, mình là CLARA. "
+                    "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc "
+                    "để mình hỗ trợ an toàn."
+                ),
+                "retrieved_ids": [],
+                "model_used": "smalltalk-fastpath-v1",
+                "flow_events": [
+                    _flow_event(
+                        stage="smalltalk_fastpath",
+                        status="completed",
+                        source_count=0,
+                        note="Greeting intent detected; bypassed retrieval and generation.",
+                    )
+                ],
+                "flow_applied": {
+                    "role_router_enabled": role_router_enabled,
+                    "intent_router_enabled": intent_router_enabled,
+                    "verification_enabled": verification_enabled,
+                    "deepseek_fallback_enabled": deepseek_fallback_enabled,
+                    "low_context_threshold": low_context_threshold,
+                    "scientific_retrieval_enabled": False,
+                    "web_retrieval_enabled": False,
+                    "file_retrieval_enabled": False,
+                    "rag_sources_count": len(rag_sources),
+                    "uploaded_documents_count": len(uploaded_documents),
+                    "retrieval_profile": "smalltalk_fastpath",
+                    "query_token_count": _query_token_count(pii.redacted_text),
+                },
             },
-        }
+            default_action="allow",
+        )
 
     retrieval_profile = "standard"
     query_token_count = _query_token_count(pii.redacted_text)
@@ -581,44 +645,58 @@ def routed_chat_infer(payload: dict) -> dict:
                 )
             )
 
-    return {
-        "role": route.role,
-        "intent": route.intent,
-        "confidence": route.confidence,
-        "emergency": False,
-        "answer": answer,
-        "retrieved_ids": rag_result.retrieved_ids,
-        "model_used": rag_result.model_used,
-        "factcheck": factcheck.as_dict() if factcheck else None,
-        "context_debug": rag_result.context_debug,
-        "flow_events": flow_events,
-        "flow_applied": {
-            "role_router_enabled": role_router_enabled,
-            "intent_router_enabled": intent_router_enabled,
-            "verification_enabled": verification_enabled,
-            "deepseek_fallback_enabled": deepseek_fallback_enabled,
-            "low_context_threshold": low_context_threshold,
-            "scientific_retrieval_enabled": adjusted_scientific_retrieval_enabled,
-            "web_retrieval_enabled": adjusted_web_retrieval_enabled,
-            "file_retrieval_enabled": adjusted_file_retrieval_enabled,
-            "rag_sources_count": len(rag_sources),
-            "uploaded_documents_count": len(uploaded_documents),
-            "retrieval_profile": retrieval_profile,
-            "query_token_count": query_token_count,
+    default_action = "allow"
+    if degraded_mode or rag_result.model_used.startswith("local-synth"):
+        default_action = "warn"
+    if factcheck and factcheck.severity == "high":
+        default_action = "warn"
+
+    return _ensure_policy_contract(
+        {
+            "role": route.role,
+            "intent": route.intent,
+            "confidence": route.confidence,
+            "emergency": False,
+            "answer": answer,
+            "retrieved_ids": rag_result.retrieved_ids,
+            "model_used": rag_result.model_used,
+            "factcheck": factcheck.as_dict() if factcheck else None,
+            "context_debug": rag_result.context_debug,
+            "flow_events": flow_events,
+            "flow_applied": {
+                "role_router_enabled": role_router_enabled,
+                "intent_router_enabled": intent_router_enabled,
+                "verification_enabled": verification_enabled,
+                "deepseek_fallback_enabled": deepseek_fallback_enabled,
+                "low_context_threshold": low_context_threshold,
+                "scientific_retrieval_enabled": adjusted_scientific_retrieval_enabled,
+                "web_retrieval_enabled": adjusted_web_retrieval_enabled,
+                "file_retrieval_enabled": adjusted_file_retrieval_enabled,
+                "rag_sources_count": len(rag_sources),
+                "uploaded_documents_count": len(uploaded_documents),
+                "retrieval_profile": retrieval_profile,
+                "query_token_count": query_token_count,
+            },
         },
-    }
+        default_action=default_action,
+    )
 
 
 @app.post("/v1/research/tier2")
 def research_tier2(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
+    route = router.route(query, role_hint=role_hint)
+    if route.emergency:
+        return _research_emergency_escalation(role_hint=route.role)
     legal_guard_reason = _detect_legal_guard_violation(query, channel="research")
     if legal_guard_reason:
         return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
     try:
         result = run_research_tier2(payload)
-        return result
+        if isinstance(result, dict):
+            return _ensure_policy_contract(result, default_action="allow")
+        return _ensure_policy_contract({"answer": str(result)}, default_action="allow")
     except Exception as exc:  # pragma: no cover - defensive fail-soft guard
         return _research_fail_soft_payload(
             query=query,

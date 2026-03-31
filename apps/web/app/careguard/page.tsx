@@ -421,58 +421,72 @@ export default function CareguardPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 1</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-900">Nhận diện OCR và xác nhận thủ công</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-900">Nhận diện OCR và xác nhận thủ công</h2>
+          <p className="mt-2 text-base leading-7 text-slate-700">
+            Chế độ dành cho người lớn tuổi: chữ lớn hơn, tương phản cao, nút xác nhận rõ ràng.
+          </p>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="text-sm font-medium text-slate-800" htmlFor="careguard-scan-file">Tải file đơn thuốc/hóa đơn</label>
+              <label className="text-base font-semibold text-slate-900" htmlFor="careguard-scan-file">
+                Tải file đơn thuốc/hóa đơn
+              </label>
               <input
                 id="careguard-scan-file"
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setReceiptFile(event.target.files?.[0] ?? null)}
-                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-sm file:font-medium"
+                className="block w-full text-base text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-base file:font-semibold"
               />
               <button
                 type="button"
                 onClick={onScanReceiptFile}
                 disabled={isScanning}
-                className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-60"
+                className="min-h-14 rounded-xl border-2 border-slate-400 px-5 py-3 text-base font-semibold text-slate-900 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200 disabled:opacity-60"
               >
                 {isScanning ? "Đang quét file..." : "Quét file OCR"}
               </button>
             </div>
 
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="text-sm font-medium text-slate-800" htmlFor="careguard-scan-text">Hoặc dán nội dung OCR</label>
+              <label className="text-base font-semibold text-slate-900" htmlFor="careguard-scan-text">
+                Hoặc dán nội dung OCR
+              </label>
               <textarea
                 id="careguard-scan-text"
                 value={receiptTextInput}
                 onChange={(event) => setReceiptTextInput(event.target.value)}
-                className="min-h-[120px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                className="min-h-[140px] w-full rounded-xl border-2 border-slate-300 px-3 py-2 text-base leading-7 text-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
                 placeholder="Dán nội dung OCR hóa đơn/đơn thuốc..."
               />
               <button
                 type="button"
                 onClick={onRecognizeReceiptText}
                 disabled={isScanning}
-                className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-60"
+                className="min-h-14 rounded-xl border-2 border-slate-400 px-5 py-3 text-base font-semibold text-slate-900 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200 disabled:opacity-60"
               >
                 {isScanning ? "Đang quét nội dung..." : "Nhận diện từ text"}
               </button>
             </div>
           </div>
 
-          {receiptNotice ? <p className="mt-3 text-sm text-slate-700">{receiptNotice}</p> : null}
+          {receiptNotice ? (
+            <p className="mt-3 text-base font-medium text-slate-800" aria-live="polite">
+              {receiptNotice}
+            </p>
+          ) : null}
 
           {receiptDetections.length ? (
             <div className="mt-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-base font-semibold text-emerald-900">Xác nhận thủ công trước khi nhập tủ thuốc</p>
-              <p className="mt-1 text-sm text-emerald-800">
+              <p className="text-xl font-semibold text-emerald-950">Xác nhận thủ công trước khi nhập tủ thuốc</p>
+              <p className="mt-1 text-base leading-7 text-emerald-900">
                 Vui lòng kiểm tra danh sách dưới đây. Thuốc có độ tin cậy thấp cần xác nhận riêng từng mục trước khi thêm.
               </p>
               {pendingLowConfidenceDetections.length ? (
-                <p className="mt-2 rounded-xl border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+                <p
+                  className="mt-2 rounded-xl border-2 border-amber-400 bg-amber-100 px-3 py-2 text-base font-semibold text-amber-950"
+                  aria-live="assertive"
+                >
                   Còn {pendingLowConfidenceDetections.length} thuốc độ tin cậy thấp chưa được xác nhận thủ công.
                 </p>
               ) : null}
@@ -488,18 +502,20 @@ export default function CareguardPage() {
                         isLowConfidence ? "border-amber-300" : "border-emerald-200"
                       }`}
                     >
-                      <p className="text-lg font-semibold text-slate-900">{item.drug_name}</p>
-                      <p className="mt-1 text-base text-slate-700">Bằng chứng: {item.evidence}</p>
-                      <p className="mt-1 text-base font-medium text-slate-700">Độ tin cậy: {Math.round(item.confidence * 100)}%</p>
+                      <p className="text-xl font-semibold text-slate-950">{item.drug_name}</p>
+                      <p className="mt-1 text-lg text-slate-800">Bằng chứng: {item.evidence}</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">
+                        Độ tin cậy: {Math.round(item.confidence * 100)}%
+                      </p>
                       {isLowConfidence ? (
-                        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
+                        <label className="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-3 py-2">
                           <input
                             type="checkbox"
                             checked={isConfirmed}
                             onChange={() => onConfirmDetection(key)}
-                            className="h-6 w-6 rounded"
+                            className="h-7 w-7 rounded border-2 border-amber-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
                           />
-                          <span className="text-sm font-semibold text-amber-900">
+                          <span className="text-base font-semibold leading-7 text-amber-950">
                             Tôi xác nhận mục này đúng trước khi nhập vào {cabinetLabel}
                           </span>
                         </label>
@@ -512,10 +528,13 @@ export default function CareguardPage() {
                 type="button"
                 onClick={onImportDetections}
                 disabled={pendingLowConfidenceDetections.length > 0}
-                className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-5 py-3 text-base font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-4 min-h-14 rounded-xl bg-emerald-700 px-6 py-3 text-lg font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Tôi đã kiểm tra đúng, thêm vào {cabinetLabel}
               </button>
+              <p className="mt-2 text-sm text-emerald-900">
+                Ghi chú roadmap: sẽ bổ sung đọc kết quả bằng giọng nói (TTS) sau vòng 2.
+              </p>
             </div>
           ) : null}
         </section>

@@ -107,7 +107,14 @@ def test_new_proxy_endpoints_success(
         }
     if api_path == "/api/v1/careguard/analyze":
         expected_payload["external_ddi_enabled"] = False
-    assert captured["json"] == expected_payload
+    forwarded_payload = captured["json"]
+    assert isinstance(forwarded_payload, dict)
+    for key, value in expected_payload.items():
+        assert forwarded_payload.get(key) == value
+    if api_path == "/api/v1/research/tier2":
+        assert isinstance(forwarded_payload.get("rag_flow"), dict)
+        assert isinstance(forwarded_payload.get("rag_sources"), list)
+        assert len(forwarded_payload["rag_sources"]) >= 1
     timeout = captured["timeout"]
     assert isinstance(timeout, (int, float))  # noqa: UP038
     assert timeout > 0
@@ -329,6 +336,8 @@ def test_research_tier2_forwards_research_mode_to_ml(
     assert isinstance(forwarded, dict)
     assert forwarded["research_mode"] == "deep"
     assert forwarded["role"] == "researcher"
+    assert isinstance(forwarded.get("rag_flow"), dict)
+    assert isinstance(forwarded.get("rag_sources"), list)
 
 
 def test_research_tier2_normalize_preserves_new_telemetry_fields(

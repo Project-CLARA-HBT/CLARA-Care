@@ -244,6 +244,19 @@ def test_research_tier2_blocks_prescription_and_dosage_requests():
     assert body["guard_reason"] in {"prescription_request", "dosage_request"}
 
 
+def test_research_tier2_emergency_escalates_fastpath():
+    response = client.post(
+        "/v1/research/tier2",
+        json={"query": "Bệnh nhân đau ngực dữ dội, khó thở và ngất xỉu"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "emergency_triage"
+    assert body["emergency"] is True
+    assert body["policy_action"] == "escalate"
+    assert body["model_used"] == "research-emergency-guard-v1"
+
+
 def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPatch):
     import clara_ml.main as main_module
 

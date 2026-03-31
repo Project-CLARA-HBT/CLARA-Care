@@ -107,7 +107,7 @@ def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
     body = response.json()
     assert body["role"] == "doctor"
     assert body["model_used"] == "api-safe-fallback-v1"
-    assert "quá tải tạm thời" in body["reply"]
+    assert "không kết nối được nguồn RAG" in body["reply"]
     assert body["ml"]["fallback_reason"].startswith("ml_unavailable:")
     assert body["attribution"]["channel"] == "chat"
     assert body["attribution"]["mode"] == "safe_mode"

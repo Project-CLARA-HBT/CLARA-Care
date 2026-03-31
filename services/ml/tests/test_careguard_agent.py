@@ -1,4 +1,8 @@
-from clara_ml.agents.careguard import _load_local_ddi_rules, run_careguard_analyze
+from clara_ml.agents.careguard import (
+    _load_local_ddi_rules,
+    _load_vn_drug_dictionary,
+    run_careguard_analyze,
+)
 
 
 def test_high_risk_pair_escalates_to_high() -> None:
@@ -31,3 +35,27 @@ def test_external_ddi_flag_source_metadata_runtime_vs_env() -> None:
 
     assert env_result["metadata"]["external_ddi_flag_source"] == "env"
     assert runtime_result["metadata"]["external_ddi_flag_source"] == "runtime"
+
+
+def test_vn_drug_dictionary_seed_has_minimum_coverage() -> None:
+    version, record_count = _load_vn_drug_dictionary()
+
+    assert version.startswith("vn-drug-dictionary")
+    assert record_count >= 100
+
+
+def test_vn_drug_dictionary_maps_panadol_extra_to_active_ingredients() -> None:
+    result = run_careguard_analyze(
+        {
+            "medications": ["Panadol Extra", "Warfarin"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert metadata["vn_dictionary_mapped_count"] >= 1
+    mapped_inputs = [item["input"] for item in metadata["vn_dictionary_mapped_items"]]
+    assert "panadol extra" in mapped_inputs
+
+    ddi_pairs = [set(alert.get("medications", [])) for alert in result["ddi_alerts"]]
+    assert any({"warfarin", "paracetamol"}.issubset(pair) for pair in ddi_pairs)
