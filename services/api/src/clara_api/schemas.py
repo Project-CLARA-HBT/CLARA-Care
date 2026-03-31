@@ -383,6 +383,7 @@ class SourceHubSyncResponse(BaseModel):
 
 
 ResearchConversationTier = Literal["tier1", "tier2"]
+ResearchJobStatus = Literal["queued", "running", "completed", "failed"]
 
 
 class ResearchConversationCreateRequest(BaseModel):
@@ -401,3 +402,29 @@ class ResearchConversationResponse(BaseModel):
 
 class ResearchConversationListResponse(BaseModel):
     items: list[ResearchConversationResponse] = Field(default_factory=list)
+
+
+class ResearchTier2JobCreateRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=4000)
+    message: str | None = None
+    research_mode: Literal["fast", "deep"] = "fast"
+    answer_format: str = "markdown"
+    response_format: str = "markdown"
+    render_hints: dict[str, object] = Field(default_factory=dict)
+    source_mode: str | None = None
+    uploaded_file_ids: list[str] = Field(default_factory=list)
+    source_ids: list[int] = Field(default_factory=list)
+    source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)
+
+
+class ResearchTier2JobResponse(BaseModel):
+    job_id: str
+    status: ResearchJobStatus
+    query: str
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+    progress: dict[str, object] = Field(default_factory=dict)
+    result: dict[str, object] | None = None
+    error: str | None = None

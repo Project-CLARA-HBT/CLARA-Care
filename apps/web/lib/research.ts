@@ -5,6 +5,7 @@ export type ResearchExecutionMode = "fast" | "deep";
 
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
 export const RESEARCH_TIER2_TIMEOUT_MS = 120000;
+export const RESEARCH_TIER2_JOB_POLL_MS = 1800;
 
 export type Tier2Citation = {
   title: string;
@@ -186,6 +187,29 @@ export type ResearchTier2Result = {
   fallbackUsed?: boolean;
   researchMode?: string;
   deepPassCount?: number;
+};
+
+export type ResearchTier2JobStatus = "queued" | "running" | "completed" | "failed";
+
+export type ResearchTier2JobProgress = {
+  flowStages: ResearchFlowStage[];
+  flowEvents: ResearchFlowEvent[];
+  activeStage?: string;
+  statusNote?: string;
+  reasoningNotes: string[];
+};
+
+export type ResearchTier2JobResponse = {
+  job_id: string;
+  status: ResearchTier2JobStatus;
+  query: string;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  progress?: unknown;
+  result?: ResearchTier2RawResponse | null;
+  error?: string | null;
 };
 
 export type UploadedResearchFile = {
@@ -1168,6 +1192,75 @@ export async function runResearchTier2(
     timeout: RESEARCH_TIER2_TIMEOUT_MS
   });
   return response.data;
+}
+
+export async function createResearchTier2Job(
+  query: string,
+  options?: {
+    uploadedFileIds?: string[];
+    sourceIds?: number[];
+    sourceHubSources?: SourceHubSourceKey[];
+    researchMode?: ResearchExecutionMode;
+  }
+): Promise<ResearchTier2JobResponse> {
+  const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
+  const sourceIds = Array.from(
+    new Set((options?.sourceIds ?? []).filter((item) => Number.isFinite(item) && item > 0).map((item) => Math.trunc(item)))
+  );
+  const sourceHubSources = uniqueText((options?.sourceHubSources ?? []).map((item) => String(item))) as SourceHubSourceKey[];
+  const researchMode = options?.researchMode === "deep" ? "deep" : "fast";
+
+  const payload: Record<string, unknown> = {
+    query,
+    message: query,
+    research_mode: researchMode,
+    answer_format: "markdown",
+    response_format: "markdown",
+    render_hints: {
+      markdown: true,
+      tables: true,
+      mermaid: true,
+      chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
+    }
+  };
+
+  if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
+  if (sourceIds.length) payload.source_ids = sourceIds;
+  if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
+
+  const response = await api.post<ResearchTier2JobResponse>("/research/tier2/jobs", payload, {
+    timeout: 30000
+  });
+  return response.data;
+}
+
+export async function getResearchTier2Job(jobId: string): Promise<ResearchTier2JobResponse> {
+  const response = await api.get<ResearchTier2JobResponse>(`/research/tier2/jobs/${jobId}`, {
+    timeout: 30000
+  });
+  return response.data;
+}
+
+export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2JobProgress {
+  const record = asRecord(value) ?? {};
+  const flowEvents = parseFlowEvents(record.flow_events ?? record.events);
+  const metadataStages = parseFlowStages(record.flow_stages ?? record.stages);
+  const flowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
+  const reasoningSteps = parseList(record.reasoning_steps, (item) => {
+    const row = asRecord(item);
+    if (!row) return null;
+    const note = asText(row.note) ?? asText(row.detail) ?? asText(row.message);
+    return note ? note : null;
+  });
+  const statusNote = asText(record.status_note);
+
+  return {
+    flowStages,
+    flowEvents,
+    activeStage: asText(record.active_stage),
+    statusNote,
+    reasoningNotes: uniqueText([...(statusNote ? [statusNote] : []), ...reasoningSteps]).slice(-8)
+  };
 }
 
 export function normalizeResearchTier2(data: ResearchTier2RawResponse): ResearchTier2Result {

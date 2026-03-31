@@ -1,5 +1,8 @@
 import json
 import math
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime
 from threading import Lock
 from typing import Any
@@ -26,6 +29,7 @@ from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     KnowledgeDocument,
     KnowledgeSource,
+    ResearchJob,
     SessionModel,
     SystemSetting,
     User,
@@ -33,7 +37,7 @@ from clara_api.db.models import (
 from clara_api.db.models import (
     Query as QueryModel,
 )
-from clara_api.db.session import get_db
+from clara_api.db.session import SessionLocal, get_db
 from clara_api.schemas import (
     KnowledgeDocumentResponse,
     KnowledgeDocumentUpdateRequest,
@@ -43,6 +47,8 @@ from clara_api.schemas import (
     ResearchConversationCreateRequest,
     ResearchConversationListResponse,
     ResearchConversationResponse,
+    ResearchTier2JobCreateRequest,
+    ResearchTier2JobResponse,
     SourceHubCatalogEntry,
     SourceHubRecord,
     SourceHubRecordsResponse,
@@ -85,6 +91,9 @@ _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
+_research_job_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="research-tier2")
+_research_job_futures: dict[str, Future[Any]] = {}
+_research_job_lock = Lock()
 
 
 def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -885,6 +894,335 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
         fallback_used=fallback_used,
     )
     return attach_attribution(normalized, attribution=attribution)
+
+
+def _build_tier2_upstream_payload(
+    payload: dict[str, Any],
+    *,
+    db: Session,
+    user: User,
+    token: TokenPayload,
+) -> dict[str, Any]:
+    settings = get_settings()
+    upstream_payload = dict(payload)
+    upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
+    upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
+    incoming_render_hints = upstream_payload.get("render_hints")
+    if isinstance(incoming_render_hints, dict):
+        merged_render_hints = {
+            **_DEFAULT_MARKDOWN_RENDER_HINTS,
+            **incoming_render_hints,
+        }
+    else:
+        merged_render_hints = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
+    upstream_payload["render_hints"] = merged_render_hints
+    transient_documents = _build_uploaded_documents(payload.get("uploaded_file_ids"))
+    source_ids = _extract_source_ids(payload)
+    source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)
+    source_hub_filters = _extract_source_hub_sources(payload)
+    source_hub_documents = _build_source_hub_documents(
+        db,
+        owner_user_id=user.id,
+        query=str(payload.get("query") or payload.get("message") or ""),
+        source_filters=source_hub_filters,
+    )
+    uploaded_documents = [*transient_documents, *source_documents, *source_hub_documents]
+
+    if uploaded_documents or payload.get("source_mode") in {"uploaded_files", "knowledge_sources"}:
+        upstream_payload["uploaded_documents"] = uploaded_documents
+    upstream_payload["role"] = token.role
+    upstream_payload["strict_deepseek_required"] = bool(settings.deepseek_strict_mode)
+    runtime_rag_flow, runtime_rag_sources = _load_research_rag_runtime(db)
+
+    incoming_rag_flow = upstream_payload.get("rag_flow")
+    if isinstance(incoming_rag_flow, dict):
+        upstream_payload["rag_flow"] = {**runtime_rag_flow, **incoming_rag_flow}
+    else:
+        upstream_payload["rag_flow"] = runtime_rag_flow
+
+    incoming_rag_sources = upstream_payload.get("rag_sources")
+    if not isinstance(incoming_rag_sources, list):
+        upstream_payload["rag_sources"] = runtime_rag_sources
+
+    return upstream_payload
+
+
+def _empty_job_progress() -> dict[str, Any]:
+    return {
+        "flow_events": [],
+        "flow_stages": [],
+        "active_stage": "",
+        "status_note": "",
+        "reasoning_steps": [],
+    }
+
+
+def _stage_from_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    stage_map: dict[str, dict[str, Any]] = {}
+    for event in events:
+        stage = str(event.get("stage") or "").strip()
+        if not stage:
+            continue
+        item = stage_map.get(stage) or {
+            "id": stage,
+            "label": stage.replace("_", " ").title(),
+            "status": "pending",
+            "detail": "",
+            "source": "flow_events",
+        }
+        event_status = str(event.get("status") or "").strip().lower() or "pending"
+        item["status"] = event_status
+        if isinstance(event.get("note"), str) and event.get("note"):
+            item["detail"] = event["note"]
+        stage_map[stage] = item
+    return list(stage_map.values())
+
+
+def _append_job_event(
+    db: Session,
+    *,
+    job: ResearchJob,
+    stage: str,
+    status_text: str,
+    note: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if isinstance(job.progress_json, dict):
+        progress = dict(job.progress_json)
+    else:
+        progress = _empty_job_progress()
+    events = progress.get("flow_events")
+    if not isinstance(events, list):
+        events = []
+    else:
+        events = [item for item in events if isinstance(item, dict)]
+    event_item: dict[str, Any] = {
+        "id": str(uuid4()),
+        "stage": stage,
+        "status": status_text,
+        "note": note,
+        "component": "research_job",
+        "timestamp": datetime.now(tz=UTC).isoformat(),
+    }
+    if payload:
+        event_item["payload"] = payload
+    events.append(event_item)
+    progress["flow_events"] = list(events[-80:])
+    progress["flow_stages"] = _stage_from_events(progress["flow_events"])
+    progress["active_stage"] = stage
+    progress["status_note"] = note
+    reasoning_steps = progress.get("reasoning_steps")
+    if not isinstance(reasoning_steps, list):
+        reasoning_steps = []
+    else:
+        reasoning_steps = [item for item in reasoning_steps if isinstance(item, dict)]
+    reasoning_steps.append(
+        {
+            "stage": stage,
+            "status": status_text,
+            "note": note,
+            "timestamp": event_item["timestamp"],
+        }
+    )
+    progress["reasoning_steps"] = list(reasoning_steps[-40:])
+    job.progress_json = json.loads(json.dumps(progress, ensure_ascii=False))
+    job.updated_at = datetime.now(tz=UTC)
+    db.add(job)
+    db.commit()
+
+
+def _serialize_research_job(job: ResearchJob) -> ResearchTier2JobResponse:
+    progress = job.progress_json if isinstance(job.progress_json, dict) else _empty_job_progress()
+    result = job.result_json if isinstance(job.result_json, dict) else None
+    return ResearchTier2JobResponse(
+        job_id=job.job_id,
+        status=str(job.status or "queued"),  # type: ignore[arg-type]
+        query=job.query_text,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        progress=progress,
+        result=result,
+        error=job.error_text or None,
+    )
+
+
+def _build_fail_soft_response_local(
+    fail_soft_payload: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    response = dict(fail_soft_payload)
+    response.setdefault("metadata", {})
+    response.setdefault("citations", [])
+    response.setdefault("fallback", True)
+    response.setdefault("fallback_reason", reason)
+    return response
+
+
+def _invoke_ml_tier2_with_progress(
+    *,
+    ml_payload: dict[str, Any],
+    fail_soft_payload: dict[str, Any] | None,
+    heartbeat: Callable[[float], None],
+) -> dict[str, Any]:
+    settings = get_settings()
+    url = f"{settings.ml_service_url.rstrip('/')}/v1/research/tier2"
+    timeout_seconds = max(settings.ml_service_timeout_seconds * 3.0, 180.0)
+    started = datetime.now(tz=UTC)
+
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="research-ml-call") as executor:
+        future = executor.submit(httpx.post, url, json=ml_payload, timeout=timeout_seconds)
+        while True:
+            try:
+                response = future.result(timeout=2.0)
+                break
+            except FutureTimeoutError:
+                elapsed = (datetime.now(tz=UTC) - started).total_seconds()
+                heartbeat(elapsed)
+                continue
+    if response.status_code >= 500:
+        if fail_soft_payload is not None:
+            return _build_fail_soft_response_local(
+                fail_soft_payload, f"status_{response.status_code}"
+            )
+        raise RuntimeError(f"ml_upstream_status_{response.status_code}")
+    if response.status_code >= 400:
+        if fail_soft_payload is not None:
+            return _build_fail_soft_response_local(
+                fail_soft_payload, f"status_{response.status_code}"
+            )
+        raise RuntimeError(f"ml_rejected_status_{response.status_code}")
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        if fail_soft_payload is not None:
+            return _build_fail_soft_response_local(fail_soft_payload, "InvalidJSON")
+        raise RuntimeError("ml_invalid_json") from exc
+
+    if not isinstance(data, dict):
+        if fail_soft_payload is not None:
+            return _build_fail_soft_response_local(
+                fail_soft_payload, "UnexpectedPayloadFormat"
+            )
+        raise RuntimeError("ml_unexpected_payload_format")
+    return data
+
+
+def _run_research_job(job_id: str) -> None:
+    db = SessionLocal()
+    try:
+        settings = get_settings()
+        job = db.execute(
+            select(ResearchJob).where(ResearchJob.job_id == job_id)
+        ).scalar_one_or_none()
+        if job is None:
+            return
+        job.status = "running"
+        job.started_at = datetime.now(tz=UTC)
+        db.add(job)
+        db.commit()
+        _append_job_event(
+            db,
+            job=job,
+            stage="dispatch_ml",
+            status_text="in_progress",
+            note="Đã gửi yêu cầu lên ML service, đang chạy reasoning nhiều bước.",
+        )
+        request_payload = job.request_payload if isinstance(job.request_payload, dict) else {}
+
+        def _heartbeat(elapsed_seconds: float) -> None:
+            # Emit heartbeat every ~10s to support live status on long deep research runs.
+            if int(elapsed_seconds) % 10 != 0:
+                return
+            _append_job_event(
+                db,
+                job=job,
+                stage="reasoning",
+                status_text="in_progress",
+                note="Model đang suy luận và đối chiếu nguồn. Vui lòng chờ...",
+                payload={"elapsed_seconds": round(elapsed_seconds, 1)},
+            )
+
+        ml_response = _invoke_ml_tier2_with_progress(
+            ml_payload=request_payload,
+            fail_soft_payload=(
+                None
+                if settings.deepseek_strict_mode
+                else _research_tier2_fallback_payload(request_payload)
+            ),
+            heartbeat=_heartbeat,
+        )
+        normalized = _normalize_tier2_response(ml_response)
+        enriched = _attach_research_attribution(normalized)
+        job.result_json = enriched
+        job.status = "completed"
+        job.completed_at = datetime.now(tz=UTC)
+        db.add(job)
+        db.commit()
+        _append_job_event(
+            db,
+            job=job,
+            stage="final_response",
+            status_text="completed",
+            note="Đã hoàn tất trả lời, có thể render Markdown đầy đủ.",
+            payload={
+                "fallback_used": bool(
+                    enriched.get("fallback") or enriched.get("fallback_reason")
+                ),
+                "source_count": len(enriched.get("sources", []))
+                if isinstance(enriched.get("sources"), list)
+                else 0,
+            },
+        )
+        flow_events = enriched.get("flow_events")
+        if isinstance(flow_events, list) and flow_events:
+            if isinstance(job.progress_json, dict):
+                progress = dict(job.progress_json)
+            else:
+                progress = _empty_job_progress()
+            history_events = progress.get("flow_events")
+            if not isinstance(history_events, list):
+                history_events = []
+            merged = [*history_events, *[item for item in flow_events if isinstance(item, dict)]]
+            progress["flow_events"] = merged[-120:]
+            progress["flow_stages"] = _stage_from_events(progress["flow_events"])
+            progress["active_stage"] = "final_response"
+            progress["status_note"] = "Đã nhận flow events đầy đủ từ ML."
+            job.progress_json = json.loads(json.dumps(progress, ensure_ascii=False))
+            db.add(job)
+            db.commit()
+    except Exception as exc:  # pragma: no cover - defensive runtime protection
+        try:
+            job = db.execute(
+                select(ResearchJob).where(ResearchJob.job_id == job_id)
+            ).scalar_one_or_none()
+            if job is not None:
+                job.status = "failed"
+                job.error_text = str(exc)
+                job.completed_at = datetime.now(tz=UTC)
+                db.add(job)
+                db.commit()
+                _append_job_event(
+                    db,
+                    job=job,
+                    stage="final_response",
+                    status_text="failed",
+                    note=f"Lỗi khi chạy research job: {exc}",
+                )
+        except Exception:
+            pass
+    finally:
+        db.close()
+        with _research_job_lock:
+            _research_job_futures.pop(job_id, None)
+
+
+def _queue_research_job(job_id: str) -> None:
+    with _research_job_lock:
+        future = _research_job_executor.submit(_run_research_job, job_id)
+        _research_job_futures[job_id] = future
 
 
 _SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
@@ -1906,46 +2244,7 @@ def research_tier2(
 ) -> dict[str, Any]:
     settings = get_settings()
     user = _get_user_by_token(db, token)
-
-    upstream_payload = dict(payload)
-    upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
-    upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
-    incoming_render_hints = upstream_payload.get("render_hints")
-    if isinstance(incoming_render_hints, dict):
-        merged_render_hints = {
-            **_DEFAULT_MARKDOWN_RENDER_HINTS,
-            **incoming_render_hints,
-        }
-    else:
-        merged_render_hints = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
-    upstream_payload["render_hints"] = merged_render_hints
-    transient_documents = _build_uploaded_documents(payload.get("uploaded_file_ids"))
-    source_ids = _extract_source_ids(payload)
-    source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)
-    source_hub_filters = _extract_source_hub_sources(payload)
-    source_hub_documents = _build_source_hub_documents(
-        db,
-        owner_user_id=user.id,
-        query=str(payload.get("query") or payload.get("message") or ""),
-        source_filters=source_hub_filters,
-    )
-    uploaded_documents = [*transient_documents, *source_documents, *source_hub_documents]
-
-    if uploaded_documents or payload.get("source_mode") in {"uploaded_files", "knowledge_sources"}:
-        upstream_payload["uploaded_documents"] = uploaded_documents
-    upstream_payload["role"] = token.role
-    upstream_payload["strict_deepseek_required"] = bool(settings.deepseek_strict_mode)
-    runtime_rag_flow, runtime_rag_sources = _load_research_rag_runtime(db)
-
-    incoming_rag_flow = upstream_payload.get("rag_flow")
-    if isinstance(incoming_rag_flow, dict):
-        upstream_payload["rag_flow"] = {**runtime_rag_flow, **incoming_rag_flow}
-    else:
-        upstream_payload["rag_flow"] = runtime_rag_flow
-
-    incoming_rag_sources = upstream_payload.get("rag_sources")
-    if not isinstance(incoming_rag_sources, list):
-        upstream_payload["rag_sources"] = runtime_rag_sources
+    upstream_payload = _build_tier2_upstream_payload(payload, db=db, user=user, token=token)
 
     response = proxy_ml_post(
         "/v1/research/tier2",
@@ -1956,6 +2255,76 @@ def research_tier2(
     )
     normalized = _normalize_tier2_response(response)
     return _attach_research_attribution(normalized)
+
+
+@router.post("/tier2/jobs")
+def create_research_tier2_job(
+    payload: ResearchTier2JobCreateRequest,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> ResearchTier2JobResponse:
+    user = _get_user_by_token(db, token)
+    query_text = str(payload.query or payload.message or "").strip()
+    if not query_text:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="query không được rỗng.",
+        )
+
+    input_payload = payload.model_dump()
+    input_payload["query"] = query_text
+    input_payload["message"] = query_text
+    upstream_payload = _build_tier2_upstream_payload(input_payload, db=db, user=user, token=token)
+
+    now = datetime.now(tz=UTC)
+    job_id = uuid4().hex
+    job = ResearchJob(
+        job_id=job_id,
+        user_id=user.id,
+        role=token.role,
+        status="queued",
+        query_text=query_text,
+        request_payload=upstream_payload,
+        progress_json=_empty_job_progress(),
+        result_json=None,
+        error_text="",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    _append_job_event(
+        db,
+        job=job,
+        stage="queue",
+        status_text="completed",
+        note="Đã tạo research job. Chuẩn bị chạy truy xuất chuyên sâu.",
+    )
+    _queue_research_job(job_id)
+    db.refresh(job)
+    return _serialize_research_job(job)
+
+
+@router.get("/tier2/jobs/{job_id}")
+def get_research_tier2_job(
+    job_id: str,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> ResearchTier2JobResponse:
+    user = _get_user_by_token(db, token)
+    job = db.execute(
+        select(ResearchJob).where(
+            ResearchJob.job_id == job_id,
+            ResearchJob.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research job không tồn tại.",
+        )
+    return _serialize_research_job(job)
 
 
 @router.get("/source-hub/catalog")

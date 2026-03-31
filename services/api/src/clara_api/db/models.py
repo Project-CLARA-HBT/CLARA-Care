@@ -44,6 +44,31 @@ class Query(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ResearchJob(Base):
+    __tablename__ = "research_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued", index=True)
+    query_text: Mapped[str] = mapped_column(Text, default="")
+    request_payload: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    progress_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    error_text: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship("User")
+
+
 class AuthToken(Base):
     __tablename__ = "auth_tokens"
 

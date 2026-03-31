@@ -240,6 +240,65 @@ def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPa
     assert "metformin" in uploaded_document["text"]
 
 
+def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Tương tác Warfarin với thuốc giảm đau phổ biến",
+            "research_mode": "deep",
+            "source_hub_sources": ["pubmed", "europepmc"],
+        },
+    )
+    assert create_response.status_code == 200
+    payload = create_response.json()
+    assert isinstance(payload.get("job_id"), str)
+    assert payload.get("status") in {"queued", "running", "completed"}
+    assert payload.get("query") == "Tương tác Warfarin với thuốc giảm đau phổ biến"
+    assert isinstance(payload.get("progress"), dict)
+
+    job_id = payload["job_id"]
+    get_response = client.get(
+        f"/api/v1/research/tier2/jobs/{job_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_response.status_code == 200
+    fetched = get_response.json()
+    assert fetched["job_id"] == job_id
+    assert fetched["query"] == payload["query"]
+
+
+def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    token_a = _login("alice@research.clara")
+    token_b = _login("bob@example.com")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token_a}"},
+        json={"query": "test isolation"},
+    )
+    assert create_response.status_code == 200
+    job_id = create_response.json()["job_id"]
+
+    other_user_response = client.get(
+        f"/api/v1/research/tier2/jobs/{job_id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert other_user_response.status_code == 404
+
+
 def test_research_tier2_returns_fail_soft_payload_with_retry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

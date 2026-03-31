@@ -17,12 +17,17 @@ import { UserRole, getRole } from "@/lib/auth-store";
 import { ChatResponse, getChatIntentDebug, getChatReply } from "@/lib/chat";
 import api from "@/lib/http-client";
 import {
+  RESEARCH_TIER2_JOB_POLL_MS,
   ResearchExecutionMode,
+  ResearchFlowEvent,
+  ResearchFlowStage,
   ResearchTier,
+  createResearchTier2Job,
   createResearchConversation,
+  getResearchTier2Job,
   listResearchConversations,
+  normalizeResearchTier2JobProgress,
   normalizeResearchTier2,
-  runResearchTier2
 } from "@/lib/research";
 
 const QUICK_PROMPTS: string[] = [
@@ -61,6 +66,11 @@ export default function ResearchPage() {
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [liveFlowStages, setLiveFlowStages] = useState<ResearchFlowStage[]>([]);
+  const [liveFlowEvents, setLiveFlowEvents] = useState<ResearchFlowEvent[]>([]);
+  const [liveReasoningNotes, setLiveReasoningNotes] = useState<string[]>([]);
+  const [liveStatusNote, setLiveStatusNote] = useState("");
+  const [liveJobId, setLiveJobId] = useState<string | null>(null);
 
   const [history, setHistory] = useState<ConversationItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -123,6 +133,11 @@ export default function ResearchPage() {
     setLastResult(null);
     setQuery("");
     setError("");
+    setLiveFlowStages([]);
+    setLiveFlowEvents([]);
+    setLiveReasoningNotes([]);
+    setLiveStatusNote("");
+    setLiveJobId(null);
   };
 
   const onSelectConversation = (item: ConversationItem) => {
@@ -131,6 +146,11 @@ export default function ResearchPage() {
     setLastResult(item.result);
     setSelectedTier(item.result.tier);
     setError("");
+    setLiveFlowStages([]);
+    setLiveFlowEvents([]);
+    setLiveReasoningNotes([]);
+    setLiveStatusNote("");
+    setLiveJobId(null);
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -155,12 +175,52 @@ export default function ResearchPage() {
           debug: getChatIntentDebug(response.data)
         };
       } else {
-        const response = await runResearchTier2(message, {
+        const job = await createResearchTier2Job(message, {
           researchMode: selectedResearchMode
         });
-        const normalized = normalizeResearchTier2(response);
+        setLiveJobId(job.job_id);
+
+        let currentJob = job;
+        let finalPayload: Record<string, unknown> | null = null;
+        let pollingRounds = 0;
+        while (pollingRounds < 240) {
+          pollingRounds += 1;
+          const progress = normalizeResearchTier2JobProgress(currentJob.progress);
+          setLiveFlowStages(progress.flowStages);
+          setLiveFlowEvents(progress.flowEvents);
+          setLiveReasoningNotes(progress.reasoningNotes);
+          setLiveStatusNote(progress.statusNote ?? "");
+
+          if (currentJob.status === "completed") {
+            finalPayload =
+              currentJob.result && typeof currentJob.result === "object"
+                ? (currentJob.result as Record<string, unknown>)
+                : {};
+            break;
+          }
+          if (currentJob.status === "failed") {
+            throw new Error(currentJob.error ?? "Research job thất bại ở backend.");
+          }
+
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, RESEARCH_TIER2_JOB_POLL_MS);
+          });
+          currentJob = await getResearchTier2Job(job.job_id);
+        }
+
+        if (!finalPayload) {
+          throw new Error("Research job quá thời gian chờ. Vui lòng thử lại.");
+        }
+
+        const normalized = normalizeResearchTier2(finalPayload);
         if (!normalized.answer && !normalized.citations.length) {
           throw new Error("Chưa có phản hồi chuyên sâu hợp lệ.");
+        }
+        if (liveFlowStages.length && !normalized.flowStages.length) {
+          normalized.flowStages = liveFlowStages;
+        }
+        if (liveFlowEvents.length && !normalized.flowEvents.length) {
+          normalized.flowEvents = liveFlowEvents;
         }
         nextResult = {
           tier: "tier2",
@@ -189,6 +249,9 @@ export default function ResearchPage() {
       setHistory((prev) => [conversation, ...prev.filter((item) => item.id !== conversation.id)]);
       setActiveConversationId(conversation.id);
       setQuery("");
+      setLiveJobId(null);
+      setLiveStatusNote("");
+      setLiveReasoningNotes([]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể xử lý câu hỏi.");
     } finally {
@@ -252,6 +315,20 @@ export default function ResearchPage() {
       )}
     </>
   );
+
+  const displayedFlowStages = useMemo(() => {
+    if (isSubmitting && selectedTier === "tier2" && liveFlowStages.length) {
+      return liveFlowStages;
+    }
+    return lastResult?.tier === "tier2" ? lastResult.flowStages : [];
+  }, [isSubmitting, selectedTier, liveFlowStages, lastResult]);
+
+  const displayedFlowEvents = useMemo(() => {
+    if (isSubmitting && selectedTier === "tier2" && liveFlowEvents.length) {
+      return liveFlowEvents;
+    }
+    return lastResult?.tier === "tier2" ? lastResult.flowEvents : [];
+  }, [isSubmitting, selectedTier, liveFlowEvents, lastResult]);
 
   return (
     <PageShell
@@ -500,6 +577,21 @@ export default function ResearchPage() {
               </form>
 
               {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
+              {isSubmitting && selectedTier === "tier2" ? (
+                <div className="mt-3 rounded-xl border border-cyan-300/60 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-800 dark:text-cyan-200">
+                  <p>
+                    {liveStatusNote || "Đang chạy research nhiều bước trên backend, trạng thái sẽ cập nhật live."}
+                  </p>
+                  {liveJobId ? <p className="mt-1 opacity-80">job_id: {liveJobId}</p> : null}
+                  {liveReasoningNotes.length ? (
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                      {liveReasoningNotes.slice(-4).map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -520,8 +612,8 @@ export default function ResearchPage() {
             {showAdvanced ? (
               <div className="mt-3 grid gap-3 xl:grid-cols-2">
                 <FlowTimelinePanel
-                  stages={lastResult?.tier === "tier2" ? lastResult.flowStages : []}
-                  events={lastResult?.tier === "tier2" ? lastResult.flowEvents : []}
+                  stages={displayedFlowStages}
+                  events={displayedFlowEvents}
                   mode={flowMode}
                   isProcessing={isSubmitting && selectedTier === "tier2"}
                 />
