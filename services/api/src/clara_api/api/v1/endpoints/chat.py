@@ -1,4 +1,5 @@
 import re
+import logging
 from typing import Any
 
 import httpx
@@ -14,6 +15,7 @@ from clara_api.core.attribution import (
 )
 from clara_api.core.config import get_settings
 from clara_api.core.control_tower import get_control_tower_config_service
+from clara_api.core.control_tower.defaults import get_default_control_tower_config
 from clara_api.core.flow import get_chat_flow_event_persister
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
@@ -21,6 +23,7 @@ from clara_api.db.session import get_db
 from clara_api.schemas import RagFlowConfig
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -274,6 +277,18 @@ def _call_ml_service(
     return _safe_chat_fallback(message, role, reason=composed_reason)
 
 
+def _load_rag_runtime(db: Session) -> tuple[RagFlowConfig, list[dict[str, Any]]]:
+    try:
+        control_tower = get_control_tower_config_service().load(db)
+        rag_flow = control_tower.rag_flow
+        rag_sources = [item.model_dump() for item in control_tower.rag_sources]
+        return rag_flow, rag_sources
+    except Exception:  # pragma: no cover - defensive path for runtime resilience
+        logger.exception("Failed to load control tower config; falling back to defaults")
+        fallback = get_default_control_tower_config()
+        return fallback.rag_flow, [item.model_dump() for item in fallback.rag_sources]
+
+
 @router.post("/")
 @router.post("")
 def chat_placeholder(
@@ -282,87 +297,119 @@ def chat_placeholder(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     settings = get_settings()
-    control_tower = get_control_tower_config_service().load(db)
-    rag_flow = control_tower.rag_flow
-    rag_sources = [item.model_dump() for item in control_tower.rag_sources]
-    ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
-    model_used = ml_response.get("model_used")
-    if (
-        settings.deepseek_strict_mode
-        and isinstance(model_used, str)
-        and model_used.startswith("local-synth")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="deepseek_required_unavailable:local_synthesis_blocked",
-        )
+    rag_flow, rag_sources = _load_rag_runtime(db)
 
-    if (
-        not settings.deepseek_strict_mode
-        and isinstance(model_used, str)
-        and model_used.startswith("local-synth")
-    ):
-        ml_response["upstream_model_used"] = model_used
-        if _is_general_greeting(payload.message):
-            ml_response["answer"] = (
-                "Chào bạn, CLARA đang sẵn sàng. "
-                "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc để mình hỗ trợ."
+    try:
+        ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
+        model_used = ml_response.get("model_used")
+        if (
+            settings.deepseek_strict_mode
+            and isinstance(model_used, str)
+            and model_used.startswith("local-synth")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="deepseek_required_unavailable:local_synthesis_blocked",
             )
-            ml_response["model_used"] = "api-safe-smalltalk-v1"
-        else:
-            ml_response["answer"] = (
-                "Hệ thống đang ưu tiên chế độ an toàn do phản hồi từ mô hình nền chưa ổn định. "
-                "Bạn vui lòng thử lại sau ít phút. Nếu có dấu hiệu nặng hoặc bệnh nền, "
-                "hãy liên hệ bác sĩ/duợc sĩ ngay."
+
+        if (
+            not settings.deepseek_strict_mode
+            and isinstance(model_used, str)
+            and model_used.startswith("local-synth")
+        ):
+            ml_response["upstream_model_used"] = model_used
+            if _is_general_greeting(payload.message):
+                ml_response["answer"] = (
+                    "Chào bạn, CLARA đang sẵn sàng. "
+                    "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc để mình hỗ trợ."
+                )
+                ml_response["model_used"] = "api-safe-smalltalk-v1"
+            else:
+                ml_response["answer"] = (
+                    "Hệ thống đang ưu tiên chế độ an toàn do phản hồi từ mô hình nền chưa ổn định. "
+                    "Bạn vui lòng thử lại sau ít phút. Nếu có dấu hiệu nặng hoặc bệnh nền, "
+                    "hãy liên hệ bác sĩ/duợc sĩ ngay."
+                )
+                ml_response["model_used"] = "api-local-synth-guard-v1"
+            ml_response["safe_mode_used"] = True
+            ml_response["fallback_reason"] = str(
+                ml_response.get("fallback_reason") or "ml_local_synthesis_guard"
             )
-            ml_response["model_used"] = "api-local-synth-guard-v1"
-        ml_response["safe_mode_used"] = True
-        ml_response["fallback_reason"] = str(
-            ml_response.get("fallback_reason") or "ml_local_synthesis_guard"
-        )
 
-    if not isinstance(ml_response.get("citations"), list):
-        ml_response["citations"] = []
+        if not isinstance(ml_response.get("citations"), list):
+            ml_response["citations"] = []
 
-    reply = ml_response.get("answer")
-    if settings.deepseek_strict_mode and (not isinstance(reply, str) or not reply.strip()):
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="deepseek_required_unavailable:missing_answer",
-        )
+        reply = ml_response.get("answer")
+        if settings.deepseek_strict_mode and (not isinstance(reply, str) or not reply.strip()):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="deepseek_required_unavailable:missing_answer",
+            )
 
-    if not isinstance(reply, str):
-        reply = _safe_chat_fallback(
+        if not isinstance(reply, str):
+            reply = _safe_chat_fallback(
+                payload.message,
+                token.role,
+                reason="ml_unexpected_payload:missing_answer",
+            )["answer"]
+        elif not reply.strip():
+            reply = _safe_chat_fallback(
+                payload.message,
+                token.role,
+                reason="ml_unexpected_payload:blank_answer",
+            )["answer"]
+
+        resolved_role = ml_response.get("role")
+        if not isinstance(resolved_role, str) or not resolved_role:
+            resolved_role = token.role
+
+        try:
+            get_chat_flow_event_persister().persist(
+                token=token,
+                role=resolved_role,
+                ml_response=ml_response,
+            )
+        except Exception:  # pragma: no cover - do not break answer flow for telemetry writes
+            logger.exception("Failed to persist chat flow event")
+
+        attribution = _build_chat_attribution(ml_response, rag_sources)
+        response_payload = {
+            "message": payload.message,
+            "reply": reply,
+            "role": resolved_role,
+            "intent": ml_response.get("intent"),
+            "confidence": ml_response.get("confidence"),
+            "emergency": ml_response.get("emergency"),
+            "model_used": ml_response.get("model_used"),
+            "retrieved_ids": ml_response.get("retrieved_ids", []),
+            "ml": ml_response,
+        }
+        return attach_attribution(response_payload, attribution=attribution)
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - final defensive guard
+        logger.exception("Chat endpoint failed unexpectedly")
+        if settings.deepseek_strict_mode:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"deepseek_required_unavailable:chat_internal_error:{exc.__class__.__name__}",
+            )
+
+        fallback_ml = _safe_chat_fallback(
             payload.message,
             token.role,
-            reason="ml_unexpected_payload:missing_answer",
-        )["answer"]
-    elif not reply.strip():
-        reply = _safe_chat_fallback(
-            payload.message,
-            token.role,
-            reason="ml_unexpected_payload:blank_answer",
-        )["answer"]
-
-    resolved_role = ml_response.get("role")
-    if not isinstance(resolved_role, str) or not resolved_role:
-        resolved_role = token.role
-
-    get_chat_flow_event_persister().persist(
-        token=token,
-        role=resolved_role,
-        ml_response=ml_response,
-    )
-    attribution = _build_chat_attribution(ml_response, rag_sources)
-    payload = {
-        "message": payload.message,
-        "reply": reply,
-        "role": resolved_role,
-        "intent": ml_response.get("intent"),
-        "confidence": ml_response.get("confidence"),
-        "emergency": ml_response.get("emergency"),
-        "model_used": ml_response.get("model_used"),
-        "retrieved_ids": ml_response.get("retrieved_ids", []),
-        "ml": ml_response,
-    }
-    return attach_attribution(payload, attribution=attribution)
+            reason=f"chat_internal_error:{exc.__class__.__name__}",
+        )
+        response_payload = {
+            "message": payload.message,
+            "reply": str(fallback_ml.get("answer", "")).strip() or _SAFE_MODE_NOTICE,
+            "role": token.role,
+            "intent": fallback_ml.get("intent"),
+            "confidence": fallback_ml.get("confidence"),
+            "emergency": fallback_ml.get("emergency"),
+            "model_used": fallback_ml.get("model_used"),
+            "retrieved_ids": fallback_ml.get("retrieved_ids", []),
+            "ml": fallback_ml,
+        }
+        attribution = _build_chat_attribution(fallback_ml, rag_sources)
+        return attach_attribution(response_payload, attribution=attribution)
