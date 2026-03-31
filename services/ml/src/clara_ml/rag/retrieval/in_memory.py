@@ -14,6 +14,18 @@ from .text_utils import dedupe_documents, query_terms
 
 
 class InMemoryRetriever:
+    _SCIENTIFIC_PROVIDERS = {
+        "pubmed",
+        "europepmc",
+        "semantic_scholar",
+        "openalex",
+        "crossref",
+        "clinicaltrials",
+        "openfda",
+        "dailymed",
+    }
+    _WEB_PROVIDERS = {"searxng", "searxng-crawl", "web_crawl"}
+
     def __init__(
         self,
         documents: list[Document],
@@ -129,6 +141,7 @@ class InMemoryRetriever:
         *,
         timeout_seconds: float = 1.2,
         rag_sources: object = None,
+        allowed_providers: set[str] | None = None,
     ) -> list[Document]:
         started = perf_counter()
         gateway_trace: dict[str, Any] = {}
@@ -137,6 +150,7 @@ class InMemoryRetriever:
             top_k=top_k,
             timeout_seconds=timeout_seconds,
             telemetry=gateway_trace,
+            allowed_providers=allowed_providers,
         )
         ranked, index_trace = self._index_candidates(
             query=query,
@@ -322,6 +336,23 @@ class InMemoryRetriever:
         search_started = perf_counter()
         source_errors: dict[str, list[str]] = {}
         connectors_attempted: list[dict[str, Any]] = []
+        source_policies = self.builder.parse_source_policies(rag_sources)
+        enabled_policy_keys = {
+            key
+            for key, cfg in source_policies.items()
+            if isinstance(cfg, dict) and bool(cfg.get("enabled", True))
+        }
+        allowed_scientific_providers = (
+            {item for item in enabled_policy_keys if item in self._SCIENTIFIC_PROVIDERS}
+            if source_policies
+            else None
+        )
+        web_retrieval_effective = bool(web_retrieval_enabled)
+        if source_policies:
+            web_retrieval_effective = bool(
+                web_retrieval_enabled
+                and any(item in enabled_policy_keys for item in self._WEB_PROVIDERS)
+            )
 
         staged_docs, internal_counts = self._collect_internal_candidates(
             file_retrieval_enabled=file_retrieval_enabled,
@@ -355,6 +386,7 @@ class InMemoryRetriever:
                     ),
                     timeout_seconds=settings.pubmed_connector_timeout_seconds,
                     telemetry=external_scientific_trace,
+                    allowed_providers=allowed_scientific_providers,
                 )
                 staged_docs.extend(scientific_docs)
                 after_external_scientific_count = len(staged_docs)
@@ -386,7 +418,7 @@ class InMemoryRetriever:
 
         web_trace: dict[str, Any] = {}
         crawl_trace: dict[str, Any] = {}
-        if web_retrieval_enabled:
+        if web_retrieval_effective:
             web_started = perf_counter()
             searxng_docs: list[Document] = []
             searxng_trace: dict[str, Any] = {}
@@ -464,7 +496,7 @@ class InMemoryRetriever:
             "query": query,
             "requested_top_k": int(top_k),
             "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
-            "web_retrieval_enabled": bool(web_retrieval_enabled),
+            "web_retrieval_enabled": bool(web_retrieval_effective),
             "file_retrieval_enabled": bool(file_retrieval_enabled),
             "source_errors": source_errors,
             "search_phase": search_phase,

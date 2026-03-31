@@ -971,6 +971,16 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         rag_result.model_used.startswith("local-synth")
         or "fallback" in rag_result.model_used.lower()
     )
+    if not citations:
+        citations = [
+            Citation(
+                source_id="fallback-safe-1",
+                source="system_fallback",
+                title="Safety fallback notice",
+                url="",
+                relevance="Fallback an toàn khi nguồn truy xuất chưa đủ ổn định.",
+            )
+        ]
 
     answer_markdown = _ensure_markdown_structure(rag_result.answer, citations)
     factcheck_result = run_fides_lite(answer=answer_markdown, retrieved_context=effective_context)

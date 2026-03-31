@@ -1,0 +1,13 @@
+query_id,query,focus_area,priority,notes
+PMQ-001,"warfarin NSAID bleeding drug interaction systematic review",DDI-high-risk,1,"High-yield anticoagulant plus NSAID interaction evidence"
+PMQ-002,"benzodiazepine opioid co-prescribing overdose risk systematic review",sedation-overdose,1,"Important polypharmacy safety pattern for older adults"
+PMQ-003,"QT prolongation drug interaction torsades systematic review",electrophysiology-safety,1,"Useful for multi-drug arrhythmia risk explanations"
+PMQ-004,"serotonin syndrome serotonergic drug combinations review",DDI-neuropsychiatric,1,"Supports explain mode for antidepressant combinations"
+PMQ-005,"macrolide statin rhabdomyolysis drug interaction review",DDI-muscle-toxicity,2,"Common outpatient interaction pattern"
+PMQ-006,"ACE inhibitor ARB combination hyperkalemia medication safety review",renal-electrolyte-safety,2,"Supports chronic disease medication safety answers"
+PMQ-007,"trimethoprim warfarin interaction bleeding review",antiinfective-DDI,2,"Common antibiotic-anticoagulant risk"
+PMQ-008,"NSAID chronic kidney disease medication safety guideline review",renal-safety,2,"Important self-medication risk pattern"
+PMQ-009,"anticholinergic burden older adults adverse drug events systematic review",geriatric-safety,1,"High-value corpus for geriatric polypharmacy"
+PMQ-010,"polypharmacy older adults inappropriate prescribing systematic review",geriatric-safety,1,"General safety backbone for medication burden"
+PMQ-011,"medication adherence hypertension older adults systematic review",adherence-risk,3,"Useful for contextual counseling but lower than acute safety topics"
+PMQ-012,"deprescribing older adults medication safety systematic review",deprescribing,2,"Supports safer tapering/escalation advice boundaries"

@@ -168,7 +168,7 @@ class DocumentScorer:
             scored.append((score, doc))
 
         scored.sort(key=lambda item: item[0], reverse=True)
-        selected_docs = [doc for _, doc in scored[:top_k]]
+        selected_docs = self._select_with_source_diversity(scored, top_k=top_k)
 
         if score_trace is not None:
             selected_ids = {doc.id for doc in selected_docs}
@@ -183,6 +183,38 @@ class DocumentScorer:
         lowered = text.lower()
         tokens = re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", lowered)
         return {token for token in tokens if token}
+
+    @staticmethod
+    def _select_with_source_diversity(
+        scored: list[tuple[float, Document]],
+        *,
+        top_k: int,
+    ) -> list[Document]:
+        if top_k <= 0:
+            return []
+        if not scored:
+            return []
+
+        # Keep score order but prevent one source from monopolizing all slots.
+        max_per_source = max(2, (top_k + 1) // 2)
+        selected: list[Document] = []
+        deferred: list[Document] = []
+        source_counts: dict[str, int] = {}
+
+        for _, doc in scored:
+            source = str((doc.metadata or {}).get("source") or "unknown").strip().lower()
+            count = source_counts.get(source, 0)
+            if count < max_per_source:
+                selected.append(doc)
+                source_counts[source] = count + 1
+            else:
+                deferred.append(doc)
+            if len(selected) >= top_k:
+                return selected[:top_k]
+
+        if len(selected) < top_k:
+            selected.extend(deferred[: max(0, top_k - len(selected))])
+        return selected[:top_k]
 
     @classmethod
     def _lexical_overlap(cls, query_tokens: set[str], text: str) -> float:

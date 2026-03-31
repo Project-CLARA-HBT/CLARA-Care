@@ -22,11 +22,14 @@ Mục tiêu của bản gọn:
 4. Nghiên cứu trọng yếu:
 - `docs/research/market-need-and-regulatory-research.md`
 - `docs/research/risk-deep-dive-and-mitigation.md`
+- `docs/research/medical-safety-corpus-pack.md`
 
 5. Dữ liệu research giữ lại cho demo:
 - `docs/research/data/vn-medical-acquired-manifest-2026-03-29.jsonl`
 - `docs/research/data/vn-medical-acquired-report-2026-03-29.json`
 - `docs/research/data/vn-medical-pdf-sources-phase1-part1-2026-03-29.csv`
+- `docs/research/data/medical-safety-corpus-sources-2026-03-31.csv`
+- `docs/research/data/medical-safety-pubmed-queries-2026-03-31.csv`
 
 6. DevOps vận hành:
 - `docs/devops/release-process.md`

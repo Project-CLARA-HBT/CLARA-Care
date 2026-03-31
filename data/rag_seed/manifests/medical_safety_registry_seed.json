@@ -1,0 +1,508 @@
+[
+  {
+    "id": "registry-vn-dt-01",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DT-01. Region: vn. Language: vi. Owner: Hội đồng Dược thư Quốc gia / Bộ Y tế. Category: Dược thư Quốc gia. Source type: drug_reference. Primary URL: https://duocquocgia.com.vn/. Discovery URL: https://duocquocgia.com.vn/. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 1. Refresh cadence: quarterly. Scope: chuẩn hóa hoạt chất, chuyên luận thuốc, cảnh báo dùng thuốc. Notes: Nguồn chuẩn nội địa nhưng availability không ổn định; dùng registry seed + health check trước khi crawl sâu",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://duocquocgia.com.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_reference",
+        "vn-dt-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DT-01",
+      "owner": "Hội đồng Dược thư Quốc gia / Bộ Y tế",
+      "license": "Official publication; verify reuse before bulk mirroring",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-dav-05",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DAV-05. Region: vn. Language: vi. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc lưu hành. Source type: drug_registry. Primary URL: https://dichvucong.dav.gov.vn/congbothuoc/index. Discovery URL: https://dichvucong.dav.gov.vn/congbothuoc/index. Access mode: html. Ingest strategy: html_table. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: legal status, số đăng ký, chuẩn hóa biệt dược. Notes: Quan trọng cho tra cứu legal status thuốc tại Việt Nam",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuoc/index",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_registry",
+        "vn-dav-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DAV-05",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "license": "Public government portal",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-dav-06",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DAV-06. Region: vn. Language: vi. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc không kê đơn. Source type: drug_registry. Primary URL: https://dichvucong.dav.gov.vn/congbothuockhongkedon. Discovery URL: https://dichvucong.dav.gov.vn/congbothuockhongkedon. Access mode: html. Ingest strategy: html_table. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: OTC self-med guardrail, phân loại thuốc không kê đơn. Notes: Ưu tiên cho luồng self-med và OTC safety",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuockhongkedon",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_registry",
+        "vn-dav-06"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DAV-06",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "license": "Public government portal",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-dav-07",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DAV-07. Region: vn. Language: vi. Owner: Cục Quản lý Dược (DVC). Category: Công bố thuốc vi phạm chất lượng. Source type: drug_safety_alert. Primary URL: https://dichvucong.dav.gov.vn/congbothuocvipham/index. Discovery URL: https://dichvucong.dav.gov.vn/congbothuocvipham/index. Access mode: html. Ingest strategy: html_table. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: thuốc vi phạm chất lượng, blocklist theo số đăng ký/lô. Notes: Nguồn bắt buộc cho cảnh báo chất lượng và thuốc bị thu hồi",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://dichvucong.dav.gov.vn/congbothuocvipham/index",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_safety_alert",
+        "vn-dav-07"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DAV-07",
+      "owner": "Cục Quản lý Dược (DVC)",
+      "license": "Public government portal",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-dav-01",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DAV-01. Region: vn. Language: vi. Owner: Cục Quản lý Dược (Bộ Y tế). Category: Thông tin thuốc và quản lý chất lượng. Source type: drug_safety_alert. Primary URL: https://dav.gov.vn/thong-tin-thuoc-qlchatluong/page-1.html. Discovery URL: https://dav.gov.vn/upload/attach/2592015_18055_qld_cl.pdf. Access mode: html. Ingest strategy: pdf_discovery. Trust tier: A1. Priority: 1. Refresh cadence: weekly. Scope: thu hồi thuốc, thuốc giả, chất lượng thuốc. Notes: Page có nhiều file PDF đính kèm; xuất catalog tương thích seed downloader hiện có",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://dav.gov.vn/thong-tin-thuoc-qlchatluong/page-1.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_safety_alert",
+        "vn-dav-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DAV-01",
+      "owner": "Cục Quản lý Dược (Bộ Y tế)",
+      "license": "Public government portal",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-vn-diadr-01",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DIADR-01. Region: vn. Language: vi. Owner: Trung tâm DI & ADR Quốc gia. Category: Cổng cảnh giác dược quốc gia. Source type: pharmacovigilance. Primary URL: https://canhgiacduoc.org.vn/. Discovery URL: https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 1. Refresh cadence: weekly. Scope: ADR, cảnh giác dược, thông tin thuốc, dùng thuốc an toàn. Notes: Nguồn nội địa trọng yếu cho pharmacovigilance",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://canhgiacduoc.org.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "pharmacovigilance",
+        "vn-diadr-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DIADR-01",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "license": "Official national center portal",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-diadr-02",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DIADR-02. Region: vn. Language: vi. Owner: Trung tâm DI & ADR Quốc gia. Category: Bản tin Cảnh giác Dược. Source type: pharmacovigilance. Primary URL: https://magazine.canhgiacduoc.org.vn/Volume/Details/71. Discovery URL: https://magazine.canhgiacduoc.org.vn/Volume/Download/71. Access mode: pdf. Ingest strategy: pdf_direct. Trust tier: A1. Priority: 1. Refresh cadence: quarterly. Scope: bản tin an toàn thuốc, case review, khuyến cáo ADR. Notes: Nên ingest full issue theo quý và tách bài về sau",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://magazine.canhgiacduoc.org.vn/Volume/Details/71",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "pharmacovigilance",
+        "vn-diadr-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DIADR-02",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "license": "Official national center publication",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-vn-diadr-05",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-DIADR-05. Region: vn. Language: vi. Owner: Trung tâm DI & ADR Quốc gia. Category: Thông tin thuốc. Source type: drug_information. Primary URL: https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc. Discovery URL: https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 1. Refresh cadence: weekly. Scope: drug safety VN, khuyến cáo an toàn thuốc, ADR. Notes: Phù hợp answer flow khi cần nguồn giải thích an toàn nội địa",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://canhgiacduoc.org.vn/CanhGiacDuoc/DiemTin/ThongTinThuoc",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "drug_information",
+        "vn-diadr-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-DIADR-05",
+      "owner": "Trung tâm DI & ADR Quốc gia",
+      "license": "Official national center portal",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-vn-moh-01",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-MOH-01. Region: vn. Language: vi. Owner: Cục Quản lý Khám chữa bệnh (Bộ Y tế). Category: Thư viện tài liệu hướng dẫn chẩn đoán và điều trị. Source type: guideline. Primary URL: https://kcb.vn/thu-vien-tai-lieu. Discovery URL: https://kcb.vn/upload/2005611/20210723/H%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-ch%E1%BA%A9n-%C4%91o%C3%A1n-v%C3%A0-%C4%91i%E1%BB%81u-tr%E1%BB%8B-S%E1%BA%A3n-ph%E1%BB%A5-khoa.pdf. Access mode: pdf. Ingest strategy: page_pdf_links. Trust tier: A1. Priority: 2. Refresh cadence: monthly. Scope: guideline chính thống, chống hallucination khi giải thích dùng thuốc. Notes: Dùng làm grounding cho trả lời guideline Việt Nam",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://kcb.vn/thu-vien-tai-lieu",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "guideline",
+        "vn-moh-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-MOH-01",
+      "owner": "Cục Quản lý Khám chữa bệnh (Bộ Y tế)",
+      "license": "Official government portal",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-vn-moh-03",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-MOH-03. Region: vn. Language: vi. Owner: Cục Quản lý Khám chữa bệnh (Bộ Y tế). Category: Hướng dẫn chẩn đoán và điều trị viêm gan B. Source type: guideline. Primary URL: https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-dieu-tri-benh-viem-gan-vi-rut-b.html. Discovery URL: https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-dieu-tri-benh-viem-gan-vi-rut-b.html. Access mode: html. Ingest strategy: page_pdf_links. Trust tier: A1. Priority: 2. Refresh cadence: yearly. Scope: chỉ định, chống chỉ định, theo dõi thuốc chuyên khoa. Notes: Giữ như exemplar cho disease-specific guideline ingestion",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://kcb.vn/thu-vien-tai-lieu/huong-dan-chan-doan-dieu-tri-benh-viem-gan-vi-rut-b.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "guideline",
+        "vn-moh-03"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-MOH-03",
+      "owner": "Cục Quản lý Khám chữa bệnh (Bộ Y tế)",
+      "license": "Official government portal",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-vn-moh-05",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-MOH-05. Region: vn. Language: vi. Owner: Cục Quản lý Khám chữa bệnh (Bộ Y tế). Category: Phòng ngừa chuẩn trong cơ sở khám chữa bệnh. Source type: guideline. Primary URL: https://kcb.vn/quy-trinh/tai-lieu-huong-dan-phong-ngua-chuan-trong-cac-co-so-kham-chu.html. Discovery URL: https://kcb.vn/quy-trinh/tai-lieu-huong-dan-phong-ngua-chuan-trong-cac-co-so-kham-chu.html. Access mode: html. Ingest strategy: page_pdf_links. Trust tier: A1. Priority: 3. Refresh cadence: yearly. Scope: infection control, phòng ngừa dùng thuốc trong môi trường y tế. Notes: Bổ trợ cho medical safety và cảnh báo dùng thuốc trong môi trường bệnh viện",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://kcb.vn/quy-trinh/tai-lieu-huong-dan-phong-ngua-chuan-trong-cac-co-so-kham-chu.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "guideline",
+        "vn-moh-05"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-MOH-05",
+      "owner": "Cục Quản lý Khám chữa bệnh (Bộ Y tế)",
+      "license": "Official government portal",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-vn-moh-07",
+    "text": "Authoritative medical safety corpus source. Source ID: VN-MOH-07. Region: vn. Language: vi. Owner: Bộ Y tế. Category: Kho tệp chuyên môn BYT. Source type: guideline. Primary URL: https://moh.gov.vn/. Discovery URL: https://emohbackup.moh.gov.vn/publish/attach/getfile/35713. Access mode: pdf. Ingest strategy: pdf_direct. Trust tier: A1. Priority: 2. Refresh cadence: ad_hoc. Scope: tệp đính kèm quyết định, hướng dẫn chuyên môn BYT. Notes: Cần mapping file id theo quyết định thay vì quét tuần tự",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://moh.gov.vn/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "vn",
+        "guideline",
+        "vn-moh-07"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "VN-MOH-07",
+      "owner": "Bộ Y tế",
+      "license": "Official government portal",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-int-pubmed-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-PUBMED-01. Region: global. Language: en. Owner: National Library of Medicine / NIH. Category: PubMed medication safety literature. Source type: biomedical_literature. Primary URL: https://pubmed.ncbi.nlm.nih.gov/. Discovery URL: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi. Access mode: api. Ingest strategy: query_seed. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: systematic review, DDI, deprescribing, adverse drug events. Notes: Chỉ dùng curated safety queries; không broad crawl",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "biomedical_literature",
+        "int-pubmed-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-PUBMED-01",
+      "owner": "National Library of Medicine / NIH",
+      "license": "U.S. federal metadata/public abstracts",
+      "seed_action": "query_seed"
+    }
+  },
+  {
+    "id": "registry-int-dailymed-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-DAILYMED-01. Region: global. Language: en. Owner: National Library of Medicine. Category: DailyMed structured product labels. Source type: drug_label. Primary URL: https://dailymed.nlm.nih.gov/dailymed/. Discovery URL: https://dailymed.nlm.nih.gov/dailymed/search.cfm. Access mode: html. Ingest strategy: html_search. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: boxed warning, contraindication, adverse reactions, patient counseling. Notes: Nguồn nhãn thuốc chính thức cho giải thích label",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://dailymed.nlm.nih.gov/dailymed/",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "drug_label",
+        "int-dailymed-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-DAILYMED-01",
+      "owner": "National Library of Medicine",
+      "license": "U.S. federal resource",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-fda-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-FDA-01. Region: global. Language: en. Owner: U.S. Food and Drug Administration. Category: Drug Safety Communications. Source type: drug_safety_alert. Primary URL: https://www.fda.gov/drugs/drug-safety-and-availability/drug-safety-communications. Discovery URL: https://www.fda.gov/drugs/drug-safety-and-availability/drug-safety-communications. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 1. Refresh cadence: daily. Scope: post-market safety signals, label changes, important warnings. Notes: Ưu tiên cao cho evidence về cảnh báo an toàn mới",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.fda.gov/drugs/drug-safety-and-availability/drug-safety-communications",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "drug_safety_alert",
+        "int-fda-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-FDA-01",
+      "owner": "U.S. Food and Drug Administration",
+      "license": "U.S. federal resource",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-fda-02",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-FDA-02. Region: global. Language: en. Owner: U.S. Food and Drug Administration. Category: MedWatch safety information. Source type: pharmacovigilance. Primary URL: https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program. Discovery URL: https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 2. Refresh cadence: daily. Scope: adverse event reporting, safety alerts, recalls. Notes: Hỗ trợ câu trả lời về reporting và safety monitoring",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "pharmacovigilance",
+        "int-fda-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-FDA-02",
+      "owner": "U.S. Food and Drug Administration",
+      "license": "U.S. federal resource",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-medlineplus-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-MEDLINEPLUS-01. Region: global. Language: en. Owner: National Library of Medicine / NIH. Category: Drugs, herbs and supplements. Source type: drug_information. Primary URL: https://medlineplus.gov/druginformation.html. Discovery URL: https://medlineplus.gov/druginfo/. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 2. Refresh cadence: weekly. Scope: patient-friendly drug information, side effects, precautions. Notes: Dùng cho safe explanation layer, không thay thế nhãn chính thức",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://medlineplus.gov/druginformation.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "drug_information",
+        "int-medlineplus-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-MEDLINEPLUS-01",
+      "owner": "National Library of Medicine / NIH",
+      "license": "U.S. federal resource",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-medlineplus-02",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-MEDLINEPLUS-02. Region: global. Language: en. Owner: National Library of Medicine / NIH. Category: Drug safety topic. Source type: patient_education. Primary URL: https://medlineplus.gov/drugsafety.html. Discovery URL: https://medlineplus.gov/drugsafety.html. Access mode: html. Ingest strategy: html_page. Trust tier: A1. Priority: 2. Refresh cadence: weekly. Scope: giải thích khái niệm drug safety, interactions, allergies. Notes: Nguồn bệnh nhân dễ hiểu, phù hợp explain mode",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://medlineplus.gov/drugsafety.html",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "patient_education",
+        "int-medlineplus-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-MEDLINEPLUS-02",
+      "owner": "National Library of Medicine / NIH",
+      "license": "U.S. federal resource",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-who-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-WHO-01. Region: global. Language: en. Owner: World Health Organization. Category: WHO Model List of Essential Medicines 2025. Source type: normative_guideline. Primary URL: https://www.who.int/publications/i/item/B09474. Discovery URL: https://www.who.int/publications/i/item/B09474. Access mode: pdf. Ingest strategy: pdf_direct. Trust tier: A1. Priority: 2. Refresh cadence: biannual. Scope: essential medicines, selection and safe use. Notes: Nguồn chuẩn toàn cầu; nên ingest bản technical document/PDF",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.who.int/publications/i/item/B09474",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "normative_guideline",
+        "int-who-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-WHO-01",
+      "owner": "World Health Organization",
+      "license": "WHO publication terms",
+      "seed_action": "fulltext_seed"
+    }
+  },
+  {
+    "id": "registry-int-who-02",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-WHO-02. Region: global. Language: en. Owner: World Health Organization. Category: WHO Model Lists of Essential Medicines. Source type: reference_portal. Primary URL: https://www.who.int/groups/expert-committee-on-selection-and-use-of-essential-medicines/essential-medicines-lists. Discovery URL: https://www.who.int/groups/expert-committee-on-selection-and-use-of-essential-medicines/essential-medicines-lists. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 2. Refresh cadence: biannual. Scope: entry portal for EML, AWaRe, country essential medicine lists. Notes: Dùng registry seed và refresh schedule",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.who.int/groups/expert-committee-on-selection-and-use-of-essential-medicines/essential-medicines-lists",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "reference_portal",
+        "int-who-02"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-WHO-02",
+      "owner": "World Health Organization",
+      "license": "WHO website terms",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-ema-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-EMA-01. Region: global. Language: en. Owner: European Medicines Agency. Category: Human medicines safety referrals. Source type: drug_safety_alert. Primary URL: https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/referrals. Discovery URL: https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/referrals. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 2. Refresh cadence: weekly. Scope: EU safety referrals, restrictions, suspensions. Notes: Giá trị cao cho cross-check safety ngoài FDA",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/referrals",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "drug_safety_alert",
+        "int-ema-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-EMA-01",
+      "owner": "European Medicines Agency",
+      "license": "EU public regulatory content",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-mhra-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-MHRA-01. Region: global. Language: en. Owner: Medicines and Healthcare products Regulatory Agency. Category: Drug Safety Update. Source type: drug_safety_alert. Primary URL: https://www.gov.uk/drug-safety-update. Discovery URL: https://www.gov.uk/drug-safety-update. Access mode: html. Ingest strategy: html_index. Trust tier: A1. Priority: 2. Refresh cadence: monthly. Scope: UK post-market safety notices and prescribing updates. Notes: Nguồn bổ sung để triangulate safety alerts",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.gov.uk/drug-safety-update",
+      "score": 0.0,
+      "weight": 1.0,
+      "tags": [
+        "medical-safety",
+        "global",
+        "drug_safety_alert",
+        "int-mhra-01"
+      ],
+      "trust_tier": "tier_1",
+      "file_type": "registry",
+      "source_id": "INT-MHRA-01",
+      "owner": "Medicines and Healthcare products Regulatory Agency",
+      "license": "UK government open website",
+      "seed_action": "registry_seed"
+    }
+  },
+  {
+    "id": "registry-int-nhs-01",
+    "text": "Authoritative medical safety corpus source. Source ID: INT-NHS-01. Region: global. Language: en. Owner: NHS. Category: Medicines A to Z. Source type: patient_education. Primary URL: https://www.nhs.uk/medicines/. Discovery URL: https://www.nhs.uk/medicines/. Access mode: html. Ingest strategy: html_index. Trust tier: A2. Priority: 3. Refresh cadence: weekly. Scope: patient-friendly monographs, common side effects, how to take medicines. Notes: Chỉ dùng explain layer; không ưu tiên hơn label/regulator",
+    "metadata": {
+      "source": "medical_safety_registry",
+      "url": "https://www.nhs.uk/medicines/",
+      "score": 0.0,
+      "weight": 0.95,
+      "tags": [
+        "medical-safety",
+        "global",
+        "patient_education",
+        "int-nhs-01"
+      ],
+      "trust_tier": "tier_2",
+      "file_type": "registry",
+      "source_id": "INT-NHS-01",
+      "owner": "NHS",
+      "license": "Public NHS website",
+      "seed_action": "registry_seed"
+    }
+  }
+]

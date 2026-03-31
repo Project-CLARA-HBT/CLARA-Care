@@ -3,6 +3,11 @@ __pycache__/
 *.pyc
 data/rag_seed/downloads/
 data/rag_seed/manifests/
+!data/rag_seed/manifests/
+data/rag_seed/manifests/*
+!data/rag_seed/manifests/medical_safety_corpus_manifest.json
+!data/rag_seed/manifests/medical_safety_registry_seed.json
+!data/rag_seed/manifests/medical_safety_vn_pdf_catalog.csv
 .venv/
 .venv-ci/
 .pycache_tmp/

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from time import sleep
 
 import httpx
 
@@ -12,33 +13,84 @@ class DeepSeekResponse:
 
 
 class DeepSeekClient:
+    _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+
     def __init__(
         self,
         api_key: str,
         base_url: str,
         model: str,
         timeout_seconds: float = 30.0,
+        retries_per_base: int = 0,
+        retry_backoff_seconds: float = 0.25,
     ) -> None:
         self._api_key = api_key
-        self._base_url = base_url.rstrip("/")
+        self._base_urls = self._parse_base_urls(base_url)
         self._model = model
         self._timeout_seconds = timeout_seconds
+        self._retries_per_base = max(0, int(retries_per_base))
+        self._retry_backoff_seconds = max(0.0, float(retry_backoff_seconds))
 
     @property
     def model(self) -> str:
         return self._model
 
-    def _chat_completions_url(self) -> str:
-        base = self._base_url
+    @staticmethod
+    def _parse_base_urls(raw_base_url: str) -> list[str]:
+        base_urls: list[str] = []
+        for chunk in raw_base_url.replace(";", ",").replace("\n", ",").split(","):
+            parsed = chunk.strip().rstrip("/")
+            if parsed and parsed not in base_urls:
+                base_urls.append(parsed)
+        if not base_urls:
+            raise ValueError("Missing DEEPSEEK_BASE_URL")
+        return base_urls
+
+    @staticmethod
+    def _chat_completions_url(base: str) -> str:
         if base.endswith("/v1"):
             return f"{base}/chat/completions"
         return f"{base}/v1/chat/completions"
 
-    def _audio_transcriptions_url(self) -> str:
-        base = self._base_url
+    @staticmethod
+    def _audio_transcriptions_url(base: str) -> str:
         if base.endswith("/v1"):
             return f"{base}/audio/transcriptions"
         return f"{base}/v1/audio/transcriptions"
+
+    def _post_json_with_failover(self, payload: dict[str, object]) -> dict[str, object]:
+        errors: list[str] = []
+        attempts = self._retries_per_base + 1
+        for base in self._base_urls:
+            url = self._chat_completions_url(base)
+            for attempt in range(attempts):
+                try:
+                    with httpx.Client(timeout=self._timeout_seconds) as client:
+                        response = client.post(
+                            url,
+                            headers={
+                                "Authorization": f"Bearer {self._api_key}",
+                                "Content-Type": "application/json",
+                            },
+                            json=payload,
+                        )
+                        response.raise_for_status()
+                    data = response.json()
+                    if not isinstance(data, dict):
+                        raise RuntimeError("DeepSeek response has invalid format")
+                    return data
+                except httpx.TimeoutException as exc:
+                    errors.append(f"timeout:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
+                    if status_code not in self._RETRYABLE_STATUS_CODES:
+                        raise
+                except httpx.HTTPError as exc:
+                    errors.append(f"http_error:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                if attempt < attempts - 1:
+                    sleep(self._retry_backoff_seconds * (attempt + 1))
+        raise RuntimeError("deepseek_request_failed|" + "|".join(errors[:8]))
 
     def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse:
         if not self._api_key:
@@ -56,18 +108,7 @@ class DeepSeekClient:
             "messages": messages,
         }
 
-        with httpx.Client(timeout=self._timeout_seconds) as client:
-            response = client.post(
-                self._chat_completions_url(),
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-
-        data = response.json()
+        data = self._post_json_with_failover(payload)
         choices = data.get("choices", [])
         if not choices:
             raise RuntimeError("DeepSeek response has no choices")
@@ -100,22 +141,48 @@ class DeepSeekClient:
         if prompt:
             data["prompt"] = prompt
 
-        with httpx.Client(timeout=self._timeout_seconds) as client:
-            response = client.post(
-                self._audio_transcriptions_url(),
-                headers={"Authorization": f"Bearer {self._api_key}"},
-                data=data,
-                files={
-                    "file": (
-                        filename,
-                        audio_bytes,
-                        content_type or "application/octet-stream",
-                    )
-                },
-            )
-            response.raise_for_status()
+        errors: list[str] = []
+        attempts = self._retries_per_base + 1
+        payload: dict[str, object] | None = None
+        for base in self._base_urls:
+            url = self._audio_transcriptions_url(base)
+            for attempt in range(attempts):
+                try:
+                    with httpx.Client(timeout=self._timeout_seconds) as client:
+                        response = client.post(
+                            url,
+                            headers={"Authorization": f"Bearer {self._api_key}"},
+                            data=data,
+                            files={
+                                "file": (
+                                    filename,
+                                    audio_bytes,
+                                    content_type or "application/octet-stream",
+                                )
+                            },
+                        )
+                        response.raise_for_status()
+                    raw_payload = response.json()
+                    if isinstance(raw_payload, dict):
+                        payload = raw_payload
+                        break
+                    raise RuntimeError("DeepSeek transcription payload has invalid format")
+                except httpx.TimeoutException as exc:
+                    errors.append(f"timeout:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
+                    if status_code not in self._RETRYABLE_STATUS_CODES:
+                        raise
+                except httpx.HTTPError as exc:
+                    errors.append(f"http_error:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                if attempt < attempts - 1:
+                    sleep(self._retry_backoff_seconds * (attempt + 1))
+            if payload is not None:
+                break
 
-        payload = response.json()
+        if payload is None:
+            raise RuntimeError("deepseek_audio_failed|" + "|".join(errors[:8]))
         if not isinstance(payload, dict):
             raise RuntimeError("DeepSeek transcription payload has invalid format")
         text = str(payload.get("text", "")).strip()

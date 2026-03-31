@@ -257,16 +257,24 @@ def _research_fail_soft_payload(
                 note="Returned safe markdown fallback instead of 500.",
             ),
         ],
+        "citations": [
+            {
+                "id": "fallback-safe-1",
+                "title": "Safety fallback notice",
+                "source": "system_fallback",
+                "url": "",
+                "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
+            }
+        ],
         "metadata": {
             "query": query,
             "policy_action": "warn",
             "fallback_used": True,
             "source_errors": {"upstream": [reason]},
-            "attributions": [],
+            "attributions": ["fallback-safe-1"],
             "research_mode": "fast",
             "deep_pass_count": 0,
         },
-        "citations": [],
     }
 
 

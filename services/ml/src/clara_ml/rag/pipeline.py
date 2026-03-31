@@ -36,6 +36,9 @@ class LlmGenerator(Protocol):
 class RagPipelineP1:
     """P1 pipeline: retrieve -> LLM answer (if available) -> deterministic fallback."""
 
+    _PROMPT_MAX_DOCS = 8
+    _PROMPT_MAX_DOC_CHARS = 520
+
     def __init__(
         self,
         retriever: InMemoryRetriever | None = None,
@@ -296,11 +299,15 @@ class RagPipelineP1:
         meta_bits = f"source={source}; score={score_txt}"
         if url:
             meta_bits = f"{meta_bits}; url={url}"
-        return f"- ({doc.id}) [{meta_bits}] {doc.text}"
+        raw_text = str(doc.text or "").strip()
+        text = raw_text
+        if len(text) > RagPipelineP1._PROMPT_MAX_DOC_CHARS:
+            text = f"{text[:RagPipelineP1._PROMPT_MAX_DOC_CHARS].rstrip()}..."
+        return f"- ({doc.id}) [{meta_bits}] {text}"
 
     @classmethod
     def _build_prompt(cls, query: str, docs: List[Document]) -> str:
-        context = "\n".join(cls._format_doc_context(doc) for doc in docs)
+        context = "\n".join(cls._format_doc_context(doc) for doc in docs[: cls._PROMPT_MAX_DOCS])
         return (
             "You are CLARA Deep Research medical assistant.\n"
             "Use retrieved context as primary evidence and avoid unsupported claims.\n"

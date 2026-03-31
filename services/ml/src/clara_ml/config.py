@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     )
     searxng_base_url: str = Field(
         default="",
-        validation_alias="SEARXNG_BASE_URL",
+        validation_alias=AliasChoices("SEARXNG_BASE_URL", "SEARXNG_PUBLIC_BASE_URL"),
     )
     searxng_timeout_seconds: float = Field(
         default=3.0,
@@ -127,6 +127,10 @@ class Settings(BaseSettings):
     semantic_scholar_timeout_seconds: float = Field(
         default=3.0,
         validation_alias="SEMANTIC_SCHOLAR_TIMEOUT_SECONDS",
+    )
+    semantic_scholar_api_key: str = Field(
+        default="",
+        validation_alias="SEMANTIC_SCHOLAR_API_KEY",
     )
     semantic_scholar_max_results: int = Field(
         default=3,

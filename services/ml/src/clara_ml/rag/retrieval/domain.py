@@ -12,17 +12,17 @@ class Document:
 
 
 SOURCE_SCORE_BIAS: dict[str, float] = {
-    "pubmed": 1.12,
-    "europepmc": 1.1,
+    "pubmed": 1.05,
+    "europepmc": 1.04,
     "clinicaltrials": 1.08,
     "openfda": 1.35,
     "dailymed": 1.35,
     "searxng": 1.0,
     "web_crawl": 0.98,
     "searxng-crawl": 0.98,
-    "openalex": 0.92,
-    "semantic_scholar": 0.95,
-    "crossref": 0.7,
+    "openalex": 1.0,
+    "semantic_scholar": 1.0,
+    "crossref": 0.95,
     "byt": 1.2,
     "dav": 1.18,
     "vn_source_registry": 1.15,
