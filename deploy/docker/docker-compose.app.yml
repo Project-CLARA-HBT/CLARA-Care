@@ -1,5 +1,11 @@
 name: clara-app
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
 services:
   api:
     build:
@@ -29,6 +35,7 @@ services:
       TGC_OCR_API_KEY: ${TGC_OCR_API_KEY:-}
     ports:
       - "127.0.0.1:${APP_API_PORT:-8100}:8000"
+    logging: *default-logging
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -61,6 +68,7 @@ services:
       - searxng
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
+    logging: *default-logging
 
   searxng:
     image: searxng/searxng:latest
@@ -74,6 +82,7 @@ services:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
     ports:
       - "127.0.0.1:${APP_SEARXNG_PORT:-8888}:8080"
+    logging: *default-logging
 
   web:
     build:
@@ -86,6 +95,7 @@ services:
       - api
     ports:
       - "127.0.0.1:${APP_WEB_PORT:-3100}:3000"
+    logging: *default-logging
 
 volumes:
   clara_api_data:

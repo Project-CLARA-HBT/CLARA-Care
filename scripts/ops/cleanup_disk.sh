@@ -4,6 +4,10 @@ set -euo pipefail
 PROJECT_DIR="${PROJECT_DIR:-/opt/clara-care}"
 MAX_USED_PCT="${MAX_USED_PCT:-88}"
 MIN_FREE_GB="${MIN_FREE_GB:-4}"
+DOCKER_IMAGE_RETENTION_HOURS="${DOCKER_IMAGE_RETENTION_HOURS:-168}"
+DOCKER_BUILDER_RETENTION_HOURS="${DOCKER_BUILDER_RETENTION_HOURS:-24}"
+TRUNCATE_DOCKER_JSON_LOGS="${TRUNCATE_DOCKER_JSON_LOGS:-false}"
+DOCKER_JSON_LOG_MAX_MB="${DOCKER_JSON_LOG_MAX_MB:-200}"
 LOCK_FILE="${LOCK_FILE:-/tmp/clara-disk-cleanup.lock}"
 FORCE_RUN="false"
 DRY_RUN="false"
@@ -16,6 +20,10 @@ Options:
   --project-dir <path>    Project root to clean local caches (default: /opt/clara-care)
   --max-used-pct <int>    Trigger cleanup when / used% >= value (default: 88)
   --min-free-gb <int>     Trigger cleanup when / free GB < value (default: 4)
+  --image-retention-hours <int>   Prune unused docker images older than N hours (default: 168)
+  --builder-retention-hours <int> Prune docker builder cache older than N hours (default: 24)
+  --truncate-docker-json-logs     Truncate docker json logs larger than --docker-json-log-max-mb
+  --docker-json-log-max-mb <int>  Threshold for docker json logs truncation (default: 200)
   --force                 Run cleanup even when thresholds are not exceeded
   --dry-run               Print actions without executing destructive commands
   -h, --help              Show this help message
@@ -34,6 +42,22 @@ while [[ $# -gt 0 ]]; do
       ;;
     --min-free-gb)
       MIN_FREE_GB="${2:?missing value for --min-free-gb}"
+      shift 2
+      ;;
+    --image-retention-hours)
+      DOCKER_IMAGE_RETENTION_HOURS="${2:?missing value for --image-retention-hours}"
+      shift 2
+      ;;
+    --builder-retention-hours)
+      DOCKER_BUILDER_RETENTION_HOURS="${2:?missing value for --builder-retention-hours}"
+      shift 2
+      ;;
+    --truncate-docker-json-logs)
+      TRUNCATE_DOCKER_JSON_LOGS="true"
+      shift
+      ;;
+    --docker-json-log-max-mb)
+      DOCKER_JSON_LOG_MAX_MB="${2:?missing value for --docker-json-log-max-mb}"
       shift 2
       ;;
     --force)
@@ -121,9 +145,12 @@ fi
 if command -v docker >/dev/null 2>&1; then
   # Safe cleanup only: remove unused artifacts, never touch active containers or named volumes in use.
   run_cmd "docker container prune -f"
-  run_cmd "docker image prune -af --filter 'until=72h'"
-  run_cmd "docker builder prune -af --filter 'until=24h'"
+  run_cmd "docker image prune -af --filter 'until=${DOCKER_IMAGE_RETENTION_HOURS}h'"
+  run_cmd "docker builder prune -af --filter 'until=${DOCKER_BUILDER_RETENTION_HOURS}h'"
   run_cmd "docker network prune -f"
+  if [[ "$TRUNCATE_DOCKER_JSON_LOGS" == "true" ]]; then
+    run_cmd "find /var/lib/docker/containers -type f -name '*-json.log' -size +${DOCKER_JSON_LOG_MAX_MB}M -exec truncate -s ${DOCKER_JSON_LOG_MAX_MB}M {} +"
+  fi
 else
   log "docker not found, skip docker cleanup"
 fi
