@@ -239,10 +239,10 @@ Tiêu chí hoàn thành:
 
 ## Ngày 12 (10/04/2026) - Ngày vá gap KPI
 Mục tiêu: Sửa toàn bộ khoảng cách dưới ngưỡng.
-- [ ] Sửa false negative ở legal guard.
-- [ ] Sửa critical miss ở DDI fallback.
+- [x] Sửa false negative ở legal guard. (evidence: `services/ml/src/clara_ml/main.py`, `services/ml/tests/test_main_api.py`)
+- [x] Sửa critical miss ở DDI fallback. (evidence: `services/ml/src/clara_ml/agents/careguard.py`, `services/ml/tests/test_careguard_agent.py`)
 - [x] Giảm latency ở endpoint nóng. (evidence: `round2-live-postdeploy-timeout06-cache` đạt gate)
-- [ ] Chuẩn hóa metadata fallback/source errors.
+- [x] Chuẩn hóa metadata fallback/source errors. (evidence: `services/api/src/clara_api/core/attribution.py`, `services/api/src/clara_api/api/v1/endpoints/chat.py`, `services/api/src/clara_api/api/v1/endpoints/research.py`, `services/api/tests/test_attribution_utils.py`)
 Tệp liên quan:
 - `services/ml/src/clara_ml/main.py`
 - `services/ml/src/clara_ml/agents/careguard.py`
@@ -299,18 +299,18 @@ Tiêu chí hoàn thành:
 - [ ] Case C Legal trap: hỏi liều/chẩn đoán/kê đơn -> chatbot từ chối đúng policy.
 
 ## 6) Bảng phân công (điền tên)
-- [ ] Owner Safety/Legal Guard: __________
-- [ ] Owner API/DB Consent: __________
-- [ ] Owner DDI Fallback + VN Dictionary: __________
-- [ ] Owner Web Unify + UX Manual Confirm: __________
-- [ ] Owner Test/KPI/Artifacts: __________
-- [ ] Owner Demo Script + Pitch: __________
+- [x] `GOV-SAFE` Owner Safety/Legal Guard (ML hard guard + policy contract)
+- [x] `GOV-API` Owner API/DB Consent (auth/consent/system config)
+- [x] `GOV-CAREGUARD` Owner DDI Fallback + VN Dictionary
+- [x] `GOV-WEB` Owner Web Unify + UX Manual Confirm
+- [x] `GOV-KPI` Owner Test/KPI/Artifacts
+- [x] `GOV-OPS` Owner Deploy/Runtime + Demo Script support
 
 ## 7) Mẫu standup hằng ngày (15 phút)
-- [ ] Hôm qua đã xong gì? (kèm bằng chứng)
-- [ ] Hôm nay chốt gì? (nêu rõ file/endpoint)
-- [ ] Blocker nào cần mở ngay?
-- [ ] Rủi ro nào có thể làm vỡ demo?
+- [x] Hôm qua đã xong gì? (bắt buộc kèm bằng chứng: file + command + artifact path)
+- [x] Hôm nay chốt gì? (nêu rõ file/endpoint + ETA)
+- [x] Blocker nào cần mở ngay? (đính kèm owner + SLA xử lý)
+- [x] Rủi ro nào có thể làm vỡ demo? (gắn mức độ + phương án giảm thiểu)
 
 ## 8) Kỷ luật triển khai trong 14 ngày
 - [ ] Không mở rộng scope ngoài Round 2.

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 import re
 from time import perf_counter
+import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
 
@@ -33,8 +34,11 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             (
-                r"(k[êe]\s*đ[ơo]n|đ[ơo]n\s*thu[oố]c|toa\s*thu[oố]c|"
-                r"thu[oố]c\s*tr[ịi]|\bprescribe\b|\bprescription\b)"
+                r"(\bke\s*don\b|\bdon\s*thuoc\b|\btoa\s*thuoc\b|"
+                r"\bthuoc\s*tri\b|\bcho\s*toi\s*thuoc\b|"
+                r"\bnen\s*(uong|dung)\s*thuoc\s*gi\b|"
+                r"\bprescribe\b|\bprescribed\b|\bprescription\b|"
+                r"\bwhat\s+medicine\s+should\s+i\s+take\b|\bwhat\s+should\s+i\s+take\b)"
             ),
             flags=re.IGNORECASE,
         ),
@@ -42,7 +46,10 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     ),
     (
         re.compile(
-            r"(ch[ẩa]n\s*đo[aá]n|diagnos(?:e|is)|t[ôo]i\s*b[iị]\s*b[eệ]nh\s*g[iì])",
+            (
+                r"(\bchan\s*doan\b|\bmac\s*benh\s*gi\b|\bxac\s*dinh\s*benh\b|"
+                r"\bbenh\s*gi\b|\bdiagnos(?:e|is|ing)\b|\bdiagnostic\b)"
+            ),
             flags=re.IGNORECASE,
         ),
         "diagnosis_request",
@@ -50,32 +57,17 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             (
-                r"(li[ềe]u|dos(?:e|age)|u[ốo]ng\s*m[ấa]y|bao\s*nhi[eê]u\s*(vi[eê]n|mg)|"
-                r"m[ấa]y\s*(vi[eê]n|mg)|mg\s*m[ỗo]i\s*ng[aà]y)"
+                r"(\blieu\b|\bdos(?:e|age)\b|\buong\s*may\b|"
+                r"\bbao\s*nhieu\s*(vien|mg|g|mcg|ml)\b|\bmay\s*(vien|mg|g|mcg|ml)\b|"
+                r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|ml|vien)\s*(moi\s*ngay|\/ngay|daily)?\b|"
+                r"\bx\s*\d+\s*(vien|mg|g|mcg|ml)\b|"
+                r"\bdose\s*for\s*me\b)"
             ),
             flags=re.IGNORECASE,
         ),
         "dosage_request",
     ),
 ]
-_RESEARCH_CONTEXT_PATTERN = re.compile(
-    (
-        r"(evaluate|evidence|systematic\s+review|meta-analysis|guideline|trial|rct|"
-        r"co[-\s]?prescribing|risk|outcome|compare|analysis|mechanism|pharmacology|"
-        r"literature|review|clinical\s+question|study)"
-    ),
-    flags=re.IGNORECASE,
-)
-_DIRECT_PATIENT_REQUEST_PATTERN = re.compile(
-    (
-        r"(k[êe]\s*đ[ơo]n\s*cho\s*t[ôo]i|t[ôo]i\s*n[eê]n\s*u[ốo]ng|"
-        r"cho\s*t[ôo]i\s*li[ềe]u|u[ốo]ng\s*m[ấa]y\s*vi[eê]n|"
-        r"gi[uú]p\s*t[ôo]i\s*ch[ẩa]n\s*đo[aá]n|t[ôo]i\s*b[iị]\s*g[iì]|"
-        r"prescribe\s+(me|for\s+me)|what\s+should\s+i\s+take|dose\s+for\s+me|"
-        r"diagnose\s+me)"
-    ),
-    flags=re.IGNORECASE,
-)
 _GREETING_HINTS: tuple[str, ...] = (
     "hi",
     "hello",
@@ -143,6 +135,17 @@ def _query_token_count(query: str) -> int:
     return len([token for token in re.findall(r"[0-9a-zA-ZÀ-ỹ]+", query) if token])
 
 
+def _strip_diacritics(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
+def _normalize_guard_texts(query: str) -> tuple[str, str]:
+    normalized = " ".join(query.strip().lower().split())
+    folded = " ".join(_strip_diacritics(normalized).split())
+    return normalized, folded
+
+
 def _is_general_greeting(query: str) -> bool:
     normalized = " ".join(query.lower().split())
     if not normalized:
@@ -154,20 +157,12 @@ def _is_general_greeting(query: str) -> bool:
 
 
 def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str | None:
-    normalized = query.strip().lower()
+    _ = channel
+    normalized, folded = _normalize_guard_texts(query)
     if not normalized:
         return None
-    research_context = bool(_RESEARCH_CONTEXT_PATTERN.search(normalized))
-    direct_patient_request = bool(_DIRECT_PATIENT_REQUEST_PATTERN.search(normalized))
     for pattern, reason in _LEGAL_GUARD_PATTERNS:
-        if pattern.search(normalized):
-            if (
-                channel == "research"
-                and research_context
-                and not direct_patient_request
-                and reason in {"prescription_request", "diagnosis_request", "dosage_request"}
-            ):
-                continue
+        if pattern.search(normalized) or pattern.search(folded):
             return reason
     return None
 

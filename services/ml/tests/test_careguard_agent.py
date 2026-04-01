@@ -59,3 +59,17 @@ def test_vn_drug_dictionary_maps_panadol_extra_to_active_ingredients() -> None:
 
     ddi_pairs = [set(alert.get("medications", [])) for alert in result["ddi_alerts"]]
     assert any({"warfarin", "paracetamol"}.issubset(pair) for pair in ddi_pairs)
+
+
+def test_decorated_medication_names_still_match_local_ddi_rules() -> None:
+    result = run_careguard_analyze(
+        {
+            "medications": ["Warfarin 5mg", "Ibuprofen 400mg tablet"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    ddi_pairs = [set(alert.get("medications", [])) for alert in result["ddi_alerts"]]
+    assert any({"warfarin", "ibuprofen"}.issubset(pair) for pair in ddi_pairs)
+    assert result["metadata"]["normalization_pair_coverage_low"] is False
+    assert result["metadata"]["normalized_medication_count"] >= 2

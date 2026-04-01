@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 from clara_ml.clients.drug_sources import DrugSourceClient
@@ -54,6 +55,40 @@ _SEVERITY_SCORE = {
     "critical": 5,
 }
 
+_DOSAGE_UNIT_PATTERN = re.compile(r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|μg|ml|iu|%)\b", re.IGNORECASE)
+_DOSAGE_COUNT_PATTERN = re.compile(r"\bx\s*\d+\b", re.IGNORECASE)
+_ROUTE_FORM_TOKENS = {
+    "tablet",
+    "tablets",
+    "tab",
+    "tabs",
+    "capsule",
+    "capsules",
+    "cap",
+    "caps",
+    "syrup",
+    "suspension",
+    "solution",
+    "cream",
+    "ointment",
+    "gel",
+    "patch",
+    "injection",
+    "injectable",
+    "sl",
+    "iv",
+    "im",
+    "po",
+    "bid",
+    "tid",
+    "qid",
+    "od",
+    "hs",
+    "vien",
+    "ống",
+    "ong",
+}
+
 
 def _normalize_text_list(value: object) -> list[str]:
     if value is None:
@@ -73,6 +108,26 @@ def _normalize_text_token(value: object) -> str:
     if not isinstance(value, str):
         return ""
     return " ".join(value.strip().lower().split())
+
+
+def _canonicalize_medication_token(token: str) -> str:
+    if not token:
+        return ""
+    cleaned = token
+    cleaned = _DOSAGE_UNIT_PATTERN.sub(" ", cleaned)
+    cleaned = _DOSAGE_COUNT_PATTERN.sub(" ", cleaned)
+    cleaned = re.sub(r"[/(),;+]", " ", cleaned)
+    normalized_parts: list[str] = []
+    for raw_part in cleaned.split():
+        part = raw_part.strip().lower()
+        if not part:
+            continue
+        if part in _ROUTE_FORM_TOKENS:
+            continue
+        if part.isdigit():
+            continue
+        normalized_parts.append(part)
+    return " ".join(normalized_parts)
 
 
 def _normalize_severity(value: object) -> str:
@@ -218,6 +273,7 @@ def _normalize_medications_with_vn_dictionary(
         }
 
     mapped_items: list[dict[str, str]] = []
+    normalized_inputs: list[dict[str, str]] = []
     normalized_medications: list[str] = []
     seen: set[str] = set()
 
@@ -225,30 +281,53 @@ def _normalize_medications_with_vn_dictionary(
         input_token = _normalize_text_token(medication)
         if not input_token:
             continue
-        canonical = _VN_DICTIONARY_ALIAS_LOOKUP.get(input_token, input_token)
+        canonical_input = _canonicalize_medication_token(input_token) or input_token
+        canonical = _VN_DICTIONARY_ALIAS_LOOKUP.get(
+            canonical_input,
+            _VN_DICTIONARY_ALIAS_LOOKUP.get(input_token, canonical_input),
+        )
         active_ingredients = _VN_DICTIONARY_ACTIVE_INGREDIENTS.get(canonical, [canonical])
+        normalized_inputs.append(
+            {
+                "input": input_token,
+                "canonical_input": canonical_input,
+                "normalized_name": canonical,
+            }
+        )
 
-        if canonical != input_token:
+        if canonical != input_token or canonical_input != input_token:
             mapped_items.append(
                 {
                     "input": input_token,
+                    "canonical_input": canonical_input,
                     "normalized_name": canonical,
                     "rxcui": _VN_DICTIONARY_RXCUI_MAP.get(canonical, ""),
                 }
             )
 
         for candidate in [canonical, *active_ingredients]:
-            normalized_candidate = _normalize_text_token(candidate)
+            normalized_candidate = _canonicalize_medication_token(
+                _normalize_text_token(candidate)
+            ) or _normalize_text_token(candidate)
             if not normalized_candidate or normalized_candidate in seen:
                 continue
             seen.add(normalized_candidate)
             normalized_medications.append(normalized_candidate)
 
+    input_count = len(normalized_inputs)
+    mapped_count = len(mapped_items)
+    normalization_confidence = 1.0 if input_count == 0 else mapped_count / input_count
+    pair_coverage_ratio = 1.0 if input_count == 0 else len(normalized_medications) / input_count
+
     return normalized_medications, {
         "version": version,
         "record_count": record_count,
-        "mapped_count": len(mapped_items),
+        "mapped_count": mapped_count,
         "mapped_items": mapped_items[:20],
+        "input_count": input_count,
+        "normalization_confidence": round(min(max(normalization_confidence, 0.0), 1.0), 3),
+        "pair_coverage_ratio": round(min(max(pair_coverage_ratio, 0.0), 1.0), 3),
+        "normalized_inputs": normalized_inputs[:20],
     }
 
 
@@ -516,6 +595,7 @@ def run_careguard_analyze(payload: dict) -> dict:
     source_errors: dict[str, list[str]] = {}
     external_ddi_alerts: list[dict[str, Any]] = []
     openfda_evidence: dict[tuple[str, str], dict[str, int]] = {}
+    openfda_pairs_checked = 0
     needs_external_lookup = len(set(medications)) >= 2
     external_ddi_flag_source = "runtime" if "external_ddi_enabled" in payload else "env"
     external_ddi_enabled = _as_bool(
@@ -532,6 +612,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             ).fetch_ddi_context(medications)
             external_ddi_alerts = external.rxnav_alerts
             openfda_evidence = external.openfda_evidence
+            openfda_pairs_checked = int(getattr(external, "openfda_pairs_checked", 0))
             source_errors = external.source_errors
             for source_name in external.source_used:
                 if source_name not in source_used:
@@ -540,6 +621,10 @@ def run_careguard_analyze(payload: dict) -> dict:
             source_errors["external"] = [f"unhandled_error:{exc.__class__.__name__}"]
     elif needs_external_lookup:
         source_errors["external"] = ["disabled_by_config"]
+
+    normalization_pair_coverage_low = bool(raw_medications) and len(set(medications)) < 2
+    if normalization_pair_coverage_low:
+        source_errors.setdefault("normalization", []).append("low_pair_coverage")
 
     ddi_alerts = _merge_drug_alerts(local_ddi_alerts, external_ddi_alerts, openfda_evidence)
     allergy_alerts = _detect_allergy_conflicts(medications, allergies)
@@ -557,7 +642,9 @@ def run_careguard_analyze(payload: dict) -> dict:
     )
 
     external_source_used = any(source in {"rxnav", "openfda"} for source in source_used)
-    fallback_used = needs_external_lookup and (not external_source_used or bool(source_errors))
+    fallback_used = needs_external_lookup and (
+        not external_source_used or bool(source_errors) or normalization_pair_coverage_low
+    )
 
     return {
         "risk": {
@@ -577,7 +664,14 @@ def run_careguard_analyze(payload: dict) -> dict:
             "vn_dictionary_record_count": vn_dictionary_metadata["record_count"],
             "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
             "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
+            "vn_dictionary_input_count": vn_dictionary_metadata["input_count"],
+            "normalization_confidence": vn_dictionary_metadata["normalization_confidence"],
+            "normalization_pair_coverage_low": normalization_pair_coverage_low,
+            "normalized_medication_count": len(medications),
+            "raw_medication_count": len(raw_medications),
+            "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
             "source_used": source_used,
             "source_errors": source_errors,
+            "openfda_pairs_checked": openfda_pairs_checked,
         },
     }

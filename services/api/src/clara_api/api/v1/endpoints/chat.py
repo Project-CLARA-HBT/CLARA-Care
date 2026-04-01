@@ -79,19 +79,50 @@ def _build_chat_attribution(
 
     context_debug = ml_response.get("context_debug")
     context_debug_obj = context_debug if isinstance(context_debug, dict) else {}
+    retrieval_trace_obj = (
+        context_debug_obj.get("retrieval_trace")
+        if isinstance(context_debug_obj.get("retrieval_trace"), dict)
+        else {}
+    )
+    search_phase_obj = (
+        retrieval_trace_obj.get("search_phase")
+        if isinstance(retrieval_trace_obj.get("search_phase"), dict)
+        else {}
+    )
     raw_source_errors = (
         ml_response.get("source_errors")
         or context_debug_obj.get("source_errors")
+        or retrieval_trace_obj.get("source_errors")
+        or search_phase_obj.get("source_errors")
         or {}
     )
     source_errors = normalize_source_errors(raw_source_errors)
     source_used = normalize_source_used(
         ml_response.get("source_used")
         or context_debug_obj.get("source_used")
+        or retrieval_trace_obj.get("source_used")
+        or search_phase_obj.get("source_used")
         or []
     )
+    source_attempts = search_phase_obj.get("source_attempts")
+    if isinstance(source_attempts, list):
+        for attempt in source_attempts:
+            if not isinstance(attempt, dict):
+                continue
+            raw_source_name = (
+                attempt.get("source")
+                or attempt.get("provider")
+                or attempt.get("connector")
+                or attempt.get("name")
+            )
+            if raw_source_name is None:
+                continue
+            source_name = str(raw_source_name).strip().lower()
+            if source_name and source_name not in source_used:
+                source_used.append(source_name)
     fallback_used = bool(
         ml_response.get("safe_mode_used")
+        or ml_response.get("fallback_used")
         or ml_response.get("fallback_reason")
         or str(ml_response.get("model_used") or "").startswith("api-safe-")
         or str(ml_response.get("model_used") or "").startswith("api-local-synth-")

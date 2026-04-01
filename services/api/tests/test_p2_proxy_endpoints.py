@@ -174,6 +174,42 @@ def test_research_upload_file_returns_file_id_and_preview() -> None:
     assert payload["token_count"] > 0
 
 
+def test_research_attribution_respects_canonical_fallback_used(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "tier": "tier2",
+                "answer": "fallback answer",
+                "fallback_used": True,
+                "source_used": "pubmed,openfda",
+                "source_errors": {"openfda": ["timeout"]},
+                "metadata": {},
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "test fallback attribution"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["attribution"]["fallback_used"] is True
+    assert body["attribution"]["source_used"] == ["pubmed", "openfda"]
+    assert body["attribution"]["source_errors"] == {"openfda": ["timeout"]}
+
+
 def test_research_upload_file_json_is_parsed_as_text() -> None:
     token = _login("alice@research.clara")
 

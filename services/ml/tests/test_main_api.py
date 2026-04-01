@@ -247,6 +247,30 @@ def test_research_tier2_blocks_prescription_and_dosage_requests():
     assert body["guard_reason"] in {"prescription_request", "dosage_request"}
 
 
+def test_research_tier2_blocks_guideline_wording_when_requesting_diagnosis_or_dose():
+    response = client.post(
+        "/v1/research/tier2",
+        json={"query": "Guideline-based diagnosis for chest pain and recommended dose for me."},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "medical_policy_refusal"
+    assert body["model_used"] == "legal-hard-guard-v1"
+    assert body["guard_reason"] in {"diagnosis_request", "dosage_request"}
+
+
+def test_chat_legal_guard_blocks_vietnamese_non_accent_phrasing():
+    response = client.post(
+        "/v1/chat/routed",
+        json={"query": "toi mac benh gi va nen uong may vien warfarin moi ngay"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "medical_policy_refusal"
+    assert body["model_used"] == "legal-hard-guard-v1"
+    assert body["guard_reason"] in {"diagnosis_request", "dosage_request"}
+
+
 def test_research_tier2_emergency_escalates_fastpath():
     response = client.post(
         "/v1/research/tier2",

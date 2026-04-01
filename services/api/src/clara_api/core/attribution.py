@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -36,8 +37,13 @@ def normalize_citations(citations_payload: Any) -> list[dict[str, str]]:
 
 def normalize_source_used(raw_source_used: Any) -> list[str]:
     if isinstance(raw_source_used, str):
-        normalized = raw_source_used.strip().lower()
-        return [normalized] if normalized else []
+        chunks = re.split(r"[,;\n]+", raw_source_used)
+        normalized_values: list[str] = []
+        for chunk in chunks:
+            normalized = chunk.strip().lower()
+            if normalized and normalized not in normalized_values:
+                normalized_values.append(normalized)
+        return normalized_values
     if not isinstance(raw_source_used, list):
         return []
 
@@ -130,9 +136,6 @@ def build_attribution(
     citations = normalize_citations(citations_payload)
     normalized_source_used = normalize_source_used(source_used)
     normalized_source_errors = normalize_source_errors(source_errors)
-
-    if not normalized_source_used:
-        normalized_source_used = [source["id"] for source in normalized_sources]
 
     attribution: dict[str, Any] = {
         "channel": channel,

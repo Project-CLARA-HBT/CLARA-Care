@@ -70,16 +70,16 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert isinstance(forwarded, dict)
     assert forwarded["query"] == "metformin la gi"
     assert forwarded["role"] == "researcher"
-    assert forwarded["rag_flow"] == {
-        "role_router_enabled": True,
-        "intent_router_enabled": True,
-        "verification_enabled": True,
-        "deepseek_fallback_enabled": True,
-        "low_context_threshold": 0.2,
-        "scientific_retrieval_enabled": True,
-        "web_retrieval_enabled": True,
-        "file_retrieval_enabled": True,
-    }
+    rag_flow = forwarded["rag_flow"]
+    assert isinstance(rag_flow, dict)
+    assert rag_flow["role_router_enabled"] is True
+    assert rag_flow["intent_router_enabled"] is True
+    assert rag_flow["verification_enabled"] is True
+    assert rag_flow["deepseek_fallback_enabled"] is True
+    assert rag_flow["low_context_threshold"] == 0.2
+    assert rag_flow["scientific_retrieval_enabled"] is True
+    assert rag_flow["web_retrieval_enabled"] is True
+    assert rag_flow["file_retrieval_enabled"] is True
     rag_sources = forwarded["rag_sources"]
     assert isinstance(rag_sources, list)
     source_ids = {
@@ -119,6 +119,50 @@ def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
     assert body["attribution"]["fallback_used"] is True
     assert isinstance(body["attributions"], list)
     assert body["attributions"][0]["channel"] == "chat"
+
+
+def test_chat_attribution_reads_nested_retrieval_source_errors(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "answer": "mocked-answer",
+                "role": "researcher",
+                "intent": "evidence_review",
+                "confidence": 0.91,
+                "emergency": False,
+                "model_used": "deepseek-v3.2",
+                "retrieved_ids": ["doc-1"],
+                "context_debug": {
+                    "retrieval_trace": {
+                        "search_phase": {
+                            "source_errors": {"openfda": ["timeout"]},
+                            "source_attempts": [{"source": "openfda"}],
+                        }
+                    }
+                },
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.chat.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/chat/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "metformin la gi"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["attribution"]["source_errors"] == {"openfda": ["timeout"]}
+    assert "openfda" in body["attribution"]["source_used"]
 
 
 def test_chat_returns_smalltalk_safe_fallback_for_greeting(monkeypatch) -> None:

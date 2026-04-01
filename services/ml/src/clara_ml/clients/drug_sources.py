@@ -20,6 +20,7 @@ _SEVERITY_MAP = {
     "low": "low",
 }
 _CACHE_TTL_SECONDS = 600.0
+_OPENFDA_PAIR_LIMIT = 12
 _DDI_CONTEXT_CACHE: dict[tuple[str, ...], tuple[float, "ExternalDDIResult"]] = {}
 
 
@@ -28,6 +29,7 @@ class ExternalDDIResult:
     rxnorm_map: dict[str, str] = field(default_factory=dict)
     rxnav_alerts: list[dict[str, Any]] = field(default_factory=list)
     openfda_evidence: dict[tuple[str, str], dict[str, int]] = field(default_factory=dict)
+    openfda_pairs_checked: int = 0
     source_used: list[str] = field(default_factory=list)
     source_errors: dict[str, list[str]] = field(default_factory=dict)
 
@@ -67,9 +69,12 @@ class DrugSourceClient:
         if rxnav_errors:
             result.source_errors["rxnav"] = sorted(rxnav_errors)
 
-        openfda_evidence, openfda_errors, openfda_success = self._fetch_openfda_evidence(meds)
+        openfda_evidence, openfda_errors, openfda_success, openfda_pairs_checked = (
+            self._fetch_openfda_evidence(meds)
+        )
         if openfda_evidence:
             result.openfda_evidence = openfda_evidence
+        result.openfda_pairs_checked = openfda_pairs_checked
         if openfda_success and "openfda" not in result.source_used:
             result.source_used.append("openfda")
         if openfda_errors:
@@ -87,6 +92,7 @@ class DrugSourceClient:
                 tuple(pair): dict(values)
                 for pair, values in result.openfda_evidence.items()
             },
+            openfda_pairs_checked=int(result.openfda_pairs_checked),
             source_used=list(result.source_used),
             source_errors={
                 source_name: list(errors)
@@ -134,15 +140,18 @@ class DrugSourceClient:
     def _fetch_openfda_evidence(
         self,
         medications: list[str],
-    ) -> tuple[dict[tuple[str, str], dict[str, int]], set[str], bool]:
+    ) -> tuple[dict[tuple[str, str], dict[str, int]], set[str], bool, int]:
         evidence: dict[tuple[str, str], dict[str, int]] = {}
         errors: set[str] = set()
         success = False
+        pairs_checked = 0
 
         with httpx.Client(timeout=self._timeout_seconds) as client:
             # Keep a bounded pair-set for predictable latency on demo paths.
-            for med_a, med_b in list(combinations(medications, 2))[:4]:
+            # Increased bound to reduce misses on polypharmacy without exploding latency.
+            for med_a, med_b in list(combinations(medications, 2))[:_OPENFDA_PAIR_LIMIT]:
                 pair_key = tuple(sorted((med_a, med_b)))
+                pairs_checked += 1
 
                 label_search = (
                     f'(openfda.generic_name:"{med_a}" AND drug_interactions:"{med_b}") OR '
@@ -194,7 +203,7 @@ class DrugSourceClient:
                         "event_reports": event_hits,
                     }
 
-        return evidence, errors, success
+        return evidence, errors, success, pairs_checked
 
     def _request_json(
         self,

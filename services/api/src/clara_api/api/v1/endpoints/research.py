@@ -1082,7 +1082,14 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
         }
         for source_id in source_used
     ]
-    fallback_used = bool(normalized.get("fallback") or normalized.get("fallback_reason"))
+    fallback_used = bool(
+        normalized.get("fallback_used")
+        or metadata_obj.get("fallback_used")
+        or normalized.get("fallback")
+        or normalized.get("fallback_reason")
+    )
+    if fallback_used:
+        normalized["fallback"] = True
 
     attribution = build_attribution(
         channel="research",
