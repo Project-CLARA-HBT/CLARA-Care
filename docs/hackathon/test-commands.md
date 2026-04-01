@@ -158,6 +158,15 @@ python3 scripts/demo/run_hackathon_kpis.py \
 - `test-report`: log trạng thái từng case.
 - `fallback-proof`: bằng chứng bật/tắt external DDI và kết quả local fallback.
 
+## Bổ sung scientific metrics
+- Từ phiên bản hiện tại, `kpi-report` có thêm:
+  - confusion matrix (TP/FP/TN/FN)
+  - accuracy, precision, recall/sensitivity, specificity, F1, balanced accuracy
+  - 95% CI (Wilson) cho các tỷ lệ chính
+  - critical-severity recall (slice ca high/critical)
+- Tài liệu phương pháp + testkit khuyến nghị:
+  - `docs/hackathon/scientific-eval-testkit-guide-2026-04-01.md`
+
 ## Lưu ý vận hành
 - Live fallback proof cần quyền `doctor` hoặc `admin` để gọi `/api/v1/system/careguard/runtime`.
 - Nếu chỉ có user token thường, runner vẫn đo được `DDI` và `refusal`, nhưng phần fallback sẽ bị đánh dấu `blocked`.

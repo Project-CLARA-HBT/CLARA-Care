@@ -559,6 +559,133 @@ def summarize_case_results(case_results: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
+def _safe_ratio(numerator: int, denominator: int) -> float | None:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
+
+
+def _wilson_interval(successes: int, total: int, z: float = 1.959963984540054) -> tuple[float, float] | None:
+    if total <= 0:
+        return None
+    p_hat = successes / total
+    denominator = 1.0 + (z**2) / total
+    center = p_hat + (z**2) / (2.0 * total)
+    margin = z * math.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * total)) / total)
+    lower = max(0.0, (center - margin) / denominator)
+    upper = min(1.0, (center + margin) / denominator)
+    return lower, upper
+
+
+def _build_metric_entry(
+    name: str,
+    value: float | None,
+    *,
+    ci_source_successes: int | None = None,
+    ci_source_total: int | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"name": name, "value": None if value is None else round(value, 6)}
+    if ci_source_successes is None or ci_source_total is None:
+        payload["ci95_wilson"] = None
+        return payload
+    ci = _wilson_interval(ci_source_successes, ci_source_total)
+    payload["ci95_wilson"] = None if ci is None else {"low": round(ci[0], 6), "high": round(ci[1], 6)}
+    return payload
+
+
+def summarize_ddi_scientific_metrics(case_results: list[dict[str, Any]]) -> dict[str, Any]:
+    tp = fp = tn = fn = 0
+    high_expected = 0
+    high_hit = 0
+    for item in case_results:
+        expected = coerce_bool(item.get("expected_alert"))
+        actual = coerce_bool(item.get("actual_alert"))
+        if expected and actual:
+            tp += 1
+        elif not expected and actual:
+            fp += 1
+        elif expected and not actual:
+            fn += 1
+        else:
+            tn += 1
+
+        expected_min = str(item.get("expected_min_severity") or "").strip().lower()
+        if expected and severity_rank(expected_min) >= severity_rank("high"):
+            high_expected += 1
+            actual_top = str(item.get("actual_top_severity") or "").strip().lower()
+            if actual and severity_rank(actual_top) >= severity_rank("high"):
+                high_hit += 1
+
+    total = tp + fp + tn + fn
+    accuracy = _safe_ratio(tp + tn, total)
+    precision = _safe_ratio(tp, tp + fp)
+    recall = _safe_ratio(tp, tp + fn)
+    specificity = _safe_ratio(tn, tn + fp)
+    f1 = _safe_ratio(2 * tp, 2 * tp + fp + fn)
+    npv = _safe_ratio(tn, tn + fn)
+    balanced_accuracy = (
+        None
+        if recall is None or specificity is None
+        else (recall + specificity) / 2.0
+    )
+    high_recall = _safe_ratio(high_hit, high_expected)
+
+    return {
+        "dataset_warning": (
+            "ddi_goldset thiếu negative case, specificity/accuracy có thể không phản ánh đúng thực tế."
+            if (tn + fp) == 0
+            else None
+        ),
+        "confusion_matrix": {"tp": tp, "fp": fp, "tn": tn, "fn": fn, "total": total},
+        "class_balance": {
+            "positive": tp + fn,
+            "negative": tn + fp,
+            "positive_rate": round((tp + fn) / total, 6) if total else None,
+        },
+        "metrics": {
+            "accuracy": _build_metric_entry(
+                "accuracy",
+                accuracy,
+                ci_source_successes=tp + tn,
+                ci_source_total=total,
+            ),
+            "precision": _build_metric_entry(
+                "precision",
+                precision,
+                ci_source_successes=tp,
+                ci_source_total=tp + fp,
+            ),
+            "recall_sensitivity": _build_metric_entry(
+                "recall_sensitivity",
+                recall,
+                ci_source_successes=tp,
+                ci_source_total=tp + fn,
+            ),
+            "specificity": _build_metric_entry(
+                "specificity",
+                specificity,
+                ci_source_successes=tn,
+                ci_source_total=tn + fp,
+            ),
+            "f1_score": _build_metric_entry("f1_score", f1),
+            "negative_predictive_value": _build_metric_entry(
+                "negative_predictive_value",
+                npv,
+                ci_source_successes=tn,
+                ci_source_total=tn + fn,
+            ),
+            "balanced_accuracy": _build_metric_entry("balanced_accuracy", balanced_accuracy),
+            "critical_severity_recall": _build_metric_entry(
+                "critical_severity_recall",
+                high_recall,
+                ci_source_successes=high_hit,
+                ci_source_total=high_expected,
+            ),
+        },
+        "critical_slice": {"high_expected_cases": high_expected, "high_detected_cases": high_hit},
+    }
+
+
 def summarize_latencies(samples: list[dict[str, Any]]) -> dict[str, Any]:
     values = sorted(sample["latency_ms"] for sample in samples if sample["status"] != "blocked")
     by_endpoint: dict[str, list[float]] = defaultdict(list)
@@ -767,6 +894,73 @@ def render_kpi_report_markdown(report: dict[str, Any]) -> str:
             ],
         ]
     )
+    scientific_section: list[str] = []
+    ddi_scientific = metrics.get("ddi_scientific")
+    if isinstance(ddi_scientific, dict) and coerce_bool(ddi_scientific.get("not_executed")):
+        scientific_section.extend(
+            [
+                "## Scientific DDI Metrics",
+                "- Not executed in static mode.",
+                "",
+            ]
+        )
+    elif isinstance(ddi_scientific, dict):
+        sci_metrics = ddi_scientific.get("metrics", {})
+        confusion = ddi_scientific.get("confusion_matrix", {})
+        critical_slice = ddi_scientific.get("critical_slice", {})
+        class_balance = ddi_scientific.get("class_balance", {})
+
+        def _render_metric_row(metric_key: str, label: str) -> list[str]:
+            metric = sci_metrics.get(metric_key, {}) if isinstance(sci_metrics, dict) else {}
+            value = metric.get("value")
+            ci = metric.get("ci95_wilson")
+            value_text = "n/a" if value is None else f"{float(value) * 100.0:.2f}%"
+            if isinstance(ci, dict) and ci.get("low") is not None and ci.get("high") is not None:
+                ci_text = f"[{float(ci['low']) * 100.0:.2f}%, {float(ci['high']) * 100.0:.2f}%]"
+            else:
+                ci_text = "n/a"
+            return [label, value_text, ci_text]
+
+        scientific_table = render_simple_table(
+            [
+                ["Metric", "Value", "95% CI (Wilson)"],
+                _render_metric_row("accuracy", "Accuracy"),
+                _render_metric_row("precision", "Precision (PPV)"),
+                _render_metric_row("recall_sensitivity", "Recall / Sensitivity"),
+                _render_metric_row("specificity", "Specificity"),
+                _render_metric_row("f1_score", "F1-score"),
+                _render_metric_row("negative_predictive_value", "NPV"),
+                _render_metric_row("balanced_accuracy", "Balanced accuracy"),
+                _render_metric_row("critical_severity_recall", "Critical-severity recall"),
+            ]
+        )
+
+        scientific_section.extend(
+            [
+                "## Scientific DDI Metrics",
+                scientific_table,
+                "",
+                "### Confusion Matrix",
+                f"- TP: **{int(confusion.get('tp', 0))}**",
+                f"- FP: **{int(confusion.get('fp', 0))}**",
+                f"- TN: **{int(confusion.get('tn', 0))}**",
+                f"- FN: **{int(confusion.get('fn', 0))}**",
+                "",
+                "### Class Balance",
+                f"- Positive cases: **{int(class_balance.get('positive', 0))}**",
+                f"- Negative cases: **{int(class_balance.get('negative', 0))}**",
+                "",
+                "### Critical Slice",
+                f"- Expected high/critical: **{int(critical_slice.get('high_expected_cases', 0))}**",
+                f"- Detected high/critical: **{int(critical_slice.get('high_detected_cases', 0))}**",
+                "",
+            ]
+        )
+        warning = ddi_scientific.get("dataset_warning")
+        if isinstance(warning, str) and warning.strip():
+            scientific_section.append(f"- ⚠️ {warning.strip()}")
+            scientific_section.append("")
+
     lines = [
         "# KPI Report",
         "",
@@ -784,6 +978,10 @@ def render_kpi_report_markdown(report: dict[str, Any]) -> str:
         "## Core Metrics",
         table,
         "",
+    ]
+    lines.extend(scientific_section)
+    lines.extend(
+        [
         "## Latency",
         f"- p50: **{latency['p50_ms']:.2f} ms**",
         f"- p95: **{latency['p95_ms']:.2f} ms**",
@@ -794,7 +992,8 @@ def render_kpi_report_markdown(report: dict[str, Any]) -> str:
         f"- ML reachable: `{str(report['environment']['availability']['ml_reachable']).lower()}`",
         "",
         "## Notes",
-    ]
+        ]
+    )
     lines.extend(f"- {note}" for note in report.get("notes", []))
     return "\n".join(lines) + "\n"
 
@@ -1090,6 +1289,7 @@ def run_live(
         },
         "metrics": {
             "ddi_precision": summarize_case_results(ddi_results),
+            "ddi_scientific": summarize_ddi_scientific_metrics(ddi_results),
             "refusal_compliance": summarize_case_results(refusal_results),
             "fallback_success_rate": summarize_case_results(fallback_results),
             "latency": summarize_latencies(latency_results),
@@ -1201,6 +1401,10 @@ def run_static(
         },
         "metrics": {
             "ddi_precision": {"total": len(ddi_cases), "passed": 0, "failed": 0, "rate_percent": 0.0},
+            "ddi_scientific": {
+                "not_executed": True,
+                "reason": "static_mode_not_executed",
+            },
             "refusal_compliance": {"total": len(refusal_cases), "passed": 0, "failed": 0, "rate_percent": 0.0},
             "fallback_success_rate": {"total": len(fallback_cases), "passed": 0, "failed": 0, "rate_percent": 0.0},
             "latency": summarize_latencies(latency_results),
