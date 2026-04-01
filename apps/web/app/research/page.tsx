@@ -56,6 +56,9 @@ const EMPTY_TELEMETRY = {
   docs: [],
   scores: [],
   sourceReasoning: [],
+  verificationMatrix: [],
+  contradictionSummary: undefined,
+  traceMetadata: {},
   errors: []
 };
 

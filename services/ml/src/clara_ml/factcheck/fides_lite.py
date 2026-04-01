@@ -18,6 +18,8 @@ class FactCheckResult:
     severity: str
     note: str
     fide_report: dict[str, Any] = field(default_factory=dict)
+    verification_matrix: list[dict[str, Any]] = field(default_factory=list)
+    contradiction_summary: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -32,6 +34,8 @@ class FactCheckResult:
             "severity": self.severity,
             "note": self.note,
             "fide_report": self.fide_report,
+            "verification_matrix": self.verification_matrix,
+            "contradiction_summary": self.contradiction_summary,
         }
 
 
@@ -80,13 +84,39 @@ def _split_claims(answer: str) -> list[str]:
     return claims
 
 
-def _best_overlap_ratio(claim: str, evidence_texts: list[str]) -> tuple[float, str]:
+def _compact_snippet(text: str, *, max_len: int = 180) -> str:
+    snippet = " ".join(str(text or "").split()).strip()
+    if not snippet:
+        return ""
+    if len(snippet) <= max_len:
+        return snippet
+    return f"{snippet[: max_len - 3]}..."
+
+
+def _build_evidence_rows(retrieved_context: list[dict[str, Any]]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for index, item in enumerate(retrieved_context, start=1):
+        if not isinstance(item, dict):
+            continue
+        text = " ".join(str(item.get("text", "")).split()).strip()
+        if not text:
+            continue
+        ref = str(item.get("id") or f"evidence-{index}").strip() or f"evidence-{index}"
+        rows.append({"ref": ref, "text": text})
+    return rows
+
+
+def _best_overlap_match(
+    claim: str,
+    evidence_rows: list[dict[str, str]],
+) -> tuple[float, dict[str, str] | None]:
     claim_tokens = _tokenize(claim)
     if not claim_tokens:
-        return 0.0, ""
+        return 0.0, None
     best_ratio = 0.0
-    best_text = ""
-    for text in evidence_texts:
+    best_row: dict[str, str] | None = None
+    for row in evidence_rows:
+        text = row.get("text", "")
         doc_tokens = _tokenize(text)
         if not doc_tokens:
             continue
@@ -94,8 +124,84 @@ def _best_overlap_ratio(claim: str, evidence_texts: list[str]) -> tuple[float, s
         ratio = overlap / max(len(claim_tokens), 1)
         if ratio > best_ratio:
             best_ratio = ratio
-            best_text = text
-    return best_ratio, best_text
+            best_row = row
+    return best_ratio, best_row
+
+
+def _claim_confidence(*, overlap_ratio: float, support_status: str) -> float:
+    bounded_ratio = max(0.0, min(float(overlap_ratio), 1.0))
+    if support_status == "contradicted":
+        score = 0.18 + (0.22 * bounded_ratio)
+    elif support_status == "supported":
+        score = 0.55 + (0.4 * bounded_ratio)
+    else:
+        score = 0.22 + (0.28 * bounded_ratio)
+    return round(max(0.05, min(0.98, score)), 4)
+
+
+def _build_matrix_summary(
+    verification_matrix: list[dict[str, Any]],
+    *,
+    claims_count: int,
+    supported_claims: int,
+) -> dict[str, Any]:
+    unsupported_count = 0
+    contradicted_count = 0
+    for row in verification_matrix:
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("support_status") or "").strip().lower()
+        if status == "unsupported":
+            unsupported_count += 1
+        elif status == "contradicted":
+            contradicted_count += 1
+
+    support_ratio = supported_claims / max(claims_count, 1) if claims_count > 0 else 0.0
+    return {
+        "version": "claim-v1",
+        "total_claims": claims_count,
+        "supported_claims": supported_claims,
+        "unsupported_claims": unsupported_count,
+        "contradicted_claims": contradicted_count,
+        "support_ratio": round(float(support_ratio), 4),
+    }
+
+
+def _build_contradiction_summary(
+    verification_matrix: list[dict[str, Any]],
+) -> dict[str, Any]:
+    contradiction_rows: list[dict[str, Any]] = []
+    for row in verification_matrix:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("support_status") or "").strip().lower() != "contradicted":
+            continue
+        contradiction_rows.append(row)
+
+    contradiction_count = len(contradiction_rows)
+    note = (
+        "Phát hiện claim mâu thuẫn với evidence retrieval."
+        if contradiction_count > 0
+        else "Không phát hiện claim mâu thuẫn."
+    )
+    details = [
+        {
+            "claim": item.get("claim", ""),
+            "evidence_ref": item.get("evidence_ref"),
+            "evidence_snippet": item.get("evidence_snippet", ""),
+            "overlap_score": item.get("overlap_score", 0.0),
+            "confidence": item.get("confidence", 0.0),
+        }
+        for item in contradiction_rows[:5]
+    ]
+    return {
+        "version": "claim-v1",
+        "has_contradiction": contradiction_count > 0,
+        "contradiction_count": contradiction_count,
+        "claims": [str(item.get("claim", "")) for item in contradiction_rows[:5]],
+        "details": details,
+        "note": note,
+    }
 
 
 def _contains_any(tokens: set[str], lexicon: set[str]) -> bool:
@@ -147,11 +253,14 @@ def _build_fide_report(
     confidence: float,
     note: str,
     unsupported_claims: list[str],
+    verification_matrix: list[dict[str, Any]],
+    verification_matrix_summary: dict[str, Any],
+    contradiction_summary: dict[str, Any],
     citation_present: bool,
     mode: str,
 ) -> dict[str, Any]:
     coverage = supported_claims / max(claims_count, 1) if claims_count > 0 else 0.0
-    contradiction_count = sum(1 for item in unsupported_claims if item.startswith("[contradiction]"))
+    contradiction_count = int(verification_matrix_summary.get("contradicted_claims", 0))
     return {
         "framework": "fide-v1",
         "mode": mode,
@@ -169,6 +278,7 @@ def _build_fide_report(
                 "citation_present": citation_present,
                 "coverage": round(float(coverage), 4),
                 "contradiction_count": contradiction_count,
+                "verification_matrix_summary": verification_matrix_summary,
             },
             {
                 "id": "decision",
@@ -186,6 +296,8 @@ def _build_fide_report(
         "summary": {
             "claims_count": claims_count,
             "supported_claims": supported_claims,
+            "unsupported_claims": int(verification_matrix_summary.get("unsupported_claims", 0)),
+            "contradicted_claims": contradiction_count,
             "coverage": round(float(coverage), 4),
             "evidence_count": evidence_count,
             "citation_present": citation_present,
@@ -193,6 +305,12 @@ def _build_fide_report(
             "severity": severity,
             "confidence": round(float(confidence), 4),
         },
+        "verification_matrix": {
+            "version": "claim-v1",
+            "summary": verification_matrix_summary,
+            "rows": verification_matrix,
+        },
+        "contradiction_summary": contradiction_summary,
     }
 
 
@@ -206,11 +324,18 @@ def run_fides_lite(
     if normalized_mode not in {"lite", "strict"}:
         normalized_mode = "lite"
 
-    evidence_texts = [str(item.get("text", "")) for item in retrieved_context if item.get("text")]
+    evidence_rows = _build_evidence_rows(retrieved_context)
     context_ids = [str(item.get("id", "")) for item in retrieved_context if item.get("id")]
     claims = _split_claims(answer)
 
     if not claims:
+        verification_matrix: list[dict[str, Any]] = []
+        verification_matrix_summary = _build_matrix_summary(
+            verification_matrix,
+            claims_count=0,
+            supported_claims=0,
+        )
+        contradiction_summary = _build_contradiction_summary(verification_matrix)
         return FactCheckResult(
             enabled=True,
             stage="fides-lite-v1.1",
@@ -219,24 +344,46 @@ def run_fides_lite(
             supported_claims=0,
             total_claims=0,
             unsupported_claims=[],
-            evidence_count=len(evidence_texts),
+            evidence_count=len(evidence_rows),
             severity="low",
             note="Không có mệnh đề trọng yếu để kiểm chứng.",
+            verification_matrix=verification_matrix,
+            contradiction_summary=contradiction_summary,
             fide_report=_build_fide_report(
                 claims_count=0,
-                evidence_count=len(evidence_texts),
+                evidence_count=len(evidence_rows),
                 supported_claims=0,
                 verdict="pass",
                 severity="low",
                 confidence=0.55,
                 note="Không có mệnh đề trọng yếu để kiểm chứng.",
                 unsupported_claims=[],
+                verification_matrix=verification_matrix,
+                verification_matrix_summary=verification_matrix_summary,
+                contradiction_summary=contradiction_summary,
                 citation_present=_has_citations(answer, context_ids),
                 mode=normalized_mode,
             ),
         )
 
-    if not evidence_texts:
+    if not evidence_rows:
+        verification_matrix = [
+            {
+                "claim": claim,
+                "support_status": "unsupported",
+                "overlap_score": 0.0,
+                "confidence": _claim_confidence(overlap_ratio=0.0, support_status="unsupported"),
+                "evidence_ref": None,
+                "evidence_snippet": "",
+            }
+            for claim in claims
+        ]
+        verification_matrix_summary = _build_matrix_summary(
+            verification_matrix,
+            claims_count=len(claims),
+            supported_claims=0,
+        )
+        contradiction_summary = _build_contradiction_summary(verification_matrix)
         return FactCheckResult(
             enabled=True,
             stage="fides-lite-v1.1",
@@ -248,6 +395,8 @@ def run_fides_lite(
             evidence_count=0,
             severity="high",
             note="Không có bằng chứng truy xuất để fact-check.",
+            verification_matrix=verification_matrix,
+            contradiction_summary=contradiction_summary,
             fide_report=_build_fide_report(
                 claims_count=len(claims),
                 evidence_count=0,
@@ -257,6 +406,9 @@ def run_fides_lite(
                 confidence=0.35,
                 note="Không có bằng chứng truy xuất để fact-check.",
                 unsupported_claims=claims[:3],
+                verification_matrix=verification_matrix,
+                verification_matrix_summary=verification_matrix_summary,
+                contradiction_summary=contradiction_summary,
                 citation_present=_has_citations(answer, context_ids),
                 mode=normalized_mode,
             ),
@@ -265,19 +417,39 @@ def run_fides_lite(
     supported_claims = 0
     unsupported_claims: list[str] = []
     contradicted_claims: list[str] = []
+    verification_matrix: list[dict[str, Any]] = []
 
     for claim in claims:
-        ratio, matched_evidence = _best_overlap_ratio(claim, evidence_texts)
-        contradiction = _has_contradiction(claim, matched_evidence, ratio)
+        ratio, matched_evidence = _best_overlap_match(claim, evidence_rows)
+        evidence_text = matched_evidence.get("text", "") if matched_evidence else ""
+        contradiction = _has_contradiction(claim, evidence_text, ratio)
+        if contradiction:
+            support_status = "contradicted"
+        elif ratio >= 0.2:
+            support_status = "supported"
+        else:
+            support_status = "unsupported"
 
         if contradiction:
             contradicted_claims.append(claim)
-            continue
-
-        if ratio >= 0.2:
+        elif ratio >= 0.2:
             supported_claims += 1
         else:
             unsupported_claims.append(claim)
+        verification_matrix.append(
+            {
+                "claim": claim,
+                "support_status": support_status,
+                "overlap_score": round(float(ratio), 4),
+                "confidence": _claim_confidence(overlap_ratio=ratio, support_status=support_status),
+                "evidence_ref": matched_evidence.get("ref") if matched_evidence and ratio > 0 else None,
+                "evidence_snippet": (
+                    _compact_snippet(evidence_text, max_len=180)
+                    if matched_evidence and ratio > 0
+                    else ""
+                ),
+            }
+        )
 
     support_ratio = supported_claims / max(len(claims), 1)
     citation_present = _has_citations(answer, context_ids)
@@ -315,6 +487,12 @@ def run_fides_lite(
     unsupported_bundle = unsupported_claims + [
         f"[contradiction] {claim}" for claim in contradicted_claims
     ]
+    verification_matrix_summary = _build_matrix_summary(
+        verification_matrix,
+        claims_count=len(claims),
+        supported_claims=supported_claims,
+    )
+    contradiction_summary = _build_contradiction_summary(verification_matrix)
 
     return FactCheckResult(
         enabled=True,
@@ -324,18 +502,23 @@ def run_fides_lite(
         supported_claims=supported_claims,
         total_claims=len(claims),
         unsupported_claims=unsupported_bundle[:3],
-        evidence_count=len(evidence_texts),
+        evidence_count=len(evidence_rows),
         severity=severity,
         note=note,
+        verification_matrix=verification_matrix,
+        contradiction_summary=contradiction_summary,
         fide_report=_build_fide_report(
             claims_count=len(claims),
-            evidence_count=len(evidence_texts),
+            evidence_count=len(evidence_rows),
             supported_claims=supported_claims,
             verdict=verdict,
             severity=severity,
             confidence=confidence,
             note=note,
             unsupported_claims=unsupported_bundle,
+            verification_matrix=verification_matrix,
+            verification_matrix_summary=verification_matrix_summary,
+            contradiction_summary=contradiction_summary,
             citation_present=citation_present,
             mode=normalized_mode,
         ),

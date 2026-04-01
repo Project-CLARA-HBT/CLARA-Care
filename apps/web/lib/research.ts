@@ -95,6 +95,26 @@ export type ResearchTier2SourceReasoning = {
   error?: string;
 };
 
+export type ResearchTier2VerificationMatrixEntry = {
+  claim: string;
+  verdict?: string;
+  confidence?: number;
+  note?: string;
+  source?: string;
+  evidence: string[];
+};
+
+export type ResearchTier2ContradictionSummary = {
+  hasContradiction?: boolean;
+  count?: number;
+  severity?: string;
+  status?: string;
+  summary?: string;
+};
+
+export type ResearchTier2TraceMetadataValue = string | number | boolean;
+export type ResearchTier2TraceMetadata = Record<string, ResearchTier2TraceMetadataValue>;
+
 export type ResearchTier2SearchPlan = {
   query?: string;
   researchMode?: string;
@@ -143,6 +163,9 @@ export type ResearchTier2Telemetry = {
   docs: ResearchTier2TelemetryDocument[];
   scores: ResearchTier2TelemetryScore[];
   sourceReasoning: ResearchTier2SourceReasoning[];
+  verificationMatrix: ResearchTier2VerificationMatrixEntry[];
+  contradictionSummary?: ResearchTier2ContradictionSummary;
+  traceMetadata: ResearchTier2TraceMetadata;
   errors: string[];
 };
 
@@ -342,6 +365,20 @@ function asNumber(value: unknown): number | undefined {
   if (typeof value !== "string") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return undefined;
+  }
+  const text = asText(value)?.toLowerCase();
+  if (!text) return undefined;
+  if (["true", "1", "yes", "y", "on"].includes(text)) return true;
+  if (["false", "0", "no", "n", "off"].includes(text)) return false;
+  return undefined;
 }
 
 function asId(value: unknown): string | undefined {
@@ -1102,6 +1139,322 @@ function dedupeTelemetrySourceReasoning(items: ResearchTier2SourceReasoning[]): 
   return results;
 }
 
+const TRACE_METADATA_CONTAINER_KEYS = [
+  "trace_metadata",
+  "trace_context",
+  "otel_trace_metadata",
+  "otel_trace_context",
+  "otel_trace",
+  "trace",
+  "otel",
+  "traceMetadata",
+  "traceContext",
+  "otelTraceMetadata",
+  "otelTraceContext",
+  "otelTrace"
+] as const;
+
+const TRACE_METADATA_SCALAR_KEYS = [
+  "trace_id",
+  "span_id",
+  "parent_span_id",
+  "trace_flags",
+  "trace_state",
+  "tracestate",
+  "traceparent",
+  "sampled",
+  "service_name",
+  "service",
+  "component"
+] as const;
+
+function isTraceMetadataKey(key: string): boolean {
+  const normalized = key.trim().toLowerCase();
+  if (!normalized) return false;
+  return (
+    normalized.includes("trace") ||
+    normalized.includes("span") ||
+    normalized.includes("otel") ||
+    normalized.includes("sampled") ||
+    normalized.includes("service") ||
+    normalized.includes("component")
+  );
+}
+
+function normalizeTraceMetadataPrimitive(value: unknown): ResearchTier2TraceMetadataValue | undefined {
+  if (typeof value === "string") {
+    const text = asText(value);
+    return text;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  return undefined;
+}
+
+function collectTraceMetadataEntries(
+  value: unknown,
+  target: ResearchTier2TraceMetadata,
+  prefix = "",
+  depth = 0
+): void {
+  if (depth > 2) return;
+
+  const record = asRecord(value);
+  if (!record) return;
+
+  Object.entries(record).forEach(([rawKey, rawValue]) => {
+    const key = prefix ? `${prefix}.${rawKey}` : rawKey;
+    const primitive = normalizeTraceMetadataPrimitive(rawValue);
+    if (primitive !== undefined) {
+      if (isTraceMetadataKey(key) && target[key] === undefined) {
+        target[key] = primitive;
+      }
+      return;
+    }
+
+    if (Array.isArray(rawValue)) {
+      const compact = rawValue
+        .map((item) => normalizeTraceMetadataPrimitive(item))
+        .filter((item): item is ResearchTier2TraceMetadataValue => item !== undefined)
+        .slice(0, 8);
+      if (compact.length && isTraceMetadataKey(key) && target[key] === undefined) {
+        target[key] = compact.map((item) => String(item)).join(", ");
+      }
+      return;
+    }
+
+    collectTraceMetadataEntries(rawValue, target, key, depth + 1);
+  });
+}
+
+function parseTraceMetadataFromRecords(
+  records: Array<Record<string, unknown> | null>
+): ResearchTier2TraceMetadata {
+  const traceMetadata: ResearchTier2TraceMetadata = {};
+
+  records.forEach((record) => {
+    if (!record) return;
+
+    TRACE_METADATA_CONTAINER_KEYS.forEach((key) => {
+      collectTraceMetadataEntries(record[key], traceMetadata);
+    });
+
+    TRACE_METADATA_SCALAR_KEYS.forEach((key) => {
+      const primitive = normalizeTraceMetadataPrimitive(record[key]);
+      if (primitive !== undefined && traceMetadata[key] === undefined) {
+        traceMetadata[key] = primitive;
+      }
+    });
+  });
+
+  return traceMetadata;
+}
+
+function parseEvidenceList(value: unknown): string[] {
+  if (typeof value === "string") {
+    const text = asText(value);
+    return text ? [text] : [];
+  }
+
+  if (!Array.isArray(value)) {
+    const record = asRecord(value);
+    if (!record) return [];
+    return parseEvidenceList(
+      record.items ?? record.values ?? record.sources ?? record.citations ?? record.evidence
+    );
+  }
+
+  return uniqueText(
+    value
+      .flatMap((item) => {
+        if (typeof item === "string" || typeof item === "number") return [String(item)];
+        const row = asRecord(item);
+        if (!row) return [];
+        const evidenceText =
+          asText(row.title) ??
+          asText(row.name) ??
+          asText(row.id) ??
+          asText(row.source) ??
+          asText(row.url) ??
+          asText(row.snippet) ??
+          asText(row.detail);
+        return evidenceText ? [evidenceText] : [];
+      })
+      .filter(Boolean)
+  );
+}
+
+function parseVerificationMatrixEntry(value: unknown): ResearchTier2VerificationMatrixEntry | null {
+  if (typeof value === "string") {
+    const claim = asText(value);
+    return claim ? { claim, evidence: [] } : null;
+  }
+
+  const row = asRecord(value);
+  if (!row) return null;
+
+  const claim =
+    asText(row.claim) ??
+    asText(row.statement) ??
+    asText(row.assertion) ??
+    asText(row.text) ??
+    asText(row.title);
+  const verdict =
+    asText(row.verdict) ??
+    asText(row.status) ??
+    asText(row.result) ??
+    asText(row.label);
+  const confidence =
+    asNumber(row.confidence) ??
+    asNumber(row.score) ??
+    asNumber(row.support_score) ??
+    asNumber(row.probability);
+  const note =
+    asText(row.note) ??
+    asText(row.reasoning) ??
+    asText(row.rationale) ??
+    asText(row.summary) ??
+    asText(row.explanation);
+  const source =
+    asText(row.source) ??
+    asText(row.source_name) ??
+    asText(row.provider);
+  const evidence = parseEvidenceList(
+    row.evidence ??
+    row.evidences ??
+    row.supporting_evidence ??
+    row.supportingEvidence ??
+    row.citations ??
+    row.sources
+  );
+
+  const resolvedClaim = claim ?? source ?? note;
+  if (!resolvedClaim && !verdict && confidence === undefined && !evidence.length) {
+    return null;
+  }
+
+  return {
+    claim: resolvedClaim ?? "Claim",
+    verdict,
+    confidence,
+    note,
+    source,
+    evidence
+  };
+}
+
+function parseVerificationMatrix(value: unknown): ResearchTier2VerificationMatrixEntry[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => parseVerificationMatrixEntry(item))
+      .filter((item): item is ResearchTier2VerificationMatrixEntry => Boolean(item));
+  }
+
+  const record = asRecord(value);
+  if (!record) {
+    const direct = parseVerificationMatrixEntry(value);
+    return direct ? [direct] : [];
+  }
+
+  const nestedRows =
+    record.rows ??
+    record.items ??
+    record.claims ??
+    record.entries ??
+    record.matrix ??
+    record.verification_matrix;
+  if (nestedRows !== undefined && nestedRows !== value) {
+    const parsedNested = parseVerificationMatrix(nestedRows);
+    if (parsedNested.length) return parsedNested;
+  }
+
+  const direct = parseVerificationMatrixEntry(record);
+  return direct ? [direct] : [];
+}
+
+function dedupeVerificationMatrix(
+  items: ResearchTier2VerificationMatrixEntry[]
+): ResearchTier2VerificationMatrixEntry[] {
+  const seen = new Set<string>();
+  const results: ResearchTier2VerificationMatrixEntry[] = [];
+
+  items.forEach((item) => {
+    const key = `${item.claim}|${item.verdict ?? ""}|${item.confidence ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    results.push(item);
+  });
+
+  return results;
+}
+
+function parseContradictionSummary(value: unknown): ResearchTier2ContradictionSummary | undefined {
+  const text = asText(value);
+  if (text) {
+    return {
+      hasContradiction: true,
+      count: 1,
+      summary: text
+    };
+  }
+
+  if (Array.isArray(value)) {
+    const entries = uniqueText(value.flatMap((item) => parseTelemetryErrors(item)));
+    if (!entries.length) return undefined;
+    return {
+      hasContradiction: true,
+      count: entries.length,
+      summary: entries.slice(0, 2).join(" | ")
+    };
+  }
+
+  const record = asRecord(value);
+  if (!record) return undefined;
+
+  const contradictions = Array.isArray(record.contradictions) ? record.contradictions : undefined;
+  const count =
+    asNumber(record.count) ??
+    asNumber(record.total) ??
+    asNumber(record.contradiction_count) ??
+    asNumber(record.contradictions_count) ??
+    (contradictions ? contradictions.length : undefined);
+  const hasContradiction =
+    asBoolean(record.has_contradiction) ??
+    asBoolean(record.hasContradiction) ??
+    asBoolean(record.contradiction_detected) ??
+    asBoolean(record.contradictions_found) ??
+    (count !== undefined ? count > 0 : undefined);
+  const severity = asText(record.severity);
+  const status = asText(record.status);
+  const summary =
+    asText(record.summary) ??
+    asText(record.note) ??
+    asText(record.message) ??
+    asText(record.description);
+
+  if (
+    hasContradiction === undefined &&
+    count === undefined &&
+    !severity &&
+    !status &&
+    !summary
+  ) {
+    return undefined;
+  }
+
+  return {
+    hasContradiction,
+    count,
+    severity,
+    status,
+    summary
+  };
+}
+
 function parseSearchPlan(value: unknown): ResearchTier2SearchPlan {
   const text = asText(value);
   if (text) {
@@ -1752,6 +2105,28 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   const sourceReasoningErrors = sourceReasoning
     .map((item) => item.error)
     .filter((item): item is string => Boolean(item));
+  const verificationMatrix = dedupeVerificationMatrix(
+    parseVerificationMatrix(
+      pickFromRecords(telemetryRecords, [
+        "verification_matrix",
+        "claim_verification_matrix",
+        "claim_matrix",
+        "claims_matrix",
+        "verificationMatrix",
+        "claimMatrix"
+      ])
+    )
+  );
+  const contradictionSummary = parseContradictionSummary(
+    pickFromRecords(telemetryRecords, [
+      "contradiction_summary",
+      "contradictions_summary",
+      "contradiction_report",
+      "contradiction_overview",
+      "contradictionSummary"
+    ])
+  );
+  const traceMetadata = parseTraceMetadataFromRecords(telemetryRecords);
   const errors = uniqueText([
     ...parseTelemetryErrors(
       pickFromRecords(telemetryRecords, [
@@ -1783,6 +2158,9 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     docs,
     scores,
     sourceReasoning,
+    verificationMatrix,
+    contradictionSummary,
+    traceMetadata,
     errors
   };
 

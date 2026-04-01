@@ -881,6 +881,95 @@ def test_research_tier2_exposes_telemetry_details_from_context_debug(
     assert payload["attribution"]["source_errors"] == {"openfda": ["timeout"]}
 
 
+def test_research_tier2_promotes_verification_matrix_and_trace_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    upstream_payload = {
+        "answer": "ok",
+        "metadata": {
+            "telemetry": {
+                "query_plan": {
+                    "query": "warfarin ibuprofen bleeding risk",
+                    "top_k": 5,
+                },
+                "source_attempts": [
+                    {"source": "pubmed", "status": "completed"},
+                    {"source": "openfda", "status": "timeout"},
+                ],
+                "source_errors": {"openfda": ["timeout"]},
+                "verification_matrix": [
+                    {
+                        "claim": "Warfarin + ibuprofen increases bleeding risk.",
+                        "verdict": "supported",
+                        "confidence": 0.96,
+                        "evidence": ["pubmed:123456"],
+                    }
+                ],
+                "contradiction_summary": {
+                    "has_contradiction": True,
+                    "count": 1,
+                    "summary": "Risk magnitude differs by dose and duration.",
+                },
+                "trace_metadata": {
+                    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+                    "span_id": "00f067aa0ba902b7",
+                    "traceparent": (
+                        "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    ),
+                },
+            },
+            "context_debug": {
+                "retrieval_trace": {
+                    "otel_trace_context": {
+                        "trace_flags": "01",
+                        "sampled": True,
+                    }
+                }
+            },
+        },
+    }
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return upstream_payload
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "warfarin ibuprofen bleeding risk", "research_mode": "deep"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["query_plan"]["query"] == "warfarin ibuprofen bleeding risk"
+    assert payload["source_attempts"][0]["source"] == "pubmed"
+    assert payload["source_errors"] == {"openfda": ["timeout"]}
+
+    assert payload["verification_matrix"][0]["verdict"] == "supported"
+    assert payload["contradiction_summary"]["count"] == 1
+    assert payload["trace_metadata"]["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
+    assert payload["trace_metadata"]["span_id"] == "00f067aa0ba902b7"
+    assert payload["trace_metadata"]["trace_flags"] == "01"
+    assert payload["trace_metadata"]["sampled"] is True
+
+    telemetry = payload["telemetry"]
+    assert telemetry["verification_matrix"][0]["claim"].startswith("Warfarin + ibuprofen")
+    assert telemetry["contradiction_summary"]["has_contradiction"] is True
+    assert telemetry["trace_metadata"]["traceparent"].startswith("00-4bf92f3577b34da6")
+
+
 def test_research_tier2_promotes_new_metadata_contract_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

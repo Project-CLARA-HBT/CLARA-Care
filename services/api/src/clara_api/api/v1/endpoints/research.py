@@ -794,6 +794,103 @@ def _first_value(
     return None
 
 
+_VERIFICATION_MATRIX_KEYS: tuple[str, ...] = (
+    "verification_matrix",
+    "claim_verification_matrix",
+    "claim_matrix",
+    "claims_matrix",
+)
+_CONTRADICTION_SUMMARY_KEYS: tuple[str, ...] = (
+    "contradiction_summary",
+    "contradictions_summary",
+    "contradiction_report",
+    "contradiction_overview",
+)
+_TRACE_CONTAINER_KEYS: tuple[str, ...] = (
+    "trace_metadata",
+    "trace_context",
+    "otel_trace_metadata",
+    "otel_trace_context",
+    "otel_trace",
+    "trace",
+    "otel",
+)
+_TRACE_SCALAR_KEYS: tuple[str, ...] = (
+    "trace_id",
+    "span_id",
+    "parent_span_id",
+    "trace_flags",
+    "trace_state",
+    "tracestate",
+    "traceparent",
+    "sampled",
+    "service_name",
+    "service",
+    "component",
+)
+_TRACE_HINT_KEYS: set[str] = {key.lower() for key in (*_TRACE_CONTAINER_KEYS, *_TRACE_SCALAR_KEYS)}
+
+
+def _is_trace_key(key: str) -> bool:
+    normalized = key.strip().lower()
+    if not normalized:
+        return False
+    return (
+        normalized in _TRACE_HINT_KEYS
+        or normalized.startswith("trace")
+        or normalized.startswith("otel")
+    )
+
+
+def _normalize_trace_value(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, list):
+        compact = [item for item in value if isinstance(item, (str, int, float, bool))]
+        return compact[:20] if compact else None
+    if isinstance(value, dict):
+        compact: dict[str, Any] = {}
+        for raw_key, nested_value in value.items():
+            normalized_nested = _normalize_trace_value(nested_value)
+            if normalized_nested is None:
+                continue
+            compact[str(raw_key)] = normalized_nested
+        return compact or None
+    return None
+
+
+def _extract_trace_metadata(
+    sources: list[dict[str, Any] | None],
+) -> dict[str, Any] | None:
+    trace_metadata: dict[str, Any] = {}
+
+    for source in sources:
+        if source is None:
+            continue
+
+        for container_key in _TRACE_CONTAINER_KEYS:
+            candidate = source.get(container_key)
+            if not isinstance(candidate, dict):
+                continue
+            for raw_key, raw_value in candidate.items():
+                key_text = str(raw_key)
+                if not _is_trace_key(key_text):
+                    continue
+                normalized_value = _normalize_trace_value(raw_value)
+                if normalized_value is None:
+                    continue
+                trace_metadata.setdefault(key_text, normalized_value)
+
+        for scalar_key in _TRACE_SCALAR_KEYS:
+            raw_value = source.get(scalar_key)
+            normalized_value = _normalize_trace_value(raw_value)
+            if normalized_value is None:
+                continue
+            trace_metadata.setdefault(scalar_key, normalized_value)
+
+    return trace_metadata or None
+
+
 def _build_tier2_telemetry(
     *,
     normalized: dict[str, Any],
@@ -822,6 +919,16 @@ def _build_tier2_telemetry(
     debug_obj = _first_dict(
         normalized.get("debug"),
         metadata_obj.get("debug") if metadata_obj else None,
+    )
+    trace_metadata = _extract_trace_metadata(
+        [
+            telemetry,
+            normalized,
+            metadata_obj,
+            context_debug_obj,
+            retrieval_trace if isinstance(retrieval_trace, dict) else None,
+            debug_obj,
+        ]
     )
     sources: list[dict[str, Any] | None] = [
         telemetry,
@@ -1003,6 +1110,25 @@ def _build_tier2_telemetry(
         elif isinstance(normalized.get("fallback_reason"), str):
             telemetry["errors"] = [normalized["fallback_reason"]]
 
+    if "verification_matrix" not in telemetry:
+        verification_matrix = _first_value(
+            sources,
+            keys=_VERIFICATION_MATRIX_KEYS,
+        )
+        if verification_matrix is not None:
+            telemetry["verification_matrix"] = verification_matrix
+
+    if "contradiction_summary" not in telemetry:
+        contradiction_summary = _first_value(
+            sources,
+            keys=_CONTRADICTION_SUMMARY_KEYS,
+        )
+        if contradiction_summary is not None:
+            telemetry["contradiction_summary"] = contradiction_summary
+
+    if "trace_metadata" not in telemetry and trace_metadata is not None:
+        telemetry["trace_metadata"] = trace_metadata
+
     return telemetry or None
 
 
@@ -1071,6 +1197,35 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
             if stripped_reason:
                 normalized["fallback_reason"] = stripped_reason
 
+    if "verification_matrix" not in normalized:
+        verification_matrix = _first_value(
+            [metadata_obj, metadata_telemetry_obj, context_debug_obj, retrieval_trace_obj],
+            keys=_VERIFICATION_MATRIX_KEYS,
+        )
+        if verification_matrix is not None:
+            normalized["verification_matrix"] = verification_matrix
+
+    if "contradiction_summary" not in normalized:
+        contradiction_summary = _first_value(
+            [metadata_obj, metadata_telemetry_obj, context_debug_obj, retrieval_trace_obj],
+            keys=_CONTRADICTION_SUMMARY_KEYS,
+        )
+        if contradiction_summary is not None:
+            normalized["contradiction_summary"] = contradiction_summary
+
+    if "trace_metadata" not in normalized:
+        trace_metadata = _extract_trace_metadata(
+            [
+                normalized,
+                metadata_obj,
+                metadata_telemetry_obj,
+                context_debug_obj,
+                retrieval_trace_obj,
+            ]
+        )
+        if trace_metadata is not None:
+            normalized["trace_metadata"] = trace_metadata
+
     if "query_plan" not in normalized:
         query_plan = _first_value(
             [metadata_obj, metadata_telemetry_obj, context_debug_obj, retrieval_trace_obj],
@@ -1097,6 +1252,17 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
             normalized["query_plan"] = telemetry.get("query_plan")
         if "search_plan" not in normalized and telemetry.get("search_plan") is not None:
             normalized["search_plan"] = telemetry.get("search_plan")
+        if "verification_matrix" not in normalized and telemetry.get("verification_matrix") is not None:
+            normalized["verification_matrix"] = telemetry.get("verification_matrix")
+        if (
+            "contradiction_summary" not in normalized
+            and telemetry.get("contradiction_summary") is not None
+        ):
+            normalized["contradiction_summary"] = telemetry.get("contradiction_summary")
+        if "trace_metadata" not in normalized:
+            telemetry_trace_metadata = _extract_trace_metadata([telemetry])
+            if telemetry_trace_metadata is not None:
+                normalized["trace_metadata"] = telemetry_trace_metadata
         if "source_errors" not in normalized:
             telemetry_source_errors = telemetry.get("source_errors")
             if telemetry_source_errors is None and isinstance(telemetry.get("errors"), dict):

@@ -506,6 +506,150 @@ def _compact_context_debug(value: Any) -> dict[str, Any]:
     return compact
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _compact_verification_matrix_rows(
+    rows: Any,
+    *,
+    max_items: int = 20,
+    max_snippet_len: int = 180,
+) -> list[dict[str, Any]]:
+    compact_rows: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return compact_rows
+
+    for row in rows[:max_items]:
+        if not isinstance(row, dict):
+            continue
+        support_status = str(row.get("support_status") or "unsupported").strip().lower()
+        compact_rows.append(
+            {
+                "claim": _first_nonempty_text(row.get("claim")),
+                "support_status": support_status or "unsupported",
+                "overlap_score": round(
+                    max(0.0, min(1.0, _safe_float(row.get("overlap_score")))),
+                    4,
+                ),
+                "confidence": round(
+                    max(0.0, min(1.0, _safe_float(row.get("confidence")))),
+                    4,
+                ),
+                "evidence_ref": _first_nonempty_text(row.get("evidence_ref")) or None,
+                "evidence_snippet": _compact_snippet(
+                    row.get("evidence_snippet") or row.get("evidence"),
+                    max_len=max_snippet_len,
+                ),
+            }
+        )
+    return compact_rows
+
+
+def _summarize_verification_matrix(
+    rows: list[dict[str, Any]],
+    *,
+    total_claims: int,
+    supported_claims: int,
+) -> dict[str, Any]:
+    supported_count = 0
+    unsupported_count = 0
+    contradicted_count = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("support_status") or "").strip().lower()
+        if status == "supported":
+            supported_count += 1
+        elif status == "contradicted":
+            contradicted_count += 1
+        else:
+            unsupported_count += 1
+
+    inferred_total = max(_safe_int(total_claims, 0), len(rows))
+    inferred_supported = _safe_int(supported_claims, 0)
+    if inferred_supported <= 0 and supported_count > 0:
+        inferred_supported = supported_count
+    inferred_supported = max(0, min(inferred_supported, inferred_total))
+    support_ratio = inferred_supported / max(inferred_total, 1) if inferred_total > 0 else 0.0
+    return {
+        "version": "claim-v1",
+        "total_claims": inferred_total,
+        "supported_claims": inferred_supported,
+        "unsupported_claims": unsupported_count,
+        "contradicted_claims": contradicted_count,
+        "support_ratio": round(float(support_ratio), 4),
+    }
+
+
+def _build_contradiction_summary(
+    verification_matrix_rows: list[dict[str, Any]],
+    raw_summary: Any,
+    *,
+    fallback_note: str,
+) -> dict[str, Any]:
+    contradicted_rows = [
+        row
+        for row in verification_matrix_rows
+        if str(row.get("support_status") or "").strip().lower() == "contradicted"
+    ]
+    default_note = (
+        "Phát hiện claim mâu thuẫn với evidence retrieval."
+        if contradicted_rows
+        else "Không phát hiện claim mâu thuẫn."
+    )
+    defaults = {
+        "version": "claim-v1",
+        "has_contradiction": bool(contradicted_rows),
+        "contradiction_count": len(contradicted_rows),
+        "claims": [str(item.get("claim") or "") for item in contradicted_rows[:5]],
+        "details": [
+            {
+                "claim": item.get("claim", ""),
+                "evidence_ref": item.get("evidence_ref"),
+                "evidence_snippet": item.get("evidence_snippet", ""),
+                "overlap_score": item.get("overlap_score", 0.0),
+                "confidence": item.get("confidence", 0.0),
+            }
+            for item in contradicted_rows[:5]
+        ],
+        "note": fallback_note or default_note,
+    }
+    if not isinstance(raw_summary, dict):
+        return defaults
+
+    claims = raw_summary.get("claims")
+    details = raw_summary.get("details")
+    contradiction_count = max(
+        0,
+        _safe_int(raw_summary.get("contradiction_count"), defaults["contradiction_count"]),
+    )
+    return {
+        "version": str(raw_summary.get("version") or defaults["version"]),
+        "has_contradiction": bool(
+            raw_summary.get("has_contradiction", defaults["has_contradiction"])
+        ),
+        "contradiction_count": contradiction_count,
+        "claims": (
+            [str(item) for item in claims[:5]]
+            if isinstance(claims, list)
+            else defaults["claims"]
+        ),
+        "details": details if isinstance(details, list) else defaults["details"],
+        "note": str(raw_summary.get("note") or defaults["note"]),
+    }
+
+
 def _context_title(item: dict[str, Any], fallback: str) -> str:
     explicit = _first_nonempty_text(
         item.get("title"),
@@ -689,8 +833,9 @@ def _build_verifier_trace(
     factcheck_result: Any,
     policy_action: str,
     verification_state: str,
+    verification_matrix: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    trace = {
         "stage": "verifier-v1",
         "timestamp": _now_iso(),
         "verifier": factcheck_result.stage,
@@ -705,6 +850,9 @@ def _build_verifier_trace(
         "evidence_count": factcheck_result.evidence_count,
         "note": factcheck_result.note,
     }
+    if isinstance(verification_matrix, dict):
+        trace["verification_matrix"] = verification_matrix
+    return trace
 
 
 def _normalize_retrieval_events(
@@ -1451,10 +1599,32 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     factcheck_result = run_fides_lite(answer=answer_markdown, retrieved_context=effective_context)
     policy_action = "allow" if factcheck_result.verdict == "pass" else "warn"
     verification_state = "verified" if policy_action == "allow" else "warning"
+    verification_matrix_rows = _compact_verification_matrix_rows(
+        getattr(factcheck_result, "verification_matrix", []),
+        max_items=20,
+        max_snippet_len=180,
+    )
+    verification_matrix_summary = _summarize_verification_matrix(
+        verification_matrix_rows,
+        total_claims=factcheck_result.total_claims,
+        supported_claims=factcheck_result.supported_claims,
+    )
+    contradiction_summary = _build_contradiction_summary(
+        verification_matrix_rows,
+        getattr(factcheck_result, "contradiction_summary", {}),
+        fallback_note=factcheck_result.note if factcheck_result.verdict == "fail" else "",
+    )
+    verification_matrix_payload = {
+        "version": "claim-v1",
+        "rows": verification_matrix_rows,
+        "summary": verification_matrix_summary,
+        "contradiction_summary": contradiction_summary,
+    }
     verifier_trace = _build_verifier_trace(
         factcheck_result=factcheck_result,
         policy_action=policy_action,
         verification_state=verification_state,
+        verification_matrix=verification_matrix_payload,
     )
     verification_status = {
         "state": verification_state,
@@ -1464,6 +1634,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "confidence": factcheck_result.confidence,
         "evidence_count": factcheck_result.evidence_count,
         "note": factcheck_result.note,
+        "verification_matrix": {
+            "summary": verification_matrix_summary,
+            "contradiction_summary": contradiction_summary,
+        },
     }
     flow_events.append(
         _event(
@@ -1490,12 +1664,34 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             },
         )
     )
+    contradiction_stage_status = (
+        "warning" if bool(contradiction_summary.get("has_contradiction")) else "completed"
+    )
+    flow_events.append(
+        _event(
+            stage="contradiction_miner",
+            status=contradiction_stage_status,
+            source_count=_safe_int(contradiction_summary.get("contradiction_count"), 0),
+            note=str(contradiction_summary.get("note") or "Contradiction miner completed."),
+            component="verifier",
+            payload={
+                "has_contradiction": bool(contradiction_summary.get("has_contradiction")),
+                "contradiction_count": _safe_int(
+                    contradiction_summary.get("contradiction_count"),
+                    0,
+                ),
+                "claims": contradiction_summary.get("claims", []),
+                "details": contradiction_summary.get("details", []),
+                "summary": contradiction_summary,
+            },
+        )
+    )
     flow_events.append(
         _event(
             stage="verification_matrix",
             status="completed",
             source_count=factcheck_result.evidence_count,
-            note="Verification matrix generated from supported/unsupported claims.",
+            note="Verification matrix generated from claim-level factcheck outputs.",
             component="verifier",
             payload={
                 "supported_claims": factcheck_result.supported_claims,
@@ -1503,6 +1699,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "total_claims": factcheck_result.total_claims,
                 "severity": factcheck_result.severity,
                 "confidence": factcheck_result.confidence,
+                "summary": verification_matrix_summary,
+                "rows": verification_matrix_rows,
+                "contradiction_summary": contradiction_summary,
             },
         )
     )
@@ -1691,6 +1890,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "deep_pass_summaries": deep_pass_summaries,
         "deep_research_profiles": deep_research_profiles,
         "deep_research_methodology": deep_research_method,
+        "verification_matrix": verification_matrix_payload,
     }
     citations_payload = [asdict(item) for item in citations]
     compact_context_debug = _compact_context_debug(rag_result.context_debug)
@@ -1713,6 +1913,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 {"name": "hybrid_retrieval", "status": retrieval_status},
                 {"name": "answer_synthesis", "status": answer_status},
                 {"name": "verification", "status": verification_state},
+                {"name": "contradiction_miner", "status": contradiction_stage_status},
+                {"name": "verification_matrix", "status": "completed"},
                 {"name": "citation_selection", "status": "completed"},
             ],
             "fallback_used": effective_fallback_used,
@@ -1726,6 +1928,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "context_debug": compact_context_debug,
             "policy_action": policy_action,
             "verification_status": verification_status,
+            "verification_matrix": verification_matrix_payload,
             "planner_trace": planner_trace,
             "retrieval_trace": retrieval_trace,
             "verifier_trace": verifier_trace,
@@ -1762,6 +1965,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "telemetry": telemetry,
         "policy_action": policy_action,
         "verification_status": verification_status,
+        "verification_matrix": verification_matrix_payload,
+        "contradiction_summary": contradiction_summary,
         "fallback_used": effective_fallback_used,
         "fallback_reason": fallback_reason or None,
         "source_attempts": source_attempts,

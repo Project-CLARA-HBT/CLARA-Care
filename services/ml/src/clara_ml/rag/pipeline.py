@@ -378,7 +378,10 @@ class RagPipelineP1:
             return {
                 "internal_top_k": 3,
                 "hybrid_top_k": 3,
+                "research_mode": "",
+                "mode": "",
                 "query_focus": "default",
+                "ddi_critical_query": False,
                 "reason_codes": [],
                 "query_plan": {},
             }
@@ -398,12 +401,357 @@ class RagPipelineP1:
                 if text:
                     reason_codes.append(text)
 
+        research_mode = str(hints.get("research_mode") or "").strip().lower()
+        mode = str(hints.get("mode") or "").strip().lower()
+
         return {
             "internal_top_k": _as_int(hints.get("internal_top_k"), 3),
             "hybrid_top_k": _as_int(hints.get("hybrid_top_k"), 3),
+            "research_mode": research_mode,
+            "mode": mode,
             "query_focus": str(hints.get("query_focus") or "default"),
+            "ddi_critical_query": bool(hints.get("ddi_critical_query")),
             "reason_codes": reason_codes,
             "query_plan": hints.get("query_plan") if isinstance(hints.get("query_plan"), dict) else {},
+        }
+
+    @staticmethod
+    def _resolve_orchestrator_mode(
+        *,
+        generation_enabled: bool,
+        planner_hints: dict[str, Any],
+        query_plan: dict[str, Any],
+    ) -> str:
+        if not generation_enabled:
+            return "retrieval_only"
+        candidates = [
+            planner_hints.get("research_mode"),
+            planner_hints.get("mode"),
+            query_plan.get("research_mode"),
+        ]
+        for value in candidates:
+            text = str(value or "").strip().lower()
+            if text in {"deep", "deep_research", "long"}:
+                return "deep"
+            if text in {"fast", "quick", "default", "standard"}:
+                return "fast"
+        return "fast"
+
+    @staticmethod
+    def _infer_retrieval_complexity(
+        *,
+        query_profile: dict[str, Any],
+        planner_hints: dict[str, Any],
+        query_plan: dict[str, Any],
+        mode: str,
+    ) -> dict[str, Any]:
+        signals: list[str] = []
+        score = 0
+        is_ddi_query = bool(query_profile.get("is_ddi_query"))
+        if is_ddi_query:
+            score += 2
+            signals.append("ddi_query")
+
+        reason_codes_raw = planner_hints.get("reason_codes")
+        reason_codes = (
+            {str(item).strip().lower() for item in reason_codes_raw if str(item).strip()}
+            if isinstance(reason_codes_raw, list)
+            else set()
+        )
+        is_ddi_critical = bool(planner_hints.get("ddi_critical_query")) or bool(
+            query_plan.get("is_ddi_critical_query")
+        )
+        if "ddi_critical_query" in reason_codes:
+            is_ddi_critical = True
+        if is_ddi_critical:
+            score += 1
+            signals.append("ddi_critical")
+        if mode == "deep":
+            score += 1
+            signals.append("deep_mode")
+
+        query_terms_raw = query_profile.get("query_terms")
+        query_terms = query_terms_raw if isinstance(query_terms_raw, list) else []
+        if len(query_terms) >= 6:
+            score += 1
+            signals.append("long_query_terms")
+
+        co_drugs_raw = query_profile.get("co_drugs")
+        co_drugs = co_drugs_raw if isinstance(co_drugs_raw, list) else []
+        if len(co_drugs) >= 2:
+            score += 1
+            signals.append("multi_codrug_focus")
+
+        if "evidence_heavy_query" in reason_codes:
+            score += 1
+            signals.append("evidence_heavy_query")
+
+        decomposition = query_plan.get("decomposition") if isinstance(query_plan, dict) else {}
+        deep_pass_queries = (
+            decomposition.get("deep_pass_queries")
+            if isinstance(decomposition, dict)
+            else []
+        )
+        if isinstance(deep_pass_queries, list) and len(deep_pass_queries) >= 6:
+            score += 1
+            signals.append("multi_pass_decomposition")
+
+        if score >= 5:
+            level = "high"
+        elif score >= 3:
+            level = "medium"
+        else:
+            level = "low"
+        return {
+            "level": level,
+            "score": score,
+            "signals": signals,
+            "is_ddi_query": is_ddi_query,
+            "is_ddi_critical_query": is_ddi_critical,
+        }
+
+    @staticmethod
+    def _orchestrator_budgets(*, mode: str, complexity_level: str) -> dict[str, Any]:
+        budget_table = {
+            "retrieval_only": {
+                "low": {
+                    "latency_budget_ms": 900,
+                    "max_search_rounds": 1,
+                    "max_connector_calls": 1,
+                    "max_documents": 5,
+                    "top_k_cap": 5,
+                },
+                "medium": {
+                    "latency_budget_ms": 1200,
+                    "max_search_rounds": 1,
+                    "max_connector_calls": 2,
+                    "max_documents": 6,
+                    "top_k_cap": 6,
+                },
+                "high": {
+                    "latency_budget_ms": 1500,
+                    "max_search_rounds": 1,
+                    "max_connector_calls": 2,
+                    "max_documents": 7,
+                    "top_k_cap": 7,
+                },
+            },
+            "fast": {
+                "low": {
+                    "latency_budget_ms": 1000,
+                    "max_search_rounds": 1,
+                    "max_connector_calls": 1,
+                    "max_documents": 6,
+                    "top_k_cap": 6,
+                },
+                "medium": {
+                    "latency_budget_ms": 1500,
+                    "max_search_rounds": 2,
+                    "max_connector_calls": 2,
+                    "max_documents": 8,
+                    "top_k_cap": 8,
+                },
+                "high": {
+                    "latency_budget_ms": 1900,
+                    "max_search_rounds": 2,
+                    "max_connector_calls": 3,
+                    "max_documents": 10,
+                    "top_k_cap": 9,
+                },
+            },
+            "deep": {
+                "low": {
+                    "latency_budget_ms": 1800,
+                    "max_search_rounds": 2,
+                    "max_connector_calls": 2,
+                    "max_documents": 8,
+                    "top_k_cap": 8,
+                },
+                "medium": {
+                    "latency_budget_ms": 2600,
+                    "max_search_rounds": 3,
+                    "max_connector_calls": 3,
+                    "max_documents": 10,
+                    "top_k_cap": 10,
+                },
+                "high": {
+                    "latency_budget_ms": 3400,
+                    "max_search_rounds": 4,
+                    "max_connector_calls": 4,
+                    "max_documents": 12,
+                    "top_k_cap": 12,
+                },
+            },
+        }
+        mode_key = mode if mode in budget_table else "fast"
+        level = complexity_level if complexity_level in {"low", "medium", "high"} else "medium"
+        return dict(budget_table[mode_key][level])
+
+    @classmethod
+    def _build_retrieval_orchestrator_plan(
+        cls,
+        *,
+        query_profile: dict[str, Any],
+        query_plan: dict[str, Any],
+        planner_hints: dict[str, Any],
+        mode: str,
+        requested_internal_top_k: int,
+        requested_hybrid_top_k: int,
+        scientific_retrieval_enabled: bool,
+        web_retrieval_enabled: bool,
+        file_retrieval_enabled: bool,
+    ) -> dict[str, Any]:
+        requested_internal = max(1, min(12, int(requested_internal_top_k)))
+        requested_hybrid = max(1, min(12, int(requested_hybrid_top_k)))
+        complexity = cls._infer_retrieval_complexity(
+            query_profile=query_profile,
+            planner_hints=planner_hints,
+            query_plan=query_plan,
+            mode=mode,
+        )
+        complexity_level = str(complexity.get("level") or "medium")
+        budgets = cls._orchestrator_budgets(mode=mode, complexity_level=complexity_level)
+        top_k_cap = max(1, min(12, int(budgets.get("top_k_cap", 8))))
+
+        internal_adjust = 0
+        hybrid_adjust = 0
+        if mode == "deep":
+            internal_adjust += 1
+            hybrid_adjust += 1
+        if complexity_level == "low":
+            if mode != "deep":
+                internal_adjust -= 1
+                hybrid_adjust -= 1
+        elif complexity_level == "medium":
+            internal_adjust += 1
+            hybrid_adjust += 1
+        else:
+            internal_adjust += 2
+            hybrid_adjust += 2
+        if mode == "retrieval_only":
+            hybrid_adjust -= 1
+
+        adjusted_internal = max(1, min(top_k_cap, requested_internal + internal_adjust))
+        adjusted_hybrid = max(1, min(top_k_cap, requested_hybrid + hybrid_adjust))
+        adjusted_hybrid = max(adjusted_hybrid, adjusted_internal)
+
+        external_available = bool(settings.rag_external_connectors_enabled)
+        disabled_reasons: list[str] = []
+        resolved_scientific = external_available and bool(scientific_retrieval_enabled)
+        if scientific_retrieval_enabled and not external_available:
+            disabled_reasons.append("external_connectors_globally_disabled")
+
+        resolved_web = external_available and bool(web_retrieval_enabled)
+        if web_retrieval_enabled and not external_available:
+            disabled_reasons.append("external_connectors_globally_disabled")
+        if resolved_web and not resolved_scientific:
+            resolved_web = False
+            disabled_reasons.append("web_requires_scientific_connectors")
+        if resolved_web and mode in {"fast", "retrieval_only"} and complexity_level == "low":
+            resolved_web = False
+            disabled_reasons.append("fast_low_complexity_web_disabled")
+        if resolved_web and mode == "retrieval_only":
+            resolved_web = False
+            disabled_reasons.append("retrieval_only_mode_web_disabled")
+
+        profile_summary = {
+            "is_ddi_query": bool(query_profile.get("is_ddi_query")),
+            "primary_drug": str(query_profile.get("primary_drug") or ""),
+            "co_drugs": [
+                str(item).strip().lower()
+                for item in query_profile.get("co_drugs", [])
+                if str(item).strip()
+            ][:6],
+            "interaction_signals": [
+                str(item).strip().lower()
+                for item in query_profile.get("interaction_signals", [])
+                if str(item).strip()
+            ][:8],
+            "query_terms": [
+                str(item).strip().lower()
+                for item in query_profile.get("query_terms", [])
+                if str(item).strip()
+            ][:10],
+        }
+
+        decomposition = query_plan.get("decomposition") if isinstance(query_plan, dict) else {}
+        source_queries = query_plan.get("source_queries") if isinstance(query_plan, dict) else {}
+        query_plan_summary = {
+            "canonical_query": str(query_plan.get("canonical_query") or ""),
+            "is_ddi_query": bool(query_plan.get("is_ddi_query")),
+            "fast_pass_count": len(decomposition.get("fast_pass_queries", []))
+            if isinstance(decomposition, dict)
+            else 0,
+            "deep_pass_count": len(decomposition.get("deep_pass_queries", []))
+            if isinstance(decomposition, dict)
+            else 0,
+            "internal_query_count": len(source_queries.get("internal", []))
+            if isinstance(source_queries, dict)
+            else 0,
+            "scientific_query_count": len(source_queries.get("scientific", []))
+            if isinstance(source_queries, dict)
+            else 0,
+            "web_query_count": len(source_queries.get("web", []))
+            if isinstance(source_queries, dict)
+            else 0,
+        }
+
+        planner_reason_codes_raw = planner_hints.get("reason_codes")
+        planner_reason_codes = (
+            [str(item).strip() for item in planner_reason_codes_raw if str(item).strip()]
+            if isinstance(planner_reason_codes_raw, list)
+            else []
+        )
+        decision_reasons = [*complexity.get("signals", []), *disabled_reasons]
+        if internal_adjust != 0 or hybrid_adjust != 0:
+            decision_reasons.append("top_k_adjusted_by_mode_and_complexity")
+        if not decision_reasons:
+            decision_reasons.append("default_retrieval_policy")
+
+        return {
+            "mode": mode,
+            "profile": profile_summary,
+            "complexity": complexity,
+            "budgets": budgets,
+            "top_k": {
+                "requested": {
+                    "internal": requested_internal,
+                    "hybrid": requested_hybrid,
+                },
+                "adjusted": {
+                    "internal": adjusted_internal,
+                    "hybrid": adjusted_hybrid,
+                },
+                "deltas": {
+                    "internal": adjusted_internal - requested_internal,
+                    "hybrid": adjusted_hybrid - requested_hybrid,
+                },
+            },
+            "connector_toggles": {
+                "requested": {
+                    "internal": True,
+                    "scientific": bool(scientific_retrieval_enabled),
+                    "web": bool(web_retrieval_enabled),
+                    "file": bool(file_retrieval_enabled),
+                    "external_connectors_available": external_available,
+                },
+                "resolved": {
+                    "internal": True,
+                    "scientific": resolved_scientific,
+                    "web": resolved_web,
+                    "file": bool(file_retrieval_enabled),
+                },
+                "disabled_reasons": list(dict.fromkeys(disabled_reasons)),
+            },
+            "planner_hints": {
+                "query_focus": str(planner_hints.get("query_focus") or "default"),
+                "reason_codes": planner_reason_codes,
+                "research_mode": str(planner_hints.get("research_mode") or ""),
+                "internal_top_k": requested_internal,
+                "hybrid_top_k": requested_hybrid,
+            },
+            "query_plan_summary": query_plan_summary,
+            "decision_reasons": list(dict.fromkeys(decision_reasons)),
         }
 
     @staticmethod
@@ -638,6 +986,7 @@ class RagPipelineP1:
         external_attempted: bool,
         planner_hints: dict[str, Any],
         retrieval_trace: dict[str, Any],
+        orchestrator_plan: dict[str, Any],
     ) -> dict[str, Any]:
         context_debug = {
             "relevance": round(float(relevance), 4),
@@ -651,6 +1000,21 @@ class RagPipelineP1:
             "source_attempts": retrieval_trace.get("source_attempts", []),
             "source_errors": retrieval_trace.get("source_errors", {}),
             "query_plan": retrieval_trace.get("query_plan", {}),
+            "orchestrator_plan": orchestrator_plan,
+            "retrieval_orchestrator": {
+                "mode": retrieval_trace.get("orchestrator_mode"),
+                "complexity": retrieval_trace.get("orchestrator_complexity"),
+                "top_k": (
+                    orchestrator_plan.get("top_k")
+                    if isinstance(orchestrator_plan.get("top_k"), dict)
+                    else {}
+                ),
+                "connector_toggles": (
+                    orchestrator_plan.get("connector_toggles")
+                    if isinstance(orchestrator_plan.get("connector_toggles"), dict)
+                    else {}
+                ),
+            },
             "fallback_reason": retrieval_trace.get("fallback_reason"),
             "trace_version": "rag-v2",
         }
@@ -694,29 +1058,20 @@ class RagPipelineP1:
             query,
             planner_query_plan=normalized_hints.get("query_plan"),
         )
-        internal_query = self._source_query(query_plan, "internal", query)
-        scientific_query = self._source_query(query_plan, "scientific", query)
-        internal_top_k = int(normalized_hints["internal_top_k"])
-        hybrid_top_k = int(normalized_hints["hybrid_top_k"])
+        requested_internal_top_k = int(normalized_hints["internal_top_k"])
+        requested_hybrid_top_k = int(normalized_hints["hybrid_top_k"])
+        query_profile = analyze_query_profile(query)
+        orchestrator_mode = self._resolve_orchestrator_mode(
+            generation_enabled=generation_enabled,
+            planner_hints=normalized_hints,
+            query_plan=query_plan,
+        )
         threshold = max(0.0, min(1.0, low_context_threshold))
-        used_stages: list[str] = ["internal_retrieval"]
+        used_stages: list[str] = ["retrieval_orchestrator", "internal_retrieval"]
         if planner_active:
             used_stages.insert(0, "planner")
         external_attempted = False
         flow_events: list[dict[str, Any]] = []
-        retrieval_trace: dict[str, Any] = {
-            "planner_hints": normalized_hints,
-            "internal_top_k": internal_top_k,
-            "hybrid_top_k": hybrid_top_k,
-            "evidence_search_enforced": bool(settings.rag_force_search_index),
-            "external_attempted": False,
-            "relevance": 0.0,
-            "documents": [],
-            "source_attempts": [],
-            "source_errors": {},
-            "fallback_reason": None,
-            "query_plan": query_plan,
-        }
 
         if planner_active:
             flow_events.append(
@@ -729,12 +1084,97 @@ class RagPipelineP1:
                     payload={
                         "query_focus": normalized_hints.get("query_focus"),
                         "reason_codes": normalized_hints.get("reason_codes"),
-                        "internal_top_k": internal_top_k,
-                        "hybrid_top_k": hybrid_top_k,
+                        "internal_top_k": requested_internal_top_k,
+                        "hybrid_top_k": requested_hybrid_top_k,
                         "query_plan": query_plan,
                     },
                 )
             )
+
+        flow_events.append(
+            self._flow_event(
+                stage="retrieval_orchestrator",
+                status="started",
+                docs=[],
+                note="Retrieval orchestrator evaluating query profile and planner hints.",
+                component="orchestrator",
+                payload={
+                    "mode": orchestrator_mode,
+                    "query_profile": query_profile,
+                    "query_plan": query_plan,
+                    "planner_hints": {
+                        "query_focus": normalized_hints.get("query_focus"),
+                        "reason_codes": normalized_hints.get("reason_codes"),
+                        "internal_top_k": requested_internal_top_k,
+                        "hybrid_top_k": requested_hybrid_top_k,
+                        "research_mode": normalized_hints.get("research_mode"),
+                    },
+                    "requested_toggles": {
+                        "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
+                        "web_retrieval_enabled": bool(web_retrieval_enabled),
+                        "file_retrieval_enabled": bool(file_retrieval_enabled),
+                    },
+                },
+            )
+        )
+        orchestrator_plan = self._build_retrieval_orchestrator_plan(
+            query_profile=query_profile,
+            query_plan=query_plan,
+            planner_hints=normalized_hints,
+            mode=orchestrator_mode,
+            requested_internal_top_k=requested_internal_top_k,
+            requested_hybrid_top_k=requested_hybrid_top_k,
+            scientific_retrieval_enabled=scientific_retrieval_enabled,
+            web_retrieval_enabled=web_retrieval_enabled,
+            file_retrieval_enabled=file_retrieval_enabled,
+        )
+        internal_top_k = int(
+            orchestrator_plan.get("top_k", {}).get("adjusted", {}).get(
+                "internal", requested_internal_top_k
+            )
+        )
+        hybrid_top_k = int(
+            orchestrator_plan.get("top_k", {}).get("adjusted", {}).get(
+                "hybrid", requested_hybrid_top_k
+            )
+        )
+        resolved_toggles = orchestrator_plan.get("connector_toggles", {}).get("resolved", {})
+        scientific_retrieval_enabled = bool(resolved_toggles.get("scientific"))
+        web_retrieval_enabled = bool(resolved_toggles.get("web"))
+        file_retrieval_enabled = bool(resolved_toggles.get("file", file_retrieval_enabled))
+        flow_events.append(
+            self._flow_event(
+                stage="retrieval_orchestrator",
+                status="completed",
+                docs=[],
+                note="Retrieval orchestrator selected retrieval plan and budgets.",
+                component="orchestrator",
+                payload=orchestrator_plan,
+            )
+        )
+
+        internal_query = self._source_query(query_plan, "internal", query)
+        scientific_query = self._source_query(query_plan, "scientific", query)
+        retrieval_trace: dict[str, Any] = {
+            "planner_hints": normalized_hints,
+            "query_profile": query_profile,
+            "orchestrator_mode": orchestrator_mode,
+            "orchestrator_complexity": orchestrator_plan.get("complexity", {}).get("level"),
+            "orchestrator_plan": orchestrator_plan,
+            "internal_top_k": internal_top_k,
+            "hybrid_top_k": hybrid_top_k,
+            "internal_top_k_requested": requested_internal_top_k,
+            "hybrid_top_k_requested": requested_hybrid_top_k,
+            "connector_toggles": resolved_toggles,
+            "evidence_search_enforced": bool(settings.rag_force_search_index),
+            "external_attempted": False,
+            "relevance": 0.0,
+            "documents": [],
+            "source_attempts": [],
+            "source_errors": {},
+            "fallback_reason": None,
+            "query_plan": query_plan,
+        }
 
         flow_events.append(
             self._flow_event(
@@ -1222,6 +1662,7 @@ class RagPipelineP1:
                 retrieval_trace.get("source_errors", {})
             )
             retrieval_trace["query_plan"] = query_plan
+            retrieval_trace["orchestrator_plan"] = orchestrator_plan
             context_debug = self._build_context_debug(
                 relevance=relevance_score,
                 threshold=threshold,
@@ -1231,6 +1672,7 @@ class RagPipelineP1:
                 external_attempted=external_attempted,
                 planner_hints=normalized_hints,
                 retrieval_trace=retrieval_trace,
+                orchestrator_plan=orchestrator_plan,
             )
             context_debug["pipeline_duration_ms"] = round(
                 (perf_counter() - run_started) * 1000.0, 3
@@ -1243,6 +1685,7 @@ class RagPipelineP1:
                     "internal_top_k": internal_top_k,
                     "hybrid_top_k": hybrid_top_k,
                 },
+                "orchestrator": orchestrator_plan,
                 "retrieval": retrieval_trace,
                 "generation": generation_trace,
             }

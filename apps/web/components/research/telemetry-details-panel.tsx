@@ -12,10 +12,24 @@ function formatScore(value: number | string): string {
   return value;
 }
 
+function formatTraceValue(value: string | number | boolean): string {
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(4);
+  return value.length > 56 ? `${value.slice(0, 56)}...` : value;
+}
+
 export default function TelemetryDetailsPanel({
   telemetry,
   isProcessing
 }: TelemetryDetailsPanelProps) {
+  const traceEntries = Object.entries(telemetry.traceMetadata ?? {});
+  const contradictionSummary = telemetry.contradictionSummary;
+  const hasContradictionSummary =
+    contradictionSummary?.hasContradiction !== undefined ||
+    contradictionSummary?.count !== undefined ||
+    Boolean(contradictionSummary?.severity) ||
+    Boolean(contradictionSummary?.status) ||
+    Boolean(contradictionSummary?.summary);
   const hasData =
     telemetry.keywords.length > 0 ||
     telemetry.searchPlan.subqueries.length > 0 ||
@@ -23,6 +37,9 @@ export default function TelemetryDetailsPanel({
     telemetry.docs.length > 0 ||
     telemetry.scores.length > 0 ||
     telemetry.sourceReasoning.length > 0 ||
+    telemetry.verificationMatrix.length > 0 ||
+    hasContradictionSummary ||
+    traceEntries.length > 0 ||
     telemetry.errors.length > 0;
 
   return (
@@ -37,6 +54,12 @@ export default function TelemetryDetailsPanel({
           </span>
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
             docs:{telemetry.docs.length}
+          </span>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            vm:{telemetry.verificationMatrix.length}
+          </span>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            trace:{traceEntries.length}
           </span>
           <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             err:{telemetry.errors.length}
@@ -126,6 +149,52 @@ export default function TelemetryDetailsPanel({
                   {connector}
                 </span>
               ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(telemetry.verificationMatrix.length || hasContradictionSummary) ? (
+        <div className="mt-3 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+            Verification
+          </p>
+          {telemetry.verificationMatrix.length ? (
+            <ul className="space-y-1.5">
+              {telemetry.verificationMatrix.slice(0, 8).map((item, index) => (
+                <li
+                  key={`${item.claim}-${item.verdict ?? "na"}-${index}`}
+                  className="rounded-xl border border-amber-200 bg-amber-50/70 px-2 py-2 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <p className="font-semibold">{item.claim}</p>
+                  <p className="mt-1">
+                    {item.verdict ? `verdict: ${item.verdict}` : "verdict: n/a"}
+                    {item.confidence !== undefined ? ` · conf ${formatScore(item.confidence)}` : ""}
+                    {item.evidence.length ? ` · evidence ${item.evidence.length}` : ""}
+                    {item.source ? ` · source ${item.source}` : ""}
+                  </p>
+                  {item.note ? <p className="mt-1 text-[11px]">{item.note}</p> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {hasContradictionSummary && contradictionSummary ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-2 py-2 text-xs text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200">
+              <p className="font-semibold">Contradiction Summary</p>
+              <p className="mt-1">
+                {contradictionSummary.hasContradiction !== undefined
+                  ? `has_contradiction: ${String(contradictionSummary.hasContradiction)}`
+                  : "has_contradiction: n/a"}
+                {contradictionSummary.count !== undefined
+                  ? ` · count ${formatScore(contradictionSummary.count)}`
+                  : ""}
+                {contradictionSummary.severity ? ` · severity ${contradictionSummary.severity}` : ""}
+                {contradictionSummary.status ? ` · status ${contradictionSummary.status}` : ""}
+              </p>
+              {contradictionSummary.summary ? (
+                <p className="mt-1 text-[11px]">{contradictionSummary.summary}</p>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -285,6 +354,24 @@ export default function TelemetryDetailsPanel({
               </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {traceEntries.length ? (
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+            Trace Metadata
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {traceEntries.slice(0, 12).map(([key, value]) => (
+              <span
+                key={`${key}-${String(value)}`}
+                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+              >
+                {key}: {formatTraceValue(value)}
+              </span>
+            ))}
+          </div>
         </div>
       ) : null}
 

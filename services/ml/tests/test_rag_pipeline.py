@@ -128,6 +128,79 @@ def test_rag_pipeline_context_debug_includes_retrieval_trace():
     assert isinstance(result.trace.get("retrieval"), dict)
 
 
+def test_rag_pipeline_emits_retrieval_orchestrator_events():
+    pipe = RagPipelineP0(deepseek_api_key="")
+    result = pipe.run(
+        "tuong tac warfarin voi ibuprofen va naproxen nguy co xuat huyet",
+        planner_hints={
+            "internal_top_k": 3,
+            "hybrid_top_k": 4,
+            "research_mode": "deep",
+            "reason_codes": ["evidence_heavy_query", "ddi_critical_query"],
+            "query_focus": "evidence_review",
+        },
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=True,
+    )
+
+    orchestrator_events = [
+        event
+        for event in result.flow_events
+        if event.get("stage") == "retrieval_orchestrator"
+    ]
+    assert len(orchestrator_events) >= 2
+    assert any(event.get("status") == "started" for event in orchestrator_events)
+    completed_events = [
+        event for event in orchestrator_events if event.get("status") == "completed"
+    ]
+    assert completed_events
+    completed_payload = completed_events[-1].get("payload", {})
+    assert completed_payload.get("mode") == "deep"
+    assert isinstance(completed_payload.get("profile"), dict)
+    assert isinstance(completed_payload.get("complexity"), dict)
+    assert isinstance(completed_payload.get("budgets"), dict)
+    assert isinstance(completed_payload.get("top_k"), dict)
+    assert isinstance(completed_payload.get("connector_toggles"), dict)
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    assert isinstance(retrieval_trace.get("orchestrator_plan"), dict)
+    assert retrieval_trace.get("orchestrator_mode") == "deep"
+    assert isinstance(result.context_debug.get("orchestrator_plan"), dict)
+    assert isinstance(result.trace.get("orchestrator"), dict)
+
+
+def test_rag_pipeline_orchestrator_adjusts_top_k_and_connector_toggles():
+    pipe = RagPipelineP0(deepseek_api_key="")
+    result = pipe.run(
+        "uong paracetamol",
+        planner_hints={
+            "internal_top_k": 4,
+            "hybrid_top_k": 4,
+            "research_mode": "fast",
+            "query_focus": "default",
+        },
+        scientific_retrieval_enabled=False,
+        web_retrieval_enabled=True,
+    )
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    orchestrator_plan = retrieval_trace.get("orchestrator_plan", {})
+    assert isinstance(orchestrator_plan, dict)
+    assert retrieval_trace.get("internal_top_k_requested") == 4
+    assert orchestrator_plan.get("top_k", {}).get("requested", {}).get("internal") == 4
+    assert orchestrator_plan.get("top_k", {}).get("adjusted", {}).get("internal") == 3
+    assert retrieval_trace.get("internal_top_k") == 3
+    assert orchestrator_plan.get("top_k", {}).get("deltas", {}).get("internal") == -1
+
+    connector_toggles = orchestrator_plan.get("connector_toggles", {})
+    assert connector_toggles.get("requested", {}).get("web") is True
+    assert connector_toggles.get("requested", {}).get("scientific") is False
+    assert connector_toggles.get("resolved", {}).get("web") is False
+    assert "web_requires_scientific_connectors" in connector_toggles.get(
+        "disabled_reasons", []
+    )
+
+
 def test_rag_pipeline_supports_retrieval_only_mode():
     pipe = RagPipelineP0(
         deepseek_api_key="test-key",

@@ -181,3 +181,76 @@ def test_build_source_aware_query_plan_handles_vi_en_ddi():
     assert len(query_plan["source_queries"].get("scientific", [])) >= 1
     assert isinstance(query_plan.get("decomposition"), dict)
     assert len(query_plan["decomposition"].get("fast_pass_queries", [])) >= 1
+
+
+def test_run_research_tier2_emits_contradiction_miner_and_verification_matrix(monkeypatch):
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        return RagResult(
+            query=query,
+            retrieved_ids=["doc-verify-1"],
+            answer="Warfarin khong lam tang nguy co chay mau khi dung cung ibuprofen.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "doc-verify-1",
+                    "source": "pubmed",
+                    "title": "Clinical interaction summary",
+                    "text": (
+                        "Tai lieu cho thay warfarin co the lam tang nguy co chay mau "
+                        "khi dung cung ibuprofen."
+                    ),
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/10000001/",
+                    "score": 0.9,
+                }
+            ],
+            context_debug={
+                "relevance": 0.8,
+                "low_context_threshold": 0.15,
+                "source_counts": {"pubmed": 1},
+                "retrieval_trace": {
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 1}
+                    ],
+                    "index_summary": {"selected_count": 1},
+                    "search_plan": {"query": query},
+                },
+            },
+            flow_events=[],
+            trace={"retrieval": {"source_attempts": [{"provider": "pubmed"}]}},
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+
+    result = tier2.run_research_tier2(
+        {
+            "query": "Tương tác warfarin với ibuprofen",
+            "research_mode": "fast",
+            "strict_deepseek_required": False,
+        }
+    )
+
+    verification_matrix = result.get("verification_matrix", {})
+    assert isinstance(verification_matrix, dict)
+    assert isinstance(verification_matrix.get("rows"), list)
+    assert isinstance(verification_matrix.get("summary"), dict)
+    assert isinstance(verification_matrix.get("contradiction_summary"), dict)
+    assert isinstance(result.get("metadata", {}).get("verification_matrix"), dict)
+    assert isinstance(result.get("telemetry", {}).get("verification_matrix"), dict)
+
+    flow_events = result.get("flow_events", [])
+    assert isinstance(flow_events, list)
+    contradiction_idx = next(
+        idx for idx, event in enumerate(flow_events) if event.get("stage") == "contradiction_miner"
+    )
+    matrix_idx = next(
+        idx for idx, event in enumerate(flow_events) if event.get("stage") == "verification_matrix"
+    )
+    assert contradiction_idx < matrix_idx
+
+    contradiction_event = flow_events[contradiction_idx]
+    matrix_event = flow_events[matrix_idx]
+    assert isinstance(contradiction_event.get("payload"), dict)
+    assert isinstance(matrix_event.get("payload"), dict)
+    assert "summary" in contradiction_event["payload"]
+    assert "rows" in matrix_event["payload"]
+    assert "summary" in matrix_event["payload"]
