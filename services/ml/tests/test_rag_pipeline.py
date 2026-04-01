@@ -1,7 +1,26 @@
+from contextlib import contextmanager
+
+from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekResponse
 from clara_ml.rag.langchain_adapter import build_prompt
 from clara_ml.rag.pipeline import RagPipelineP0
 from clara_ml.rag.retriever import Document
+
+
+@contextmanager
+def _graphrag_flags(*, enabled: bool, max_neighbors: int = 8, expansion_docs: int = 4):
+    prev_enabled = settings.rag_graphrag_enabled
+    prev_neighbors = settings.rag_graphrag_max_neighbors
+    prev_expansion = settings.rag_graphrag_expansion_docs
+    settings.rag_graphrag_enabled = enabled
+    settings.rag_graphrag_max_neighbors = max_neighbors
+    settings.rag_graphrag_expansion_docs = expansion_docs
+    try:
+        yield
+    finally:
+        settings.rag_graphrag_enabled = prev_enabled
+        settings.rag_graphrag_max_neighbors = prev_neighbors
+        settings.rag_graphrag_expansion_docs = prev_expansion
 
 
 def test_rag_pipeline_returns_sources_and_answer():
@@ -258,3 +277,39 @@ def test_rag_pipeline_retrieval_events_precede_answer_synthesis():
     ]
     assert retrieval_indices
     assert max(retrieval_indices) < first_synthesis_index
+
+
+def test_rag_pipeline_graphrag_sidecar_enabled_emits_events_and_summary():
+    with _graphrag_flags(enabled=True, max_neighbors=5, expansion_docs=3):
+        pipe = RagPipelineP0(deepseek_api_key="")
+        result = pipe.run("warfarin ibuprofen interaction bleeding risk")
+
+    graphrag_events = [
+        event for event in result.flow_events if event.get("stage") == "graphrag_sidecar"
+    ]
+    assert any(event.get("status") == "started" for event in graphrag_events)
+    completed = [event for event in graphrag_events if event.get("status") == "completed"]
+    assert completed
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    graphrag = retrieval_trace.get("graphrag", {})
+    assert graphrag.get("enabled") is True
+    assert int(graphrag.get("node_count") or 0) >= len(result.retrieved_ids)
+    assert int(graphrag.get("edge_count") or 0) >= 0
+    assert int(graphrag.get("expansion_count") or 0) <= 3
+    assert retrieval_trace.get("graphrag_enabled") is True
+    assert result.context_debug.get("graphrag_enabled") is True
+
+
+def test_rag_pipeline_graphrag_sidecar_disabled_keeps_default_trace():
+    with _graphrag_flags(enabled=False):
+        pipe = RagPipelineP0(deepseek_api_key="")
+        result = pipe.run("aspirin ibuprofen warning")
+
+    assert not any(
+        event.get("stage") == "graphrag_sidecar" for event in result.flow_events
+    )
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    graphrag = retrieval_trace.get("graphrag", {})
+    assert graphrag.get("enabled") is False
+    assert int(retrieval_trace.get("graphrag_expansion_count") or 0) == 0

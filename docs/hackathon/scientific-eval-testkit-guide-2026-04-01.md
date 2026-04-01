@@ -89,11 +89,33 @@ Khoảng tin cậy:
 ## 5) Áp dụng ngay trong repo CLARA
 - Runner KPI: `scripts/demo/run_hackathon_kpis.py`
   - Đã hỗ trợ scientific metrics + Wilson CI cho DDI.
+- One-command runner full testset: `scripts/demo/run_scientific_eval_full.sh`
+  - Chạy static + live (online/offline fallback) + optional active eval hard-negative loop.
 - Artifact output:
   - `artifacts/round2/<run_id>/kpi-report/kpi-report.json`
   - `artifacts/round2/<run_id>/kpi-report/kpi-report.md`
 
-Lệnh chạy nhanh:
+Lệnh 1 dòng (khuyến nghị):
+
+```bash
+bash scripts/demo/run_scientific_eval_full.sh \
+  --run-id round2-science-full \
+  --api-base-url http://127.0.0.1:8000 \
+  --ml-base-url http://127.0.0.1:8001 \
+  --email admin@example.com \
+  --password 'Clara#Admin2026!' \
+  --doctor-email admin@example.com \
+  --doctor-password 'Clara#Admin2026!'
+```
+
+Kết quả chính:
+- `artifacts/round2/round2-science-full-static/*`
+- `artifacts/round2/round2-science-full-live/*`
+- `artifacts/round2/round2-science-full/scientific-eval-summary.md`
+- `artifacts/round2/round2-science-full/scientific-eval-summary.json`
+- Nếu bật active loop: `artifacts/round2/round2-science-full-active/*`
+
+Lệnh chạy nhanh từng phần:
 
 ```bash
 python3 scripts/demo/run_hackathon_kpis.py --mode static --run-id local-science-smoke

@@ -106,6 +106,22 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="RAG_EXTERNAL_CONNECTORS_ENABLED",
     )
+    rag_graphrag_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_GRAPHRAG_ENABLED",
+    )
+    rag_graphrag_max_neighbors: int = Field(
+        default=8,
+        validation_alias="RAG_GRAPHRAG_MAX_NEIGHBORS",
+        ge=1,
+        le=32,
+    )
+    rag_graphrag_expansion_docs: int = Field(
+        default=4,
+        validation_alias="RAG_GRAPHRAG_EXPANSION_DOCS",
+        ge=1,
+        le=16,
+    )
     rag_force_search_index: bool = Field(
         default=True,
         validation_alias="RAG_FORCE_SEARCH_INDEX",

@@ -9,6 +9,26 @@ Tài liệu này chốt các lệnh ngắn gọn để team tạo bộ bằng ch
 - `data/demo/fallback-scenarios.jsonl`
 - `data/demo/latency-scenarios.jsonl`
 
+## 0. Full scientific testset (1 lệnh)
+
+```bash
+bash scripts/demo/run_scientific_eval_full.sh \
+  --run-id round2-science-full \
+  --api-base-url http://127.0.0.1:8000 \
+  --ml-base-url http://127.0.0.1:8001 \
+  --email admin@example.com \
+  --password 'Clara#Admin2026!' \
+  --doctor-email admin@example.com \
+  --doctor-password 'Clara#Admin2026!'
+```
+
+Output chính:
+- `artifacts/round2/round2-science-full-static/*`
+- `artifacts/round2/round2-science-full-live/*`
+- `artifacts/round2/round2-science-full/scientific-eval-summary.md`
+- `artifacts/round2/round2-science-full/scientific-eval-summary.json`
+- `artifacts/round2/round2-science-full-active/*` (nếu active loop bật)
+
 ## 0. Chạy one-shot matrix (khuyến nghị cho Vòng 2)
 Script này orchestration toàn bộ flow theo thứ tự:
 1. Generate artifacts

@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
+from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.rag.retriever import Document, InMemoryRetriever
 from clara_ml.rag.seed_documents import base_documents, load_seed_documents
@@ -72,6 +73,7 @@ class RagPipelineP1:
                 retries_per_base=settings.deepseek_retries_per_base,
                 retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
             )
+        self._graphrag = GraphRagSidecar()
 
     @staticmethod
     def _local_synthesis(query: str, docs: List[Document]) -> str:
@@ -1001,6 +1003,7 @@ class RagPipelineP1:
             "source_errors": retrieval_trace.get("source_errors", {}),
             "query_plan": retrieval_trace.get("query_plan", {}),
             "orchestrator_plan": orchestrator_plan,
+            "graphrag": retrieval_trace.get("graphrag", {}),
             "retrieval_orchestrator": {
                 "mode": retrieval_trace.get("orchestrator_mode"),
                 "complexity": retrieval_trace.get("orchestrator_complexity"),
@@ -1015,6 +1018,10 @@ class RagPipelineP1:
                     else {}
                 ),
             },
+            "graphrag_enabled": bool(retrieval_trace.get("graphrag_enabled")),
+            "graphrag_expansion_count": int(retrieval_trace.get("graphrag_expansion_count") or 0),
+            "graphrag_node_count": int(retrieval_trace.get("graphrag_node_count") or 0),
+            "graphrag_edge_count": int(retrieval_trace.get("graphrag_edge_count") or 0),
             "fallback_reason": retrieval_trace.get("fallback_reason"),
             "trace_version": "rag-v2",
         }
@@ -1035,6 +1042,18 @@ class RagPipelineP1:
                 }
             )
         return serialized
+
+    @staticmethod
+    def _merge_documents_by_id(docs: List[Document]) -> List[Document]:
+        merged: list[Document] = []
+        seen: set[str] = set()
+        for doc in docs:
+            doc_id = str(doc.id or "").strip()
+            if not doc_id or doc_id in seen:
+                continue
+            seen.add(doc_id)
+            merged.append(doc)
+        return merged
 
     def run(
         self,
@@ -1174,6 +1193,16 @@ class RagPipelineP1:
             "source_errors": {},
             "fallback_reason": None,
             "query_plan": query_plan,
+            "graphrag": {
+                "enabled": bool(settings.rag_graphrag_enabled),
+                "node_count": 0,
+                "edge_count": 0,
+                "expansion_count": 0,
+            },
+            "graphrag_enabled": bool(settings.rag_graphrag_enabled),
+            "graphrag_expansion_count": 0,
+            "graphrag_node_count": 0,
+            "graphrag_edge_count": 0,
         }
 
         flow_events.append(
@@ -1565,6 +1594,84 @@ class RagPipelineP1:
                     )
                 )
 
+        graphrag_summary: dict[str, Any] = {
+            "enabled": bool(settings.rag_graphrag_enabled),
+            "node_count": 0,
+            "edge_count": 0,
+            "expansion_count": 0,
+            "max_neighbors": int(settings.rag_graphrag_max_neighbors),
+            "expansion_doc_budget": int(settings.rag_graphrag_expansion_docs),
+        }
+        if settings.rag_graphrag_enabled:
+            used_stages.append("graphrag_sidecar")
+            flow_events.append(
+                self._flow_event(
+                    stage="graphrag_sidecar",
+                    status="started",
+                    docs=docs,
+                    note="GraphRAG sidecar building local evidence graph.",
+                    component="retrieval",
+                    payload={
+                        "max_neighbors": int(settings.rag_graphrag_max_neighbors),
+                        "expansion_docs": int(settings.rag_graphrag_expansion_docs),
+                    },
+                )
+            )
+            try:
+                graph_result = self._graphrag.expand(
+                    query=query,
+                    documents=docs,
+                    max_neighbors=int(settings.rag_graphrag_max_neighbors),
+                    expansion_docs=int(settings.rag_graphrag_expansion_docs),
+                )
+                graphrag_summary = dict(graph_result.summary or graphrag_summary)
+                if graph_result.expansion_docs:
+                    docs = self._merge_documents_by_id([*docs, *graph_result.expansion_docs])
+                graphrag_summary["expansion_count"] = int(
+                    graphrag_summary.get("expansion_count") or len(graph_result.expansion_docs)
+                )
+                flow_events.append(
+                    self._flow_event(
+                        stage="graphrag_sidecar",
+                        status="completed",
+                        docs=docs,
+                        note=(
+                            "GraphRAG sidecar completed with "
+                            f"{int(graphrag_summary.get('expansion_count') or 0)} expansion doc(s)."
+                        ),
+                        component="retrieval",
+                        payload=graphrag_summary,
+                    )
+                )
+            except Exception as exc:
+                graphrag_summary = {
+                    **graphrag_summary,
+                    "error": exc.__class__.__name__,
+                }
+                flow_events.append(
+                    self._flow_event(
+                        stage="graphrag_sidecar",
+                        status="error",
+                        docs=docs,
+                        note=(
+                            "GraphRAG sidecar failed; continue with base context. "
+                            f"error={exc.__class__.__name__}"
+                        ),
+                        component="retrieval",
+                        payload={"error": exc.__class__.__name__},
+                    )
+                )
+
+        retrieval_trace["graphrag"] = graphrag_summary
+        retrieval_trace["graphrag_enabled"] = bool(graphrag_summary.get("enabled"))
+        retrieval_trace["graphrag_expansion_count"] = int(
+            graphrag_summary.get("expansion_count") or 0
+        )
+        retrieval_trace["graphrag_node_count"] = int(graphrag_summary.get("node_count") or 0)
+        retrieval_trace["graphrag_edge_count"] = int(graphrag_summary.get("edge_count") or 0)
+
+        relevance_score = self._context_relevance(query, docs)
+        retrieval_trace["relevance"] = round(float(relevance_score), 4)
         has_relevant_context = relevance_score >= threshold
         ids = [d.id for d in docs]
         retrieval_trace["external_attempted"] = external_attempted

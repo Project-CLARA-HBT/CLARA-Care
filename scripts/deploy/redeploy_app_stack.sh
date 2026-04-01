@@ -23,6 +23,25 @@ COMPOSE=(
   -f "${ROOT_DIR}/deploy/docker/docker-compose.app.yml"
 )
 
+bridge_api_to_postgres_network() {
+  local postgres_container="${POSTGRES_CONTAINER_NAME:-clara-postgres}"
+  local api_container_id
+  local postgres_container_id
+  local network
+
+  api_container_id="$("${COMPOSE[@]}" ps -q api 2>/dev/null || true)"
+  postgres_container_id="$(docker ps -q -f "name=^/${postgres_container}$" 2>/dev/null || true)"
+
+  if [[ -z "${api_container_id}" || -z "${postgres_container_id}" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r network; do
+    [[ -z "${network}" ]] && continue
+    docker network connect "${network}" "${api_container_id}" 2>/dev/null || true
+  done < <(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "${postgres_container_id}")
+}
+
 wait_json() {
   local url="$1"
   local pattern="$2"
@@ -50,15 +69,15 @@ smoke_ml() {
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "${tmp_dir}"' RETURN
 
-  curl -fsS -X POST "${ml_url}/v1/chat/routed" \
+  curl -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 
-  curl -fsS -X POST "${ml_url}/v1/research/tier2" \
+  curl -fsS -m 45 -X POST "${ml_url}/v1/research/tier2" \
     -H 'Content-Type: application/json' \
     -d '{"query":"aspirin and ibuprofen interaction risk","research_mode":"deep","source_mode":"hybrid"}' > "${tmp_dir}/research.json"
 
-  curl -fsS -X POST "${ml_url}/v1/careguard/analyze" \
+  curl -fsS -m 20 -X POST "${ml_url}/v1/careguard/analyze" \
     -H 'Content-Type: application/json' \
     -d '{"medications":["Aspirin","Ibuprofen"],"symptoms":[],"allergies":[]}' > "${tmp_dir}/careguard.json"
 
@@ -189,6 +208,8 @@ if [[ "${SKIP_BUILD}" == "true" ]]; then
 else
   "${COMPOSE[@]}" up -d --build api ml web
 fi
+
+bridge_api_to_postgres_network
 
 wait_json "http://127.0.0.1:8100/health" '"status":"ok"'
 wait_json "http://127.0.0.1:8110/health" '"status":"ok"'
