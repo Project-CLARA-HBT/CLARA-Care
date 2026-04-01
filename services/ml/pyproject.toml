@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clara-ml"
 version = "0.1.0"
-description = "CLARA ML/NLP P0 skeleton with LangChain/LangGraph and Vietnamese NLP baseline"
+description = "CLARA ML/NLP P0 baseline with LangChain/LangGraph and Vietnamese NLP foundation"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "CLARA Team" }]

@@ -23,7 +23,7 @@ def build_langgraph_workflow() -> Any:
     """Xây graph workflow cơ bản query -> retrieve -> generate.
 
     Trả object graph nếu thư viện có sẵn; nếu thiếu dependency thì trả None
-    để service vẫn khởi động ở chế độ P0 skeleton.
+    để service vẫn khởi động ở chế độ baseline tương thích.
     """
 
     try:

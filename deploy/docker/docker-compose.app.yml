@@ -15,6 +15,8 @@ services:
     environment:
       ENV: ${ENV:-production}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://clara:clara_dev_password@postgres:5432/clara}
+      DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-false}
+      DATABASE_FALLBACK_URL: ${DATABASE_FALLBACK_URL:-sqlite+pysqlite:////data/clara.db}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_super_secret}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       REFRESH_TOKEN_EXPIRE_MINUTES: ${REFRESH_TOKEN_EXPIRE_MINUTES:-43200}

@@ -122,7 +122,7 @@ def run_scribe_soap(transcript: str) -> dict:
         "assessment": assessment,
         "plan": plan,
         "metadata": {
-            "pipeline": "p2-scribe-soap-skeleton-v1",
+            "pipeline": "p2-scribe-soap-v1",
             "fallback_used": True,
         },
     }

@@ -1,9 +1,12 @@
 import json
 import math
+import os
+import re
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime
+from io import BytesIO
 from threading import Lock
 from typing import Any
 from urllib.parse import quote
@@ -61,11 +64,13 @@ router = APIRouter()
 
 _MAX_RESEARCH_UPLOADS = 200
 _PREVIEW_CHAR_LIMIT = 500
+_MAX_EXTRACTED_TEXT_CHARS = 20_000
 _DEFAULT_SOURCE_NAME = "General Uploads"
 _TEXT_FILE_EXTENSIONS = {
     ".csv",
     ".json",
     ".log",
+    ".markdown",
     ".md",
     ".txt",
     ".xml",
@@ -76,6 +81,7 @@ _IMAGE_FILE_EXTENSIONS = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tif
 _SOURCE_HUB_SETTING_KEY = "source_hub_records_v1"
 _SOURCE_HUB_MAX_RECORDS = 500
 _SOURCE_HUB_TIMEOUT_SECONDS = 12.0
+_TRUE_VALUES = {"1", "true", "yes", "on"}
 _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
     "markdown": True,
     "tables": True,
@@ -132,21 +138,159 @@ def _is_pdf_file(filename: str, content_type: str) -> bool:
     return content_type == "application/pdf" or _guess_extension(filename) == ".pdf"
 
 
+def _decode_text_payload(file_bytes: bytes) -> str:
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return file_bytes.decode("utf-8", errors="replace")
+
+
+def _normalize_extracted_text(text: str) -> str:
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()[:_MAX_EXTRACTED_TEXT_CHARS]
+
+
+def _extract_text_like_file(file_bytes: bytes, filename: str, content_type: str) -> str:
+    decoded = _decode_text_payload(file_bytes)
+    extension = _guess_extension(filename)
+    if content_type == "application/json" or extension == ".json":
+        try:
+            parsed = json.loads(decoded)
+        except json.JSONDecodeError:
+            return decoded
+        try:
+            return json.dumps(parsed, ensure_ascii=False, indent=2)
+        except (TypeError, ValueError):
+            return _normalize_extracted_text(decoded)
+    return _normalize_extracted_text(decoded)
+
+
+def _extract_pdf_text(file_bytes: bytes) -> tuple[str, str]:
+    try:
+        from pypdf import PdfReader
+    except Exception:
+        return "", "PDF đã tải lên nhưng chưa thể trích xuất text vì thiếu parser `pypdf`."
+
+    try:
+        reader = PdfReader(BytesIO(file_bytes))
+    except Exception as exc:
+        return "", f"PDF đã được tải lên nhưng không đọc được nội dung ({exc.__class__.__name__})."
+
+    pages_text: list[str] = []
+    for page in reader.pages[:20]:
+        try:
+            extracted = page.extract_text() or ""
+        except Exception:
+            extracted = ""
+        normalized = _normalize_extracted_text(extracted)
+        if normalized:
+            pages_text.append(normalized)
+
+    if not pages_text:
+        return "", "PDF đã tải lên nhưng không trích xuất được text hữu ích."
+    return _normalize_extracted_text("\n\n".join(pages_text)), ""
+
+
+def _extract_image_metadata_text(file_bytes: bytes, filename: str) -> tuple[str, str]:
+    try:
+        from PIL import Image, UnidentifiedImageError
+    except Exception:
+        return "", "Ảnh đã tải lên nhưng môi trường chưa có parser metadata."
+
+    try:
+        with Image.open(BytesIO(file_bytes)) as image_obj:
+            width, height = image_obj.size
+            image_format = (image_obj.format or _guess_extension(filename).lstrip(".")).upper()
+            mode = image_obj.mode or "unknown"
+            frame_count = int(getattr(image_obj, "n_frames", 1) or 1)
+            parts = [
+                f"image_format={image_format or 'UNKNOWN'}",
+                f"size={width}x{height}",
+                f"mode={mode}",
+            ]
+            if frame_count > 1:
+                parts.append(f"frames={frame_count}")
+            return _normalize_extracted_text("Image metadata: " + ", ".join(parts)), ""
+    except (UnidentifiedImageError, OSError):
+        return "", "Ảnh đã tải lên nhưng không đọc được metadata."
+    except Exception as exc:
+        return "", f"Ảnh đã tải lên nhưng parse metadata thất bại ({exc.__class__.__name__})."
+
+
+def _is_truthy_env(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in _TRUE_VALUES
+
+
+def _extract_image_text_with_ocr(
+    file_bytes: bytes,
+    filename: str,
+    content_type: str,
+) -> tuple[str, str]:
+    if not _is_truthy_env("RESEARCH_UPLOAD_IMAGE_OCR", default=True):
+        return "", ""
+
+    try:
+        from clara_api.api.v1.endpoints.careguard import _scan_with_tgc_ocr
+    except Exception:
+        return "", ""
+
+    try:
+        extracted_text, _used_endpoint, _provider = _scan_with_tgc_ocr(
+            file_bytes=file_bytes,
+            file_name=filename,
+            content_type=content_type,
+        )
+    except HTTPException as exc:
+        detail = str(exc.detail).strip() if isinstance(exc.detail, str) else ""
+        if detail:
+            return "", f"Ảnh đã tải lên nhưng OCR không khả dụng: {detail}"
+        return "", "Ảnh đã tải lên nhưng OCR không khả dụng."
+    except Exception:
+        return "", "Ảnh đã tải lên nhưng OCR không khả dụng."
+
+    normalized = _normalize_extracted_text(extracted_text)
+    if not normalized:
+        return "", "Ảnh đã tải lên nhưng OCR không trích xuất được text hữu ích."
+    return normalized, ""
+
+
 def _extract_basic_text(file_bytes: bytes, filename: str, content_type: str) -> tuple[str, str]:
     if _is_text_file(filename, content_type):
-        try:
-            text = file_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            text = file_bytes.decode("utf-8", errors="replace")
+        text = _extract_text_like_file(file_bytes, filename, content_type)
         return text, "text"
 
     if _is_pdf_file(filename, content_type):
-        return "PDF đã được tải lên. Hệ thống chưa hỗ trợ parse sâu cho định dạng này.", "pdf"
+        extracted_pdf_text, pdf_message = _extract_pdf_text(file_bytes)
+        if extracted_pdf_text:
+            return extracted_pdf_text, "text"
+        return pdf_message, "pdf"
 
     if _is_image_file(filename, content_type):
-        return "Ảnh đã được tải lên. Hệ thống chưa hỗ trợ parse sâu cho định dạng này.", "image"
+        metadata_text, metadata_message = _extract_image_metadata_text(file_bytes, filename)
+        extracted_image_text, image_message = _extract_image_text_with_ocr(
+            file_bytes,
+            filename,
+            content_type,
+        )
+        if extracted_image_text and metadata_text:
+            merged = _normalize_extracted_text(
+                f"{metadata_text}\n\nOCR text:\n{extracted_image_text}"
+            )
+            return merged, "text"
+        if extracted_image_text:
+            return extracted_image_text, "text"
+        if image_message:
+            return image_message, "image"
+        if metadata_text:
+            return metadata_text, "text"
+        return metadata_message, "image"
 
-    return "File đã được tải lên. Hệ thống chưa hỗ trợ parse sâu cho định dạng này.", "other"
+    return "File đã tải lên. Định dạng này chưa hỗ trợ trích xuất text tự động.", "other"
 
 
 def _approx_token_count(text: str) -> int:

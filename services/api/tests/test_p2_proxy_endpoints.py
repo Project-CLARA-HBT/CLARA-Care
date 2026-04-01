@@ -1,10 +1,17 @@
 import httpx
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from clara_api.main import app
 
 client = TestClient(app)
+_TINY_PNG = (
+    b"\x89PNG\r\n\x1a\n"
+    b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+    b"\x00\x00\x00\nIDATx\x9cc`\x00\x00\x00\x02\x00\x01\xe5'\xd4\xa2"
+    b"\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 def _login(email: str) -> str:
@@ -167,19 +174,105 @@ def test_research_upload_file_returns_file_id_and_preview() -> None:
     assert payload["token_count"] > 0
 
 
-def test_research_upload_file_image_returns_soft_preview() -> None:
+def test_research_upload_file_json_is_parsed_as_text() -> None:
     token = _login("alice@research.clara")
 
     response = client.post(
         "/api/v1/research/upload-file",
         headers={"Authorization": f"Bearer {token}"},
-        files={"file": ("scan.png", b"\x89PNG\r\n\x1a\n", "image/png")},
+        files={
+            "file": (
+                "medication.json",
+                b'{"drug":"metformin","dose":"500mg","with_food":true}',
+                "application/json",
+            )
+        },
     )
 
     assert response.status_code == 200
     payload = response.json()
-    assert "parse sâu" in payload["preview"].lower()
+    assert '"drug": "metformin"' in payload["preview"]
+    assert payload["token_count"] > 0
+
+
+def test_research_upload_file_image_returns_soft_preview(monkeypatch: pytest.MonkeyPatch) -> None:
+    token = _login("alice@research.clara")
+    monkeypatch.setenv("RESEARCH_UPLOAD_IMAGE_OCR", "1")
+
+    def _fake_scan_with_tgc_ocr(
+        *,
+        file_bytes: bytes,
+        file_name: str,
+        content_type: str,
+    ) -> tuple[str, str, str]:
+        _ = (file_bytes, file_name, content_type)
+        raise HTTPException(status_code=502, detail="Không kết nối được OCR service")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard._scan_with_tgc_ocr",
+        _fake_scan_with_tgc_ocr,
+    )
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.png", _TINY_PNG, "image/png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "ocr" in payload["preview"].lower()
     assert payload["token_count"] == 0
+
+
+def test_research_upload_file_image_uses_internal_ocr(monkeypatch: pytest.MonkeyPatch) -> None:
+    token = _login("alice@research.clara")
+    monkeypatch.setenv("RESEARCH_UPLOAD_IMAGE_OCR", "1")
+
+    def _fake_scan_with_tgc_ocr(
+        *,
+        file_bytes: bytes,
+        file_name: str,
+        content_type: str,
+    ) -> tuple[str, str, str]:
+        _ = (file_bytes, file_name, content_type)
+        return "Aspirin 81mg", "/ocr", "tgc-transhub"
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard._scan_with_tgc_ocr",
+        _fake_scan_with_tgc_ocr,
+    )
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.png", _TINY_PNG, "image/png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "aspirin 81mg" in payload["preview"].lower()
+    assert payload["token_count"] > 0
+
+
+def test_research_upload_file_pdf_uses_parsed_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._extract_pdf_text",
+        lambda _file_bytes: ("Clinical summary: metformin maintenance.", ""),
+    )
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("clinical-note.pdf", b"%PDF-1.4\n%%EOF\n", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "metformin" in payload["preview"].lower()
+    assert payload["token_count"] > 0
 
 
 def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPatch) -> None:

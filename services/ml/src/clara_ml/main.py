@@ -604,8 +604,8 @@ def routed_chat_infer(payload: dict) -> dict:
     if factcheck and factcheck.severity == "high":
         answer = (
             f"{rag_result.answer}\n\n"
-            "Luu y an toan: mot so noi dung chua du bang chung tu tai lieu truy xuat. "
-            "Ban nen doi chieu them voi bac si/duoc si truoc khi ap dung."
+            "Lưu ý an toàn: một số nội dung chưa đủ bằng chứng từ tài liệu truy xuất. "
+            "Bạn nên đối chiếu thêm với bác sĩ/dược sĩ trước khi áp dụng."
         )
 
     flow_events = list(rag_result.flow_events)

@@ -1,6 +1,6 @@
 # CLARA API (P0)
 
-FastAPI backend skeleton for CLARA P0.
+FastAPI backend for CLARA P0.
 
 ## P1 Round-2 Additions
 

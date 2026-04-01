@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clara-api"
 version = "0.1.0"
-description = "CLARA Backend API P0 skeleton"
+description = "CLARA Backend API P0"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
