@@ -2,6 +2,8 @@ export type ChatResponse = {
   message?: string;
   reply?: string;
   answer?: string;
+  fallback?: boolean;
+  fallback_reason?: string;
   role?: string;
   intent?: string;
   confidence?: number;
@@ -14,7 +16,6 @@ export type ChatIntentDebug = Pick<ChatResponse, "role" | "intent" | "confidence
 export function getChatReply(data: ChatResponse): string | null {
   if (typeof data.reply === "string" && data.reply.trim()) return data.reply;
   if (typeof data.answer === "string" && data.answer.trim()) return data.answer;
-  if (typeof data.message === "string" && data.message.trim()) return data.message;
   return null;
 }
 

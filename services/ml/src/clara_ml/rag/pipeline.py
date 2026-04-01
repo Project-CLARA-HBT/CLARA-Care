@@ -40,6 +40,8 @@ class RagPipelineP1:
 
     _PROMPT_MAX_DOCS = 8
     _PROMPT_MAX_DOC_CHARS = 520
+    _PROMPT_RETRY_MAX_DOCS = 5
+    _PROMPT_RETRY_MAX_DOC_CHARS = 280
 
     def __init__(
         self,
@@ -920,11 +922,73 @@ class RagPipelineP1:
             "4) ## Nguồn tham chiếu\n"
             "If comparing >=2 options, include a Markdown table with columns: Tiêu chí | Phương án A | Phương án B | Ghi chú.\n"
             "If explaining process/flow/decision path, include a fenced mermaid flowchart block.\n"
+            "For Mermaid blocks, do not use markdown links or square-bracket citations inside node labels. "
+            "Keep citations outside the Mermaid block in normal markdown text.\n"
             "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
             "Cite evidence inline with source ids like [source-id].\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
         )
+
+    @classmethod
+    def _build_compact_retry_prompt(cls, query: str, docs: List[Document]) -> str:
+        context = "\n".join(
+            cls._format_doc_context_with_limit(doc, max_chars=cls._PROMPT_RETRY_MAX_DOC_CHARS)
+            for doc in docs[: cls._PROMPT_RETRY_MAX_DOCS]
+        )
+        return (
+            "You are CLARA medical safety assistant.\n"
+            "Answer in Vietnamese, concise, evidence-grounded, no HTML.\n"
+            "Focus on practical safety guidance and key risks only.\n"
+            "Do not diagnose or prescribe dosage.\n"
+            "Output sections in order:\n"
+            "1) ## Kết luận nhanh\n"
+            "2) ## Phân tích chi tiết\n"
+            "3) ## Khuyến nghị an toàn\n"
+            "4) ## Nguồn tham chiếu\n"
+            "Use inline source IDs like [source-id].\n"
+            f"User query: {query}\n"
+            f"Retrieved context:\n{context}"
+        )
+
+    @classmethod
+    def _format_doc_context_with_limit(cls, doc: Document, max_chars: int) -> str:
+        metadata = doc.metadata or {}
+        source = str(metadata.get("source") or "unknown")
+        url = str(metadata.get("url") or "")
+        score = metadata.get("score", 0.0)
+        try:
+            score_txt = f"{float(score):.4f}"
+        except (TypeError, ValueError):
+            score_txt = "0.0000"
+        meta_bits = f"source={source}; score={score_txt}"
+        if url:
+            meta_bits = f"{meta_bits}; url={url}"
+        raw_text = str(doc.text or "").strip()
+        text = raw_text
+        if len(text) > max_chars:
+            text = f"{text[:max_chars].rstrip()}..."
+        return f"- ({doc.id}) [{meta_bits}] {text}"
+
+    @staticmethod
+    def _is_retryable_llm_exception(exc: Exception) -> bool:
+        message = str(exc).lower()
+        retryable_signals = (
+            "timeout",
+            "timed out",
+            "too many requests",
+            "rate limit",
+            "http_429",
+            "http_408",
+            "http_500",
+            "http_502",
+            "http_503",
+            "http_504",
+            "connection",
+            "temporarily unavailable",
+            "deepseek_request_failed",
+        )
+        return any(signal in message for signal in retryable_signals)
 
     @staticmethod
     def _build_no_rag_prompt(query: str) -> str:
@@ -935,6 +999,7 @@ class RagPipelineP1:
             "Be explicit about uncertainty and avoid diagnostic/prescription overreach.\n"
             "If comparative question, provide balanced criteria and a Markdown table.\n"
             "If process/workflow explanation is needed, include fenced mermaid flowchart.\n"
+            "In Mermaid labels, avoid markdown links and avoid square-bracket citations; place references outside the diagram.\n"
             "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
             "Output MUST be valid GitHub-Flavored Markdown (GFM), no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
@@ -1895,11 +1960,13 @@ class RagPipelineP1:
                         "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
                         "Use markdown table for comparisons. "
                         "Use fenced mermaid flowchart only when process explanation is needed. "
+                        "In Mermaid node labels, do not include square-bracket citations or markdown links; keep citations outside diagrams. "
                         "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
                         "Do not output HTML. "
                         "Do not prescribe dosage or diagnose."
                     ),
                 )
+                response_model = response.model or self._llm_client.model
                 flow_events.append(
                     self._flow_event(
                         stage="llm_generation",
@@ -1907,19 +1974,83 @@ class RagPipelineP1:
                         docs=docs,
                         note="LLM answer generated successfully.",
                         component="generation",
-                        payload={"model": response.model or self._llm_client.model},
+                        payload={"model": response_model, "attempt": "primary"},
                     )
                 )
                 return _build_result(
                     answer=self._postprocess_answer(response.content, query, docs),
-                    model_used=response.model or self._llm_client.model,
+                    model_used=response_model,
                     generation_trace={
                         "mode": "llm",
-                        "model": response.model or self._llm_client.model,
+                        "model": response_model,
                         "has_relevant_context": has_relevant_context,
+                        "attempt": "primary",
                     },
                 )
             except Exception as exc:
+                recovered_from_retry = False
+                if self._is_retryable_llm_exception(exc):
+                    flow_events.append(
+                        self._flow_event(
+                            stage="llm_generation_retry",
+                            status="started",
+                            docs=docs,
+                            note=(
+                                "Primary LLM generation failed with transient error; "
+                                "retrying with compact prompt."
+                            ),
+                            component="generation",
+                            payload={"error": exc.__class__.__name__, "strategy": "compact_prompt"},
+                        )
+                    )
+                    try:
+                        retry_response = self._llm_client.generate(
+                            prompt=self._build_compact_retry_prompt(query, docs),
+                            system_prompt=(
+                                "You are CLARA clinical assistant. "
+                                "Prioritize stable, concise medical-safety output in Vietnamese. "
+                                "No HTML. Do not prescribe dosage or diagnose."
+                            ),
+                        )
+                        retry_model = retry_response.model or self._llm_client.model
+                        flow_events.append(
+                            self._flow_event(
+                                stage="llm_generation_retry",
+                                status="completed",
+                                docs=docs,
+                                note="Recovered by retrying LLM generation with compact prompt.",
+                                component="generation",
+                                payload={"model": retry_model, "attempt": "retry_compact"},
+                            )
+                        )
+                        recovered_from_retry = True
+                        return _build_result(
+                            answer=self._postprocess_answer(retry_response.content, query, docs),
+                            model_used=retry_model,
+                            generation_trace={
+                                "mode": "llm",
+                                "model": retry_model,
+                                "has_relevant_context": has_relevant_context,
+                                "attempt": "retry_compact",
+                            },
+                        )
+                    except Exception as retry_exc:
+                        flow_events.append(
+                            self._flow_event(
+                                stage="llm_generation_retry",
+                                status="error",
+                                docs=docs,
+                                note=(
+                                    "Compact retry failed; switching to deterministic fallback if allowed."
+                                ),
+                                component="generation",
+                                payload={"error": retry_exc.__class__.__name__},
+                            )
+                        )
+                        exc = retry_exc
+
+                if recovered_from_retry:
+                    raise RuntimeError("llm_retry_state_inconsistent")
                 if strict_deepseek_required or not deepseek_fallback_enabled:
                     raise RuntimeError("deepseek_generation_failed") from exc
                 used_stages.append("llm_error_fallback")

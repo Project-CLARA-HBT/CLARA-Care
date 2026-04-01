@@ -480,7 +480,7 @@ class ResearchConversationMessagesResponse(BaseModel):
 class ResearchTier2JobCreateRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
     message: str | None = None
-    research_mode: Literal["fast", "deep"] = "fast"
+    research_mode: Literal["fast", "deep", "deep_beta"] = "fast"
     answer_format: str = "markdown"
     response_format: str = "markdown"
     render_hints: dict[str, object] = Field(default_factory=dict)

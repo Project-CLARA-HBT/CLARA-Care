@@ -120,11 +120,55 @@ function normalizeMermaidCode(code: string): string {
   normalized = normalized
     .split("\n")
     .map((line) => line.trimEnd())
+    .map((line) => line.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/gi, "$1"))
+    .map((line) =>
+      line.replace(
+        /\[((?:pubmed|pmid|doi|source|ref|nih|fda|who|rxnav|openfda)[^\]\n]*)\]/gi,
+        "($1)"
+      )
+    )
+    .map((line) => line.replace(/\[(\d{1,3})\]/g, "($1)"))
+    .map((line) => {
+      let value = line;
+      let guard = 0;
+      const nestedPattern = /\[([^\[\]\n]*)\[([^\[\]\n]+)\]([^\[\]\n]*)\]/g;
+      while (nestedPattern.test(value) && guard < 8) {
+        value = value.replace(nestedPattern, "[$1($2)$3]");
+        guard += 1;
+      }
+      return value;
+    })
+    .map((line) => {
+      const opens = (line.match(/\[/g) ?? []).length;
+      const closes = (line.match(/\]/g) ?? []).length;
+      if (closes <= opens) return line;
+      let diff = closes - opens;
+      const chars = line.split("");
+      for (let index = chars.length - 1; index >= 0 && diff > 0; index -= 1) {
+        if (chars[index] === "]") {
+          chars.splice(index, 1);
+          diff -= 1;
+        }
+      }
+      return chars.join("");
+    })
     .filter((line, index, arr) => !(line.trim() === "" && arr[index - 1]?.trim() === ""))
     .join("\n")
     .trim();
 
   return normalized;
+}
+
+function buildMermaidRenderCandidates(rawCode: string): string[] {
+  const base = normalizeMermaidCode(rawCode);
+  if (!base) return [];
+
+  const relaxed = base
+    .replace(/\[(pubmed-\d+|pmid:?\s*\d+|doi:[^\]\n]+)\]/gi, "($1)")
+    .replace(/\]\];/g, "];")
+    .replace(/\]\]\s*-->/g, "] -->");
+
+  return Array.from(new Set([base, relaxed].filter(Boolean)));
 }
 
 function MermaidBlock({ code }: MermaidBlockProps) {
@@ -138,7 +182,10 @@ function MermaidBlock({ code }: MermaidBlockProps) {
       try {
         const mermaidModule = await import("mermaid");
         const mermaid = mermaidModule.default;
-        const normalizedCode = normalizeMermaidCode(code);
+        const candidates = buildMermaidRenderCandidates(code);
+        if (!candidates.length) {
+          throw new Error("Mermaid code is empty.");
+        }
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
@@ -149,10 +196,24 @@ function MermaidBlock({ code }: MermaidBlockProps) {
           },
         });
 
-        const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
-        const renderResult = await mermaid.render(id, normalizedCode);
+        let renderedSvg = "";
+        let lastError: unknown = null;
+        for (const candidate of candidates) {
+          try {
+            const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
+            const renderResult = await mermaid.render(id, candidate);
+            renderedSvg = renderResult.svg;
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        if (!renderedSvg) {
+          throw (lastError instanceof Error ? lastError : new Error("Không thể parse Mermaid."));
+        }
         if (!cancelled) {
-          const sanitized = sanitizeMermaidSvg(renderResult.svg);
+          const sanitized = sanitizeMermaidSvg(renderedSvg);
           if (!sanitized) {
             throw new Error("Mermaid SVG output is empty after sanitization.");
           }

@@ -2,7 +2,7 @@ import api from "@/lib/http-client";
 import { getAccessToken } from "@/lib/auth-store";
 
 export type ResearchTier = "tier1" | "tier2";
-export type ResearchExecutionMode = "fast" | "deep";
+export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
 export const RESEARCH_TIER2_TIMEOUT_MS = 120000;
@@ -167,6 +167,39 @@ export type ResearchTier2Telemetry = {
   contradictionSummary?: ResearchTier2ContradictionSummary;
   traceMetadata: ResearchTier2TraceMetadata;
   errors: string[];
+  fallbackInfo: string[];
+};
+
+export type ResearchTier2VisualAsset = {
+  id?: string;
+  title: string;
+  url?: string;
+  caption?: string;
+  source?: string;
+  provider?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+};
+
+export type ResearchTier2ChartSpec = {
+  id?: string;
+  title: string;
+  format?: string;
+  spec: string;
+  description?: string;
+};
+
+export type ResearchTier2ReasoningDigestItem = {
+  title: string;
+  detail?: string;
+  confidence?: number;
+  status?: string;
+};
+
+export type ResearchTier2ReasoningDigest = {
+  summary?: string;
+  items: ResearchTier2ReasoningDigestItem[];
 };
 
 export type ResearchTier2RawResponse = {
@@ -187,6 +220,13 @@ export type ResearchTier2RawResponse = {
   events?: unknown;
   context_debug?: unknown;
   telemetry?: unknown;
+  visual_assets?: unknown;
+  visualAssets?: unknown;
+  images?: unknown;
+  chart_specs?: unknown;
+  chartSpecs?: unknown;
+  reasoning_digest?: unknown;
+  reasoningDigest?: unknown;
   debug?: unknown;
   source_errors?: unknown;
   fallback_reason?: unknown;
@@ -200,6 +240,9 @@ export type ResearchTier2Result = {
   flowStages: ResearchFlowStage[];
   flowEvents: ResearchFlowEvent[];
   telemetry: ResearchTier2Telemetry;
+  visualAssets: ResearchTier2VisualAsset[];
+  chartSpecs: ResearchTier2ChartSpec[];
+  reasoningDigest: ResearchTier2ReasoningDigest;
   debug: ResearchTier2DebugMeta;
   verificationStatus?: {
     verdict?: string;
@@ -411,6 +454,11 @@ function uniqueText(values: string[]): string[] {
   );
 }
 
+function normalizeResearchExecutionMode(mode?: ResearchExecutionMode): ResearchExecutionMode {
+  if (mode === "deep" || mode === "deep_beta" || mode === "fast") return mode;
+  return "fast";
+}
+
 function resolveApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
@@ -609,6 +657,22 @@ const FLOW_STAGE_ALIAS_MAP: Record<string, { stageId: string; label: string }> =
   retrieval_orchestrator: { stageId: "retrieval_orchestrator", label: "Retrieval Orchestrator" },
   deep_research: { stageId: "deep_research", label: "Deep Research Loop" },
   deep_retrieval_pass: { stageId: "deep_research", label: "Deep Research Loop" },
+  deep_beta: { stageId: "deep_beta_router", label: "Deep Beta Router" },
+  deep_beta_router: { stageId: "deep_beta_router", label: "Deep Beta Router" },
+  deep_beta_gate: { stageId: "deep_beta_router", label: "Deep Beta Router" },
+  deep_beta_planner: { stageId: "deep_beta_router", label: "Deep Beta Router" },
+  deep_beta_loop: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
+  beta_hypothesis_graph: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
+  hypothesis_graph: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
+  deep_beta_hypothesis: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
+  deep_beta_debate: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  cross_source_debate: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  debate_refiner: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  uncertainty_probe: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  deep_beta_critic: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  deep_beta_consensus: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
+  consensus_builder: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
+  evidence_consensus: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
   retrieval_internal: { stageId: "retrieval_internal", label: "Internal Corpus" },
   internal_retrieval: { stageId: "retrieval_internal", label: "Internal Corpus" },
   retrieval_scientific: { stageId: "retrieval_scientific", label: "Scientific Retrieval" },
@@ -1753,6 +1817,77 @@ function parseTelemetryErrors(value: unknown): string[] {
   return uniqueText(errors);
 }
 
+function parseVisualAsset(value: unknown): ResearchTier2VisualAsset | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const title = asText(record.title) ?? asText(record.caption) ?? asText(record.id);
+  const url = asText(record.url) ?? asText(record.href);
+  if (!title && !url) return null;
+  return {
+    id: asText(record.id),
+    title: title ?? "Visual asset",
+    url,
+    caption: asText(record.caption),
+    source: asText(record.source),
+    provider: asText(record.provider),
+    mimeType: asText(record.mime_type) ?? asText(record.mimeType),
+    width: asNumber(record.width),
+    height: asNumber(record.height),
+  };
+}
+
+function parseChartSpec(value: unknown): ResearchTier2ChartSpec | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const title = asText(record.title) ?? asText(record.name) ?? asText(record.id);
+  const spec =
+    asText(record.spec) ??
+    asText(record.content) ??
+    asText(record.code) ??
+    asText(record.value);
+  if (!title && !spec) return null;
+  return {
+    id: asText(record.id),
+    title: title ?? "Chart spec",
+    format: asText(record.format) ?? asText(record.type),
+    spec: spec ?? "",
+    description: asText(record.description) ?? asText(record.note),
+  };
+}
+
+function parseReasoningDigest(value: unknown): ResearchTier2ReasoningDigest {
+  const record = asRecord(value);
+  if (!record) {
+    const text = asText(value);
+    return {
+      summary: text,
+      items: [],
+    };
+  }
+
+  const items = parseList(
+    record.items ?? record.steps ?? record.highlights,
+    (item): ResearchTier2ReasoningDigestItem | null => {
+      const row = asRecord(item);
+      if (!row) return null;
+      const title = asText(row.title) ?? asText(row.label);
+      const detail = asText(row.detail) ?? asText(row.note) ?? asText(row.reasoning);
+      if (!title && !detail) return null;
+      return {
+        title: title ?? "Reasoning step",
+        detail,
+        confidence: asNumber(row.confidence),
+        status: asText(row.status),
+      };
+    }
+  );
+
+  return {
+    summary: asText(record.summary) ?? asText(record.note),
+    items,
+  };
+}
+
 export async function uploadResearchFile(file: File): Promise<ResearchUploadResult> {
   const formData = new FormData();
   formData.append("file", file);
@@ -1801,7 +1936,7 @@ export async function runResearchTier2(
     new Set((options?.sourceIds ?? []).filter((item) => Number.isFinite(item) && item > 0).map((item) => Math.trunc(item)))
   );
   const payload: Record<string, unknown> = { query, message: query };
-  const researchMode = options?.researchMode === "deep" ? "deep" : "fast";
+  const researchMode = normalizeResearchExecutionMode(options?.researchMode);
   payload.research_mode = researchMode;
   payload.answer_format = "markdown";
   payload.response_format = "markdown";
@@ -1839,7 +1974,7 @@ export async function createResearchTier2Job(
     new Set((options?.sourceIds ?? []).filter((item) => Number.isFinite(item) && item > 0).map((item) => Math.trunc(item)))
   );
   const sourceHubSources = uniqueText((options?.sourceHubSources ?? []).map((item) => String(item))) as SourceHubSourceKey[];
-  const researchMode = options?.researchMode === "deep" ? "deep" : "fast";
+  const researchMode = normalizeResearchExecutionMode(options?.researchMode);
 
   const payload: Record<string, unknown> = {
     query,
@@ -1946,20 +2081,43 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
   const flowEvents = parseFlowEvents(record.flow_events ?? record.events);
   const metadataStages = parseFlowStages(record.flow_stages ?? record.stages);
   const flowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
-  const reasoningSteps = parseList(record.reasoning_steps, (item) => {
-    const row = asRecord(item);
-    if (!row) return null;
-    const note = asText(row.note) ?? asText(row.detail) ?? asText(row.message);
-    return note ? note : null;
-  });
-  const statusNote = asText(record.status_note);
+  const reasoningSteps = parseList(
+    pickFromRecords(
+      [record],
+      [
+        "reasoning_steps",
+        "reasoning_notes",
+        "reasoning_log",
+        "reasoning_timeline",
+        "reasoning",
+        "notes"
+      ]
+    ),
+    (item) => {
+      const direct = asText(item);
+      if (direct) return direct;
+      const row = asRecord(item);
+      if (!row) return null;
+      const note =
+        asText(row.note) ??
+        asText(row.detail) ??
+        asText(row.message) ??
+        asText(row.reasoning) ??
+        asText(row.summary);
+      return note ? note : null;
+    }
+  );
+  const statusNote =
+    asText(record.status_note) ??
+    asText(record.status) ??
+    asText(record.message);
 
   return {
     flowStages,
     flowEvents,
     activeStage: asText(record.active_stage),
     statusNote,
-    reasoningNotes: uniqueText([...(statusNote ? [statusNote] : []), ...reasoningSteps]).slice(-8)
+    reasoningNotes: uniqueText([...(statusNote ? [statusNote] : []), ...reasoningSteps]).slice(-40)
   };
 }
 
@@ -2145,9 +2303,13 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     ...parseTelemetryErrors(data.source_errors),
     ...parseTelemetryErrors(metadata.source_errors),
     ...parseTelemetryErrors(contextDebug?.source_errors),
-    ...parseTelemetryErrors(data.fallback_reason),
     ...docErrors,
     ...sourceReasoningErrors
+  ]);
+  const fallbackInfo = uniqueText([
+    ...parseTelemetryErrors(data.fallback_reason),
+    ...parseTelemetryErrors(metadata.fallback_reason),
+    ...parseTelemetryErrors(contextDebug?.fallback_reason)
   ]);
   const telemetry: ResearchTier2Telemetry = {
     keywords,
@@ -2161,8 +2323,23 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     verificationMatrix,
     contradictionSummary,
     traceMetadata,
-    errors
+    errors,
+    fallbackInfo
   };
+  const visualAssets = parseList(
+    data.visual_assets ?? data.visualAssets ?? data.images ?? metadata.visual_assets ?? metadata.visualAssets,
+    parseVisualAsset
+  );
+  const chartSpecs = parseList(
+    data.chart_specs ?? data.chartSpecs ?? metadata.chart_specs ?? metadata.chartSpecs,
+    parseChartSpec
+  );
+  const reasoningDigest = parseReasoningDigest(
+    data.reasoning_digest ??
+      data.reasoningDigest ??
+      metadata.reasoning_digest ??
+      metadata.reasoningDigest
+  );
 
   const flowEvents = parseFlowEvents(
     data.flow_events ??
@@ -2235,6 +2412,9 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       )
     },
     telemetry,
+    visualAssets,
+    chartSpecs,
+    reasoningDigest,
     verificationStatus,
     policyAction,
     fallbackUsed,

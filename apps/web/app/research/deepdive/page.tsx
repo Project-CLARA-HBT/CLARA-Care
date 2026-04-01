@@ -10,6 +10,7 @@ import PageShell from "@/components/ui/page-shell";
 import {
   createResearchConversation,
   normalizeResearchTier2,
+  ResearchExecutionMode,
   runResearchTier2
 } from "@/lib/research";
 
@@ -20,6 +21,7 @@ export default function ResearchDeepdivePage() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "failed">("idle");
   const [error, setError] = useState("");
   const [result, setResult] = useState<Tier2Result | null>(null);
+  const [selectedResearchMode, setSelectedResearchMode] = useState<ResearchExecutionMode>("deep");
 
   const flowMode = useMemo(
     () => (result ? resolveFlowModeFromResult(result) : "idle"),
@@ -37,7 +39,7 @@ export default function ResearchDeepdivePage() {
     setLastQuery(message);
 
     try {
-      const response = await runResearchTier2(message, { researchMode: "deep" });
+      const response = await runResearchTier2(message, { researchMode: selectedResearchMode });
       const normalized = normalizeResearchTier2(response);
       const nextResult: Tier2Result = { tier: "tier2", ...normalized };
       setResult(nextResult);
@@ -61,7 +63,7 @@ export default function ResearchDeepdivePage() {
   return (
     <PageShell
       title="Research Deepdive"
-      description="Chạy deep research riêng: nhập query, thực thi, nhận answer và trạng thái tối giản."
+      description="Chạy deep/deep_beta research riêng: nhập query, thực thi, nhận answer và trạng thái tối giản."
     >
       <div className="space-y-4">
         <ResearchLabNav />
@@ -83,9 +85,35 @@ export default function ResearchDeepdivePage() {
               className="min-h-[132px] w-full rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-sky-500 transition focus:ring-2 disabled:opacity-60"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-[var(--text-secondary)]">
-                Chế độ: <span className="font-semibold">Deep</span>
-              </p>
+              <fieldset className="inline-flex rounded-full border border-cyan-300/70 bg-cyan-500/10 p-1">
+                <legend className="sr-only">Chọn mode deepdive</legend>
+                <button
+                  type="button"
+                  onClick={() => setSelectedResearchMode("deep")}
+                  disabled={isRunning}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold transition",
+                    selectedResearchMode === "deep"
+                      ? "bg-cyan-500 text-white"
+                      : "text-cyan-700 dark:text-cyan-200"
+                  ].join(" ")}
+                >
+                  Deep
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedResearchMode("deep_beta")}
+                  disabled={isRunning}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold transition",
+                    selectedResearchMode === "deep_beta"
+                      ? "bg-cyan-500 text-white"
+                      : "text-cyan-700 dark:text-cyan-200"
+                  ].join(" ")}
+                >
+                  Deep Beta
+                </button>
+              </fieldset>
               <button
                 type="submit"
                 disabled={isRunning || !query.trim()}
@@ -101,6 +129,9 @@ export default function ResearchDeepdivePage() {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
               status: {status}
+            </span>
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
+              mode: {selectedResearchMode === "deep_beta" ? "DEEP BETA" : "DEEP"}
             </span>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
               flow: {flowMode}

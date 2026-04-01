@@ -74,7 +74,7 @@ export default function AdminAnswerFlowPanel() {
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Answer Flow Block</p>
             <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">CLARA Research Flow Visualizer</h3>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-              Bản đồ runtime cho pipeline research thật: session guard, legal hard guard, planner, deep research, retrieval, verification và responder.
+              Bản đồ runtime cho pipeline research thật: session guard, legal hard guard, planner, deep/deep_beta, retrieval, verification và responder.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

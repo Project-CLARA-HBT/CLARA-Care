@@ -47,11 +47,11 @@ class Settings(BaseSettings):
         validation_alias="DEEPSEEK_REQUIRED",
     )
     deepseek_timeout_seconds: float = Field(
-        default=30.0,
+        default=45.0,
         validation_alias=AliasChoices("DEEPSEEK_TIMEOUT_SECONDS", "DEEPSEEK_TIMEOUT"),
     )
     deepseek_retries_per_base: int = Field(
-        default=1,
+        default=2,
         validation_alias="DEEPSEEK_RETRIES_PER_BASE",
         ge=0,
         le=5,

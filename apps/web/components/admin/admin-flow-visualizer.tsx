@@ -17,6 +17,10 @@ export type FlowNodeId =
   | "query_decomposition"
   | "retrieval_orchestrator"
   | "deep_research"
+  | "deep_beta_router"
+  | "deep_beta_hypothesis"
+  | "deep_beta_critic"
+  | "deep_beta_consensus"
   | "retrieval_internal"
   | "retrieval_scientific"
   | "retrieval_web"
@@ -185,6 +189,46 @@ const NODES: FlowNodeDef[] = [
     tone: "amber",
   },
   {
+    id: "deep_beta_router",
+    title: "Deep Beta Router",
+    subtitle: "adaptive branch selection",
+    description: "Bật nhánh deep_beta cho truy vấn khó: tăng depth budget, chọn critic profile và strategy động.",
+    riskNote: "Nếu route nhầm sang deep_beta sẽ đội chi phí; nếu bỏ qua sẽ mất nhánh suy luận nâng cao.",
+    x: 1640,
+    y: 220,
+    tone: "indigo",
+  },
+  {
+    id: "deep_beta_hypothesis",
+    title: "Deep Beta Hypothesis Graph",
+    subtitle: "claim lattice + uncertainty probes",
+    description: "Xây đồ thị giả thuyết, mở rộng phản giả thuyết và đánh dấu vùng bất định cần truy xuất thêm.",
+    riskNote: "Không có hypothesis graph thì deep_beta khó vượt chất lượng của deep cũ.",
+    x: 1640,
+    y: 470,
+    tone: "indigo",
+  },
+  {
+    id: "deep_beta_critic",
+    title: "Deep Beta Critic Loop",
+    subtitle: "cross-source critique passes",
+    description: "Chạy critic pass để bẻ gãy lập luận yếu, buộc pipeline thu thập bằng chứng phản biện.",
+    riskNote: "Nếu critic loop quá nhẹ, output vẫn có nguy cơ overconfident trên evidence mỏng.",
+    x: 2000,
+    y: 220,
+    tone: "amber",
+  },
+  {
+    id: "deep_beta_consensus",
+    title: "Deep Beta Consensus",
+    subtitle: "merge verdict + retrieval focus",
+    description: "Hợp nhất kết quả critic/hypothesis thành kế hoạch retrieval và verification tập trung hơn.",
+    riskNote: "Consensus sai sẽ lan lỗi sang verification và citation selection.",
+    x: 2000,
+    y: 380,
+    tone: "teal",
+  },
+  {
     id: "retrieval_internal",
     title: "Internal Corpus",
     subtitle: "Seed docs, source hub, uploaded files",
@@ -264,7 +308,7 @@ const NODES: FlowNodeDef[] = [
     description: "Đối chiếu claim với retrieved evidence, đo coverage và phát hiện mâu thuẫn.",
     riskNote: "Không có verification thì không biết câu trả lời grounded đến mức nào.",
     x: 2000,
-    y: 500,
+    y: 560,
     tone: "indigo",
     toggleKey: "verification_enabled",
   },
@@ -364,9 +408,18 @@ const EDGES: FlowEdgeDef[] = [
   { from: "query_canonicalizer", to: "planner", bend: -64 },
   { from: "planner", to: "query_decomposition", bend: 46, label: "decompose" },
   { from: "planner", to: "deep_research", bend: -170, label: "deep mode" },
+  { from: "planner", to: "deep_beta_router", bend: -250, label: "deep_beta mode" },
   { from: "planner", to: "retrieval_orchestrator", bend: 150 },
   { from: "query_decomposition", to: "deep_research", bend: -88 },
+  { from: "query_decomposition", to: "deep_beta_router", bend: -160 },
   { from: "query_decomposition", to: "retrieval_orchestrator", bend: 48 },
+  { from: "deep_research", to: "deep_beta_router", bend: -118, label: "beta escalation" },
+  { from: "deep_beta_router", to: "deep_beta_hypothesis", bend: 48 },
+  { from: "deep_beta_hypothesis", to: "deep_beta_critic", bend: -92, label: "critic pass" },
+  { from: "deep_beta_critic", to: "deep_beta_consensus", bend: 24, label: "consensus" },
+  { from: "deep_beta_consensus", to: "retrieval_scientific", bend: 108, label: "targeted retrieval" },
+  { from: "deep_beta_consensus", to: "verification", bend: 24 },
+  { from: "deep_beta_consensus", to: "citation_selection", bend: -36 },
   { from: "retrieval_orchestrator", to: "retrieval_internal", bend: -120 },
   { from: "retrieval_orchestrator", to: "retrieval_scientific", bend: -40 },
   { from: "retrieval_orchestrator", to: "retrieval_web", bend: 30 },
@@ -531,14 +584,14 @@ export default function AdminFlowVisualizer({
       <div className="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-            Research Control Tower
+            CLARA Research Flow Visualizer
           </p>
           <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
-            CLARA Research Flow Visualizer
+            Runtime Canvas: Deep + Deep Beta
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
             Canvas mới mô tả pipeline deep research nâng cấp: safety/legal ingress, query canonicalization,
-            decomposition, retrieval orchestration, contradiction mining, verification và feedback loop.
+            deep_beta critic loop, retrieval orchestration, contradiction mining, verification và feedback loop.
           </p>
         </div>
 

@@ -156,6 +156,7 @@ _uploaded_research_lock = Lock()
 _research_job_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="research-tier2")
 _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
+_RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 
 
 def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -437,6 +438,83 @@ def _get_user_by_token(db: Session, token: TokenPayload) -> User:
     return user
 
 
+def _normalize_research_mode_value(raw_mode: Any, *, default: str = "fast") -> str:
+    normalized = str(raw_mode or "").strip().lower().replace("-", "_")
+    if normalized in {"deep", "deep_research", "long"}:
+        return "deep"
+    if normalized in {"deep_beta", "deepbeta"}:
+        return "deep_beta"
+    if normalized in _RESEARCH_MODE_ALLOWED:
+        return normalized
+    return default
+
+
+def _canonicalize_research_payload_contract(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    metadata_obj = normalized.get("metadata")
+    if not isinstance(metadata_obj, dict):
+        metadata_obj = None
+
+    has_mode_signal = (
+        ("research_mode" in normalized)
+        or ("mode" in normalized)
+        or (metadata_obj is not None and metadata_obj.get("research_mode") is not None)
+    )
+    if has_mode_signal:
+        mode = _normalize_research_mode_value(
+            normalized.get("research_mode")
+            or normalized.get("mode")
+            or (metadata_obj.get("research_mode") if metadata_obj is not None else None),
+            default="fast",
+        )
+        normalized["research_mode"] = mode
+        if metadata_obj is not None:
+            metadata_obj["research_mode"] = mode
+
+    fallback_reason = normalized.get("fallback_reason")
+    if (not isinstance(fallback_reason, str) or not fallback_reason.strip()) and (
+        metadata_obj is not None
+    ):
+        metadata_reason = metadata_obj.get("fallback_reason")
+        if isinstance(metadata_reason, str) and metadata_reason.strip():
+            fallback_reason = metadata_reason.strip()
+            normalized["fallback_reason"] = fallback_reason
+        else:
+            fallback_reason = ""
+    elif isinstance(fallback_reason, str):
+        fallback_reason = fallback_reason.strip()
+        if fallback_reason:
+            normalized["fallback_reason"] = fallback_reason
+    else:
+        fallback_reason = ""
+
+    has_fallback_signal = (
+        any(key in normalized for key in ("fallback", "fallback_used", "fallback_reason"))
+        or (
+            metadata_obj is not None
+            and any(
+                key in metadata_obj for key in ("fallback", "fallback_used", "fallback_reason")
+            )
+        )
+    )
+    if has_fallback_signal:
+        fallback_used = bool(
+            normalized.get("fallback_used")
+            or (metadata_obj.get("fallback_used") if metadata_obj is not None else False)
+            or normalized.get("fallback")
+            or fallback_reason
+        )
+        normalized["fallback_used"] = fallback_used
+        if "fallback" in normalized or fallback_used:
+            normalized["fallback"] = fallback_used
+        if metadata_obj is not None:
+            metadata_obj["fallback_used"] = fallback_used
+            if fallback_reason:
+                metadata_obj["fallback_reason"] = fallback_reason
+
+    return normalized
+
+
 def _coerce_stored_result(raw_text: str) -> dict[str, Any]:
     stripped = raw_text.strip()
     if not stripped:
@@ -460,6 +538,8 @@ def _coerce_stored_result(raw_text: str) -> dict[str, Any]:
                 "flowEvents",
                 "flow_events",
                 "telemetry",
+                "research_mode",
+                "deep_pass_count",
                 "source_attempts",
                 "source_errors",
                 "fallback_reason",
@@ -469,6 +549,9 @@ def _coerce_stored_result(raw_text: str) -> dict[str, Any]:
             result = {"tier": "tier2", **result}
         else:
             result = {"tier": "tier1", **result}
+    tier = str(result.get("tier") or "").strip().lower()
+    if tier == "tier2":
+        return _canonicalize_research_payload_contract(result)
     return result
 
 
@@ -523,6 +606,8 @@ def _validate_result_payload(result: dict[str, Any]) -> dict[str, Any]:
             detail="result.tier phải là 'tier1' hoặc 'tier2'.",
         )
     payload["tier"] = tier
+    if tier == "tier2":
+        payload = _canonicalize_research_payload_contract(payload)
     return payload
 
 
@@ -724,10 +809,10 @@ def _extract_source_ids(payload: dict[str, Any]) -> list[int]:
 
 
 def _coerce_research_mode(payload: dict[str, Any]) -> str:
-    raw_mode = str(payload.get("research_mode") or payload.get("mode") or "fast").strip().lower()
-    if raw_mode in {"deep", "deep_research", "long"}:
-        return "deep"
-    return "fast"
+    return _normalize_research_mode_value(
+        payload.get("research_mode") or payload.get("mode"),
+        default="fast",
+    )
 
 
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1286,7 +1371,7 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(normalized.get("render_hints"), dict):
         normalized["render_hints"] = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
 
-    return normalized
+    return _canonicalize_research_payload_contract(normalized)
 
 
 def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
@@ -1340,11 +1425,8 @@ def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
 
 
 def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
-    metadata_obj = (
-        normalized.get("metadata")
-        if isinstance(normalized.get("metadata"), dict)
-        else {}
-    )
+    normalized = _canonicalize_research_payload_contract(normalized)
+    metadata_obj = normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
     telemetry_obj = (
         normalized.get("telemetry")
         if isinstance(normalized.get("telemetry"), dict)
@@ -1364,13 +1446,13 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
     )
     if "source_errors" not in normalized and source_errors:
         normalized["source_errors"] = source_errors
-    mode = str(
-        normalized.get("research_mode")
-        or metadata_obj.get("research_mode")
-        or "fast"
-    ).strip().lower()
-    if mode not in {"fast", "deep"}:
-        mode = "fast"
+    mode = _normalize_research_mode_value(
+        normalized.get("research_mode") or metadata_obj.get("research_mode"),
+        default="fast",
+    )
+    normalized["research_mode"] = mode
+    if isinstance(metadata_obj, dict):
+        metadata_obj["research_mode"] = mode
 
     sources = [
         {
@@ -1395,8 +1477,12 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
         or normalized.get("fallback")
         or fallback_reason
     )
-    if fallback_used:
-        normalized["fallback"] = True
+    if "fallback" in normalized or fallback_used:
+        normalized["fallback"] = fallback_used
+    normalized["fallback_used"] = fallback_used
+    metadata_obj["fallback_used"] = fallback_used
+    if fallback_reason:
+        metadata_obj["fallback_reason"] = fallback_reason
 
     attribution = build_attribution(
         channel="research",
@@ -1419,6 +1505,8 @@ def _build_tier2_upstream_payload(
 ) -> dict[str, Any]:
     settings = get_settings()
     upstream_payload = dict(payload)
+    if "research_mode" in upstream_payload or "mode" in upstream_payload:
+        upstream_payload["research_mode"] = _coerce_research_mode(upstream_payload)
     upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
     upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
     incoming_render_hints = upstream_payload.get("render_hints")
@@ -1678,7 +1766,7 @@ def _run_research_job(job_id: str) -> None:
                     "heartbeat_seq": bucket,
                     "phase": phase,
                     "progress_percent": progress_percent,
-                    "research_mode": str(request_payload.get("research_mode") or "deep"),
+                    "research_mode": _coerce_research_mode(request_payload),
                     "source_mode": str(request_payload.get("source_mode") or "hybrid"),
                 },
             )

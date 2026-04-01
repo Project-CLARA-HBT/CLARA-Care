@@ -62,6 +62,8 @@ def _normalize_research_mode(payload: dict[str, Any]) -> str:
         .strip()
         .lower()
     )
+    if raw_mode in {"deep_beta", "deep-beta", "deepbeta", "beta"}:
+        return "deep_beta"
     if raw_mode in {"deep", "deep_research", "long"}:
         return "deep"
     return "fast"
@@ -201,6 +203,18 @@ def _build_source_aware_query_plan(
         ],
         limit=12,
     )
+    deep_beta_queries = _dedupe_query_list(
+        [
+            *deep_queries,
+            f"{canonical_query} dose-adjusted subgroup evidence chronic kidney disease liver impairment",
+            f"{canonical_query} pharmacovigilance post-marketing safety signal trend",
+            f"{canonical_query} disagreement analysis by trial design and endpoint definitions",
+            f"{canonical_query} guideline divergence and implementation constraints primary care",
+            f"{canonical_query} monitoring algorithm threshold escalation and stop criteria",
+            f"{canonical_query} unresolved evidence gaps and pragmatic fallback protocol",
+        ],
+        limit=14,
+    )
     fast_queries = _dedupe_query_list([canonical_query, original_query, " ".join(keyword_terms[:6])], limit=4)
 
     return {
@@ -217,6 +231,7 @@ def _build_source_aware_query_plan(
         "decomposition": {
             "fast_pass_queries": fast_queries,
             "deep_pass_queries": deep_queries,
+            "deep_beta_pass_queries": deep_beta_queries,
         },
         "research_mode": research_mode,
         "query_terms": keyword_terms[:10],
@@ -252,6 +267,69 @@ def _build_plan_steps(
             output="Actionable recommendations with safety notes.",
         ),
     ]
+    if research_mode == "deep_beta":
+        return [
+            base_steps[0],
+            PlanStep(
+                step="decompose_research",
+                objective=(
+                    "Break the research topic into sub-queries, hypothesis/counter-hypothesis "
+                    "pairs and evidence conflict checkpoints."
+                ),
+                output="Prioritized sub-query graph and expected directional signals.",
+            ),
+            PlanStep(
+                step="retrieval_budgeting",
+                objective=(
+                    "Allocate explicit retrieval budget by source type, pass index and "
+                    "quality threshold."
+                ),
+                output="Pass-level retrieval budgets and source coverage targets.",
+            ),
+            PlanStep(
+                step="breadth_scan",
+                objective=(
+                    "Run a broad evidence sweep across guidelines, trials, reviews, "
+                    "drug labels and safety bulletins."
+                ),
+                output="Breadth-first evidence pool with source quality metadata.",
+            ),
+            base_steps[1],
+            PlanStep(
+                step="iterative_gap_fill",
+                objective=(
+                    "Run iterative passes to fill unresolved evidence gaps and "
+                    "edge-case caveats."
+                ),
+                output="Gap-closure notes and augmented pass summaries.",
+            ),
+            PlanStep(
+                step="counter_evidence_scan",
+                objective=(
+                    "Search explicitly for contradictory findings, subgroup caveats "
+                    "and negative outcomes."
+                ),
+                output="Contradiction candidates and uncertainty notes.",
+            ),
+            PlanStep(
+                step="cross_source_verification",
+                objective=(
+                    "Cross-check consistency across internal docs, scientific connectors, "
+                    "web and source trust hierarchy."
+                ),
+                output="Agreement/disagreement matrix by source and pass.",
+            ),
+            PlanStep(
+                step="reasoning_chain_audit",
+                objective=(
+                    "Audit the reasoning chain for unsupported links before synthesis."
+                ),
+                output="Reasoning-chain status with mitigation notes.",
+            ),
+            base_steps[2],
+            base_steps[3],
+        ]
+
     if research_mode != "deep":
         return base_steps
 
@@ -336,6 +414,8 @@ def _build_planner_hints(
     reason_codes: list[str] = ["tier2_standard_flow"]
     if research_mode == "deep":
         reason_codes.append("tier2_deep_mode")
+    if research_mode == "deep_beta":
+        reason_codes.append("tier2_deep_beta_mode")
     extracted_keywords = query_terms(topic)
     if has_uploaded:
         reason_codes.append("uploaded_documents_present")
@@ -360,23 +440,41 @@ def _build_planner_hints(
         hybrid_top_k += 1
 
     deep_mode = research_mode == "deep"
+    deep_beta_mode = research_mode == "deep_beta"
+    deep_like_mode = deep_mode or deep_beta_mode
     if deep_mode:
         internal_top_k = min(12, internal_top_k + 2)
         hybrid_top_k = min(12, hybrid_top_k + 3)
         target_pass_count = 9 if is_ddi_query else (8 if evidence_query else 7)
+    elif deep_beta_mode:
+        internal_top_k = min(12, internal_top_k + 4)
+        hybrid_top_k = min(12, hybrid_top_k + 5)
+        target_pass_count = 12 if is_ddi_query else (11 if evidence_query else 10)
     else:
         # Fast mode ưu tiên SLA: giới hạn fan-out retrieval để tránh timeout upstream.
         internal_top_k = min(4, max(2, internal_top_k))
         hybrid_top_k = min(5, max(3, hybrid_top_k))
         target_pass_count = 1
-    # Web crawl chỉ bật mặc định ở deep mode để giảm latency dao động ở fast mode.
-    web_enabled = bool(deep_mode)
-    if not deep_mode and (evidence_query or is_ddi_query):
+    # Web crawl chỉ bật mặc định ở deep/deep_beta để giảm latency dao động ở fast mode.
+    web_enabled = bool(deep_like_mode)
+    if not deep_like_mode and (evidence_query or is_ddi_query):
         reason_codes.append("fast_mode_latency_guard")
 
-    scientific_enabled = bool(deep_mode)
+    scientific_enabled = bool(deep_like_mode)
     if not scientific_enabled and evidence_query:
         reason_codes.append("fast_scientific_disabled_for_sla")
+
+    retrieval_budget = {
+        "mode": research_mode,
+        "target_pass_count": max(1, min(12, target_pass_count)),
+        "internal_top_k": max(1, min(12, internal_top_k)),
+        "hybrid_top_k": max(1, min(12, hybrid_top_k)),
+        "estimated_max_documents": max(1, min(12, hybrid_top_k))
+        * max(1, min(12, target_pass_count)),
+        "scientific_retrieval_enabled": scientific_enabled,
+        "web_retrieval_enabled": web_enabled,
+        "file_retrieval_enabled": True,
+    }
 
     return {
         "internal_top_k": max(1, min(12, internal_top_k)),
@@ -393,9 +491,16 @@ def _build_planner_hints(
         "research_mode": research_mode,
         "deep_pass_count": target_pass_count,
         "reasoning_style": (
-            "agentic_deep_research_v2" if deep_mode else "targeted_fast_research_v1"
+            (
+                "agentic_deep_research_beta_v1"
+                if deep_beta_mode
+                else "agentic_deep_research_v2"
+                if deep_mode
+                else "targeted_fast_research_v1"
+            )
         ),
         "ddi_critical_query": is_ddi_critical_query,
+        "retrieval_budget": retrieval_budget,
     }
 
 
@@ -998,6 +1103,89 @@ def _deep_research_methodology(*, topic: str, subqueries: list[str]) -> dict[str
     }
 
 
+def _deep_beta_research_methodology(
+    *,
+    topic: str,
+    subqueries: list[str],
+    retrieval_budget: dict[str, Any],
+) -> dict[str, Any]:
+    base = _deep_research_methodology(topic=topic, subqueries=subqueries)
+    return {
+        **base,
+        "id": "agentic-deep-research-beta-v1",
+        "query": topic,
+        "retrieval_budget": retrieval_budget,
+        "inspired_patterns": [
+            *base.get("inspired_patterns", []),
+            "retrieval_budgeting",
+            "iterative_gap_fill",
+            "reasoning_chain_audit",
+        ],
+        "stages": [
+            {
+                "name": "beta_scope_lock",
+                "goal": "Khoá phạm vi lâm sàng, giả định và tiêu chí loại trừ ngay từ đầu.",
+            },
+            {
+                "name": "beta_hypothesis_map",
+                "goal": "Tạo bản đồ giả thuyết/chống giả thuyết kèm bằng chứng kỳ vọng.",
+            },
+            {
+                "name": "beta_budgeted_retrieval",
+                "goal": "Phân bổ ngân sách retrieval theo pass/source và chạy multi-pass.",
+            },
+            {
+                "name": "beta_reasoning_chain",
+                "goal": "Liên kết bằng chứng-pass thành chuỗi lập luận có kiểm lỗi.",
+            },
+            {
+                "name": "beta_chain_verification",
+                "goal": "Đánh dấu mắt xích yếu, mâu thuẫn và mức tự tin cuối.",
+            },
+        ],
+    }
+
+
+def _build_deep_beta_reasoning_steps(*, topic: str, subqueries: list[str]) -> list[dict[str, Any]]:
+    return [
+        {
+            "stage": "deep_beta_scope",
+            "status": "pending",
+            "objective": "Lock scope, safety boundaries and exclusions for the beta chain.",
+            "subquery": subqueries[0] if subqueries else topic,
+        },
+        {
+            "stage": "deep_beta_hypothesis_map",
+            "status": "pending",
+            "objective": "Map main/counter hypotheses with expected supporting evidence.",
+            "subquery": subqueries[1] if len(subqueries) > 1 else topic,
+        },
+        {
+            "stage": "deep_beta_retrieval_budget",
+            "status": "pending",
+            "objective": "Allocate retrieval budgets and quality thresholds across passes.",
+            "subquery": subqueries[2] if len(subqueries) > 2 else topic,
+        },
+        {
+            "stage": "deep_beta_multi_pass_retrieval",
+            "status": "pending",
+            "objective": "Run iterative retrieval passes and close evidence gaps.",
+            "subquery": subqueries[3] if len(subqueries) > 3 else topic,
+        },
+        {
+            "stage": "deep_beta_chain_synthesis",
+            "status": "pending",
+            "objective": "Build synthesis chain from pass-level evidence summaries.",
+            "subquery": subqueries[4] if len(subqueries) > 4 else topic,
+        },
+        {
+            "stage": "deep_beta_chain_verification",
+            "status": "pending",
+            "objective": "Validate chain consistency, contradictions and uncertainty.",
+            "subquery": subqueries[5] if len(subqueries) > 5 else topic,
+        },
+    ]
+
 def _resolve_deep_pass_count(payload: dict[str, Any], default_count: int) -> int:
     metadata_obj = payload.get("metadata")
     metadata = metadata_obj if isinstance(metadata_obj, dict) else {}
@@ -1309,6 +1497,27 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     deep_pass_summaries: list[dict[str, Any]] = []
     deep_pass_contexts: list[list[dict[str, Any]]] = []
     deep_pass_flow_events: list[dict[str, Any]] = []
+    deep_beta_reasoning_steps: list[dict[str, Any]] = []
+    deep_beta_retrieval_budgets: dict[str, Any] = {}
+    deep_beta_chain_status: dict[str, Any] = {}
+
+    def _update_beta_reasoning_step(
+        *,
+        stage: str,
+        status: str,
+        note: str,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        if not deep_beta_reasoning_steps:
+            return
+        for item in deep_beta_reasoning_steps:
+            if str(item.get("stage")) != stage:
+                continue
+            item["status"] = status
+            item["note"] = note
+            if isinstance(payload, dict) and payload:
+                item["payload"] = payload
+            break
 
     if research_mode == "deep":
         query_plan = (
@@ -1500,6 +1709,411 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 },
             )
         )
+    elif research_mode == "deep_beta":
+        query_plan = (
+            planner_hints.get("query_plan")
+            if isinstance(planner_hints.get("query_plan"), dict)
+            else {}
+        )
+        decomposition = (
+            query_plan.get("decomposition") if isinstance(query_plan.get("decomposition"), dict) else {}
+        )
+        deep_seed_queries = (
+            decomposition.get("deep_beta_pass_queries")
+            if isinstance(decomposition.get("deep_beta_pass_queries"), list)
+            else decomposition.get("deep_pass_queries")
+            if isinstance(decomposition.get("deep_pass_queries"), list)
+            else []
+        )
+        subqueries = _build_deep_subqueries(
+            str(query_plan.get("canonical_query") or topic),
+            planner_hints.get("keywords", []),
+            deep_pass_count,
+            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+        )
+        deep_subqueries = subqueries
+        deep_beta_retrieval_budgets = {
+            **(
+                planner_hints.get("retrieval_budget")
+                if isinstance(planner_hints.get("retrieval_budget"), dict)
+                else {}
+            ),
+            "mode": "deep_beta",
+            "target_pass_count": len(subqueries),
+            "allocated_pass_count": len(subqueries),
+            "per_pass_doc_target": max(4, min(12, _safe_int(planner_hints.get("hybrid_top_k"), 8))),
+            "max_total_docs": max(4, min(12, _safe_int(planner_hints.get("hybrid_top_k"), 8)))
+            * max(len(subqueries), 1),
+        }
+        deep_research_method = _deep_beta_research_methodology(
+            topic=topic,
+            subqueries=subqueries,
+            retrieval_budget=deep_beta_retrieval_budgets,
+        )
+        deep_research_profiles = [
+            {
+                "profile": "beta_scope_lock",
+                "goal": "Khoá phạm vi và điều kiện loại trừ ngay từ đầu.",
+                "subquery": subqueries[0] if len(subqueries) > 0 else topic,
+            },
+            {
+                "profile": "beta_hypothesis_map",
+                "goal": "Lập bản đồ giả thuyết/chống giả thuyết theo hướng bằng chứng.",
+                "subquery": subqueries[1] if len(subqueries) > 1 else topic,
+            },
+            {
+                "profile": "beta_budgeted_recall",
+                "goal": "Mở rộng retrieval theo ngân sách pass/source.",
+                "subquery": subqueries[2] if len(subqueries) > 2 else topic,
+            },
+            {
+                "profile": "beta_gap_fill",
+                "goal": "Lấp khoảng trống bằng chứng sau mỗi pass.",
+                "subquery": subqueries[3] if len(subqueries) > 3 else topic,
+            },
+            {
+                "profile": "beta_counter_evidence",
+                "goal": "Tập trung tìm bằng chứng trái chiều và ngoại lệ.",
+                "subquery": subqueries[4] if len(subqueries) > 4 else topic,
+            },
+            {
+                "profile": "beta_chain_synthesis",
+                "goal": "Xây chuỗi lập luận từ bằng chứng đa pass.",
+                "subquery": subqueries[5] if len(subqueries) > 5 else topic,
+            },
+            {
+                "profile": "beta_chain_validation",
+                "goal": "Đánh dấu mắt xích yếu và mức độ chắc chắn.",
+                "subquery": subqueries[6] if len(subqueries) > 6 else topic,
+            },
+        ]
+        deep_beta_reasoning_steps = _build_deep_beta_reasoning_steps(topic=topic, subqueries=subqueries)
+        deep_beta_chain_status = {
+            "mode": "deep_beta",
+            "status": "running",
+            "completed_steps": 0,
+            "total_steps": len(deep_beta_reasoning_steps),
+            "current_stage": "deep_beta_scope",
+        }
+
+        flow_events.append(
+            _event(
+                stage="deep_beta_scope",
+                status="started",
+                source_count=0,
+                note="Deep beta stage started: scope lock.",
+                component="planner",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "profiles": deep_research_profiles,
+                    "methodology": deep_research_method,
+                },
+            )
+        )
+        _update_beta_reasoning_step(
+            stage="deep_beta_scope",
+            status="completed",
+            note="Scope lock completed.",
+            payload={"topic": topic},
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": 1,
+                "current_stage": "deep_beta_hypothesis_map",
+            }
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_scope",
+                status="completed",
+                source_count=0,
+                note="Deep beta scope locked.",
+                component="planner",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                },
+            )
+        )
+
+        flow_events.append(
+            _event(
+                stage="deep_beta_hypothesis_map",
+                status="started",
+                source_count=0,
+                note="Deep beta stage started: hypothesis map.",
+                component="planner",
+                payload={
+                    "profiles": deep_research_profiles,
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                },
+            )
+        )
+        _update_beta_reasoning_step(
+            stage="deep_beta_hypothesis_map",
+            status="completed",
+            note="Hypothesis map completed.",
+            payload={"profiles": deep_research_profiles},
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": 2,
+                "current_stage": "deep_beta_retrieval_budget",
+            }
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_hypothesis_map",
+                status="completed",
+                source_count=0,
+                note="Deep beta hypothesis map completed.",
+                component="planner",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "profiles": deep_research_profiles,
+                    "chain_status": deep_beta_chain_status,
+                },
+            )
+        )
+
+        flow_events.append(
+            _event(
+                stage="deep_beta_retrieval_budget",
+                status="started",
+                source_count=0,
+                note="Deep beta stage started: retrieval budgeting.",
+                component="planner",
+                payload={"retrieval_budgets": deep_beta_retrieval_budgets},
+            )
+        )
+        _update_beta_reasoning_step(
+            stage="deep_beta_retrieval_budget",
+            status="completed",
+            note="Retrieval budget allocated.",
+            payload=deep_beta_retrieval_budgets,
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": 3,
+                "current_stage": "deep_beta_multi_pass_retrieval",
+            }
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_retrieval_budget",
+                status="completed",
+                source_count=0,
+                note="Deep beta retrieval budget allocated.",
+                component="planner",
+                payload={
+                    "retrieval_budgets": deep_beta_retrieval_budgets,
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                },
+            )
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_multi_pass_retrieval",
+                status="started",
+                source_count=0,
+                note=f"Deep beta multi-pass retrieval started ({len(subqueries)} pass(es)).",
+                component="retrieval",
+                payload={
+                    "pass_count": len(subqueries),
+                    "subqueries": subqueries,
+                    "retrieval_budgets": deep_beta_retrieval_budgets,
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                },
+            )
+        )
+
+        for pass_index, subquery in enumerate(subqueries, start=1):
+            pass_started = perf_counter()
+            deep_pass_flow_events.append(
+                _event(
+                    stage="deep_beta_retrieval_pass",
+                    status="started",
+                    source_count=0,
+                    note=f"Deep beta retrieval pass {pass_index} started.",
+                    component="retrieval",
+                    payload={
+                        "pass_index": pass_index,
+                        "subquery": subquery,
+                        "retrieval_budgets": deep_beta_retrieval_budgets,
+                    },
+                )
+            )
+            pass_result = pipeline.run(
+                subquery,
+                low_context_threshold=float(planner_hints["low_context_threshold"]),
+                deepseek_fallback_enabled=deepseek_fallback_enabled,
+                scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
+                web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
+                file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
+                rag_sources=rag_sources,
+                uploaded_documents=uploaded_documents,
+                planner_hints={
+                    **planner_hints,
+                    "query_focus": f"deep_beta_pass_{pass_index}",
+                    "reason_codes": [
+                        *planner_hints.get("reason_codes", []),
+                        f"deep_beta_pass_{pass_index}",
+                    ],
+                    "retrieval_budget": deep_beta_retrieval_budgets,
+                },
+                generation_enabled=False,
+                strict_deepseek_required=strict_deepseek_required,
+            )
+            pass_trace = (
+                pass_result.trace.get("retrieval")
+                if isinstance(pass_result.trace.get("retrieval"), dict)
+                else {}
+            )
+            pass_source_attempts = (
+                pass_trace.get("source_attempts")
+                if isinstance(pass_trace.get("source_attempts"), list)
+                else []
+            )
+            pass_index_summary = (
+                pass_trace.get("index_summary")
+                if isinstance(pass_trace.get("index_summary"), dict)
+                else {}
+            )
+            pass_crawl_summary = (
+                pass_trace.get("crawl_summary")
+                if isinstance(pass_trace.get("crawl_summary"), dict)
+                else {}
+            )
+            retriever_debug = (
+                pass_trace.get("hybrid")
+                if isinstance(pass_trace.get("hybrid"), dict)
+                else pass_trace.get("internal")
+                if isinstance(pass_trace.get("internal"), dict)
+                else {}
+            )
+            deep_pass_contexts.append(pass_result.retrieved_context)
+            deep_pass_summaries.append(
+                {
+                    "pass_index": pass_index,
+                    "subquery": subquery,
+                    "retrieved_count": len(pass_result.retrieved_ids),
+                    "doc_ids": list(pass_result.retrieved_ids[:8]),
+                    "relevance": pass_result.context_debug.get("relevance")
+                    if isinstance(pass_result.context_debug, dict)
+                    else None,
+                    "duration_ms": round((perf_counter() - pass_started) * 1000.0, 3),
+                    "source_errors": retriever_debug.get("source_errors", {})
+                    if isinstance(retriever_debug, dict)
+                    else {},
+                    "source_attempts": pass_source_attempts,
+                    "index_summary": pass_index_summary,
+                    "crawl_summary": pass_crawl_summary,
+                    "reasoning_focus": f"deep_beta_pass_{pass_index}",
+                    "budget_target_docs": deep_beta_retrieval_budgets.get("per_pass_doc_target"),
+                }
+            )
+            source_errors = (
+                deep_pass_summaries[-1].get("source_errors")
+                if isinstance(deep_pass_summaries[-1].get("source_errors"), dict)
+                else {}
+            )
+            duration_ms = round((perf_counter() - pass_started) * 1000.0, 3)
+            deep_pass_flow_events.extend(
+                _normalize_retrieval_events(
+                    pass_result.flow_events, default_component="deep_beta_retrieval"
+                )
+            )
+            deep_pass_flow_events.append(
+                _event(
+                    stage="deep_beta_retrieval_pass",
+                    status="completed",
+                    source_count=len(pass_result.retrieved_ids),
+                    note=f"Deep beta retrieval pass {pass_index} completed.",
+                    component="retrieval",
+                    payload={
+                        "pass_index": pass_index,
+                        "subquery": subquery,
+                        "docs_found": list(pass_result.retrieved_ids[:8]),
+                        "retrieved_count": len(pass_result.retrieved_ids),
+                        "duration_ms": duration_ms,
+                        "source_errors": source_errors,
+                        "pass_summary": deep_pass_summaries[-1],
+                    },
+                    started_at=pass_started,
+                )
+            )
+
+        _update_beta_reasoning_step(
+            stage="deep_beta_multi_pass_retrieval",
+            status="completed",
+            note="All deep beta retrieval passes completed.",
+            payload={
+                "pass_count": len(deep_pass_summaries),
+                "pass_summaries": deep_pass_summaries,
+            },
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": 4,
+                "current_stage": "deep_beta_chain_synthesis",
+            }
+        )
+        flow_events.extend(deep_pass_flow_events)
+        flow_events.append(
+            _event(
+                stage="deep_beta_multi_pass_retrieval",
+                status="completed",
+                source_count=sum(item["retrieved_count"] for item in deep_pass_summaries),
+                note="Deep beta multi-pass retrieval completed.",
+                component="retrieval",
+                payload={
+                    "pass_count": len(deep_pass_summaries),
+                    "pass_summaries": deep_pass_summaries,
+                    "retrieval_budgets": deep_beta_retrieval_budgets,
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                },
+            )
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_chain_synthesis",
+                status="started",
+                source_count=len(deep_pass_summaries),
+                note="Deep beta chain synthesis started.",
+                component="planner",
+                payload={
+                    "pass_summaries": deep_pass_summaries,
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                },
+            )
+        )
+        _update_beta_reasoning_step(
+            stage="deep_beta_chain_synthesis",
+            status="completed",
+            note="Deep beta chain synthesis prepared for final answer generation.",
+            payload={"pass_summaries": deep_pass_summaries},
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": 5,
+                "current_stage": "deep_beta_chain_verification",
+            }
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_chain_synthesis",
+                status="completed",
+                source_count=len(deep_pass_summaries),
+                note="Deep beta chain synthesis completed.",
+                component="planner",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                },
+            )
+        )
 
     rag_result = pipeline.run(
         topic,
@@ -1520,9 +2134,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     ):
         raise RuntimeError("tier2_deepseek_required_violation")
     retrieval_trace = _build_retrieval_trace(rag_result=rag_result, planner_hints=planner_hints)
-    if research_mode == "deep":
+    if research_mode in {"deep", "deep_beta"}:
         retrieval_trace["deep_pass_summaries"] = deep_pass_summaries
         retrieval_trace["deep_pass_count"] = len(deep_pass_summaries)
+    if research_mode == "deep_beta":
+        retrieval_trace["reasoning_steps"] = deep_beta_reasoning_steps
+        retrieval_trace["retrieval_budgets"] = deep_beta_retrieval_budgets
+        retrieval_trace["chain_status"] = deep_beta_chain_status
     flow_events.extend(_normalize_retrieval_events(rag_result.flow_events))
 
     merged_context = _merge_retrieved_context(rag_result.retrieved_context, deep_pass_contexts)
@@ -1639,6 +2257,21 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "contradiction_summary": contradiction_summary,
         },
     }
+    if research_mode == "deep_beta":
+        flow_events.append(
+            _event(
+                stage="deep_beta_chain_verification",
+                status="started",
+                source_count=len(deep_pass_summaries),
+                note="Deep beta chain verification started.",
+                component="verifier",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                    "pass_summaries": deep_pass_summaries,
+                },
+            )
+        )
     flow_events.append(
         _event(
             stage="verification",
@@ -1705,6 +2338,45 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             },
         )
     )
+    if research_mode == "deep_beta":
+        chain_verification_status = (
+            "warning"
+            if contradiction_summary.get("has_contradiction") or factcheck_result.verdict != "pass"
+            else "completed"
+        )
+        deep_beta_chain_status.update(
+            {
+                "completed_steps": len(deep_beta_reasoning_steps),
+                "current_stage": "deep_beta_chain_verification",
+                "status": "completed",
+                "verification_status": chain_verification_status,
+            }
+        )
+        _update_beta_reasoning_step(
+            stage="deep_beta_chain_verification",
+            status=chain_verification_status,
+            note="Deep beta chain verification completed.",
+            payload={
+                "verdict": factcheck_result.verdict,
+                "support_ratio": verification_matrix_summary.get("support_ratio"),
+                "contradiction_count": contradiction_summary.get("contradiction_count"),
+            },
+        )
+        flow_events.append(
+            _event(
+                stage="deep_beta_chain_verification",
+                status=chain_verification_status,
+                source_count=factcheck_result.evidence_count,
+                note="Deep beta chain verification completed.",
+                component="verifier",
+                payload={
+                    "reasoning_steps": deep_beta_reasoning_steps,
+                    "chain_status": deep_beta_chain_status,
+                    "summary": verification_matrix_summary,
+                    "contradiction_summary": contradiction_summary,
+                },
+            )
+        )
     flow_events.append(
         _event(
             stage="citation_selection",
@@ -1797,6 +2469,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "decomposition": {
                 "fast_pass_queries": [topic],
                 "deep_pass_queries": [topic],
+                "deep_beta_pass_queries": [topic],
             },
             "research_mode": research_mode,
         }
@@ -1866,6 +2539,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "subqueries": deep_subqueries,
             "research_mode": research_mode,
             "profiles": deep_research_profiles,
+            "retrieval_budgets": deep_beta_retrieval_budgets
+            if research_mode == "deep_beta"
+            else planner_hints.get("retrieval_budget", {}),
         },
         "source_attempts": source_attempts,
         "source_errors": aggregated_errors,
@@ -1888,8 +2564,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "source_reasoning": source_reasoning,
         "errors": aggregated_errors,
         "deep_pass_summaries": deep_pass_summaries,
+        "pass_summaries": deep_pass_summaries,
         "deep_research_profiles": deep_research_profiles,
         "deep_research_methodology": deep_research_method,
+        "reasoning_steps": deep_beta_reasoning_steps if research_mode == "deep_beta" else [],
+        "retrieval_budgets": deep_beta_retrieval_budgets if research_mode == "deep_beta" else {},
+        "chain_status": deep_beta_chain_status if research_mode == "deep_beta" else {},
         "verification_matrix": verification_matrix_payload,
     }
     citations_payload = [asdict(item) for item in citations]
@@ -1901,6 +2581,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "pipeline": (
                 "p2-research-tier2-deep-v1"
                 if research_mode == "deep"
+                else "p2-research-tier2-deep-beta-v1"
+                if research_mode == "deep_beta"
                 else "p2-research-tier2-hybrid-v2"
             ),
             "stages": [
@@ -1908,6 +2590,22 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 *(
                     [{"name": "deep_research", "status": "completed"}]
                     if research_mode == "deep"
+                    else [
+                        {"name": "deep_beta_scope", "status": "completed"},
+                        {"name": "deep_beta_hypothesis_map", "status": "completed"},
+                        {"name": "deep_beta_retrieval_budget", "status": "completed"},
+                        {"name": "deep_beta_multi_pass_retrieval", "status": retrieval_status},
+                        {"name": "deep_beta_chain_synthesis", "status": "completed"},
+                        {
+                            "name": "deep_beta_chain_verification",
+                            "status": (
+                                deep_beta_chain_status.get("verification_status", "completed")
+                                if isinstance(deep_beta_chain_status, dict)
+                                else "completed"
+                            ),
+                        },
+                    ]
+                    if research_mode == "deep_beta"
                     else []
                 ),
                 {"name": "hybrid_retrieval", "status": retrieval_status},
@@ -1936,6 +2634,14 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "flow_events": flow_events,
             "telemetry": telemetry,
             "deep_research_methodology": deep_research_method,
+            "reasoning_steps": deep_beta_reasoning_steps if research_mode == "deep_beta" else [],
+            "pass_summaries": deep_pass_summaries if research_mode == "deep_beta" else [],
+            "retrieval_budgets": (
+                deep_beta_retrieval_budgets
+                if research_mode == "deep_beta"
+                else planner_hints.get("retrieval_budget", {})
+            ),
+            "chain_status": deep_beta_chain_status if research_mode == "deep_beta" else {},
             "routing": {
                 "role": route.role,
                 "intent": route.intent,
@@ -1974,6 +2680,14 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "query_plan": query_plan,
         "research_mode": research_mode,
         "deep_pass_count": len(deep_pass_summaries),
+        "reasoning_steps": deep_beta_reasoning_steps if research_mode == "deep_beta" else [],
+        "pass_summaries": deep_pass_summaries if research_mode == "deep_beta" else [],
+        "retrieval_budgets": (
+            deep_beta_retrieval_budgets
+            if research_mode == "deep_beta"
+            else planner_hints.get("retrieval_budget", {})
+        ),
+        "chain_status": deep_beta_chain_status if research_mode == "deep_beta" else {},
         "plan_steps": [asdict(step) for step in plan_steps],
         "citations": citations_payload,
         # Backward-compat alias for clients still expecting `sources`.

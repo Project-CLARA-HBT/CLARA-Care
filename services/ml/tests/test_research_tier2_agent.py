@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from types import SimpleNamespace
 
 from clara_ml.agents import research_tier2 as tier2
 from clara_ml.rag.pipeline import RagResult
@@ -254,3 +255,256 @@ def test_run_research_tier2_emits_contradiction_miner_and_verification_matrix(mo
     assert "summary" in contradiction_event["payload"]
     assert "rows" in matrix_event["payload"]
     assert "summary" in matrix_event["payload"]
+
+
+def test_normalize_research_mode_supports_deep_beta_aliases():
+    assert tier2._normalize_research_mode({"research_mode": "deep_beta"}) == "deep_beta"
+    assert tier2._normalize_research_mode({"research_mode": "deep-beta"}) == "deep_beta"
+    assert tier2._normalize_research_mode({"research_mode": "deep"}) == "deep"
+    assert tier2._normalize_research_mode({"research_mode": "fast"}) == "fast"
+
+
+def test_build_plan_steps_deep_beta_is_longer_than_deep():
+    deep_steps = tier2._build_plan_steps(
+        "warfarin ibuprofen bleeding risk",
+        None,
+        research_mode="deep",
+    )
+    beta_steps = tier2._build_plan_steps(
+        "warfarin ibuprofen bleeding risk",
+        None,
+        research_mode="deep_beta",
+    )
+
+    assert len(beta_steps) > len(deep_steps)
+    assert any(step.step == "retrieval_budgeting" for step in beta_steps)
+    assert any(step.step == "reasoning_chain_audit" for step in beta_steps)
+
+
+def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch):
+    call_log: list[dict] = []
+
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        planner_hints = kwargs.get("planner_hints", {})
+        if not isinstance(planner_hints, dict):
+            planner_hints = {}
+        generation_enabled = bool(kwargs.get("generation_enabled", True))
+        query_focus = str(planner_hints.get("query_focus") or "")
+        doc_prefix = query_focus or "final"
+        call_log.append(
+            {
+                "query": query,
+                "generation_enabled": generation_enabled,
+                "query_focus": query_focus,
+            }
+        )
+        return RagResult(
+            query=query,
+            retrieved_ids=[f"{doc_prefix}-doc-1"],
+            answer="Tong hop bang chung beta mode.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": f"{doc_prefix}-doc-1",
+                    "source": "pubmed",
+                    "title": f"Evidence for {doc_prefix}",
+                    "text": "Clinical evidence summary for retrieval pass.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
+                    "score": 0.81,
+                }
+            ],
+            context_debug={
+                "relevance": 0.81,
+                "low_context_threshold": kwargs.get("low_context_threshold", 0.12),
+                "source_counts": {"pubmed": 1},
+                "retrieval_trace": {
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 1}
+                    ],
+                    "index_summary": {"selected_count": 1, "retrieved_count": 1},
+                    "crawl_summary": {"domains": []},
+                    "search_plan": {"query": query},
+                    "query_plan": planner_hints.get("query_plan", {}),
+                },
+            },
+            flow_events=[
+                {
+                    "stage": "index_search",
+                    "timestamp": tier2._now_iso(),
+                    "status": "completed",
+                    "source_count": 1,
+                    "note": "Index search completed.",
+                    "payload": {"provider": "pubmed", "query_focus": query_focus or "final"},
+                }
+            ],
+            trace={
+                "retrieval": {
+                    "source_attempts": [{"provider": "pubmed", "status": "completed"}],
+                    "index_summary": {"selected_count": 1, "retrieved_count": 1},
+                    "crawl_summary": {"domains": []},
+                    "hybrid": {"source_errors": {}},
+                },
+                "generation": {"mode": "llm"} if generation_enabled else {},
+            },
+        )
+
+    def _fake_factcheck(answer: str, retrieved_context: list[dict]) -> SimpleNamespace:
+        return SimpleNamespace(
+            stage="fides_lite",
+            verdict="pass",
+            severity="low",
+            confidence=0.93,
+            supported_claims=2,
+            total_claims=2,
+            unsupported_claims=[],
+            evidence_count=max(len(retrieved_context), 1),
+            note="Consistency checks passed.",
+            verification_matrix=[
+                {
+                    "claim": "Main claim",
+                    "support_status": "supported",
+                    "overlap_score": 0.91,
+                    "confidence": 0.9,
+                    "evidence_ref": "pubmed",
+                    "evidence_snippet": "Clinical evidence summary.",
+                }
+            ],
+            contradiction_summary={
+                "version": "claim-v1",
+                "has_contradiction": False,
+                "contradiction_count": 0,
+                "claims": [],
+                "details": [],
+                "note": "No contradiction detected.",
+            },
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    monkeypatch.setattr(tier2, "run_fides_lite", _fake_factcheck)
+
+    result = tier2.run_research_tier2(
+        {
+            "query": "Compare warfarin and ibuprofen bleeding-risk evidence in older adults.",
+            "research_mode": "deep_beta",
+            "deep_pass_count": 4,
+            "strict_deepseek_required": False,
+        }
+    )
+
+    assert result["research_mode"] == "deep_beta"
+    assert result["metadata"]["research_mode"] == "deep_beta"
+    assert result["metadata"]["pipeline"] == "p2-research-tier2-deep-beta-v1"
+    assert result["deep_pass_count"] == 4
+    assert len(result["pass_summaries"]) == 4
+    assert len(result["metadata"]["pass_summaries"]) == 4
+    assert len(result["telemetry"]["pass_summaries"]) == 4
+    assert isinstance(result["metadata"]["reasoning_steps"], list)
+    assert len(result["metadata"]["reasoning_steps"]) >= 6
+    assert isinstance(result["metadata"]["retrieval_budgets"], dict)
+    assert result["metadata"]["retrieval_budgets"]["target_pass_count"] == 4
+    assert isinstance(result["metadata"]["chain_status"], dict)
+    assert result["metadata"]["chain_status"]["status"] == "completed"
+
+    flow_events = result["flow_events"]
+    stages = {str(event.get("stage")) for event in flow_events}
+    assert {
+        "deep_beta_scope",
+        "deep_beta_hypothesis_map",
+        "deep_beta_retrieval_budget",
+        "deep_beta_multi_pass_retrieval",
+        "deep_beta_retrieval_pass",
+        "deep_beta_chain_synthesis",
+        "deep_beta_chain_verification",
+    }.issubset(stages)
+    assert sum(
+        1
+        for event in flow_events
+        if event.get("stage") == "deep_beta_retrieval_pass"
+        and event.get("status") == "completed"
+    ) == 4
+    assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
+
+
+def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        generation_enabled = bool(kwargs.get("generation_enabled", True))
+        return RagResult(
+            query=query,
+            retrieved_ids=["doc-deep-1"],
+            answer="Tong hop deep mode.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "doc-deep-1",
+                    "source": "pubmed",
+                    "title": "Deep evidence",
+                    "text": "Evidence summary.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/10000001/",
+                    "score": 0.85,
+                }
+            ],
+            context_debug={
+                "relevance": 0.85,
+                "low_context_threshold": kwargs.get("low_context_threshold", 0.12),
+                "source_counts": {"pubmed": 1},
+                "retrieval_trace": {
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 1}
+                    ],
+                    "index_summary": {"selected_count": 1, "retrieved_count": 1},
+                    "crawl_summary": {"domains": []},
+                    "search_plan": {"query": query},
+                },
+            },
+            flow_events=[],
+            trace={
+                "retrieval": {
+                    "source_attempts": [{"provider": "pubmed", "status": "completed"}],
+                    "index_summary": {"selected_count": 1, "retrieved_count": 1},
+                    "crawl_summary": {"domains": []},
+                    "hybrid": {"source_errors": {}},
+                },
+                "generation": {"mode": "llm"} if generation_enabled else {},
+            },
+        )
+
+    def _fake_factcheck(answer: str, retrieved_context: list[dict]) -> SimpleNamespace:
+        return SimpleNamespace(
+            stage="fides_lite",
+            verdict="pass",
+            severity="low",
+            confidence=0.9,
+            supported_claims=1,
+            total_claims=1,
+            unsupported_claims=[],
+            evidence_count=max(len(retrieved_context), 1),
+            note="OK",
+            verification_matrix=[],
+            contradiction_summary={
+                "version": "claim-v1",
+                "has_contradiction": False,
+                "contradiction_count": 0,
+                "claims": [],
+                "details": [],
+                "note": "No contradiction detected.",
+            },
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    monkeypatch.setattr(tier2, "run_fides_lite", _fake_factcheck)
+
+    result = tier2.run_research_tier2(
+        {
+            "query": "Compare warfarin and ibuprofen evidence.",
+            "research_mode": "deep",
+            "deep_pass_count": 2,
+            "strict_deepseek_required": False,
+        }
+    )
+
+    assert result["research_mode"] == "deep"
+    assert result["metadata"]["pipeline"] == "p2-research-tier2-deep-v1"
+    assert not any(
+        str(event.get("stage", "")).startswith("deep_beta")
+        for event in result.get("flow_events", [])
+    )

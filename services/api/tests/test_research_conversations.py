@@ -281,3 +281,84 @@ def test_research_conversations_infers_tier2_from_new_ml_metadata_keys() -> None
     assert items[0]["result"]["source_attempts"][0]["source"] == "pubmed"
     assert items[0]["result"]["source_errors"] == {"openfda": ["timeout"]}
     assert items[0]["result"]["fallback_reason"] == "upstream_timeout"
+
+
+def test_research_conversation_persists_canonical_deep_beta_contract() -> None:
+    token = _login("deep-beta-conversation@example.com")
+
+    create_response = client.post(
+        "/api/v1/research/conversations",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Deep beta persistence",
+            "result": {
+                "tier": "tier2",
+                "answer": "contract check",
+                "research_mode": "deep-beta",
+                "metadata": {
+                    "research_mode": "deep-beta",
+                    "fallback_reason": "upstream_timeout",
+                },
+                "source_errors": {"openfda": "timeout"},
+            },
+        },
+    )
+    assert create_response.status_code == 200
+    created = create_response.json()
+    assert created["result"]["research_mode"] == "deep_beta"
+    assert created["result"]["metadata"]["research_mode"] == "deep_beta"
+    assert created["result"]["fallback"] is True
+    assert created["result"]["fallback_used"] is True
+    assert created["result"]["metadata"]["fallback_used"] is True
+    assert created["result"]["fallback_reason"] == "upstream_timeout"
+
+    with SessionLocal() as db:
+        row = db.query(QueryModel).filter(QueryModel.id == created["query_id"]).first()
+        assert row is not None
+        stored = json.loads(row.response_text)
+    stored_result = stored["result"]
+    assert stored_result["research_mode"] == "deep_beta"
+    assert stored_result["metadata"]["research_mode"] == "deep_beta"
+    assert stored_result["fallback"] is True
+    assert stored_result["fallback_used"] is True
+    assert stored_result["metadata"]["fallback_used"] is True
+
+
+def test_research_conversations_infers_tier2_when_research_mode_is_deep_beta() -> None:
+    token = _login("deep-beta-legacy@example.com")
+
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.email == "deep-beta-legacy@example.com").first()
+        assert user is not None
+        session_obj = SessionModel(user_id=user.id, title="deep beta legacy")
+        db.add(session_obj)
+        db.flush()
+        payload = json.dumps(
+            {
+                "result": {
+                    "answer": "legacy deep beta",
+                    "research_mode": "deep_beta",
+                    "metadata": {"research_mode": "deep_beta"},
+                }
+            }
+        )
+        db.add(
+            QueryModel(
+                session_id=session_obj.id,
+                role="normal",
+                user_input="deep beta legacy query",
+                response_text=payload,
+            )
+        )
+        db.commit()
+
+    list_response = client.get(
+        "/api/v1/research/conversations",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert list_response.status_code == 200
+    items = list_response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["tier"] == "tier2"
+    assert items[0]["result"]["tier"] == "tier2"
+    assert items[0]["result"]["research_mode"] == "deep_beta"

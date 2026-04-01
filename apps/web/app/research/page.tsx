@@ -47,6 +47,12 @@ const ADVANCED_LINKS: Array<{ href: string; label: string }> = [
   { href: "/research/details", label: "Details" }
 ];
 
+const RESEARCH_MODE_OPTIONS: Array<{ id: ResearchExecutionMode; label: string }> = [
+  { id: "fast", label: "Fast" },
+  { id: "deep", label: "Deep" },
+  { id: "deep_beta", label: "Deep Beta" }
+];
+
 const EMPTY_TELEMETRY = {
   keywords: [],
   searchPlan: { keywords: [], subqueries: [], connectors: [] },
@@ -59,8 +65,14 @@ const EMPTY_TELEMETRY = {
   verificationMatrix: [],
   contradictionSummary: undefined,
   traceMetadata: {},
-  errors: []
+  errors: [],
+  fallbackInfo: []
 };
+
+const JOB_FETCH_RETRY_ATTEMPTS = 3;
+const JOB_FETCH_RETRY_BACKOFF_MS = 600;
+const JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS = 5;
+const JOB_COMPLETED_RESULT_REFETCH_MS = 900;
 
 function isAttemptLikelyFailed(status?: string, hasError?: boolean): boolean {
   if (hasError) return true;
@@ -99,6 +111,42 @@ function buildTier2MetaSummary(result: Extract<ResearchResult, { tier: "tier2" }
   };
 }
 
+function normalizeResearchMode(value?: string): ResearchExecutionMode {
+  if (value === "deep") return "deep";
+  if (value === "deep_beta") return "deep_beta";
+  return "fast";
+}
+
+function formatLiveEventTime(timestamp?: string): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.valueOf())) return "";
+  return date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function summarizeLiveEvent(event: ResearchFlowEvent): string {
+  const payload = event.payload;
+  if (!payload) return "";
+  const pieces: string[] = [];
+  if (typeof payload.progress_percent === "number") pieces.push(`progress ${payload.progress_percent}%`);
+  if (typeof payload.elapsed_seconds === "number") pieces.push(`${payload.elapsed_seconds.toFixed(1)}s`);
+  if (typeof payload.pass_index === "number") pieces.push(`pass #${payload.pass_index}`);
+  if (typeof payload.source_count === "number") pieces.push(`sources ${payload.source_count}`);
+  if (typeof payload.total_candidates === "number") pieces.push(`candidates ${payload.total_candidates}`);
+  if (typeof payload.phase === "string" && payload.phase.trim()) pieces.push(`phase ${payload.phase}`);
+  return pieces.join(" · ");
+}
+
+function toResearchModeLabel(mode?: string): string {
+  if (mode === "deep_beta") return "DEEP BETA";
+  if (mode === "deep") return "DEEP";
+  return "FAST";
+}
+
 export default function ResearchPage() {
   const [role, setRole] = useState<UserRole>("normal");
   const [selectedTier, setSelectedTier] = useState<ResearchTier>("tier1");
@@ -109,6 +157,7 @@ export default function ResearchPage() {
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showLiveResearchTrace, setShowLiveResearchTrace] = useState(true);
   const [liveFlowStages, setLiveFlowStages] = useState<ResearchFlowStage[]>([]);
   const [liveFlowEvents, setLiveFlowEvents] = useState<ResearchFlowEvent[]>([]);
   const [liveReasoningNotes, setLiveReasoningNotes] = useState<string[]>([]);
@@ -170,6 +219,9 @@ export default function ResearchPage() {
         setActiveConversationId(firstItem.id);
         setConversationTurns([firstItem]);
         setSelectedTier(firstItem.result.tier);
+        setSelectedResearchMode(
+          firstItem.result.tier === "tier2" ? normalizeResearchMode(firstItem.result.researchMode) : "fast"
+        );
         void loadConversationTurns(firstItem.id, firstItem);
       } catch (cause) {
         if (cancelled) return;
@@ -224,6 +276,7 @@ export default function ResearchPage() {
     setActiveConversationId(item.id);
     setConversationTurns([item]);
     setSelectedTier(item.result.tier);
+    setSelectedResearchMode(item.result.tier === "tier2" ? normalizeResearchMode(item.result.researchMode) : "fast");
     setError("");
     setLiveFlowStages([]);
     setLiveFlowEvents([]);
@@ -321,7 +374,7 @@ export default function ResearchPage() {
           await new Promise((resolve) => {
             window.setTimeout(resolve, RESEARCH_TIER2_JOB_POLL_MS);
           });
-          currentJob = await getResearchTier2Job(job.job_id);
+          currentJob = await fetchTier2JobWithRetry(job.job_id);
           applyLiveSnapshot(currentJob);
         }
 
@@ -329,22 +382,35 @@ export default function ResearchPage() {
           finalPayload =
             currentJob.result && typeof currentJob.result === "object"
               ? (currentJob.result as Record<string, unknown>)
-              : {};
+              : null;
         } else if (currentJob.status === "failed") {
           throw new Error(currentJob.error ?? "Research job thất bại ở backend.");
         } else {
           throw new Error("Research job quá thời gian chờ. Vui lòng thử lại.");
         }
 
-        if (!finalPayload) {
-          currentJob = await getResearchTier2Job(job.job_id);
-          applyLiveSnapshot(currentJob);
-          const progress = normalizeResearchTier2JobProgress(currentJob.progress);
-          finalPayload =
-            currentJob.result && typeof currentJob.result === "object"
-              ? (currentJob.result as Record<string, unknown>)
-              : null;
-          if (!finalPayload) {
+        const hasFinalResultObject = (value: unknown): value is Record<string, unknown> =>
+          Boolean(value) && typeof value === "object";
+
+        if (!hasFinalResultObject(finalPayload)) {
+          let completionRefetchRound = 0;
+          while (
+            completionRefetchRound < JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS &&
+            !hasFinalResultObject(finalPayload)
+          ) {
+            completionRefetchRound += 1;
+            await new Promise((resolve) =>
+              window.setTimeout(resolve, JOB_COMPLETED_RESULT_REFETCH_MS)
+            );
+            currentJob = await fetchTier2JobWithRetry(job.job_id);
+            applyLiveSnapshot(currentJob);
+            if (hasFinalResultObject(currentJob.result)) {
+              finalPayload = currentJob.result;
+              break;
+            }
+          }
+          if (!hasFinalResultObject(finalPayload)) {
+            const progress = normalizeResearchTier2JobProgress(currentJob.progress);
             throw new Error(
               progress.statusNote || "Không nhận được kết quả cuối từ research job."
             );
@@ -482,19 +548,42 @@ export default function ResearchPage() {
     </>
   );
 
+  const isTier2Running = isSubmitting && selectedTier === "tier2";
+
   const displayedFlowStages = useMemo(() => {
-    if (isSubmitting && selectedTier === "tier2" && liveFlowStages.length) {
+    if (isTier2Running && liveFlowStages.length) {
       return liveFlowStages;
     }
     return lastResult?.tier === "tier2" ? lastResult.flowStages : [];
-  }, [isSubmitting, selectedTier, liveFlowStages, lastResult]);
+  }, [isTier2Running, liveFlowStages, lastResult]);
 
   const displayedFlowEvents = useMemo(() => {
-    if (isSubmitting && selectedTier === "tier2" && liveFlowEvents.length) {
+    if (isTier2Running && liveFlowEvents.length) {
       return liveFlowEvents;
     }
     return lastResult?.tier === "tier2" ? lastResult.flowEvents : [];
-  }, [isSubmitting, selectedTier, liveFlowEvents, lastResult]);
+  }, [isTier2Running, liveFlowEvents, lastResult]);
+
+  const displayedFlowMode = useMemo(() => {
+    if (isTier2Running && displayedFlowEvents.length) return "flow-events";
+    if (isTier2Running && displayedFlowStages.length) return "metadata-stages";
+    if (isTier2Running) return "server-await";
+    return flowMode;
+  }, [displayedFlowEvents.length, displayedFlowStages.length, flowMode, isTier2Running]) as
+    | "idle"
+    | "flow-events"
+    | "metadata-stages"
+    | "local-fallback"
+    | "server-await";
+
+  const liveReasoningPreview = useMemo(
+    () => (isTier2Running ? liveReasoningNotes.slice(-20) : []),
+    [isTier2Running, liveReasoningNotes]
+  );
+  const liveEventPreview = useMemo(
+    () => (isTier2Running ? displayedFlowEvents.slice(-24).reverse() : []),
+    [displayedFlowEvents, isTier2Running]
+  );
 
   return (
     <PageShell
@@ -582,32 +671,22 @@ export default function ResearchPage() {
                 {selectedTier === "tier2" ? (
                   <fieldset className="inline-flex rounded-full border border-cyan-300/70 bg-cyan-500/10 p-1">
                     <legend className="sr-only">Chọn mode research</legend>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedResearchMode("fast")}
-                      disabled={isSubmitting}
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-semibold transition",
-                        selectedResearchMode === "fast"
-                          ? "bg-cyan-500 text-white"
-                          : "text-cyan-700 dark:text-cyan-200"
-                      ].join(" ")}
-                    >
-                      Fast
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedResearchMode("deep")}
-                      disabled={isSubmitting}
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-semibold transition",
-                        selectedResearchMode === "deep"
-                          ? "bg-cyan-500 text-white"
-                          : "text-cyan-700 dark:text-cyan-200"
-                      ].join(" ")}
-                    >
-                      Deep
-                    </button>
+                    {RESEARCH_MODE_OPTIONS.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setSelectedResearchMode(mode.id)}
+                        disabled={isSubmitting}
+                        className={[
+                          "rounded-full px-3 py-1 text-xs font-semibold transition",
+                          selectedResearchMode === mode.id
+                            ? "bg-cyan-500 text-white"
+                            : "text-cyan-700 dark:text-cyan-200"
+                        ].join(" ")}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
                   </fieldset>
                 ) : null}
               </div>
@@ -658,7 +737,7 @@ export default function ResearchPage() {
                       result.tier === "tier2" ? buildTier2MetaSummary(result) : null;
                     const tierLabel =
                       result.tier === "tier2"
-                        ? `Research ${result.researchMode?.toUpperCase() ?? ""}`.trim()
+                        ? `Research ${toResearchModeLabel(result.researchMode)}`
                         : "Quick";
 
                     return (
@@ -784,7 +863,7 @@ export default function ResearchPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-[var(--text-muted)]">
                     {selectedTier === "tier2"
-                      ? `Research mode: ${selectedResearchMode.toUpperCase()} · hiển thị query plan/source attempts/errors + timeline.`
+                      ? `Research mode: ${toResearchModeLabel(selectedResearchMode)} · hiển thị query plan/source attempts/errors + timeline.`
                       : "Quick mode: phản hồi nhanh với guard an toàn."}
                   </p>
 
@@ -809,20 +888,85 @@ export default function ResearchPage() {
               </form>
 
               {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
-              {isSubmitting && selectedTier === "tier2" ? (
-                <div className="mt-3 rounded-xl border border-cyan-300/60 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-800 dark:text-cyan-200">
-                  <p>
-                    {liveStatusNote || "Đang chạy research nhiều bước trên backend, trạng thái sẽ cập nhật live."}
-                  </p>
-                  {liveJobId ? <p className="mt-1 opacity-80">job_id: {liveJobId}</p> : null}
-                  {liveReasoningNotes.length ? (
-                    <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                      {liveReasoningNotes.slice(-4).map((note) => (
-                        <li key={note}>{note}</li>
-                      ))}
-                    </ul>
+              {isTier2Running ? (
+                <section className="mt-3 rounded-xl border border-cyan-300/60 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-900 dark:text-cyan-200">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">
+                      {liveStatusNote || "Đang chạy research nhiều bước trên backend, trạng thái sẽ cập nhật live."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowLiveResearchTrace((prev) => !prev)}
+                      className="inline-flex min-h-[30px] items-center rounded-md border border-cyan-400/60 bg-white/70 px-2.5 text-[11px] font-semibold text-cyan-800 dark:bg-cyan-950/35 dark:text-cyan-100"
+                    >
+                      {showLiveResearchTrace ? "Ẩn luồng live" : "Hiện luồng live"}
+                    </button>
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                    {liveJobId ? (
+                      <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5">
+                        job_id: {liveJobId}
+                      </span>
+                    ) : null}
+                    <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5">
+                      reasoning: {liveReasoningNotes.length}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5">
+                      events: {displayedFlowEvents.length}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5">
+                      stages: {displayedFlowStages.length}
+                    </span>
+                  </div>
+
+                  {showLiveResearchTrace ? (
+                    <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                      <div className="rounded-lg border border-cyan-300/60 bg-white/80 px-2.5 py-2 dark:bg-cyan-950/20">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.1em]">Reasoning feed</p>
+                        {liveReasoningPreview.length ? (
+                          <ol className="mt-1.5 max-h-36 space-y-1 overflow-y-auto pr-1 text-[11px]">
+                            {liveReasoningPreview.map((note, index) => (
+                              <li key={`${index}-${note.slice(0, 24)}`} className="rounded-md border border-cyan-200/70 bg-cyan-50/70 px-2 py-1 dark:border-cyan-900/80 dark:bg-cyan-950/35">
+                                {note}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="mt-1.5 text-[11px] opacity-75">Chưa có reasoning note từ backend.</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border border-cyan-300/60 bg-white/80 px-2.5 py-2 dark:bg-cyan-950/20">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.1em]">Flow events</p>
+                        {liveEventPreview.length ? (
+                          <ul className="mt-1.5 max-h-36 space-y-1 overflow-y-auto pr-1 text-[11px]">
+                            {liveEventPreview.map((event) => {
+                              const preview = summarizeLiveEvent(event);
+                              return (
+                                <li key={event.id} className="rounded-md border border-cyan-200/70 bg-cyan-50/70 px-2 py-1 dark:border-cyan-900/80 dark:bg-cyan-950/35">
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    <span className="font-semibold">{event.label}</span>
+                                    <span className="rounded-full border border-cyan-300/70 px-1.5 py-0 text-[10px] uppercase">
+                                      {event.status}
+                                    </span>
+                                    {event.timestamp ? (
+                                      <span className="opacity-80">{formatLiveEventTime(event.timestamp)}</span>
+                                    ) : null}
+                                  </div>
+                                  {event.detail ? <p className="mt-0.5 opacity-90">{event.detail}</p> : null}
+                                  {preview ? <p className="mt-0.5 opacity-75">{preview}</p> : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="mt-1.5 text-[11px] opacity-75">Chưa có flow event realtime.</p>
+                        )}
+                      </div>
+                    </div>
                   ) : null}
-                </div>
+                </section>
               ) : null}
             </div>
           </section>
@@ -846,13 +990,13 @@ export default function ResearchPage() {
                 <FlowTimelinePanel
                   stages={displayedFlowStages}
                   events={displayedFlowEvents}
-                  mode={flowMode}
-                  isProcessing={isSubmitting && selectedTier === "tier2"}
+                  mode={displayedFlowMode}
+                  isProcessing={isTier2Running}
                 />
 
                 <TelemetryDetailsPanel
                   telemetry={lastResult?.tier === "tier2" ? lastResult.telemetry : EMPTY_TELEMETRY}
-                  isProcessing={isSubmitting && selectedTier === "tier2"}
+                  isProcessing={isTier2Running}
                 />
               </div>
             ) : (
@@ -866,3 +1010,20 @@ export default function ResearchPage() {
     </PageShell>
   );
 }
+  const fetchTier2JobWithRetry = async (jobId: string) => {
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= JOB_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        return await getResearchTier2Job(jobId);
+      } catch (error) {
+        lastError = error;
+        if (attempt < JOB_FETCH_RETRY_ATTEMPTS) {
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, JOB_FETCH_RETRY_BACKOFF_MS * attempt)
+          );
+          continue;
+        }
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error("Không thể tải trạng thái research job.");
+  };

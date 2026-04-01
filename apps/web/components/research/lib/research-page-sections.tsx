@@ -161,6 +161,19 @@ export function ResearchMainCard({
                   >
                     Deep research
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectResearchMode("deep_beta")}
+                    disabled={isSubmitting}
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                      selectedResearchMode === "deep_beta"
+                        ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                        : "text-sky-700 dark:text-sky-300"
+                    ].join(" ")}
+                  >
+                    Deep beta
+                  </button>
                 </fieldset>
               ) : null}
             </div>
@@ -198,7 +211,7 @@ export function ResearchMainCard({
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
               {selectedTier === "tier2"
-                ? `Server đang xử lý research mode: ${selectedResearchMode.toUpperCase()}. Timeline sẽ cập nhật theo flow thật từ backend.`
+                ? `Server đang xử lý research mode: ${selectedResearchMode === "deep_beta" ? "DEEP BETA" : selectedResearchMode.toUpperCase()}. Timeline sẽ cập nhật theo flow thật từ backend.`
                 : "CLARA đang tổng hợp trả lời nhanh..."}
             </span>
           </article>

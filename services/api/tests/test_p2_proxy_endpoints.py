@@ -21,6 +21,32 @@ _TINY_PNG = (
 )
 
 
+def _minimal_progress(now: datetime) -> dict[str, object]:
+    return {
+        "flow_events": [
+            {
+                "id": "evt-1",
+                "stage": "final_response",
+                "status": "completed",
+                "note": "done",
+                "timestamp": now.isoformat(),
+            }
+        ],
+        "flow_stages": [
+            {
+                "id": "final_response",
+                "label": "Final Response",
+                "status": "completed",
+                "detail": "done",
+                "source": "flow_events",
+            }
+        ],
+        "active_stage": "final_response",
+        "status_note": "done",
+        "reasoning_steps": [],
+    }
+
+
 def _login(email: str) -> str:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": "secret"})
     assert response.status_code == 200
@@ -413,6 +439,35 @@ def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> N
     assert fetched["query"] == payload["query"]
 
 
+def test_research_tier2_job_create_accepts_deep_beta_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Deep beta mode persistence",
+            "research_mode": "deep_beta",
+        },
+    )
+    assert create_response.status_code == 200
+    payload = create_response.json()
+    job_id = payload["job_id"]
+
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).first()
+        assert row is not None
+        assert isinstance(row.request_payload, dict)
+        assert row.request_payload["research_mode"] == "deep_beta"
+
+
 def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPatch) -> None:
     token_a = _login("alice@research.clara")
     token_b = _login("bob@example.com")
@@ -626,6 +681,50 @@ def test_research_tier2_job_stream_reflects_external_job_updates() -> None:
     assert '"status": "completed"' in body or '"status":"completed"' in body
 
 
+def test_research_tier2_job_stream_surfaces_deep_beta_result_mode() -> None:
+    token = _login("alice@research.clara")
+    now = datetime.now(tz=UTC)
+
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.email == "alice@research.clara").first()
+        assert user is not None
+        job = ResearchJob(
+            job_id="stream-test-job-deep-beta",
+            user_id=user.id,
+            role="researcher",
+            status="completed",
+            query_text="stream deep beta",
+            request_payload={"query": "stream deep beta", "research_mode": "deep_beta"},
+            progress_json=_minimal_progress(now),
+            result_json={"answer": "ok", "metadata": {"research_mode": "deep_beta"}},
+            error_text="",
+            created_at=now,
+            updated_at=now,
+            started_at=now,
+            completed_at=now,
+        )
+        db.add(job)
+        db.commit()
+
+    with client.stream(
+        "GET",
+        "/api/v1/research/tier2/jobs/stream-test-job-deep-beta/stream",
+        headers={"Authorization": f"Bearer {token}"},
+    ) as response:
+        assert response.status_code == 200
+        body = ""
+        for chunk in response.iter_text():
+            body += chunk
+
+    data_lines = [line[len("data: ") :] for line in body.splitlines() if line.startswith("data: ")]
+    assert data_lines
+    payloads = [json.loads(raw) for raw in data_lines]
+    done_payload = payloads[-1]
+    result_payload = done_payload.get("result") or {}
+    metadata_payload = result_payload.get("metadata") if isinstance(result_payload, dict) else {}
+    assert metadata_payload["research_mode"] == "deep_beta"
+
+
 def test_research_tier2_returns_fail_soft_payload_with_retry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -689,6 +788,38 @@ def test_research_tier2_fail_soft_keeps_deep_mode_flags(
     assert call_count["count"] == 2
 
 
+def test_research_tier2_fail_soft_keeps_deep_beta_mode_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    call_count = {"count": 0}
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> object:
+        call_count["count"] += 1
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "deep beta fail soft", "research_mode": "deep_beta"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["fallback"] is True
+    assert payload["research_mode"] == "deep_beta"
+    assert payload["deep_pass_count"] == 0
+    assert payload["metadata"]["research_mode"] == "deep_beta"
+    assert payload["metadata"]["deep_pass_count"] == 0
+    assert payload["fallback_reason"] == "ConnectError"
+    assert payload["attribution"]["channel"] == "research"
+    assert payload["attribution"]["fallback_used"] is True
+    assert payload["attribution"]["mode"] == "deep_beta"
+    assert call_count["count"] == 2
+
+
 def test_research_tier2_forwards_research_mode_to_ml(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -725,6 +856,44 @@ def test_research_tier2_forwards_research_mode_to_ml(
     assert forwarded["strict_deepseek_required"] is False
     assert isinstance(forwarded.get("rag_flow"), dict)
     assert isinstance(forwarded.get("rag_sources"), list)
+
+
+def test_research_tier2_forwards_deep_beta_mode_to_ml(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"answer": "ok", "metadata": {"research_mode": "deep_beta", "deep_pass_count": 1}}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "deep beta reasoning test", "research_mode": "deep_beta"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["research_mode"] == "deep_beta"
+    assert payload["attribution"]["mode"] == "deep_beta"
+    assert str(captured["url"]).endswith("/v1/research/tier2")
+    forwarded = captured["json"]
+    assert isinstance(forwarded, dict)
+    assert forwarded["research_mode"] == "deep_beta"
+    assert forwarded["role"] == "researcher"
 
 
 def test_research_tier2_normalize_preserves_new_telemetry_fields(

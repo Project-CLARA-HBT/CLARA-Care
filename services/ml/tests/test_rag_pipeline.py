@@ -51,6 +51,21 @@ class _FailingClient:
         raise RuntimeError("provider down")
 
 
+class _TransientThenSuccessClient:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    @property
+    def model(self) -> str:
+        return "deepseek-v3.2"
+
+    def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse:
+        self.calls += 1
+        if self.calls == 1:
+            raise RuntimeError("timeout: upstream gateway")
+        return DeepSeekResponse(content="provider-retry-answer", model="deepseek-v3.2")
+
+
 class _SuccessfulClient:
     @property
     def model(self) -> str:
@@ -111,6 +126,22 @@ def test_rag_pipeline_fallback_when_deepseek_fails():
     assert result.model_used == "local-synth-v1"
     assert "LOCAL_FALLBACK_V1" in result.answer
     assert "## Kết luận nhanh" in result.answer
+
+
+def test_rag_pipeline_recovers_from_transient_llm_failure_with_compact_retry():
+    client = _TransientThenSuccessClient()
+    pipe = RagPipelineP0(
+        deepseek_api_key="test-key",
+        llm_client=client,
+    )
+    result = pipe.run("canh bao tuong tac nsaid voi warfarin")
+    assert result.model_used == "deepseek-v3.2"
+    assert result.answer == "provider-retry-answer"
+    assert client.calls == 2
+    assert any(
+        event.get("stage") == "llm_generation_retry" and event.get("status") == "completed"
+        for event in result.flow_events
+    )
 
 
 def test_rag_pipeline_survives_external_retrieval_exception():
