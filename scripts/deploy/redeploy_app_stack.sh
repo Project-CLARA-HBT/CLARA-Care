@@ -63,58 +63,100 @@ wait_json() {
   return 1
 }
 
+SMOKE_RESEARCH_FAIL_REASON=""
+
+smoke_research_mode() {
+  local ml_url="$1"
+  local research_mode="$2"
+  local output_file="$3"
+  local require_deepseek="$4"
+  local last_reason="no successful attempt"
+
+  for attempt in 1 2 3; do
+    if curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
+      -H 'Content-Type: application/json' \
+      -d "{\"query\":\"aspirin and ibuprofen interaction risk\",\"research_mode\":\"${research_mode}\",\"source_mode\":\"hybrid\"}" > "${output_file}"; then
+      :
+    else
+      local curl_exit="$?"
+      last_reason="transport_error (curl_exit=${curl_exit})"
+      echo "[smoke] ${research_mode} attempt ${attempt} failed at transport layer (curl_exit=${curl_exit})"
+      sleep 2
+      continue
+    fi
+
+    if [[ "${require_deepseek}" =~ ^(1|true|yes)$ ]]; then
+      local policy_reason
+      if ! policy_reason="$(
+        RESEARCH_JSON="${output_file}" \
+        RESEARCH_MODE="${research_mode}" \
+        python3 - <<'PY'
+import json
+import os
+import sys
+
+with open(os.environ["RESEARCH_JSON"], "r", encoding="utf-8") as file_obj:
+    research = json.load(file_obj)
+
+mode = os.environ["RESEARCH_MODE"]
+context_debug = research.get("context_debug")
+if not isinstance(context_debug, dict):
+    context_debug = {}
+used_stages = set(context_debug.get("used_stages") or [])
+fallback_used = bool(research.get("fallback_used"))
+
+if "llm_generation" not in used_stages:
+    print(f"{mode}: llm_generation stage not present")
+    sys.exit(1)
+if fallback_used:
+    print(f"{mode}: fallback_used=true")
+    sys.exit(1)
+PY
+      )"; then
+        policy_reason="${policy_reason//$'\n'/; }"
+        if [[ -z "${policy_reason}" ]]; then
+          policy_reason="${research_mode}: deepseek policy check failed"
+        fi
+        last_reason="deepseek_policy_violation (${policy_reason})"
+        echo "[smoke] ${research_mode} attempt ${attempt} failed deepseek policy: ${policy_reason}; retrying..."
+        sleep 2
+        continue
+      fi
+    fi
+
+    SMOKE_RESEARCH_FAIL_REASON=""
+    return 0
+  done
+
+  SMOKE_RESEARCH_FAIL_REASON="${last_reason}"
+  return 1
+}
+
 smoke_ml() {
   local ml_url="http://127.0.0.1:8110"
   local tmp_dir
   local require_deepseek
-  local research_ok="false"
+  local deep_research_json
+  local deep_beta_research_json
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "${tmp_dir}"' RETURN
   require_deepseek="$(printf '%s' "${REQUIRE_DEEPSEEK}" | tr '[:upper:]' '[:lower:]')"
+  deep_research_json="${tmp_dir}/research.deep.json"
+  deep_beta_research_json="${tmp_dir}/research.deep_beta.json"
 
   curl -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 
-  for attempt in 1 2 3; do
-    if ! curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
-      -H 'Content-Type: application/json' \
-      -d '{"query":"aspirin and ibuprofen interaction risk","research_mode":"deep","source_mode":"hybrid"}' > "${tmp_dir}/research.json"; then
-      echo "[smoke] research attempt ${attempt} failed at transport layer"
-      sleep 2
-      continue
-    fi
-    if [[ "${require_deepseek}" =~ ^(1|true|yes)$ ]]; then
-      if TMP_DIR="${tmp_dir}" python3 - <<'PY'
-import json
-import os
-import sys
-
-tmp_dir = os.environ["TMP_DIR"]
-with open(f"{tmp_dir}/research.json", "r", encoding="utf-8") as file_obj:
-    research = json.load(file_obj)
-
-used_stages = set((research.get("context_debug") or {}).get("used_stages") or [])
-fallback_used = bool(research.get("fallback_used"))
-if "llm_generation" in used_stages and not fallback_used:
-    sys.exit(0)
-sys.exit(1)
-PY
-      then
-        research_ok="true"
-        break
-      fi
-      echo "[smoke] research attempt ${attempt} used fallback; retrying..."
-      sleep 2
-      continue
-    fi
-    research_ok="true"
-    break
-  done
-
-  if [[ "${research_ok}" != "true" ]]; then
+  if ! smoke_research_mode "${ml_url}" "deep" "${deep_research_json}" "${require_deepseek}"; then
     echo "[smoke] FAILED"
-    echo "- research did not pass deepseek policy after retries"
+    echo "- deep research failed after retries: ${SMOKE_RESEARCH_FAIL_REASON}"
+    return 1
+  fi
+
+  if ! smoke_research_mode "${ml_url}" "deep_beta" "${deep_beta_research_json}" "${require_deepseek}"; then
+    echo "[smoke] FAILED"
+    echo "- deep_beta research failed after retries: ${SMOKE_RESEARCH_FAIL_REASON}"
     return 1
   fi
 
@@ -124,6 +166,8 @@ PY
 
   REQUIRE_DEEPSEEK="${REQUIRE_DEEPSEEK}" \
   TMP_DIR="${tmp_dir}" \
+  RESEARCH_DEEP_JSON="${deep_research_json}" \
+  RESEARCH_DEEP_BETA_JSON="${deep_beta_research_json}" \
   python3 - <<'PY'
 import json
 import os
@@ -132,8 +176,10 @@ import sys
 tmp_dir = os.environ["TMP_DIR"]
 with open(f"{tmp_dir}/chat.json", "r", encoding="utf-8") as file_obj:
     chat = json.load(file_obj)
-with open(f"{tmp_dir}/research.json", "r", encoding="utf-8") as file_obj:
-    research = json.load(file_obj)
+with open(os.environ["RESEARCH_DEEP_JSON"], "r", encoding="utf-8") as file_obj:
+    deep_research = json.load(file_obj)
+with open(os.environ["RESEARCH_DEEP_BETA_JSON"], "r", encoding="utf-8") as file_obj:
+    deep_beta_research = json.load(file_obj)
 with open(f"{tmp_dir}/careguard.json", "r", encoding="utf-8") as file_obj:
     careguard = json.load(file_obj)
 require_deepseek = os.environ.get("REQUIRE_DEEPSEEK", "true").lower() in {"1", "true", "yes"}
@@ -143,24 +189,109 @@ errors = []
 if not str(chat.get("answer", "")).strip():
     errors.append("chat answer empty")
 
-if research.get("research_mode") != "deep":
-    errors.append("research_mode is not deep")
-if int(research.get("deep_pass_count") or 0) < 3:
-    errors.append("deep_pass_count < 3")
+def _safe_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
-flow_events = research.get("flow_events") or []
-stages = {str(item.get("stage")) for item in flow_events if isinstance(item, dict)}
-if "evidence_search" not in stages:
-    errors.append("missing evidence_search stage")
-if "evidence_index" not in stages:
-    errors.append("missing evidence_index stage")
 
-context_debug = research.get("context_debug") or {}
-used_stages = set(context_debug.get("used_stages") or [])
-if require_deepseek and "llm_generation" not in used_stages:
-    errors.append("llm_generation stage not present")
-if require_deepseek and bool(research.get("fallback_used")):
-    errors.append("research still uses fallback")
+def _validate_research_mode(payload, mode):
+    mode_errors = []
+    if not isinstance(payload, dict):
+        return [f"{mode}: response payload is not an object"], set(), ""
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    if payload.get("research_mode") != mode:
+        mode_errors.append(
+            f"{mode}: research_mode mismatch (got {payload.get('research_mode')!r})"
+        )
+    metadata_mode = metadata.get("research_mode")
+    if metadata_mode not in ("", None, mode):
+        mode_errors.append(f"{mode}: metadata.research_mode mismatch (got {metadata_mode!r})")
+
+    deep_pass_count = _safe_int(payload.get("deep_pass_count") or 0)
+    if deep_pass_count < 3:
+        mode_errors.append(f"{mode}: deep_pass_count < 3 (got {deep_pass_count})")
+
+    flow_events = payload.get("flow_events")
+    if not isinstance(flow_events, list):
+        flow_events = metadata.get("flow_events") if isinstance(metadata.get("flow_events"), list) else []
+    stages = {str(item.get("stage")) for item in flow_events if isinstance(item, dict)}
+
+    if mode == "deep":
+        if "evidence_search" not in stages:
+            mode_errors.append("deep: missing evidence_search stage")
+        if "evidence_index" not in stages:
+            mode_errors.append("deep: missing evidence_index stage")
+    elif mode == "deep_beta":
+        pipeline = str(metadata.get("pipeline") or "")
+        if "deep-beta" not in pipeline:
+            mode_errors.append(
+                f"deep_beta: metadata.pipeline missing deep-beta runtime marker (got {pipeline!r})"
+            )
+        required_beta_stages = {
+            "deep_beta_scope",
+            "deep_beta_hypothesis_map",
+            "deep_beta_retrieval_budget",
+            "deep_beta_multi_pass_retrieval",
+            "deep_beta_chain_synthesis",
+            "deep_beta_chain_verification",
+        }
+        missing_beta_stages = sorted(required_beta_stages - stages)
+        if missing_beta_stages:
+            mode_errors.append(
+                "deep_beta: missing runtime stages: " + ", ".join(missing_beta_stages)
+            )
+
+        reasoning_steps = payload.get("reasoning_steps")
+        if not isinstance(reasoning_steps, list):
+            reasoning_steps = metadata.get("reasoning_steps")
+        if not isinstance(reasoning_steps, list) or len(reasoning_steps) < 3:
+            mode_errors.append(
+                "deep_beta: reasoning_steps missing or too short for beta runtime"
+            )
+
+        retrieval_budgets = payload.get("retrieval_budgets")
+        if not isinstance(retrieval_budgets, dict):
+            retrieval_budgets = (
+                metadata.get("retrieval_budgets")
+                if isinstance(metadata.get("retrieval_budgets"), dict)
+                else {}
+            )
+        if retrieval_budgets.get("mode") != "deep_beta":
+            mode_errors.append(
+                f"deep_beta: retrieval_budgets.mode is not deep_beta (got {retrieval_budgets.get('mode')!r})"
+            )
+
+        chain_status = payload.get("chain_status")
+        if not isinstance(chain_status, dict):
+            chain_status = metadata.get("chain_status") if isinstance(metadata.get("chain_status"), dict) else {}
+        if chain_status.get("mode") != "deep_beta":
+            mode_errors.append(
+                f"deep_beta: chain_status.mode is not deep_beta (got {chain_status.get('mode')!r})"
+            )
+
+    context_debug = payload.get("context_debug")
+    if not isinstance(context_debug, dict):
+        context_debug = {}
+    used_stages = {str(item) for item in (context_debug.get("used_stages") or [])}
+    if require_deepseek and "llm_generation" not in used_stages:
+        mode_errors.append(f"{mode}: llm_generation stage not present")
+    if require_deepseek and bool(payload.get("fallback_used")):
+        mode_errors.append(f"{mode}: fallback_used=true under REQUIRE_DEEPSEEK")
+
+    return mode_errors, used_stages, str(metadata.get("pipeline") or "")
+
+
+deep_errors, deep_used_stages, deep_pipeline = _validate_research_mode(deep_research, "deep")
+beta_errors, deep_beta_used_stages, deep_beta_pipeline = _validate_research_mode(
+    deep_beta_research, "deep_beta"
+)
+errors.extend(deep_errors)
+errors.extend(beta_errors)
 
 risk = careguard.get("risk") or {}
 metadata = careguard.get("metadata") or {}
@@ -177,9 +308,12 @@ if errors:
 
 print("[smoke] OK")
 print(f"chat_intent={chat.get('intent')}")
-print(f"research_pipeline={(research.get('metadata') or {}).get('pipeline')}")
-print(f"research_fallback={research.get('fallback_used')}")
-print(f"research_stages={sorted(used_stages)}")
+print(f"research_deep_pipeline={deep_pipeline}")
+print(f"research_deep_beta_pipeline={deep_beta_pipeline}")
+print(f"research_deep_fallback={deep_research.get('fallback_used')}")
+print(f"research_deep_beta_fallback={deep_beta_research.get('fallback_used')}")
+print(f"research_deep_stages={sorted(deep_used_stages)}")
+print(f"research_deep_beta_stages={sorted(deep_beta_used_stages)}")
 print(f"careguard_level={risk.get('level')}")
 print(f"careguard_sources={metadata.get('source_used')}")
 PY

@@ -404,6 +404,28 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
     assert result["metadata"]["retrieval_budgets"]["target_pass_count"] == 4
     assert isinstance(result["metadata"]["chain_status"], dict)
     assert result["metadata"]["chain_status"]["status"] == "completed"
+    assert isinstance(result.get("trace_id"), str)
+    assert isinstance(result.get("run_id"), str)
+    assert result["trace_id"]
+    assert result["run_id"]
+    assert result["metadata"]["trace_id"] == result["trace_id"]
+    assert result["metadata"]["run_id"] == result["run_id"]
+    assert result["telemetry"]["trace_id"] == result["trace_id"]
+    assert result["telemetry"]["run_id"] == result["run_id"]
+    assert result["trace"]["trace_id"] == result["trace_id"]
+    assert result["trace"]["run_id"] == result["run_id"]
+    stage_spans = result["metadata"].get("stage_spans", [])
+    assert isinstance(stage_spans, list)
+    assert len(stage_spans) >= 1
+    assert result["telemetry"].get("stage_spans") == stage_spans
+    deep_beta_span = next(
+        item
+        for item in stage_spans
+        if str(item.get("stage")) == "deep_beta_multi_pass_retrieval"
+    )
+    assert isinstance(deep_beta_span.get("start_at"), str)
+    assert isinstance(deep_beta_span.get("end_at"), str)
+    assert deep_beta_span.get("duration_ms") is not None
 
     flow_events = result["flow_events"]
     stages = {str(event.get("stage")) for event in flow_events}
@@ -504,6 +526,14 @@ def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
 
     assert result["research_mode"] == "deep"
     assert result["metadata"]["pipeline"] == "p2-research-tier2-deep-v1"
+    assert result["metadata"]["trace_id"] == result["trace_id"] == result["telemetry"]["trace_id"]
+    assert result["metadata"]["run_id"] == result["run_id"] == result["telemetry"]["run_id"]
+    stage_spans = result["metadata"].get("stage_spans", [])
+    assert isinstance(stage_spans, list)
+    deep_span = next(item for item in stage_spans if str(item.get("stage")) == "deep_research")
+    assert isinstance(deep_span.get("start_at"), str)
+    assert isinstance(deep_span.get("end_at"), str)
+    assert deep_span.get("duration_ms") is not None
     assert not any(
         str(event.get("stage", "")).startswith("deep_beta")
         for event in result.get("flow_events", [])

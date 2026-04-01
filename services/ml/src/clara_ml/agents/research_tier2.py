@@ -6,6 +6,7 @@ import re
 from time import perf_counter
 from typing import Any
 import unicodedata
+from uuid import uuid4
 
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
@@ -42,6 +43,54 @@ _REQUIRED_MARKDOWN_HEADINGS = (
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _normalized_identifier(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    compact = re.sub(r"\s+", "-", text)
+    return compact[:160]
+
+
+def _resolve_trace_identifiers(payload: dict[str, Any]) -> tuple[str, str]:
+    metadata_obj = payload.get("metadata")
+    metadata = metadata_obj if isinstance(metadata_obj, dict) else {}
+    trace_obj = payload.get("trace")
+    trace = trace_obj if isinstance(trace_obj, dict) else {}
+
+    trace_id = (
+        _normalized_identifier(payload.get("trace_id"))
+        or _normalized_identifier(metadata.get("trace_id"))
+        or _normalized_identifier(trace.get("trace_id"))
+    )
+    run_id = (
+        _normalized_identifier(payload.get("run_id"))
+        or _normalized_identifier(metadata.get("run_id"))
+        or _normalized_identifier(trace.get("run_id"))
+        or _normalized_identifier(payload.get("request_id"))
+        or _normalized_identifier(metadata.get("request_id"))
+    )
+
+    if trace_id and run_id:
+        return trace_id, run_id
+    if run_id and not trace_id:
+        return f"tier2-trace-{run_id}", run_id
+    if trace_id and not run_id:
+        return trace_id, f"tier2-run-{trace_id}"
+
+    seed = uuid4().hex
+    return f"tier2-trace-{seed}", f"tier2-run-{seed}"
+
+
+def _parse_event_timestamp(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _normalize_topic(payload: dict[str, Any]) -> str:
@@ -968,15 +1017,6 @@ def _normalize_retrieval_events(
     normalized: list[dict[str, Any]] = []
     first_timestamp: datetime | None = None
 
-    def _parse_timestamp(value: Any) -> datetime | None:
-        text = str(value or "").strip()
-        if not text:
-            return None
-        try:
-            return datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-
     for item in events:
         if not isinstance(item, dict):
             continue
@@ -986,7 +1026,7 @@ def _normalize_retrieval_events(
             source_count = int(source_count_raw)
         except (TypeError, ValueError):
             source_count = 0
-        parsed_timestamp = _parse_timestamp(item.get("timestamp"))
+        parsed_timestamp = _parse_event_timestamp(item.get("timestamp"))
         if parsed_timestamp and first_timestamp is None:
             first_timestamp = parsed_timestamp
         elapsed_ms = (
@@ -1010,6 +1050,110 @@ def _normalize_retrieval_events(
             }
         )
     return normalized
+
+
+def _build_stage_span_summaries(
+    flow_events: list[dict[str, Any]],
+    *,
+    stage_entries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not stage_entries:
+        return []
+
+    events_by_stage: dict[str, list[dict[str, Any]]] = {}
+    retrieval_like_events: list[dict[str, Any]] = []
+    for event in flow_events:
+        if not isinstance(event, dict):
+            continue
+        stage = str(event.get("stage") or "").strip()
+        if not stage:
+            continue
+        events_by_stage.setdefault(stage, []).append(event)
+        stage_lower = stage.lower()
+        component = str(event.get("component") or "").strip().lower()
+        if (
+            component in {"retrieval", "deep_retrieval", "deep_beta_retrieval"}
+            or "retrieval" in stage_lower
+            or "search" in stage_lower
+            or "index" in stage_lower
+        ):
+            retrieval_like_events.append(event)
+
+    status_start_markers = {"started", "start", "running", "in_progress"}
+    stage_aliases: dict[str, list[str]] = {
+        "plan": ["planner"],
+        "hybrid_retrieval": [],
+    }
+
+    spans: list[dict[str, Any]] = []
+    for stage_entry in stage_entries:
+        if not isinstance(stage_entry, dict):
+            continue
+        stage_name = str(stage_entry.get("name") or "").strip()
+        if not stage_name:
+            continue
+
+        stage_events: list[dict[str, Any]] = []
+        if stage_name == "hybrid_retrieval":
+            stage_events = retrieval_like_events
+        else:
+            candidates = stage_aliases.get(stage_name, [stage_name])
+            for candidate in candidates:
+                stage_events.extend(events_by_stage.get(candidate, []))
+
+        start_at: str | None = None
+        end_at: str | None = None
+        duration_ms: float | None = None
+        event_count = len(stage_events)
+        final_status = str(stage_entry.get("status") or "unknown")
+        source_count = 0
+        first_event_sequence: int | None = None
+        last_event_sequence: int | None = None
+
+        if stage_events:
+            start_event = next(
+                (
+                    item
+                    for item in stage_events
+                    if str(item.get("status") or "").strip().lower() in status_start_markers
+                ),
+                stage_events[0],
+            )
+            end_event = next(
+                (
+                    item
+                    for item in reversed(stage_events)
+                    if str(item.get("status") or "").strip().lower() not in status_start_markers
+                ),
+                stage_events[-1],
+            )
+            start_at_raw = str(start_event.get("timestamp") or "").strip()
+            end_at_raw = str(end_event.get("timestamp") or "").strip()
+            start_at = start_at_raw or None
+            end_at = end_at_raw or None
+            start_ts = _parse_event_timestamp(start_at)
+            end_ts = _parse_event_timestamp(end_at)
+            if start_ts and end_ts:
+                duration_ms = round(max((end_ts - start_ts).total_seconds() * 1000.0, 0.0), 3)
+            final_status = str(end_event.get("status") or final_status)
+            source_count = max(_safe_int(end_event.get("source_count"), 0), 0)
+            first_event_sequence = _safe_int(start_event.get("event_sequence"), 0) or None
+            last_event_sequence = _safe_int(end_event.get("event_sequence"), 0) or None
+
+        spans.append(
+            {
+                "stage": stage_name,
+                "status": final_status,
+                "start_at": start_at,
+                "end_at": end_at,
+                "duration_ms": duration_ms,
+                "event_count": event_count,
+                "source_count": source_count,
+                "first_event_sequence": first_event_sequence,
+                "last_event_sequence": last_event_sequence,
+            }
+        )
+    return spans
 
 
 def _build_deep_subqueries(
@@ -1397,6 +1541,7 @@ def _ensure_markdown_structure(answer: str, citations: list[Citation]) -> str:
 def run_research_tier2(payload: dict[str, Any]) -> dict:
     topic = _normalize_topic(payload)
     research_mode = _normalize_research_mode(payload)
+    trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
     uploaded_documents_raw = payload.get("uploaded_documents")
@@ -1431,6 +1576,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         planner_hints=planner_hints,
         plan_steps=plan_steps,
     )
+    planner_trace["trace_id"] = trace_id
+    planner_trace["run_id"] = run_id
     run_started_at = perf_counter()
 
     def _event(
@@ -1445,6 +1592,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     ) -> dict[str, Any]:
         now = perf_counter()
         event_payload = dict(payload or {})
+        event_payload.setdefault("trace_id", trace_id)
+        event_payload.setdefault("run_id", run_id)
         event_payload.setdefault("elapsed_ms", round((now - run_started_at) * 1000.0, 3))
         if started_at is not None:
             event_payload.setdefault("duration_ms", round((now - started_at) * 1000.0, 3))
@@ -2134,6 +2283,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     ):
         raise RuntimeError("tier2_deepseek_required_violation")
     retrieval_trace = _build_retrieval_trace(rag_result=rag_result, planner_hints=planner_hints)
+    retrieval_trace["trace_id"] = trace_id
+    retrieval_trace["run_id"] = run_id
     if research_mode in {"deep", "deep_beta"}:
         retrieval_trace["deep_pass_summaries"] = deep_pass_summaries
         retrieval_trace["deep_pass_count"] = len(deep_pass_summaries)
@@ -2244,6 +2395,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         verification_state=verification_state,
         verification_matrix=verification_matrix_payload,
     )
+    verifier_trace["trace_id"] = trace_id
+    verifier_trace["run_id"] = run_id
     verification_status = {
         "state": verification_state,
         "stage": factcheck_result.stage,
@@ -2396,10 +2549,72 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
     effective_fallback_used = False if strict_deepseek_required else fallback_used
     answer_status = "warning" if effective_fallback_used else "completed"
+    metadata_stage_entries = [
+        {"name": "plan", "status": "completed"},
+        *(
+            [{"name": "deep_research", "status": "completed"}]
+            if research_mode == "deep"
+            else [
+                {"name": "deep_beta_scope", "status": "completed"},
+                {"name": "deep_beta_hypothesis_map", "status": "completed"},
+                {"name": "deep_beta_retrieval_budget", "status": "completed"},
+                {"name": "deep_beta_multi_pass_retrieval", "status": retrieval_status},
+                {"name": "deep_beta_chain_synthesis", "status": "completed"},
+                {
+                    "name": "deep_beta_chain_verification",
+                    "status": (
+                        deep_beta_chain_status.get("verification_status", "completed")
+                        if isinstance(deep_beta_chain_status, dict)
+                        else "completed"
+                    ),
+                },
+            ]
+            if research_mode == "deep_beta"
+            else []
+        ),
+        {"name": "hybrid_retrieval", "status": retrieval_status},
+        {"name": "answer_synthesis", "status": answer_status},
+        {"name": "verification", "status": verification_state},
+        {"name": "contradiction_miner", "status": contradiction_stage_status},
+        {"name": "verification_matrix", "status": "completed"},
+        {"name": "citation_selection", "status": "completed"},
+    ]
+    stage_spans = (
+        _build_stage_span_summaries(flow_events, stage_entries=metadata_stage_entries)
+        if research_mode in {"deep", "deep_beta"}
+        else []
+    )
+    stage_spans_by_stage: dict[str, dict[str, Any]] = {
+        str(item.get("stage")): item for item in stage_spans if isinstance(item, dict)
+    }
+    metadata_stages = [
+        {
+            **stage_entry,
+            "start_at": (
+                stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("start_at")
+                if stage_spans_by_stage
+                else None
+            ),
+            "end_at": (
+                stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("end_at")
+                if stage_spans_by_stage
+                else None
+            ),
+            "duration_ms": (
+                stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("duration_ms")
+                if stage_spans_by_stage
+                else None
+            ),
+        }
+        for stage_entry in metadata_stage_entries
+    ]
     trace_bundle = {
+        "trace_id": trace_id,
+        "run_id": run_id,
         "planner": planner_trace,
         "retrieval": retrieval_trace,
         "verifier": verifier_trace,
+        "stage_spans": stage_spans,
     }
     source_reasoning: list[dict[str, Any]] = []
     retriever_debug = (
@@ -2532,6 +2747,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         crawl_summary["domains"] = []
 
     telemetry = {
+        "trace_id": trace_id,
+        "run_id": run_id,
         "keywords": planner_hints.get("keywords", []),
         "query_plan": query_plan,
         "search_plan": {
@@ -2571,12 +2788,15 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "retrieval_budgets": deep_beta_retrieval_budgets if research_mode == "deep_beta" else {},
         "chain_status": deep_beta_chain_status if research_mode == "deep_beta" else {},
         "verification_matrix": verification_matrix_payload,
+        "stage_spans": stage_spans,
     }
     citations_payload = [asdict(item) for item in citations]
     compact_context_debug = _compact_context_debug(rag_result.context_debug)
 
     return {
         "metadata": {
+            "trace_id": trace_id,
+            "run_id": run_id,
             "response_style": "progressive",
             "pipeline": (
                 "p2-research-tier2-deep-v1"
@@ -2585,36 +2805,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 if research_mode == "deep_beta"
                 else "p2-research-tier2-hybrid-v2"
             ),
-            "stages": [
-                {"name": "plan", "status": "completed"},
-                *(
-                    [{"name": "deep_research", "status": "completed"}]
-                    if research_mode == "deep"
-                    else [
-                        {"name": "deep_beta_scope", "status": "completed"},
-                        {"name": "deep_beta_hypothesis_map", "status": "completed"},
-                        {"name": "deep_beta_retrieval_budget", "status": "completed"},
-                        {"name": "deep_beta_multi_pass_retrieval", "status": retrieval_status},
-                        {"name": "deep_beta_chain_synthesis", "status": "completed"},
-                        {
-                            "name": "deep_beta_chain_verification",
-                            "status": (
-                                deep_beta_chain_status.get("verification_status", "completed")
-                                if isinstance(deep_beta_chain_status, dict)
-                                else "completed"
-                            ),
-                        },
-                    ]
-                    if research_mode == "deep_beta"
-                    else []
-                ),
-                {"name": "hybrid_retrieval", "status": retrieval_status},
-                {"name": "answer_synthesis", "status": answer_status},
-                {"name": "verification", "status": verification_state},
-                {"name": "contradiction_miner", "status": contradiction_stage_status},
-                {"name": "verification_matrix", "status": "completed"},
-                {"name": "citation_selection", "status": "completed"},
-            ],
+            "stages": metadata_stages,
+            "stage_spans": stage_spans,
             "fallback_used": effective_fallback_used,
             "fallback_reason": fallback_reason or None,
             "source_mode": source_mode,
@@ -2663,6 +2855,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             },
         },
         "context_debug": compact_context_debug,
+        "trace_id": trace_id,
+        "run_id": run_id,
         "flow_events": flow_events,
         "planner_trace": planner_trace,
         "retrieval_trace": retrieval_trace,

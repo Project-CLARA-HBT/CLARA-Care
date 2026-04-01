@@ -391,6 +391,10 @@ def test_research_tier2_deep_mode_returns_multi_pass_telemetry():
 
     assert body["research_mode"] == "deep"
     assert body["metadata"]["research_mode"] == "deep"
+    assert isinstance(body.get("trace_id"), str)
+    assert isinstance(body.get("run_id"), str)
+    assert body["metadata"]["trace_id"] == body["trace_id"] == body["telemetry"]["trace_id"]
+    assert body["metadata"]["run_id"] == body["run_id"] == body["telemetry"]["run_id"]
     assert body["metadata"]["pipeline"] == "p2-research-tier2-deep-v1"
     assert body["deep_pass_count"] >= 1
     assert body["metadata"]["deep_pass_count"] >= 1
@@ -427,6 +431,9 @@ def test_research_tier2_deep_mode_returns_multi_pass_telemetry():
     assert isinstance(index_summary, dict)
     assert "retrieved_count" in index_summary
     assert "source_counts" in index_summary
+    stage_spans = body["metadata"].get("stage_spans")
+    assert isinstance(stage_spans, list)
+    assert any(str(item.get("stage")) == "deep_research" for item in stage_spans)
 
 
 def test_careguard_analyze_returns_risk_and_alerts():
