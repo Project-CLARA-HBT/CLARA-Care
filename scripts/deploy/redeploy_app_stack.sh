@@ -66,16 +66,57 @@ wait_json() {
 smoke_ml() {
   local ml_url="http://127.0.0.1:8110"
   local tmp_dir
+  local require_deepseek
+  local research_ok="false"
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "${tmp_dir}"' RETURN
+  require_deepseek="$(printf '%s' "${REQUIRE_DEEPSEEK}" | tr '[:upper:]' '[:lower:]')"
 
   curl -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 
-  curl -fsS -m 45 -X POST "${ml_url}/v1/research/tier2" \
-    -H 'Content-Type: application/json' \
-    -d '{"query":"aspirin and ibuprofen interaction risk","research_mode":"deep","source_mode":"hybrid"}' > "${tmp_dir}/research.json"
+  for attempt in 1 2 3; do
+    if ! curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
+      -H 'Content-Type: application/json' \
+      -d '{"query":"aspirin and ibuprofen interaction risk","research_mode":"deep","source_mode":"hybrid"}' > "${tmp_dir}/research.json"; then
+      echo "[smoke] research attempt ${attempt} failed at transport layer"
+      sleep 2
+      continue
+    fi
+    if [[ "${require_deepseek}" =~ ^(1|true|yes)$ ]]; then
+      if TMP_DIR="${tmp_dir}" python3 - <<'PY'
+import json
+import os
+import sys
+
+tmp_dir = os.environ["TMP_DIR"]
+with open(f"{tmp_dir}/research.json", "r", encoding="utf-8") as file_obj:
+    research = json.load(file_obj)
+
+used_stages = set((research.get("context_debug") or {}).get("used_stages") or [])
+fallback_used = bool(research.get("fallback_used"))
+if "llm_generation" in used_stages and not fallback_used:
+    sys.exit(0)
+sys.exit(1)
+PY
+      then
+        research_ok="true"
+        break
+      fi
+      echo "[smoke] research attempt ${attempt} used fallback; retrying..."
+      sleep 2
+      continue
+    fi
+    research_ok="true"
+    break
+  done
+
+  if [[ "${research_ok}" != "true" ]]; then
+    echo "[smoke] FAILED"
+    echo "- research did not pass deepseek policy after retries"
+    return 1
+  fi
 
   curl -fsS -m 20 -X POST "${ml_url}/v1/careguard/analyze" \
     -H 'Content-Type: application/json' \
