@@ -19,6 +19,11 @@ const SOURCE_LABELS: Record<SourceHubSourceKey, string> = {
   clinicaltrials: "ClinicalTrials.gov",
   europepmc: "Europe PMC",
   semantic_scholar: "Semantic Scholar",
+  vn_moh: "Bộ Y tế Việt Nam",
+  vn_kcb: "Cục Quản lý Khám chữa bệnh",
+  vn_canhgiacduoc: "Cảnh giác Dược Quốc gia",
+  vn_vbpl_byt: "VBPL Bộ Y tế",
+  vn_dav: "Cục Quản lý Dược Việt Nam",
   davidrug: "DAVIDrug",
 };
 
@@ -94,7 +99,9 @@ export default function AdminSourceHubPage() {
     }
 
     const parsedLimit = Number(syncLimit);
-    const safeLimit = Number.isFinite(parsedLimit) ? Math.max(3, Math.min(30, Math.trunc(parsedLimit))) : 12;
+    const safeLimit = Number.isFinite(parsedLimit)
+      ? Math.max(3, Math.min(500, Math.trunc(parsedLimit)))
+      : 12;
 
     setIsSyncing(true);
     setError("");
@@ -128,7 +135,7 @@ export default function AdminSourceHubPage() {
     <AdminShell
       activeTab="source-hub"
       title="Source Hub y khoa"
-      description="Quản lý đồng bộ dữ liệu từ PubMed, Europe PMC, ClinicalTrials.gov, DailyMed, RxNorm, openFDA, DAVIDrug và Semantic Scholar. Theo dõi record crawl, query đã dùng và metadata chi tiết để phục vụ RAG và kiểm chứng."
+      description="Quản lý đồng bộ dữ liệu từ PubMed, Europe PMC, ClinicalTrials.gov, DailyMed, RxNorm, openFDA, Semantic Scholar, Bộ Y tế Việt Nam, Cục Quản lý Khám chữa bệnh, Cảnh giác Dược, VBPL Bộ Y tế, Cục Quản lý Dược và DAVIDrug. Theo dõi record crawl, query đã dùng và metadata chi tiết để phục vụ RAG và kiểm chứng."
     >
       <div className="space-y-5">
         <section className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -187,7 +194,7 @@ export default function AdminSourceHubPage() {
               </label>
 
               <label className="block space-y-1">
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">Số record/lần sync (3-30)</span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">Số record/lần sync (3-500)</span>
                 <input
                   value={syncLimit}
                   onChange={(event) => setSyncLimit(event.target.value)}

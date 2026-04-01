@@ -262,6 +262,11 @@ export type SourceHubSourceKey =
   | "clinicaltrials"
   | "europepmc"
   | "semantic_scholar"
+  | "vn_moh"
+  | "vn_kcb"
+  | "vn_canhgiacduoc"
+  | "vn_vbpl_byt"
+  | "vn_dav"
   | "davidrug";
 
 export type SourceHubCatalogEntry = {
@@ -1538,6 +1543,11 @@ function parseSourceHubKey(value: unknown): SourceHubSourceKey | null {
     text === "clinicaltrials" ||
     text === "europepmc" ||
     text === "semantic_scholar" ||
+    text === "vn_moh" ||
+    text === "vn_kcb" ||
+    text === "vn_canhgiacduoc" ||
+    text === "vn_vbpl_byt" ||
+    text === "vn_dav" ||
     text === "davidrug"
   ) {
     return text;

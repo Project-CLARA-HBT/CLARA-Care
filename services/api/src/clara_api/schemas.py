@@ -296,6 +296,9 @@ class RagFlowConfig(BaseModel):
     verification_enabled: bool = True
     deepseek_fallback_enabled: bool = True
     low_context_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
+    precision_at_k: int = Field(default=10, ge=1, le=50)
+    recall_at_k: int = Field(default=10, ge=1, le=50)
+    ndcg_at_k: int = Field(default=10, ge=1, le=50)
     scientific_retrieval_enabled: bool = True
     web_retrieval_enabled: bool = True
     file_retrieval_enabled: bool = True
@@ -386,6 +389,11 @@ SourceHubSourceKey = Literal[
     "europepmc",
     "semantic_scholar",
     "clinicaltrials",
+    "vn_moh",
+    "vn_kcb",
+    "vn_canhgiacduoc",
+    "vn_vbpl_byt",
+    "vn_dav",
     "davidrug",
 ]
 
@@ -419,7 +427,7 @@ class SourceHubRecordsResponse(BaseModel):
 class SourceHubSyncRequest(BaseModel):
     source: SourceHubSourceKey
     query: str = Field(min_length=1, max_length=512)
-    limit: int = Field(default=12, ge=1, le=100)
+    limit: int = Field(default=12, ge=1, le=500)
 
 
 class SourceHubSyncResponse(BaseModel):

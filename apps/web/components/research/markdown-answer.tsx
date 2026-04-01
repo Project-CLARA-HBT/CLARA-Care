@@ -50,6 +50,9 @@ function sanitizeMermaidSvg(svg: string): string {
   try {
     const parser = new window.DOMParser();
     const parsed = parser.parseFromString(svg, "image/svg+xml");
+    if (parsed.documentElement?.nodeName?.toLowerCase() === "parsererror") {
+      return "";
+    }
 
     parsed.querySelectorAll("script, foreignObject, iframe, object, embed").forEach((node) => {
       node.remove();
@@ -77,6 +80,26 @@ function sanitizeMermaidSvg(svg: string): string {
   }
 }
 
+function normalizeMermaidCode(code: string): string {
+  let normalized = code.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return normalized;
+
+  normalized = normalized
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?p\b[^>]*>/gi, "")
+    .replace(/<\/?div\b[^>]*>/gi, "")
+    .replace(/&nbsp;/gi, " ");
+
+  normalized = normalized
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line, index, arr) => !(line.trim() === "" && arr[index - 1]?.trim() === ""))
+    .join("\n")
+    .trim();
+
+  return normalized;
+}
+
 function MermaidBlock({ code }: MermaidBlockProps) {
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -88,14 +111,19 @@ function MermaidBlock({ code }: MermaidBlockProps) {
       try {
         const mermaidModule = await import("mermaid");
         const mermaid = mermaidModule.default;
+        const normalizedCode = normalizeMermaidCode(code);
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
           theme: "default",
+          flowchart: {
+            htmlLabels: false,
+            useMaxWidth: true,
+          },
         });
 
         const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
-        const renderResult = await mermaid.render(id, code);
+        const renderResult = await mermaid.render(id, normalizedCode);
         if (!cancelled) {
           const sanitized = sanitizeMermaidSvg(renderResult.svg);
           if (!sanitized) {

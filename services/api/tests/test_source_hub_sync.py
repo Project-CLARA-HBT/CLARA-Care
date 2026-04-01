@@ -221,3 +221,117 @@ def test_source_hub_sync_clinicaltrials_records(monkeypatch) -> None:
     assert record["external_id"] == "NCT12345678"
     assert record["title"] == "Warfarin and NSAID interaction study"
     assert "clinicaltrials.gov/study/NCT12345678" in (record["url"] or "")
+
+
+def test_source_hub_sync_vn_moh_html_crawl_filters_and_dedupes(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    html_doc = """
+    <html>
+      <body>
+        <a href="/tin-tuc/huong-dan-dieu-tri-sot-xuat-huyet-2025.html">
+          Hướng dẫn điều trị sốt xuất huyết 2025
+        </a>
+        <a href="/tin-tuc/huong-dan-dieu-tri-sot-xuat-huyet-2025.html">Bản sao link trùng</a>
+        <a href="/tin-tuc/ke-hoach-tiem-chung.html">Kế hoạch tiêm chủng mở rộng</a>
+      </body>
+    </html>
+    """
+
+    def _fake_http_get_text(url: str, *, params: dict[str, object] | None = None) -> str:
+        assert "moh.gov.vn" in url
+        assert params is None
+        return html_doc
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._http_get_text",
+        _fake_http_get_text,
+    )
+
+    response = client.post(
+        "/api/v1/research/source-hub/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "vn_moh", "query": "sot xuat huyet", "limit": 10},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "vn_moh"
+    assert payload["fetched"] == 1
+    assert len(payload["records"]) == 1
+    record = payload["records"][0]
+    assert record["id"].startswith("vn_moh:")
+    assert "sốt xuất huyết" in record["title"].lower()
+    assert (record["url"] or "").startswith("https://moh.gov.vn/")
+
+
+def test_source_hub_sync_vn_dav_html_crawl_parses_title_and_date(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    html_doc = """
+    <html>
+      <body>
+        <a
+          href="/thong-bao/thu-hoi-thuoc-ngay-01-04-2026.html"
+          title="Thông báo thu hồi thuốc 01/04/2026"
+        >
+          Xem chi tiết
+        </a>
+        <a href="/thong-bao/lich-hop-noi-bo.html">Lịch họp nội bộ</a>
+      </body>
+    </html>
+    """
+
+    def _fake_http_get_text(url: str, *, params: dict[str, object] | None = None) -> str:
+        assert "dav.gov.vn" in url
+        assert params is None
+        return html_doc
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._http_get_text",
+        _fake_http_get_text,
+    )
+
+    response = client.post(
+        "/api/v1/research/source-hub/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "vn_dav", "query": "thu hoi", "limit": 20},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "vn_dav"
+    assert payload["fetched"] == 1
+    record = payload["records"][0]
+    assert record["id"].startswith("vn_dav:")
+    assert "thu hồi thuốc" in record["title"].lower()
+    assert record["published_at"] == "2026-04-01"
+    assert (record["url"] or "").startswith("https://dav.gov.vn/")
+
+
+def test_source_hub_sync_limit_clamp_min_3_and_max_500(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+    observed_limits: list[int] = []
+
+    def _fake_fetch_source_hub_records(source: str, query: str, limit: int):
+        _ = source, query
+        observed_limits.append(limit)
+        return [], []
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._fetch_source_hub_records",
+        _fake_fetch_source_hub_records,
+    )
+
+    low_limit_response = client.post(
+        "/api/v1/research/source-hub/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "vn_kcb", "query": "huong dan", "limit": 1},
+    )
+    assert low_limit_response.status_code == 200
+
+    high_limit_response = client.post(
+        "/api/v1/research/source-hub/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "vn_kcb", "query": "huong dan", "limit": 500},
+    )
+    assert high_limit_response.status_code == 200
+    assert observed_limits == [3, 500]

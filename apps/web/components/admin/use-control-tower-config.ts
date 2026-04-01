@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ControlTowerConfig,
   ControlTowerRagFlow,
+  ControlTowerRagFlowConfig,
   ControlTowerRagSource,
   getControlTowerConfig,
   updateControlTowerConfig
 } from "@/lib/system";
 
 export type FlowToggleKey = Exclude<keyof ControlTowerRagFlow, "low_context_threshold">;
+export type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
 
 const FLOW_TOGGLES: FlowToggleKey[] = [
   "role_router_enabled",
@@ -21,16 +23,23 @@ const FLOW_TOGGLES: FlowToggleKey[] = [
   "file_retrieval_enabled"
 ];
 
-const DEFAULT_FLOW: ControlTowerRagFlow = {
+const DEFAULT_FLOW: ControlTowerRagFlowConfig = {
   role_router_enabled: true,
   intent_router_enabled: true,
   verification_enabled: true,
   deepseek_fallback_enabled: true,
   low_context_threshold: 0.2,
+  precision_at_k: 10,
+  recall_at_k: 10,
+  ndcg_at_k: 10,
   scientific_retrieval_enabled: true,
   web_retrieval_enabled: true,
   file_retrieval_enabled: true
 };
+
+const RETRIEVAL_METRIC_K_MIN = 1;
+const RETRIEVAL_METRIC_K_MAX = 50;
+const DEFAULT_RETRIEVAL_METRIC_K = 10;
 
 const SOURCE_WEIGHT_MIN = 0;
 const SOURCE_WEIGHT_MAX = 1;
@@ -70,13 +79,28 @@ function sortSources(sources: ControlTowerRagSource[]): ControlTowerRagSource[] 
   return [...sources].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
 }
 
-function normalizeFlow(flow?: Partial<ControlTowerRagFlow> | null): ControlTowerRagFlow {
+function normalizeFlow(flow?: Partial<ControlTowerRagFlowConfig> | null): ControlTowerRagFlowConfig {
   return {
     role_router_enabled: flow?.role_router_enabled ?? DEFAULT_FLOW.role_router_enabled,
     intent_router_enabled: flow?.intent_router_enabled ?? DEFAULT_FLOW.intent_router_enabled,
     verification_enabled: flow?.verification_enabled ?? DEFAULT_FLOW.verification_enabled,
     deepseek_fallback_enabled: flow?.deepseek_fallback_enabled ?? DEFAULT_FLOW.deepseek_fallback_enabled,
     low_context_threshold: clamp(Number(flow?.low_context_threshold ?? DEFAULT_FLOW.low_context_threshold), 0, 1),
+    precision_at_k: clamp(
+      Math.trunc(Number(flow?.precision_at_k ?? DEFAULT_FLOW.precision_at_k)),
+      RETRIEVAL_METRIC_K_MIN,
+      RETRIEVAL_METRIC_K_MAX
+    ),
+    recall_at_k: clamp(
+      Math.trunc(Number(flow?.recall_at_k ?? DEFAULT_FLOW.recall_at_k)),
+      RETRIEVAL_METRIC_K_MIN,
+      RETRIEVAL_METRIC_K_MAX
+    ),
+    ndcg_at_k: clamp(
+      Math.trunc(Number(flow?.ndcg_at_k ?? DEFAULT_FLOW.ndcg_at_k)),
+      RETRIEVAL_METRIC_K_MIN,
+      RETRIEVAL_METRIC_K_MAX
+    ),
     scientific_retrieval_enabled:
       flow?.scientific_retrieval_enabled ?? DEFAULT_FLOW.scientific_retrieval_enabled,
     web_retrieval_enabled: flow?.web_retrieval_enabled ?? DEFAULT_FLOW.web_retrieval_enabled,
@@ -110,6 +134,7 @@ export type UseControlTowerConfigResult = {
   setSourceCategory: (sourceId: string, category: string) => void;
   setFlowToggle: (key: FlowToggleKey, enabled: boolean) => void;
   setLowContextThreshold: (value: number) => void;
+  setRetrievalMetricK: (key: RetrievalMetricKey, value: number) => void;
   flowToggleKeys: FlowToggleKey[];
 };
 
@@ -241,6 +266,25 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
     });
   }, []);
 
+  const setRetrievalMetricK = useCallback((key: RetrievalMetricKey, value: number) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const fallbackMetricK = DEFAULT_FLOW[key] ?? DEFAULT_RETRIEVAL_METRIC_K;
+      const metricK = clamp(
+        Math.trunc(Number.isFinite(value) ? value : fallbackMetricK),
+        RETRIEVAL_METRIC_K_MIN,
+        RETRIEVAL_METRIC_K_MAX
+      );
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          [key]: metricK
+        }
+      };
+    });
+  }, []);
+
   return {
     config,
     isLoading,
@@ -256,6 +300,7 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
     setSourceCategory,
     setFlowToggle,
     setLowContextThreshold,
+    setRetrievalMetricK,
     flowToggleKeys: FLOW_TOGGLES
   };
 }

@@ -109,13 +109,21 @@ export type ControlTowerRagFlow = {
   file_retrieval_enabled: boolean;
 };
 
+export type ControlTowerRagFlowMetrics = {
+  precision_at_k?: number;
+  recall_at_k?: number;
+  ndcg_at_k?: number;
+};
+
+export type ControlTowerRagFlowConfig = ControlTowerRagFlow & ControlTowerRagFlowMetrics;
+
 export type CareguardRuntimeConfig = {
   external_ddi_enabled: boolean;
 };
 
 export type ControlTowerConfig = {
   rag_sources: ControlTowerRagSource[];
-  rag_flow: ControlTowerRagFlow;
+  rag_flow: ControlTowerRagFlowConfig;
   careguard_runtime: CareguardRuntimeConfig;
 };
 

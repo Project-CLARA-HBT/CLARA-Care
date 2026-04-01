@@ -96,6 +96,15 @@ function formatPayloadPreview(payload?: Record<string, unknown>): string {
   if (!payload) return "";
 
   const parts: string[] = [];
+  if (typeof payload.elapsed_seconds === "number") {
+    parts.push(`elapsed=${payload.elapsed_seconds.toFixed(1)}s`);
+  }
+  if (typeof payload.progress_percent === "number") {
+    parts.push(`progress=${payload.progress_percent}%`);
+  }
+  if (typeof payload.heartbeat_seq === "number") {
+    parts.push(`tick=#${payload.heartbeat_seq}`);
+  }
   if (typeof payload.top_k === "number") {
     parts.push(`top_k=${payload.top_k}`);
   }
@@ -174,7 +183,8 @@ function getProgressPercent(summary: TimelineSummary): number {
 function formatPayloadValue(value: unknown): string {
   if (value == null) return "null";
   if (typeof value === "string") return value.length > 72 ? `${value.slice(0, 72)}...` : value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number") return Number.isFinite(value) ? `${value}` : "NaN";
+  if (typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return `array(${value.length})`;
   if (typeof value === "object") return "object";
   return String(value);
@@ -182,9 +192,25 @@ function formatPayloadValue(value: unknown): string {
 
 function extractPayloadChips(payload?: Record<string, unknown>): Array<{ key: string; value: string }> {
   if (!payload) return [];
+  const keyMap: Record<string, string> = {
+    elapsed_seconds: "đã chạy",
+    heartbeat_seq: "nhịp",
+    phase: "pha",
+    progress_percent: "tiến độ",
+    research_mode: "mode",
+    source_mode: "nguồn",
+  };
   return Object.entries(payload)
     .slice(0, 6)
-    .map(([key, value]) => ({ key, value: formatPayloadValue(value) }));
+    .map(([key, value]) => {
+      if (key === "elapsed_seconds" && typeof value === "number") {
+        return { key: keyMap[key] ?? key, value: `${value.toFixed(1)}s` };
+      }
+      if (key === "progress_percent" && typeof value === "number") {
+        return { key: keyMap[key] ?? key, value: `${value}%` };
+      }
+      return { key: keyMap[key] ?? key, value: formatPayloadValue(value) };
+    });
 }
 
 function safeStringifyPayload(payload?: Record<string, unknown>): string {

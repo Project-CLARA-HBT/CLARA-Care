@@ -9,8 +9,12 @@ import {
   updateControlTowerConfig
 } from "@/lib/system";
 
-type FlowFlagKey = Exclude<keyof ControlTowerConfig["rag_flow"], "low_context_threshold">;
+type FlowFlagKey = Exclude<
+  keyof ControlTowerConfig["rag_flow"],
+  "low_context_threshold" | "precision_at_k" | "recall_at_k" | "ndcg_at_k"
+>;
 type FlowGroupKey = "routing" | "verification" | "retrieval";
+type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
 
 const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: FlowGroupKey }> = [
   {
@@ -72,12 +76,45 @@ const FLOW_GROUP_META: Record<FlowGroupKey, { label: string; description: string
   }
 };
 
+const RETRIEVAL_METRIC_K_MIN = 1;
+const RETRIEVAL_METRIC_K_MAX = 50;
+const DEFAULT_RETRIEVAL_METRIC_K = 10;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
 function sortSources(sources: ControlTowerRagSource[]): ControlTowerRagSource[] {
   return [...sources].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
+}
+
+function normalizeFlow(flow?: Partial<ControlTowerConfig["rag_flow"]> | null): ControlTowerConfig["rag_flow"] {
+  const precisionRaw = flow?.precision_at_k;
+  const recallRaw = flow?.recall_at_k;
+  const ndcgRaw = flow?.ndcg_at_k;
+  const precisionAtK = Math.trunc(
+    typeof precisionRaw === "number" && Number.isFinite(precisionRaw) ? precisionRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+  const recallAtK = Math.trunc(
+    typeof recallRaw === "number" && Number.isFinite(recallRaw) ? recallRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+  const ndcgAtK = Math.trunc(
+    typeof ndcgRaw === "number" && Number.isFinite(ndcgRaw) ? ndcgRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+
+  return {
+    role_router_enabled: flow?.role_router_enabled ?? true,
+    intent_router_enabled: flow?.intent_router_enabled ?? true,
+    verification_enabled: flow?.verification_enabled ?? true,
+    deepseek_fallback_enabled: flow?.deepseek_fallback_enabled ?? true,
+    low_context_threshold: clamp(Number(flow?.low_context_threshold ?? 0.2), 0, 1),
+    precision_at_k: clamp(precisionAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    recall_at_k: clamp(recallAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    ndcg_at_k: clamp(ndcgAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    scientific_retrieval_enabled: flow?.scientific_retrieval_enabled ?? true,
+    web_retrieval_enabled: flow?.web_retrieval_enabled ?? true,
+    file_retrieval_enabled: flow?.file_retrieval_enabled ?? true
+  };
 }
 
 export default function ControlTowerPage() {
@@ -95,7 +132,7 @@ export default function ControlTowerPage() {
         const response = await getControlTowerConfig();
         setConfig({
           rag_sources: sortSources(response.rag_sources ?? []),
-          rag_flow: response.rag_flow,
+          rag_flow: normalizeFlow(response.rag_flow),
           careguard_runtime: {
             external_ddi_enabled: Boolean(response.careguard_runtime?.external_ddi_enabled)
           }
@@ -158,6 +195,22 @@ export default function ControlTowerPage() {
     });
   };
 
+  const onRetrievalMetricChange = (key: RetrievalMetricKey, value: string) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          [key]: clamp(Math.trunc(parsed), RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX)
+        }
+      };
+    });
+  };
+
   const onToggleExternalDdi = () => {
     setConfig((prev) => {
       if (!prev) return prev;
@@ -179,7 +232,7 @@ export default function ControlTowerPage() {
       const updated = await updateControlTowerConfig(config);
       setConfig({
         rag_sources: sortSources(updated.rag_sources ?? []),
-        rag_flow: updated.rag_flow,
+        rag_flow: normalizeFlow(updated.rag_flow),
         careguard_runtime: {
           external_ddi_enabled: Boolean(updated.careguard_runtime?.external_ddi_enabled)
         }
@@ -400,6 +453,57 @@ export default function ControlTowerPage() {
                     onChange={(event) => onThresholdChange(event.target.value)}
                   />
                 </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Retrieval Metrics</p>
+                <h3 className="text-sm font-semibold text-slate-900">Evaluation @K</h3>
+                <p className="text-xs text-slate-500">
+                  Cấu hình K cho precision/recall/nDCG khi đánh giá chất lượng retrieval (1 - 50).
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Precision@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.precision_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("precision_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Recall@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.recall_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("recall_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">nDCG@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.ndcg_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("ndcg_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
               </div>
             </section>
 

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 import os
@@ -6,10 +7,12 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime
+from html import unescape
+from html.parser import HTMLParser
 from io import BytesIO
 from threading import Lock
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urljoin, urlparse
 from uuid import uuid4
 
 import httpx
@@ -82,6 +85,7 @@ _SOURCE_HUB_SETTING_KEY = "source_hub_records_v1"
 _SOURCE_HUB_MAX_RECORDS = 500
 _SOURCE_HUB_TIMEOUT_SECONDS = 12.0
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+_SOURCE_HUB_SNIPPET_CHAR_LIMIT = 300
 _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
     "markdown": True,
     "tables": True,
@@ -93,6 +97,53 @@ _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
         "json",
         "yaml",
     ],
+}
+_VN_HTML_SOURCE_DEFINITIONS: dict[str, dict[str, Any]] = {
+    "vn_moh": {
+        "label": "Bộ Y tế Việt Nam",
+        "docs_url": "https://moh.gov.vn/",
+        "default_query": "huong dan chan doan dieu tri",
+        "search_urls": (
+            "https://moh.gov.vn/tim-kiem?q={query_q}",
+            "https://moh.gov.vn/",
+        ),
+    },
+    "vn_kcb": {
+        "label": "Cục Quản lý Khám chữa bệnh",
+        "docs_url": "https://kcb.vn/",
+        "default_query": "huong dan kham chua benh",
+        "search_urls": (
+            "https://kcb.vn/?s={query_q}",
+            "https://kcb.vn/",
+        ),
+    },
+    "vn_canhgiacduoc": {
+        "label": "Trung tâm Quốc gia về Thông tin thuốc và Theo dõi phản ứng có hại của thuốc",
+        "docs_url": "https://canhgiacduoc.org.vn/",
+        "default_query": "canh giac duoc ADR",
+        "search_urls": (
+            "https://canhgiacduoc.org.vn/?s={query_q}",
+            "https://canhgiacduoc.org.vn/",
+        ),
+    },
+    "vn_vbpl_byt": {
+        "label": "VBPL Bộ Y tế",
+        "docs_url": "https://vbpl.vn/boyte/Pages/home.aspx",
+        "default_query": "thong tu bo y te",
+        "search_urls": (
+            "https://vbpl.vn/boyte/pages/default.aspx?keyword={query_q}",
+            "https://vbpl.vn/boyte/Pages/home.aspx",
+        ),
+    },
+    "vn_dav": {
+        "label": "Cục Quản lý Dược Việt Nam",
+        "docs_url": "https://dav.gov.vn/",
+        "default_query": "thu hoi thuoc",
+        "search_urls": (
+            "https://dav.gov.vn/?s={query_q}",
+            "https://dav.gov.vn/",
+        ),
+    },
 }
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
@@ -557,6 +608,11 @@ def _extract_source_hub_sources(payload: dict[str, Any]) -> set[str]:
         "rxnorm",
         "openfda",
         "dailymed",
+        "vn_moh",
+        "vn_kcb",
+        "vn_canhgiacduoc",
+        "vn_vbpl_byt",
+        "vn_dav",
         "davidrug",
     }
     return {item for item in values if item in allowed}
@@ -1204,6 +1260,18 @@ def _build_fail_soft_response_local(
     return response
 
 
+def _estimate_reasoning_phase(elapsed_seconds: float) -> tuple[str, str, int]:
+    if elapsed_seconds < 15:
+        return ("scope_question", "Đang phân tích câu hỏi và xác định phạm vi.", 15)
+    if elapsed_seconds < 35:
+        return ("collect_evidence", "Đang truy xuất evidence từ nguồn nội bộ và nguồn live.", 40)
+    if elapsed_seconds < 60:
+        return ("synthesize_findings", "Đang tổng hợp điểm đồng thuận và phát hiện mâu thuẫn.", 70)
+    if elapsed_seconds < 90:
+        return ("verification", "Đang kiểm chứng claim theo bằng chứng truy xuất.", 88)
+    return ("final_response", "Đang hoàn thiện câu trả lời và chuẩn hóa citation.", 95)
+
+
 def _invoke_ml_tier2_with_progress(
     *,
     ml_payload: dict[str, Any],
@@ -1275,18 +1343,30 @@ def _run_research_job(job_id: str) -> None:
             note="Đã gửi yêu cầu lên ML service, đang chạy reasoning nhiều bước.",
         )
         request_payload = job.request_payload if isinstance(job.request_payload, dict) else {}
+        last_heartbeat_bucket = -1
 
         def _heartbeat(elapsed_seconds: float) -> None:
-            # Emit heartbeat every ~10s to support live status on long deep research runs.
-            if int(elapsed_seconds) % 10 != 0:
+            nonlocal last_heartbeat_bucket
+            # Emit heartbeat every ~10s and avoid duplicate messages in same 10s bucket.
+            bucket = int(elapsed_seconds // 10)
+            if bucket <= 0 or bucket == last_heartbeat_bucket:
                 return
+            last_heartbeat_bucket = bucket
+            phase, note, progress_percent = _estimate_reasoning_phase(elapsed_seconds)
             _append_job_event(
                 db,
                 job=job,
                 stage="reasoning",
                 status_text="in_progress",
-                note="Model đang suy luận và đối chiếu nguồn. Vui lòng chờ...",
-                payload={"elapsed_seconds": round(elapsed_seconds, 1)},
+                note=note,
+                payload={
+                    "elapsed_seconds": round(elapsed_seconds, 1),
+                    "heartbeat_seq": bucket,
+                    "phase": phase,
+                    "progress_percent": progress_percent,
+                    "research_mode": str(request_payload.get("research_mode") or "deep"),
+                    "source_mode": str(request_payload.get("source_mode") or "hybrid"),
+                },
             )
 
         ml_response = _invoke_ml_tier2_with_progress(
@@ -1427,6 +1507,46 @@ _SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
         supports_live_sync=True,
     ),
     SourceHubCatalogEntry(
+        key="vn_moh",
+        label="Bộ Y tế Việt Nam",
+        description="Tin tức và văn bản điều hành chính thức từ Cổng thông tin Bộ Y tế",
+        docs_url="https://moh.gov.vn/",
+        default_query="huong dan chan doan dieu tri",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="vn_kcb",
+        label="Cục Quản lý Khám chữa bệnh",
+        description="Thông báo, công văn và hướng dẫn khám chữa bệnh từ kcb.vn",
+        docs_url="https://kcb.vn/",
+        default_query="huong dan kham chua benh",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="vn_canhgiacduoc",
+        label="Cảnh giác Dược Quốc gia",
+        description="Bản tin cảnh giác dược và theo dõi phản ứng có hại của thuốc",
+        docs_url="https://canhgiacduoc.org.vn/",
+        default_query="canh giac duoc ADR",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="vn_vbpl_byt",
+        label="VBPL Bộ Y tế",
+        description="Văn bản pháp quy lĩnh vực y tế trên hệ thống VBPL",
+        docs_url="https://vbpl.vn/boyte/Pages/home.aspx",
+        default_query="thong tu bo y te",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
+        key="vn_dav",
+        label="Cục Quản lý Dược Việt Nam",
+        description="Thông tin quản lý dược, công bố và thông báo chuyên ngành từ dav.gov.vn",
+        docs_url="https://dav.gov.vn/",
+        default_query="thu hoi thuoc",
+        supports_live_sync=True,
+    ),
+    SourceHubCatalogEntry(
         key="davidrug",
         label="DAVIDrug",
         description="Cục Quản lý Dược Việt Nam (public web data fallback)",
@@ -1459,6 +1579,11 @@ def _normalize_source_hub_record(record: dict[str, Any]) -> SourceHubRecord | No
         "europepmc",
         "semantic_scholar",
         "clinicaltrials",
+        "vn_moh",
+        "vn_kcb",
+        "vn_canhgiacduoc",
+        "vn_vbpl_byt",
+        "vn_dav",
         "davidrug",
     }:
         return None
@@ -1558,6 +1683,258 @@ def _http_post_json(url: str, *, payload: dict[str, Any]) -> dict[str, Any]:
     response.raise_for_status()
     body = response.json()
     return body if isinstance(body, dict) else {}
+
+
+class _LightAnchorExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.items: list[dict[str, str]] = []
+        self._skip_depth = 0
+        self._in_anchor = False
+        self._anchor_href = ""
+        self._anchor_title = ""
+        self._anchor_text_chunks: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        normalized_tag = tag.lower()
+        if normalized_tag in {"script", "style", "noscript"}:
+            self._skip_depth += 1
+            return
+        if self._skip_depth > 0:
+            return
+        if normalized_tag != "a":
+            return
+        attributes = {str(key).lower(): _to_text(value) for key, value in attrs if key}
+        self._in_anchor = True
+        self._anchor_href = _to_text(attributes.get("href"))
+        self._anchor_title = _to_text(attributes.get("title")) or _to_text(
+            attributes.get("aria-label")
+        )
+        self._anchor_text_chunks = []
+
+    def handle_endtag(self, tag: str) -> None:
+        normalized_tag = tag.lower()
+        if normalized_tag in {"script", "style", "noscript"}:
+            if self._skip_depth > 0:
+                self._skip_depth -= 1
+            return
+        if self._skip_depth > 0:
+            return
+        if normalized_tag != "a" or not self._in_anchor:
+            return
+
+        text = _normalize_html_text(" ".join(self._anchor_text_chunks))
+        title = _normalize_html_text(self._anchor_title) or text
+        if self._anchor_href and title:
+            self.items.append(
+                {
+                    "href": self._anchor_href,
+                    "title": title,
+                    "snippet": text[:_SOURCE_HUB_SNIPPET_CHAR_LIMIT],
+                }
+            )
+
+        self._in_anchor = False
+        self._anchor_href = ""
+        self._anchor_title = ""
+        self._anchor_text_chunks = []
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth > 0 or not self._in_anchor:
+            return
+        text = _normalize_html_text(data)
+        if text:
+            self._anchor_text_chunks.append(text)
+
+
+def _normalize_html_text(value: str) -> str:
+    cleaned = unescape(value or "")
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
+def _build_query_terms(query: str) -> list[str]:
+    terms = [part for part in re.split(r"[^\w]+", query.lower()) if len(part.strip()) >= 2]
+    if not terms and query.strip():
+        return [query.strip().lower()]
+    return list(dict.fromkeys(terms))
+
+
+def _resolve_source_hub_url(page_url: str, href: str) -> str:
+    raw_href = href.strip()
+    if not raw_href or raw_href.startswith("#"):
+        return ""
+    if raw_href.lower().startswith(("javascript:", "mailto:", "tel:")):
+        return ""
+    resolved = urljoin(page_url, raw_href)
+    parsed = urlparse(resolved)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return resolved
+
+
+def _extract_anchor_candidates(html_text: str, page_url: str) -> list[dict[str, str]]:
+    parser = _LightAnchorExtractor()
+    parser.feed(html_text)
+    parser.close()
+
+    candidates: list[dict[str, str]] = []
+    for item in parser.items:
+        title = _to_text(item.get("title"))
+        href = _to_text(item.get("href"))
+        if not title or not href:
+            continue
+        resolved_url = _resolve_source_hub_url(page_url, href)
+        if not resolved_url:
+            continue
+        snippet = _to_text(item.get("snippet"))
+        if snippet == title:
+            snippet = ""
+        candidates.append(
+            {
+                "title": title,
+                "url": resolved_url,
+                "snippet": snippet[:_SOURCE_HUB_SNIPPET_CHAR_LIMIT],
+            }
+        )
+    return candidates
+
+
+def _extract_published_date(value: str) -> str | None:
+    for pattern, year_idx, month_idx, day_idx in (
+        (r"(?<!\d)(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)", 1, 2, 3),
+        (r"(?<!\d)(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})(?!\d)", 3, 2, 1),
+    ):
+        matched = re.search(pattern, value)
+        if not matched:
+            continue
+        try:
+            year = int(matched.group(year_idx))
+            month = int(matched.group(month_idx))
+            day = int(matched.group(day_idx))
+            if 1 <= month <= 12 and 1 <= day <= 31:
+                return f"{year:04d}-{month:02d}-{day:02d}"
+        except ValueError:
+            continue
+    return None
+
+
+def _external_id_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    path_value = f"{parsed.netloc}{parsed.path}?{parsed.query}".strip("?").lower()
+    normalized = re.sub(r"[^a-z0-9]+", "-", path_value).strip("-")
+    if normalized:
+        return normalized[:120]
+    return hashlib.sha1(url.encode("utf-8")).hexdigest()[:32]
+
+
+def _build_vn_source_urls(source: str, query: str) -> list[str]:
+    source_def = _VN_HTML_SOURCE_DEFINITIONS.get(source)
+    if not isinstance(source_def, dict):
+        return []
+    search_urls = source_def.get("search_urls")
+    if not isinstance(search_urls, (list, tuple)):
+        return []
+
+    query_text = query.strip()
+    query_q = quote(query_text)
+    urls: list[str] = []
+    for template in search_urls:
+        if not isinstance(template, str):
+            continue
+        text = template.strip()
+        if not text:
+            continue
+        try:
+            candidate = text.format(query=query_text, query_q=query_q)
+        except Exception:
+            candidate = text
+        urls.append(candidate)
+    return list(dict.fromkeys(urls))
+
+
+def _fetch_vn_html_source_records(
+    source: SourceHubSourceKey,
+    query: str,
+    limit: int,
+    synced_at: str,
+) -> tuple[list[SourceHubRecord], list[str]]:
+    source_def = _VN_HTML_SOURCE_DEFINITIONS.get(source)
+    if not isinstance(source_def, dict):
+        return [], [f"Nguồn không được hỗ trợ: {source}"]
+
+    source_label = _to_text(source_def.get("label")) or source
+    safe_limit = max(1, min(500, int(limit)))
+    query_terms = _build_query_terms(query)
+    page_urls = _build_vn_source_urls(source, query)
+
+    records: list[SourceHubRecord] = []
+    warnings: list[str] = []
+    seen_urls: set[str] = set()
+    seen_ids: set[str] = set()
+    crawl_errors = 0
+
+    for page_url in page_urls:
+        try:
+            html = _http_get_text(page_url)
+        except Exception:
+            crawl_errors += 1
+            continue
+
+        for item in _extract_anchor_candidates(html, page_url):
+            title = _to_text(item.get("title"))
+            record_url = _to_text(item.get("url"))
+            snippet = _to_text(item.get("snippet"))
+            if not title or not record_url:
+                continue
+            if record_url in seen_urls:
+                continue
+
+            haystack = f"{title} {snippet} {record_url}".lower()
+            if query_terms and not any(term in haystack for term in query_terms):
+                continue
+
+            external_id = _external_id_from_url(record_url)
+            record_id = f"{source}:{external_id}"
+            if record_id in seen_ids:
+                continue
+
+            seen_ids.add(record_id)
+            seen_urls.add(record_url)
+            records.append(
+                SourceHubRecord(
+                    id=record_id,
+                    source=source,
+                    title=title,
+                    url=record_url,
+                    snippet=snippet[:_SOURCE_HUB_SNIPPET_CHAR_LIMIT] or None,
+                    external_id=external_id,
+                    query=query,
+                    published_at=_extract_published_date(f"{title} {snippet} {record_url}"),
+                    synced_at=synced_at,
+                    metadata={
+                        "crawl_url": page_url,
+                        "source_label": source_label,
+                        "query_terms": query_terms[:8],
+                    },
+                )
+            )
+            if len(records) >= safe_limit:
+                break
+        if len(records) >= safe_limit:
+            break
+
+    if not records:
+        if crawl_errors >= len(page_urls) and page_urls:
+            warnings.append(f"{source_label} hiện không truy cập được để crawl HTML.")
+        else:
+            warnings.append(f"{source_label} không có kết quả phù hợp cho query này.")
+    elif crawl_errors:
+        warnings.append(
+            f"{source_label} có một số URL crawl lỗi ({crawl_errors}/{len(page_urls)})."
+        )
+
+    return records[:safe_limit], warnings
 
 
 def _fetch_pubmed_records(
@@ -2031,6 +2408,14 @@ def _fetch_source_hub_records(
         return _fetch_semantic_scholar_records(query, limit, synced_at)
     if source == "clinicaltrials":
         return _fetch_clinicaltrials_records(query, limit, synced_at)
+    if source in {
+        "vn_moh",
+        "vn_kcb",
+        "vn_canhgiacduoc",
+        "vn_vbpl_byt",
+        "vn_dav",
+    }:
+        return _fetch_vn_html_source_records(source, query, limit, synced_at)
     if source == "davidrug":
         return _fetch_davidrug_records(query, limit, synced_at)
     return [], [f"Nguồn không được hỗ trợ: {source}"]
@@ -2521,7 +2906,7 @@ def source_hub_sync(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Query không được rỗng."
         )
 
-    safe_limit = max(3, min(30, int(payload.limit)))
+    safe_limit = max(3, min(500, int(payload.limit)))
     try:
         records, warnings = _fetch_source_hub_records(payload.source, query, safe_limit)
     except httpx.TimeoutException:
