@@ -801,15 +801,21 @@ def test_research_tier2_fail_soft_keeps_deep_mode_flags(
     response = client.post(
         "/api/v1/research/tier2",
         headers={"Authorization": f"Bearer {token}"},
-        json={"query": "deep mode fail soft", "research_mode": "deep"},
+        json={
+            "query": "deep mode fail soft",
+            "research_mode": "deep",
+            "retrieval_stack_mode": "full",
+        },
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["fallback"] is True
     assert payload["research_mode"] == "deep"
+    assert payload["retrieval_stack_mode"] == "full"
     assert payload["deep_pass_count"] == 0
     assert payload["metadata"]["research_mode"] == "deep"
+    assert payload["metadata"]["retrieval_stack_mode"] == "full"
     assert payload["metadata"]["deep_pass_count"] == 0
     assert payload["fallback_reason"] == "ConnectError"
     assert payload["attribution"]["channel"] == "research"

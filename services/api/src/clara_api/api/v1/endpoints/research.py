@@ -1592,6 +1592,32 @@ def _build_tier2_upstream_payload(
     return upstream_payload
 
 
+def _enforce_request_execution_contract(
+    normalized: dict[str, Any],
+    *,
+    request_payload: dict[str, Any],
+) -> dict[str, Any]:
+    response = dict(normalized)
+    metadata_obj = response.get("metadata")
+    if not isinstance(metadata_obj, dict):
+        metadata_obj = {}
+        response["metadata"] = metadata_obj
+
+    research_mode = _coerce_research_mode(request_payload)
+    if not response.get("research_mode"):
+        response["research_mode"] = research_mode
+    if not metadata_obj.get("research_mode"):
+        metadata_obj["research_mode"] = research_mode
+
+    retrieval_stack_mode = _coerce_retrieval_stack_mode(request_payload)
+    if not response.get("retrieval_stack_mode"):
+        response["retrieval_stack_mode"] = retrieval_stack_mode
+    if not metadata_obj.get("retrieval_stack_mode"):
+        metadata_obj["retrieval_stack_mode"] = retrieval_stack_mode
+
+    return response
+
+
 def _empty_job_progress() -> dict[str, Any]:
     return {
         "flow_events": [],
@@ -1824,6 +1850,10 @@ def _run_research_job(job_id: str) -> None:
             heartbeat=_heartbeat,
         )
         normalized = _normalize_tier2_response(ml_response)
+        normalized = _enforce_request_execution_contract(
+            normalized,
+            request_payload=request_payload,
+        )
         enriched = _attach_research_attribution(normalized)
         job.result_json = enriched
         job.status = "completed"
@@ -3315,6 +3345,10 @@ def research_tier2(
         ),
     )
     normalized = _normalize_tier2_response(response)
+    normalized = _enforce_request_execution_contract(
+        normalized,
+        request_payload=upstream_payload,
+    )
     return _attach_research_attribution(normalized)
 
 
