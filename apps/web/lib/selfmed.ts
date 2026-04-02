@@ -36,7 +36,7 @@ export type ScanDetection = {
   mapping_confidence?: number | null;
 };
 
-export const LOW_CONFIDENCE_DETECTION_THRESHOLD = 0.85;
+export const LOW_CONFIDENCE_DETECTION_THRESHOLD = 0.9;
 
 export function isLowConfidenceDetection(detection: ScanDetection): boolean {
   return detection.confidence < LOW_CONFIDENCE_DETECTION_THRESHOLD;
