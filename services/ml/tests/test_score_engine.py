@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+
+from clara_ml.config import settings
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.score_engine import DocumentScorer
 
@@ -6,6 +9,22 @@ class _StubEmbedder:
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         # Deterministic vectors for unit tests; ranking relies mainly on lexical/policy logic.
         return [[1.0, 0.0] for _ in texts]
+
+
+@contextmanager
+def _biomedical_rerank_flags(*, enabled: bool, alpha: float = 0.28, top_n: int = 8):
+    previous_enabled = settings.rag_biomedical_rerank_enabled
+    previous_alpha = settings.rag_biomedical_rerank_alpha
+    previous_top_n = settings.rag_biomedical_rerank_top_n
+    settings.rag_biomedical_rerank_enabled = enabled
+    settings.rag_biomedical_rerank_alpha = alpha
+    settings.rag_biomedical_rerank_top_n = top_n
+    try:
+        yield
+    finally:
+        settings.rag_biomedical_rerank_enabled = previous_enabled
+        settings.rag_biomedical_rerank_alpha = previous_alpha
+        settings.rag_biomedical_rerank_top_n = previous_top_n
 
 
 def test_score_engine_filters_ddi_irrelevant_documents() -> None:
@@ -114,3 +133,64 @@ def test_score_engine_emits_rrf_breakdown_for_selected_documents() -> None:
     selected_rows = [row for row in score_trace if row.get("excluded") is False]
     assert selected_rows
     assert all("rrf_score" in row and "pre_rrf_score" in row for row in selected_rows)
+
+
+def test_score_engine_biomedical_rerank_boosts_score_when_enabled() -> None:
+    scorer = DocumentScorer(embedder=_StubEmbedder())
+    query = "warfarin ibuprofen interaction major bleeding risk"
+    docs = [
+        Document(
+            id="doc-signal-strong",
+            text=(
+                "Warfarin with ibuprofen has major contraindication and bleeding risk. "
+                "Label warning and INR monitoring are required."
+            ),
+            metadata={"source": "openfda"},
+        ),
+        Document(
+            id="doc-signal-weaker",
+            text="Warfarin and ibuprofen co-use requires attention in routine follow-up.",
+            metadata={"source": "pubmed"},
+        ),
+    ]
+
+    with _biomedical_rerank_flags(enabled=False, alpha=0.4, top_n=2):
+        ranked_without_rerank = scorer.score_documents(query, docs, top_k=2)
+    with _biomedical_rerank_flags(enabled=True, alpha=0.4, top_n=2):
+        ranked_with_rerank = scorer.score_documents(query, docs, top_k=2)
+
+    without_score = float((ranked_without_rerank[0].metadata or {}).get("score") or 0.0)
+    with_score = float((ranked_with_rerank[0].metadata or {}).get("score") or 0.0)
+    breakdown = (ranked_with_rerank[0].metadata or {}).get("score_breakdown", {})
+
+    assert with_score > without_score
+    assert breakdown.get("biomedical_rerank_enabled") is True
+    assert float(breakdown.get("biomedical_rerank_signal") or 0.0) > 0.0
+    assert (
+        float((ranked_with_rerank[0].metadata or {}).get("biomedical_rerank_factor") or 1.0) > 1.0
+    )
+
+
+def test_score_engine_biomedical_rerank_respects_top_n_limit() -> None:
+    scorer = DocumentScorer(embedder=_StubEmbedder())
+    query = "warfarin ibuprofen interaction bleeding"
+    docs = [
+        Document(
+            id="doc-1",
+            text="Warfarin and ibuprofen interaction with bleeding risk and contraindication.",
+            metadata={"source": "openfda"},
+        ),
+        Document(
+            id="doc-2",
+            text="Warfarin and ibuprofen interaction notes.",
+            metadata={"source": "pubmed"},
+        ),
+    ]
+
+    with _biomedical_rerank_flags(enabled=True, alpha=0.35, top_n=1):
+        ranked = scorer.score_documents(query, docs, top_k=2)
+
+    first = ranked[0].metadata or {}
+    second = ranked[1].metadata or {}
+    assert first.get("biomedical_rerank_enabled") is True
+    assert second.get("biomedical_rerank_enabled") is False

@@ -353,6 +353,7 @@ class RagPipelineP1:
         after_dedupe_count: Any = None,
         selected_count: Any = None,
         duration_ms: Any = None,
+        rerank: Any = None,
     ) -> dict[str, Any]:
         def _as_int(value: Any, default: int) -> int:
             try:
@@ -370,6 +371,7 @@ class RagPipelineP1:
         except (TypeError, ValueError):
             parsed_duration = None
 
+        rerank_payload = rerank if isinstance(rerank, dict) else {}
         return {
             "retrieved_count": len(docs),
             "source_counts": self._source_counts(docs),
@@ -379,6 +381,7 @@ class RagPipelineP1:
             "after_dedupe": after,
             "selected_count": selected,
             "duration_ms": parsed_duration,
+            "rerank": rerank_payload,
         }
 
     def _should_force_external_retrieval(self, query: str, docs: List[Document]) -> bool:
@@ -402,6 +405,7 @@ class RagPipelineP1:
                 "reason_codes": [],
                 "query_plan": {},
                 "retrieval_stack_mode": "auto",
+                "retrieval_budget": {},
                 "graphrag_enabled_override": None,
                 "external_connectors_enabled_override": None,
             }
@@ -438,6 +442,44 @@ class RagPipelineP1:
 
         research_mode = str(hints.get("research_mode") or "").strip().lower()
         mode = str(hints.get("mode") or "").strip().lower()
+        retrieval_budget_raw = (
+            hints.get("retrieval_budget") if isinstance(hints.get("retrieval_budget"), dict) else {}
+        )
+        retrieval_budget: dict[str, int] = {}
+        if retrieval_budget_raw:
+            retrieval_budget = {
+                "latency_budget_ms": _as_int(
+                    retrieval_budget_raw.get("latency_budget_ms"),
+                    0,
+                    min_value=300,
+                    max_value=12000,
+                ),
+                "max_search_rounds": _as_int(
+                    retrieval_budget_raw.get("max_search_rounds"),
+                    0,
+                    min_value=1,
+                    max_value=8,
+                ),
+                "max_connector_calls": _as_int(
+                    retrieval_budget_raw.get("max_connector_calls"),
+                    0,
+                    min_value=0,
+                    max_value=8,
+                ),
+                "max_documents": _as_int(
+                    retrieval_budget_raw.get("max_documents"),
+                    0,
+                    min_value=1,
+                    max_value=24,
+                ),
+                "top_k_cap": _as_int(
+                    retrieval_budget_raw.get("top_k_cap"),
+                    0,
+                    min_value=1,
+                    max_value=12,
+                ),
+            }
+            retrieval_budget = {key: value for key, value in retrieval_budget.items() if value > 0}
 
         return {
             "internal_top_k": _as_int(hints.get("internal_top_k"), 3),
@@ -449,6 +491,7 @@ class RagPipelineP1:
             "reason_codes": reason_codes,
             "query_plan": hints.get("query_plan") if isinstance(hints.get("query_plan"), dict) else {},
             "retrieval_stack_mode": retrieval_stack_mode,
+            "retrieval_budget": retrieval_budget,
             "graphrag_enabled_override": _as_optional_bool(hints.get("graphrag_enabled_override")),
             "external_connectors_enabled_override": _as_optional_bool(
                 hints.get("external_connectors_enabled_override")
@@ -654,6 +697,36 @@ class RagPipelineP1:
         )
         complexity_level = str(complexity.get("level") or "medium")
         budgets = cls._orchestrator_budgets(mode=mode, complexity_level=complexity_level)
+        retrieval_budget_override = (
+            planner_hints.get("retrieval_budget")
+            if isinstance(planner_hints.get("retrieval_budget"), dict)
+            else {}
+        )
+        if retrieval_budget_override:
+            for key in (
+                "latency_budget_ms",
+                "max_search_rounds",
+                "max_connector_calls",
+                "max_documents",
+                "top_k_cap",
+            ):
+                if key not in retrieval_budget_override:
+                    continue
+                raw_value = retrieval_budget_override.get(key)
+                try:
+                    parsed_value = int(raw_value)  # type: ignore[arg-type]
+                except (TypeError, ValueError):
+                    continue
+                if key == "latency_budget_ms":
+                    budgets[key] = max(300, min(12000, parsed_value))
+                elif key == "max_search_rounds":
+                    budgets[key] = max(1, min(8, parsed_value))
+                elif key == "max_connector_calls":
+                    budgets[key] = max(0, min(8, parsed_value))
+                elif key == "max_documents":
+                    budgets[key] = max(1, min(24, parsed_value))
+                elif key == "top_k_cap":
+                    budgets[key] = max(1, min(12, parsed_value))
         top_k_cap = max(1, min(12, int(budgets.get("top_k_cap", 8))))
 
         internal_adjust = 0
@@ -756,6 +829,8 @@ class RagPipelineP1:
             decision_reasons.append("top_k_adjusted_by_mode_and_complexity")
         if normalized_stack_mode == "full":
             decision_reasons.append("retrieval_stack_mode_full_forced")
+        if retrieval_budget_override:
+            decision_reasons.append("planner_retrieval_budget_override")
         if not decision_reasons:
             decision_reasons.append("default_retrieval_policy")
 
@@ -813,6 +888,7 @@ class RagPipelineP1:
                 "internal_top_k": requested_internal,
                 "hybrid_top_k": requested_hybrid,
                 "retrieval_stack_mode": normalized_stack_mode,
+                "retrieval_budget": dict(retrieval_budget_override),
             },
             "query_plan_summary": query_plan_summary,
             "decision_reasons": list(dict.fromkeys(decision_reasons)),
@@ -1504,6 +1580,7 @@ class RagPipelineP1:
             after_dedupe_count=internal_index.get("after_dedupe_count"),
             selected_count=internal_index.get("selected_count"),
             duration_ms=internal_index.get("duration_ms"),
+            rerank=internal_index.get("rerank"),
         )
         retrieval_trace["crawl_summary"] = {}
         flow_events.append(
@@ -1673,6 +1750,7 @@ class RagPipelineP1:
                     after_dedupe_count=hybrid_index.get("after_dedupe_count"),
                     selected_count=hybrid_index.get("selected_count"),
                     duration_ms=hybrid_index.get("duration_ms"),
+                    rerank=hybrid_index.get("rerank"),
                 )
                 retrieval_trace["crawl_summary"] = (
                     hybrid_search.get("crawl_summary")
@@ -1763,6 +1841,7 @@ class RagPipelineP1:
                     before_dedupe_count=len(docs),
                     after_dedupe_count=len(docs),
                     selected_count=len(docs),
+                    rerank={},
                 )
                 retrieval_trace["crawl_summary"] = {}
                 flow_events.append(
@@ -1952,6 +2031,7 @@ class RagPipelineP1:
             ),
             selected_count=active_index_summary.get("selected_count"),
             duration_ms=active_index_summary.get("duration_ms"),
+            rerank=active_index_summary.get("rerank"),
         )
         retrieval_trace["crawl_summary"] = (
             active_trace.get("crawl_summary")

@@ -154,7 +154,7 @@ File canvas:
 | Metadata chuẩn hóa (`source_attempts`, `source_errors`, `query_plan`, `fallback_reason`) | Có ở ML + API normalize path | **Done (P0)** |
 | OTel trace metadata | Trước đây mới ở mức stage spans; đã bổ sung `otel_trace_metadata` payload | **Done (P1 incremental)** |
 | Learned orchestrator (model-based policy) | Chưa có, hiện vẫn rule-based orchestration | **Partial / chưa full** |
-| Cross-encoder biomedical reranker | Chưa có module riêng, chưa vào production path | **Partial / chưa full** |
+| Cross-encoder biomedical reranker | Đã có lớp `biomedical_rerank` theo feature-flag trong `score_engine` + trace ở `index_summary.rerank` (bản lite, chưa inference model cross-encoder thật) | **Done (P1 incremental)** |
 | GraphRAG sidecar | Có sidecar runtime, chưa có graph index lớn production | **Partial / đang mở rộng** |
 
 ## 11) Hạng mục còn ở mức cơ bản/skeleton cần hoàn thiện tiếp
@@ -165,16 +165,34 @@ File canvas:
 2. Cross-encoder reranker:
    - Cần thêm lớp rerank chuyên y sinh để tăng precision@k ở top evidence.
 3. Active eval + hard-negative mining:
-   - Đã có script nền; cần đóng vòng tự động theo cron + regression gate.
+   - Đã đóng vòng ingest vào KPI runner ở mức runtime.
+   - Còn thiếu cron + CI regression gate tự động.
 4. OTel exporter thật:
-   - Hiện đã có trace metadata trong payload, nhưng chưa đẩy exporter chuẩn (OTLP/Jaeger).
+   - Đã có exporter HTTP best-effort (tắt mặc định), nhưng chưa phải OTLP chuẩn + collector production.
+5. Cross-encoder model thật (ColBERT/Cross-Encoder biomedical):
+   - Bản hiện tại là rerank lite để tăng precision@k an toàn cho vòng thi.
+   - Cần thay bằng model inference service ở phase sau.
 
 ## 12) Cập nhật mới đã triển khai ngay sau audit
 
 - Bổ sung `provider_queries` vào query plan để rewrite theo từng provider thay vì chỉ theo nhóm nguồn.
 - Truyền `provider_query_overrides` xuyên suốt `research_tier2 -> rag pipeline -> in_memory retriever -> external gateway`.
 - Bổ sung `otel_trace_metadata` vào `metadata`, `telemetry` và `trace` của kết quả research.
+- Bổ sung `otel_export` best-effort:
+  - Env: `OTEL_EXPORT_ENABLED`, `OTEL_EXPORT_ENDPOINT`, `OTEL_EXPORT_TIMEOUT_SECONDS`.
+  - Trả trạng thái export trong payload (`otel_export`) để debug nhanh khi collector lỗi.
+- Bổ sung `retrieval_budget` override vào orchestrator runtime:
+  - Cho phép planner/agent truyền budget (`latency_budget_ms`, `max_connector_calls`, `top_k_cap`...) và được áp vào plan thực thi.
+  - Có test regression để đảm bảo `top_k` thực tế tuân theo budget cap.
+- Bổ sung `biomedical_rerank` (feature-flag) vào retrieval score engine:
+  - Env: `RAG_BIOMEDICAL_RERANK_ENABLED`, `RAG_BIOMEDICAL_RERANK_ALPHA`, `RAG_BIOMEDICAL_RERANK_TOP_N`.
+  - Trace: `retrieval_trace.index_summary.rerank`.
+- Bổ sung ingest `hard-negative` vào KPI pipeline:
+  - Nhận `--active-negative-set` / `CLARA_ACTIVE_NEGATIVE_SET`.
+  - Thêm `hard_negative_cases` vào test report.
+  - Thêm metric `hard_negative_pass_rate` vào KPI report.
 - Bổ sung test coverage:
   - `services/ml/tests/test_external_gateway.py` (provider override telemetry)
   - `services/ml/tests/test_research_tier2_agent.py` (query plan có provider queries)
   - `services/ml/tests/test_main_api.py` (schema có `otel_trace_metadata`)
+  - `services/ml/tests/test_score_engine.py` (biomedical rerank on/off + top_n limit)

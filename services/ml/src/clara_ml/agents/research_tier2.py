@@ -7,6 +7,8 @@ import re
 from time import perf_counter
 from typing import Any
 import unicodedata
+import urllib.error
+import urllib.request
 from uuid import uuid4
 
 from clara_ml.config import settings
@@ -1589,6 +1591,51 @@ def _build_otel_trace_metadata(
         "event_count": len(flow_events),
         "spans": span_rows,
     }
+
+
+def _emit_otel_trace_best_effort(
+    *,
+    otel_trace_metadata: dict[str, Any],
+    flow_events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    endpoint = str(settings.otel_export_endpoint or "").strip()
+    enabled = bool(settings.otel_export_enabled) and bool(endpoint)
+    status: dict[str, Any] = {
+        "enabled": enabled,
+        "endpoint": endpoint if enabled else "",
+        "sent": False,
+    }
+    if not enabled:
+        return status
+
+    payload = {
+        "service_name": "clara-ml",
+        "component": "research_tier2",
+        "trace": otel_trace_metadata,
+        "event_count": len(flow_events),
+        "exported_at": _now_iso(),
+    }
+    request = urllib.request.Request(
+        url=endpoint,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(  # noqa: S310
+            request,
+            timeout=float(settings.otel_export_timeout_seconds),
+        ) as response:
+            status["sent"] = True
+            status["http_status"] = int(response.getcode())
+            return status
+    except urllib.error.HTTPError as exc:
+        status["http_status"] = int(exc.code)
+        status["error"] = f"HTTPError:{exc.code}"
+        return status
+    except Exception as exc:  # noqa: BLE001
+        status["error"] = f"{type(exc).__name__}:{exc}"
+        return status
 
 
 def _build_deep_subqueries(
@@ -3451,6 +3498,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         stage_spans=stage_spans,
         flow_events=flow_events,
     )
+    otel_export_status = _emit_otel_trace_best_effort(
+        otel_trace_metadata=otel_trace_metadata,
+        flow_events=flow_events,
+    )
     trace_bundle = {
         "trace_id": trace_id,
         "run_id": run_id,
@@ -3459,6 +3510,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "verifier": verifier_trace,
         "stage_spans": stage_spans,
         "otel_trace_metadata": otel_trace_metadata,
+        "otel_export": otel_export_status,
     }
     source_reasoning: list[dict[str, Any]] = []
     retriever_debug = (
@@ -3809,6 +3861,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "verification_matrix": verification_matrix_payload,
         "stage_spans": stage_spans,
         "otel_trace_metadata": otel_trace_metadata,
+        "otel_export": otel_export_status,
     }
     citations_payload = [asdict(item) for item in citations]
     compact_context_debug = _compact_context_debug(rag_result.context_debug)
@@ -3846,6 +3899,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "flow_events": flow_events,
             "telemetry": telemetry,
             "otel_trace_metadata": otel_trace_metadata,
+            "otel_export": otel_export_status,
             "deep_research_methodology": deep_research_method,
             "reasoning_steps": deep_beta_reasoning_steps if research_mode == "deep_beta" else [],
             "pass_summaries": deep_pass_summaries if research_mode == "deep_beta" else [],
@@ -3890,6 +3944,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "trace": trace_bundle,
         "telemetry": telemetry,
         "otel_trace_metadata": otel_trace_metadata,
+        "otel_export": otel_export_status,
         "policy_action": policy_action,
         "verification_status": verification_status,
         "verification_matrix": verification_matrix_payload,

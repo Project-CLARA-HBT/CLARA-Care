@@ -4,6 +4,7 @@ import re
 from typing import Any, Sequence
 import unicodedata
 
+from clara_ml.config import settings
 from clara_ml.rag.embedder import HttpEmbeddingClient
 
 from .domain import Document, SOURCE_SCORE_BIAS
@@ -20,6 +21,38 @@ from .text_utils import (
 class DocumentScorer:
     _RRF_K = 60
     _RRF_BLEND = 0.14
+    _BIOMEDICAL_SIGNAL_TERMS = {
+        "interaction",
+        "ddi",
+        "contraindication",
+        "contraindications",
+        "bleeding",
+        "hemorrhage",
+        "adverse",
+        "toxicity",
+        "safety",
+        "warning",
+        "boxed warning",
+        "labeling",
+        "pharmacokinetic",
+        "pharmacodynamic",
+        "metabolism",
+        "cyp",
+        "inr",
+        "guideline",
+        "clinical trial",
+    }
+    _BIOMEDICAL_SOURCE_PRIOR = {
+        "openfda": 1.0,
+        "dailymed": 1.0,
+        "rxnorm": 0.9,
+        "pubmed": 0.85,
+        "europepmc": 0.82,
+        "clinicaltrials": 0.8,
+        "who": 0.78,
+        "nih": 0.76,
+        "internal": 0.55,
+    }
 
     def __init__(self, embedder: HttpEmbeddingClient | None = None) -> None:
         self.embedder = embedder or HttpEmbeddingClient()
@@ -142,7 +175,9 @@ class DocumentScorer:
                 ]
             )
             doc_tokens = self._tokenize(doc_haystack)
-            has_primary_drug = bool(primary_aliases) and bool(primary_aliases.intersection(doc_tokens))
+            has_primary_drug = bool(primary_aliases) and bool(
+                primary_aliases.intersection(doc_tokens)
+            )
             has_codrug_signal = bool(co_drug_aliases.intersection(doc_tokens))
             has_interaction_signal = bool(doc_tokens.intersection(interaction_tokens))
             source_key = str(doc.metadata.get("source") or "").strip().lower()
@@ -310,6 +345,7 @@ class DocumentScorer:
         ):
             lexical_rank[str(item["doc"].id)] = index
 
+        scored_rows: list[dict[str, Any]] = []
         for item in candidate_rows:
             doc = item["doc"]
             doc_id = str(doc.id)
@@ -339,6 +375,9 @@ class DocumentScorer:
                 "rrf_semantic_rank": semantic_pos,
                 "rrf_lexical_rank": lexical_pos,
                 "final_score": float(final_score),
+                "biomedical_rerank_enabled": False,
+                "biomedical_rerank_signal": 0.0,
+                "biomedical_rerank_factor": 1.0,
                 "ddi_query": bool(item["ddi_query"]),
                 "ddi_critical_query": bool(item["ddi_critical_query"]),
                 "has_primary_drug": bool(item["has_primary_drug"]),
@@ -346,21 +385,76 @@ class DocumentScorer:
                 "has_interaction_signal": bool(item["has_interaction_signal"]),
                 "trusted_label_source": bool(item["trusted_label_source"]),
             }
-            doc.metadata["weight"] = float(item["doc_weight"])
-            doc.metadata["policy_weight"] = float(item["policy_weight"])
-            doc.metadata["source_bias"] = float(item["source_bias"])
-            doc.metadata["trust_factor"] = float(item["trust_factor"])
-            doc.metadata["tag_factor"] = float(item["tag_factor"])
-            doc.metadata["pdf_factor"] = float(item["pdf_factor"])
-            doc.metadata["ddi_boost"] = float(item["ddi_boost"])
-            doc.metadata["rrf_score"] = float(rrf_score)
-            doc.metadata["rrf_scaled"] = float(rrf_scaled)
+            scored_rows.append(
+                {
+                    "doc": doc,
+                    "source": str(item["source_key"] or "unknown"),
+                    "final_score": float(final_score),
+                    "score_breakdown": score_breakdown,
+                    "has_primary_drug": bool(item["has_primary_drug"]),
+                    "has_codrug_signal": bool(item["has_codrug_signal"]),
+                    "has_interaction_signal": bool(item["has_interaction_signal"]),
+                    "trusted_label_source": bool(item["trusted_label_source"]),
+                }
+            )
+
+        rerank_enabled = bool(settings.rag_biomedical_rerank_enabled)
+        rerank_alpha = max(0.0, min(1.0, float(settings.rag_biomedical_rerank_alpha)))
+        rerank_top_n = max(0, int(settings.rag_biomedical_rerank_top_n))
+        if rerank_enabled and rerank_alpha > 0.0 and rerank_top_n > 0 and scored_rows:
+            rerank_candidates = sorted(
+                scored_rows,
+                key=lambda row: float(row["final_score"]),
+                reverse=True,
+            )[:rerank_top_n]
+            for row in rerank_candidates:
+                doc = row["doc"]
+                signal = self._biomedical_signal(
+                    query_tokens=query_tokens,
+                    doc=doc,
+                    query_profile=query_profile,
+                    has_primary_drug=bool(row["has_primary_drug"]),
+                    has_codrug_signal=bool(row["has_codrug_signal"]),
+                    has_interaction_signal=bool(row["has_interaction_signal"]),
+                    trusted_label_source=bool(row["trusted_label_source"]),
+                )
+                rerank_factor = 1.0 + (rerank_alpha * signal)
+                reranked_score = float(row["final_score"]) * rerank_factor
+                row["final_score"] = reranked_score
+                score_breakdown = row["score_breakdown"]
+                score_breakdown["biomedical_rerank_enabled"] = True
+                score_breakdown["biomedical_rerank_signal"] = float(signal)
+                score_breakdown["biomedical_rerank_factor"] = float(rerank_factor)
+                score_breakdown["final_score"] = float(reranked_score)
+
+        for row in scored_rows:
+            doc = row["doc"]
+            score_breakdown = row["score_breakdown"]
+            final_score = float(row["final_score"])
+            doc.metadata["weight"] = float(score_breakdown["doc_weight"])
+            doc.metadata["policy_weight"] = float(score_breakdown["policy_weight"])
+            doc.metadata["source_bias"] = float(score_breakdown["source_bias"])
+            doc.metadata["trust_factor"] = float(score_breakdown["trust_factor"])
+            doc.metadata["tag_factor"] = float(score_breakdown["tag_factor"])
+            doc.metadata["pdf_factor"] = float(score_breakdown["pdf_factor"])
+            doc.metadata["ddi_boost"] = float(score_breakdown["ddi_boost"])
+            doc.metadata["rrf_score"] = float(score_breakdown["rrf_score"])
+            doc.metadata["rrf_scaled"] = float(score_breakdown["rrf_scaled"])
+            doc.metadata["biomedical_rerank_enabled"] = bool(
+                score_breakdown["biomedical_rerank_enabled"]
+            )
+            doc.metadata["biomedical_rerank_signal"] = float(
+                score_breakdown["biomedical_rerank_signal"]
+            )
+            doc.metadata["biomedical_rerank_factor"] = float(
+                score_breakdown["biomedical_rerank_factor"]
+            )
             doc.metadata["score"] = float(final_score)
             doc.metadata["score_breakdown"] = score_breakdown
             trace_rows.append(
                 {
                     "doc_id": doc.id,
-                    "source": str(item["source_key"] or "unknown"),
+                    "source": str(row["source"] or "unknown"),
                     "excluded": False,
                     **score_breakdown,
                 }
@@ -425,3 +519,67 @@ class DocumentScorer:
             return 0.0
         overlap = len(query_tokens.intersection(doc_tokens))
         return float(overlap) / float(max(len(query_tokens), 1))
+
+    @classmethod
+    def _biomedical_signal(
+        cls,
+        *,
+        query_tokens: set[str],
+        doc: Document,
+        query_profile: dict[str, Any],
+        has_primary_drug: bool,
+        has_codrug_signal: bool,
+        has_interaction_signal: bool,
+        trusted_label_source: bool,
+    ) -> float:
+        metadata = doc.metadata or {}
+        doc_haystack = " ".join(
+            [
+                str(doc.text or ""),
+                str(metadata.get("title") or ""),
+                str(metadata.get("url") or ""),
+            ]
+        ).strip()
+        doc_tokens = cls._tokenize(doc_haystack)
+        if not doc_tokens:
+            return 0.0
+
+        lexical_signal = float(len(query_tokens.intersection(doc_tokens))) / float(
+            max(len(query_tokens), 1)
+        )
+        biomedical_hits = 0
+        lowered_haystack = doc_haystack.lower()
+        for marker in cls._BIOMEDICAL_SIGNAL_TERMS:
+            if " " in marker:
+                if marker in lowered_haystack:
+                    biomedical_hits += 1
+            elif marker in doc_tokens:
+                biomedical_hits += 1
+        biomedical_term_signal = min(1.0, float(biomedical_hits) / 6.0)
+
+        source_key = str(metadata.get("source") or "").strip().lower()
+        source_signal = float(cls._BIOMEDICAL_SOURCE_PRIOR.get(source_key, 0.5))
+
+        ddi_signal = 0.0
+        if bool(query_profile.get("is_ddi_query")):
+            if has_primary_drug:
+                ddi_signal += 0.35
+            if has_codrug_signal:
+                ddi_signal += 0.3
+            if has_interaction_signal:
+                ddi_signal += 0.25
+            if trusted_label_source:
+                ddi_signal += 0.1
+        else:
+            if trusted_label_source:
+                ddi_signal += 0.15
+            if has_interaction_signal:
+                ddi_signal += 0.2
+
+        combined = (
+            (0.38 * lexical_signal)
+            + (0.32 * biomedical_term_signal)
+            + (0.2 * min(ddi_signal, 1.0))
+            + (0.1 * min(source_signal, 1.0))
+        )
+        return max(0.0, min(1.0, combined))

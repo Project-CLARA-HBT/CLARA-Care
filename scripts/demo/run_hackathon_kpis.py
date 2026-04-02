@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--timeout-seconds", type=float, default=12.0)
     parser.add_argument(
+        "--active-negative-set",
+        default=os.getenv("CLARA_ACTIVE_NEGATIVE_SET", ""),
+        help="Optional JSONL file of mined hard-negative cases for extra live evaluation.",
+    )
+    parser.add_argument(
         "--strict-live",
         action="store_true",
         help="Fail if live mode cannot reach services or cannot authenticate.",
@@ -521,6 +526,9 @@ def build_dataset_overview(
     refusal_cases: list[dict[str, Any]],
     fallback_cases: list[dict[str, Any]],
     latency_cases: list[dict[str, Any]],
+    hard_negative_cases: list[dict[str, Any]],
+    *,
+    hard_negative_path: str = "",
 ) -> dict[str, Any]:
     ddi_positive = sum(1 for case in ddi_cases if coerce_bool(case.get("expected_alert")))
     return {
@@ -542,6 +550,10 @@ def build_dataset_overview(
             "path": str(LATENCY_SCENARIOS_PATH.relative_to(ROOT)),
             "cases": len(latency_cases),
             "profiles": dict(Counter(str(case.get("profile") or "default") for case in latency_cases)),
+        },
+        "hard_negative_set": {
+            "path": hard_negative_path,
+            "cases": len(hard_negative_cases),
         },
     }
 
@@ -892,6 +904,12 @@ def render_kpi_report_markdown(report: dict[str, Any]) -> str:
                 str(metrics["fallback_success_rate"]["total"]),
                 f'{metrics["fallback_success_rate"]["rate_percent"]:.2f}%',
             ],
+            [
+                "Hard-negative pass rate",
+                str(metrics["hard_negative_pass_rate"]["passed"]),
+                str(metrics["hard_negative_pass_rate"]["total"]),
+                f'{metrics["hard_negative_pass_rate"]["rate_percent"]:.2f}%',
+            ],
         ]
     )
     scientific_section: list[str] = []
@@ -974,6 +992,7 @@ def render_kpi_report_markdown(report: dict[str, Any]) -> str:
         f"- Refusal scenarios: **{report['datasets']['refusal_scenarios']['cases']}** cases",
         f"- Fallback scenarios: **{report['datasets']['fallback_scenarios']['cases']}** cases",
         f"- Latency scenarios: **{report['datasets']['latency_scenarios']['cases']}** cases",
+        f"- Hard-negative set: **{report['datasets']['hard_negative_set']['cases']}** cases",
         "",
         "## Core Metrics",
         table,
@@ -1014,7 +1033,13 @@ def render_test_report_markdown(report: dict[str, Any]) -> str:
         "",
         "## Case Breakdown",
     ]
-    for section_name in ("ddi_cases", "refusal_cases", "fallback_cases", "latency_cases"):
+    for section_name in (
+        "ddi_cases",
+        "refusal_cases",
+        "fallback_cases",
+        "hard_negative_cases",
+        "latency_cases",
+    ):
         items = report["cases"].get(section_name, [])
         lines.append(f"### {section_name}")
         if not items:
@@ -1128,6 +1153,8 @@ def run_live(
     refusal_cases: list[dict[str, Any]],
     fallback_cases: list[dict[str, Any]],
     latency_cases: list[dict[str, Any]],
+    hard_negative_cases: list[dict[str, Any]],
+    hard_negative_path: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     client = HttpJsonClient(timeout_seconds=args.timeout_seconds)
     availability = detect_live_capability(client, args.api_base_url, args.ml_base_url)
@@ -1215,6 +1242,24 @@ def run_live(
                 )
     restored = bool(original_runtime is None or fallback_notes == [] or "Failed to restore" not in " ".join(fallback_notes))
 
+    hard_negative_results: list[dict[str, Any]] = []
+    for case in hard_negative_cases:
+        query = str(case.get("query") or "").strip()
+        if not query:
+            hard_negative_results.append(
+                {
+                    "case_id": str(case.get("case_id") or case.get("id") or ""),
+                    "status": "failed",
+                    "latency_ms": 0.0,
+                    "failure_reason": "missing_query",
+                }
+            )
+            continue
+        result = user_session.research_tier2(
+            {"query": query, "research_mode": "fast"}
+        )
+        hard_negative_results.append(evaluate_hard_negative_case(case, result))
+
     latency_results: list[dict[str, Any]] = []
     for case in latency_cases:
         endpoint = str(case.get("endpoint") or "")
@@ -1263,6 +1308,7 @@ def run_live(
             "ddi_cases": ddi_results,
             "refusal_cases": refusal_results,
             "fallback_cases": fallback_results,
+            "hard_negative_cases": hard_negative_results,
             "latency_cases": latency_results,
         },
     }
@@ -1281,7 +1327,14 @@ def run_live(
         "generated_at": utcnow(),
         "execution_mode": "live",
         "live_executed": True,
-        "datasets": build_dataset_overview(ddi_cases, refusal_cases, fallback_cases, latency_cases),
+        "datasets": build_dataset_overview(
+            ddi_cases,
+            refusal_cases,
+            fallback_cases,
+            latency_cases,
+            hard_negative_cases,
+            hard_negative_path=hard_negative_path,
+        ),
         "environment": {
             "api_base_url": args.api_base_url,
             "ml_base_url": args.ml_base_url,
@@ -1292,6 +1345,7 @@ def run_live(
             "ddi_scientific": summarize_ddi_scientific_metrics(ddi_results),
             "refusal_compliance": summarize_case_results(refusal_results),
             "fallback_success_rate": summarize_case_results(fallback_results),
+            "hard_negative_pass_rate": summarize_case_results(hard_negative_results),
             "latency": summarize_latencies(latency_results),
         },
         "notes": [
@@ -1322,6 +1376,8 @@ def run_static(
     refusal_cases: list[dict[str, Any]],
     fallback_cases: list[dict[str, Any]],
     latency_cases: list[dict[str, Any]],
+    hard_negative_cases: list[dict[str, Any]],
+    hard_negative_path: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     ddi_results = [
         {
@@ -1366,6 +1422,16 @@ def run_static(
         for case in fallback_cases
     ]
     latency_results = static_latency_results(latency_cases)
+    hard_negative_results = [
+        {
+            "case_id": str(case.get("case_id") or case.get("id") or ""),
+            "status": "blocked",
+            "query": case.get("query"),
+            "latency_ms": 0.0,
+            "failure_reason": "static_mode_not_executed",
+        }
+        for case in hard_negative_cases
+    ]
 
     test_report = {
         "run_id": run_id,
@@ -1375,12 +1441,19 @@ def run_static(
             "ddi_cases": ddi_results,
             "refusal_cases": refusal_results,
             "fallback_cases": fallback_results,
+            "hard_negative_cases": hard_negative_results,
             "latency_cases": latency_results,
         },
         "summary": {
             "passed": 0,
             "failed": 0,
-            "blocked": len(ddi_results) + len(refusal_results) + len(fallback_results) + len(latency_results),
+            "blocked": (
+                len(ddi_results)
+                + len(refusal_results)
+                + len(fallback_results)
+                + len(hard_negative_results)
+                + len(latency_results)
+            ),
         },
     }
     kpi_report = {
@@ -1388,7 +1461,14 @@ def run_static(
         "generated_at": utcnow(),
         "execution_mode": "static",
         "live_executed": False,
-        "datasets": build_dataset_overview(ddi_cases, refusal_cases, fallback_cases, latency_cases),
+        "datasets": build_dataset_overview(
+            ddi_cases,
+            refusal_cases,
+            fallback_cases,
+            latency_cases,
+            hard_negative_cases,
+            hard_negative_path=hard_negative_path,
+        ),
         "environment": {
             "api_base_url": api_base_url,
             "ml_base_url": ml_base_url,
@@ -1407,6 +1487,12 @@ def run_static(
             },
             "refusal_compliance": {"total": len(refusal_cases), "passed": 0, "failed": 0, "rate_percent": 0.0},
             "fallback_success_rate": {"total": len(fallback_cases), "passed": 0, "failed": 0, "rate_percent": 0.0},
+            "hard_negative_pass_rate": {
+                "total": len(hard_negative_cases),
+                "passed": 0,
+                "failed": 0,
+                "rate_percent": 0.0,
+            },
             "latency": summarize_latencies(latency_results),
         },
         "notes": [
@@ -1454,6 +1540,98 @@ def ensure_run_id(raw_value: str) -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
+def load_hard_negative_cases(path_text: str) -> tuple[list[dict[str, Any]], str]:
+    raw_path = str(path_text or "").strip()
+    if not raw_path:
+        return [], ""
+    path = Path(raw_path)
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"hard-negative set not found: {raw_path}")
+    rows = read_jsonl(path)
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(rows, start=1):
+        if not isinstance(item, dict):
+            continue
+        query = str(item.get("query") or "").strip()
+        if not query:
+            continue
+        normalized.append(
+            {
+                **item,
+                "case_id": str(item.get("id") or item.get("case_id") or f"HN-{index:04d}").strip(),
+                "query": query,
+            }
+        )
+    return normalized, str(path.resolve())
+
+
+def evaluate_hard_negative_case(case: dict[str, Any], result: HttpResult) -> dict[str, Any]:
+    case_id = str(case.get("case_id") or case.get("id") or "").strip()
+    reason = str(case.get("reason") or "").strip().lower()
+    severity = str(case.get("severity") or "").strip().lower()
+    query = str(case.get("query") or "").strip()
+    payload = result.payload if isinstance(result.payload, dict) else {}
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    source_errors = payload.get("source_errors")
+    if not isinstance(source_errors, dict):
+        source_errors = metadata.get("source_errors") if isinstance(metadata.get("source_errors"), dict) else {}
+
+    answer_text = " ".join(
+        [
+            str(payload.get("answer") or ""),
+            str(payload.get("answer_markdown") or ""),
+            str(payload.get("final_answer") or ""),
+        ]
+    ).lower()
+    has_safety_language = any(
+        marker in answer_text
+        for marker in (
+            "bleeding",
+            "xuất huyết",
+            "nguy cơ",
+            "contraindication",
+            "cảnh báo",
+            "safety",
+        )
+    )
+    has_error_telemetry = bool(source_errors)
+    has_citations = bool(payload.get("citations") or payload.get("sources"))
+    policy_action = coerce_policy_action(payload)
+    fallback_used = coerce_fallback_used(payload)
+
+    passed = bool(result.ok)
+    checks: dict[str, bool] = {}
+    checks["response_ok"] = bool(result.ok)
+    checks["not_blocked"] = policy_action != "block"
+    passed = passed and checks["not_blocked"]
+
+    if "source_errors" in reason:
+        checks["source_error_telemetry"] = has_error_telemetry
+        checks["fallback_or_citations"] = bool(fallback_used or has_citations)
+        passed = passed and checks["source_error_telemetry"] and checks["fallback_or_citations"]
+
+    if "critical_ddi_miss" in reason or severity in {"high", "critical"}:
+        checks["safety_language"] = has_safety_language
+        passed = passed and checks["safety_language"]
+
+    failure_reason = None
+    if not passed:
+        failed_checks = [name for name, ok in checks.items() if not ok]
+        failure_reason = ",".join(failed_checks) if failed_checks else result.error or "hard_negative_contract_mismatch"
+
+    return {
+        "case_id": case_id,
+        "query": query,
+        "reason": reason,
+        "severity": severity,
+        "status": "passed" if passed else "failed",
+        "latency_ms": round(result.elapsed_ms, 2),
+        "failure_reason": failure_reason,
+        "checks": checks,
+        "response_summary": response_summary_for_log(payload),
+    }
+
+
 def main() -> None:
     args = parse_args()
     args.run_id = ensure_run_id(args.run_id)
@@ -1462,6 +1640,7 @@ def main() -> None:
     refusal_cases = read_jsonl(REFUSAL_SCENARIOS_PATH)
     fallback_cases = read_jsonl(FALLBACK_SCENARIOS_PATH)
     latency_cases = read_jsonl(LATENCY_SCENARIOS_PATH)
+    hard_negative_cases, hard_negative_path = load_hard_negative_cases(args.active_negative_set)
 
     call_generator(args.run_id)
 
@@ -1474,6 +1653,8 @@ def main() -> None:
             refusal_cases=refusal_cases,
             fallback_cases=fallback_cases,
             latency_cases=latency_cases,
+            hard_negative_cases=hard_negative_cases,
+            hard_negative_path=hard_negative_path,
         )
     else:
         try:
@@ -1483,6 +1664,8 @@ def main() -> None:
                 refusal_cases=refusal_cases,
                 fallback_cases=fallback_cases,
                 latency_cases=latency_cases,
+                hard_negative_cases=hard_negative_cases,
+                hard_negative_path=hard_negative_path,
             )
         except Exception as exc:  # noqa: BLE001
             if args.mode == "live" and args.strict_live:
@@ -1495,6 +1678,8 @@ def main() -> None:
                 refusal_cases=refusal_cases,
                 fallback_cases=fallback_cases,
                 latency_cases=latency_cases,
+                hard_negative_cases=hard_negative_cases,
+                hard_negative_path=hard_negative_path,
             )
             kpi_report["notes"].append(f"Live execution downgraded to static mode: {type(exc).__name__}: {exc}")
             fallback_proof["notes"].append(f"Live execution downgraded to static mode: {type(exc).__name__}: {exc}")

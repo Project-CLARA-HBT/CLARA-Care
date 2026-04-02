@@ -251,6 +251,39 @@ def test_rag_pipeline_orchestrator_adjusts_top_k_and_connector_toggles():
     )
 
 
+def test_rag_pipeline_orchestrator_applies_retrieval_budget_override():
+    pipe = RagPipelineP0(deepseek_api_key="")
+    result = pipe.run(
+        "tuong tac warfarin voi ibuprofen va naproxen",
+        planner_hints={
+            "internal_top_k": 8,
+            "hybrid_top_k": 8,
+            "research_mode": "deep",
+            "scientific_retrieval_enabled": True,
+            "retrieval_budget": {
+                "top_k_cap": 4,
+                "max_connector_calls": 1,
+                "latency_budget_ms": 1400,
+            },
+        },
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=True,
+    )
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    orchestrator_plan = retrieval_trace.get("orchestrator_plan", {})
+    assert isinstance(orchestrator_plan, dict)
+    budgets = orchestrator_plan.get("budgets", {})
+    assert int(budgets.get("top_k_cap") or 0) == 4
+    assert int(budgets.get("max_connector_calls") or 0) == 1
+    assert int(budgets.get("latency_budget_ms") or 0) == 1400
+    adjusted_top_k = orchestrator_plan.get("top_k", {}).get("adjusted", {})
+    assert int(adjusted_top_k.get("internal") or 0) <= 4
+    assert int(adjusted_top_k.get("hybrid") or 0) <= 4
+    decision_reasons = orchestrator_plan.get("decision_reasons", [])
+    assert "planner_retrieval_budget_override" in decision_reasons
+
+
 def test_rag_pipeline_supports_retrieval_only_mode():
     pipe = RagPipelineP0(
         deepseek_api_key="test-key",
@@ -272,6 +305,7 @@ def test_rag_pipeline_emits_search_and_index_events():
     assert isinstance(retrieval_trace, dict)
     assert isinstance(retrieval_trace.get("search_plan"), dict)
     assert isinstance(retrieval_trace.get("index_summary"), dict)
+    assert isinstance(retrieval_trace.get("index_summary", {}).get("rerank"), dict)
     assert "source_attempts" in retrieval_trace
 
     assert any(

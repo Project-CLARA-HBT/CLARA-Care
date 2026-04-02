@@ -198,6 +198,43 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="EVIDENCE_SEARCH_ENFORCED",
     )
+    otel_export_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OTEL_EXPORT_ENABLED", "CLARA_OTEL_EXPORT_ENABLED"),
+    )
+    otel_export_endpoint: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "OTEL_EXPORT_ENDPOINT",
+            "OTEL_EXPORTER_OTLP_ENDPOINT",
+            "CLARA_OTEL_EXPORT_ENDPOINT",
+        ),
+    )
+    otel_export_timeout_seconds: float = Field(
+        default=1.5,
+        validation_alias=AliasChoices(
+            "OTEL_EXPORT_TIMEOUT_SECONDS",
+            "CLARA_OTEL_EXPORT_TIMEOUT_SECONDS",
+        ),
+        ge=0.1,
+        le=10.0,
+    )
+    rag_biomedical_rerank_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_BIOMEDICAL_RERANK_ENABLED",
+    )
+    rag_biomedical_rerank_alpha: float = Field(
+        default=0.28,
+        validation_alias="RAG_BIOMEDICAL_RERANK_ALPHA",
+        ge=0.0,
+        le=1.0,
+    )
+    rag_biomedical_rerank_top_n: int = Field(
+        default=8,
+        validation_alias="RAG_BIOMEDICAL_RERANK_TOP_N",
+        ge=0,
+        le=64,
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

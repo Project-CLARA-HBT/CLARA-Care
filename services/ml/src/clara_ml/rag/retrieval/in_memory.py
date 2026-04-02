@@ -130,6 +130,16 @@ class InMemoryRetriever:
             "after_dedupe_count": len(deduped),
             "selected_count": len(ranked),
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
+            "rerank": {
+                "enabled": bool(settings.rag_biomedical_rerank_enabled),
+                "alpha": float(settings.rag_biomedical_rerank_alpha),
+                "top_n": int(settings.rag_biomedical_rerank_top_n),
+                "applied_count": sum(
+                    1
+                    for doc in ranked
+                    if bool((doc.metadata or {}).get("biomedical_rerank_enabled"))
+                ),
+            },
             "score_trace": score_trace,
             "top_documents": self._trace_top_docs(ranked),
         }
