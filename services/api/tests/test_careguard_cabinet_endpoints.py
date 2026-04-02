@@ -66,6 +66,8 @@ def test_cabinet_lifecycle() -> None:
     )
     assert add_response.status_code == 200
     item_id = add_response.json()["id"]
+    assert add_response.json()["normalization_source"] in {"db", "candidate", "fallback"}
+    assert 0.0 <= add_response.json()["normalization_confidence"] <= 1.0
 
     patch_response = client.patch(
         f"/api/v1/careguard/cabinet/items/{item_id}",
@@ -84,6 +86,8 @@ def test_cabinet_lifecycle() -> None:
     assert patched_item["dosage"] == "3mg"
     assert patched_item["quantity"] == 14
     assert patched_item["note"] == "uống buổi tối"
+    assert patched_item["normalization_source"] in {"db", "candidate", "fallback"}
+    assert 0.0 <= patched_item["normalization_confidence"] <= 1.0
 
     list_response = client.get(
         "/api/v1/careguard/cabinet",
@@ -198,6 +202,8 @@ def test_scan_and_import_detection() -> None:
     assert len(detections) >= 1
     assert all("requires_manual_confirm" in item for item in detections)
     assert all("confirmed" in item for item in detections)
+    assert all("mapping_source" in item for item in detections)
+    assert all("mapping_confidence" in item for item in detections)
 
     normalized_detections = []
     for detection in detections:
@@ -330,6 +336,7 @@ def test_vn_dictionary_crud_and_resolve() -> None:
     )
     assert resolve_response.status_code == 200
     assert resolve_response.json()["mapping_source"] == "db"
+    assert resolve_response.json()["mapping_confidence"] == 1.0
     assert resolve_response.json()["normalized_name"] == "paracetamol caffeine"
     assert resolve_response.json()["rx_cui"] == "999001"
 
@@ -346,6 +353,8 @@ def test_vn_dictionary_crud_and_resolve() -> None:
     assert add_item_response.status_code == 200
     assert add_item_response.json()["normalized_name"] == "paracetamol caffeine"
     assert add_item_response.json()["rx_cui"] == "999001"
+    assert add_item_response.json()["normalization_source"] in {"db", "candidate", "fallback"}
+    assert 0.0 <= add_item_response.json()["normalization_confidence"] <= 1.0
 
     update_response = client.patch(
         f"/api/v1/careguard/dictionary/{mapping_id}",
@@ -369,6 +378,7 @@ def test_vn_dictionary_crud_and_resolve() -> None:
     )
     assert resolve_after_delete.status_code == 200
     assert resolve_after_delete.json()["mapping_source"] == "fallback"
+    assert 0.0 <= resolve_after_delete.json()["mapping_confidence"] <= 1.0
 
 
 def test_dictionary_resolve_candidate_match() -> None:
@@ -398,6 +408,7 @@ def test_dictionary_resolve_candidate_match() -> None:
     assert resolve_response.status_code == 200
     payload = resolve_response.json()
     assert payload["mapping_source"] == "candidate"
+    assert payload["mapping_confidence"] >= 0.78
     assert payload["normalized_name"] == "paracetamol caffeine"
     assert payload["rx_cui"] == "900001"
 
@@ -436,6 +447,8 @@ def test_add_cabinet_item_candidate_normalization() -> None:
     added = add_response.json()
     assert added["normalized_name"] == "paracetamol caffeine"
     assert added["rx_cui"] == "900002"
+    assert added["normalization_source"] == "candidate"
+    assert added["normalization_confidence"] >= 0.78
 
     duplicate_response = client.post(
         "/api/v1/careguard/cabinet/items",
@@ -498,6 +511,8 @@ def test_import_detections_candidate_normalization() -> None:
     assert any(
         item["normalized_name"] == "paracetamol caffeine"
         and item["rx_cui"] == "900003"
+        and item["normalization_source"] in {"db", "candidate", "fallback"}
+        and 0.0 <= item["normalization_confidence"] <= 1.0
         for item in cabinet_response.json()["items"]
     )
 
@@ -544,6 +559,12 @@ def test_auto_ddi_proxy_payload(monkeypatch) -> None:
     payload = captured["payload"]
     assert isinstance(payload, dict)
     assert "medications" in payload
+    assert "medications_with_meta" in payload
+    assert isinstance(payload["medications_with_meta"], list)
+    assert len(payload["medications_with_meta"]) >= 1
+    first_med = payload["medications_with_meta"][0]
+    assert first_med["mapping_source"] in {"db", "candidate", "fallback"}
+    assert 0.0 <= first_med["mapping_confidence"] <= 1.0
     assert payload["external_ddi_enabled"] is False
     body = response.json()
     assert "attribution" in body

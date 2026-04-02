@@ -5,6 +5,8 @@ export type CabinetItem = {
   id: number;
   drug_name: string;
   normalized_name: string;
+  normalization_source?: "db" | "candidate" | "fallback" | null;
+  normalization_confidence?: number | null;
   dosage: string;
   dosage_form: string;
   quantity: number;
@@ -28,6 +30,10 @@ export type ScanDetection = {
   normalized_name: string;
   confidence: number;
   evidence: string;
+  requires_manual_confirm?: boolean;
+  confirmed?: boolean;
+  mapping_source?: "db" | "candidate" | "fallback" | null;
+  mapping_confidence?: number | null;
 };
 
 export const LOW_CONFIDENCE_DETECTION_THRESHOLD = 0.85;

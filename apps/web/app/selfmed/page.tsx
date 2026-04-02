@@ -22,6 +22,20 @@ function sourceClass(source: string): string {
   return "border-slate-400/35 bg-slate-500/20 text-slate-100";
 }
 
+function normalizationLabel(source: string | null | undefined): string {
+  if (source === "db") return "Dictionary exact";
+  if (source === "candidate") return "Candidate match";
+  if (source === "fallback") return "Fallback";
+  return "Unknown";
+}
+
+function normalizationClass(source: string | null | undefined): string {
+  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
+  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
+  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
+  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+}
+
 export default function SelfMedPage() {
   const [cabinetLabel, setCabinetLabel] = useState("Tủ thuốc cá nhân");
   const [items, setItems] = useState<CabinetItem[]>([]);
@@ -162,6 +176,16 @@ export default function SelfMedPage() {
                           <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${sourceClass(item.source)}`}>
                             {sourceLabel(item.source)}
                           </span>
+                          {item.normalization_source ? (
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${normalizationClass(item.normalization_source)}`}
+                            >
+                              {normalizationLabel(item.normalization_source)}
+                              {typeof item.normalization_confidence === "number"
+                                ? ` · ${Math.round(item.normalization_confidence * 100)}%`
+                                : ""}
+                            </span>
+                          ) : null}
                           {item.ocr_confidence !== null ? (
                             <span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-200">
                               OCR {Math.round(item.ocr_confidence * 100)}%

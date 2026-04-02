@@ -24,6 +24,20 @@ function getDetectionKey(item: ScanDetection, index: number): string {
   return `${item.normalized_name}-${item.evidence}-${index}`;
 }
 
+function normalizationLabel(source: string | null | undefined): string {
+  if (source === "db") return "Dictionary exact";
+  if (source === "candidate") return "Candidate match";
+  if (source === "fallback") return "Fallback";
+  return "Unknown";
+}
+
+function normalizationClass(source: string | null | undefined): string {
+  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
+  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
+  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
+  return "border-slate-300/60 bg-slate-500/15 text-slate-100";
+}
+
 export default function SelfMedAddPage() {
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [scanText, setScanText] = useState("");
@@ -285,6 +299,16 @@ export default function SelfMedAddPage() {
                             <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceClass(item.confidence)}`}>
                               OCR {Math.round(item.confidence * 100)}%
                             </span>
+                            {item.mapping_source ? (
+                              <span
+                                className={`ml-2 mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${normalizationClass(item.mapping_source)}`}
+                              >
+                                {normalizationLabel(item.mapping_source)}
+                                {typeof item.mapping_confidence === "number"
+                                  ? ` · ${Math.round(item.mapping_confidence * 100)}%`
+                                  : ""}
+                              </span>
+                            ) : null}
                           </div>
                         </label>
                         {isLowConfidence && checked ? (

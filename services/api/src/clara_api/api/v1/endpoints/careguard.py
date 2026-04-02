@@ -364,7 +364,7 @@ def _find_db_mapping_candidate(
 def _resolve_dictionary_mapping_with_source(
     drug_name: str,
     db: Session | None = None,
-) -> tuple[str, str, str, str]:
+) -> tuple[str, str, str, str, float]:
     normalized_input = _normalize_text(drug_name)
     if db is not None:
         db_mapping = _find_db_mapping_by_alias(db, normalized_input)
@@ -374,28 +374,32 @@ def _resolve_dictionary_mapping_with_source(
             rx_cui = db_mapping.rx_cui.strip()
             if not rx_cui:
                 rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
-            return display_name, normalized_name, rx_cui, "db"
+            return display_name, normalized_name, rx_cui, "db", 1.0
 
-        candidate_mapping, _, _, _ = _find_db_mapping_candidate(db, normalized_input)
+        candidate_mapping, candidate_score, _, _ = _find_db_mapping_candidate(db, normalized_input)
         if candidate_mapping is not None:
             display_name = candidate_mapping.brand_name.strip() or _to_title_case(candidate_mapping.normalized_name)
             normalized_name = candidate_mapping.normalized_name.strip() or normalized_input
             rx_cui = candidate_mapping.rx_cui.strip()
             if not rx_cui:
                 rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
-            return display_name, normalized_name, rx_cui, "candidate"
+            return display_name, normalized_name, rx_cui, "candidate", max(min(candidate_score, 1.0), 0.0)
 
     canonical = DRUG_ALIAS_LOOKUP.get(normalized_input, normalized_input)
     display_name = _to_title_case(canonical)
     rx_cui = DRUG_RXCUI_MAP.get(canonical, "")
-    return display_name, canonical, rx_cui, "fallback"
+    if canonical != normalized_input:
+        fallback_confidence = 0.72
+    else:
+        fallback_confidence = 0.35
+    return display_name, canonical, rx_cui, "fallback", fallback_confidence
 
 
 def _resolve_dictionary_mapping(
     drug_name: str,
     db: Session | None = None,
 ) -> tuple[str, str, str]:
-    display_name, normalized_name, rx_cui, _mapping_source = _resolve_dictionary_mapping_with_source(
+    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
         drug_name=drug_name,
         db=db,
     )
@@ -406,11 +410,18 @@ def _to_title_case(value: str) -> str:
     return " ".join(token.capitalize() for token in value.split(" ") if token)
 
 
-def _to_item_response(item: MedicineItem) -> MedicineCabinetItemResponse:
+def _to_item_response(
+    item: MedicineItem,
+    *,
+    normalization_source: str | None = None,
+    normalization_confidence: float | None = None,
+) -> MedicineCabinetItemResponse:
     return MedicineCabinetItemResponse(
         id=item.id,
         drug_name=item.drug_name,
         normalized_name=item.normalized_name,
+        normalization_source=normalization_source,
+        normalization_confidence=normalization_confidence,
         dosage=item.dosage,
         dosage_form=item.dosage_form,
         quantity=item.quantity,
@@ -602,7 +613,9 @@ def _detect_drugs_from_text(text: str, db: Session | None = None) -> list[Cabine
             if not re.search(pattern, normalized_text, flags=re.IGNORECASE):
                 continue
 
-            display_name, normalized_name, _rx_cui = _resolve_dictionary_mapping(canonical, db=db)
+            display_name, normalized_name, _rx_cui, mapping_source, mapping_confidence = (
+                _resolve_dictionary_mapping_with_source(canonical, db=db)
+            )
             confidence = 0.94 if alias == canonical else 0.82
             requires_manual_confirm = confidence < LOW_CONFIDENCE_OCR_THRESHOLD
             detections.append(
@@ -611,6 +624,8 @@ def _detect_drugs_from_text(text: str, db: Session | None = None) -> list[Cabine
                     normalized_name=normalized_name,
                     confidence=confidence,
                     evidence=alias,
+                    mapping_source=mapping_source,
+                    mapping_confidence=mapping_confidence,
                     requires_manual_confirm=requires_manual_confirm,
                     confirmed=not requires_manual_confirm,
                 )
@@ -811,10 +826,23 @@ def get_cabinet(
         .scalars()
         .all()
     )
+    resolved_items = []
+    for item in items:
+        _, _, _, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
+            item.drug_name,
+            db=db,
+        )
+        resolved_items.append(
+            _to_item_response(
+                item,
+                normalization_source=mapping_source,
+                normalization_confidence=mapping_confidence,
+            )
+        )
     return MedicineCabinetResponse(
         cabinet_id=cabinet.id,
         label=cabinet.label,
-        items=[_to_item_response(item) for item in items],
+        items=resolved_items,
     )
 
 
@@ -827,7 +855,10 @@ def add_cabinet_item(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
-    _, normalized, mapped_rxcui = _resolve_dictionary_mapping(payload.drug_name, db=db)
+    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
+        payload.drug_name,
+        db=db,
+    )
     existing = db.execute(
         select(MedicineItem).where(
             MedicineItem.cabinet_id == cabinet.id,
@@ -857,7 +888,11 @@ def add_cabinet_item(
     db.add(item)
     db.commit()
     db.refresh(item)
-    return _to_item_response(item)
+    return _to_item_response(
+        item,
+        normalization_source=mapping_source,
+        normalization_confidence=mapping_confidence,
+    )
 
 
 @router.patch("/cabinet/items/{item_id}", response_model=MedicineCabinetItemResponse)
@@ -886,6 +921,9 @@ def update_cabinet_item(
             detail="Payload cập nhật rỗng",
         )
 
+    response_mapping_source: str | None = None
+    response_mapping_confidence: float | None = None
+
     if "drug_name" in provided:
         if payload.drug_name is None or not payload.drug_name.strip():
             raise HTTPException(
@@ -893,7 +931,9 @@ def update_cabinet_item(
                 detail="Tên thuốc không hợp lệ",
             )
         updated_name = payload.drug_name.strip()
-        _, normalized_name, mapped_rxcui = _resolve_dictionary_mapping(updated_name, db=db)
+        _, normalized_name, mapped_rxcui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(updated_name, db=db)
+        )
         duplicate = db.execute(
             select(MedicineItem).where(
                 MedicineItem.cabinet_id == cabinet.id,
@@ -908,6 +948,8 @@ def update_cabinet_item(
             )
         item.drug_name = updated_name
         item.normalized_name = normalized_name
+        response_mapping_source = mapping_source
+        response_mapping_confidence = mapping_confidence
         if "rx_cui" not in provided:
             item.rx_cui = mapped_rxcui
 
@@ -949,7 +991,16 @@ def update_cabinet_item(
     db.add(item)
     db.commit()
     db.refresh(item)
-    return _to_item_response(item)
+    if response_mapping_source is None or response_mapping_confidence is None:
+        _, _, _, response_mapping_source, response_mapping_confidence = _resolve_dictionary_mapping_with_source(
+            item.drug_name,
+            db=db,
+        )
+    return _to_item_response(
+        item,
+        normalization_source=response_mapping_source,
+        normalization_confidence=response_mapping_confidence,
+    )
 
 
 @router.delete("/cabinet/items/{item_id}")
@@ -1070,7 +1121,7 @@ def import_detections(
 
     inserted = 0
     for detection in payload.detections:
-        _, normalized, mapped_rxcui = _resolve_dictionary_mapping(
+        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
             detection.normalized_name or detection.drug_name,
             db=db,
         )
@@ -1106,18 +1157,35 @@ def run_auto_ddi_check(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
     control_tower = get_control_tower_config_service().load(db)
-    medication_names = (
+    medication_items = (
         db.execute(
-            select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
+            select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
         )
         .scalars()
         .all()
     )
+    medication_names = [item.normalized_name for item in medication_items if item.normalized_name]
+    medications_with_meta = []
+    for item in medication_items:
+        display_name, normalized_name, rx_cui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(item.drug_name, db=db)
+        )
+        medications_with_meta.append(
+            {
+                "drug_name": item.drug_name,
+                "display_name": display_name,
+                "normalized_name": normalized_name or item.normalized_name,
+                "rx_cui": item.rx_cui or rx_cui,
+                "mapping_source": mapping_source,
+                "mapping_confidence": mapping_confidence,
+            }
+        )
 
     request_payload: dict[str, Any] = {
         "symptoms": payload.symptoms,
         "labs": payload.labs,
         "medications": sorted(set(medication_names)),
+        "medications_with_meta": medications_with_meta,
         "allergies": payload.allergies,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
@@ -1304,7 +1372,7 @@ def resolve_vn_drug_mapping(
     db: Session = Depends(get_db),
 ) -> VnDrugResolveResponse:
     _require_user(token, db)
-    display_name, normalized_name, rx_cui, source = _resolve_dictionary_mapping_with_source(
+    display_name, normalized_name, rx_cui, source, mapping_confidence = _resolve_dictionary_mapping_with_source(
         payload.drug_name,
         db=db,
     )
@@ -1314,6 +1382,7 @@ def resolve_vn_drug_mapping(
         normalized_name=normalized_name,
         rx_cui=rx_cui,
         mapping_source=source,
+        mapping_confidence=mapping_confidence,
     )
 
 

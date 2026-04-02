@@ -72,6 +72,20 @@ function getDetectionKey(item: ScanDetection, index: number): string {
   return `${item.normalized_name}-${item.evidence}-${index}`;
 }
 
+function getNormalizationLabel(source: string | null | undefined): string {
+  if (source === "db") return "Dictionary exact";
+  if (source === "candidate") return "Candidate match";
+  if (source === "fallback") return "Fallback";
+  return "Unknown";
+}
+
+function getNormalizationClass(source: string | null | undefined): string {
+  if (source === "db") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (source === "candidate") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (source === "fallback") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 export default function CareguardPage() {
   const [consentLoading, setConsentLoading] = useState(true);
   const [consentAccepted, setConsentAccepted] = useState(false);
@@ -507,6 +521,16 @@ export default function CareguardPage() {
                       <p className="mt-1 text-lg font-semibold text-slate-900">
                         Độ tin cậy: {Math.round(item.confidence * 100)}%
                       </p>
+                      {item.mapping_source ? (
+                        <span
+                          className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getNormalizationClass(item.mapping_source)}`}
+                        >
+                          {getNormalizationLabel(item.mapping_source)}
+                          {typeof item.mapping_confidence === "number"
+                            ? ` · ${Math.round(item.mapping_confidence * 100)}%`
+                            : ""}
+                        </span>
+                      ) : null}
                       {isLowConfidence ? (
                         <label className="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-3 py-2">
                           <input
@@ -579,6 +603,16 @@ export default function CareguardPage() {
                     <p className="mt-1 text-xs text-slate-600">
                       normalized: {item.normalized_name} | nguồn: {item.source}
                     </p>
+                    {item.normalization_source ? (
+                      <span
+                        className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_source)}`}
+                      >
+                        {getNormalizationLabel(item.normalization_source)}
+                        {typeof item.normalization_confidence === "number"
+                          ? ` · ${Math.round(item.normalization_confidence * 100)}%`
+                          : ""}
+                      </span>
+                    ) : null}
                   </div>
                   <button
                     type="button"

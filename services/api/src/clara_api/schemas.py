@@ -236,6 +236,8 @@ class MedicineCabinetItemResponse(BaseModel):
     id: int
     drug_name: str
     normalized_name: str
+    normalization_source: Literal["db", "candidate", "fallback"] | None = None
+    normalization_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     dosage: str
     dosage_form: str
     quantity: float
@@ -263,6 +265,8 @@ class CabinetScanDetection(BaseModel):
     normalized_name: str
     confidence: float
     evidence: str
+    mapping_source: Literal["db", "candidate", "fallback"] | None = None
+    mapping_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     requires_manual_confirm: bool = False
     confirmed: bool = False
 
@@ -336,6 +340,7 @@ class VnDrugResolveResponse(BaseModel):
     normalized_name: str
     rx_cui: str
     mapping_source: Literal["db", "candidate", "fallback"]
+    mapping_confidence: float = Field(ge=0.0, le=1.0)
 
 
 class RagSourceEntry(BaseModel):

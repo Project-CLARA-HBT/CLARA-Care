@@ -266,8 +266,8 @@ Day 13
 - [x] Implement hybrid normalize (dictionary + neural candidate).
 
 Day 14
-- [ ] Cắm normalize vào careguard/selfmed.
-- [ ] Bổ sung `mapping_source`, `confidence`.
+- [x] Cắm normalize vào careguard/selfmed.
+- [x] Bổ sung `mapping_source`, `confidence`.
 
 Day 15
 - [ ] Nâng UX manual confirm cho người lớn tuổi.
