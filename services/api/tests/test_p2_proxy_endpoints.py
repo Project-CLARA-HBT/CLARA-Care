@@ -1357,3 +1357,71 @@ def test_research_tier2_promotes_new_metadata_contract_fields(
     assert set(payload["attribution"]["source_used"]) >= {"pubmed", "openfda"}
     assert isinstance(payload["attributions"], list)
     assert payload["attributions"][0] == payload["attribution"]
+
+
+def test_research_tier2_passes_through_safety_override_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    upstream_payload = {
+        "answer": "ok",
+        "policy_action": "block",
+        "metadata": {
+            "research_mode": "deep",
+            "telemetry": {
+                "verification_matrix": {
+                    "rows": [
+                        {
+                            "claim": "Dùng warfarin 2 viên/ngày cho mọi bệnh nhân là an toàn.",
+                            "claim_type": "dosage",
+                            "support_status": "contradicted",
+                            "confidence": 0.88,
+                            "overlap_score": 0.32,
+                            "evidence_ref": "pubmed:123",
+                        }
+                    ],
+                    "safety_override": {
+                        "applied": True,
+                        "policy_action": "block",
+                        "verification_state": "warning",
+                        "reason": "safety_critical_contradicted",
+                        "affected_claim_count": 1,
+                        "claims": [
+                            "Dùng warfarin 2 viên/ngày cho mọi bệnh nhân là an toàn.",
+                        ],
+                    },
+                }
+            },
+        },
+    }
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return upstream_payload
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "warfarin dosage safety"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["policy_action"] == "block"
+    assert payload["verification_matrix"]["safety_override"]["policy_action"] == "block"
+    assert payload["verification_matrix"]["rows"][0]["support_status"] == "contradicted"
+    assert payload["verification_matrix"]["rows"][0]["claim_type"] == "dosage"
+
+    telemetry = payload["telemetry"]
+    assert telemetry["verification_matrix"]["safety_override"]["reason"] == "safety_critical_contradicted"
+    assert telemetry["verification_matrix"]["rows"][0]["evidence_ref"] == "pubmed:123"
