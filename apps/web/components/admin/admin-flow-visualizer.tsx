@@ -457,18 +457,24 @@ const STATUS_META: Record<
 > = {
   required: {
     label: "core",
-    nodeClass: "border-white/20 bg-white/88 shadow-[0_16px_40px_rgba(15,23,42,0.14)]",
-    badgeClass: "border-sky-300/80 bg-sky-100 text-sky-800",
+    nodeClass:
+      "border-cyan-200/70 bg-white/90 shadow-[0_16px_40px_rgba(8,47,73,0.16)] dark:border-cyan-400/35 dark:bg-slate-900/82 dark:shadow-[0_20px_46px_rgba(2,6,23,0.72)]",
+    badgeClass:
+      "border-cyan-300/80 bg-cyan-100/90 text-cyan-800 dark:border-cyan-400/45 dark:bg-cyan-950/55 dark:text-cyan-200",
   },
   on: {
     label: "live",
-    nodeClass: "border-emerald-300/60 bg-white shadow-[0_20px_48px_rgba(16,185,129,0.16)]",
-    badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-800",
+    nodeClass:
+      "border-emerald-300/70 bg-white/92 shadow-[0_20px_48px_rgba(16,185,129,0.2)] dark:border-emerald-400/40 dark:bg-slate-900/86 dark:shadow-[0_24px_54px_rgba(6,78,59,0.6)]",
+    badgeClass:
+      "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-950/55 dark:text-emerald-200",
   },
   off: {
     label: "off",
-    nodeClass: "border-slate-300/70 bg-slate-100/85 opacity-80 shadow-none",
-    badgeClass: "border-slate-300 bg-slate-100 text-slate-600",
+    nodeClass:
+      "border-slate-300/70 bg-slate-100/80 opacity-85 shadow-none dark:border-slate-600/70 dark:bg-slate-900/65 dark:opacity-80",
+    badgeClass:
+      "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
   },
 };
 
@@ -481,29 +487,29 @@ const TONE_META: Record<
   }
 > = {
   sky: {
-    glow: "shadow-sky-500/20",
-    stripe: "from-sky-500/80 to-cyan-400/70",
-    chip: "bg-sky-100 text-sky-700",
+    glow: "shadow-[0_0_0_1px_rgba(14,165,233,0.2),0_18px_42px_rgba(14,165,233,0.16)] dark:shadow-[0_0_0_1px_rgba(34,211,238,0.36),0_22px_46px_rgba(8,47,73,0.72)]",
+    stripe: "from-cyan-400 via-sky-500 to-blue-500 dark:from-cyan-300 dark:via-sky-400 dark:to-blue-400",
+    chip: "border border-cyan-300/70 bg-cyan-100/85 text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-950/50 dark:text-cyan-200",
   },
   teal: {
-    glow: "shadow-teal-500/20",
-    stripe: "from-teal-500/80 to-emerald-400/70",
-    chip: "bg-teal-100 text-teal-700",
+    glow: "shadow-[0_0_0_1px_rgba(20,184,166,0.2),0_18px_42px_rgba(20,184,166,0.16)] dark:shadow-[0_0_0_1px_rgba(45,212,191,0.34),0_22px_46px_rgba(6,78,59,0.68)]",
+    stripe: "from-teal-400 via-emerald-500 to-lime-400 dark:from-teal-300 dark:via-emerald-400 dark:to-lime-300",
+    chip: "border border-teal-300/70 bg-teal-100/85 text-teal-700 dark:border-teal-500/45 dark:bg-teal-950/50 dark:text-teal-200",
   },
   indigo: {
-    glow: "shadow-indigo-500/20",
-    stripe: "from-indigo-500/80 to-blue-500/70",
-    chip: "bg-indigo-100 text-indigo-700",
+    glow: "shadow-[0_0_0_1px_rgba(99,102,241,0.2),0_18px_42px_rgba(99,102,241,0.16)] dark:shadow-[0_0_0_1px_rgba(129,140,248,0.34),0_22px_46px_rgba(49,46,129,0.68)]",
+    stripe: "from-indigo-400 via-blue-500 to-violet-500 dark:from-indigo-300 dark:via-blue-400 dark:to-violet-400",
+    chip: "border border-indigo-300/70 bg-indigo-100/85 text-indigo-700 dark:border-indigo-500/45 dark:bg-indigo-950/50 dark:text-indigo-200",
   },
   amber: {
-    glow: "shadow-amber-500/20",
-    stripe: "from-amber-500/80 to-orange-400/70",
-    chip: "bg-amber-100 text-amber-700",
+    glow: "shadow-[0_0_0_1px_rgba(245,158,11,0.2),0_18px_42px_rgba(245,158,11,0.16)] dark:shadow-[0_0_0_1px_rgba(251,191,36,0.32),0_22px_46px_rgba(146,64,14,0.66)]",
+    stripe: "from-amber-400 via-orange-500 to-yellow-400 dark:from-amber-300 dark:via-orange-400 dark:to-yellow-300",
+    chip: "border border-amber-300/70 bg-amber-100/85 text-amber-700 dark:border-amber-500/45 dark:bg-amber-950/50 dark:text-amber-200",
   },
   rose: {
-    glow: "shadow-rose-500/20",
-    stripe: "from-rose-500/80 to-fuchsia-400/70",
-    chip: "bg-rose-100 text-rose-700",
+    glow: "shadow-[0_0_0_1px_rgba(244,63,94,0.2),0_18px_42px_rgba(244,63,94,0.16)] dark:shadow-[0_0_0_1px_rgba(251,113,133,0.34),0_22px_46px_rgba(136,19,55,0.68)]",
+    stripe: "from-rose-400 via-fuchsia-500 to-pink-500 dark:from-rose-300 dark:via-fuchsia-400 dark:to-pink-400",
+    chip: "border border-rose-300/70 bg-rose-100/85 text-rose-700 dark:border-rose-500/45 dark:bg-rose-950/50 dark:text-rose-200",
   },
 };
 
@@ -553,6 +559,8 @@ export default function AdminFlowVisualizer({
       if (typeof document !== "undefined" && "fonts" in document) {
         await document.fonts.ready;
       }
+      const root = document.documentElement;
+      const darkModeEnabled = root.classList.contains("dark") || root.dataset.theme === "dark";
       const { toJpeg } = await import("html-to-image");
       const dataUrl = await toJpeg(sceneRef.current, {
         cacheBust: true,
@@ -560,7 +568,7 @@ export default function AdminFlowVisualizer({
         quality: 0.96,
         canvasWidth: SCENE_WIDTH * EXPORT_SCALE,
         canvasHeight: SCENE_HEIGHT * EXPORT_SCALE,
-        backgroundColor: "#f8fafc",
+        backgroundColor: darkModeEnabled ? "#020617" : "#eff6ff",
       });
       const anchor = document.createElement("a");
       anchor.href = dataUrl;
@@ -578,48 +586,48 @@ export default function AdminFlowVisualizer({
   const lowContextThreshold = typeof ragFlow?.low_context_threshold === "number" ? ragFlow.low_context_threshold : 0;
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.94))] p-5 shadow-[0_28px_80px_rgba(15,23,42,0.12)]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:28px_28px]" />
+    <section className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-[radial-gradient(circle_at_6%_8%,rgba(34,211,238,0.24),transparent_28%),radial-gradient(circle_at_96%_88%,rgba(59,130,246,0.18),transparent_30%),linear-gradient(165deg,rgba(255,255,255,0.96),rgba(239,246,255,0.9))] p-5 shadow-[0_28px_80px_rgba(15,23,42,0.12)] dark:border-slate-700/70 dark:bg-[radial-gradient(circle_at_6%_8%,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_96%_88%,rgba(59,130,246,0.14),transparent_32%),linear-gradient(165deg,rgba(2,6,23,0.94),rgba(15,23,42,0.9))] dark:shadow-[0_34px_88px_rgba(2,6,23,0.8)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(to_right,rgba(71,85,105,0.34)_1px,transparent_1px),linear-gradient(to_bottom,rgba(71,85,105,0.34)_1px,transparent_1px)]" />
 
       <div className="relative flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
             CLARA Research Flow Visualizer
           </p>
-          <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+          <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-100">
             Runtime Canvas: Deep + Deep Beta
           </h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Canvas mới mô tả pipeline deep research nâng cấp: safety/legal ingress, query canonicalization,
             deep_beta critic loop, retrieval orchestration, contradiction mining, verification và feedback loop.
           </p>
         </div>
 
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Active Nodes</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-950">{liveNodeCount}</p>
-            <p className="mt-1 text-xs text-slate-500">trong tổng {NODES.length} node</p>
+          <div className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-600/55 dark:bg-slate-900/62 dark:shadow-[0_16px_34px_rgba(2,6,23,0.7)]">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Active Nodes</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-100">{liveNodeCount}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">trong tổng {NODES.length} node</p>
           </div>
-          <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Toggle Nodes</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-950">{optionalNodeCount}</p>
-            <p className="mt-1 text-xs text-slate-500">có thể bật/tắt từ runtime</p>
+          <div className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-600/55 dark:bg-slate-900/62 dark:shadow-[0_16px_34px_rgba(2,6,23,0.7)]">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Toggle Nodes</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-100">{optionalNodeCount}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">có thể bật/tắt từ runtime</p>
           </div>
-          <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Low Context Threshold</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-950">{lowContextThreshold.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-500">điều khiển degraded path</p>
+          <div className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-600/55 dark:bg-slate-900/62 dark:shadow-[0_16px_34px_rgba(2,6,23,0.7)]">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Low Context Threshold</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-100">{lowContextThreshold.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">điều khiển degraded path</p>
           </div>
         </div>
       </div>
 
-      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/70 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/74 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-600/55 dark:bg-slate-900/58 dark:shadow-[0_16px_38px_rgba(2,6,23,0.72)]">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
             Export
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Xuất trực tiếp flow hiện tại thành ảnh JPG độ phân giải cao để đưa vào proposal hoặc slide pitching.
           </p>
         </div>
@@ -631,8 +639,8 @@ export default function AdminFlowVisualizer({
             "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
             isExporting
-              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-              : "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200",
+              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+              : "border-cyan-300 bg-cyan-100/95 text-cyan-800 hover:bg-cyan-200 dark:border-cyan-500/50 dark:bg-cyan-950/50 dark:text-cyan-200 dark:hover:bg-cyan-900/70",
           )}
         >
           {isExporting ? "Đang xuất JPG 3x..." : "Xuất JPG High-Res"}
@@ -640,27 +648,27 @@ export default function AdminFlowVisualizer({
       </div>
 
       <div className="relative mt-5 flex flex-wrap items-center gap-2 text-[11px]">
-        <span className="rounded-full border border-sky-300 bg-sky-100 px-2.5 py-1 font-semibold text-sky-800">
+        <span className="rounded-full border border-cyan-300/75 bg-cyan-100/92 px-2.5 py-1 font-semibold text-cyan-800 dark:border-cyan-500/45 dark:bg-cyan-950/50 dark:text-cyan-200">
           core
         </span>
-        <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">
+        <span className="rounded-full border border-emerald-300/75 bg-emerald-100/92 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-950/50 dark:text-emerald-200">
           live
         </span>
-        <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 font-semibold text-slate-600">
+        <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
           off
         </span>
-        <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 font-semibold text-orange-700">
+        <span className="rounded-full border border-orange-300/75 bg-orange-100/92 px-2.5 py-1 font-semibold text-orange-700 dark:border-orange-500/45 dark:bg-orange-950/50 dark:text-orange-200">
           degraded branch
         </span>
-        <span className="rounded-full border border-indigo-300 bg-indigo-100 px-2.5 py-1 font-semibold text-indigo-700">
+        <span className="rounded-full border border-indigo-300/75 bg-indigo-100/92 px-2.5 py-1 font-semibold text-indigo-700 dark:border-indigo-500/45 dark:bg-indigo-950/50 dark:text-indigo-200">
           tuning feedback
         </span>
       </div>
 
-      <div className="relative mt-5 overflow-x-auto rounded-[24px] border border-white/80 bg-slate-950/[0.04] p-3">
+      <div className="relative mt-5 overflow-x-auto rounded-[24px] border border-white/80 bg-slate-950/[0.04] p-3 dark:border-slate-700/60 dark:bg-slate-950/30">
         <div
           ref={sceneRef}
-          className="relative overflow-hidden rounded-[22px] border border-white/50 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_26%),linear-gradient(180deg,_rgba(248,250,252,0.72),_rgba(241,245,249,0.86))]"
+          className="relative overflow-hidden rounded-[22px] border border-white/60 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_26%),linear-gradient(180deg,_rgba(248,250,252,0.72),_rgba(241,245,249,0.86))] dark:border-slate-700/75 dark:bg-[radial-gradient(circle_at_top,_rgba(14,116,144,0.18),_transparent_34%),linear-gradient(180deg,_rgba(2,6,23,0.72),_rgba(15,23,42,0.88))] [--flow-edge-live:#0f766e] [--flow-edge-muted:#94a3b8] [--flow-edge-fallback:#ea580c] [--flow-label-color:#475569] dark:[--flow-edge-live:#2dd4bf] dark:[--flow-edge-muted:#64748b] dark:[--flow-edge-fallback:#fb923c] dark:[--flow-label-color:#94a3b8]"
           style={{ width: SCENE_WIDTH, height: SCENE_HEIGHT }}
         >
           <svg
@@ -671,13 +679,13 @@ export default function AdminFlowVisualizer({
           >
             <defs>
               <marker id="flow-arrow-live" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                <path d="M0,0 L10,5 L0,10 z" fill="#0f766e" />
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--flow-edge-live)" />
               </marker>
               <marker id="flow-arrow-muted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8" />
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--flow-edge-muted)" />
               </marker>
               <marker id="flow-arrow-fallback" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                <path d="M0,0 L10,5 L0,10 z" fill="#ea580c" />
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--flow-edge-fallback)" />
               </marker>
               <filter id="flow-glow" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="6" result="blur" />
@@ -698,11 +706,11 @@ export default function AdminFlowVisualizer({
               const path = buildPath(from, to, edge.bend);
               const stroke = edge.fallback
                 ? fallbackEnabled
-                  ? "#ea580c"
-                  : "#cbd5e1"
+                  ? "var(--flow-edge-fallback)"
+                  : "var(--flow-edge-muted)"
                 : edgeActive
-                  ? "#0f766e"
-                  : "#94a3b8";
+                  ? "var(--flow-edge-live)"
+                  : "var(--flow-edge-muted)";
               const marker = edge.fallback
                 ? fallbackEnabled
                   ? "url(#flow-arrow-fallback)"
@@ -730,7 +738,8 @@ export default function AdminFlowVisualizer({
                       x={labelX}
                       y={labelY}
                       textAnchor="middle"
-                      className="fill-slate-600 text-[11px] font-semibold tracking-[0.08em]"
+                      className="text-[11px] font-semibold tracking-[0.08em]"
+                      style={{ fill: "var(--flow-label-color)" }}
                     >
                       {edge.label}
                     </text>
@@ -769,7 +778,7 @@ export default function AdminFlowVisualizer({
                     "backdrop-blur-md",
                     meta.nodeClass,
                     tone.glow,
-                    isSelected && "border-slate-950/80 ring-2 ring-slate-950/10",
+                    isSelected && "border-slate-900/80 ring-2 ring-cyan-500/35 dark:border-cyan-300/65 dark:ring-cyan-400/35",
                   )}
                   style={{ width: NODE_CARD_WIDTH }}
                 >
@@ -777,10 +786,10 @@ export default function AdminFlowVisualizer({
 
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                         {node.subtitle}
                       </p>
-                      <h4 className="mt-1 text-sm font-semibold leading-5 text-slate-950">{node.title}</h4>
+                      <h4 className="mt-1 text-sm font-semibold leading-5 text-slate-950 dark:text-slate-100">{node.title}</h4>
                     </div>
                     <span
                       className={cx(
@@ -792,7 +801,7 @@ export default function AdminFlowVisualizer({
                     </span>
                   </div>
 
-                  <p className="mt-3 text-[12px] leading-5 text-slate-600">{node.description}</p>
+                  <p className="mt-3 text-[12px] leading-5 text-slate-600 dark:text-slate-300">{node.description}</p>
 
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", tone.chip)}>
@@ -809,8 +818,8 @@ export default function AdminFlowVisualizer({
                         className={cx(
                           "rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] transition",
                           status === "on"
-                            ? "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                            : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100",
+                            ? "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:border-emerald-500/45 dark:bg-emerald-950/55 dark:text-emerald-200 dark:hover:bg-emerald-900/70"
+                            : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
                         )}
                       >
                         {status === "on" ? "disable" : "enable"}
