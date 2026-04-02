@@ -1,0 +1,142 @@
+name: Active Eval
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Execution mode for KPI loop"
+        required: true
+        default: "live"
+        type: choice
+        options:
+          - live
+          - static
+      strict:
+        description: "Enforce strict live gate"
+        required: true
+        default: true
+        type: boolean
+      negative_limit:
+        description: "Max mined hard negatives"
+        required: true
+        default: "150"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: active-eval-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  run-active-eval:
+    name: run active eval loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Resolve execution context
+        id: ctx
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            mode="${{ github.event.inputs.mode }}"
+            strict="${{ github.event.inputs.strict }}"
+            negative_limit="${{ github.event.inputs.negative_limit }}"
+          else
+            mode="live"
+            strict="true"
+            negative_limit="150"
+          fi
+          run_id="active-eval-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          {
+            echo "mode=${mode}"
+            echo "strict=${strict}"
+            echo "negative_limit=${negative_limit}"
+            echo "run_id=${run_id}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Guard missing secrets in live mode
+        id: guard
+        env:
+          MODE: ${{ steps.ctx.outputs.mode }}
+          API_BASE: ${{ secrets.CLARA_API_BASE_URL }}
+          ML_BASE: ${{ secrets.CLARA_ML_BASE_URL }}
+          EMAIL: ${{ secrets.CLARA_DEMO_EMAIL }}
+          PASSWORD: ${{ secrets.CLARA_DEMO_PASSWORD }}
+          DOCTOR_EMAIL: ${{ secrets.CLARA_DOCTOR_EMAIL }}
+          DOCTOR_PASSWORD: ${{ secrets.CLARA_DOCTOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          should_run="true"
+          if [ "${MODE}" = "live" ]; then
+            missing=0
+            for key in API_BASE ML_BASE EMAIL PASSWORD DOCTOR_EMAIL DOCTOR_PASSWORD; do
+              if [ -z "${!key:-}" ]; then
+                echo "::warning::Missing secret for ${key}"
+                missing=$((missing + 1))
+              fi
+            done
+            if [ "${missing}" -gt 0 ]; then
+              should_run="false"
+            fi
+          fi
+          echo "should_run=${should_run}" >> "$GITHUB_OUTPUT"
+
+      - name: Run active eval loop
+        if: ${{ steps.guard.outputs.should_run == 'true' }}
+        env:
+          CLARA_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
+          CLARA_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
+          CLARA_DEMO_EMAIL: ${{ secrets.CLARA_DEMO_EMAIL }}
+          CLARA_DEMO_PASSWORD: ${{ secrets.CLARA_DEMO_PASSWORD }}
+          CLARA_DOCTOR_EMAIL: ${{ secrets.CLARA_DOCTOR_EMAIL }}
+          CLARA_DOCTOR_PASSWORD: ${{ secrets.CLARA_DOCTOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bash scripts/demo/run_active_eval_loop.sh \
+            --run-id "${{ steps.ctx.outputs.run_id }}" \
+            --mode "${{ steps.ctx.outputs.mode }}" \
+            --api-base "${CLARA_API_BASE_URL:-http://127.0.0.1:8000}" \
+            --ml-base "${CLARA_ML_BASE_URL:-http://127.0.0.1:8001}" \
+            --email "${CLARA_DEMO_EMAIL:-}" \
+            --password "${CLARA_DEMO_PASSWORD:-}" \
+            --doctor-email "${CLARA_DOCTOR_EMAIL:-}" \
+            --doctor-password "${CLARA_DOCTOR_PASSWORD:-}" \
+            --strict "${{ steps.ctx.outputs.strict }}" \
+            --limit "${{ steps.ctx.outputs.negative_limit }}"
+
+      - name: Skip summary
+        if: ${{ steps.guard.outputs.should_run != 'true' }}
+        run: |
+          {
+            echo "## Active Eval Skipped"
+            echo ""
+            echo "- mode: \`${{ steps.ctx.outputs.mode }}\`"
+            echo "- reason: missing required live secrets"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload active eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: active-eval-${{ steps.ctx.outputs.run_id }}
+          path: |
+            artifacts/round2/${{ steps.ctx.outputs.run_id }}*
+            data/demo/hard-negative-mined-*.jsonl
+            data/demo/hard-negative-mined-*.summary.json
+          if-no-files-found: ignore
+
