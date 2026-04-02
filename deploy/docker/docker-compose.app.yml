@@ -96,6 +96,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+        NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-/grafana}
     restart: unless-stopped
     depends_on:
       - api
@@ -103,8 +104,47 @@ services:
       - "127.0.0.1:${APP_WEB_PORT:-3100}:3000"
     logging: *default-logging
 
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:latest}
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    depends_on:
+      - api
+      - ml
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml.tmpl:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:${APP_PROMETHEUS_PORT:-9090}:9090"
+    logging: *default-logging
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:latest}
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_DOMAIN: ${GRAFANA_SERVER_DOMAIN:-clara.thiennn.icu}
+      GF_SERVER_ROOT_URL: ${GRAFANA_SERVER_ROOT_URL:-%(protocol)s://%(domain)s/grafana/}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${APP_GRAFANA_PORT:-3001}:3000"
+    logging: *default-logging
+
 volumes:
   clara_api_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   clara-local:

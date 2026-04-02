@@ -14,17 +14,29 @@ def reset_in_memory_metrics():
     metrics_collector.reset()
 
 
-def test_metrics_endpoint_returns_snapshot_schema():
-    response = client.get("/metrics")
-    assert response.status_code == 200
-    body = response.json()
+def test_metrics_endpoint_returns_prometheus_text_and_json_snapshot():
+    response_prometheus = client.get("/metrics")
+    assert response_prometheus.status_code == 200
+    assert response_prometheus.headers["content-type"].startswith("text/plain")
+    body_prometheus = response_prometheus.text
 
-    assert set(["requests_total", "by_path", "error_total", "avg_latency_ms"]).issubset(body.keys())
-    assert body["requests_total"] == 0
-    assert body["by_path"] == {}
-    assert body["error_total"] == 0
-    assert isinstance(body["avg_latency_ms"], float)
-    assert body["avg_latency_ms"] == 0.0
+    assert "# TYPE requests_total counter" in body_prometheus
+    assert "# TYPE error_total counter" in body_prometheus
+    assert "# TYPE avg_latency_ms gauge" in body_prometheus
+    assert "# TYPE by_path counter" in body_prometheus
+
+    response_json = client.get("/metrics/json")
+    assert response_json.status_code == 200
+    body_json = response_json.json()
+
+    assert set(["requests_total", "by_path", "error_total", "avg_latency_ms"]).issubset(
+        body_json.keys()
+    )
+    assert body_json["requests_total"] == 1
+    assert body_json["by_path"] == {"/metrics": 1}
+    assert body_json["error_total"] == 0
+    assert isinstance(body_json["avg_latency_ms"], float)
+    assert body_json["avg_latency_ms"] >= 0.0
 
 
 def test_health_details_returns_dependency_and_config_flags():
@@ -90,7 +102,7 @@ def test_metrics_increment_after_tracked_requests():
     )
     assert response_council.status_code == 200
 
-    response_metrics = client.get("/metrics")
+    response_metrics = client.get("/metrics/json")
     assert response_metrics.status_code == 200
     metrics = response_metrics.json()
 

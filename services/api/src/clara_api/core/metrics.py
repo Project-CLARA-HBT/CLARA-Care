@@ -1,4 +1,5 @@
 from collections import Counter
+from collections.abc import Mapping
 from threading import Lock
 from time import perf_counter
 from typing import Any
@@ -62,3 +63,63 @@ _api_metrics_store = APIMetricsStore()
 
 def get_api_metrics_store() -> APIMetricsStore:
     return _api_metrics_store
+
+
+def _prometheus_label_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
+
+def _coerce_non_negative_int(value: Any) -> int:
+    try:
+        return max(int(value), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _coerce_non_negative_float(value: Any) -> float:
+    try:
+        return max(float(value), 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def format_metrics_prometheus(snapshot: Mapping[str, Any]) -> str:
+    requests_total = _coerce_non_negative_int(snapshot.get("requests_total"))
+    avg_latency_ms = _coerce_non_negative_float(snapshot.get("avg_latency_ms"))
+
+    by_route_raw = snapshot.get("by_route")
+    by_status_raw = snapshot.get("by_status")
+    by_route = by_route_raw if isinstance(by_route_raw, Mapping) else {}
+    by_status = by_status_raw if isinstance(by_status_raw, Mapping) else {}
+
+    lines = [
+        "# HELP requests_total Total API requests observed.",
+        "# TYPE requests_total counter",
+        f"requests_total {requests_total}",
+        "# HELP avg_latency_ms Average API request latency in milliseconds.",
+        "# TYPE avg_latency_ms gauge",
+        f"avg_latency_ms {avg_latency_ms:.3f}",
+        "# HELP by_route API request counts by route.",
+        "# TYPE by_route counter",
+    ]
+
+    for route, count in sorted(by_route.items(), key=lambda item: str(item[0])):
+        lines.append(
+            f'by_route{{route="{_prometheus_label_escape(str(route))}"}} '
+            f"{_coerce_non_negative_int(count)}"
+        )
+
+    lines.extend(
+        [
+            "# HELP by_status API request counts by status code.",
+            "# TYPE by_status counter",
+        ]
+    )
+
+    for status, count in sorted(by_status.items(), key=lambda item: str(item[0])):
+        lines.append(
+            f'by_status{{status="{_prometheus_label_escape(str(status))}"}} '
+            f"{_coerce_non_negative_int(count)}"
+        )
+
+    return "\n".join(lines) + "\n"

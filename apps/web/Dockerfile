@@ -7,7 +7,9 @@ RUN npm install
 
 FROM base AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:8100/api/v1
+ARG NEXT_PUBLIC_GRAFANA_URL=/grafana
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/web .

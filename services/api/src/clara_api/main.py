@@ -3,13 +3,17 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from clara_api.api.router import api_router
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
-from clara_api.core.metrics import APIMetricsMiddleware
+from clara_api.core.metrics import (
+    APIMetricsMiddleware,
+    format_metrics_prometheus,
+    get_api_metrics_store,
+)
 from clara_api.core.rate_limit import RateLimiterMiddleware
 from clara_api.core.rbac import AuthContextMiddleware
 from clara_api.db import models as _db_models  # noqa: F401
@@ -100,6 +104,12 @@ async def add_security_headers(request: Request, call_next):
 @app.get("/health")
 def root_health() -> dict[str, str]:
     return {"status": "ok", "service": "clara-api"}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def root_metrics() -> PlainTextResponse:
+    payload = format_metrics_prometheus(get_api_metrics_store().snapshot())
+    return PlainTextResponse(content=payload, media_type="text/plain; version=0.0.4")
 
 
 app.include_router(api_router)

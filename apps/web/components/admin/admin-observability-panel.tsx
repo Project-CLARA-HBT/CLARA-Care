@@ -50,6 +50,28 @@ function toInt(value: number | null): number {
 
 export default function AdminObservabilityPanel() {
   const [state, setState] = useState<ObservabilityState>(INITIAL_STATE);
+  const [grafanaTheme, setGrafanaTheme] = useState<"dark" | "light">("dark");
+  const grafanaBaseUrl = useMemo(() => {
+    const raw = (process.env.NEXT_PUBLIC_GRAFANA_URL ?? "/grafana").trim();
+    if (!raw) return "";
+    return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const syncTheme = () => {
+      const isDark = root.classList.contains("dark") || root.dataset.theme === "dark";
+      setGrafanaTheme(isDark ? "dark" : "light");
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"]
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: "" }));
@@ -122,9 +144,52 @@ export default function AdminObservabilityPanel() {
   ];
 
   const apiHealthy = state.apiStatus.toLowerCase().includes("ok") || state.apiStatus.toLowerCase().includes("healthy");
+  const grafanaEmbeddedUrl = grafanaBaseUrl
+    ? `${grafanaBaseUrl}/d/clara-observability/clara-observability?orgId=1&from=now-6h&to=now&refresh=10s&kiosk=tv&theme=${grafanaTheme}`
+    : "";
+  const grafanaOpenUrl = grafanaBaseUrl
+    ? `${grafanaBaseUrl}/d/clara-observability/clara-observability?orgId=1&from=now-24h&to=now`
+    : "";
 
   return (
     <div className="space-y-4">
+      <section className="rounded-2xl border border-cyan-300/45 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(236,254,255,0.86))] p-4 shadow-[0_26px_60px_-42px_rgba(8,47,73,0.42)] dark:border-cyan-500/30 dark:bg-[linear-gradient(150deg,rgba(2,6,23,0.92),rgba(8,47,73,0.76))]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Grafana Integration</p>
+            <h3 className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Admin Observability Wall</h3>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+              Bảng Grafana thật được mount trực tiếp từ stack monitoring (Prometheus + Grafana provisioning).
+            </p>
+          </div>
+          {grafanaOpenUrl ? (
+            <a
+              href={grafanaOpenUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-cyan-400/60 bg-cyan-100/80 px-3 py-1.5 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-200 dark:border-cyan-500/45 dark:bg-cyan-950/45 dark:text-cyan-200 dark:hover:bg-cyan-900/65"
+            >
+              Open Grafana ↗
+            </a>
+          ) : null}
+        </div>
+
+        {grafanaEmbeddedUrl ? (
+          <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white/85 dark:border-slate-700 dark:bg-slate-900/70">
+            <iframe
+              title="CLARA Grafana Observability"
+              src={grafanaEmbeddedUrl}
+              className="h-[560px] w-full"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-200">
+            Thiếu cấu hình `NEXT_PUBLIC_GRAFANA_URL`. Hãy set env này để embed Grafana.
+          </p>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

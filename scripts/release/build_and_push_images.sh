@@ -107,6 +107,7 @@ for i in "${!services[@]}"; do
   build_args=()
   if [[ "$service" == "web" ]]; then
     build_args+=(--build-arg "NEXT_PUBLIC_API_URL=/api/v1")
+    build_args+=(--build-arg "NEXT_PUBLIC_GRAFANA_URL=/grafana")
   fi
 
   docker buildx build \

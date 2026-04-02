@@ -8,6 +8,7 @@ from time import perf_counter
 import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
+from fastapi.responses import PlainTextResponse
 
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
@@ -17,7 +18,7 @@ from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.nlp.pii_filter import redact_pii
-from clara_ml.observability import metrics_collector
+from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.routing import P1RoleIntentRouter
@@ -414,8 +415,14 @@ def health_details() -> dict:
     }
 
 
-@app.get("/metrics")
-def metrics() -> dict:
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> PlainTextResponse:
+    payload = format_metrics_prometheus(metrics_collector.snapshot())
+    return PlainTextResponse(content=payload, media_type="text/plain; version=0.0.4")
+
+
+@app.get("/metrics/json")
+def metrics_json() -> dict:
     return metrics_collector.snapshot()
 
 
