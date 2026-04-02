@@ -91,3 +91,11 @@ Reference directions to guide later Phase 2:
 - BAR-RAG (generator-aware reranking): https://arxiv.org/abs/2602.03689
 - LCR (training-free reranking): https://arxiv.org/abs/2602.13571
 - MedRAGChecker (claim-level medical verification): https://arxiv.org/abs/2601.06519
+
+## 8) Day 5 Safety Override
+- `research_tier2` áp dụng `safety_critical_override` khi claim-type `dosage|contraindication`
+  ở trạng thái `insufficient|contradicted`.
+- Override policy:
+  - `contradicted` -> `policy_action=block`
+  - `insufficient` -> `policy_action=warn`
+- Payload `verification_matrix` chứa thêm trường `safety_override` để UI/admin trace được lý do.
