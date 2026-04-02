@@ -13,6 +13,7 @@ export type FlowNodeId =
   | "role_router"
   | "intent_router"
   | "query_canonicalizer"
+  | "vn_drug_dictionary"
   | "planner"
   | "query_decomposition"
   | "retrieval_orchestrator"
@@ -153,6 +154,18 @@ const NODES: FlowNodeDef[] = [
     riskNote: "Canonicalization yếu sẽ làm recall thấp dù connector/source tốt.",
     x: 560,
     y: 1020,
+    tone: "teal",
+  },
+  {
+    id: "vn_drug_dictionary",
+    title: "VN Drug Dictionary DB",
+    subtitle: "brand_vn -> ingredients -> normalized/rxcui",
+    description:
+      "Tra cứu mapping biệt dược Việt Nam từ bảng DB (alias + combo hoạt chất + RxCUI) để tăng recall đúng ngữ cảnh nội địa trước khi planner/retrieval chạy sâu.",
+    riskNote:
+      "Dictionary thiếu coverage hoặc conflict alias sẽ gây map sai hoạt chất và có thể bỏ sót DDI critical.",
+    x: 920,
+    y: 280,
     tone: "teal",
   },
   {
@@ -448,6 +461,7 @@ const NODE_GRID_LAYOUT: Record<FlowNodeId, { col: number; row: number }> = {
   role_router: { col: 1, row: 1 },
   intent_router: { col: 1, row: 2 },
   query_canonicalizer: { col: 1, row: 3 },
+  vn_drug_dictionary: { col: 2, row: 0 },
 
   planner: { col: 2, row: 1 },
   query_decomposition: { col: 2, row: 2 },
@@ -561,7 +575,9 @@ const EDGES: FlowEdgeDef[] = [
   { from: "legal_guard", to: "policy_gate", bend: -160, label: "hard refusal" },
   { from: "role_router", to: "planner", bend: 22 },
   { from: "intent_router", to: "planner", bend: -40 },
-  { from: "query_canonicalizer", to: "planner", bend: -64 },
+  { from: "query_canonicalizer", to: "vn_drug_dictionary", bend: -26, label: "brand->ingredient map" },
+  { from: "vn_drug_dictionary", to: "planner", bend: -40 },
+  { from: "vn_drug_dictionary", to: "retrieval_scientific", bend: 160, label: "rxnorm aligned" },
   { from: "planner", to: "query_decomposition", bend: 46, label: "decompose" },
   { from: "planner", to: "deep_research", bend: -170, label: "deep mode" },
   { from: "planner", to: "deep_beta_router", bend: -250, label: "deep_beta mode" },

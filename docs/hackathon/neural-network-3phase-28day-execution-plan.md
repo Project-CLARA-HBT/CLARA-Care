@@ -255,8 +255,8 @@ Day 10 (Gate)
 
 ### Day 11-18 (Phase 2)
 Day 11
-- [ ] Thiết kế schema DB mapping.
-- [ ] Migration + model + schema API.
+- [x] Thiết kế schema DB mapping.
+- [x] Migration + model + schema API.
 
 Day 12
 - [ ] Seed dictionary 100+ biệt dược VN.

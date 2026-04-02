@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
@@ -23,7 +23,13 @@ from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import MedicineCabinet, MedicineItem, User
+from clara_api.db.models import (
+    MedicineCabinet,
+    MedicineItem,
+    User,
+    VnDrugMapping,
+    VnDrugMappingAlias,
+)
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
@@ -35,6 +41,12 @@ from clara_api.schemas import (
     MedicineCabinetItemResponse,
     MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
+    VnDrugMappingCreateRequest,
+    VnDrugMappingListResponse,
+    VnDrugMappingResponse,
+    VnDrugMappingUpdateRequest,
+    VnDrugResolveRequest,
+    VnDrugResolveResponse,
 )
 
 router = APIRouter()
@@ -208,12 +220,76 @@ def _normalize_text(value: str) -> str:
 DRUG_ALIAS_LOOKUP = _build_alias_lookup()
 
 
-def _resolve_dictionary_mapping(drug_name: str) -> tuple[str, str, str]:
+def _normalize_aliases(raw_aliases: list[str], brand_name: str) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for candidate in [brand_name, *raw_aliases]:
+        cleaned = " ".join(str(candidate or "").split()).strip()
+        if not cleaned:
+            continue
+        key = _normalize_text(cleaned)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(cleaned)
+    return normalized
+
+
+def _find_db_mapping_by_alias(db: Session, normalized_input: str) -> VnDrugMapping | None:
+    mapping = (
+        db.execute(
+            select(VnDrugMapping)
+            .join(VnDrugMappingAlias, VnDrugMappingAlias.mapping_id == VnDrugMapping.id)
+            .where(
+                VnDrugMapping.is_active.is_(True),
+                VnDrugMappingAlias.normalized_alias == normalized_input,
+            )
+            .order_by(VnDrugMappingAlias.is_primary.desc(), VnDrugMapping.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    if mapping is not None:
+        return mapping
+
+    return db.execute(
+        select(VnDrugMapping).where(
+            VnDrugMapping.is_active.is_(True),
+            VnDrugMapping.normalized_brand == normalized_input,
+        )
+    ).scalar_one_or_none()
+
+
+def _resolve_dictionary_mapping_with_source(
+    drug_name: str,
+    db: Session | None = None,
+) -> tuple[str, str, str, str]:
     normalized_input = _normalize_text(drug_name)
+    if db is not None:
+        db_mapping = _find_db_mapping_by_alias(db, normalized_input)
+        if db_mapping is not None:
+            display_name = db_mapping.brand_name.strip() or _to_title_case(db_mapping.normalized_name)
+            normalized_name = db_mapping.normalized_name.strip() or normalized_input
+            rx_cui = db_mapping.rx_cui.strip()
+            if not rx_cui:
+                rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
+            return display_name, normalized_name, rx_cui, "db"
+
     canonical = DRUG_ALIAS_LOOKUP.get(normalized_input, normalized_input)
     display_name = _to_title_case(canonical)
     rx_cui = DRUG_RXCUI_MAP.get(canonical, "")
-    return display_name, canonical, rx_cui
+    return display_name, canonical, rx_cui, "fallback"
+
+
+def _resolve_dictionary_mapping(
+    drug_name: str,
+    db: Session | None = None,
+) -> tuple[str, str, str]:
+    display_name, normalized_name, rx_cui, _mapping_source = _resolve_dictionary_mapping_with_source(
+        drug_name=drug_name,
+        db=db,
+    )
+    return display_name, normalized_name, rx_cui
 
 
 def _to_title_case(value: str) -> str:
@@ -236,6 +312,77 @@ def _to_item_response(item: MedicineItem) -> MedicineCabinetItemResponse:
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
+
+
+def _to_mapping_response(mapping: VnDrugMapping) -> VnDrugMappingResponse:
+    aliases_sorted = sorted(
+        mapping.aliases,
+        key=lambda alias: (not alias.is_primary, alias.alias_name.lower()),
+    )
+    return VnDrugMappingResponse(
+        id=mapping.id,
+        brand_name=mapping.brand_name,
+        aliases=[alias.alias_name for alias in aliases_sorted],
+        active_ingredients=mapping.active_ingredients,
+        normalized_name=mapping.normalized_name,
+        rx_cui=mapping.rx_cui,
+        mapping_source=mapping.mapping_source,
+        notes=mapping.notes,
+        is_active=mapping.is_active,
+        created_by_user_id=mapping.created_by_user_id,
+        created_at=mapping.created_at,
+        updated_at=mapping.updated_at,
+    )
+
+
+def _get_mapping_or_404(db: Session, mapping_id: int) -> VnDrugMapping:
+    mapping = db.execute(select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)).scalar_one_or_none()
+    if mapping is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mapping")
+    return mapping
+
+
+def _validate_alias_conflicts(
+    db: Session,
+    aliases: list[str],
+    *,
+    exclude_mapping_id: int | None = None,
+) -> None:
+    normalized_aliases = [_normalize_text(alias) for alias in aliases]
+    if not normalized_aliases:
+        return
+    existing_aliases = (
+        db.execute(
+            select(VnDrugMappingAlias)
+            .join(VnDrugMapping, VnDrugMapping.id == VnDrugMappingAlias.mapping_id)
+            .where(
+                VnDrugMappingAlias.normalized_alias.in_(normalized_aliases),
+                VnDrugMapping.is_active.is_(True),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for alias in existing_aliases:
+        if exclude_mapping_id is not None and alias.mapping_id == exclude_mapping_id:
+            continue
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Alias đã tồn tại trong mapping khác: {alias.alias_name}",
+        )
+
+
+def _replace_mapping_aliases(db: Session, mapping: VnDrugMapping, aliases: list[str]) -> None:
+    db.query(VnDrugMappingAlias).filter(VnDrugMappingAlias.mapping_id == mapping.id).delete()
+    for index, alias in enumerate(aliases):
+        db.add(
+            VnDrugMappingAlias(
+                mapping_id=mapping.id,
+                alias_name=alias,
+                normalized_alias=_normalize_text(alias),
+                is_primary=index == 0,
+            )
+        )
 
 
 def _default_careguard_sources(external_ddi_enabled: bool) -> list[dict[str, str]]:
@@ -334,7 +481,7 @@ def _get_or_create_cabinet(db: Session, user_id: int) -> MedicineCabinet:
     return cabinet
 
 
-def _detect_drugs_from_text(text: str) -> list[CabinetScanDetection]:
+def _detect_drugs_from_text(text: str, db: Session | None = None) -> list[CabinetScanDetection]:
     normalized_text = text.lower()
     detections: list[CabinetScanDetection] = []
 
@@ -345,7 +492,7 @@ def _detect_drugs_from_text(text: str) -> list[CabinetScanDetection]:
             if not re.search(pattern, normalized_text, flags=re.IGNORECASE):
                 continue
 
-            display_name, normalized_name, _rx_cui = _resolve_dictionary_mapping(canonical)
+            display_name, normalized_name, _rx_cui = _resolve_dictionary_mapping(canonical, db=db)
             confidence = 0.94 if alias == canonical else 0.82
             requires_manual_confirm = confidence < LOW_CONFIDENCE_OCR_THRESHOLD
             detections.append(
@@ -570,7 +717,7 @@ def add_cabinet_item(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
-    _, normalized, mapped_rxcui = _resolve_dictionary_mapping(payload.drug_name)
+    _, normalized, mapped_rxcui = _resolve_dictionary_mapping(payload.drug_name, db=db)
     existing = db.execute(
         select(MedicineItem).where(
             MedicineItem.cabinet_id == cabinet.id,
@@ -636,7 +783,7 @@ def update_cabinet_item(
                 detail="Tên thuốc không hợp lệ",
             )
         updated_name = payload.drug_name.strip()
-        _, normalized_name, mapped_rxcui = _resolve_dictionary_mapping(updated_name)
+        _, normalized_name, mapped_rxcui = _resolve_dictionary_mapping(updated_name, db=db)
         duplicate = db.execute(
             select(MedicineItem).where(
                 MedicineItem.cabinet_id == cabinet.id,
@@ -677,7 +824,7 @@ def update_cabinet_item(
         if rx_cui:
             item.rx_cui = rx_cui
         elif "drug_name" in provided:
-            _, _, mapped_rxcui = _resolve_dictionary_mapping(item.drug_name)
+            _, _, mapped_rxcui = _resolve_dictionary_mapping(item.drug_name, db=db)
             item.rx_cui = mapped_rxcui
         else:
             item.rx_cui = ""
@@ -725,7 +872,7 @@ def scan_cabinet_text(
 ) -> CabinetScanTextResponse:
     _require_user(token, db)
     return CabinetScanTextResponse(
-        detections=_detect_drugs_from_text(payload.text),
+        detections=_detect_drugs_from_text(payload.text, db=db),
         extracted_text=payload.text,
     )
 
@@ -753,7 +900,7 @@ async def scan_cabinet_file(
         file_name=file_name,
         content_type=content_type,
     )
-    detections = _detect_drugs_from_text(extracted_text)
+    detections = _detect_drugs_from_text(extracted_text, db=db)
     return CabinetScanTextResponse(
         detections=detections,
         extracted_text=extracted_text[:4000],
@@ -814,7 +961,8 @@ def import_detections(
     inserted = 0
     for detection in payload.detections:
         _, normalized, mapped_rxcui = _resolve_dictionary_mapping(
-            detection.normalized_name or detection.drug_name
+            detection.normalized_name or detection.drug_name,
+            db=db,
         )
         if not normalized or normalized in existing_names:
             continue
@@ -867,6 +1015,195 @@ def run_auto_ddi_check(
     return _attach_careguard_attribution(
         result,
         external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
+    )
+
+
+@router.get("/dictionary", response_model=VnDrugMappingListResponse)
+def list_vn_drug_mappings(
+    q: str = "",
+    limit: int = 100,
+    offset: int = 0,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingListResponse:
+    _require_user(token, db)
+    safe_limit = min(max(limit, 1), 200)
+    safe_offset = max(offset, 0)
+    query = select(VnDrugMapping)
+    count_query = select(func.count(VnDrugMapping.id))
+
+    keyword = " ".join(q.split()).strip()
+    if keyword:
+        pattern = f"%{keyword.lower()}%"
+        filters = or_(
+            func.lower(VnDrugMapping.brand_name).like(pattern),
+            func.lower(VnDrugMapping.normalized_name).like(pattern),
+            func.lower(VnDrugMapping.active_ingredients).like(pattern),
+        )
+        query = query.where(filters)
+        count_query = count_query.where(filters)
+
+    total = int(db.execute(count_query).scalar_one() or 0)
+    mappings = (
+        db.execute(
+            query.order_by(VnDrugMapping.updated_at.desc(), VnDrugMapping.id.desc())
+            .limit(safe_limit)
+            .offset(safe_offset)
+        )
+        .scalars()
+        .all()
+    )
+    return VnDrugMappingListResponse(
+        total=total,
+        items=[_to_mapping_response(mapping) for mapping in mappings],
+    )
+
+
+@router.post("/dictionary", response_model=VnDrugMappingResponse)
+def create_vn_drug_mapping(
+    payload: VnDrugMappingCreateRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingResponse:
+    user = _require_user(token, db)
+    brand_name = " ".join(payload.brand_name.split()).strip()
+    normalized_brand = _normalize_text(brand_name)
+    normalized_name = _normalize_text(payload.normalized_name)
+    aliases = _normalize_aliases(payload.aliases, brand_name)
+
+    existing_brand = db.execute(
+        select(VnDrugMapping).where(VnDrugMapping.normalized_brand == normalized_brand)
+    ).scalar_one_or_none()
+    if existing_brand is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Brand đã tồn tại trong dictionary",
+        )
+
+    _validate_alias_conflicts(db, aliases)
+
+    mapping = VnDrugMapping(
+        brand_name=brand_name,
+        normalized_brand=normalized_brand,
+        active_ingredients=payload.active_ingredients.strip(),
+        normalized_name=normalized_name,
+        rx_cui=payload.rx_cui.strip(),
+        mapping_source=payload.mapping_source,
+        notes=payload.notes.strip(),
+        is_active=payload.is_active,
+        created_by_user_id=user.id,
+        updated_at=datetime.now(tz=UTC),
+    )
+    db.add(mapping)
+    db.flush()
+    _replace_mapping_aliases(db, mapping, aliases)
+    db.commit()
+    db.refresh(mapping)
+    return _to_mapping_response(mapping)
+
+
+@router.patch("/dictionary/{mapping_id}", response_model=VnDrugMappingResponse)
+@router.put("/dictionary/{mapping_id}", response_model=VnDrugMappingResponse)
+def update_vn_drug_mapping(
+    mapping_id: int,
+    payload: VnDrugMappingUpdateRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingResponse:
+    _require_user(token, db)
+    mapping = _get_mapping_or_404(db, mapping_id)
+    provided = set(payload.model_fields_set)
+    if not provided:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload cập nhật rỗng",
+        )
+
+    if "brand_name" in provided:
+        brand_name = " ".join((payload.brand_name or "").split()).strip()
+        if not brand_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="brand_name không hợp lệ",
+            )
+        normalized_brand = _normalize_text(brand_name)
+        existing_brand = db.execute(
+            select(VnDrugMapping).where(
+                VnDrugMapping.normalized_brand == normalized_brand,
+                VnDrugMapping.id != mapping.id,
+            )
+        ).scalar_one_or_none()
+        if existing_brand is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Brand đã tồn tại trong dictionary",
+            )
+        mapping.brand_name = brand_name
+        mapping.normalized_brand = normalized_brand
+
+    if "active_ingredients" in provided:
+        mapping.active_ingredients = (payload.active_ingredients or "").strip()
+    if "normalized_name" in provided:
+        normalized_name = _normalize_text(payload.normalized_name or "")
+        if not normalized_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="normalized_name không hợp lệ",
+            )
+        mapping.normalized_name = normalized_name
+    if "rx_cui" in provided:
+        mapping.rx_cui = (payload.rx_cui or "").strip()
+    if "mapping_source" in provided and payload.mapping_source is not None:
+        mapping.mapping_source = payload.mapping_source
+    if "notes" in provided:
+        mapping.notes = (payload.notes or "").strip()
+    if "is_active" in provided and payload.is_active is not None:
+        mapping.is_active = payload.is_active
+
+    if "aliases" in provided:
+        aliases = _normalize_aliases(payload.aliases or [], mapping.brand_name)
+        _validate_alias_conflicts(db, aliases, exclude_mapping_id=mapping.id)
+        _replace_mapping_aliases(db, mapping, aliases)
+
+    mapping.updated_at = datetime.now(tz=UTC)
+    db.add(mapping)
+    db.commit()
+    db.refresh(mapping)
+    return _to_mapping_response(mapping)
+
+
+@router.delete("/dictionary/{mapping_id}")
+def deactivate_vn_drug_mapping(
+    mapping_id: int,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    _require_user(token, db)
+    mapping = _get_mapping_or_404(db, mapping_id)
+    mapping.is_active = False
+    mapping.updated_at = datetime.now(tz=UTC)
+    db.add(mapping)
+    db.commit()
+    return {"deleted": True}
+
+
+@router.post("/dictionary/resolve", response_model=VnDrugResolveResponse)
+def resolve_vn_drug_mapping(
+    payload: VnDrugResolveRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugResolveResponse:
+    _require_user(token, db)
+    display_name, normalized_name, rx_cui, source = _resolve_dictionary_mapping_with_source(
+        payload.drug_name,
+        db=db,
+    )
+    return VnDrugResolveResponse(
+        input_name=payload.drug_name.strip(),
+        display_name=display_name,
+        normalized_name=normalized_name,
+        rx_cui=rx_cui,
+        mapping_source=source,
     )
 
 

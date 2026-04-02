@@ -146,6 +146,54 @@ class MedicineItem(Base):
     cabinet: Mapped[MedicineCabinet] = relationship("MedicineCabinet")
 
 
+class VnDrugMapping(Base):
+    __tablename__ = "vn_drug_mappings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    brand_name: Mapped[str] = mapped_column(String(255), index=True)
+    normalized_brand: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    active_ingredients: Mapped[str] = mapped_column(Text, default="")
+    normalized_name: Mapped[str] = mapped_column(String(255), index=True)
+    rx_cui: Mapped[str] = mapped_column(String(64), default="")
+    mapping_source: Mapped[str] = mapped_column(String(32), default="manual", index=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    created_by: Mapped[User | None] = relationship("User")
+    aliases: Mapped[list["VnDrugMappingAlias"]] = relationship(
+        "VnDrugMappingAlias",
+        cascade="all, delete-orphan",
+        back_populates="mapping",
+    )
+
+
+class VnDrugMappingAlias(Base):
+    __tablename__ = "vn_drug_mapping_aliases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_id: Mapped[int] = mapped_column(
+        ForeignKey("vn_drug_mappings.id", ondelete="CASCADE"),
+        index=True,
+    )
+    alias_name: Mapped[str] = mapped_column(String(255))
+    normalized_alias: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    mapping: Mapped[VnDrugMapping] = relationship("VnDrugMapping", back_populates="aliases")
+
+
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 

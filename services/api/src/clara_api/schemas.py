@@ -284,6 +284,60 @@ class CabinetAutoDdiRequest(BaseModel):
     allergies: list[str] = Field(default_factory=list)
 
 
+class VnDrugMappingCreateRequest(BaseModel):
+    brand_name: str = Field(min_length=1, max_length=255)
+    aliases: list[str] = Field(default_factory=list)
+    active_ingredients: str = Field(default="", max_length=2000)
+    normalized_name: str = Field(min_length=1, max_length=255)
+    rx_cui: str = Field(default="", max_length=64)
+    mapping_source: Literal["manual", "seed", "import", "curated", "neural"] = "manual"
+    notes: str = Field(default="", max_length=4000)
+    is_active: bool = True
+
+
+class VnDrugMappingUpdateRequest(BaseModel):
+    brand_name: str | None = Field(default=None, min_length=1, max_length=255)
+    aliases: list[str] | None = None
+    active_ingredients: str | None = Field(default=None, max_length=2000)
+    normalized_name: str | None = Field(default=None, min_length=1, max_length=255)
+    rx_cui: str | None = Field(default=None, max_length=64)
+    mapping_source: Literal["manual", "seed", "import", "curated", "neural"] | None = None
+    notes: str | None = Field(default=None, max_length=4000)
+    is_active: bool | None = None
+
+
+class VnDrugMappingResponse(BaseModel):
+    id: int
+    brand_name: str
+    aliases: list[str] = Field(default_factory=list)
+    active_ingredients: str
+    normalized_name: str
+    rx_cui: str
+    mapping_source: str
+    notes: str
+    is_active: bool
+    created_by_user_id: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class VnDrugMappingListResponse(BaseModel):
+    total: int
+    items: list[VnDrugMappingResponse] = Field(default_factory=list)
+
+
+class VnDrugResolveRequest(BaseModel):
+    drug_name: str = Field(min_length=1, max_length=255)
+
+
+class VnDrugResolveResponse(BaseModel):
+    input_name: str
+    display_name: str
+    normalized_name: str
+    rx_cui: str
+    mapping_source: Literal["db", "fallback"]
+
+
 class RagSourceEntry(BaseModel):
     id: str
     name: str

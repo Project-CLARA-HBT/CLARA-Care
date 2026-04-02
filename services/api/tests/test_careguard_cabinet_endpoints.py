@@ -30,6 +30,10 @@ def _login(email: str) -> str:
     return token
 
 
+def _login_doctor() -> str:
+    return _login("doctor-mapping@doctor.clara")
+
+
 def test_cabinet_requires_consent_gate() -> None:
     token = _login_without_consent("consent-required@example.com")
     response = client.get(
@@ -278,6 +282,93 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
     assert len(payload["detections"]) >= 1
     assert any(has_files for has_files, _ in call_kinds)
     assert any(has_json for _, has_json in call_kinds)
+
+
+def test_vn_dictionary_requires_doctor_role() -> None:
+    normal_token = _login("normal-mapping@example.com")
+    response = client.get(
+        "/api/v1/careguard/dictionary",
+        headers={"Authorization": f"Bearer {normal_token}"},
+    )
+    assert response.status_code == 403
+    assert "Không đủ quyền" in response.json()["detail"]
+
+
+def test_vn_dictionary_crud_and_resolve() -> None:
+    doctor_token = _login_doctor()
+
+    create_response = client.post(
+        "/api/v1/careguard/dictionary",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "brand_name": "Panadol Plus VN",
+            "aliases": ["Panadol Plus VN", "Panadol-VN Plus"],
+            "active_ingredients": "Paracetamol + Caffeine",
+            "normalized_name": "paracetamol caffeine",
+            "rx_cui": "999001",
+            "mapping_source": "manual",
+            "notes": "test mapping",
+            "is_active": True,
+        },
+    )
+    assert create_response.status_code == 200
+    mapping_id = create_response.json()["id"]
+    assert create_response.json()["normalized_name"] == "paracetamol caffeine"
+
+    list_response = client.get(
+        "/api/v1/careguard/dictionary?q=panadol",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+    )
+    assert list_response.status_code == 200
+    assert list_response.json()["total"] >= 1
+    assert any(item["id"] == mapping_id for item in list_response.json()["items"])
+
+    resolve_response = client.post(
+        "/api/v1/careguard/dictionary/resolve",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"drug_name": "Panadol-VN Plus"},
+    )
+    assert resolve_response.status_code == 200
+    assert resolve_response.json()["mapping_source"] == "db"
+    assert resolve_response.json()["normalized_name"] == "paracetamol caffeine"
+    assert resolve_response.json()["rx_cui"] == "999001"
+
+    add_item_response = client.post(
+        "/api/v1/careguard/cabinet/items",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "drug_name": "Panadol-VN Plus",
+            "dosage": "500mg",
+            "quantity": 3,
+            "source": "manual",
+        },
+    )
+    assert add_item_response.status_code == 200
+    assert add_item_response.json()["normalized_name"] == "paracetamol caffeine"
+    assert add_item_response.json()["rx_cui"] == "999001"
+
+    update_response = client.patch(
+        f"/api/v1/careguard/dictionary/{mapping_id}",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"rx_cui": "999002"},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["rx_cui"] == "999002"
+
+    delete_response = client.delete(
+        f"/api/v1/careguard/dictionary/{mapping_id}",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["deleted"] is True
+
+    resolve_after_delete = client.post(
+        "/api/v1/careguard/dictionary/resolve",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"drug_name": "Panadol-VN Plus"},
+    )
+    assert resolve_after_delete.status_code == 200
+    assert resolve_after_delete.json()["mapping_source"] == "fallback"
 
 
 def test_auto_ddi_proxy_payload(monkeypatch) -> None:
