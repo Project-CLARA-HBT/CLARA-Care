@@ -12,15 +12,18 @@ def _graphrag_flags(*, enabled: bool, max_neighbors: int = 8, expansion_docs: in
     prev_enabled = settings.rag_graphrag_enabled
     prev_neighbors = settings.rag_graphrag_max_neighbors
     prev_expansion = settings.rag_graphrag_expansion_docs
+    prev_domain_enabled = settings.rag_biomed_graph_enabled
     settings.rag_graphrag_enabled = enabled
     settings.rag_graphrag_max_neighbors = max_neighbors
     settings.rag_graphrag_expansion_docs = expansion_docs
+    settings.rag_biomed_graph_enabled = enabled
     try:
         yield
     finally:
         settings.rag_graphrag_enabled = prev_enabled
         settings.rag_graphrag_max_neighbors = prev_neighbors
         settings.rag_graphrag_expansion_docs = prev_expansion
+        settings.rag_biomed_graph_enabled = prev_domain_enabled
 
 
 def test_rag_pipeline_returns_sources_and_answer():
@@ -364,6 +367,21 @@ def test_rag_pipeline_graphrag_sidecar_enabled_emits_events_and_summary():
     assert int(graphrag.get("expansion_count") or 0) <= 3
     assert retrieval_trace.get("graphrag_enabled") is True
     assert result.context_debug.get("graphrag_enabled") is True
+
+
+def test_rag_pipeline_graphrag_sidecar_domain_graph_emits_hits():
+    with _graphrag_flags(enabled=True, max_neighbors=6, expansion_docs=4):
+        pipe = RagPipelineP0(deepseek_api_key="")
+        result = pipe.run("warfarin ibuprofen contraindication bleeding")
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    graphrag = retrieval_trace.get("graphrag", {})
+    assert graphrag.get("enabled") is True
+    assert graphrag.get("domain_graph_enabled") is True
+    assert graphrag.get("domain_graph_loaded") is True
+    assert int(graphrag.get("domain_entity_match_count") or 0) >= 2
+    assert int(graphrag.get("domain_edge_hit_count") or 0) >= 1
+    assert any(doc_id.startswith("graphrag-domain-") for doc_id in (graphrag.get("expansion_doc_ids") or []))
 
 
 def test_rag_pipeline_graphrag_sidecar_disabled_keeps_default_trace():

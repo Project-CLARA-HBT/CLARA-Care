@@ -26,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: active-eval-${{ github.ref }}
@@ -96,6 +97,79 @@ jobs:
           fi
           echo "should_run=${should_run}" >> "$GITHUB_OUTPUT"
 
+      - name: Download previous active-eval artifact
+        id: prev
+        if: ${{ steps.guard.outputs.should_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          OUT_DIR="${RUNNER_TEMP}/previous-active-eval"
+          mkdir -p "${OUT_DIR}"
+
+          runs_json="$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/actions/workflows/active-eval.yml/runs?status=success&branch=${BRANCH}&per_page=10")"
+
+          prev_run_id="$(RUNS_JSON="$runs_json" CURRENT_RUN_ID="$CURRENT_RUN_ID" python - <<'PY'
+          import json, os
+          payload = json.loads(os.environ["RUNS_JSON"])
+          current = str(os.environ.get("CURRENT_RUN_ID", ""))
+          for run in payload.get("workflow_runs", []):
+              rid = str(run.get("id") or "")
+              if rid and rid != current:
+                  print(rid)
+                  break
+          PY
+          )"
+
+          if [ -z "${prev_run_id}" ]; then
+            echo "No previous successful active-eval run found."
+            echo "previous_kpi=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          artifacts_json="$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/actions/runs/${prev_run_id}/artifacts?per_page=50")"
+
+          archive_url="$(ARTIFACTS_JSON="$artifacts_json" python - <<'PY'
+          import json, os
+          payload = json.loads(os.environ["ARTIFACTS_JSON"])
+          for item in payload.get("artifacts", []):
+              name = str(item.get("name") or "")
+              if name.startswith("active-eval-"):
+                  print(str(item.get("archive_download_url") or ""))
+                  break
+          PY
+          )"
+
+          if [ -z "${archive_url}" ]; then
+            echo "No active-eval artifact found in previous run."
+            echo "previous_kpi=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${archive_url}" -o "${OUT_DIR}/prev-active-eval.zip"
+
+          unzip -o -q "${OUT_DIR}/prev-active-eval.zip" -d "${OUT_DIR}/unzipped"
+          previous_kpi="$(find "${OUT_DIR}/unzipped" -type f -path "*/kpi-report/kpi-report.json" | head -n1 || true)"
+          if [ -n "${previous_kpi}" ]; then
+            echo "Recovered previous KPI: ${previous_kpi}"
+            echo "previous_kpi=${previous_kpi}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No kpi-report.json found in downloaded artifact."
+            echo "previous_kpi=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run active eval loop
         if: ${{ steps.guard.outputs.should_run == 'true' }}
         env:
@@ -107,7 +181,7 @@ jobs:
           CLARA_DOCTOR_PASSWORD: ${{ secrets.CLARA_DOCTOR_PASSWORD }}
         run: |
           set -euo pipefail
-          bash scripts/demo/run_active_eval_loop.sh \
+          cmd=(bash scripts/demo/run_active_eval_loop.sh \
             --run-id "${{ steps.ctx.outputs.run_id }}" \
             --mode "${{ steps.ctx.outputs.mode }}" \
             --api-base "${CLARA_API_BASE_URL:-http://127.0.0.1:8000}" \
@@ -117,7 +191,12 @@ jobs:
             --doctor-email "${CLARA_DOCTOR_EMAIL:-}" \
             --doctor-password "${CLARA_DOCTOR_PASSWORD:-}" \
             --strict "${{ steps.ctx.outputs.strict }}" \
-            --limit "${{ steps.ctx.outputs.negative_limit }}"
+            --limit "${{ steps.ctx.outputs.negative_limit }}" \
+            --compare-strict "${{ steps.ctx.outputs.strict }}")
+          if [ -n "${{ steps.prev.outputs.previous_kpi }}" ]; then
+            cmd+=(--previous-kpi "${{ steps.prev.outputs.previous_kpi }}")
+          fi
+          "${cmd[@]}"
 
       - name: Skip summary
         if: ${{ steps.guard.outputs.should_run != 'true' }}
@@ -139,4 +218,3 @@ jobs:
             data/demo/hard-negative-mined-*.jsonl
             data/demo/hard-negative-mined-*.summary.json
           if-no-files-found: ignore
-

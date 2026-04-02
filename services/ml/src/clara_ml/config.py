@@ -122,6 +122,20 @@ class Settings(BaseSettings):
         ge=1,
         le=16,
     )
+    rag_biomed_graph_enabled: bool = Field(
+        default=True,
+        validation_alias="RAG_BIOMED_GRAPH_ENABLED",
+    )
+    rag_biomed_graph_path: str = Field(
+        default="",
+        validation_alias="RAG_BIOMED_GRAPH_PATH",
+    )
+    rag_biomed_graph_max_edges: int = Field(
+        default=12,
+        validation_alias="RAG_BIOMED_GRAPH_MAX_EDGES",
+        ge=1,
+        le=64,
+    )
     rag_force_search_index: bool = Field(
         default=True,
         validation_alias="RAG_FORCE_SEARCH_INDEX",

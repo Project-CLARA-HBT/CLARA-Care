@@ -16,6 +16,13 @@ DOCTOR_EMAIL="${CLARA_DOCTOR_EMAIL:-}"
 DOCTOR_PASSWORD="${CLARA_DOCTOR_PASSWORD:-}"
 STRICT="false"
 LIMIT="200"
+PULL_PRODUCTION_LOGS="${CLARA_PULL_PRODUCTION_LOGS:-true}"
+PRODUCTION_LOG_SOURCE="${CLARA_PRODUCTION_FLOW_SOURCE:-research}"
+PRODUCTION_LOG_LIMIT="${CLARA_PRODUCTION_FLOW_LIMIT:-500}"
+PREVIOUS_KPI="${CLARA_PREVIOUS_BASELINE_KPI:-}"
+COMPARE_STRICT="${CLARA_COMPARE_STRICT:-false}"
+MAX_DROP_RATE="${CLARA_COMPARE_MAX_DROP_RATE:-2.0}"
+MAX_LATENCY_INCREASE_MS="${CLARA_COMPARE_MAX_LATENCY_INCREASE_MS:-350.0}"
 
 CONVERSATION_LOGS=()
 
@@ -30,7 +37,9 @@ Usage:
     [--email <email>] [--password <password>] \
     [--doctor-email <email>] [--doctor-password <password>] \
     [--conversation-log <path>]... \
-    [--limit <n>] [--strict true|false]
+    [--limit <n>] [--strict true|false] \
+    [--previous-kpi <path>] [--compare-strict true|false] \
+    [--max-drop-rate <float>] [--max-latency-increase-ms <float>]
 EOF
 }
 
@@ -60,6 +69,20 @@ while [[ $# -gt 0 ]]; do
       CONVERSATION_LOGS+=("$2"); shift 2 ;;
     --limit)
       LIMIT="$2"; shift 2 ;;
+    --pull-production-logs)
+      PULL_PRODUCTION_LOGS="$2"; shift 2 ;;
+    --production-log-source)
+      PRODUCTION_LOG_SOURCE="$2"; shift 2 ;;
+    --production-log-limit)
+      PRODUCTION_LOG_LIMIT="$2"; shift 2 ;;
+    --previous-kpi)
+      PREVIOUS_KPI="$2"; shift 2 ;;
+    --compare-strict)
+      COMPARE_STRICT="$2"; shift 2 ;;
+    --max-drop-rate)
+      MAX_DROP_RATE="$2"; shift 2 ;;
+    --max-latency-increase-ms)
+      MAX_LATENCY_INCREASE_MS="$2"; shift 2 ;;
     --strict)
       STRICT="$2"; shift 2 ;;
     -h|--help)
@@ -93,6 +116,8 @@ normalize_bool() {
 }
 
 STRICT="$(normalize_bool "$STRICT")"
+PULL_PRODUCTION_LOGS="$(normalize_bool "$PULL_PRODUCTION_LOGS")"
+COMPARE_STRICT="$(normalize_bool "$COMPARE_STRICT")"
 
 BASE_RUN_ID="${RUN_ID}-base"
 POST_RUN_ID="${RUN_ID}-postneg"
@@ -102,6 +127,9 @@ NEGATIVE_SET="${ROOT_DIR}/data/demo/hard-negative-mined-${RUN_ID}.jsonl"
 SUMMARY_DIR="${ROOT_DIR}/artifacts/round2/${RUN_ID}"
 SUMMARY_MD="${SUMMARY_DIR}/active-eval-summary.md"
 SUMMARY_JSON="${SUMMARY_DIR}/active-eval-summary.json"
+PRODUCTION_LOG_FILE="${SUMMARY_DIR}/production-flow-events.json"
+COMPARE_JSON="${SUMMARY_DIR}/baseline-regression-compare.json"
+COMPARE_MD="${SUMMARY_DIR}/baseline-regression-compare.md"
 
 mkdir -p "${SUMMARY_DIR}"
 
@@ -155,6 +183,56 @@ count_jsonl_rows() {
   awk 'NF {c++} END {print c+0}' "$path"
 }
 
+discover_previous_kpi() {
+  local current_base="$1"
+  local current_post="$2"
+  local explicit="${3:-}"
+  if [[ -n "$explicit" ]]; then
+    if [[ -f "$explicit" ]]; then
+      printf '%s\n' "$explicit"
+      return
+    fi
+    echo "[active-eval] --previous-kpi not found: $explicit" >&2
+    return
+  fi
+
+  local search_root="${ROOT_DIR}/artifacts/round2"
+  if [[ ! -d "$search_root" ]]; then
+    return
+  fi
+
+  local candidates=()
+  while IFS= read -r path; do
+    candidates+=("$path")
+  done < <(find "$search_root" -type f -path "*/kpi-report/kpi-report.json" -print)
+
+  if [[ ${#candidates[@]} -eq 0 ]]; then
+    return
+  fi
+
+  local best_path=""
+  local best_mtime=0
+  local item=""
+  local mtime=0
+  for item in "${candidates[@]}"; do
+    if [[ "$item" == *"/${current_base}/kpi-report/kpi-report.json" ]]; then
+      continue
+    fi
+    if [[ "$item" == *"/${current_post}/kpi-report/kpi-report.json" ]]; then
+      continue
+    fi
+    mtime="$(stat -f "%m" "$item" 2>/dev/null || echo 0)"
+    if [[ "$mtime" -gt "$best_mtime" ]]; then
+      best_mtime="$mtime"
+      best_path="$item"
+    fi
+  done
+
+  if [[ -n "$best_path" ]]; then
+    printf '%s\n' "$best_path"
+  fi
+}
+
 # (a) baseline KPI
 run_kpi "$BASE_RUN_ID" "baseline"
 if [[ ! -d "$ARTIFACT_RUN_BASE" ]]; then
@@ -163,6 +241,31 @@ if [[ ! -d "$ARTIFACT_RUN_BASE" ]]; then
 fi
 
 # (b) mine hard negatives from latest run
+if [[ "${PULL_PRODUCTION_LOGS}" == "true" ]]; then
+  export_cmd=(
+    "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/export_production_flow_events.py"
+    --api-base "$API_BASE"
+    --output "$PRODUCTION_LOG_FILE"
+    --source "$PRODUCTION_LOG_SOURCE"
+    --limit "$PRODUCTION_LOG_LIMIT"
+  )
+  if [[ -n "$DOCTOR_TOKEN" ]]; then
+    export_cmd+=(--token "$DOCTOR_TOKEN")
+  elif [[ -n "$TOKEN" ]]; then
+    export_cmd+=(--token "$TOKEN")
+  elif [[ -n "$DOCTOR_EMAIL" && -n "$DOCTOR_PASSWORD" ]]; then
+    export_cmd+=(--email "$DOCTOR_EMAIL" --password "$DOCTOR_PASSWORD")
+  elif [[ -n "$EMAIL" && -n "$PASSWORD" ]]; then
+    export_cmd+=(--email "$EMAIL" --password "$PASSWORD")
+  fi
+  log "Export production flow-events from API"
+  if "${export_cmd[@]}"; then
+    CONVERSATION_LOGS+=("$PRODUCTION_LOG_FILE")
+  else
+    log "Warning: export production flow-events failed; continue mining without prod flow logs"
+  fi
+fi
+
 mine_cmd=(
   "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/mine_hard_negatives.py"
   --run-dir "$ARTIFACT_RUN_BASE"
@@ -196,7 +299,43 @@ else
   log "Skip post-negative KPI run because mined set is empty"
 fi
 
-# (d) summary markdown/json
+# (d) compare against previous baseline run (if available)
+TARGET_KPI="${ARTIFACT_RUN_BASE}/kpi-report/kpi-report.json"
+if [[ "$POST_EXECUTED" == "true" ]]; then
+  TARGET_KPI="${ARTIFACT_RUN_POST}/kpi-report/kpi-report.json"
+fi
+PREVIOUS_KPI_RESOLVED="$(discover_previous_kpi "$BASE_RUN_ID" "$POST_RUN_ID" "$PREVIOUS_KPI")"
+COMPARE_EXECUTED="false"
+COMPARE_GO="null"
+COMPARE_CURRENT_KPI="$TARGET_KPI"
+COMPARE_PREVIOUS_KPI="$PREVIOUS_KPI_RESOLVED"
+if [[ -n "$PREVIOUS_KPI_RESOLVED" && -f "$PREVIOUS_KPI_RESOLVED" && -f "$TARGET_KPI" ]]; then
+  log "Compare KPI with previous baseline report"
+  set +e
+  "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/compare_kpi_reports.py" \
+    --current "$TARGET_KPI" \
+    --previous "$PREVIOUS_KPI_RESOLVED" \
+    --output-json "$COMPARE_JSON" \
+    --output-md "$COMPARE_MD" \
+    --max-drop-rate "$MAX_DROP_RATE" \
+    --max-latency-increase-ms "$MAX_LATENCY_INCREASE_MS"
+  compare_rc=$?
+  set -e
+  COMPARE_EXECUTED="true"
+  if [[ "$compare_rc" -eq 0 ]]; then
+    COMPARE_GO="true"
+  else
+    COMPARE_GO="false"
+    if [[ "$COMPARE_STRICT" == "true" ]]; then
+      echo "[active-eval] baseline regression compare failed in strict mode" >&2
+      exit 5
+    fi
+  fi
+else
+  log "Skip baseline compare (missing previous KPI or current target report)."
+fi
+
+# (e) summary markdown/json
 cat > "$SUMMARY_MD" <<EOF
 # CLARA Active Eval Loop Summary
 
@@ -205,18 +344,29 @@ cat > "$SUMMARY_MD" <<EOF
 - post_negative_run_id: ${POST_RUN_ID}
 - mode: ${MODE}
 - strict: ${STRICT}
+- pull_production_logs: ${PULL_PRODUCTION_LOGS}
+- production_log_source: ${PRODUCTION_LOG_SOURCE}
+- production_log_file: ${PRODUCTION_LOG_FILE}
 - api_base: ${API_BASE}
 - ml_base: ${ML_BASE}
 - baseline_artifact: ${ARTIFACT_RUN_BASE}
 - post_artifact_executed: ${POST_EXECUTED}
 - mined_negative_set: ${NEGATIVE_SET}
 - mined_negative_count: ${NEGATIVE_COUNT}
+- compare_executed: ${COMPARE_EXECUTED}
+- compare_strict: ${COMPARE_STRICT}
+- compare_current_kpi: ${COMPARE_CURRENT_KPI}
+- compare_previous_kpi: ${COMPARE_PREVIOUS_KPI}
+- compare_go: ${COMPARE_GO}
+- compare_json: ${COMPARE_JSON}
+- compare_md: ${COMPARE_MD}
 
 ## Steps
 1. Baseline KPI run completed.
 2. Hard negatives mined from baseline artifacts.
 3. KPI re-run completed if mined set is not empty.
-4. Summary exported.
+4. Compare with previous baseline run if available.
+5. Summary exported.
 EOF
 
 cat > "$SUMMARY_JSON" <<EOF
@@ -224,6 +374,9 @@ cat > "$SUMMARY_JSON" <<EOF
   "run_id": "${RUN_ID}",
   "mode": "${MODE}",
   "strict": ${STRICT},
+  "pull_production_logs": ${PULL_PRODUCTION_LOGS},
+  "production_log_source": "${PRODUCTION_LOG_SOURCE}",
+  "production_log_file": "${PRODUCTION_LOG_FILE}",
   "api_base": "${API_BASE}",
   "ml_base": "${ML_BASE}",
   "baseline_run_id": "${BASE_RUN_ID}",
@@ -231,7 +384,14 @@ cat > "$SUMMARY_JSON" <<EOF
   "baseline_artifact": "${ARTIFACT_RUN_BASE}",
   "post_executed": ${POST_EXECUTED},
   "negative_set": "${NEGATIVE_SET}",
-  "negative_count": ${NEGATIVE_COUNT}
+  "negative_count": ${NEGATIVE_COUNT},
+  "compare_executed": ${COMPARE_EXECUTED},
+  "compare_strict": ${COMPARE_STRICT},
+  "compare_current_kpi": "${COMPARE_CURRENT_KPI}",
+  "compare_previous_kpi": "${COMPARE_PREVIOUS_KPI}",
+  "compare_go": ${COMPARE_GO},
+  "compare_json": "${COMPARE_JSON}",
+  "compare_md": "${COMPARE_MD}"
 }
 EOF
 

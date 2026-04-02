@@ -33,6 +33,7 @@ from clara_api.core.attribution import (
 from clara_api.core.config import get_settings
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.control_tower.defaults import get_default_control_tower_config
+from clara_api.core.flow_event_store import get_flow_event_store
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -1704,6 +1705,44 @@ def _append_job_event(
     db.add(job)
     db.commit()
 
+    try:
+        store_event: dict[str, Any] = {
+            "job_id": str(job.job_id),
+            "query": str(job.query_text or ""),
+            "stage": stage,
+            "status": status_text,
+            "note": note,
+            "timestamp": event_item["timestamp"],
+        }
+        if isinstance(payload, dict):
+            for key in (
+                "source_errors",
+                "fallback_reason",
+                "fallback_used",
+                "unsupported_claims",
+                "verification_matrix",
+                "retrieval_trace",
+                "metadata",
+            ):
+                if key in payload:
+                    store_event[key] = payload.get(key)
+        get_flow_event_store().append(
+            source="research",
+            user_id=str(job.user_id),
+            role=str(job.role or "normal"),
+            intent="research_tier2",
+            model_used=(
+                str(payload.get("model_used"))
+                if isinstance(payload, dict) and payload.get("model_used") is not None
+                else None
+            ),
+            event=store_event,
+            occurred_at=event_item["timestamp"],
+        )
+    except Exception:
+        # Best effort only; never break research job flow due to telemetry stream persistence.
+        pass
+
 
 def _serialize_research_job(job: ResearchJob) -> ResearchTier2JobResponse:
     progress = job.progress_json if isinstance(job.progress_json, dict) else _empty_job_progress()
@@ -1873,6 +1912,11 @@ def _run_research_job(job_id: str) -> None:
                 "fallback_used": bool(
                     enriched.get("fallback") or enriched.get("fallback_reason")
                 ),
+                "fallback_reason": enriched.get("fallback_reason"),
+                "source_errors": enriched.get("source_errors"),
+                "verification_matrix": enriched.get("verification_matrix"),
+                "unsupported_claims": enriched.get("unsupported_claims"),
+                "model_used": enriched.get("model_used"),
                 "source_count": len(enriched.get("sources", []))
                 if isinstance(enriched.get("sources"), list)
                 else 0,

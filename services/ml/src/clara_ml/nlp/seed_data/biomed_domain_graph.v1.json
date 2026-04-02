@@ -1,0 +1,199 @@
+{
+  "version": "v1",
+  "entities": [
+    {
+      "id": "drug:warfarin",
+      "label": "Warfarin",
+      "type": "drug",
+      "aliases": ["warfarin", "coumadin"]
+    },
+    {
+      "id": "drug:ibuprofen",
+      "label": "Ibuprofen",
+      "type": "drug",
+      "aliases": ["ibuprofen", "advil", "motrin"]
+    },
+    {
+      "id": "drug:aspirin",
+      "label": "Aspirin",
+      "type": "drug",
+      "aliases": ["aspirin", "acetylsalicylic acid", "asa"]
+    },
+    {
+      "id": "drug:clopidogrel",
+      "label": "Clopidogrel",
+      "type": "drug",
+      "aliases": ["clopidogrel", "plavix"]
+    },
+    {
+      "id": "drug:naproxen",
+      "label": "Naproxen",
+      "type": "drug",
+      "aliases": ["naproxen", "aleve"]
+    },
+    {
+      "id": "drug:diclofenac",
+      "label": "Diclofenac",
+      "type": "drug",
+      "aliases": ["diclofenac", "voltaren"]
+    },
+    {
+      "id": "class:nsaid",
+      "label": "NSAID",
+      "type": "drug_class",
+      "aliases": ["nsaid", "nonsteroidal anti inflammatory", "thuoc giam dau khang viem"]
+    },
+    {
+      "id": "class:anticoagulant",
+      "label": "Anticoagulant",
+      "type": "drug_class",
+      "aliases": ["anticoagulant", "blood thinner", "thuoc chong dong"]
+    },
+    {
+      "id": "class:antiplatelet",
+      "label": "Antiplatelet",
+      "type": "drug_class",
+      "aliases": ["antiplatelet", "platelet inhibitor", "thuoc chong ket tap tieu cau"]
+    },
+    {
+      "id": "risk:bleeding",
+      "label": "Major Bleeding",
+      "type": "risk",
+      "aliases": ["bleeding", "xuat huyet", "hemorrhage", "chay mau"]
+    },
+    {
+      "id": "risk:gi_bleeding",
+      "label": "GI Bleeding",
+      "type": "risk",
+      "aliases": ["gi bleeding", "xuat huyet tieu hoa", "bleeding ulcer"]
+    },
+    {
+      "id": "risk:inr_instability",
+      "label": "INR Instability",
+      "type": "risk",
+      "aliases": ["inr", "inr instability", "inr tang"]
+    },
+    {
+      "id": "condition:peptic_ulcer",
+      "label": "Peptic Ulcer",
+      "type": "condition",
+      "aliases": ["peptic ulcer", "loet da day", "loet ta trang"]
+    }
+  ],
+  "edges": [
+    {
+      "source": "drug:warfarin",
+      "target": "class:anticoagulant",
+      "relation": "belongs_to",
+      "weight": 0.92
+    },
+    {
+      "source": "drug:aspirin",
+      "target": "class:antiplatelet",
+      "relation": "belongs_to",
+      "weight": 0.9
+    },
+    {
+      "source": "drug:clopidogrel",
+      "target": "class:antiplatelet",
+      "relation": "belongs_to",
+      "weight": 0.9
+    },
+    {
+      "source": "drug:ibuprofen",
+      "target": "class:nsaid",
+      "relation": "belongs_to",
+      "weight": 0.9
+    },
+    {
+      "source": "drug:naproxen",
+      "target": "class:nsaid",
+      "relation": "belongs_to",
+      "weight": 0.88
+    },
+    {
+      "source": "drug:diclofenac",
+      "target": "class:nsaid",
+      "relation": "belongs_to",
+      "weight": 0.88
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "risk:bleeding",
+      "relation": "has_risk",
+      "weight": 0.94
+    },
+    {
+      "source": "class:nsaid",
+      "target": "risk:gi_bleeding",
+      "relation": "has_risk",
+      "weight": 0.89
+    },
+    {
+      "source": "class:nsaid",
+      "target": "risk:bleeding",
+      "relation": "raises_risk",
+      "weight": 0.86
+    },
+    {
+      "source": "class:antiplatelet",
+      "target": "risk:bleeding",
+      "relation": "raises_risk",
+      "weight": 0.9
+    },
+    {
+      "source": "class:anticoagulant",
+      "target": "risk:bleeding",
+      "relation": "raises_risk",
+      "weight": 0.92
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "class:nsaid",
+      "relation": "contraindicated_with_class",
+      "weight": 0.98
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "drug:ibuprofen",
+      "relation": "major_interaction_with",
+      "weight": 0.99
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "drug:naproxen",
+      "relation": "major_interaction_with",
+      "weight": 0.98
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "drug:diclofenac",
+      "relation": "major_interaction_with",
+      "weight": 0.98
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "drug:aspirin",
+      "relation": "major_interaction_with",
+      "weight": 0.97
+    },
+    {
+      "source": "drug:warfarin",
+      "target": "drug:clopidogrel",
+      "relation": "major_interaction_with",
+      "weight": 0.97
+    },
+    {
+      "source": "drug:ibuprofen",
+      "target": "condition:peptic_ulcer",
+      "relation": "contraindicated_with_condition",
+      "weight": 0.86
+    },
+    {
+      "source": "class:anticoagulant",
+      "target": "risk:inr_instability",
+      "relation": "has_risk",
+      "weight": 0.83
+    }
+  ]
+}
