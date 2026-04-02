@@ -246,8 +246,8 @@ Day 8
 - [x] Cache candidate embedding/rerank inputs.
 
 Day 9
-- [ ] Chạy active eval loop full.
-- [ ] Xuất artifact KPI phase1.
+- [x] Chạy active eval loop full.
+- [x] Xuất artifact KPI phase1.
 
 Day 10 (Gate)
 - [ ] Gate phase1 đạt ngưỡng.

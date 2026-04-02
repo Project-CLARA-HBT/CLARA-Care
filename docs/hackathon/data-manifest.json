@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-04-01T01:18:35.721830+00:00",
+  "generated_at": "2026-04-02T15:41:32.716844+00:00",
   "generator": {
     "script": "scripts/demo/generate_demo_artifacts.py",
-    "run_id": "local-ci-smoke"
+    "run_id": "phase1-day9-20260402-224131-postneg"
   },
   "consistency_hints": [
     "Snapshot generated from repository source files at generation time (not live runtime telemetry).",
     "Checksums are for traceability; regenerate manifest after any source or dataset change.",
     "DDI test set is derived from the first 50 local fallback rules for stable baseline comparison.",
     "Refusal prompt set is a static red-team pre-check and does not replace end-to-end runtime benchmark.",
-    "Round2 scaffold refreshed under artifacts/round2/local-ci-smoke for this generation run."
+    "Round2 scaffold refreshed under artifacts/round2/phase1-day9-20260402-224131-postneg for this generation run."
   ],
   "items": [
     {
@@ -36,7 +36,7 @@
     {
       "name": "Hard Legal Guard Patterns",
       "path": "services/ml/src/clara_ml/main.py",
-      "checksum_md5": "27a6233eaf37aa9a879d2e782f4484d6",
+      "checksum_md5": "e0c461e0ef1ecfa583e57f58d2214000",
       "license": "Internal Team Asset for Demo",
       "source": "CLARA runtime policy"
     },
