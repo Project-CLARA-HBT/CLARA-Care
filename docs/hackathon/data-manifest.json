@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-04-02T15:41:32.716844+00:00",
+  "generated_at": "2026-04-02T15:51:43.068057+00:00",
   "generator": {
     "script": "scripts/demo/generate_demo_artifacts.py",
-    "run_id": "phase1-day9-20260402-224131-postneg"
+    "run_id": "phase1-day10-live-20260402-225142"
   },
   "consistency_hints": [
     "Snapshot generated from repository source files at generation time (not live runtime telemetry).",
     "Checksums are for traceability; regenerate manifest after any source or dataset change.",
     "DDI test set is derived from the first 50 local fallback rules for stable baseline comparison.",
     "Refusal prompt set is a static red-team pre-check and does not replace end-to-end runtime benchmark.",
-    "Round2 scaffold refreshed under artifacts/round2/phase1-day9-20260402-224131-postneg for this generation run."
+    "Round2 scaffold refreshed under artifacts/round2/phase1-day10-live-20260402-225142 for this generation run."
   ],
   "items": [
     {

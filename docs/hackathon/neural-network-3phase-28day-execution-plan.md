@@ -250,8 +250,8 @@ Day 9
 - [x] Xuất artifact KPI phase1.
 
 Day 10 (Gate)
-- [ ] Gate phase1 đạt ngưỡng.
-- [ ] Merge + tag nội bộ `phase1-ready`.
+- [x] Gate phase1 đạt ngưỡng.
+- [x] Merge + tag nội bộ `phase1-ready`.
 
 ### Day 11-18 (Phase 2)
 Day 11

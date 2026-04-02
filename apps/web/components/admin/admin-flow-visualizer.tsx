@@ -794,7 +794,7 @@ export default function AdminFlowVisualizer({
             Canvas mới mô tả pipeline deep research nâng cấp: safety/legal ingress, query canonicalization,
             deep_beta critic loop, retrieval orchestration, contradiction mining, verification, API pass-through
             contract, UI telemetry matrix, baseline compare gate (Day7) và reranker cache gate (Day8)
-            trước khi vào feedback loop và active-eval artifact loop (Day9).
+            trước khi vào feedback loop, active-eval artifact loop (Day9) và phase1-ready gate (Day10).
           </p>
         </div>
 
