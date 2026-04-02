@@ -10,21 +10,16 @@ export type CouncilWorkspaceLink = {
 };
 
 export const COUNCIL_WORKSPACE_LINKS: CouncilWorkspaceLink[] = [
-  { href: "/council", label: "Landing", hint: "Overview" },
-  { href: "/council/new", label: "New Case", hint: "Intake + Run" },
-  { href: "/council/result", label: "Result", hint: "Summary Hub" },
-  { href: "/council/analyze", label: "Analyze", hint: "Risk View" },
-  { href: "/council/details", label: "Details", hint: "Case + Logs" },
-  { href: "/council/citations", label: "Citations", hint: "Sources" },
-  { href: "/council/research", label: "Research", hint: "Questions" },
-  { href: "/council/deepdive", label: "Deep Dive", hint: "Trace" },
+  { href: "/council", label: "Landing", hint: "Tổng quan" },
+  { href: "/council/new", label: "New Case", hint: "Cấu hình từng bước" },
+  { href: "/council/result", label: "Result", hint: "Kết quả hội chẩn" },
 ];
 
 function isActiveLink(pathname: string, href: string): boolean {
   if (href === "/council") {
     return pathname === "/council";
   }
-  return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function CouncilWorkspaceNav({ className = "" }: { className?: string }) {
@@ -33,7 +28,7 @@ export default function CouncilWorkspaceNav({ className = "" }: { className?: st
   return (
     <nav className={`chrome-panel rounded-[1.3rem] border border-[color:var(--shell-border)] p-2.5 ${className}`.trim()}>
       <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">Council Workspace</p>
-      <div className="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
         {COUNCIL_WORKSPACE_LINKS.map((item) => {
           const active = isActiveLink(pathname, item.href);
           return (
