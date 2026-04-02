@@ -2,11 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
+import CouncilFlowCanvas from "@/components/council/council-flow-canvas";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
 import { CouncilRunSnapshot, loadCouncilSnapshot } from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
+
+function resolveNeedsMoreInfo(snapshot: CouncilRunSnapshot): boolean {
+  const root = snapshot.raw as Record<string, unknown> | null;
+  if (!root || typeof root !== "object") return false;
+
+  const direct = root.needs_more_info;
+  if (typeof direct === "boolean") return direct;
+
+  const analyze = root.analyze as Record<string, unknown> | null;
+  if (analyze && typeof analyze === "object" && typeof analyze.needs_more_info === "boolean") {
+    return analyze.needs_more_info;
+  }
+  return false;
+}
 
 export default function CouncilDeepDivePage() {
   const [snapshot, setSnapshot] = useState<CouncilRunSnapshot | null>(null);
@@ -33,6 +48,13 @@ export default function CouncilDeepDivePage() {
           />
         ) : (
           <>
+            <CouncilFlowCanvas
+              isEmergency={view.urgencyTone === "emergency"}
+              needsMoreInfo={resolveNeedsMoreInfo(view.snapshot)}
+              hasCitations={view.citations.length > 0}
+              confidenceScore={view.snapshot.result.confidenceScore ?? null}
+            />
+
             <CouncilSection eyebrow="Deep Sections" title="Bóc tách theo cụm chuyên sâu">
               {!view.deepDive.sections.length ? (
                 <p className="text-sm text-[var(--text-secondary)]">Không có deep sections trong payload hiện tại.</p>
