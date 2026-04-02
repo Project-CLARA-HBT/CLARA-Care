@@ -30,6 +30,7 @@ GO_NO_GO_THRESHOLDS: dict[str, float] = {
     "ddi_precision": 0.95,
     "fallback_success_rate": 1.0,
     "refusal_compliance_rate": 1.0,
+    "hard_negative_pass_rate": 0.8,
     "latency_online_p95_seconds": 3.0,
     "latency_offline_p95_seconds": 0.5,
 }
@@ -769,6 +770,11 @@ def evaluate_go_no_go(
         if isinstance(metrics.get("refusal_compliance"), dict)
         else {}
     )
+    hard_negative_summary = (
+        metrics.get("hard_negative_pass_rate", {})
+        if isinstance(metrics.get("hard_negative_pass_rate"), dict)
+        else {}
+    )
     latency_cases = []
     cases_obj = test_report.get("cases")
     if isinstance(cases_obj, dict):
@@ -844,6 +850,24 @@ def evaluate_go_no_go(
             ),
         },
     ]
+
+    hard_negative_total = int(hard_negative_summary.get("total") or 0)
+    if hard_negative_total > 0:
+        hard_negative_ratio = ratio_from_summary(hard_negative_summary)
+        evaluated_metrics.insert(
+            3,
+            {
+                "name": "hard_negative_pass_rate",
+                "actual": round(hard_negative_ratio, 6),
+                "operator": ">=",
+                "threshold": GO_NO_GO_THRESHOLDS["hard_negative_pass_rate"],
+                "passed": hard_negative_ratio >= GO_NO_GO_THRESHOLDS["hard_negative_pass_rate"],
+                "detail": (
+                    f"passed={hard_negative_summary.get('passed', 0)}"
+                    f"/total={hard_negative_summary.get('total', 0)}"
+                ),
+            },
+        )
 
     failure_reasons: list[str] = []
     for item in evaluated_metrics:
