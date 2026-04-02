@@ -257,6 +257,22 @@ class Settings(BaseSettings):
         ge=50,
         le=30000,
     )
+    rag_reranker_cache_enabled: bool = Field(
+        default=True,
+        validation_alias="RAG_RERANKER_CACHE_ENABLED",
+    )
+    rag_reranker_cache_ttl_seconds: int = Field(
+        default=180,
+        validation_alias="RAG_RERANKER_CACHE_TTL_SECONDS",
+        ge=1,
+        le=3600,
+    )
+    rag_reranker_cache_max_entries: int = Field(
+        default=512,
+        validation_alias="RAG_RERANKER_CACHE_MAX_ENTRIES",
+        ge=32,
+        le=10000,
+    )
     rag_nli_enabled: bool = Field(
         default=True,
         validation_alias="RAG_NLI_ENABLED",

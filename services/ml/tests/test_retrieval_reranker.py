@@ -1,7 +1,16 @@
 import time
 
+import pytest
+
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.reranker import NeuralReranker
+
+
+@pytest.fixture(autouse=True)
+def _clear_neural_reranker_cache() -> None:
+    NeuralReranker.clear_cache()
+    yield
+    NeuralReranker.clear_cache()
 
 
 def test_reranker_disabled_returns_passthrough_and_metadata_fields() -> None:
@@ -18,6 +27,7 @@ def test_reranker_disabled_returns_passthrough_and_metadata_fields() -> None:
     assert result.metadata["rerank_topn"] == 0
     assert isinstance(result.metadata["rerank_latency_ms"], float)
     assert result.metadata["rerank_latency_ms"] >= 0.0
+    assert result.metadata["rerank_cache_hit"] is False
 
 
 def test_reranker_enabled_applies_topn_and_sets_doc_fields() -> None:
@@ -51,6 +61,7 @@ def test_reranker_enabled_applies_topn_and_sets_doc_fields() -> None:
     assert result.metadata["rerank_topn"] == 2
     assert isinstance(result.metadata["rerank_latency_ms"], float)
     assert result.metadata["rerank_applied_count"] == 2
+    assert result.metadata["rerank_cache_hit"] is False
 
 
 def test_reranker_handles_non_positive_top_k() -> None:
@@ -65,6 +76,7 @@ def test_reranker_handles_non_positive_top_k() -> None:
     assert result.metadata["rerank_topn"] == 0
     assert result.metadata["rerank_reason"] == "top_k_non_positive"
     assert isinstance(result.metadata["rerank_latency_ms"], float)
+    assert result.metadata["rerank_cache_hit"] is False
 
 
 def test_reranker_clamps_topn_to_candidate_count() -> None:
@@ -79,6 +91,7 @@ def test_reranker_clamps_topn_to_candidate_count() -> None:
     assert result.metadata["rerank_topn"] == 2
     assert result.metadata["rerank_applied_count"] == 2
     assert isinstance(result.metadata["rerank_latency_ms"], float)
+    assert result.metadata["rerank_cache_hit"] is False
 
 
 def test_reranker_timeout_fallback_does_not_break_retrieval(monkeypatch) -> None:
@@ -100,3 +113,43 @@ def test_reranker_timeout_fallback_does_not_break_retrieval(monkeypatch) -> None
     assert result.metadata["rerank_timed_out"] is True
     assert result.metadata["rerank_applied_count"] == 0
     assert result.metadata["rerank_topn"] == 0
+    assert result.metadata["rerank_cache_hit"] is False
+
+
+def test_reranker_uses_cached_result_for_identical_inputs(monkeypatch) -> None:
+    docs = [
+        Document(
+            id="doc-1",
+            text="Warfarin and ibuprofen increase bleeding risk in older adults.",
+            metadata={"source": "openfda", "score": 0.9},
+        ),
+        Document(
+            id="doc-2",
+            text="General medication reminder.",
+            metadata={"source": "internal", "score": 0.2},
+        ),
+    ]
+    reranker = NeuralReranker(
+        enabled=True,
+        top_n=2,
+        timeout_ms=200,
+        cache_enabled=True,
+        cache_ttl_seconds=120,
+        cache_max_entries=64,
+    )
+
+    first = reranker.rerank("warfarin ibuprofen bleeding risk", docs, top_k=2)
+    assert first.metadata["rerank_cache_hit"] is False
+
+    def _should_not_run(cls, query: str, doc: Document) -> float:  # noqa: ARG001
+        raise AssertionError("placeholder scorer should not be called on cache hit")
+
+    monkeypatch.setattr(NeuralReranker, "_placeholder_score", classmethod(_should_not_run))
+
+    second = reranker.rerank("warfarin ibuprofen bleeding risk", docs, top_k=2)
+
+    assert [doc.id for doc in first.documents] == [doc.id for doc in second.documents]
+    assert second.metadata["rerank_cache_hit"] is True
+    assert second.metadata["rerank_reason"] == "cache_hit"
+    assert isinstance(second.metadata["rerank_cache_age_ms"], float)
+    assert second.metadata["rerank_cache_age_ms"] >= 0.0
