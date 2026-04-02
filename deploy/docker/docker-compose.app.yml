@@ -42,6 +42,9 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - clara_api_data:/data
+    networks:
+      - default
+      - clara-local
 
   ml:
     build:
@@ -101,3 +104,8 @@ services:
 
 volumes:
   clara_api_data:
+
+networks:
+  clara-local:
+    external: true
+    name: clara-local_default
