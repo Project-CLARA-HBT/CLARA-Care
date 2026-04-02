@@ -274,7 +274,7 @@ export default function ClaraKp3Landing() {
         <SectionContainer>
           <SectionLabel>CLARA RUNTIME OPERATING MODEL</SectionLabel>
           <h2 className="clara-sub-display mx-auto mt-3 max-w-5xl text-center font-black uppercase text-white">
-            Từ trải nghiệm người dùng đến vận hành admin đều nối thành một flow
+            Từ trải nghiệm người dùng đến quản trị hệ thống đều có chuẩn vận hành rõ ràng
           </h2>
           <p className="clara-copy-rhythm mx-auto mt-6 max-w-4xl text-center text-slate-300">
             Codebase hiện tại đã tách rõ luồng theo nhiệm vụ: intake, retrieve, verify, council workspace, DDI guard,
