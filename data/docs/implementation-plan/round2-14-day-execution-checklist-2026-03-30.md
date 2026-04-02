@@ -285,7 +285,7 @@ Lệnh kiểm tra:
 make test
 ```
 Tiêu chí hoàn thành:
-- [ ] Sẵn sàng demo Online/Offline không vỡ luồng.
+- [x] Sẵn sàng demo Online/Offline không vỡ luồng. (evidence: `artifacts/round2/round2-final-canonical-20260402-110603/readiness/readiness.json`)
 
 ## 4) KPI Gate bắt buộc trước demo
 - [x] Gate evaluator tự động đã được triển khai trong `run_hackathon_kpis.py`.

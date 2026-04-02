@@ -126,6 +126,17 @@ Ghi chú:
 - Script ưu tiên kiểm chứng từ artifact canonical `demo-cases/case-c-legal-trap.json` cho legal/chat attribution.
 - Với `/api/v1/research/tier2`, nếu live timeout do upstream tải cao, script sẽ fallback sang contract-check từ code + test để không mất bằng chứng review vòng cuối.
 
+## 0.4. Gate readiness kỹ thuật trước khi rehearsal
+
+```bash
+python3 scripts/demo/check_round2_demo_readiness.py \
+  --run-id round2-final-canonical-<timestamp>
+```
+
+Output:
+- `artifacts/round2/<run_id>/readiness/readiness.json`
+- `artifacts/round2/<run_id>/readiness/readiness.md`
+
 ## 0.1. Preflight local giống CI (khuyến nghị trước khi push)
 
 Chạy nhanh 2 check blocking mới trong CI:

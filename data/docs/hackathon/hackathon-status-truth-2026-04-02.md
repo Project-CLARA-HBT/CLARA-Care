@@ -90,9 +90,9 @@
   - Done: có matrix script, có go/no-go, có artifact online/offline, có script demo Case A/B/C và đã khóa run canonical `round2-final-canonical-20260402-110603`.
 - Day 14:
   - Done: rà legal text + attribution UI final (có artifact review).
+  - Done: readiness kỹ thuật online/offline PASS (`readiness/readiness.json`).
   - Chưa done:
     - Rehearsal pitch 3 lần.
-    - Checklist “ready for demo online/offline không vỡ luồng” (chốt sau rehearsal).
 
 ## 5) Phần còn skeleton/flow cơ bản cần nêu rõ
 1. Mobile app
