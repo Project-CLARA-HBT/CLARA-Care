@@ -32,10 +32,10 @@ export type Office = {
 };
 
 export const HERO_METRICS = [
-  { label: "Bệnh không lây nhiễm tại Việt Nam", value: "~80%" },
-  { label: "Tỷ lệ DDI gộp ở người >=65 tuổi", value: "28.8%" },
-  { label: "Tự dùng kháng sinh (nghiên cứu 2025)", value: "35.8%" },
-  { label: "Tuân thủ THA tại cộng đồng", value: "49.8%" },
+  { label: "Phân hệ sản phẩm đang hoạt động", value: "6" },
+  { label: "Trang chức năng đã triển khai", value: "40+" },
+  { label: "Flow đa trang Research + Council", value: "2" },
+  { label: "Bảng quản trị Control Tower", value: "6" },
 ] as const;
 
 export const OPEN_LETTER_PARAGRAPHS = [
@@ -61,6 +61,19 @@ export const SERVICE_CARDS: ServiceCard[] = [
     href: "/research",
   },
   {
+    tag: "CLARA COUNCIL",
+    title: "Hội chẩn AI đa chuyên khoa",
+    description:
+      "Đi từ intake đến review theo wizard nhiều bước, tổng hợp đồng thuận đa góc nhìn và tách workspace theo trang để giảm rối.",
+    bullets: [
+      "Wizard theo từng bước: intake, chọn chuyên khoa, review",
+      "Workspace tách riêng: research, analyze, details, deepdive, citations",
+      "Kết quả hội chẩn gọn, rõ conflict và escalation"
+    ],
+    cta: "Mở Hội chẩn AI",
+    href: "/council/new",
+  },
+  {
     tag: "CLARA SELF-MED",
     title: "An toàn dùng thuốc tại gia đình",
     description:
@@ -73,37 +86,86 @@ export const SERVICE_CARDS: ServiceCard[] = [
     cta: "Mở CLARA Self-Med",
     href: "/selfmed",
   },
+  {
+    tag: "CLARA CAREGUARD",
+    title: "DDI guardrail cho quyết định thuốc",
+    description:
+      "Kiểm tra tương tác thuốc theo ca cụ thể, kết hợp dị ứng và triệu chứng để đưa cảnh báo sớm trước khi phát sinh rủi ro.",
+    bullets: [
+      "Kiểm tra tương tác trực tiếp từ danh mục thuốc",
+      "Cảnh báo mức độ ưu tiên, dễ hành động",
+      "Phù hợp phòng khám ngoại trú và theo dõi tại nhà"
+    ],
+    cta: "Mở CareGuard",
+    href: "/careguard",
+  },
+  {
+    tag: "CLARA SCRIBE",
+    title: "Medical Scribe cho ghi chép lâm sàng",
+    description:
+      "Chuẩn hóa ghi chú khám bệnh theo cấu trúc rõ ràng để giảm tải hành chính và giữ nhất quán chất lượng hồ sơ.",
+    bullets: [
+      "Tạo bản ghi theo mẫu thống nhất",
+      "Giảm thời gian soạn ghi chú sau khám",
+      "Dễ kiểm tra lại trong quy trình điều trị liên tục"
+    ],
+    cta: "Mở Medical Scribe",
+    href: "/scribe",
+  },
+  {
+    tag: "CLARA CONTROL TOWER",
+    title: "Quản trị Answer Flow và nguồn tri thức",
+    description:
+      "Điều phối runtime flow, theo dõi observability, quản lý knowledge sources và source hub trong cùng không gian vận hành.",
+    bullets: [
+      "Admin Overview, Answer Flow, Observability",
+      "RAG Sources, Knowledge Sources, Source Hub",
+      "Phù hợp đội triển khai AI y tế cần kiểm toán"
+    ],
+    cta: "Mở Control Tower",
+    href: "/admin/overview",
+  },
 ] as const;
 
 export const MODEL_STEPS: ModelStep[] = [
   {
     index: "01",
-    title: "TRIAGE & ROUTER",
-    subtitle: "ĐÚNG NGƯỜI DÙNG, ĐÚNG Ý ĐỊNH",
+    title: "INTAKE & ROUTING",
+    subtitle: "ĐÚNG VAI TRÒ, ĐÚNG NGỮ CẢNH",
     points: [
-      "Role-based routing (patient / doctor / researcher)",
-      "Intent parsing trước khi truy xuất",
-      "Ưu tiên luồng an toàn trong tình huống nhạy cảm"
+      "Role-aware navigation cho normal/doctor/researcher/admin",
+      "Council wizard tách bước để giảm lỗi nhập liệu",
+      "Routing theo intent trước khi chạy deep flow"
     ],
   },
   {
     index: "02",
-    title: "RETRIEVE & SYNTHESIZE",
-    subtitle: "RAG CÓ CẤU TRÚC VÀ KIỂM SOÁT NGUỒN",
+    title: "RETRIEVE & REASON",
+    subtitle: "RAG ĐA NGUỒN, CÓ DEEP FLOW",
     points: [
-      "Truy xuất đa nguồn quốc tế + nội địa",
-      "Re-rank theo trust tier",
-      "Tổng hợp câu trả lời kèm bằng chứng"
+      "Research canvas với analyze/details/deepdive/citations",
+      "Deep + Deep Beta branch cho truy vấn khó",
+      "Source hub và kho tri thức nội bộ có thể mở rộng"
     ],
   },
   {
     index: "03",
-    title: "VERIFY & POLICY GATE",
-    subtitle: "CHẶN RỦI RO TRƯỚC KHI HIỂN THỊ",
+    title: "VERIFY & SAFETY",
+    subtitle: "KIỂM CHỨNG CLAIM + DDI GUARD",
     points: [
-      "FIDES-lite kiểm chứng phát biểu chính",
-      "Policy gate cho khuyến nghị nhạy cảm",
-      "Audit trail đầy đủ cho phiên rủi ro cao"
+      "Verification layer trước khi phản hồi cuối",
+      "CareGuard + SelfMed DDI cảnh báo rủi ro thuốc",
+      "Fallback path có ngưỡng low-context rõ ràng"
+    ],
+  },
+  {
+    index: "04",
+    title: "OPERATE & SCALE",
+    subtitle: "CONTROL TOWER CHO TRIỂN KHAI THẬT",
+    points: [
+      "Theo dõi flow flags, threshold, runtime health",
+      "Quản trị nguồn tri thức theo từng kho dữ liệu",
+      "Mở rộng pilot theo KPI thay vì cảm tính"
     ],
   },
 ] as const;
@@ -220,9 +282,9 @@ export const PARTNER_STRIP = [
 ] as const;
 
 export const FINAL_CTA = {
-  heading: "SẴN SÀNG BIẾN DỮ LIỆU Y TẾ THÀNH QUYẾT ĐỊNH AN TOÀN HƠN?",
+  heading: "SẴN SÀNG CHUYỂN TỪ DEMO AI SANG WORKFLOW Y TẾ THẬT?",
   subheading:
-    "Bắt đầu với CLARA Research hoặc CLARA Self-Med trong vài phút. Theo dõi bằng chứng, cảnh báo rủi ro và hành động có kiểm soát trong cùng một nền tảng.",
-  button: "BẮT ĐẦU VỚI CLARA",
+    "Bắt đầu bằng một use-case cụ thể: Research, Council, SelfMed hoặc CareGuard. Khi KPI ổn định, mở rộng bằng Control Tower mà không phải xây lại từ đầu.",
+  button: "BẮT ĐẦU PILOT VỚI CLARA",
   href: "/register",
 } as const;

@@ -123,8 +123,14 @@ export default function ClaraKp3Landing() {
             <Link href="/research" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
               CLARA Research
             </Link>
+            <Link href="/council" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
+              Hội chẩn AI
+            </Link>
             <Link href="/selfmed" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
               CLARA Self-Med
+            </Link>
+            <Link href="/careguard" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
+              CareGuard
             </Link>
             <NeonButton href="/register">Bắt đầu miễn phí</NeonButton>
           </div>
@@ -149,8 +155,8 @@ export default function ClaraKp3Landing() {
               <span className="clara-neon-text">HIỆU SUẤT CAO</span>
             </h1>
             <p className="mx-auto mt-6 max-w-3xl text-[0.95rem] leading-7 text-slate-200 min-[641px]:max-[1024px]:text-[1.05rem] min-[641px]:max-[1024px]:leading-8 min-[1025px]:max-[1535px]:max-w-4xl min-[1025px]:max-[1535px]:text-[1.15rem] min-[1025px]:max-[1535px]:leading-8 min-[1536px]:text-xl min-[1536px]:leading-9">
-              Biến tra cứu y khoa rời rạc thành một luồng quyết định có căn cứ: truy xuất bằng chứng, kiểm chứng phản hồi,
-              cảnh báo rủi ro dùng thuốc, và hỗ trợ ghi chép lâm sàng.
+              Một nền tảng duy nhất cho toàn bộ vòng đời quyết định: hỏi đáp có citation, hội chẩn đa chuyên khoa, quản lý tủ thuốc,
+              kiểm tra tương tác DDI, medical scribe và control tower vận hành.
             </p>
 
             <div className="clara-cta-panel mx-auto mt-8 flex w-full max-w-[980px] flex-col gap-3 rounded-2xl border border-blue-200/20 bg-[#091431]/80 p-3 min-[641px]:max-[1024px]:flex-row min-[641px]:max-[1024px]:items-center min-[1025px]:max-[1535px]:p-4 min-[1536px]:p-5">
@@ -163,8 +169,8 @@ export default function ClaraKp3Landing() {
                 <NeonButton href="/register" className="min-[641px]:max-[1024px]:w-auto min-[1025px]:max-[1535px]:px-8 min-[1536px]:px-10">
                   Bắt đầu miễn phí
                 </NeonButton>
-                <NeonGhostButton href="/huong-dan" className="min-[641px]:max-[1024px]:min-h-12 min-[641px]:max-[1024px]:text-sm">
-                  Xem demo 2 phút
+                <NeonGhostButton href="/research" className="min-[641px]:max-[1024px]:min-h-12 min-[641px]:max-[1024px]:text-sm">
+                  Dùng thử ngay
                 </NeonGhostButton>
               </div>
             </div>
@@ -243,7 +249,7 @@ export default function ClaraKp3Landing() {
 
       <SectionContainer className="clara-section relative z-10">
         <SectionLabel>Chúng tôi cung cấp</SectionLabel>
-        <div className="mt-5 grid gap-5 min-[1025px]:max-[1535px]:grid-cols-2 min-[1536px]:grid-cols-2">
+        <div className="mt-5 grid gap-5 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-3 min-[1536px]:grid-cols-3">
           {SERVICE_CARDS.map((card) => (
             <article key={card.title} className="clara-dark-card clara-card-equal flex h-full flex-col rounded-[1.75rem] p-6 lg:p-7">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">{card.tag}</p>
@@ -266,16 +272,16 @@ export default function ClaraKp3Landing() {
 
       <section className="clara-section-strong relative z-10 bg-[#040916]">
         <SectionContainer>
-          <SectionLabel>$100M HEALTH DECISION MODELS</SectionLabel>
+          <SectionLabel>CLARA RUNTIME OPERATING MODEL</SectionLabel>
           <h2 className="clara-sub-display mx-auto mt-3 max-w-5xl text-center font-black uppercase text-white">
-            Chúng tôi giúp bạn xây dựng và mở rộng năng lực quyết định y khoa số
+            Từ trải nghiệm người dùng đến vận hành admin đều nối thành một flow
           </h2>
           <p className="clara-copy-rhythm mx-auto mt-6 max-w-4xl text-center text-slate-300">
-            Từ một câu hỏi lâm sàng đến một khuyến nghị có kiểm chứng, CLARA thiết kế luồng thực thi để giảm nhiễu,
-            giảm sai sót và giảm thời gian ra quyết định.
+            Codebase hiện tại đã tách rõ luồng theo nhiệm vụ: intake, retrieve, verify, council workspace, DDI guard,
+            và control tower để kiểm soát chất lượng khi scale.
           </p>
 
-          <div className="mt-8 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-3 min-[1536px]:grid-cols-3">
+          <div className="mt-8 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
             {MODEL_STEPS.map((step) => (
               <article key={step.title} className="clara-model-card relative overflow-hidden rounded-[1.5rem] p-5">
                 <p className="text-6xl font-black text-blue-200/25">{step.index}</p>
@@ -296,31 +302,31 @@ export default function ClaraKp3Landing() {
         <SectionContainer>
           <article className="rounded-[2rem] border border-blue-200/20 bg-[#050e24] p-6 text-center sm:p-10">
             <h2 className="clara-display-title font-black uppercase text-white">
-              Nhanh hơn X10
+              Một Nền Tảng
               <br />
-              Tốt hơn, tối ưu hơn
+              Nhiều Workflow Y Tế
             </h2>
             <p className="clara-copy-rhythm mx-auto mt-6 max-w-4xl text-slate-300">
-              Bỏ qua quyết định cảm tính. Thay vào đó, CLARA giúp chuẩn hóa quy trình từ truy xuất tri thức đến cảnh báo
-              an toàn thuốc để mỗi hành động đều có dấu vết bằng chứng.
+              Từ đội lâm sàng đến đội triển khai AI, tất cả dùng chung một logic vận hành. Điều này giúp tăng tốc go-live,
+              giảm rủi ro rollout và giữ được traceability khi hệ thống mở rộng.
             </p>
 
             <div className="mt-8 grid gap-3 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
               <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Citation Coverage</p>
-                <p className="mt-2 text-5xl font-black text-white">90%+</p>
+                <p className="text-sm text-blue-200">Research Workspace</p>
+                <p className="mt-2 text-5xl font-black text-white">5 Tabs</p>
               </div>
               <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">DDI Critical Detection</p>
-                <p className="mt-2 text-5xl font-black text-white">Realtime</p>
+                <p className="text-sm text-blue-200">Council Workspace</p>
+                <p className="mt-2 text-5xl font-black text-white">5 Tabs</p>
               </div>
               <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
                 <p className="text-sm text-blue-200">Control Tower</p>
-                <p className="mt-2 text-5xl font-black text-white">Audit</p>
+                <p className="mt-2 text-5xl font-black text-white">6 Panels</p>
               </div>
               <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Data Privacy</p>
-                <p className="mt-2 text-5xl font-black text-white">PII/PHI</p>
+                <p className="text-sm text-blue-200">Drug Safety</p>
+                <p className="mt-2 text-5xl font-black text-white">DDI</p>
               </div>
             </div>
           </article>
@@ -453,11 +459,11 @@ export default function ClaraKp3Landing() {
           <article className="clara-dome-panel overflow-hidden rounded-[2rem] border border-blue-200/20 px-6 py-10 sm:px-10">
             <SectionLabel>Chia sẻ tri thức, nâng chuẩn thực hành</SectionLabel>
             <h2 className="clara-sub-display mt-3 text-center font-black uppercase text-white">
-              CLARA Clinical Podcast
+              CLARA Product Walkthrough
             </h2>
             <p className="clara-copy-rhythm mx-auto mt-5 max-w-4xl text-center text-slate-300">
-              Chuỗi nội dung chuyên đề về an toàn dùng thuốc, RAG y khoa, medical scribe và vận hành hệ thống AI có
-              kiểm soát. Từ bài toán thực tế đến quy trình triển khai.
+              Chuỗi nội dung demo theo module thật trong sản phẩm: Research, Council, SelfMed, CareGuard, Scribe và
+              Admin Control Tower. Tập trung vào workflow và giá trị triển khai thực tế.
             </p>
 
             <div className="mx-auto mt-8 max-w-4xl rounded-2xl border border-blue-200/25 bg-[#091431]/85 p-4">
@@ -510,7 +516,7 @@ export default function ClaraKp3Landing() {
             <div className="min-[1025px]:max-[1535px]:col-span-2 min-[1536px]:col-span-2">
               <p className="text-2xl font-black text-white">CLARA.CARE</p>
               <p className="mt-3 leading-7">
-                Hệ sinh thái AI y tế đa mô-đun cho Research, Self-Med, Medical Scribe và Control Tower.
+                Hệ sinh thái AI y tế đa mô-đun cho Research, Council, Self-Med, CareGuard, Medical Scribe và Control Tower.
                 Định hướng: hỗ trợ quyết định dựa trên bằng chứng, không thay thế chuyên môn lâm sàng.
               </p>
             </div>
@@ -521,7 +527,16 @@ export default function ClaraKp3Landing() {
                   <Link href="/research" className="hover:text-white">CLARA Research</Link>
                 </li>
                 <li>
+                  <Link href="/council/new" className="hover:text-white">Hội chẩn AI</Link>
+                </li>
+                <li>
                   <Link href="/selfmed" className="hover:text-white">CLARA Self-Med</Link>
+                </li>
+                <li>
+                  <Link href="/careguard" className="hover:text-white">CareGuard DDI</Link>
+                </li>
+                <li>
+                  <Link href="/scribe" className="hover:text-white">Medical Scribe</Link>
                 </li>
                 <li>
                   <Link href="/admin/overview" className="hover:text-white">Control Tower</Link>
