@@ -42,6 +42,19 @@ class RagPipelineP1:
     _PROMPT_MAX_DOC_CHARS = 520
     _PROMPT_RETRY_MAX_DOCS = 5
     _PROMPT_RETRY_MAX_DOC_CHARS = 280
+    _SCIENTIFIC_PROVIDER_KEYS = {
+        "pubmed",
+        "europepmc",
+        "semantic_scholar",
+        "openalex",
+        "crossref",
+        "clinicaltrials",
+        "openfda",
+        "dailymed",
+        "rxnorm",
+        "external_scientific",
+    }
+    _WEB_PROVIDER_KEYS = {"searxng", "searxng-crawl", "web_crawl"}
 
     def __init__(
         self,
@@ -388,6 +401,9 @@ class RagPipelineP1:
                 "ddi_critical_query": False,
                 "reason_codes": [],
                 "query_plan": {},
+                "retrieval_stack_mode": "auto",
+                "graphrag_enabled_override": None,
+                "external_connectors_enabled_override": None,
             }
 
         def _as_int(value: object, default: int, *, min_value: int = 1, max_value: int = 12) -> int:
@@ -396,6 +412,21 @@ class RagPipelineP1:
             except (TypeError, ValueError):
                 return default
             return max(min_value, min(max_value, parsed))
+
+        def _as_optional_bool(value: object) -> bool | None:
+            if isinstance(value, bool):
+                return value
+            text = str(value or "").strip().lower()
+            if not text:
+                return None
+            if text in {"1", "true", "yes", "on"}:
+                return True
+            if text in {"0", "false", "no", "off"}:
+                return False
+            return None
+
+        raw_stack_mode = str(hints.get("retrieval_stack_mode") or "").strip().lower()
+        retrieval_stack_mode = "full" if raw_stack_mode == "full" else "auto"
 
         reason_codes_raw = hints.get("reason_codes")
         reason_codes: list[str] = []
@@ -417,6 +448,11 @@ class RagPipelineP1:
             "ddi_critical_query": bool(hints.get("ddi_critical_query")),
             "reason_codes": reason_codes,
             "query_plan": hints.get("query_plan") if isinstance(hints.get("query_plan"), dict) else {},
+            "retrieval_stack_mode": retrieval_stack_mode,
+            "graphrag_enabled_override": _as_optional_bool(hints.get("graphrag_enabled_override")),
+            "external_connectors_enabled_override": _as_optional_bool(
+                hints.get("external_connectors_enabled_override")
+            ),
         }
 
     @staticmethod
@@ -604,9 +640,12 @@ class RagPipelineP1:
         scientific_retrieval_enabled: bool,
         web_retrieval_enabled: bool,
         file_retrieval_enabled: bool,
+        retrieval_stack_mode: str,
+        external_connectors_enabled: bool,
     ) -> dict[str, Any]:
         requested_internal = max(1, min(12, int(requested_internal_top_k)))
         requested_hybrid = max(1, min(12, int(requested_hybrid_top_k)))
+        normalized_stack_mode = "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
         complexity = cls._infer_retrieval_complexity(
             query_profile=query_profile,
             planner_hints=planner_hints,
@@ -639,24 +678,30 @@ class RagPipelineP1:
         adjusted_hybrid = max(1, min(top_k_cap, requested_hybrid + hybrid_adjust))
         adjusted_hybrid = max(adjusted_hybrid, adjusted_internal)
 
-        external_available = bool(settings.rag_external_connectors_enabled)
+        external_available = bool(external_connectors_enabled)
         disabled_reasons: list[str] = []
-        resolved_scientific = external_available and bool(scientific_retrieval_enabled)
-        if scientific_retrieval_enabled and not external_available:
-            disabled_reasons.append("external_connectors_globally_disabled")
+        if normalized_stack_mode == "full":
+            resolved_scientific = bool(external_available)
+            resolved_web = bool(external_available)
+            if not external_available:
+                disabled_reasons.append("external_connectors_unavailable_for_full_stack")
+        else:
+            resolved_scientific = external_available and bool(scientific_retrieval_enabled)
+            if scientific_retrieval_enabled and not external_available:
+                disabled_reasons.append("external_connectors_globally_disabled")
 
-        resolved_web = external_available and bool(web_retrieval_enabled)
-        if web_retrieval_enabled and not external_available:
-            disabled_reasons.append("external_connectors_globally_disabled")
-        if resolved_web and not resolved_scientific:
-            resolved_web = False
-            disabled_reasons.append("web_requires_scientific_connectors")
-        if resolved_web and mode in {"fast", "retrieval_only"} and complexity_level == "low":
-            resolved_web = False
-            disabled_reasons.append("fast_low_complexity_web_disabled")
-        if resolved_web and mode == "retrieval_only":
-            resolved_web = False
-            disabled_reasons.append("retrieval_only_mode_web_disabled")
+            resolved_web = external_available and bool(web_retrieval_enabled)
+            if web_retrieval_enabled and not external_available:
+                disabled_reasons.append("external_connectors_globally_disabled")
+            if resolved_web and not resolved_scientific:
+                resolved_web = False
+                disabled_reasons.append("web_requires_scientific_connectors")
+            if resolved_web and mode in {"fast", "retrieval_only"} and complexity_level == "low":
+                resolved_web = False
+                disabled_reasons.append("fast_low_complexity_web_disabled")
+            if resolved_web and mode == "retrieval_only":
+                resolved_web = False
+                disabled_reasons.append("retrieval_only_mode_web_disabled")
 
         profile_summary = {
             "is_ddi_query": bool(query_profile.get("is_ddi_query")),
@@ -709,6 +754,8 @@ class RagPipelineP1:
         decision_reasons = [*complexity.get("signals", []), *disabled_reasons]
         if internal_adjust != 0 or hybrid_adjust != 0:
             decision_reasons.append("top_k_adjusted_by_mode_and_complexity")
+        if normalized_stack_mode == "full":
+            decision_reasons.append("retrieval_stack_mode_full_forced")
         if not decision_reasons:
             decision_reasons.append("default_retrieval_policy")
 
@@ -747,12 +794,25 @@ class RagPipelineP1:
                 },
                 "disabled_reasons": list(dict.fromkeys(disabled_reasons)),
             },
+            "stack_mode": {
+                "requested": normalized_stack_mode,
+                "effective": (
+                    "full"
+                    if (
+                        normalized_stack_mode == "full"
+                        and resolved_scientific
+                        and resolved_web
+                    )
+                    else "auto"
+                ),
+            },
             "planner_hints": {
                 "query_focus": str(planner_hints.get("query_focus") or "default"),
                 "reason_codes": planner_reason_codes,
                 "research_mode": str(planner_hints.get("research_mode") or ""),
                 "internal_top_k": requested_internal,
                 "hybrid_top_k": requested_hybrid,
+                "retrieval_stack_mode": normalized_stack_mode,
             },
             "query_plan_summary": query_plan_summary,
             "decision_reasons": list(dict.fromkeys(decision_reasons)),
@@ -1087,6 +1147,13 @@ class RagPipelineP1:
             "graphrag_expansion_count": int(retrieval_trace.get("graphrag_expansion_count") or 0),
             "graphrag_node_count": int(retrieval_trace.get("graphrag_node_count") or 0),
             "graphrag_edge_count": int(retrieval_trace.get("graphrag_edge_count") or 0),
+            "stack_mode_requested": str(retrieval_trace.get("stack_mode_requested") or "auto"),
+            "stack_mode_effective": str(retrieval_trace.get("stack_mode_effective") or "auto"),
+            "stack_coverage": (
+                retrieval_trace.get("stack_coverage")
+                if isinstance(retrieval_trace.get("stack_coverage"), dict)
+                else {}
+            ),
             "fallback_reason": retrieval_trace.get("fallback_reason"),
             "trace_version": "rag-v2",
         }
@@ -1138,6 +1205,23 @@ class RagPipelineP1:
         run_started = perf_counter()
         planner_active = isinstance(planner_hints, dict) and bool(planner_hints)
         normalized_hints = self._normalize_planner_hints(planner_hints)
+        requested_stack_mode = (
+            "full"
+            if str(normalized_hints.get("retrieval_stack_mode") or "").strip().lower() == "full"
+            else "auto"
+        )
+        graphrag_enabled_override = normalized_hints.get("graphrag_enabled_override")
+        graphrag_enabled_runtime = bool(settings.rag_graphrag_enabled)
+        if isinstance(graphrag_enabled_override, bool):
+            graphrag_enabled_runtime = graphrag_enabled_override
+        elif requested_stack_mode == "full":
+            graphrag_enabled_runtime = True
+        external_connectors_override = normalized_hints.get("external_connectors_enabled_override")
+        external_connectors_runtime_enabled = bool(settings.rag_external_connectors_enabled)
+        if isinstance(external_connectors_override, bool):
+            external_connectors_runtime_enabled = external_connectors_override
+        if requested_stack_mode == "full":
+            external_connectors_runtime_enabled = True
         query_plan = self._build_query_plan(
             query,
             planner_query_plan=normalized_hints.get("query_plan"),
@@ -1170,6 +1254,7 @@ class RagPipelineP1:
                         "reason_codes": normalized_hints.get("reason_codes"),
                         "internal_top_k": requested_internal_top_k,
                         "hybrid_top_k": requested_hybrid_top_k,
+                        "retrieval_stack_mode": requested_stack_mode,
                         "query_plan": query_plan,
                     },
                 )
@@ -1192,11 +1277,13 @@ class RagPipelineP1:
                         "internal_top_k": requested_internal_top_k,
                         "hybrid_top_k": requested_hybrid_top_k,
                         "research_mode": normalized_hints.get("research_mode"),
+                        "retrieval_stack_mode": requested_stack_mode,
                     },
                     "requested_toggles": {
                         "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
                         "web_retrieval_enabled": bool(web_retrieval_enabled),
                         "file_retrieval_enabled": bool(file_retrieval_enabled),
+                        "graphrag_enabled_override": graphrag_enabled_override,
                     },
                 },
             )
@@ -1211,6 +1298,8 @@ class RagPipelineP1:
             scientific_retrieval_enabled=scientific_retrieval_enabled,
             web_retrieval_enabled=web_retrieval_enabled,
             file_retrieval_enabled=file_retrieval_enabled,
+            retrieval_stack_mode=requested_stack_mode,
+            external_connectors_enabled=external_connectors_runtime_enabled,
         )
         internal_top_k = int(
             orchestrator_plan.get("top_k", {}).get("adjusted", {}).get(
@@ -1259,15 +1348,18 @@ class RagPipelineP1:
             "fallback_reason": None,
             "query_plan": query_plan,
             "graphrag": {
-                "enabled": bool(settings.rag_graphrag_enabled),
+                "enabled": bool(graphrag_enabled_runtime),
                 "node_count": 0,
                 "edge_count": 0,
                 "expansion_count": 0,
             },
-            "graphrag_enabled": bool(settings.rag_graphrag_enabled),
+            "graphrag_enabled": bool(graphrag_enabled_runtime),
             "graphrag_expansion_count": 0,
             "graphrag_node_count": 0,
             "graphrag_edge_count": 0,
+            "stack_mode_requested": requested_stack_mode,
+            "stack_mode_effective": "auto",
+            "stack_coverage": {},
         }
 
         flow_events.append(
@@ -1434,7 +1526,7 @@ class RagPipelineP1:
         retrieval_trace["low_context_before_external"] = low_context_before_external
         should_force_external = (
             scientific_retrieval_enabled
-            and settings.rag_external_connectors_enabled
+            and external_connectors_runtime_enabled
             and self._should_force_external_retrieval(query, docs)
         )
         retrieval_trace["should_force_external"] = should_force_external
@@ -1442,7 +1534,7 @@ class RagPipelineP1:
         if (
             (low_context_before_external or should_force_external)
             and scientific_retrieval_enabled
-            and settings.rag_external_connectors_enabled
+            and external_connectors_runtime_enabled
         ):
             external_attempted = True
             used_stages.append("external_scientific_retrieval")
@@ -1660,14 +1752,15 @@ class RagPipelineP1:
                 )
 
         graphrag_summary: dict[str, Any] = {
-            "enabled": bool(settings.rag_graphrag_enabled),
+            "enabled": bool(graphrag_enabled_runtime),
             "node_count": 0,
             "edge_count": 0,
             "expansion_count": 0,
             "max_neighbors": int(settings.rag_graphrag_max_neighbors),
             "expansion_doc_budget": int(settings.rag_graphrag_expansion_docs),
+            "runtime_override": graphrag_enabled_override,
         }
-        if settings.rag_graphrag_enabled:
+        if graphrag_enabled_runtime:
             used_stages.append("graphrag_sidecar")
             flow_events.append(
                 self._flow_event(
@@ -1814,6 +1907,37 @@ class RagPipelineP1:
             if isinstance(active_trace.get("crawl_summary"), dict)
             else {}
         )
+        provider_keys: set[str] = set()
+        for attempt in retrieval_trace.get("source_attempts", []):
+            if not isinstance(attempt, dict):
+                continue
+            provider_key = str(attempt.get("provider") or attempt.get("source") or "").strip().lower()
+            if provider_key:
+                provider_keys.add(provider_key)
+        vector_internal_used = bool(retrieval_trace.get("internal")) or ("internal_corpus" in provider_keys)
+        scientific_used = bool(provider_keys.intersection(self._SCIENTIFIC_PROVIDER_KEYS))
+        web_used = bool(provider_keys.intersection(self._WEB_PROVIDER_KEYS))
+        graph_used = bool(retrieval_trace.get("graphrag_enabled"))
+        graph_expansion_count = int(retrieval_trace.get("graphrag_expansion_count") or 0)
+        stack_mode_effective = (
+            "full"
+            if (
+                requested_stack_mode == "full"
+                and vector_internal_used
+                and scientific_used
+                and web_used
+                and graph_used
+            )
+            else "auto"
+        )
+        retrieval_trace["stack_mode_effective"] = stack_mode_effective
+        retrieval_trace["stack_coverage"] = {
+            "vector_internal_used": vector_internal_used,
+            "graph_used": graph_used,
+            "graph_expansion_count": graph_expansion_count,
+            "scientific_used": scientific_used,
+            "web_used": web_used,
+        }
 
         def _build_result(
             *,

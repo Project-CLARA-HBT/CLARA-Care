@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from clara_ml.agents import research_tier2 as tier2
-from clara_ml.rag.pipeline import RagResult
+from clara_ml.rag.pipeline import RagPipelineP1, RagResult
+from clara_ml.rag.retriever import Document
 
 
 @pytest.fixture(autouse=True)
@@ -117,6 +118,125 @@ def test_build_planner_hints_applies_latency_guard_for_fast_ddi_query():
     assert hints["web_retrieval_enabled"] is False
     assert "fast_mode_latency_guard" in hints["reason_codes"]
     assert "fast_scientific_disabled_for_sla" in hints["reason_codes"]
+
+
+def test_build_planner_hints_full_stack_mode_forces_connectors_and_graphrag():
+    hints = tier2._build_planner_hints(
+        topic="Tương tác warfarin với ibuprofen ở người cao tuổi",
+        source_mode=None,
+        route_role="researcher",
+        route_intent="evidence_review",
+        uploaded_documents=[],
+        rag_sources=[],
+        research_mode="fast",
+        retrieval_stack_mode="full",
+    )
+    assert hints["retrieval_stack_mode"] == "full"
+    assert hints["scientific_retrieval_enabled"] is True
+    assert hints["web_retrieval_enabled"] is True
+    assert hints["graphrag_enabled_override"] is True
+    assert "retrieval_stack_mode_full" in hints["reason_codes"]
+    assert "stack_mode_full_force_scientific" in hints["reason_codes"]
+    assert "stack_mode_full_force_web" in hints["reason_codes"]
+    assert "stack_mode_full_force_graphrag" in hints["reason_codes"]
+
+
+def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
+    class _FakeRetriever:
+        def __init__(self) -> None:
+            self.last_trace: dict = {}
+
+        def retrieve_internal(self, query: str, top_k: int = 3, **_kwargs) -> list[Document]:
+            self.last_trace = {
+                "search_phase": {
+                    "query_terms": ["warfarin", "ibuprofen"],
+                    "connectors_attempted": [
+                        {"provider": "internal_corpus", "status": "completed", "documents": 1}
+                    ],
+                    "source_errors": {},
+                    "total_candidates": 1,
+                },
+                "index_phase": {
+                    "before_dedupe_count": 1,
+                    "after_dedupe_count": 1,
+                    "selected_count": 1,
+                    "duration_ms": 1.0,
+                },
+                "search_plan": {
+                    "query": query,
+                    "query_terms": ["warfarin", "ibuprofen"],
+                    "top_k": top_k,
+                    "phase": "internal",
+                    "total_candidates": 1,
+                },
+                "source_attempts": [
+                    {"provider": "internal_corpus", "status": "completed", "documents": 1}
+                ],
+                "source_errors": {},
+                "index_summary": {
+                    "before_dedupe_count": 1,
+                    "after_dedupe_count": 1,
+                    "selected_count": 1,
+                    "duration_ms": 1.0,
+                },
+                "crawl_summary": {},
+            }
+            return [
+                Document(
+                    id="internal-1",
+                    text="warfarin ibuprofen interaction warning",
+                    metadata={"source": "internal", "url": "https://internal.example/1", "score": 0.9},
+                )
+            ]
+
+        def retrieve(self, *args, **kwargs) -> list[Document]:  # pragma: no cover - defensive
+            raise AssertionError("Hybrid retrieve should not be called in this test.")
+
+    class _FakeGraphSidecar:
+        def __init__(self) -> None:
+            self.expand_calls = 0
+
+        def expand(self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int):
+            self.expand_calls += 1
+            return SimpleNamespace(
+                summary={
+                    "enabled": True,
+                    "node_count": 2,
+                    "edge_count": 1,
+                    "expansion_count": 1,
+                    "max_neighbors": max_neighbors,
+                    "expansion_doc_budget": expansion_docs,
+                },
+                expansion_docs=[
+                    Document(
+                        id="graph-1",
+                        text="Graph-sidecar linked evidence",
+                        metadata={"source": "graphrag", "url": "https://graph.example/1", "score": 0.7},
+                    )
+                ],
+            )
+
+    monkeypatch.setattr(tier2.settings, "rag_graphrag_enabled", False)
+    pipeline = RagPipelineP1(retriever=_FakeRetriever(), llm_client=None, deepseek_api_key="")
+    fake_sidecar = _FakeGraphSidecar()
+    pipeline._graphrag = fake_sidecar
+
+    result = pipeline.run(
+        "warfarin ibuprofen interaction",
+        generation_enabled=False,
+        planner_hints={"graphrag_enabled_override": True},
+    )
+
+    retrieval_trace = result.trace["retrieval"]
+    assert fake_sidecar.expand_calls == 1
+    assert retrieval_trace["graphrag_enabled"] is True
+    assert retrieval_trace["graphrag_expansion_count"] == 1
+    assert retrieval_trace["stack_coverage"]["graph_used"] is True
+    assert retrieval_trace["stack_coverage"]["graph_expansion_count"] == 1
+    assert any(
+        event.get("stage") == "graphrag_sidecar" and event.get("status") == "completed"
+        for event in result.flow_events
+    )
 
 
 def test_filter_context_for_ddi_keeps_primary_alias_rows():
@@ -304,6 +424,171 @@ def test_run_research_tier2_llm_query_planner_success_path(monkeypatch):
     assert len(result["query_plan"]["source_queries"]["internal"]) >= 1
     llm_events = [event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"]
     assert any(event.get("status") == "completed" for event in llm_events)
+
+
+def test_run_research_tier2_full_stack_mode_forces_and_reports_stack_coverage(monkeypatch):
+    captured_calls: list[dict] = []
+
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        planner_hints = kwargs.get("planner_hints", {})
+        if not isinstance(planner_hints, dict):
+            planner_hints = {}
+        captured_calls.append({"query": query, **kwargs})
+        stack_mode = str(planner_hints.get("retrieval_stack_mode") or "auto")
+        stack_coverage = {
+            "vector_internal_used": True,
+            "graph_used": True,
+            "graph_expansion_count": 1,
+            "scientific_used": True,
+            "web_used": True,
+        }
+        retrieval_trace = {
+            "source_attempts": [
+                {"provider": "internal_corpus", "status": "completed", "documents": 1},
+                {"provider": "pubmed", "status": "completed", "documents": 1},
+                {"provider": "searxng", "status": "completed", "documents": 1},
+            ],
+            "source_errors": {},
+            "index_summary": {"selected_count": 4, "retrieved_count": 4},
+            "crawl_summary": {"domains": ["example.org"]},
+            "query_plan": planner_hints.get("query_plan", {}),
+            "graphrag_enabled": True,
+            "graphrag_expansion_count": 1,
+            "graphrag_node_count": 2,
+            "graphrag_edge_count": 1,
+            "stack_mode_requested": stack_mode,
+            "stack_mode_effective": "full" if stack_mode == "full" else "auto",
+            "stack_coverage": stack_coverage,
+        }
+        return RagResult(
+            query=query,
+            retrieved_ids=["internal-1", "pubmed-1", "searxng-1", "graph-1"],
+            answer="Tổng hợp bằng chứng đầy đủ từ nhiều lớp retrieval.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "internal-1",
+                    "source": "internal",
+                    "title": "Internal policy note",
+                    "text": "Internal context.",
+                    "url": "https://internal.example/1",
+                    "score": 0.8,
+                },
+                {
+                    "id": "pubmed-1",
+                    "source": "pubmed",
+                    "title": "PubMed evidence",
+                    "text": "Scientific context.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
+                    "score": 0.9,
+                },
+                {
+                    "id": "searxng-1",
+                    "source": "searxng",
+                    "title": "Web evidence",
+                    "text": "Web context.",
+                    "url": "https://example.org/web-evidence",
+                    "score": 0.7,
+                },
+                {
+                    "id": "graph-1",
+                    "source": "graphrag",
+                    "title": "Graph expansion",
+                    "text": "Graph sidecar evidence.",
+                    "url": "https://example.org/graph-evidence",
+                    "score": 0.75,
+                },
+            ],
+            context_debug={
+                "relevance": 0.91,
+                "low_context_threshold": kwargs.get("low_context_threshold", 0.15),
+                "source_counts": {"internal": 1, "pubmed": 1, "searxng": 1, "graphrag": 1},
+                "retrieval_trace": retrieval_trace,
+            },
+            flow_events=[
+                {
+                    "stage": "external_scientific_retrieval",
+                    "timestamp": tier2._now_iso(),
+                    "status": "completed",
+                    "source_count": 2,
+                    "note": "External scientific retrieval completed.",
+                    "payload": {"provider": "pubmed"},
+                },
+                {
+                    "stage": "graphrag_sidecar",
+                    "timestamp": tier2._now_iso(),
+                    "status": "completed",
+                    "source_count": 1,
+                    "note": "Graph sidecar completed.",
+                    "payload": {"expansion_count": 1},
+                },
+            ],
+            trace={
+                "retrieval": retrieval_trace,
+                "generation": {"mode": "llm"},
+            },
+        )
+
+    def _fake_factcheck(answer: str, retrieved_context: list[dict]) -> SimpleNamespace:
+        return SimpleNamespace(
+            stage="fides_lite",
+            verdict="pass",
+            severity="low",
+            confidence=0.95,
+            supported_claims=1,
+            total_claims=1,
+            unsupported_claims=[],
+            evidence_count=max(len(retrieved_context), 1),
+            note="OK",
+            verification_matrix=[],
+            contradiction_summary={
+                "version": "claim-v1",
+                "has_contradiction": False,
+                "contradiction_count": 0,
+                "claims": [],
+                "details": [],
+                "note": "No contradiction detected.",
+            },
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    monkeypatch.setattr(tier2, "run_fides_lite", _fake_factcheck)
+
+    result = tier2.run_research_tier2(
+        {
+            "query": "Compare warfarin and ibuprofen evidence.",
+            "research_mode": "fast",
+            "retrieval_stack_mode": "full",
+            "strict_deepseek_required": False,
+        }
+    )
+
+    assert len(captured_calls) == 1
+    call = captured_calls[0]
+    assert call["scientific_retrieval_enabled"] is True
+    assert call["web_retrieval_enabled"] is True
+    assert call["planner_hints"]["retrieval_stack_mode"] == "full"
+    assert call["planner_hints"]["graphrag_enabled_override"] is True
+
+    assert "retrieval_stack_mode_full" in result["metadata"]["planner_trace"]["planner_hints"][
+        "reason_codes"
+    ]
+    assert result["telemetry"]["stack_mode"]["requested"] == "full"
+    assert result["telemetry"]["stack_mode"]["effective"] == "full"
+    assert result["telemetry"]["stack_coverage"]["vector_internal_used"] is True
+    assert result["telemetry"]["stack_coverage"]["scientific_used"] is True
+    assert result["telemetry"]["stack_coverage"]["web_used"] is True
+    assert result["telemetry"]["stack_coverage"]["graph_used"] is True
+    assert result["telemetry"]["stack_coverage"]["graph_expansion_count"] == 1
+    assert any(
+        event.get("stage") == "external_scientific_retrieval"
+        and event.get("status") == "completed"
+        for event in result.get("flow_events", [])
+    )
+    assert any(
+        event.get("stage") == "graphrag_sidecar" and event.get("status") == "completed"
+        for event in result.get("flow_events", [])
+    )
 
 
 def test_run_research_tier2_llm_query_planner_fallback_path(monkeypatch):

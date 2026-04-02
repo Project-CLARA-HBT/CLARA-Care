@@ -133,6 +133,25 @@ def _normalize_research_mode(payload: dict[str, Any]) -> str:
     return "fast"
 
 
+def _normalize_retrieval_stack_mode(payload: dict[str, Any]) -> str:
+    metadata_obj = payload.get("metadata")
+    metadata = metadata_obj if isinstance(metadata_obj, dict) else {}
+    raw_mode = (
+        str(
+            payload.get("retrieval_stack_mode")
+            or payload.get("stack_mode")
+            or metadata.get("retrieval_stack_mode")
+            or metadata.get("stack_mode")
+            or "auto"
+        )
+        .strip()
+        .lower()
+    )
+    if raw_mode in {"full", "full_stack", "full-stack"}:
+        return "full"
+    return "auto"
+
+
 def _ascii_fold(text: str) -> str:
     normalized = unicodedata.normalize("NFD", str(text or ""))
     without_marks = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
@@ -657,6 +676,7 @@ def _build_planner_hints(
     uploaded_documents: list[dict[str, Any]],
     rag_sources: object,
     research_mode: str,
+    retrieval_stack_mode: str = "auto",
 ) -> dict[str, Any]:
     normalized_topic = topic.lower()
     query_profile = analyze_query_profile(topic)
@@ -703,6 +723,8 @@ def _build_planner_hints(
         reason_codes.append("ddi_query_detected")
     if is_ddi_critical_query:
         reason_codes.append("ddi_critical_query")
+    stack_mode = "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
+    reason_codes.append(f"retrieval_stack_mode_{stack_mode}")
 
     internal_top_k = 4 if has_uploaded else 3
     if has_knowledge_sources:
@@ -740,9 +762,19 @@ def _build_planner_hints(
     if not scientific_enabled and evidence_query:
         reason_codes.append("fast_scientific_disabled_for_sla")
 
+    graphrag_enabled_override: bool | None = None
+    if stack_mode == "full":
+        scientific_enabled = True
+        web_enabled = True
+        graphrag_enabled_override = True
+        reason_codes.append("stack_mode_full_force_scientific")
+        reason_codes.append("stack_mode_full_force_web")
+        reason_codes.append("stack_mode_full_force_graphrag")
+
     pass_cap = _DEEP_BETA_PASS_CAP if deep_beta_mode else _DEFAULT_DEEP_PASS_CAP
     retrieval_budget = {
         "mode": research_mode,
+        "retrieval_stack_mode": stack_mode,
         "target_pass_count": max(1, min(pass_cap, target_pass_count)),
         "pass_cap": pass_cap,
         "internal_top_k": max(1, min(12, internal_top_k)),
@@ -766,6 +798,8 @@ def _build_planner_hints(
         "scientific_retrieval_enabled": scientific_enabled,
         "web_retrieval_enabled": web_enabled,
         "file_retrieval_enabled": True,
+        "retrieval_stack_mode": stack_mode,
+        "graphrag_enabled_override": graphrag_enabled_override,
         "research_mode": research_mode,
         "deep_pass_count": max(1, min(pass_cap, target_pass_count)),
         "reasoning_style": (
@@ -1201,6 +1235,11 @@ def _build_retrieval_trace(
         "source_errors": source_errors,
         "fallback_reason": fallback_reason or None,
         "query_plan": query_plan,
+        "stack_mode_requested": str(retrieval_debug.get("stack_mode_requested") or "auto"),
+        "stack_mode_effective": str(retrieval_debug.get("stack_mode_effective") or "auto"),
+        "stack_coverage": retrieval_debug.get("stack_coverage")
+        if isinstance(retrieval_debug.get("stack_coverage"), dict)
+        else {},
         "index_summary": retrieval_debug.get("index_summary")
         if isinstance(retrieval_debug.get("index_summary"), dict)
         else {},
@@ -2014,6 +2053,7 @@ def _ensure_markdown_structure(
 def run_research_tier2(payload: dict[str, Any]) -> dict:
     topic = _normalize_topic(payload)
     research_mode = _normalize_research_mode(payload)
+    retrieval_stack_mode = _normalize_retrieval_stack_mode(payload)
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
@@ -2033,6 +2073,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         uploaded_documents=uploaded_documents,
         rag_sources=rag_sources,
         research_mode=research_mode,
+        retrieval_stack_mode=retrieval_stack_mode,
     )
     base_query_plan = _build_source_aware_query_plan(
         topic=topic,
@@ -3314,6 +3355,59 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     if not isinstance(crawl_summary.get("domains"), list):
         crawl_summary["domains"] = []
 
+    stack_mode_requested = (
+        "full"
+        if str(planner_hints.get("retrieval_stack_mode") or "").strip().lower() == "full"
+        else "auto"
+    )
+    stack_coverage = (
+        retrieval_trace.get("stack_coverage")
+        if isinstance(retrieval_trace.get("stack_coverage"), dict)
+        else {}
+    )
+    if not stack_coverage:
+        provider_keys: set[str] = set()
+        for attempt in source_attempts:
+            if not isinstance(attempt, dict):
+                continue
+            provider_key = _first_nonempty_text(attempt.get("provider"), attempt.get("source")).lower()
+            if provider_key:
+                provider_keys.add(provider_key)
+        scientific_provider_keys = {
+            "pubmed",
+            "europepmc",
+            "semantic_scholar",
+            "openalex",
+            "crossref",
+            "clinicaltrials",
+            "openfda",
+            "dailymed",
+            "rxnorm",
+            "external_scientific",
+        }
+        web_provider_keys = {"searxng", "searxng-crawl", "web_crawl"}
+        stack_coverage = {
+            "vector_internal_used": "internal_corpus" in provider_keys,
+            "graph_used": bool(retrieval_trace.get("graphrag_enabled")),
+            "graph_expansion_count": _safe_int(retrieval_trace.get("graphrag_expansion_count"), 0),
+            "scientific_used": bool(provider_keys.intersection(scientific_provider_keys)),
+            "web_used": bool(provider_keys.intersection(web_provider_keys)),
+        }
+    stack_mode_effective = str(
+        retrieval_trace.get("stack_mode_effective")
+        or (
+            "full"
+            if (
+                stack_mode_requested == "full"
+                and bool(stack_coverage.get("vector_internal_used"))
+                and bool(stack_coverage.get("scientific_used"))
+                and bool(stack_coverage.get("web_used"))
+                and bool(stack_coverage.get("graph_used"))
+            )
+            else "auto"
+        )
+    )
+
     target_sources = ["internal"]
     if bool(planner_hints.get("scientific_retrieval_enabled")):
         target_sources.append("scientific")
@@ -3397,6 +3491,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "fallback_reason": fallback_reason or None,
         "index_summary": index_summary,
         "crawl_summary": crawl_summary,
+        "stack_mode": {
+            "requested": stack_mode_requested,
+            "effective": stack_mode_effective,
+        },
+        "stack_coverage": stack_coverage,
         "docs": _compact_context_rows(effective_context, max_items=10, max_text_len=240),
         "scores": {
             "relevance": rag_result.context_debug.get("relevance")
