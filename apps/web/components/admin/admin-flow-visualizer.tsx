@@ -30,6 +30,8 @@ export type FlowNodeId =
   | "synthesis"
   | "verification"
   | "verification_matrix"
+  | "api_contract_passthrough"
+  | "research_ui_telemetry"
   | "citation_selection"
   | "policy_gate"
   | "deepseek_fallback"
@@ -342,6 +344,30 @@ const NODES: FlowNodeDef[] = [
     tone: "teal",
   },
   {
+    id: "api_contract_passthrough",
+    title: "API Contract Pass-through",
+    subtitle: "research endpoint normalization",
+    description:
+      "Endpoint `/research/tier2` chuẩn hóa payload rồi pass-through đầy đủ telemetry + verification matrix + safety_override cho frontend.",
+    riskNote:
+      "Nếu contract bị cắt trường ở lớp API, UI sẽ mất trace quan trọng dù ML đã tính đúng.",
+    x: 2360,
+    y: 620,
+    tone: "teal",
+  },
+  {
+    id: "research_ui_telemetry",
+    title: "UI Matrix + Telemetry Panel",
+    subtitle: "verification badges + rerank trace",
+    description:
+      "Panel research hiển thị claim matrix (support_status/claim_type), safety override và rerank telemetry (latency/topN/model).",
+    riskNote:
+      "Thiếu panel này thì Day 6 chỉ đúng backend, ban giám khảo không quan sát được contract thực tế.",
+    x: 2720,
+    y: 620,
+    tone: "sky",
+  },
+  {
     id: "policy_gate",
     title: "Policy Gate",
     subtitle: "allow, warn, block, fallback",
@@ -441,10 +467,12 @@ const NODE_GRID_LAYOUT: Record<FlowNodeId, { col: number; row: number }> = {
   contradiction_miner: { col: 4, row: 5 },
 
   citation_selection: { col: 5, row: 3 },
+  api_contract_passthrough: { col: 6, row: 3 },
   verification: { col: 5, row: 4 },
   synthesis: { col: 5, row: 5 },
   verification_matrix: { col: 5, row: 6 },
 
+  research_ui_telemetry: { col: 7, row: 3 },
   responder: { col: 6, row: 4 },
   policy_gate: { col: 6, row: 5 },
   deepseek_fallback: { col: 6, row: 6 },
@@ -563,8 +591,12 @@ const EDGES: FlowEdgeDef[] = [
   { from: "synthesis", to: "verification", bend: -100 },
   { from: "synthesis", to: "verification_matrix", bend: 180 },
   { from: "verification", to: "citation_selection", bend: -42 },
+  { from: "verification_matrix", to: "api_contract_passthrough", bend: -64, label: "matrix pass-through" },
   { from: "verification", to: "policy_gate", bend: 20 },
   { from: "verification_matrix", to: "policy_gate", bend: -120 },
+  { from: "citation_selection", to: "api_contract_passthrough", bend: 26 },
+  { from: "api_contract_passthrough", to: "research_ui_telemetry", bend: 12, label: "ui payload" },
+  { from: "research_ui_telemetry", to: "flow_event_stream", bend: 20, label: "render telemetry" },
   { from: "citation_selection", to: "responder", bend: 66 },
   { from: "policy_gate", to: "responder", bend: 10 },
   { from: "responder", to: "flow_event_stream", bend: 64, label: "persist events" },
@@ -760,7 +792,8 @@ export default function AdminFlowVisualizer({
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Canvas mới mô tả pipeline deep research nâng cấp: safety/legal ingress, query canonicalization,
-            deep_beta critic loop, retrieval orchestration, contradiction mining, verification và feedback loop.
+            deep_beta critic loop, retrieval orchestration, contradiction mining, verification, API pass-through
+            contract và UI telemetry matrix trước khi vào feedback loop.
           </p>
         </div>
 
