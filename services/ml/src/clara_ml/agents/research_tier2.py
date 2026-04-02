@@ -15,6 +15,11 @@ from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.rag.pipeline import RagPipelineP1
+from clara_ml.rag.retrieval.source_router import (
+    SourceRouterDecision,
+    decide_source_route,
+    to_metadata_payload as source_route_metadata_payload,
+)
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.routing import P1RoleIntentRouter
 
@@ -59,6 +64,12 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
 
 _DEFAULT_DEEP_PASS_CAP = 12
 _DEEP_BETA_PASS_CAP = 14
+_ALLOWED_RETRIEVAL_ROUTES = {
+    "internal-heavy",
+    "scientific-heavy",
+    "web-assisted",
+    "file-grounded",
+}
 
 
 def _now_iso() -> str:
@@ -161,6 +172,42 @@ def _ascii_fold(text: str) -> str:
     normalized = unicodedata.normalize("NFD", str(text or ""))
     without_marks = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
     return without_marks.lower()
+
+
+def _detect_language_hint(text: str) -> tuple[bool, bool, str]:
+    lowered = str(text or "").lower()
+    has_vietnamese_marks = bool(
+        re.search(
+            r"[àáạảãâầấậẩẫăằắặẳẵđèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ]",
+            lowered,
+        )
+    )
+    has_english_markers = bool(
+        re.search(
+            r"\b(interaction|guideline|evidence|review|trial|safety|contraindication|bleeding)\b",
+            lowered,
+        )
+    )
+    if has_vietnamese_marks and has_english_markers:
+        return has_vietnamese_marks, has_english_markers, "mixed"
+    if has_vietnamese_marks:
+        return has_vietnamese_marks, has_english_markers, "vi"
+    return has_vietnamese_marks, has_english_markers, "en"
+
+
+def _normalize_retrieval_route(value: Any) -> str:
+    route = str(value or "").strip().lower()
+    if route in _ALLOWED_RETRIEVAL_ROUTES:
+        return route
+    return "internal-heavy"
+
+
+def _normalize_router_confidence(value: Any) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = 0.0
+    return round(max(0.0, min(numeric, 1.0)), 4)
 
 
 def _dedupe_query_list(queries: list[str], *, limit: int = 12) -> list[str]:
@@ -298,6 +345,7 @@ def _build_source_aware_query_plan(
     topic: str,
     research_mode: str,
     keywords: list[str],
+    source_route: SourceRouterDecision | None = None,
 ) -> dict[str, Any]:
     original_query = " ".join(str(topic or "").split()).strip()
     folded_query = _ascii_fold(original_query)
@@ -310,18 +358,7 @@ def _build_source_aware_query_plan(
     if not keyword_terms:
         keyword_terms = query_terms(original_query)
 
-    has_vietnamese_marks = bool(
-        re.search(r"[àáạảãâầấậẩẫăằắặẳẵđèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ]", original_query.lower())
-    )
-    has_english_markers = bool(
-        re.search(
-            r"\b(interaction|guideline|evidence|review|trial|safety|contraindication|bleeding)\b",
-            original_query.lower(),
-        )
-    )
-    language_hint = "vi" if has_vietnamese_marks else "en"
-    if has_vietnamese_marks and has_english_markers:
-        language_hint = "mixed"
+    _, _, language_hint = _detect_language_hint(original_query)
 
     primary_drug = str(profile.get("primary_drug") or "").strip().lower()
     co_drugs_raw = profile.get("co_drugs")
@@ -404,6 +441,7 @@ def _build_source_aware_query_plan(
         keywords=keyword_terms[:10],
     )
 
+    route_payload = source_route_metadata_payload(source_route)
     return {
         "original_query": original_query,
         "canonical_query": canonical_query,
@@ -423,6 +461,9 @@ def _build_source_aware_query_plan(
         "provider_queries": provider_queries,
         "research_mode": research_mode,
         "query_terms": keyword_terms[:10],
+        "retrieval_route": route_payload.get("retrieval_route"),
+        "router_confidence": route_payload.get("router_confidence"),
+        "router_reason_codes": route_payload.get("router_reason_codes", []),
     }
 
 
@@ -800,6 +841,7 @@ def _build_planner_hints(
     retrieval_stack_mode: str = "auto",
 ) -> dict[str, Any]:
     normalized_topic = topic.lower()
+    _, _, language_hint = _detect_language_hint(topic)
     query_profile = analyze_query_profile(topic)
     is_ddi_query = bool(query_profile.get("is_ddi_query"))
     is_ddi_critical_query = is_ddi_query and _is_ddi_critical_topic(topic)
@@ -919,6 +961,9 @@ def _build_planner_hints(
         "query_focus": route_intent or "evidence_review",
         "reason_codes": reason_codes,
         "keywords": extracted_keywords,
+        "is_ddi_query": is_ddi_query,
+        "is_ddi_critical_query": is_ddi_critical_query,
+        "language_hint": language_hint,
         "role": route_role,
         "source_mode": source_mode or "default",
         "low_context_threshold": 0.12 if has_uploaded else 0.15,
@@ -2415,10 +2460,37 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         research_mode=research_mode,
         retrieval_stack_mode=retrieval_stack_mode,
     )
+    source_route = decide_source_route(
+        query=topic,
+        research_mode=research_mode,
+        has_uploaded_documents=bool(uploaded_documents),
+        is_ddi_query=bool(planner_hints.get("is_ddi_query")),
+        is_ddi_critical_query=bool(planner_hints.get("is_ddi_critical_query")),
+        language_hint=str(planner_hints.get("language_hint") or "en"),
+        web_policy_allowed=bool(planner_hints.get("web_retrieval_enabled")),
+    )
+
+    planner_hints["scientific_retrieval_enabled"] = bool(
+        planner_hints.get("scientific_retrieval_enabled")
+    ) and bool(source_route.enable_scientific)
+    planner_hints["web_retrieval_enabled"] = bool(planner_hints.get("web_retrieval_enabled")) and bool(
+        source_route.enable_web
+    )
+    reason_codes = planner_hints.get("reason_codes")
+    if not isinstance(reason_codes, list):
+        reason_codes = []
+    reason_codes.extend(f"source_route:{code}" for code in source_route.reason_codes if code)
+    reason_codes.append(f"retrieval_route_{source_route.retrieval_route}")
+    planner_hints["reason_codes"] = list(dict.fromkeys([str(item) for item in reason_codes if str(item)]))
+    planner_hints["retrieval_route"] = _normalize_retrieval_route(source_route.retrieval_route)
+    planner_hints["router_confidence"] = _normalize_router_confidence(source_route.confidence)
+    planner_hints["router_reason_codes"] = list(source_route.reason_codes)
+
     base_query_plan = _build_source_aware_query_plan(
         topic=topic,
         research_mode=research_mode,
         keywords=planner_hints.get("keywords", []),
+        source_route=source_route,
     )
     planner_hints["query_plan"] = base_query_plan
     run_started_at = perf_counter()
@@ -2461,6 +2533,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "route_role": route.role,
                 "route_intent": route.intent,
                 "research_mode": research_mode,
+                "retrieval_route": planner_hints.get("retrieval_route", "internal-heavy"),
+                "router_confidence": planner_hints.get("router_confidence", 0.0),
             },
         ),
     ]
@@ -2537,6 +2611,14 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     "canonical_query": planner_hints["query_plan"].get("canonical_query"),
                 },
             )
+        )
+
+    if isinstance(planner_hints.get("query_plan"), dict):
+        planner_hints["query_plan"]["retrieval_route"] = _normalize_retrieval_route(
+            planner_hints.get("retrieval_route")
+        )
+        planner_hints["query_plan"]["router_confidence"] = _normalize_router_confidence(
+            planner_hints.get("router_confidence")
         )
 
     planner_trace = _build_planner_trace(
@@ -3902,6 +3984,26 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         flow_events=flow_events,
         deep_pass_count=len(deep_pass_summaries) if deep_pass_summaries else 1,
     )
+    retrieval_route = _normalize_retrieval_route(
+        query_plan.get("retrieval_route")
+        or planner_hints.get("retrieval_route")
+        or "internal-heavy"
+    )
+    router_confidence = _normalize_router_confidence(
+        query_plan.get("router_confidence")
+        if isinstance(query_plan.get("router_confidence"), (int, float))
+        else planner_hints.get("router_confidence")
+        if isinstance(planner_hints.get("router_confidence"), (int, float))
+        else 0.0
+    )
+    degraded_path = bool(
+        effective_fallback_used
+        or any(
+            str(event.get("status") or "").strip().lower() == "degraded"
+            for event in flow_events
+            if isinstance(event, dict)
+        )
+    )
 
     telemetry = {
         "trace_id": trace_id,
@@ -3920,6 +4022,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "source_attempts": source_attempts,
         "source_errors": aggregated_errors,
         "fallback_reason": fallback_reason or None,
+        "degraded_path": degraded_path,
+        "retrieval_route": retrieval_route,
+        "router_confidence": router_confidence,
         "index_summary": index_summary,
         "crawl_summary": crawl_summary,
         "stack_mode": {
@@ -3984,6 +4089,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "deep_pass_count": len(deep_pass_summaries),
             "source_attempts": source_attempts,
             "source_errors": aggregated_errors,
+            "degraded_path": degraded_path,
+            "retrieval_route": retrieval_route,
+            "router_confidence": router_confidence,
             "query_plan": query_plan,
             "context_debug": compact_context_debug,
             "policy_action": policy_action,
@@ -4050,6 +4158,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "fallback_reason": fallback_reason or None,
         "source_attempts": source_attempts,
         "source_errors": aggregated_errors,
+        "degraded_path": degraded_path,
+        "retrieval_route": retrieval_route,
+        "router_confidence": router_confidence,
         "query_plan": query_plan,
         "research_mode": research_mode,
         "deep_pass_count": len(deep_pass_summaries),

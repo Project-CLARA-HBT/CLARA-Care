@@ -241,6 +241,43 @@ def test_scan_and_import_detection() -> None:
     assert import_response.json()["inserted"] >= 1
 
 
+def test_scan_text_applies_ocr_post_correction() -> None:
+    token = _login("scan-ocr-correct-user@example.com")
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-text",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"text": "Toa thuoc: warfariin 3mg moi toi"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ocr_provider"] == "ocr-postprocess"
+    assert payload["ocr_endpoint"] == "local-ocr-correction"
+    assert "warfarin" in (payload.get("extracted_text") or "").lower()
+    detections = payload["detections"]
+    assert any(item["normalized_name"] == "warfarin" for item in detections)
+
+
+def test_scan_text_keeps_manual_confirm_for_low_confidence_after_correction() -> None:
+    token = _login("scan-ocr-low-confidence@example.com")
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-text",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"text": "Toa thuoc: panad0l 500mg sau an"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert "panadol" in (payload.get("extracted_text") or "").lower()
+    detections = payload["detections"]
+    panadol_detection = next(
+        (item for item in detections if item["normalized_name"] == "paracetamol"),
+        None,
+    )
+    assert panadol_detection is not None
+    assert panadol_detection["requires_manual_confirm"] is True
+    assert panadol_detection["confirmed"] is False
+    assert panadol_detection["confidence"] < 0.9
+
+
 def test_import_detection_rejects_low_confidence_without_confirmation() -> None:
     token = _login("scan-reject-user@example.com")
     import_response = client.post(

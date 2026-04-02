@@ -164,6 +164,115 @@ def test_build_planner_hints_deep_mode_full_stack_still_forces_connectors_and_gr
     assert "stack_mode_full_force_graphrag" in hints["reason_codes"]
 
 
+def test_source_router_prefers_scientific_for_critical_ddi():
+    decision = tier2.decide_source_route(
+        query="Tương tác warfarin và ibuprofen có nguy cơ xuất huyết nghiêm trọng không?",
+        research_mode="deep",
+        has_uploaded_documents=False,
+        is_ddi_query=True,
+        is_ddi_critical_query=True,
+        language_hint="vi",
+        web_policy_allowed=True,
+    )
+    assert decision.retrieval_route == "scientific-heavy"
+    assert decision.enable_scientific is True
+    assert decision.enable_internal is True
+    assert decision.confidence >= 0.9
+
+
+def test_source_router_respects_web_policy_block():
+    decision = tier2.decide_source_route(
+        query="Tương tác warfarin với ibuprofen",
+        research_mode="deep",
+        has_uploaded_documents=False,
+        is_ddi_query=False,
+        is_ddi_critical_query=False,
+        language_hint="vi",
+        web_policy_allowed=False,
+    )
+    assert decision.enable_web is False
+    assert decision.retrieval_route in {"internal-heavy", "scientific-heavy"}
+
+
+def test_source_router_critical_ddi_overrides_file_grounded_path():
+    decision = tier2.decide_source_route(
+        query="Warfarin và NSAID có nguy cơ xuất huyết nghiêm trọng không?",
+        research_mode="deep",
+        has_uploaded_documents=True,
+        is_ddi_query=True,
+        is_ddi_critical_query=True,
+        language_hint="mixed",
+        web_policy_allowed=True,
+    )
+    assert decision.retrieval_route == "scientific-heavy"
+    assert decision.enable_scientific is True
+
+
+def test_run_research_tier2_emits_retrieval_route_metadata(monkeypatch: pytest.MonkeyPatch):
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        return RagResult(
+            query=query,
+            retrieved_ids=["doc-1"],
+            answer="Nội dung tạm thời.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "doc-1",
+                    "source": "pubmed",
+                    "title": "Warfarin Interaction",
+                    "text": "Relevant context.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/1/",
+                    "score": 0.87,
+                }
+            ],
+            context_debug={
+                "relevance": 0.72,
+                "low_context_threshold": 0.2,
+                "retrieval_trace": {
+                    "source_attempts": [{"provider": "pubmed", "status": "completed", "documents": 1}],
+                    "source_errors": {},
+                    "index_summary": {"selected_count": 1},
+                    "search_plan": {"query": query},
+                },
+            },
+            flow_events=[],
+            trace={"retrieval": {"source_attempts": [{"provider": "pubmed"}]}},
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    result = tier2.run_research_tier2(
+        {
+            "query": "Tương tác warfarin với ibuprofen",
+            "research_mode": "deep",
+            "strict_deepseek_required": False,
+        }
+    )
+    assert result.get("retrieval_route") in {
+        "internal-heavy",
+        "scientific-heavy",
+        "web-assisted",
+        "file-grounded",
+        "balanced",
+    }
+    assert isinstance(result.get("router_confidence"), float)
+    assert 0.0 <= result.get("router_confidence", 0.0) <= 1.0
+    metadata = result.get("metadata", {})
+    telemetry = result.get("telemetry", {})
+    assert metadata.get("retrieval_route") == result.get("retrieval_route")
+    assert telemetry.get("retrieval_route") == result.get("retrieval_route")
+    assert metadata.get("router_confidence") == result.get("router_confidence")
+    assert telemetry.get("router_confidence") == result.get("router_confidence")
+    assert "degraded_path" in result
+    assert "degraded_path" in metadata
+    assert "degraded_path" in telemetry
+    assert isinstance(result.get("source_errors"), dict)
+    assert isinstance(metadata.get("source_errors"), dict)
+    assert isinstance(telemetry.get("source_errors"), dict)
+    assert "fallback_reason" in result
+    assert "fallback_reason" in metadata
+    assert "fallback_reason" in telemetry
+
+
 def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
     class _FakeRetriever:
         def __init__(self) -> None:

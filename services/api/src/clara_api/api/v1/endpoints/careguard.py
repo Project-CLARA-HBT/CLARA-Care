@@ -24,6 +24,7 @@ from clara_api.core.attribution import (
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.control_tower import get_control_tower_config_service
+from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -186,6 +187,7 @@ DRUG_RXCUI_MAP: dict[str, str] = {
 }
 
 LOW_CONFIDENCE_OCR_THRESHOLD = 0.9
+OCR_CORRECTION_CUTOFF = 0.86
 _CANDIDATE_DB_LIMIT = 120
 _CANDIDATE_MIN_SCORE = 0.78
 _CANDIDATE_MIN_MARGIN = 0.05
@@ -228,6 +230,9 @@ def _normalize_text(value: str) -> str:
 
 
 DRUG_ALIAS_LOOKUP = _build_alias_lookup()
+OCR_DRUG_VOCABULARY: tuple[str, ...] = tuple(
+    sorted({alias for aliases in DRUG_ALIAS_MAP.values() for alias in aliases})
+)
 
 
 def _ascii_fold(value: str) -> str:
@@ -678,8 +683,23 @@ def _get_or_create_cabinet(db: Session, user_id: int) -> MedicineCabinet:
     return cabinet
 
 
-def _detect_drugs_from_text(text: str, db: Session | None = None) -> list[CabinetScanDetection]:
-    normalized_text = text.lower()
+def _apply_ocr_correction(text: str) -> OcrCorrectionResult:
+    return correct_ocr_text(
+        text,
+        vocabulary=OCR_DRUG_VOCABULARY,
+        cutoff=OCR_CORRECTION_CUTOFF,
+        max_events=24,
+    )
+
+
+def _detect_drugs_from_text(
+    text: str,
+    db: Session | None = None,
+    *,
+    skip_ocr_correction: bool = False,
+) -> list[CabinetScanDetection]:
+    candidate_text = text if skip_ocr_correction else _apply_ocr_correction(text).corrected_text
+    normalized_text = candidate_text.lower()
     detections: list[CabinetScanDetection] = []
 
     for canonical, aliases in DRUG_ALIAS_MAP.items():
@@ -1108,9 +1128,16 @@ def scan_cabinet_text(
     db: Session = Depends(get_db),
 ) -> CabinetScanTextResponse:
     _require_user(token, db)
+    correction = _apply_ocr_correction(payload.text)
     return CabinetScanTextResponse(
-        detections=_detect_drugs_from_text(payload.text, db=db),
-        extracted_text=payload.text,
+        detections=_detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        ),
+        extracted_text=correction.corrected_text[:4000],
+        ocr_provider="ocr-postprocess",
+        ocr_endpoint="local-ocr-correction",
     )
 
 
@@ -1137,10 +1164,15 @@ async def scan_cabinet_file(
         file_name=file_name,
         content_type=content_type,
     )
-    detections = _detect_drugs_from_text(extracted_text, db=db)
+    correction = _apply_ocr_correction(extracted_text)
+    detections = _detect_drugs_from_text(
+        correction.corrected_text,
+        db=db,
+        skip_ocr_correction=True,
+    )
     return CabinetScanTextResponse(
         detections=detections,
-        extracted_text=extracted_text[:4000],
+        extracted_text=correction.corrected_text[:4000],
         ocr_provider=ocr_provider,
         ocr_endpoint=used_endpoint,
     )
