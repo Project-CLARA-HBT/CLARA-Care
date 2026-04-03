@@ -74,14 +74,14 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     href: "/careguard",
     tag: "CareGuard",
-    label: "Check tương tác DDI",
+    label: "Kiểm tra tương tác DDI",
     detail: "Kiểm tra rủi ro tương tác theo tủ thuốc hiện tại."
   },
   {
     href: "/research",
     tag: "Research",
     label: "Nghiên cứu chuyên sâu",
-    detail: "Hỏi đáp có citation và flow verification."
+    detail: "Hỏi đáp có trích dẫn và lớp kiểm chứng."
   },
   {
     href: "/selfmed",
@@ -499,13 +499,13 @@ export default function DashboardPage() {
     { label: "ML", value: mlTone === "ok" ? 88 : mlTone === "warn" ? 52 : 24 },
     { label: "DDI", value: (cabinetCount ?? 0) > 1 ? 82 : 46 },
     { label: "RAG", value: Math.round(sourceCoverage) },
-    { label: "Verify", value: verificationStackEnabled ? 92 : 30 },
-    { label: "Latency", value: latencySafe < 800 ? 84 : latencySafe < 1200 ? 56 : 28 },
-    { label: "Error", value: errorRate < 5 ? 86 : errorRate < 10 ? 52 : 22 }
+    { label: "Kiểm chứng", value: verificationStackEnabled ? 92 : 30 },
+    { label: "Độ trễ", value: latencySafe < 800 ? 84 : latencySafe < 1200 ? 56 : 28 },
+    { label: "Lỗi", value: errorRate < 5 ? 86 : errorRate < 10 ? 52 : 22 }
   ];
 
-  const matrixRows = ["Safety", "Operations", "Knowledge", "Flow", "Delivery"];
-  const matrixColumns = ["Stability", "Latency", "Errors", "Coverage", "Confidence"];
+  const matrixRows = ["An toàn", "Vận hành", "Tri thức", "Flow", "Phản hồi"];
+  const matrixColumns = ["Ổn định", "Độ trễ", "Lỗi", "Độ phủ", "Tin cậy"];
   const matrixValues = [
     [reliability, latencySafe < 850 ? 82 : 48, errorRate < 6 ? 83 : 34, Math.round(sourceCoverage), verificationStackEnabled ? 92 : 40],
     [healthTone === "ok" ? 90 : 45, latencySafe < 900 ? 80 : 44, errorRate < 8 ? 78 : 38, 74, reliability],
@@ -521,19 +521,19 @@ export default function DashboardPage() {
   ];
 
   const telemetryBars = [
-    { label: "Throughput", value: trendThroughput, target: Math.max(1, trendThroughput + 10), tone: "ok" as const },
-    { label: "Error load", value: errorSafe, target: Math.max(2, Math.round(requestSafe * 0.08)), tone: errorRate >= 8 ? "error" as const : "warn" as const },
-    { label: "Latency(ms)", value: latencySafe, target: 900, tone: latencySafe > 1000 ? "error" as const : "warn" as const },
-    { label: "Reliability", value: Math.round(reliability), target: 82, tone: reliability >= 82 ? "ok" as const : "warn" as const }
+    { label: "Lưu lượng", value: trendThroughput, target: Math.max(1, trendThroughput + 10), tone: "ok" as const },
+    { label: "Tải lỗi", value: errorSafe, target: Math.max(2, Math.round(requestSafe * 0.08)), tone: errorRate >= 8 ? "error" as const : "warn" as const },
+    { label: "Độ trễ (ms)", value: latencySafe, target: 900, tone: latencySafe > 1000 ? "error" as const : "warn" as const },
+    { label: "Ổn định", value: Math.round(reliability), target: 82, tone: reliability >= 82 ? "ok" as const : "warn" as const }
   ];
 
   const flowStages = [
-    { label: "Ingress", status: healthTone === "error" ? "error" as const : healthTone === "warn" ? "warn" as const : "ok" as const, detail: healthStatus },
-    { label: "Route", status: flowFlags.roleRouter && flowFlags.intentRouter ? "ok" as const : "warn" as const, detail: `${flowEnabledCount}/11` },
-    { label: "Retrieve", status: sourceCoverage >= 55 ? "ok" as const : "warn" as const, detail: `${enabledSources}/${totalSources}` },
-    { label: "Analyze", status: mlTone === "error" ? "error" as const : mlTone === "warn" ? "warn" as const : "ok" as const, detail: mlStatus },
-    { label: "Verify", status: verificationStackEnabled ? "ok" as const : "warn" as const, detail: verificationStackEnabled ? "on" : "off" },
-    { label: "Deliver", status: reliability >= 70 ? "ok" as const : reliability >= 50 ? "warn" as const : "error" as const, detail: `${Math.round(reliability)}%` }
+    { label: "Đầu vào", status: healthTone === "error" ? "error" as const : healthTone === "warn" ? "warn" as const : "ok" as const, detail: healthStatus },
+    { label: "Định tuyến", status: flowFlags.roleRouter && flowFlags.intentRouter ? "ok" as const : "warn" as const, detail: `${flowEnabledCount}/11` },
+    { label: "Truy xuất", status: sourceCoverage >= 55 ? "ok" as const : "warn" as const, detail: `${enabledSources}/${totalSources}` },
+    { label: "Phân tích", status: mlTone === "error" ? "error" as const : mlTone === "warn" ? "warn" as const : "ok" as const, detail: mlStatus },
+    { label: "Kiểm chứng", status: verificationStackEnabled ? "ok" as const : "warn" as const, detail: verificationStackEnabled ? "bật" : "tắt" },
+    { label: "Phản hồi", status: reliability >= 70 ? "ok" as const : reliability >= 50 ? "warn" as const : "error" as const, detail: `${Math.round(reliability)}%` }
   ];
 
   const medicationCards = [
@@ -569,6 +569,19 @@ export default function DashboardPage() {
     { label: "Rủi ro DDI", value: ddiRiskLabel, detail: `${formatCount(cabinetCount)} thuốc` },
     { label: "Việc chờ", value: formatCount(pendingActions), detail: "Danh sách ưu tiên" }
   ];
+
+  const friendlySummary = useMemo(() => {
+    if (alerts.length > 0) {
+      return "Hệ thống đang có lưu ý cần kiểm tra. Bạn nên xử lý các mục cảnh báo trước.";
+    }
+    if (pendingActions > 0) {
+      return `Hiện có ${formatCount(pendingActions)} việc cần xử lý. Ưu tiên các mục an toàn thuốc trước.`;
+    }
+    if (reliability >= 80) {
+      return "Mọi thứ đang ổn định. Bạn có thể tiếp tục cập nhật dữ liệu hoặc tra cứu chuyên sâu.";
+    }
+    return "Hệ thống hoạt động bình thường, nên theo dõi thêm để giữ độ ổn định cao.";
+  }, [alerts.length, pendingActions, reliability]);
 
   return (
     <PageShell
@@ -624,6 +637,10 @@ export default function DashboardPage() {
               </span>
             ) : null}
           </div>
+
+          <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+            {friendlySummary}
+          </div>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -641,7 +658,7 @@ export default function DashboardPage() {
             title="Theo Dõi Trực Tiếp (Request / Lỗi / Độ trễ / Tủ thuốc)"
             labels={graphLabels}
             series={[
-              { id: "req", label: "Requests", color: "#22d3ee", values: requestsSeries.length > 0 ? requestsSeries : [requestSafe] },
+              { id: "req", label: "Lưu lượng", color: "#22d3ee", values: requestsSeries.length > 0 ? requestsSeries : [requestSafe] },
               { id: "err", label: "Lỗi", color: "#f43f5e", values: errorsSeries.length > 0 ? errorsSeries : [errorSafe] },
               { id: "lat", label: "Độ trễ", color: "#f59e0b", values: latencySeries.length > 0 ? latencySeries : [latencySafe] },
               { id: "cab", label: "Tủ thuốc", color: "#14b8a6", values: cabinetSeries.length > 0 ? cabinetSeries : [Math.max(0, cabinetCount ?? 0)] }
@@ -741,7 +758,7 @@ export default function DashboardPage() {
           <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Medication Status</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Tình Trạng Thuốc</p>
                 <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Tình trạng tủ thuốc</h3>
               </div>
               <Link
@@ -764,13 +781,13 @@ export default function DashboardPage() {
           </article>
 
           <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">System Status</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Trạng Thái Hệ Thống</p>
             <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Sức khỏe hệ thống</h3>
 
             <div className="mt-3 space-y-2.5">
               <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">API Health</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Sức khỏe API</p>
                   <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeClassForTone(healthTone)}`}>
                     {healthStatus}
                   </span>
@@ -780,21 +797,21 @@ export default function DashboardPage() {
 
               <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">ML Runtime</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Trạng thái ML</p>
                   <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeClassForTone(mlTone)}`}>
-                    {mlReachable === true ? "reachable" : mlReachable === false ? "offline" : mlStatus}
+                    {mlReachable === true ? "sẵn sàng" : mlReachable === false ? "mất kết nối" : mlStatus}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {mlReachable === true ? "Sẵn sàng cho DDI/Research pipeline." : "Kiểm tra service ML hoặc bật fallback mode."}
+                  {mlReachable === true ? "Sẵn sàng cho luồng DDI và luồng nghiên cứu." : "Hãy kiểm tra dịch vụ ML hoặc bật cơ chế dự phòng."}
                 </p>
               </div>
 
               <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Runtime Metrics</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Chỉ số vận hành</p>
                 <div className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
-                  <p>Request tổng: <span className="font-semibold text-[var(--text-primary)]">{formatCount(requestCount)}</span></p>
-                  <p>Error tổng: <span className="font-semibold text-[var(--text-primary)]">{formatCount(errorCount)}</span></p>
+                  <p>Tổng request: <span className="font-semibold text-[var(--text-primary)]">{formatCount(requestCount)}</span></p>
+                  <p>Tổng lỗi: <span className="font-semibold text-[var(--text-primary)]">{formatCount(errorCount)}</span></p>
                   <p>
                     Latency TB: <span className="font-semibold text-[var(--text-primary)]">{avgLatencyMs === null ? "--" : `${avgLatencyMs.toFixed(2)} ms`}</span>
                   </p>
@@ -807,14 +824,14 @@ export default function DashboardPage() {
         <section className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Recent Research Activity</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Hoạt Động Gần Đây</p>
               <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Lịch sử truy vấn gần đây</h3>
             </div>
             <Link
               href="/research"
               className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
             >
-              Mở Research
+              Mở tra cứu
             </Link>
           </div>
 
@@ -839,7 +856,7 @@ export default function DashboardPage() {
 
         {alerts.length > 0 ? (
           <section className="rounded-[1.4rem] border border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--status-danger-text)]">Watchlist</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--status-danger-text)]">Lưu Ý Nhanh</p>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {alerts.map((alert) => (
                 <p

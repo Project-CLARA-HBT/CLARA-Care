@@ -233,7 +233,7 @@ export default function AdminObservabilityPanel() {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: cause instanceof Error ? cause.message : "Unable to load observability snapshot."
+        error: cause instanceof Error ? cause.message : "Không thể tải ảnh chụp trạng thái hệ thống."
       }));
     }
   }, []);
@@ -275,13 +275,13 @@ export default function AdminObservabilityPanel() {
     () => [
       {
         id: "requests",
-        label: "Requests",
+        label: "Request",
         color: "#22d3ee",
         values: timeline.map((item) => item.requests)
       },
       {
         id: "errors",
-        label: "Errors",
+        label: "Lỗi",
         color: "#fb7185",
         values: timeline.map((item) => item.errors)
       }
@@ -293,13 +293,13 @@ export default function AdminObservabilityPanel() {
     () => [
       {
         id: "latency",
-        label: "Latency",
+        label: "Độ trễ",
         color: "#60a5fa",
         values: timeline.map((item) => item.latencyMs)
       },
       {
         id: "sourceCoverage",
-        label: "Source coverage",
+        label: "Độ phủ nguồn",
         color: "#34d399",
         values: timeline.map((item) => item.sourceCoverage)
       }
@@ -309,11 +309,11 @@ export default function AdminObservabilityPanel() {
 
   const radarAxes = useMemo(
     () => [
-      { label: "Runtime", value: runtimeStability, max: 100 },
-      { label: "Verification", value: verificationStrength, max: 100 },
-      { label: "Source Coverage", value: sourceCoverage, max: 100 },
-      { label: "Flow Health", value: flowHealth, max: 100 },
-      { label: "API Health", value: apiTone === "ok" ? 95 : apiTone === "warn" ? 68 : 40, max: 100 }
+      { label: "Vận hành", value: runtimeStability, max: 100 },
+      { label: "Kiểm chứng", value: verificationStrength, max: 100 },
+      { label: "Độ phủ", value: sourceCoverage, max: 100 },
+      { label: "Flow", value: flowHealth, max: 100 },
+      { label: "API", value: apiTone === "ok" ? 95 : apiTone === "warn" ? 68 : 40, max: 100 }
     ],
     [apiTone, flowHealth, runtimeStability, sourceCoverage, verificationStrength]
   );
@@ -322,10 +322,10 @@ export default function AdminObservabilityPanel() {
     Array<{ label: string; value: number; tone: "ok" | "warn" | "danger" }>
   >(
     () => [
-      { label: "Runtime Stability", value: Math.round(runtimeStability), tone: runtimeStability < 65 ? "warn" : "ok" },
-      { label: "Verification Strength", value: Math.round(verificationStrength), tone: verificationStrength < 70 ? "warn" : "ok" },
-      { label: "Flow Health", value: Math.round(flowHealth), tone: flowHealth < 60 ? "danger" : "ok" },
-      { label: "Source Coverage", value: Math.round(sourceCoverage), tone: sourceCoverage < 50 ? "warn" : "ok" }
+      { label: "Độ ổn định", value: Math.round(runtimeStability), tone: runtimeStability < 65 ? "warn" : "ok" },
+      { label: "Mức kiểm chứng", value: Math.round(verificationStrength), tone: verificationStrength < 70 ? "warn" : "ok" },
+      { label: "Sức khỏe flow", value: Math.round(flowHealth), tone: flowHealth < 60 ? "danger" : "ok" },
+      { label: "Độ phủ nguồn", value: Math.round(sourceCoverage), tone: sourceCoverage < 50 ? "warn" : "ok" }
     ],
     [flowHealth, runtimeStability, sourceCoverage, verificationStrength]
   );
@@ -336,15 +336,15 @@ export default function AdminObservabilityPanel() {
     Array<{ label: string; status: "ok" | "warn" | "error" | "idle"; note: string }>
   >(
     () => [
-      { label: "Gateway", status: apiTone === "ok" ? "ok" : apiTone === "warn" ? "warn" : "error", note: state.apiStatus },
-      { label: "Role Router", status: state.flow.roleRouter ? "ok" : "warn", note: state.flow.roleRouter ? "ON" : "OFF" },
-      { label: "Intent Router", status: state.flow.intentRouter ? "ok" : "warn", note: state.flow.intentRouter ? "ON" : "OFF" },
+      { label: "Cổng vào", status: apiTone === "ok" ? "ok" : apiTone === "warn" ? "warn" : "error", note: state.apiStatus },
+      { label: "Role Router", status: state.flow.roleRouter ? "ok" : "warn", note: state.flow.roleRouter ? "BẬT" : "TẮT" },
+      { label: "Intent Router", status: state.flow.intentRouter ? "ok" : "warn", note: state.flow.intentRouter ? "BẬT" : "TẮT" },
       {
-        label: "Rule + NLI Verification",
+        label: "Kiểm chứng Rule + NLI",
         status: verificationStackEnabled ? "ok" : "error",
-        note: verificationStackEnabled ? "ON" : "OFF"
+        note: verificationStackEnabled ? "BẬT" : "TẮT"
       },
-      { label: "ML Runtime", status: mlTone === "ok" ? "ok" : mlTone === "warn" ? "warn" : "error", note: state.mlReachable === false ? "offline" : "reachable" }
+      { label: "ML Runtime", status: mlTone === "ok" ? "ok" : mlTone === "warn" ? "warn" : "error", note: state.mlReachable === false ? "mất kết nối" : "sẵn sàng" }
     ],
     [apiTone, mlTone, state.apiStatus, state.flow.intentRouter, state.flow.roleRouter, state.mlReachable, verificationStackEnabled]
   );
@@ -355,8 +355,8 @@ export default function AdminObservabilityPanel() {
     if (apiTone !== "ok") {
       rows.push({
         level: apiTone === "error" ? "critical" : "warn",
-        title: "API runtime degraded",
-        detail: state.apiMessage || "Gateway signals are unstable.",
+        title: "API đang giảm ổn định",
+        detail: state.apiMessage || "Tín hiệu từ cổng vào chưa ổn định.",
         source: "api"
       });
     }
@@ -364,8 +364,8 @@ export default function AdminObservabilityPanel() {
     if (state.mlReachable === false) {
       rows.push({
         level: "critical",
-        title: "ML dependency unreachable",
-        detail: state.mlStatus || "No response from ML runtime.",
+        title: "Không kết nối được ML",
+        detail: state.mlStatus || "Không nhận được phản hồi từ dịch vụ ML.",
         source: "ml"
       });
     }
@@ -373,15 +373,15 @@ export default function AdminObservabilityPanel() {
     if (errorRate >= 15) {
       rows.push({
         level: "critical",
-        title: "Error rate exceeded threshold",
-        detail: `Current error-rate ${formatPercent(errorRate)} is above safety window.`,
+        title: "Tỷ lệ lỗi vượt ngưỡng",
+        detail: `Tỷ lệ lỗi hiện tại ${formatPercent(errorRate)} đang vượt vùng an toàn.`,
         source: "metrics"
       });
     } else if (errorRate >= 8) {
       rows.push({
         level: "warn",
-        title: "Error rate trending up",
-        detail: `Current error-rate is ${formatPercent(errorRate)}.`,
+        title: "Tỷ lệ lỗi đang tăng",
+        detail: `Tỷ lệ lỗi hiện tại là ${formatPercent(errorRate)}.`,
         source: "metrics"
       });
     }
@@ -389,8 +389,8 @@ export default function AdminObservabilityPanel() {
     if (latencyMs >= 1200) {
       rows.push({
         level: "warn",
-        title: "Latency high",
-        detail: `Average latency ${latencyMs}ms is above nominal control band.`,
+        title: "Độ trễ cao",
+        detail: `Độ trễ trung bình ${latencyMs}ms đang cao hơn mức mục tiêu.`,
         source: "metrics"
       });
     }
@@ -398,8 +398,8 @@ export default function AdminObservabilityPanel() {
     if (sourceCoverage < 50 && state.totalSources > 0) {
       rows.push({
         level: "warn",
-        title: "Low source coverage",
-        detail: `${state.enabledSources}/${state.totalSources} sources enabled.`,
+        title: "Độ phủ nguồn thấp",
+        detail: `${state.enabledSources}/${state.totalSources} nguồn đang bật.`,
         source: "control-tower"
       });
     }
@@ -407,8 +407,8 @@ export default function AdminObservabilityPanel() {
     if (!verificationStackEnabled) {
       rows.push({
         level: "critical",
-        title: "Verification stack disabled",
-        detail: "Rule verification hoặc NLI stack đang OFF, cần bật để giữ guardrail production.",
+        title: "Stack kiểm chứng đang tắt",
+        detail: "Rule verification hoặc NLI stack đang tắt, cần bật để giữ guardrail production.",
         source: "flow"
       });
     }
@@ -440,7 +440,7 @@ export default function AdminObservabilityPanel() {
   const flowRows: Array<{ label: string; enabled: boolean; detail: string }> = [
     { label: "Role Router", enabled: state.flow.roleRouter, detail: "Định tuyến theo vai trò người dùng." },
     { label: "Intent Router", enabled: state.flow.intentRouter, detail: "Tách ý định để chọn pipeline phù hợp." },
-    { label: "Rule Verification", enabled: state.flow.ruleVerification, detail: "Kiểm chứng theo luật/policy trước phản hồi." },
+    { label: "Rule Verification", enabled: state.flow.ruleVerification, detail: "Kiểm chứng theo luật và policy trước phản hồi." },
     { label: "NLI Model", enabled: state.flow.nliModel, detail: "Mô hình NLI cho quan hệ claim-evidence." },
     { label: "RAG NLI", enabled: state.flow.ragNli, detail: "Bật bước NLI trong pipeline RAG." },
     { label: "Neural Reranker", enabled: state.flow.ragReranker, detail: "Rerank evidence bằng mô hình neural." },
@@ -450,6 +450,38 @@ export default function AdminObservabilityPanel() {
     { label: "Web Retrieval", enabled: state.flow.webRetrieval, detail: "Bổ sung khi nguồn nội bộ thiếu ngữ cảnh." },
     { label: "File Retrieval", enabled: state.flow.fileRetrieval, detail: "Truy xuất dữ liệu tài liệu đã upload." }
   ];
+
+  const friendlySummary = useMemo(() => {
+    if (state.error) {
+      return {
+        tone: "critical",
+        title: "Không tải được dữ liệu giám sát",
+        detail: "Vui lòng làm mới lại hoặc kiểm tra kết nối tới backend."
+      } as const;
+    }
+
+    if (alerts.some((alert) => alert.level === "critical")) {
+      return {
+        tone: "critical",
+        title: "Cần xử lý ngay",
+        detail: "Có cảnh báo mức nghiêm trọng. Nên ưu tiên xử lý trước khi tiếp tục vận hành."
+      } as const;
+    }
+
+    if (alerts.some((alert) => alert.level === "warn")) {
+      return {
+        tone: "warn",
+        title: "Có tín hiệu cần theo dõi",
+        detail: "Hệ thống vẫn chạy nhưng một số chỉ số đang lệch mục tiêu."
+      } as const;
+    }
+
+    return {
+      tone: "ok",
+      title: "Hệ thống đang ổn định",
+      detail: "Các chỉ số chính đang trong vùng an toàn."
+    } as const;
+  }, [alerts, state.error]);
 
   return (
     <div className="space-y-4">
@@ -488,6 +520,20 @@ export default function AdminObservabilityPanel() {
             {state.error}
           </p>
         ) : null}
+
+        <div
+          className={[
+            "relative z-[1] mt-3 rounded-lg border px-3 py-2 text-sm",
+            friendlySummary.tone === "critical"
+              ? "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+              : friendlySummary.tone === "warn"
+                ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+          ].join(" ")}
+        >
+          <p className="font-semibold">{friendlySummary.title}</p>
+          <p className="mt-0.5 text-xs opacity-90">{friendlySummary.detail}</p>
+        </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -584,7 +630,7 @@ export default function AdminObservabilityPanel() {
         <article className="futura-card rounded-2xl p-4">
           <ConduitFlowLine
             title="Luồng xử lý"
-            description="Gateway -> định tuyến -> kiểm chứng -> ML"
+            description="Cổng vào -> định tuyến -> kiểm chứng -> ML"
             stages={pipelineStages}
           />
 
@@ -628,6 +674,8 @@ export default function AdminObservabilityPanel() {
 
           <div className="mt-3 space-y-2">
             {alerts.map((alert, index) => {
+              const levelLabel =
+                alert.level === "critical" ? "nghiêm trọng" : alert.level === "warn" ? "cảnh báo" : "ổn định";
               const toneClass =
                 alert.level === "critical"
                   ? "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
@@ -638,7 +686,7 @@ export default function AdminObservabilityPanel() {
               return (
                 <div key={`${alert.title}-${index}`} className={["rounded-lg border p-3", toneClass].join(" ")}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em]">{alert.level}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em]">{levelLabel}</p>
                     <span className="rounded-full border border-current/30 px-2 py-0.5 text-[10px] uppercase">{alert.source}</span>
                   </div>
                   <p className="mt-1 text-sm font-semibold">{alert.title}</p>
