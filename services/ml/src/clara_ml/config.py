@@ -309,6 +309,26 @@ class Settings(BaseSettings):
         ge=0,
         le=64,
     )
+    council_neural_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_NEURAL_ENABLED",
+    )
+    council_neural_shadow_mode: bool = Field(
+        default=True,
+        validation_alias="COUNCIL_NEURAL_SHADOW_MODE",
+    )
+    council_neural_medium_threshold: float = Field(
+        default=0.45,
+        validation_alias="COUNCIL_NEURAL_MEDIUM_THRESHOLD",
+        ge=0.0,
+        le=1.0,
+    )
+    council_neural_high_threshold: float = Field(
+        default=0.72,
+        validation_alias="COUNCIL_NEURAL_HIGH_THRESHOLD",
+        ge=0.0,
+        le=1.0,
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

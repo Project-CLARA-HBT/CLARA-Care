@@ -707,6 +707,15 @@ def test_council_run_returns_expected_schema():
         assert item["recommendation"]
 
     assert isinstance(body["conflict_list"], list)
+    assert isinstance(body["council_consensus"], dict)
+    assert body["council_consensus"]["winning_triage"] in {
+        "routine_follow_up",
+        "same_day_review",
+        "emergency_escalation",
+    }
+    assert isinstance(body["council_consensus"]["vote_breakdown"], dict)
+    assert 0.0 <= body["council_consensus"]["support_ratio"] <= 1.0
+    assert 0.0 <= body["council_consensus"]["disagreement_index"] <= 1.0
     assert isinstance(body["consensus_summary"], str)
     assert body["consensus_summary"]
     assert isinstance(body["divergence_notes"], list)
@@ -728,6 +737,24 @@ def test_council_run_returns_expected_schema():
     assert isinstance(body["details"], dict)
     assert isinstance(body["citations"], list)
     assert len(body["citations"]) >= 1
+    assert isinstance(body["citation_quality"], dict)
+    assert body["citation_quality"]["total_citations"] == len(body["citations"])
+    for item in body["citations"]:
+        assert 0.0 <= item["evidence_strength"] <= 1.0
+        assert item["quality_flag"] in {
+            "high_signal",
+            "supporting_signal",
+            "context_only",
+            "negated_context",
+        }
+    assert isinstance(body["reasoning_timeline"], list)
+    assert len(body["reasoning_timeline"]) >= 6
+    steps = [item["step"] for item in body["reasoning_timeline"]]
+    assert "consensus_decision" in steps
+    assert "safety_gate" in steps
+    assert isinstance(body["neural_risk"], dict)
+    assert body["neural_risk"]["enabled"] is False
+    assert body["neural_risk"]["model_version"] == "council-neural-shadow-v1"
     assert isinstance(body["research"], dict)
     assert isinstance(body["deepdive"], dict)
     assert body["analyze"]["consensus_triage"] in {
@@ -759,12 +786,50 @@ def test_council_run_emergency_escalation_on_red_flags():
     assert isinstance(body["emergency_escalation"]["red_flags"], list)
     assert len(body["emergency_escalation"]["red_flags"]) >= 1
     assert body["emergency_escalation"]["action"] == "immediate_emergency_referral"
+    metadata = body["emergency_escalation"]["metadata"]
+    assert metadata["priority"] == "critical"
+    assert metadata["recommended_sla_minutes"] == 5
+    assert metadata["requires_human_handoff"] is True
+    assert metadata["generated_at_utc"].endswith("Z")
+    assert isinstance(metadata["trigger_evidence"], list)
+    assert len(metadata["trigger_evidence"]) >= 1
     assert body["estimated_duration_minutes"] == 5
     assert "Emergency escalation triggered" in body["final_recommendation"]
     assert body["needs_more_info"] is False
     assert isinstance(body["emergency_escalation"]["negated_red_flags"], list)
     assert body["analyze"]["emergency_triggered"] is True
     assert body["confidence_level"] in {"medium", "high"}
+
+
+def test_council_run_supports_neural_shadow_scoring():
+    response = client.post(
+        "/v1/council/run",
+        json={
+            "symptoms": ["fatigue", "palpitations"],
+            "labs": {"egfr": 55, "glucose": 280},
+            "medications": ["metformin", "ibuprofen", "aspirin"],
+            "history": ["type 2 diabetes", "chronic kidney disease"],
+            "specialists": ["cardiology", "endocrinology", "nephrology"],
+            "council_neural_enabled": True,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+
+    assert isinstance(body["neural_risk"], dict)
+    assert body["neural_risk"]["enabled"] is True
+    assert body["neural_risk"]["shadow_mode"] is True
+    assert body["neural_risk"]["model_version"] == "council-neural-shadow-v1"
+    assert body["neural_risk"]["risk_band"] in {"low", "medium", "high"}
+    assert 0.0 <= body["neural_risk"]["risk_probability"] <= 1.0
+    assert body["neural_risk"]["recommended_triage"] in {
+        "routine_follow_up",
+        "same_day_review",
+        "emergency_escalation",
+    }
+    assert isinstance(body["neural_risk"]["feature_map"], dict)
+    assert isinstance(body["neural_risk"]["top_contributors"], list)
+    assert len(body["neural_risk"]["top_contributors"]) >= 1
 
 
 def test_council_run_negation_aware_and_insufficient_data_gate():
@@ -793,6 +858,8 @@ def test_council_run_negation_aware_and_insufficient_data_gate():
     assert "insufficient" in body["final_recommendation"].lower()
     assert isinstance(body["citations"], list)
     assert any(item.get("evidence_type") == "negated_symptom" for item in body["citations"])
+    assert body["citation_quality"]["negated_context_count"] >= 1
+    assert body["emergency_escalation"]["metadata"]["priority"] in {"same_day", "routine", "urgent"}
 
 
 def test_council_consult_with_transcript_and_overrides(monkeypatch: pytest.MonkeyPatch):
