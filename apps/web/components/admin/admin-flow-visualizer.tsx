@@ -40,6 +40,12 @@ export type FlowNodeId =
   | "deepseek_fallback"
   | "responder"
   | "flow_event_stream"
+  | "active_eval_scheduler"
+  | "active_eval_baseline"
+  | "active_eval_mine"
+  | "active_eval_rerun"
+  | "active_eval_compare"
+  | "active_eval_strict_gate"
   | "baseline_regression"
   | "evaluation_feedback";
 
@@ -77,7 +83,7 @@ type AdminFlowVisualizerProps = {
   selectedNodeId?: FlowNodeId | null;
 };
 
-const SCENE_WIDTH = 4280;
+const SCENE_WIDTH = 5200;
 const SCENE_HEIGHT = 2440;
 const NODE_CARD_WIDTH = 252;
 const NODE_CARD_HEIGHT = 216;
@@ -450,6 +456,78 @@ const NODES: FlowNodeDef[] = [
     tone: "teal",
   },
   {
+    id: "active_eval_scheduler",
+    title: "Active Eval Scheduler",
+    subtitle: "cron + manual dispatch",
+    description:
+      "Khởi tạo active-eval loop theo schedule và workflow_dispatch, đồng bộ run id, strict mode và artifact scope.",
+    riskNote:
+      "Nếu scheduler không đồng bộ strict inputs, cùng một pipeline có thể pass/fail lệch giữa schedule và manual run.",
+    x: 3360,
+    y: 760,
+    tone: "indigo",
+  },
+  {
+    id: "active_eval_baseline",
+    title: "Active Eval: Baseline",
+    subtitle: "stage 1/4 baseline KPI run",
+    description:
+      "Chạy baseline KPI run, tạo artifact chuẩn làm mốc trước khi mine hard negatives.",
+    riskNote:
+      "Thiếu baseline artifact thì toàn bộ loop mất mốc so sánh và strict gate phải fail.",
+    x: 3700,
+    y: 760,
+    tone: "sky",
+  },
+  {
+    id: "active_eval_mine",
+    title: "Active Eval: Mine",
+    subtitle: "stage 2/4 hard-negative mining",
+    description:
+      "Khai thác hard negatives từ baseline artifacts + production flow events để mở rộng regression set.",
+    riskNote:
+      "Mining lỗi hoặc dữ liệu rỗng kéo dài sẽ khiến loop tự tin giả và không học được regression thật.",
+    x: 4020,
+    y: 760,
+    tone: "teal",
+  },
+  {
+    id: "active_eval_rerun",
+    title: "Active Eval: Rerun",
+    subtitle: "stage 3/4 post-negative rerun",
+    description:
+      "Re-run KPI sau mining (luôn chạy để giữ stage chain deterministic cho strict gate).",
+    riskNote:
+      "Nếu bỏ rerun khi mined set rỗng, strict stage chain không đầy đủ và gate không minh bạch.",
+    x: 4340,
+    y: 760,
+    tone: "amber",
+  },
+  {
+    id: "active_eval_compare",
+    title: "Active Eval: Compare",
+    subtitle: "stage 4/4 compare with previous baseline",
+    description:
+      "So sánh run hiện tại với baseline trước, tính drop-rate/latency drift và verdict compare_go.",
+    riskNote:
+      "Không có compare hoặc compare thiếu previous baseline thì strict gate phải xem là incomplete.",
+    x: 4660,
+    y: 760,
+    tone: "indigo",
+  },
+  {
+    id: "active_eval_strict_gate",
+    title: "Strict Gate Surface",
+    subtitle: "gate_passed + stage_chain + workflow outcome",
+    description:
+      "Hợp nhất `gate_passed`, `strict_stage_chain_ok`, outcome run loop và phát verdict strict gate cho PR/main.",
+    riskNote:
+      "Gate không surfaced rõ sẽ gây merge sai chất lượng dù loop đã phát hiện regression.",
+    x: 4660,
+    y: 1060,
+    tone: "rose",
+  },
+  {
     id: "baseline_regression",
     title: "Baseline Regression Compare",
     subtitle: "current vs previous KPI report",
@@ -520,6 +598,12 @@ const NODE_GRID_LAYOUT: Record<FlowNodeId, { col: number; row: number }> = {
   policy_gate: { col: 6, row: 5 },
   deepseek_fallback: { col: 6, row: 6 },
   flow_event_stream: { col: 7, row: 4 },
+  active_eval_scheduler: { col: 8, row: 3 },
+  active_eval_baseline: { col: 8, row: 4 },
+  active_eval_mine: { col: 8, row: 5 },
+  active_eval_rerun: { col: 8, row: 6 },
+  active_eval_compare: { col: 8, row: 7 },
+  active_eval_strict_gate: { col: 8, row: 8 },
   baseline_regression: { col: 7, row: 5 },
   evaluation_feedback: { col: 7, row: 6 },
 };
@@ -650,9 +734,16 @@ const EDGES: FlowEdgeDef[] = [
   { from: "citation_selection", to: "responder", bend: 66 },
   { from: "policy_gate", to: "responder", bend: 10 },
   { from: "responder", to: "flow_event_stream", bend: 64, label: "persist events" },
-  { from: "flow_event_stream", to: "evaluation_feedback", bend: 84, label: "mine negatives" },
-  { from: "evaluation_feedback", to: "baseline_regression", bend: -58, label: "compare runs" },
-  { from: "baseline_regression", to: "planner", bend: -520, label: "regression gate" },
+  { from: "flow_event_stream", to: "active_eval_scheduler", bend: 62, label: "schedule + dispatch" },
+  { from: "active_eval_scheduler", to: "active_eval_baseline", bend: 28, label: "stage 1/4" },
+  { from: "active_eval_baseline", to: "evaluation_feedback", bend: 116, label: "baseline artifacts" },
+  { from: "evaluation_feedback", to: "active_eval_mine", bend: -56, label: "stage 2/4 mine" },
+  { from: "active_eval_mine", to: "active_eval_rerun", bend: -10, label: "stage 3/4 rerun" },
+  { from: "active_eval_rerun", to: "active_eval_compare", bend: -10, label: "stage 4/4 compare" },
+  { from: "active_eval_compare", to: "baseline_regression", bend: 126, label: "compare_go" },
+  { from: "baseline_regression", to: "active_eval_strict_gate", bend: -74, label: "gate inputs" },
+  { from: "active_eval_strict_gate", to: "planner", bend: -690, label: "strict gate feedback" },
+  { from: "active_eval_strict_gate", to: "responder", bend: -280, label: "surface verdict" },
   { from: "planner", to: "deepseek_fallback", fallback: true, bend: 320, label: "degraded path" },
   { from: "evidence_index", to: "deepseek_fallback", fallback: true, bend: 260 },
   { from: "policy_gate", to: "deepseek_fallback", fallback: true, bend: 146 },

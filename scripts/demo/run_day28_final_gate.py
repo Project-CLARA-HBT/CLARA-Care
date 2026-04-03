@@ -24,6 +24,27 @@ def _latest_by_mtime(pattern: str) -> Path | None:
     return candidates[-1] if candidates else None
 
 
+def _detect_active_eval_summary() -> Path | None:
+    candidates = sorted(
+        ROOT.glob("artifacts/round2/*/active-eval-summary.json"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    if not candidates:
+        return None
+
+    def _is_strict_pass(path: Path) -> bool:
+        try:
+            payload = _safe_load_json(path)
+        except Exception:
+            return False
+        return bool(payload.get("gate_passed")) and bool(payload.get("strict_stage_chain_ok"))
+
+    strict_passes = [path for path in candidates if _is_strict_pass(path)]
+    if strict_passes:
+        return strict_passes[-1]
+    return candidates[-1]
+
+
 def _detect_day27_kpi() -> Path | None:
     preferred = sorted(
         ROOT.glob("artifacts/round2/day27*/kpi-report/kpi-report.json"),
@@ -98,7 +119,7 @@ def main() -> None:
     markdown_out.parent.mkdir(parents=True, exist_ok=True)
 
     day18_path = _latest_by_mtime("data/demo/day18-phase2-gate-*.json")
-    active_eval_path = _latest_by_mtime("artifacts/round2/*/active-eval-summary.json")
+    active_eval_path = _detect_active_eval_summary()
     day27_kpi_path = _detect_day27_kpi()
 
     day18_payload = _safe_load_json(day18_path) if day18_path else {}
@@ -111,9 +132,17 @@ def main() -> None:
     phase2_gate_pass = bool(day18_payload.get("gate_passed"))
     active_eval_gate_pass = bool(active_eval_payload.get("gate_passed"))
     day27_live_executed = bool(day27_kpi_payload.get("live_executed"))
-    day27_go_value = str(day27_go_payload.get("decision") or day27_go_payload.get("verdict") or "NO-GO").upper()
-    if day27_go_value not in {"GO", "NO-GO"}:
+    go_field = day27_go_payload.get("go")
+    if go_field is True:
+        day27_go_value = "GO"
+    elif go_field is False:
         day27_go_value = "NO-GO"
+    else:
+        day27_go_value = str(
+            day27_go_payload.get("decision") or day27_go_payload.get("verdict") or "NO-GO"
+        ).upper()
+        if day27_go_value not in {"GO", "NO-GO"}:
+            day27_go_value = "NO-GO"
 
     final_go = phase2_gate_pass and active_eval_gate_pass and day27_live_executed and day27_go_value == "GO"
 

@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-04-03T02:18:56.342888+00:00",
+  "checks": {
+    "phase2_gate_pass": true,
+    "active_eval_gate_pass": true,
+    "day27_live_executed": true,
+    "day27_go_no_go": "GO"
+  },
+  "final_gate": {
+    "go": true,
+    "release_tag_allowed": true
+  },
+  "inputs": {
+    "day18_gate_artifact": "data/demo/day18-phase2-gate-20260402-185335.json",
+    "active_eval_summary": "artifacts/round2/day24-scope-smoke3-021653/active-eval-summary.json",
+    "day27_kpi_report": "artifacts/round2/day27-phase3-live-20260403-rerun/kpi-report/kpi-report.json",
+    "day27_go_no_go": "artifacts/round2/day27-phase3-live-20260403-rerun/go-no-go/go-no-go.json"
+  }
+}

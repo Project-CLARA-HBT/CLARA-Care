@@ -301,19 +301,23 @@ Day 23
 
 Day 24
 - [x] Nâng active-eval loop: baseline -> mine -> rerun -> compare.
+- [x] Harden stage-chain: luôn chạy rerun stage, xuất `strict_stage_chain_ok` + `stage_failure_reasons`.
 
 Day 25
 - [x] Workflow schedule + artifact upload + strict gate.
+- [x] Surface strict gate rõ ràng trên workflow summary (outcome, reason) trước khi fail job.
 
 Day 26
 - [x] Update canvas flow theo runtime thật.
+- [x] Canvas hiển thị rõ chuỗi Active Eval 4 stage + strict gate runtime verdict.
 
 Day 27
 - [x] Full stack live KPI run + canary deploy.
 
 Day 28 (Final Gate)
-- [ ] Gate phase3 đạt ngưỡng.
-- [x] Report tổng kết Final Gate đã tạo (release tag bị chặn khi NO-GO).
+- [x] Gate phase3 đạt ngưỡng.
+- [x] Report tổng kết Final Gate đã tạo.
+- [x] Release tag `phase3-ready` sau khi GO.
 
 ## 7. Checklist vận hành mỗi ngày
 1. [ ] Standup 15 phút: blocker, owner, ETA.

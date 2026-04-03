@@ -732,6 +732,36 @@ def _detect_drugs_from_text(
     return detections
 
 
+def _enforce_low_confidence_manual_confirm(
+    detections: list[CabinetScanDetection],
+) -> list[CabinetScanDetection]:
+    enforced: list[CabinetScanDetection] = []
+    for detection in detections:
+        requires_manual_confirm = (
+            detection.requires_manual_confirm
+            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+        )
+        if requires_manual_confirm:
+            enforced.append(
+                detection.model_copy(
+                    update={
+                        "requires_manual_confirm": True,
+                        "confirmed": False,
+                    }
+                )
+            )
+            continue
+        enforced.append(
+            detection.model_copy(
+                update={
+                    "requires_manual_confirm": False,
+                    "confirmed": True,
+                }
+            )
+        )
+    return enforced
+
+
 def _parse_ocr_endpoints(raw: str) -> list[str]:
     entries = [entry.strip() for entry in raw.split(",")]
     return [entry if entry.startswith("/") else f"/{entry}" for entry in entries if entry]
@@ -1129,12 +1159,15 @@ def scan_cabinet_text(
 ) -> CabinetScanTextResponse:
     _require_user(token, db)
     correction = _apply_ocr_correction(payload.text)
-    return CabinetScanTextResponse(
-        detections=_detect_drugs_from_text(
+    detections = _enforce_low_confidence_manual_confirm(
+        _detect_drugs_from_text(
             correction.corrected_text,
             db=db,
             skip_ocr_correction=True,
-        ),
+        )
+    )
+    return CabinetScanTextResponse(
+        detections=detections,
         extracted_text=correction.corrected_text[:4000],
         ocr_provider="ocr-postprocess",
         ocr_endpoint="local-ocr-correction",
@@ -1165,10 +1198,12 @@ async def scan_cabinet_file(
         content_type=content_type,
     )
     correction = _apply_ocr_correction(extracted_text)
-    detections = _detect_drugs_from_text(
-        correction.corrected_text,
-        db=db,
-        skip_ocr_correction=True,
+    detections = _enforce_low_confidence_manual_confirm(
+        _detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        )
     )
     return CabinetScanTextResponse(
         detections=detections,

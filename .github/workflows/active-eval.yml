@@ -171,7 +171,9 @@ jobs:
           fi
 
       - name: Run active eval loop
+        id: run_loop
         if: ${{ steps.guard.outputs.should_run == 'true' }}
+        continue-on-error: true
         env:
           CLARA_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
           CLARA_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
@@ -199,16 +201,25 @@ jobs:
           "${cmd[@]}"
 
       - name: Publish active eval stage status
-        if: ${{ steps.guard.outputs.should_run == 'true' }}
+        if: ${{ always() && steps.guard.outputs.should_run == 'true' }}
+        id: publish
         env:
           RUN_ID: ${{ steps.ctx.outputs.run_id }}
           STRICT_INPUT: ${{ steps.ctx.outputs.strict }}
+          RUN_LOOP_OUTCOME: ${{ steps.run_loop.outcome }}
+          RUN_LOOP_CONCLUSION: ${{ steps.run_loop.conclusion }}
+          TRIGGER_EVENT: ${{ github.event_name }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           summary_json="artifacts/round2/${RUN_ID}/active-eval-summary.json"
           if [ ! -f "${summary_json}" ]; then
             echo "::warning::Missing active eval summary JSON at ${summary_json}"
-            exit 0
+            {
+              echo "strict_gate_passed=false"
+              echo "strict_gate_reason=missing_summary_json"
+            } >> "$GITHUB_OUTPUT"
+            exit 1
           fi
 
           python - <<'PY'
@@ -223,16 +234,30 @@ jobs:
           mining_done = bool(stage.get("mining_done"))
           post_done = bool(stage.get("post_run_done"))
           compare_done = bool(stage.get("compare_done"))
+          strict_chain_ok = bool(payload.get("strict_stage_chain_ok"))
+          failure_count = int(payload.get("stage_failure_count") or 0)
+          failure_reasons = payload.get("stage_failure_reasons") or []
           gate_passed = bool(payload.get("gate_passed"))
           strict = str(os.environ.get("STRICT_INPUT", "true")).strip().lower() in {"1", "true", "yes", "on"}
+          run_loop_outcome = os.environ.get("RUN_LOOP_OUTCOME", "")
+          run_loop_conclusion = os.environ.get("RUN_LOOP_CONCLUSION", "")
+          trigger_event = os.environ.get("TRIGGER_EVENT", "")
+          branch_name = os.environ.get("BRANCH_NAME", "")
 
           lines = [
               "## Active Eval Stage Status",
               "",
+              f"- trigger_event: `{trigger_event}`",
+              f"- branch: `{branch_name}`",
+              f"- run_loop_outcome: `{run_loop_outcome}`",
+              f"- run_loop_conclusion: `{run_loop_conclusion}`",
               f"- baseline_done: `{baseline_done}`",
               f"- mining_done: `{mining_done}`",
               f"- post_run_done: `{post_done}`",
               f"- compare_done: `{compare_done}`",
+              f"- strict_stage_chain_ok: `{strict_chain_ok}`",
+              f"- stage_failure_count: `{failure_count}`",
+              f"- stage_failure_reasons: `{failure_reasons}`",
               f"- gate_passed: `{gate_passed}`",
               f"- strict_input: `{strict}`",
           ]
@@ -240,9 +265,29 @@ jobs:
           existing = summary_file.read_text(encoding="utf-8") if summary_file.exists() else ""
           summary_file.write_text(existing + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
 
-          if strict and not gate_passed:
-              raise SystemExit("Strict active-eval gate failed")
+          strict_gate_passed = (not strict) or (gate_passed and strict_chain_ok and run_loop_outcome == "success")
+          strict_gate_reason = "ok" if strict_gate_passed else "strict_gate_failed"
+          if strict and run_loop_outcome != "success":
+              strict_gate_reason = "run_loop_failed_or_cancelled"
+          elif strict and (not strict_chain_ok):
+              strict_gate_reason = "strict_stage_chain_incomplete"
+          elif strict and (not gate_passed):
+              strict_gate_reason = "gate_passed_false"
+
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as fh:
+              fh.write(f"strict_gate_passed={'true' if strict_gate_passed else 'false'}\n")
+              fh.write(f"strict_gate_reason={strict_gate_reason}\n")
           PY
+
+      - name: Enforce strict gate outcome
+        if: ${{ always() && steps.guard.outputs.should_run == 'true' && steps.ctx.outputs.strict == 'true' }}
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.publish.outputs.strict_gate_passed }}" != "true" ]; then
+            echo "::error::Active-eval strict gate failed (${{ steps.publish.outputs.strict_gate_reason }})"
+            exit 1
+          fi
 
       - name: Skip summary
         if: ${{ steps.guard.outputs.should_run != 'true' }}

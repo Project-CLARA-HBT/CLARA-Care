@@ -277,6 +277,16 @@ def test_scan_text_keeps_manual_confirm_for_low_confidence_after_correction() ->
     assert panadol_detection["confirmed"] is False
     assert panadol_detection["confidence"] < 0.9
 
+    # Correction is applied, but low-confidence detections still require explicit confirm at import.
+    import_response = client.post(
+        "/api/v1/careguard/cabinet/import-detections",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"detections": detections},
+    )
+    assert import_response.status_code == 422
+    detail = import_response.json()["detail"]
+    assert detail["error"] == "manual_confirmation_required"
+
 
 def test_import_detection_rejects_low_confidence_without_confirmation() -> None:
     token = _login("scan-reject-user@example.com")

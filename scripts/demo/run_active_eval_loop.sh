@@ -30,6 +30,8 @@ MINING_DONE="false"
 POST_RUN_DONE="false"
 COMPARE_DONE="false"
 GATE_PASSED="true"
+STRICT_STAGE_CHAIN_OK="false"
+STAGE_FAILURES=()
 
 usage() {
   cat <<'EOF'
@@ -142,6 +144,13 @@ log() {
   printf '[active-eval] %s\n' "$*"
 }
 
+mark_stage_failure() {
+  local reason="$1"
+  STAGE_FAILURES+=("$reason")
+  GATE_PASSED="false"
+  log "Stage failure: ${reason}"
+}
+
 run_kpi() {
   local target_run_id="$1"
   local extra_env_name="$2"
@@ -177,6 +186,29 @@ run_kpi() {
 
   log "Run KPI (${extra_env_name}) -> ${target_run_id}"
   "${cmd[@]}"
+}
+
+read_go_no_go() {
+  local run_dir="$1"
+  local go_path="${run_dir}/go-no-go/go-no-go.json"
+  if [[ ! -f "$go_path" ]]; then
+    echo "unknown"
+    return
+  fi
+  "$PYTHON_BIN" - "$go_path" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+go = payload.get("go")
+if go is True:
+    print("true")
+elif go is False:
+    print("false")
+else:
+    print("unknown")
+PY
 }
 
 count_jsonl_rows() {
@@ -239,85 +271,120 @@ discover_previous_kpi() {
 }
 
 # (a) baseline KPI
+set +e
 run_kpi "$BASE_RUN_ID" "baseline"
-if [[ ! -d "$ARTIFACT_RUN_BASE" ]]; then
-  echo "[active-eval] baseline run artifact missing: ${ARTIFACT_RUN_BASE}" >&2
-  exit 3
+baseline_rc=$?
+set -e
+if [[ "$baseline_rc" -eq 0 && -d "$ARTIFACT_RUN_BASE" ]]; then
+  BASELINE_DONE="true"
+else
+  mark_stage_failure "baseline_failed"
 fi
-BASELINE_DONE="true"
+BASELINE_GO="$(read_go_no_go "$ARTIFACT_RUN_BASE")"
+if [[ "$BASELINE_GO" != "true" ]]; then
+  mark_stage_failure "baseline_go_no_go_failed"
+fi
 
 # (b) mine hard negatives from latest run
-if [[ "${PULL_PRODUCTION_LOGS}" == "true" ]]; then
-  export_cmd=(
-    "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/export_production_flow_events.py"
-    --api-base "$API_BASE"
-    --output "$PRODUCTION_LOG_FILE"
-    --source "$PRODUCTION_LOG_SOURCE"
-    --limit "$PRODUCTION_LOG_LIMIT"
+if [[ "$BASELINE_DONE" == "true" ]]; then
+  if [[ "${PULL_PRODUCTION_LOGS}" == "true" ]]; then
+    export_cmd=(
+      "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/export_production_flow_events.py"
+      --api-base "$API_BASE"
+      --output "$PRODUCTION_LOG_FILE"
+      --source "$PRODUCTION_LOG_SOURCE"
+      --limit "$PRODUCTION_LOG_LIMIT"
+    )
+    if [[ -n "$DOCTOR_TOKEN" ]]; then
+      export_cmd+=(--token "$DOCTOR_TOKEN")
+    elif [[ -n "$TOKEN" ]]; then
+      export_cmd+=(--token "$TOKEN")
+    elif [[ -n "$DOCTOR_EMAIL" && -n "$DOCTOR_PASSWORD" ]]; then
+      export_cmd+=(--email "$DOCTOR_EMAIL" --password "$DOCTOR_PASSWORD")
+    elif [[ -n "$EMAIL" && -n "$PASSWORD" ]]; then
+      export_cmd+=(--email "$EMAIL" --password "$PASSWORD")
+    fi
+    log "Export production flow-events from API"
+    if "${export_cmd[@]}"; then
+      CONVERSATION_LOGS+=("$PRODUCTION_LOG_FILE")
+    else
+      log "Warning: export production flow-events failed; continue mining without prod flow logs"
+    fi
+  fi
+
+  mine_cmd=(
+    "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/mine_hard_negatives.py"
+    --run-dir "$ARTIFACT_RUN_BASE"
+    --output "$NEGATIVE_SET"
+    --limit "$LIMIT"
   )
-  if [[ -n "$DOCTOR_TOKEN" ]]; then
-    export_cmd+=(--token "$DOCTOR_TOKEN")
-  elif [[ -n "$TOKEN" ]]; then
-    export_cmd+=(--token "$TOKEN")
-  elif [[ -n "$DOCTOR_EMAIL" && -n "$DOCTOR_PASSWORD" ]]; then
-    export_cmd+=(--email "$DOCTOR_EMAIL" --password "$DOCTOR_PASSWORD")
-  elif [[ -n "$EMAIL" && -n "$PASSWORD" ]]; then
-    export_cmd+=(--email "$EMAIL" --password "$PASSWORD")
-  fi
-  log "Export production flow-events from API"
-  if "${export_cmd[@]}"; then
-    CONVERSATION_LOGS+=("$PRODUCTION_LOG_FILE")
+  set +u
+  for item in "${CONVERSATION_LOGS[@]}"; do
+    mine_cmd+=(--conversation-log "$item")
+  done
+  set -u
+
+  log "Mine hard negatives from ${BASE_RUN_ID}"
+  set +e
+  "${mine_cmd[@]}"
+  mine_rc=$?
+  set -e
+  if [[ "$mine_rc" -eq 0 ]]; then
+    MINING_DONE="true"
   else
-    log "Warning: export production flow-events failed; continue mining without prod flow logs"
+    mark_stage_failure "negative_mining_failed"
   fi
+else
+  mark_stage_failure "negative_mining_skipped_due_baseline_failure"
 fi
-
-mine_cmd=(
-  "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/mine_hard_negatives.py"
-  --run-dir "$ARTIFACT_RUN_BASE"
-  --output "$NEGATIVE_SET"
-  --limit "$LIMIT"
-)
-set +u
-for item in "${CONVERSATION_LOGS[@]}"; do
-  mine_cmd+=(--conversation-log "$item")
-done
-set -u
-
-log "Mine hard negatives from ${BASE_RUN_ID}"
-"${mine_cmd[@]}"
 
 NEGATIVE_COUNT="$(count_jsonl_rows "$NEGATIVE_SET")"
 log "Mined negatives: ${NEGATIVE_COUNT}"
-MINING_DONE="true"
 
-# (c) re-run KPI after mining (if any)
+# (c) re-run KPI after mining (always run to keep strict stage chain deterministic)
 POST_EXECUTED="false"
-if [[ "$NEGATIVE_COUNT" -gt 0 ]]; then
-  export CLARA_ACTIVE_NEGATIVE_SET="$NEGATIVE_SET"
-  run_kpi "$POST_RUN_ID" "post-negative"
-  unset CLARA_ACTIVE_NEGATIVE_SET || true
-  POST_EXECUTED="true"
-  if [[ ! -d "$ARTIFACT_RUN_POST" ]]; then
-    echo "[active-eval] post-negative run artifact missing: ${ARTIFACT_RUN_POST}" >&2
-    exit 4
+if [[ "$BASELINE_DONE" == "true" && "$MINING_DONE" == "true" ]]; then
+  if [[ "$NEGATIVE_COUNT" -gt 0 ]]; then
+    export CLARA_ACTIVE_NEGATIVE_SET="$NEGATIVE_SET"
+    log "Run post-negative KPI with mined negatives"
+  else
+    unset CLARA_ACTIVE_NEGATIVE_SET || true
+    log "Run post-negative KPI without mined negatives (stage-chain enforcement)"
   fi
-  POST_RUN_DONE="true"
+  set +e
+  run_kpi "$POST_RUN_ID" "post-negative"
+  post_rc=$?
+  set -e
+  unset CLARA_ACTIVE_NEGATIVE_SET || true
+  if [[ "$post_rc" -eq 0 && -d "$ARTIFACT_RUN_POST" ]]; then
+    POST_EXECUTED="true"
+    POST_RUN_DONE="true"
+  else
+    mark_stage_failure "post_rerun_failed"
+  fi
+  POST_GO="$(read_go_no_go "$ARTIFACT_RUN_POST")"
+  if [[ "$POST_GO" != "true" ]]; then
+    mark_stage_failure "post_rerun_go_no_go_failed"
+  fi
 else
-  log "Skip post-negative KPI run because mined set is empty"
+  mark_stage_failure "post_rerun_skipped_due_prereq_failure"
 fi
 
 # (d) compare against previous baseline run (if available)
 TARGET_KPI="${ARTIFACT_RUN_BASE}/kpi-report/kpi-report.json"
-if [[ "$POST_EXECUTED" == "true" ]]; then
+if [[ "$POST_RUN_DONE" == "true" ]]; then
   TARGET_KPI="${ARTIFACT_RUN_POST}/kpi-report/kpi-report.json"
+fi
+TARGET_RUN_GO="$BASELINE_GO"
+if [[ "$POST_RUN_DONE" == "true" ]]; then
+  TARGET_RUN_GO="${POST_GO:-unknown}"
 fi
 PREVIOUS_KPI_RESOLVED="$(discover_previous_kpi "$BASE_RUN_ID" "$POST_RUN_ID" "$PREVIOUS_KPI")"
 COMPARE_EXECUTED="false"
 COMPARE_GO="null"
 COMPARE_CURRENT_KPI="$TARGET_KPI"
 COMPARE_PREVIOUS_KPI="$PREVIOUS_KPI_RESOLVED"
-if [[ -n "$PREVIOUS_KPI_RESOLVED" && -f "$PREVIOUS_KPI_RESOLVED" && -f "$TARGET_KPI" ]]; then
+if [[ "$POST_RUN_DONE" == "true" && -n "$PREVIOUS_KPI_RESOLVED" && -f "$PREVIOUS_KPI_RESOLVED" && -f "$TARGET_KPI" ]]; then
   log "Compare KPI with previous baseline report"
   set +e
   "$PYTHON_BIN" "${ROOT_DIR}/scripts/demo/compare_kpi_reports.py" \
@@ -334,25 +401,54 @@ if [[ -n "$PREVIOUS_KPI_RESOLVED" && -f "$PREVIOUS_KPI_RESOLVED" && -f "$TARGET_
     COMPARE_GO="true"
   else
     COMPARE_GO="false"
-    if [[ "$COMPARE_STRICT" == "true" ]]; then
-      echo "[active-eval] baseline regression compare failed in strict mode" >&2
-      exit 5
-    fi
+    mark_stage_failure "compare_threshold_failed"
   fi
   COMPARE_DONE="true"
 else
   log "Skip baseline compare (missing previous KPI or current target report)."
+  if [[ "$POST_RUN_DONE" != "true" ]]; then
+    mark_stage_failure "compare_skipped_due_post_rerun_failure"
+  else
+    mark_stage_failure "compare_skipped_missing_previous_kpi"
+  fi
 fi
 
-if [[ "$NEGATIVE_COUNT" -gt 0 && "$POST_EXECUTED" != "true" ]]; then
-  GATE_PASSED="false"
+if [[ "$BASELINE_DONE" == "true" && "$MINING_DONE" == "true" && "$POST_RUN_DONE" == "true" && "$COMPARE_DONE" == "true" ]]; then
+  STRICT_STAGE_CHAIN_OK="true"
+else
+  STRICT_STAGE_CHAIN_OK="false"
 fi
-if [[ "$COMPARE_EXECUTED" == "true" && "$COMPARE_GO" == "false" ]]; then
-  GATE_PASSED="false"
+
+if [[ "$STRICT" == "true" && "$STRICT_STAGE_CHAIN_OK" != "true" ]]; then
+  mark_stage_failure "strict_stage_chain_incomplete"
 fi
-if [[ "$BASELINE_DONE" != "true" || "$MINING_DONE" != "true" ]]; then
-  GATE_PASSED="false"
+
+if [[ "$COMPARE_EXECUTED" == "true" && "$COMPARE_GO" == "false" && "$COMPARE_STRICT" == "true" ]]; then
+  mark_stage_failure "strict_compare_gate_failed"
 fi
+
+# build failure reason list for markdown/json
+STAGE_FAILURE_COUNT="${#STAGE_FAILURES[@]}"
+if [[ "$STAGE_FAILURE_COUNT" -gt 0 ]]; then
+  STAGE_FAILURE_BULLETS="$(printf -- '- %s\n' "${STAGE_FAILURES[@]}")"
+else
+  STAGE_FAILURE_BULLETS="- none"
+fi
+STAGE_FAILURE_FILE="${SUMMARY_DIR}/stage-failures.txt"
+: > "$STAGE_FAILURE_FILE"
+if [[ "$STAGE_FAILURE_COUNT" -gt 0 ]]; then
+  printf '%s\n' "${STAGE_FAILURES[@]}" > "$STAGE_FAILURE_FILE"
+fi
+STAGE_FAILURE_JSON="$(
+  "$PYTHON_BIN" - "$STAGE_FAILURE_FILE" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    items = [line.strip() for line in fh.readlines() if line.strip()]
+print(", ".join(json.dumps(item) for item in items))
+PY
+)"
 
 # (e) summary markdown/json
 cat > "$SUMMARY_MD" <<EOF
@@ -370,6 +466,9 @@ cat > "$SUMMARY_MD" <<EOF
 - ml_base: ${ML_BASE}
 - baseline_artifact: ${ARTIFACT_RUN_BASE}
 - post_artifact_executed: ${POST_EXECUTED}
+- baseline_go_no_go: ${BASELINE_GO}
+- post_go_no_go: ${POST_GO:-unknown}
+- target_run_go_no_go: ${TARGET_RUN_GO}
 - mined_negative_set: ${NEGATIVE_SET}
 - mined_negative_count: ${NEGATIVE_COUNT}
 - compare_executed: ${COMPARE_EXECUTED}
@@ -383,14 +482,19 @@ cat > "$SUMMARY_MD" <<EOF
 - stage_mining_done: ${MINING_DONE}
 - stage_post_run_done: ${POST_RUN_DONE}
 - stage_compare_done: ${COMPARE_DONE}
+- strict_stage_chain_ok: ${STRICT_STAGE_CHAIN_OK}
+- stage_failure_count: ${STAGE_FAILURE_COUNT}
 - gate_passed: ${GATE_PASSED}
 
 ## Steps
-1. Baseline KPI run completed.
-2. Hard negatives mined from baseline artifacts.
-3. KPI re-run completed if mined set is not empty.
-4. Compare with previous baseline run if available.
+1. Baseline KPI run.
+2. Hard negatives mining.
+3. KPI re-run (always for strict stage-chain).
+4. Compare with previous baseline run.
 5. Summary exported.
+
+## Stage failures
+${STAGE_FAILURE_BULLETS}
 EOF
 
 cat > "$SUMMARY_JSON" <<EOF
@@ -407,6 +511,9 @@ cat > "$SUMMARY_JSON" <<EOF
   "post_run_id": "${POST_RUN_ID}",
   "baseline_artifact": "${ARTIFACT_RUN_BASE}",
   "post_executed": ${POST_EXECUTED},
+  "baseline_go_no_go": "${BASELINE_GO}",
+  "post_go_no_go": "${POST_GO:-unknown}",
+  "target_run_go_no_go": "${TARGET_RUN_GO}",
   "negative_set": "${NEGATIVE_SET}",
   "negative_count": ${NEGATIVE_COUNT},
   "compare_executed": ${COMPARE_EXECUTED},
@@ -422,6 +529,9 @@ cat > "$SUMMARY_JSON" <<EOF
     "post_run_done": ${POST_RUN_DONE},
     "compare_done": ${COMPARE_DONE}
   },
+  "strict_stage_chain_ok": ${STRICT_STAGE_CHAIN_OK},
+  "stage_failure_count": ${STAGE_FAILURE_COUNT},
+  "stage_failure_reasons": [${STAGE_FAILURE_JSON}],
   "gate_passed": ${GATE_PASSED}
 }
 EOF
@@ -430,3 +540,7 @@ log "Done"
 log "- summary: ${SUMMARY_MD}"
 log "- summary_json: ${SUMMARY_JSON}"
 log "- gate_passed: ${GATE_PASSED}"
+
+if [[ "$STRICT" == "true" && "$GATE_PASSED" != "true" ]]; then
+  exit 6
+fi

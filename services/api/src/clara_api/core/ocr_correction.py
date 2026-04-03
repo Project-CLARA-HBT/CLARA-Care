@@ -27,7 +27,7 @@ _RULES: list[tuple[str, re.Pattern[str], str]] = [
 _MULTI_SPACE_PATTERN = re.compile(r"[ \t]{2,}")
 _BROKEN_NEWLINE_PATTERN = re.compile(r"(?<=\w)-\n(?=\w)")
 _ZERO_IN_WORD_PATTERN = re.compile(r"(?<=[a-zA-Z])0(?=[a-zA-Z])")
-_ONE_IN_WORD_PATTERN = re.compile(r"(?<=[a-zA-Z])[1I](?=[a-zA-Z])")
+_ONE_IN_WORD_PATTERN = re.compile(r"(?<=[a-zA-Z])1(?=[a-zA-Z])")
 _TOKEN_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9-]{2,}")
 
 

@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-04-02T15:51:43.068057+00:00",
+  "generated_at": "2026-04-03T02:17:53.570512+00:00",
   "generator": {
     "script": "scripts/demo/generate_demo_artifacts.py",
-    "run_id": "phase1-day10-live-20260402-225142"
+    "run_id": "day24-phase3-live-20260403-rerun-postneg"
   },
   "consistency_hints": [
     "Snapshot generated from repository source files at generation time (not live runtime telemetry).",
     "Checksums are for traceability; regenerate manifest after any source or dataset change.",
     "DDI test set is derived from the first 50 local fallback rules for stable baseline comparison.",
     "Refusal prompt set is a static red-team pre-check and does not replace end-to-end runtime benchmark.",
-    "Round2 scaffold refreshed under artifacts/round2/phase1-day10-live-20260402-225142 for this generation run."
+    "Round2 scaffold refreshed under artifacts/round2/day24-phase3-live-20260403-rerun-postneg for this generation run."
   ],
   "items": [
     {
       "name": "VN Drug Dictionary",
       "path": "services/api/src/clara_api/api/v1/endpoints/careguard.py",
-      "checksum_md5": "68f4525881750f61598f5896a1e6198a",
+      "checksum_md5": "83a71b8aab4a8b081ace6f321e203608",
       "coverage": {
         "canonical_keys": 56,
         "alias_entries": 217
@@ -36,7 +36,7 @@
     {
       "name": "Hard Legal Guard Patterns",
       "path": "services/ml/src/clara_ml/main.py",
-      "checksum_md5": "e0c461e0ef1ecfa583e57f58d2214000",
+      "checksum_md5": "86c06907893467ff666d5c0b440618f3",
       "license": "Internal Team Asset for Demo",
       "source": "CLARA runtime policy"
     },
