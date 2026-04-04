@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MarkdownAnswer from "@/components/research/markdown-answer";
 import {
   createConversationItem,
   createConversationItemFromPersisted,
-  formatHistoryTime,
 } from "@/components/research/lib/research-page-helpers";
 import { ConversationItem, ResearchResult } from "@/components/research/lib/research-page-types";
+import ChatComposer from "@/components/chat-workspace/chat-composer";
+import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
 import {
   RESEARCH_TIER2_JOB_POLL_MS,
@@ -31,6 +32,7 @@ import {
   WorkspaceSearchResponse,
   WorkspaceSuggestion,
   WorkspaceSummary,
+  bulkUpdateWorkspaceConversationMeta,
   createWorkspaceConversationShare,
   createWorkspaceChannel,
   createWorkspaceFolder,
@@ -45,6 +47,7 @@ import {
   listWorkspaceConversations,
   listWorkspaceFolders,
   listWorkspaceNotes,
+  exportWorkspaceConversation,
   listWorkspaceSuggestions,
   revokeWorkspaceConversationShare,
   searchWorkspace,
@@ -62,21 +65,24 @@ const QUICK_PROMPTS: string[] = [
   "Gợi ý câu hỏi cần hỏi bác sĩ cho bệnh nhân tăng huyết áp",
 ];
 
-const RESEARCH_MODE_OPTIONS: Array<{ id: ResearchExecutionMode; label: string }> = [
-  { id: "fast", label: "Fast" },
-  { id: "deep", label: "Deep" },
-  { id: "deep_beta", label: "Deep Beta" },
-];
-
-const RESEARCH_RETRIEVAL_STACK_OPTIONS: Array<{ id: ResearchRetrievalStackMode; label: string }> = [
-  { id: "auto", label: "Auto" },
-  { id: "full", label: "Full" },
-];
-
 const JOB_FETCH_RETRY_ATTEMPTS = 3;
 const JOB_FETCH_RETRY_BACKOFF_MS = 600;
 const JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS = 5;
 const JOB_COMPLETED_RESULT_REFETCH_MS = 900;
+
+type WorkspaceLeftView = "all" | "chat" | "library" | "notes" | "discover";
+
+const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
+  id: WorkspaceLeftView;
+  label: string;
+  title: string;
+}> = [
+  { id: "all", label: "AL", title: "All" },
+  { id: "chat", label: "CH", title: "Chat" },
+  { id: "library", label: "LB", title: "Library" },
+  { id: "notes", label: "NT", title: "Notes" },
+  { id: "discover", label: "DS", title: "Discover" },
+];
 
 function parsePromptText(value: string | null): string | null {
   if (typeof value !== "string") return null;
@@ -106,6 +112,15 @@ function latestAnswerFromTurn(turn: ConversationItem | null): string {
 function asConversationId(value: number | null): number | null {
   if (!Number.isFinite(value) || value === null || value <= 0) return null;
   return Math.trunc(value);
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(objectUrl);
 }
 
 const fetchTier2JobWithRetry = async (jobId: string) => {
@@ -158,15 +173,20 @@ export default function ChatWorkspacePage() {
   const [selectedFolderFilterId, setSelectedFolderFilterId] = useState<number | null>(null);
   const [selectedChannelFilterId, setSelectedChannelFilterId] = useState<number | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [bulkFolderTarget, setBulkFolderTarget] = useState<string>("skip");
+  const [bulkChannelTarget, setBulkChannelTarget] = useState<string>("skip");
 
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [activeConversationMeta, setActiveConversationMeta] = useState<WorkspaceConversationItem | null>(null);
   const [conversationTurns, setConversationTurns] = useState<ConversationItem[]>([]);
+  const [selectedConversationIds, setSelectedConversationIds] = useState<number[]>([]);
+  const [draggingConversationId, setDraggingConversationId] = useState<number | null>(null);
 
   const [selectedResearchMode, setSelectedResearchMode] =
     useState<ResearchExecutionMode>("fast");
   const [selectedRetrievalStackMode, setSelectedRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
+  const [workspaceLeftView, setWorkspaceLeftView] = useState<WorkspaceLeftView>("chat");
   const [liveStatusNote, setLiveStatusNote] = useState("");
   const [liveJobId, setLiveJobId] = useState<string | null>(null);
 
@@ -178,6 +198,10 @@ export default function ChatWorkspacePage() {
     [conversationTurns]
   );
   const latestAnswer = useMemo(() => latestAnswerFromTurn(latestTurn), [latestTurn]);
+  const selectedConversationSet = useMemo(
+    () => new Set(selectedConversationIds),
+    [selectedConversationIds]
+  );
 
   useEffect(() => {
     const node = conversationScrollRef.current;
@@ -369,6 +393,12 @@ export default function ChatWorkspacePage() {
     return conversations;
   }, [conversations, searchResult]);
 
+  useEffect(() => {
+    if (!selectedConversationIds.length) return;
+    const visible = new Set(displayedConversations.map((item) => item.conversation_id));
+    setSelectedConversationIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [displayedConversations, selectedConversationIds.length]);
+
   const displayedNotes = useMemo(() => {
     if (searchResult) return searchResult.notes;
     return notes;
@@ -413,6 +443,147 @@ export default function ChatWorkspacePage() {
     []
   );
 
+  const toggleConversationSelection = useCallback((conversationId: number, checked: boolean) => {
+    setSelectedConversationIds((prev) => {
+      if (checked) {
+        if (prev.includes(conversationId)) return prev;
+        return [...prev, conversationId];
+      }
+      return prev.filter((id) => id !== conversationId);
+    });
+  }, []);
+
+  const selectAllDisplayedConversations = useCallback(() => {
+    setSelectedConversationIds(displayedConversations.map((item) => item.conversation_id));
+  }, [displayedConversations]);
+
+  const clearConversationSelection = useCallback(() => {
+    setSelectedConversationIds([]);
+  }, []);
+
+  const applyBulkMetaUpdate = useCallback(
+    async (payload: { folderId?: number | null; channelId?: number | null; isFavorite?: boolean }) => {
+      if (!selectedConversationIds.length) {
+        setNotice("Hãy chọn conversation trước khi chạy bulk action.");
+        return;
+      }
+      try {
+        const result = await bulkUpdateWorkspaceConversationMeta({
+          conversationIds: selectedConversationIds,
+          folderId: payload.folderId,
+          channelId: payload.channelId,
+          isFavorite: payload.isFavorite,
+          touched: false,
+        });
+        const updatedIds = new Set(result.updated_ids);
+        setConversations((prev) =>
+          prev.map((item) =>
+            updatedIds.has(item.conversation_id)
+              ? {
+                  ...item,
+                  folder_id:
+                    payload.folderId !== undefined ? (payload.folderId ?? null) : item.folder_id,
+                  channel_id:
+                    payload.channelId !== undefined
+                      ? (payload.channelId ?? null)
+                      : item.channel_id,
+                  is_favorite:
+                    payload.isFavorite !== undefined ? payload.isFavorite : item.is_favorite,
+                }
+              : item
+          )
+        );
+        setSearchResult((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            conversations: prev.conversations.map((item) =>
+              updatedIds.has(item.conversation_id)
+                ? {
+                    ...item,
+                    folder_id:
+                      payload.folderId !== undefined ? (payload.folderId ?? null) : item.folder_id,
+                    channel_id:
+                      payload.channelId !== undefined
+                        ? (payload.channelId ?? null)
+                        : item.channel_id,
+                    is_favorite:
+                      payload.isFavorite !== undefined ? payload.isFavorite : item.is_favorite,
+                  }
+                : item
+            ),
+          };
+        });
+        if (activeConversationId && updatedIds.has(activeConversationId)) {
+          setActiveConversationMeta((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              folder_id:
+                payload.folderId !== undefined ? (payload.folderId ?? null) : prev.folder_id,
+              channel_id:
+                payload.channelId !== undefined ? (payload.channelId ?? null) : prev.channel_id,
+              is_favorite:
+                payload.isFavorite !== undefined ? payload.isFavorite : prev.is_favorite,
+            };
+          });
+        }
+        await refreshSummary();
+        setNotice(`Đã cập nhật ${result.updated_count} conversation.`);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Không thể cập nhật bulk metadata.");
+      }
+    },
+    [activeConversationId, refreshSummary, selectedConversationIds]
+  );
+
+  const bulkDeleteSelectedConversations = useCallback(async () => {
+    if (!selectedConversationIds.length) {
+      setNotice("Hãy chọn conversation trước khi xóa.");
+      return;
+    }
+    const confirmed = window.confirm(`Xóa ${selectedConversationIds.length} conversation đã chọn?`);
+    if (!confirmed) return;
+    let deletedCount = 0;
+    for (const conversationId of selectedConversationIds) {
+      try {
+        await deleteWorkspaceConversation(conversationId);
+        deletedCount += 1;
+      } catch {
+        // Continue deleting remaining items.
+      }
+    }
+    setSelectedConversationIds([]);
+    if (activeConversationId && selectedConversationIds.includes(activeConversationId)) {
+      setActiveConversationId(null);
+      setActiveConversationMeta(null);
+      setConversationTurns([]);
+    }
+    await Promise.all([loadConversations(), refreshSummary()]);
+    setNotice(`Đã xóa ${deletedCount}/${selectedConversationIds.length} conversation.`);
+  }, [activeConversationId, loadConversations, refreshSummary, selectedConversationIds]);
+
+  const bulkExportSelectedConversations = useCallback(
+    async (format: "markdown" | "docx") => {
+      if (!selectedConversationIds.length) {
+        setNotice("Hãy chọn conversation trước khi export.");
+        return;
+      }
+      let successCount = 0;
+      for (const conversationId of selectedConversationIds) {
+        try {
+          const blob = await exportWorkspaceConversation(conversationId, format);
+          triggerBlobDownload(blob, `conversation-${conversationId}.${format === "markdown" ? "md" : "docx"}`);
+          successCount += 1;
+        } catch {
+          // Keep exporting remaining conversations.
+        }
+      }
+      setNotice(`Đã export ${successCount}/${selectedConversationIds.length} conversation (${format}).`);
+    },
+    [selectedConversationIds]
+  );
+
   const onSelectConversation = useCallback(
     async (item: WorkspaceConversationItem) => {
       const conversationId = asConversationId(item.conversation_id);
@@ -432,10 +603,61 @@ export default function ChatWorkspacePage() {
     [loadConversationTurns]
   );
 
+  const onDragConversationStart = (conversationId: number) => {
+    setDraggingConversationId(conversationId);
+  };
+
+  const onDragConversationEnd = () => {
+    setDraggingConversationId(null);
+  };
+
+  const onDropConversationToFolder = async (folderId: number | null) => {
+    if (!draggingConversationId) return;
+    try {
+      const updated = await updateWorkspaceConversationMeta(draggingConversationId, {
+        folderId,
+        touched: false,
+      });
+      setConversationMetaPatch(draggingConversationId, {
+        folder_id: updated.folder_id ?? null,
+        channel_id: updated.channel_id ?? null,
+        is_favorite: updated.is_favorite,
+      });
+      await refreshSummary();
+      setNotice(`Đã chuyển conversation #${draggingConversationId} sang folder.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể drag & drop vào folder.");
+    } finally {
+      setDraggingConversationId(null);
+    }
+  };
+
+  const onDropConversationToChannel = async (channelId: number | null) => {
+    if (!draggingConversationId) return;
+    try {
+      const updated = await updateWorkspaceConversationMeta(draggingConversationId, {
+        channelId,
+        touched: false,
+      });
+      setConversationMetaPatch(draggingConversationId, {
+        folder_id: updated.folder_id ?? null,
+        channel_id: updated.channel_id ?? null,
+        is_favorite: updated.is_favorite,
+      });
+      await refreshSummary();
+      setNotice(`Đã chuyển conversation #${draggingConversationId} sang channel.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể drag & drop vào channel.");
+    } finally {
+      setDraggingConversationId(null);
+    }
+  };
+
   const createNewConversation = () => {
     setActiveConversationId(null);
     setActiveConversationMeta(null);
     setConversationTurns([]);
+    setSelectedConversationIds([]);
     setShareInfo(null);
     setConversationTitleDraft("");
     setQuery("");
@@ -847,6 +1069,18 @@ export default function ChatWorkspacePage() {
     }
   };
 
+  const onExportActiveConversation = async (format: "markdown" | "docx") => {
+    const conversationId = asConversationId(activeConversationId);
+    if (!conversationId) return;
+    try {
+      const blob = await exportWorkspaceConversation(conversationId, format);
+      triggerBlobDownload(blob, `conversation-${conversationId}.${format === "markdown" ? "md" : "docx"}`);
+      setNotice(`Đã export conversation #${conversationId} (${format}).`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể export conversation.");
+    }
+  };
+
   const onRenameActiveConversation = async () => {
     const conversationId = asConversationId(activeConversationId);
     const title = parsePromptText(conversationTitleDraft);
@@ -869,6 +1103,7 @@ export default function ChatWorkspacePage() {
     try {
       await deleteWorkspaceConversation(conversationId);
       setConversations((prev) => prev.filter((item) => item.conversation_id !== conversationId));
+      setSelectedConversationIds((prev) => prev.filter((id) => id !== conversationId));
       setActiveConversationId(null);
       setActiveConversationMeta(null);
       setConversationTurns([]);
@@ -887,9 +1122,36 @@ export default function ChatWorkspacePage() {
     <PageShell
       variant="plain"
       title="Chat Workspace"
-      description="Workspace-style chat: quản lý conversation theo folder/channel, ghi chú và gợi ý, đồng thời giữ input luôn hiển thị."
+      description="OpenWebUI-style workspace: rail điều hướng, conversation canvas, notes/search/suggestions và composer luôn hiển thị."
     >
-      <div className="grid min-h-[78dvh] gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div className="grid min-h-[78dvh] gap-4 lg:grid-cols-[3.4rem_22rem_minmax(0,1fr)]">
+        <aside className="chrome-panel hidden max-h-[82dvh] flex-col items-center justify-between rounded-[1.35rem] px-2 py-3 lg:flex">
+          <div className="flex w-full flex-col gap-2">
+            {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => {
+              const active = workspaceLeftView === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  title={option.title}
+                  onClick={() => setWorkspaceLeftView(option.id)}
+                  className={[
+                    "inline-flex min-h-[40px] w-full items-center justify-center rounded-xl border text-[11px] font-semibold tracking-[0.08em] transition",
+                    active
+                      ? "border-cyan-300/70 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-cyan-300/55",
+                  ].join(" ")}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2 text-center text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            OpenUI
+          </div>
+        </aside>
+
         <aside className="chrome-panel flex max-h-[82dvh] flex-col overflow-hidden rounded-[1.35rem] p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Workspace</h2>
@@ -900,6 +1162,27 @@ export default function ChatWorkspacePage() {
             >
               + New
             </button>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
+            {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => {
+              const active = workspaceLeftView === option.id;
+              return (
+                <button
+                  key={`mobile-${option.id}`}
+                  type="button"
+                  onClick={() => setWorkspaceLeftView(option.id)}
+                  className={[
+                    "rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]",
+                    active
+                      ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+                  ].join(" ")}
+                >
+                  {option.title}
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -981,6 +1264,7 @@ export default function ChatWorkspacePage() {
           </div>
 
           <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
+            {(workspaceLeftView === "all" || workspaceLeftView === "library") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Folders</p>
@@ -1005,6 +1289,13 @@ export default function ChatWorkspacePage() {
                 <button
                   type="button"
                   onClick={() => setSelectedFolderFilterId(null)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void onDropConversationToFolder(null);
+                  }}
                   className={[
                     "rounded-full border px-2.5 py-1 text-[11px]",
                     selectedFolderFilterId === null
@@ -1019,11 +1310,19 @@ export default function ChatWorkspacePage() {
                     key={folder.id}
                     type="button"
                     onClick={() => setSelectedFolderFilterId(folder.id)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      void onDropConversationToFolder(folder.id);
+                    }}
                     className={[
                       "rounded-full border px-2.5 py-1 text-[11px]",
                       selectedFolderFilterId === folder.id
                         ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-800"
                         : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]",
+                      draggingConversationId ? "ring-1 ring-cyan-300/60" : "",
                     ].join(" ")}
                   >
                     {folder.name}
@@ -1059,7 +1358,9 @@ export default function ChatWorkspacePage() {
                 </ul>
               ) : null}
             </section>
+            ) : null}
 
+            {(workspaceLeftView === "all" || workspaceLeftView === "library") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Channels</p>
@@ -1084,6 +1385,13 @@ export default function ChatWorkspacePage() {
                 <button
                   type="button"
                   onClick={() => setSelectedChannelFilterId(null)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void onDropConversationToChannel(null);
+                  }}
                   className={[
                     "rounded-full border px-2.5 py-1 text-[11px]",
                     selectedChannelFilterId === null
@@ -1098,11 +1406,19 @@ export default function ChatWorkspacePage() {
                     key={channel.id}
                     type="button"
                     onClick={() => setSelectedChannelFilterId(channel.id)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      void onDropConversationToChannel(channel.id);
+                    }}
                     className={[
                       "rounded-full border px-2.5 py-1 text-[11px]",
                       selectedChannelFilterId === channel.id
                         ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-800"
                         : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]",
+                      draggingConversationId ? "ring-1 ring-cyan-300/60" : "",
                     ].join(" ")}
                   >
                     #{channel.name}
@@ -1138,35 +1454,192 @@ export default function ChatWorkspacePage() {
                 </ul>
               ) : null}
             </section>
+            ) : null}
 
+            {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Conversations</p>
                 <span className="text-[11px] text-[var(--text-muted)]">{displayedConversations.length}</span>
               </div>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={selectAllDisplayedConversations}
+                  className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={clearConversationSelection}
+                  className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                >
+                  Clear
+                </button>
+                <span className="inline-flex items-center rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-[10px] text-[var(--text-muted)]">
+                  Selected: {selectedConversationIds.length}
+                </span>
+              </div>
+              {selectedConversationIds.length ? (
+                <div className="mb-2 space-y-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Bulk actions
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <select
+                      value={bulkFolderTarget}
+                      onChange={(event) => setBulkFolderTarget(event.target.value)}
+                      className="min-h-[28px] rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      <option value="skip">Folder: Skip</option>
+                      <option value="none">Folder: None</option>
+                      {folders.map((folder) => (
+                        <option key={`bulk-folder-${folder.id}`} value={String(folder.id)}>
+                          Folder: {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (bulkFolderTarget === "skip") return;
+                        const folderId =
+                          bulkFolderTarget === "none" ? null : Number(bulkFolderTarget);
+                        void applyBulkMetaUpdate({ folderId });
+                      }}
+                      className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      Apply folder
+                    </button>
+                    <select
+                      value={bulkChannelTarget}
+                      onChange={(event) => setBulkChannelTarget(event.target.value)}
+                      className="min-h-[28px] rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      <option value="skip">Channel: Skip</option>
+                      <option value="none">Channel: None</option>
+                      {channels.map((channel) => (
+                        <option key={`bulk-channel-${channel.id}`} value={String(channel.id)}>
+                          Channel: #{channel.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (bulkChannelTarget === "skip") return;
+                        const channelId =
+                          bulkChannelTarget === "none" ? null : Number(bulkChannelTarget);
+                        void applyBulkMetaUpdate({ channelId });
+                      }}
+                      className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      Apply channel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void applyBulkMetaUpdate({ isFavorite: true })}
+                      className="rounded border border-amber-300/70 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700"
+                    >
+                      Favorite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void applyBulkMetaUpdate({ isFavorite: false })}
+                      className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      Unfavorite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void applyBulkMetaUpdate({ folderId: null })}
+                      className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      Clear folder
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void applyBulkMetaUpdate({ channelId: null })}
+                      className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                    >
+                      Clear channel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void bulkExportSelectedConversations("markdown")}
+                      className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
+                    >
+                      Export .md
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void bulkExportSelectedConversations("docx")}
+                      className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
+                    >
+                      Export .docx
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void bulkDeleteSelectedConversations()}
+                      className="rounded border border-rose-300/70 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-700"
+                    >
+                      Delete selected
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {isLoadingWorkspace || isLoadingConversations ? (
                 <p className="text-xs text-[var(--text-muted)]">Đang tải...</p>
               ) : displayedConversations.length ? (
                 <ul className="space-y-1.5">
                   {displayedConversations.slice(0, 30).map((item) => {
                     const isActive = item.conversation_id === activeConversationId;
+                    const isChecked = selectedConversationSet.has(item.conversation_id);
                     return (
                       <li key={item.conversation_id}>
-                        <button
-                          type="button"
-                          onClick={() => void onSelectConversation(item)}
+                        <div
+                          draggable
+                          onDragStart={() => onDragConversationStart(item.conversation_id)}
+                          onDragEnd={onDragConversationEnd}
                           className={[
                             "w-full rounded-lg border px-2.5 py-2 text-left",
                             isActive
                               ? "border-cyan-300/70 bg-cyan-500/10"
                               : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
+                            draggingConversationId === item.conversation_id
+                              ? "opacity-70"
+                              : "",
                           ].join(" ")}
                         >
-                          <p className="line-clamp-2 text-xs font-semibold text-[var(--text-primary)]">{buildConversationPreview(item)}</p>
-                          <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                            #{item.conversation_id} · {item.is_favorite ? "fav" : "normal"} · {new Date(item.created_at).toLocaleDateString("vi-VN")}
-                          </p>
-                        </button>
+                          <div className="flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(event) =>
+                                toggleConversationSelection(
+                                  item.conversation_id,
+                                  event.target.checked
+                                )
+                              }
+                              className="mt-0.5 h-3.5 w-3.5"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void onSelectConversation(item)}
+                              className="flex-1 text-left"
+                            >
+                              <p className="line-clamp-2 text-xs font-semibold text-[var(--text-primary)]">
+                                {buildConversationPreview(item)}
+                              </p>
+                              <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                                #{item.conversation_id} ·{" "}
+                                {item.is_favorite ? "fav" : "normal"} ·{" "}
+                                {new Date(item.created_at).toLocaleDateString("vi-VN")}
+                              </p>
+                            </button>
+                          </div>
+                        </div>
                       </li>
                     );
                   })}
@@ -1175,7 +1648,9 @@ export default function ChatWorkspacePage() {
                 <p className="text-xs text-[var(--text-muted)]">Không có conversation phù hợp filter hiện tại.</p>
               )}
             </section>
+            ) : null}
 
+            {(workspaceLeftView === "all" || workspaceLeftView === "notes") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Notes</p>
@@ -1259,7 +1734,9 @@ export default function ChatWorkspacePage() {
                 <p className="text-xs text-[var(--text-muted)]">Chưa có note.</p>
               )}
             </section>
+            ) : null}
 
+            {(workspaceLeftView === "all" || workspaceLeftView === "discover") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Suggestions</p>
               <div className="flex flex-wrap gap-1.5">
@@ -1279,6 +1756,7 @@ export default function ChatWorkspacePage() {
                 )}
               </div>
             </section>
+            ) : null}
           </div>
         </aside>
 
@@ -1350,6 +1828,28 @@ export default function ChatWorkspacePage() {
                 >
                   Revoke share
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void onExportActiveConversation("markdown")}
+                  disabled={!activeConversationId}
+                  className="inline-flex min-h-[36px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Export .md
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onExportActiveConversation("docx")}
+                  disabled={!activeConversationId}
+                  className="inline-flex min-h-[36px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Export .docx
+                </button>
+                <Link
+                  href="/chat/shares"
+                  className="inline-flex min-h-[36px] items-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
+                >
+                  Manage shares
+                </Link>
                 <button
                   type="button"
                   onClick={() => void onDeleteActiveConversation()}
@@ -1446,136 +1946,31 @@ export default function ChatWorkspacePage() {
                 Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới.
               </article>
             ) : (
-              conversationTurns.map((turn) => {
-                const result = turn.result;
-                const answer = result.answer || "";
-                const citations = result.tier === "tier2" ? result.citations : [];
-
-                return (
-                  <div key={turn.id} className="space-y-3">
-                    <div className="flex justify-end">
-                      <article className="max-w-[90%] rounded-2xl border border-cyan-300/60 bg-cyan-500/10 px-4 py-3 text-sm leading-7 text-[var(--text-primary)]">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300">Bạn</p>
-                        <p className="mt-1.5 whitespace-pre-wrap">{turn.query}</p>
-                      </article>
-                    </div>
-
-                    <div className="flex justify-start">
-                      <article className="w-full rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-4 sm:px-5">
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                            CLARA
-                          </span>
-                          <span className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                            {result.tier === "tier2" ? "Research" : "Quick"}
-                          </span>
-                          <span className="text-[11px] text-[var(--text-muted)]">{formatHistoryTime(turn.createdAt)}</span>
-                        </div>
-
-                        <MarkdownAnswer answer={answer} citations={citations} />
-                      </article>
-                    </div>
-                  </div>
-                );
-              })
+              conversationTurns.map((turn) => <ChatTurn key={turn.id} turn={turn} />)
             )}
           </div>
 
-          <div className="sticky bottom-0 z-10 -mx-4 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/95 px-4 pt-3 backdrop-blur sm:-mx-5 sm:px-5">
-            <div className="mb-2 flex flex-wrap gap-2">
-              {QUICK_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => setQuery(prompt)}
-                  className="inline-flex min-h-[32px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-medium text-[var(--text-secondary)]"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={onSubmit} className="space-y-2.5 pb-1">
-              <textarea
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                disabled={isSubmitting}
-                placeholder="Nhập câu hỏi để chạy research tier2..."
-                className="min-h-[90px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-7 text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
-              />
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-2">
-                  <fieldset className="inline-flex rounded-full border border-cyan-300/70 bg-cyan-500/10 p-1">
-                    <legend className="sr-only">Research mode</legend>
-                    {RESEARCH_MODE_OPTIONS.map((mode) => (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedResearchMode(mode.id);
-                          if (mode.id === "fast") {
-                            setSelectedRetrievalStackMode("auto");
-                          }
-                        }}
-                        disabled={isSubmitting}
-                        className={[
-                          "rounded-full px-3 py-1 text-xs font-semibold",
-                          selectedResearchMode === mode.id
-                            ? "bg-cyan-500 text-white"
-                            : "text-cyan-800 dark:text-cyan-200",
-                        ].join(" ")}
-                      >
-                        {mode.label}
-                      </button>
-                    ))}
-                  </fieldset>
-
-                  <fieldset className="inline-flex rounded-full border border-cyan-300/70 bg-cyan-500/10 p-1">
-                    <legend className="sr-only">Retrieval stack mode</legend>
-                    {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
-                      const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
-                      return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={() => setSelectedRetrievalStackMode(mode.id)}
-                          disabled={disabled}
-                          className={[
-                            "rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50",
-                            selectedRetrievalStackMode === mode.id
-                              ? "bg-cyan-500 text-white"
-                              : "text-cyan-800 dark:text-cyan-200",
-                          ].join(" ")}
-                        >
-                          {mode.label}
-                        </button>
-                      );
-                    })}
-                  </fieldset>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !query.trim()}
-                  className="inline-flex min-h-[42px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  {isSubmitting ? "Đang xử lý..." : "Gửi"}
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-2 min-h-[1.2rem] pb-1 text-xs">
-              {liveJobId || liveStatusNote ? (
-                <p className="text-cyan-700 dark:text-cyan-300">
-                  {liveStatusNote || "Đang xử lý tier2 job..."}
-                  {liveJobId ? ` (job_id: ${liveJobId})` : ""}
-                </p>
-              ) : null}
-              {error ? <p className="text-rose-600">{error}</p> : null}
-              {!error && notice ? <p className="text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
-            </div>
-          </div>
+          <ChatComposer
+            query={query}
+            isSubmitting={isSubmitting}
+            onChangeQuery={setQuery}
+            onSubmit={onSubmit}
+            quickPrompts={QUICK_PROMPTS}
+            selectedResearchMode={selectedResearchMode}
+            selectedRetrievalStackMode={selectedRetrievalStackMode}
+            isFastResearchMode={isFastResearchMode}
+            onChangeResearchMode={(mode) => {
+              setSelectedResearchMode(mode);
+              if (mode === "fast") {
+                setSelectedRetrievalStackMode("auto");
+              }
+            }}
+            onChangeRetrievalStackMode={setSelectedRetrievalStackMode}
+            liveJobId={liveJobId}
+            liveStatusNote={liveStatusNote}
+            error={error}
+            notice={notice}
+          />
         </section>
       </div>
     </PageShell>
