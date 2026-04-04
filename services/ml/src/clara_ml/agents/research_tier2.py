@@ -54,12 +54,15 @@ _REQUIRED_MARKDOWN_HEADINGS = (
 _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Kết luận nhanh",
     "## Tóm tắt điều hành",
-    "## Bối cảnh lâm sàng áp dụng",
-    "## Phân tích chi tiết",
-    "## Bảng tổng hợp bằng chứng",
+    "## Câu hỏi nghiên cứu (PICO)",
+    "## Phương pháp truy xuất & tiêu chí chọn lọc",
+    "## Hồ sơ bằng chứng & chất lượng nguồn",
+    "## Tổng hợp phát hiện chính",
+    "## Phản biện bằng chứng đối nghịch",
+    "## Ứng dụng lâm sàng theo nhóm bệnh nhân",
     "## Ma trận quyết định an toàn",
     "## Kế hoạch theo dõi sau tư vấn",
-    "## Cảnh báo pháp lý & giới hạn hệ thống",
+    "## Giới hạn, sai số và rủi ro pháp lý",
     "## Nguồn tham chiếu",
 )
 
@@ -649,25 +652,65 @@ def _sanitize_llm_query_plan_payload(
     }
 
 
-def _build_query_planner_client() -> DeepSeekClient:
+def _resolve_runtime_llm_config(
+    llm_runtime: dict[str, Any] | None,
+) -> tuple[str, str, str, str]:
+    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
+    provider = str(runtime.get("provider") or "deepseek").strip().lower()
+    if provider == "hitechcloud_gpt53_codex_high":
+        api_key = (
+            str(runtime.get("api_key") or "").strip()
+            or str(settings.primary_llm_api_key or "").strip()
+        )
+        base_url = (
+            str(runtime.get("base_url") or "").strip()
+            or str(settings.primary_llm_base_url or "").strip()
+            or "https://platform.hitechcloud.one/v1"
+        )
+        model = (
+            str(runtime.get("model") or "").strip()
+            or str(settings.primary_llm_model or "").strip()
+            or "gpt-5.3-codex-high"
+        )
+        return provider, api_key, base_url, model
+
+    api_key = str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
+    base_url = str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
+    model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
+    return "deepseek", api_key, base_url, model
+
+
+def _build_query_planner_client(
+    *, llm_runtime: dict[str, Any] | None = None
+) -> DeepSeekClient | None:
+    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key or not base_url or not model:
+        return None
     timeout_seconds = max(1.0, min(float(settings.deepseek_timeout_seconds), 8.0))
     return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         timeout_seconds=timeout_seconds,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
     )
 
 
-def _build_reasoning_client(*, timeout_seconds: float | None = None) -> DeepSeekClient:
+def _build_reasoning_client(
+    *,
+    timeout_seconds: float | None = None,
+    llm_runtime: dict[str, Any] | None = None,
+) -> DeepSeekClient | None:
+    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key or not base_url or not model:
+        return None
     resolved_timeout = float(timeout_seconds or settings.deep_beta_reasoning_llm_timeout_seconds)
     resolved_timeout = max(2.0, min(resolved_timeout, 120.0))
     return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         timeout_seconds=resolved_timeout,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
@@ -691,6 +734,7 @@ def _run_deep_beta_llm_reasoning_node(
     retrieval_budget: dict[str, Any],
     deep_pass_summaries: list[dict[str, Any]],
     evidence_rows: list[dict[str, Any]],
+    llm_runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not settings.deep_beta_reasoning_llm_enabled:
         return {
@@ -702,7 +746,8 @@ def _run_deep_beta_llm_reasoning_node(
             "actions": [],
             "watchouts": [],
         }
-    if not str(settings.deepseek_api_key or "").strip():
+    _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key:
         return {
             "node": node_name,
             "status": "degraded",
@@ -765,7 +810,19 @@ def _run_deep_beta_llm_reasoning_node(
     )
 
     try:
-        client = _build_reasoning_client()
+        client = _build_reasoning_client(llm_runtime=llm_runtime)
+        if client is None:
+            return {
+                "node": node_name,
+                "status": "degraded",
+                "reason": "runtime_llm_unconfigured",
+                "confidence": 0.0,
+                "insights": [],
+                "actions": [],
+                "watchouts": [],
+                "follow_up_queries": [],
+                "evidence_checks": [],
+            }
         response = client.generate(prompt=prompt, system_prompt=system_prompt)
         parsed = _parse_json_from_llm(response.content)
         confidence = _normalize_router_confidence(parsed.get("confidence"))
@@ -814,6 +871,7 @@ def _run_deep_beta_parallel_reasoning_nodes(
     retrieval_budget: dict[str, Any],
     deep_pass_summaries: list[dict[str, Any]],
     evidence_rows: list[dict[str, Any]],
+    llm_runtime: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     nodes = [
         (
@@ -866,6 +924,7 @@ def _run_deep_beta_parallel_reasoning_nodes(
                     retrieval_budget=retrieval_budget,
                     deep_pass_summaries=deep_pass_summaries,
                     evidence_rows=evidence_rows,
+                    llm_runtime=llm_runtime,
                 ): node_name
                 for node_name, objective in selected_nodes
             }
@@ -926,6 +985,7 @@ def _run_deep_beta_evidence_verification_node(
     deep_pass_summaries: list[dict[str, Any]],
     evidence_rows: list[dict[str, Any]],
     reasoning_nodes: list[dict[str, Any]],
+    llm_runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not settings.deep_beta_evidence_verification_enabled:
         return {
@@ -938,7 +998,8 @@ def _run_deep_beta_evidence_verification_node(
             "high_risk_flags": [],
             "model_used": "disabled",
         }
-    if not str(settings.deepseek_api_key or "").strip():
+    _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key:
         return {
             "status": "degraded",
             "verification_confidence": 0.0,
@@ -1005,8 +1066,11 @@ def _run_deep_beta_evidence_verification_node(
     )
     try:
         client = _build_reasoning_client(
-            timeout_seconds=max(float(settings.deep_beta_evidence_verification_timeout_seconds), 2.0)
+            timeout_seconds=max(float(settings.deep_beta_evidence_verification_timeout_seconds), 2.0),
+            llm_runtime=llm_runtime,
         )
+        if client is None:
+            raise RuntimeError("runtime_llm_unconfigured")
         response = client.generate(
             prompt=prompt,
             system_prompt=(
@@ -1059,6 +1123,7 @@ def _run_deep_beta_quality_gate(
     verification_matrix_payload: dict[str, Any],
     reasoning_nodes: list[dict[str, Any]],
     evidence_verification: dict[str, Any] | None = None,
+    llm_runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not settings.deep_beta_quality_gate_enabled:
         return {
@@ -1070,7 +1135,8 @@ def _run_deep_beta_quality_gate(
             "findings": [],
             "follow_up_actions": [],
         }
-    if not str(settings.deepseek_api_key or "").strip():
+    _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key:
         return {
             "status": "degraded",
             "quality_score": 0.0,
@@ -1115,8 +1181,11 @@ def _run_deep_beta_quality_gate(
     )
     try:
         client = _build_reasoning_client(
-            timeout_seconds=max(float(settings.deep_beta_quality_gate_timeout_seconds), 2.0)
+            timeout_seconds=max(float(settings.deep_beta_quality_gate_timeout_seconds), 2.0),
+            llm_runtime=llm_runtime,
         )
+        if client is None:
+            raise RuntimeError("runtime_llm_unconfigured")
         response = client.generate(
             prompt=prompt,
             system_prompt=(
@@ -1285,6 +1354,34 @@ def _sanitize_deep_beta_markdown_output(markdown_text: str) -> str:
     return _dedupe_duplicate_h2_headings(_strip_html_from_mermaid_blocks(markdown_text))
 
 
+def _markdown_word_count(text: str) -> int:
+    return len(re.findall(r"\S+", str(text or "").strip()))
+
+
+def _resolve_deep_beta_target_words() -> int:
+    min_words = max(int(settings.deep_beta_report_min_words), 900)
+    page_target = max(int(settings.deep_beta_report_target_pages), 1)
+    words_per_page = max(int(settings.deep_beta_report_words_per_page), 250)
+    return max(min_words, page_target * words_per_page)
+
+
+def _safe_generate_with_token_budget(
+    client: Any,
+    *,
+    prompt: str,
+    system_prompt: str,
+    max_tokens: int,
+) -> Any:
+    try:
+        return client.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            max_tokens=max_tokens,
+        )
+    except TypeError:
+        return client.generate(prompt=prompt, system_prompt=system_prompt)
+
+
 def _ensure_deep_beta_report_artifacts(
     *,
     markdown_text: str,
@@ -1356,10 +1453,12 @@ def _synthesize_deep_beta_long_report(
     reasoning_nodes: list[dict[str, Any]],
     deep_pass_summaries: list[dict[str, Any]],
     evidence_verification: dict[str, Any] | None = None,
+    llm_runtime: dict[str, Any] | None = None,
 ) -> str:
     if not settings.deep_beta_report_llm_enabled:
         return answer_markdown
-    if not str(settings.deepseek_api_key or "").strip():
+    _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key:
         return answer_markdown
 
     compact_citations = [
@@ -1393,27 +1492,38 @@ def _synthesize_deep_beta_long_report(
         if isinstance(item, dict)
     ]
 
-    target_words = max(int(settings.deep_beta_report_min_words), 900)
+    target_words = _resolve_deep_beta_target_words()
+    report_timeout_seconds = max(
+        float(settings.deep_beta_report_timeout_seconds),
+        float(settings.deep_beta_reasoning_llm_timeout_seconds),
+        30.0,
+    )
+    report_max_tokens = max(int(settings.deep_beta_report_max_tokens), 1024)
     prompt = (
         "Rewrite the baseline answer into a long-form clinical research report in Vietnamese.\n"
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
         "Must include these sections in this exact order:\n"
         "## Kết luận nhanh\n"
         "## Tóm tắt điều hành\n"
-        "## Bối cảnh lâm sàng áp dụng\n"
-        "## Phân tích chi tiết\n"
-        "## Bảng tổng hợp bằng chứng\n"
+        "## Câu hỏi nghiên cứu (PICO)\n"
+        "## Phương pháp truy xuất & tiêu chí chọn lọc\n"
+        "## Hồ sơ bằng chứng & chất lượng nguồn\n"
+        "## Tổng hợp phát hiện chính\n"
+        "## Phản biện bằng chứng đối nghịch\n"
+        "## Ứng dụng lâm sàng theo nhóm bệnh nhân\n"
         "## Ma trận quyết định an toàn\n"
         "## Kế hoạch theo dõi sau tư vấn\n"
-        "## Cảnh báo pháp lý & giới hạn hệ thống\n"
+        "## Giới hạn, sai số và rủi ro pháp lý\n"
         "## Nguồn tham chiếu\n"
         "Requirements:\n"
         "- length >= "
         f"{target_words} words\n"
-        "- each major section must contain concrete bullet points (not placeholder text)\n"
+        "- write as a long-form clinical report with high depth (target: ~5-10 pages)\n"
+        "- each major section must contain concrete bullet points and paragraph analysis (not placeholder text)\n"
         "- explicitly discuss uncertainty, contradictory evidence, and subgroup caveats\n"
+        "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)\n"
         "- include an 'if-then' decision flow in mermaid format\n"
-        "- include at least one markdown table in 'Bảng tổng hợp bằng chứng'\n"
+        "- include at least one markdown table in 'Hồ sơ bằng chứng & chất lượng nguồn'\n"
         "- include one mermaid flowchart for decision pathway\n"
         "- mermaid block must not contain HTML tags like <br>, <p>, <div>, <span>\n"
         "- include one fenced code block with language 'chart-spec' summarizing numeric signals\n"
@@ -1430,52 +1540,109 @@ def _synthesize_deep_beta_long_report(
     )
     system_prompt = (
         "You are CLARA Deep Beta medical report synthesizer. "
-        "Be evidence-grounded, safety-first, and specific."
+        "Be evidence-grounded, safety-first, and specific. "
+        "Use a formal medical research style suitable for clinical briefing."
     )
     try:
-        client = _build_reasoning_client(timeout_seconds=max(settings.deep_beta_reasoning_llm_timeout_seconds, 30.0))
-        response = client.generate(prompt=prompt, system_prompt=system_prompt)
-        content = str(response.content or "").strip()
+        client = _build_reasoning_client(
+            timeout_seconds=report_timeout_seconds,
+            llm_runtime=llm_runtime,
+        )
+        if client is None:
+            return answer_markdown
+        response = client.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            max_tokens=report_max_tokens,
+        )
+        content = _sanitize_deep_beta_markdown_output(str(response.content or "").strip())
         if not content:
             return answer_markdown
-        target_chars = max(1800, int(target_words * 5))
-        if len(content) < target_chars:
+
+        expansion_rounds = max(int(settings.deep_beta_report_expansion_rounds), 0)
+        for round_idx in range(expansion_rounds):
+            current_words = _markdown_word_count(content)
+            if current_words >= target_words:
+                break
+
+            missing_words = max(target_words - current_words, 0)
+            continuation_prompt = (
+                "Expand the following Vietnamese medical report by APPENDING new content only.\n"
+                "Do NOT rewrite previous sections.\n"
+                "Do NOT duplicate any existing H2 section title.\n"
+                "Add deeper analysis with practical clinical caveats, subgroup handling, and uncertainty.\n"
+                f"Need at least ~{missing_words} additional words.\n"
+                "Append supplementary sections using H3/H4 headings and additional tables where useful.\n"
+                "Return Markdown only.\n\n"
+                f"topic={topic}\n"
+                f"existing_report={content}\n"
+                f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
+                f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
+                f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
+                f"verification_summary={json.dumps(verification_summary, ensure_ascii=False)}\n"
+            )
+            continuation_response = client.generate(
+                prompt=continuation_prompt,
+                system_prompt=system_prompt,
+                max_tokens=report_max_tokens,
+            )
+            continuation = _sanitize_deep_beta_markdown_output(
+                str(continuation_response.content or "").strip()
+            )
+            if not continuation or continuation in content:
+                break
+            content = f"{content.rstrip()}\n\n{continuation.strip()}"
+
+        if _markdown_word_count(content) < target_words:
             pass_rows = [
                 "| Pass | Subquery | Retrieved | Duration (ms) |",
                 "| --- | --- | ---: | ---: |",
             ]
-            for item in compact_passes[:12]:
+            for item in compact_passes[:16]:
                 pass_rows.append(
                     f"| {item.get('pass_index') or '-'} | "
                     f"{_escape_markdown_cell(item.get('subquery') or '-')} | "
                     f"{_safe_int(item.get('retrieved_count'), 0)} | "
                     f"{round(_safe_float(item.get('duration_ms'), 0.0), 2)} |"
                 )
+
             node_rows = [
-                "| Reasoning Node | Status | Confidence | Highlight |",
-                "| --- | --- | ---: | --- |",
+                "| Reasoning Node | Status | Confidence | Key Insight | Actions |",
+                "| --- | --- | ---: | --- | --- |",
             ]
-            for node in reasoning_nodes[:10]:
+            for node in reasoning_nodes[:16]:
                 insights = node.get("insights")
+                actions = node.get("actions")
                 top_insight = (
-                    _compact_snippet(insights[0], max_len=120)
+                    _compact_snippet(insights[0], max_len=150)
                     if isinstance(insights, list) and insights
-                    else ""
+                    else "-"
+                )
+                top_action = (
+                    _compact_snippet(actions[0], max_len=120)
+                    if isinstance(actions, list) and actions
+                    else "-"
                 )
                 node_rows.append(
                     f"| {_escape_markdown_cell(node.get('node') or '-')} | "
                     f"{_escape_markdown_cell(node.get('status') or '-')} | "
                     f"{_normalize_router_confidence(node.get('confidence')):.2f} | "
-                    f"{_escape_markdown_cell(top_insight or '-')} |"
+                    f"{_escape_markdown_cell(top_insight)} | "
+                    f"{_escape_markdown_cell(top_action)} |"
                 )
-            appendix = (
-                "\n\n## Phụ lục kỹ thuật Deep Beta\n"
-                "### Tóm tắt multi-pass retrieval\n"
+
+            fallback_appendix = (
+                "\n\n## Phụ lục kỹ thuật Deep Beta (mở rộng)\n"
+                "### Nhật ký multi-pass retrieval\n"
                 + "\n".join(pass_rows)
-                + "\n\n### Tóm tắt reasoning nodes\n"
+                + "\n\n### Ma trận reasoning nodes\n"
                 + "\n".join(node_rows)
+                + "\n\n### Ghi chú phương pháp\n"
+                "- Báo cáo này được mở rộng tự động để đạt độ bao phủ bằng chứng và diễn giải lâm sàng sâu hơn.\n"
+                "- Các nội dung chưa đủ bằng chứng được giữ trạng thái cảnh báo và không chuyển thành khuyến nghị điều trị.\n"
             )
-            content = f"{content}{appendix}"
+            content = f"{content.rstrip()}{fallback_appendix}"
+
         return _ensure_deep_beta_report_artifacts(
             markdown_text=content,
             deep_pass_summaries=deep_pass_summaries,
@@ -1499,8 +1666,10 @@ def _refine_query_plan_with_llm(
     route_intent: str,
     base_query_plan: dict[str, Any],
     keywords: list[str],
+    llm_runtime: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    if not str(settings.deepseek_api_key or "").strip():
+    _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key:
         return base_query_plan, {
             "attempted": False,
             "status": "degraded",
@@ -1548,7 +1717,9 @@ def _refine_query_plan_with_llm(
     )
 
     try:
-        client = _build_query_planner_client()
+        client = _build_query_planner_client(llm_runtime=llm_runtime)
+        if client is None:
+            raise RuntimeError("runtime_llm_unconfigured")
         llm_response = client.generate(prompt=prompt, system_prompt=system_prompt)
         cleaned = _strip_markdown_fence(llm_response.content)
         parsed_payload = json.loads(cleaned)
@@ -3303,21 +3474,34 @@ def _ensure_markdown_structure(
             f"- Mức độ bằng chứng hiện có: {len(citations)} nguồn tham chiếu.\n"
             f"- Tín hiệu rủi ro lâm sàng: {risk_level} ({risk_signal}). {risk_note}\n"
             f"- Điểm chính: {executive_summary}\n\n"
-            "## Bối cảnh lâm sàng áp dụng\n"
-            "- Phù hợp cho mục đích hỗ trợ thông tin và sàng lọc rủi ro ban đầu.\n"
-            "- Không dùng để thay thế chẩn đoán, kê đơn hoặc chỉnh liều điều trị cá thể hóa.\n"
-            "- Cần diễn giải theo bệnh nền, thuốc đang dùng, tuổi và chức năng gan-thận của người bệnh.\n\n"
-            "## Phân tích chi tiết\n"
-            f"{analysis_block}\n\n"
-            "## Bảng tổng hợp bằng chứng\n"
+            "## Câu hỏi nghiên cứu (PICO)\n"
+            f"- **Population**: Nhóm bệnh nhân liên quan đến chủ đề: {_compact_snippet(topic_snippet, max_len=120)}.\n"
+            "- **Intervention/Exposure**: Thuốc/phác đồ/yếu tố can thiệp đang được quan tâm.\n"
+            "- **Comparison**: So sánh với phương án chuẩn hoặc nhóm đối chứng nếu có.\n"
+            "- **Outcomes**: Hiệu quả lâm sàng, biến cố bất lợi, và chỉ số an toàn quan trọng.\n\n"
+            "## Phương pháp truy xuất & tiêu chí chọn lọc\n"
+            "- Chiến lược truy xuất đa nguồn (guideline, y văn, nguồn chính thống, dữ liệu nội bộ).\n"
+            "- Ưu tiên bằng chứng bậc cao (systematic review/meta-analysis/RCT), sau đó cohort/case-series.\n"
+            "- Loại trừ nguồn không rõ xuất xứ hoặc không truy cập được metadata tối thiểu.\n\n"
+            "## Hồ sơ bằng chứng & chất lượng nguồn\n"
             f"{evidence_table}\n\n"
+            "## Tổng hợp phát hiện chính\n"
+            f"{analysis_block}\n\n"
+            "## Phản biện bằng chứng đối nghịch\n"
+            "- Nêu rõ các điểm bất đồng giữa guideline/nghiên cứu quan sát và thử nghiệm có đối chứng.\n"
+            "- Đánh giá nguy cơ sai lệch (selection bias, confounding, publication bias) trước khi kết luận.\n"
+            "- Đánh dấu claim chưa đủ hỗ trợ để tránh over-claim.\n\n"
+            "## Ứng dụng lâm sàng theo nhóm bệnh nhân\n"
+            "- Người cao tuổi/đa trị liệu: ưu tiên kiểm tra DDI và độc tính tích lũy.\n"
+            "- Bệnh nền gan-thận/tim mạch/đái tháo đường: cần hiệu chỉnh theo nguy cơ cá thể.\n"
+            "- Khi xuất hiện dấu hiệu nặng hoặc bất thường mới, chuyển khám trực tiếp thay vì tự xử lý tại nhà.\n\n"
             "## Ma trận quyết định an toàn\n"
             f"{matrix_table}\n\n"
             "## Kế hoạch theo dõi sau tư vấn\n"
             "- Theo dõi triệu chứng trong 24-72 giờ sau khi áp dụng khuyến nghị an toàn.\n"
             "- Ghi lại thuốc đang dùng, thời điểm dùng, và phản ứng bất thường để đối chiếu với bác sĩ.\n"
             "- Nếu có đa thuốc hoặc bệnh nền phức tạp, ưu tiên lịch tư vấn sớm với cơ sở y tế.\n\n"
-            "## Cảnh báo pháp lý & giới hạn hệ thống\n"
+            "## Giới hạn, sai số và rủi ro pháp lý\n"
             "- Hệ thống chỉ cung cấp thông tin tham khảo dựa trên bằng chứng truy xuất được.\n"
             "- Có thể tồn tại sai lệch do nguồn dữ liệu chưa đầy đủ hoặc khác biệt theo bối cảnh lâm sàng.\n"
             "- Quyết định điều trị cuối cùng phải do bác sĩ/dược sĩ có thẩm quyền xác nhận.\n\n"
@@ -3341,14 +3525,19 @@ def _ensure_markdown_structure(
     )
 
 
-def _build_deep_beta_reasoning_client(*, timeout_cap_seconds: float = 25.0) -> DeepSeekClient | None:
-    if not str(settings.deepseek_api_key or "").strip():
+def _build_deep_beta_reasoning_client(
+    *,
+    timeout_cap_seconds: float = 25.0,
+    llm_runtime: dict[str, Any] | None = None,
+) -> DeepSeekClient | None:
+    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
+    if not api_key or not base_url or not model:
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), timeout_cap_seconds))
     return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         timeout_seconds=timeout_seconds,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
@@ -3488,6 +3677,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_sources = payload.get("rag_sources")
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
+    llm_runtime = {
+        "provider": rag_flow.get("llm_provider"),
+        "api_key": rag_flow.get("llm_api_key"),
+        "base_url": rag_flow.get("llm_base_url"),
+        "model": rag_flow.get("llm_model"),
+    }
+    llm_provider, _llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(llm_runtime)
     legacy_verification_enabled = _coerce_bool(
         rag_flow.get("verification_enabled"),
         bool(settings.rule_verification_enabled),
@@ -3629,6 +3825,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         route_intent=route.intent,
         base_query_plan=base_query_plan,
         keywords=planner_hints.get("keywords", []),
+        llm_runtime=llm_runtime,
     )
     llm_attempted = bool(llm_plan_status.get("attempted"))
     llm_status = str(llm_plan_status.get("status") or "degraded")
@@ -3644,7 +3841,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 component="planner",
                 payload={
                     "base_canonical_query": base_query_plan.get("canonical_query"),
-                    "model": settings.deepseek_model,
+                    "model": llm_model or settings.deepseek_model,
+                    "provider": llm_provider,
+                    "base_url": llm_base_url,
                 },
             )
         )
@@ -3921,6 +4120,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 strict_deepseek_required=strict_deepseek_required,
                 rag_reranker_enabled=rag_reranker_enabled_override,
                 rag_graphrag_enabled=rag_graphrag_enabled_override,
+                llm_runtime=llm_runtime,
             )
             pass_trace = (
                 pass_result.trace.get("retrieval")
@@ -4266,6 +4466,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 strict_deepseek_required=strict_deepseek_required,
                 rag_reranker_enabled=rag_reranker_enabled_override,
                 rag_graphrag_enabled=rag_graphrag_enabled_override,
+                llm_runtime=llm_runtime,
             )
             pass_trace = (
                 pass_result.trace.get("retrieval")
@@ -4398,6 +4599,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             retrieval_budget=deep_beta_retrieval_budgets,
             deep_pass_summaries=deep_pass_summaries,
             evidence_rows=_merge_retrieved_context([], deep_pass_contexts),
+            llm_runtime=llm_runtime,
         )
         completed_parallel_nodes = 0
         for node_result in deep_beta_parallel_reasoning_nodes:
@@ -4508,6 +4710,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     strict_deepseek_required=strict_deepseek_required,
                     rag_reranker_enabled=rag_reranker_enabled_override,
                     rag_graphrag_enabled=rag_graphrag_enabled_override,
+                    llm_runtime=llm_runtime,
                 )
                 deep_pass_contexts.append(pass_result.retrieved_context)
                 deep_pass_summaries.append(
@@ -4624,6 +4827,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             deep_pass_summaries=deep_pass_summaries,
             evidence_rows=_merge_retrieved_context([], deep_pass_contexts),
             reasoning_nodes=deep_beta_parallel_reasoning_nodes,
+            llm_runtime=llm_runtime,
         )
         evidence_verification_status = str(
             deep_beta_evidence_verification.get("status") or "degraded"
@@ -4706,6 +4910,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         strict_deepseek_required=strict_deepseek_required,
         rag_reranker_enabled=rag_reranker_enabled_override,
         rag_graphrag_enabled=rag_graphrag_enabled_override,
+        llm_runtime=llm_runtime,
     )
     if strict_deepseek_required and (
         rag_result.model_used.startswith("local-synth")
@@ -4808,6 +5013,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             reasoning_nodes=deep_beta_parallel_reasoning_nodes,
             deep_pass_summaries=deep_pass_summaries,
             evidence_verification=deep_beta_evidence_verification,
+            llm_runtime=llm_runtime,
         )
         report_changed = bool(
             str(rewritten_report or "").strip()
@@ -5005,6 +5211,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             verification_matrix_payload=verification_matrix_payload,
             reasoning_nodes=deep_beta_parallel_reasoning_nodes,
             evidence_verification=deep_beta_evidence_verification,
+            llm_runtime=llm_runtime,
         )
         gate_status = str(deep_beta_quality_gate.get("status") or "degraded").strip().lower()
         gate_quality_score = _safe_float(deep_beta_quality_gate.get("quality_score"), 0.0)

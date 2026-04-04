@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 import logging
 from pathlib import Path
 import re
+import secrets
 from time import perf_counter
 import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
@@ -81,6 +82,8 @@ _GREETING_HINTS: tuple[str, ...] = (
     "good evening",
 )
 _VALID_POLICY_ACTIONS = {"allow", "warn", "block", "escalate"}
+_PROTECTED_ML_PATH_PREFIXES = ("/v1/",)
+_PROTECTED_ML_PATH_EXACT = {"/metrics", "/metrics/json", "/health/details"}
 
 
 def _now_iso() -> str:
@@ -140,6 +143,46 @@ def _as_threshold(value: object, default: float) -> float:
     return max(0.0, min(1.0, parsed))
 
 
+def _as_text(value: object, default: str = "") -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float)):
+        return str(value).strip()
+    return default
+
+
+def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str, str]:
+    provider = _as_text(rag_flow.get("llm_provider"), "deepseek").lower()
+    if provider == "hitechcloud_gpt53_codex_high":
+        api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.primary_llm_api_key
+        base_url = (
+            _as_text(rag_flow.get("llm_base_url"), "")
+            or settings.primary_llm_base_url
+            or "https://platform.hitechcloud.one/v1"
+        )
+        model = (
+            _as_text(rag_flow.get("llm_model"), "")
+            or settings.primary_llm_model
+            or "gpt-5.3-codex-high"
+        )
+        return {
+            "provider": "hitechcloud_gpt53_codex_high",
+            "api_key": api_key.strip(),
+            "base_url": base_url.strip(),
+            "model": model.strip(),
+        }
+
+    api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.deepseek_api_key
+    base_url = _as_text(rag_flow.get("llm_base_url"), "") or settings.deepseek_base_url
+    model = _as_text(rag_flow.get("llm_model"), "") or settings.deepseek_model
+    return {
+        "provider": "deepseek",
+        "api_key": api_key.strip(),
+        "base_url": base_url.strip(),
+        "model": model.strip(),
+    }
+
+
 def _as_list(value: object) -> list:
     if isinstance(value, list):
         return value
@@ -191,6 +234,19 @@ def _normalize_policy_action(value: object, *, default: str) -> str:
         if normalized in _VALID_POLICY_ACTIONS:
             return normalized
     return default
+
+
+def _requires_internal_key(path: str) -> bool:
+    if path in _PROTECTED_ML_PATH_EXACT:
+        return True
+    return any(path.startswith(prefix) for prefix in _PROTECTED_ML_PATH_PREFIXES)
+
+
+def _internal_key_is_valid(provided: str, expected: str) -> bool:
+    value = provided.strip()
+    if not value or not expected:
+        return False
+    return secrets.compare_digest(value, expected)
 
 
 def _ensure_policy_contract(payload: dict[str, object], *, default_action: str) -> dict[str, object]:
@@ -413,6 +469,30 @@ async def instrument_requests(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def enforce_internal_api_key(request: Request, call_next):
+    path = request.url.path
+    if not _requires_internal_key(path):
+        return await call_next(request)
+
+    expected_key = settings.ml_internal_api_key.strip()
+    if not expected_key:
+        if settings.environment.lower() == "production":
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "ML internal auth misconfigured"},
+            )
+        return await call_next(request)
+
+    provided_key = request.headers.get("X-ML-Internal-Key", "").strip()
+    if not _internal_key_is_valid(provided_key, expected_key):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Unauthorized internal request"},
+        )
+    return await call_next(request)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "clara-ml"}
@@ -483,6 +563,7 @@ def routed_chat_infer(payload: dict) -> dict:
 
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
+    llm_runtime = _resolve_llm_runtime_from_rag_flow(rag_flow)
     role_router_enabled = _as_bool(rag_flow.get("role_router_enabled"), True)
     intent_router_enabled = _as_bool(rag_flow.get("intent_router_enabled"), True)
     legacy_verification_enabled = _as_bool(
@@ -664,6 +745,7 @@ def routed_chat_infer(payload: dict) -> dict:
             strict_deepseek_required=settings.deepseek_required,
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
+            llm_runtime=llm_runtime,
         )
     except Exception as exc:
         if settings.deepseek_required or not deepseek_fallback_enabled:
@@ -685,6 +767,7 @@ def routed_chat_infer(payload: dict) -> dict:
             strict_deepseek_required=False,
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
+            llm_runtime=llm_runtime,
         )
     factcheck = None
     if rule_verification_enabled:
@@ -794,6 +877,9 @@ def routed_chat_infer(payload: dict) -> dict:
                 "uploaded_documents_count": len(uploaded_documents),
                 "retrieval_profile": retrieval_profile,
                 "query_token_count": query_token_count,
+                "llm_provider": llm_runtime.get("provider", "deepseek"),
+                "llm_model": llm_runtime.get("model", ""),
+                "llm_base_url": llm_runtime.get("base_url", ""),
             },
         },
         default_action=default_action,
@@ -928,6 +1014,16 @@ def get_prompt(role: str, intent: str) -> dict:
 
 @app.websocket("/ws/stream")
 async def ws_stream(websocket: WebSocket) -> None:
+    expected_key = settings.ml_internal_api_key.strip()
+    if expected_key:
+        provided_key = websocket.headers.get("x-ml-internal-key", "").strip()
+        if not _internal_key_is_valid(provided_key, expected_key):
+            await websocket.close(code=1008)
+            return
+    elif settings.environment.lower() == "production":
+        await websocket.close(code=1011)
+        return
+
     await websocket.accept()
     incoming = await websocket.receive_text()
     async for token in token_stream(incoming):

@@ -11,7 +11,14 @@ import {
 
 type FlowFlagKey = Exclude<
   keyof ControlTowerConfig["rag_flow"],
-  "low_context_threshold" | "precision_at_k" | "recall_at_k" | "ndcg_at_k"
+  | "low_context_threshold"
+  | "precision_at_k"
+  | "recall_at_k"
+  | "ndcg_at_k"
+  | "llm_provider"
+  | "llm_base_url"
+  | "llm_model"
+  | "llm_api_key"
 >;
 type FlowGroupKey = "routing" | "verification" | "retrieval";
 type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
@@ -146,7 +153,20 @@ function normalizeFlow(flow?: Partial<ControlTowerConfig["rag_flow"]> | null): C
     ndcg_at_k: clamp(ndcgAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
     scientific_retrieval_enabled: flow?.scientific_retrieval_enabled ?? true,
     web_retrieval_enabled: flow?.web_retrieval_enabled ?? true,
-    file_retrieval_enabled: flow?.file_retrieval_enabled ?? true
+    file_retrieval_enabled: flow?.file_retrieval_enabled ?? true,
+    llm_provider:
+      flow?.llm_provider === "hitechcloud_gpt53_codex_high"
+        ? "hitechcloud_gpt53_codex_high"
+        : "deepseek",
+    llm_base_url:
+      typeof flow?.llm_base_url === "string" && flow.llm_base_url.trim()
+        ? flow.llm_base_url.trim()
+        : "https://platform.hitechcloud.one/v1",
+    llm_model:
+      typeof flow?.llm_model === "string" && flow.llm_model.trim()
+        ? flow.llm_model.trim()
+        : "gpt-5.3-codex-high",
+    llm_api_key: typeof flow?.llm_api_key === "string" ? flow.llm_api_key.trim() : ""
   };
 }
 
@@ -240,6 +260,60 @@ export default function ControlTowerPage() {
           ...prev.rag_flow,
           [key]: clamp(Math.trunc(parsed), RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX)
         }
+      };
+    });
+  };
+
+  const onLlmProviderChange = (provider: "deepseek" | "hitechcloud_gpt53_codex_high") => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev.rag_flow, llm_provider: provider };
+      if (provider === "hitechcloud_gpt53_codex_high") {
+        if (!next.llm_base_url) next.llm_base_url = "https://platform.hitechcloud.one/v1";
+        if (!next.llm_model) next.llm_model = "gpt-5.3-codex-high";
+      }
+      return {
+        ...prev,
+        rag_flow: next,
+      };
+    });
+  };
+
+  const onLlmBaseUrlChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_base_url: value.trim(),
+        },
+      };
+    });
+  };
+
+  const onLlmModelChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_model: value.trim(),
+        },
+      };
+    });
+  };
+
+  const onLlmApiKeyChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_api_key: value.trim(),
+        },
       };
     });
   };
@@ -534,6 +608,75 @@ export default function ControlTowerPage() {
                     step={1}
                     value={config?.rag_flow.ndcg_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
                     onChange={(event) => onRetrievalMetricChange("ndcg_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">LLM Runtime</p>
+                <h3 className="text-sm font-semibold text-slate-900">Provider & model switching</h3>
+                <p className="text-xs text-slate-500">
+                  Cấu hình provider chính cho chat/research ngay trong control tower.
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-600">Provider</span>
+                  <select
+                    value={config?.rag_flow.llm_provider ?? "hitechcloud_gpt53_codex_high"}
+                    onChange={(event) =>
+                      onLlmProviderChange(
+                        event.target.value === "hitechcloud_gpt53_codex_high"
+                          ? "hitechcloud_gpt53_codex_high"
+                          : "deepseek"
+                      )
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  >
+                    <option value="hitechcloud_gpt53_codex_high">hitechcloud + gpt-5.3-codex-high</option>
+                    <option value="deepseek">deepseek (installed)</option>
+                  </select>
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Model</span>
+                  <input
+                    type="text"
+                    value={config?.rag_flow.llm_model ?? ""}
+                    onChange={(event) => onLlmModelChange(event.target.value)}
+                    placeholder={
+                      config?.rag_flow.llm_provider === "deepseek" ? "deepseek-v3.2" : "gpt-5.3-codex-high"
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Base URL</span>
+                  <input
+                    type="url"
+                    value={config?.rag_flow.llm_base_url ?? ""}
+                    onChange={(event) => onLlmBaseUrlChange(event.target.value)}
+                    placeholder={
+                      config?.rag_flow.llm_provider === "deepseek"
+                        ? "https://api.yescale.vip/v1"
+                        : "https://platform.hitechcloud.one/v1"
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-600">API Key</span>
+                  <input
+                    type="password"
+                    value={config?.rag_flow.llm_api_key ?? ""}
+                    onChange={(event) => onLlmApiKeyChange(event.target.value)}
+                    placeholder="sk-..."
                     className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
                   />
                 </label>

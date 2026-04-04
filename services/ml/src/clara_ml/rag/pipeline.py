@@ -1053,8 +1053,40 @@ class RagPipelineP1:
         return f"- ({doc.id}) [{meta_bits}] {text}"
 
     @classmethod
-    def _build_prompt(cls, query: str, docs: List[Document]) -> str:
+    def _build_prompt(
+        cls,
+        query: str,
+        docs: List[Document],
+        *,
+        report_depth: str = "standard",
+    ) -> str:
         context = "\n".join(cls._format_doc_context(doc) for doc in docs[: cls._PROMPT_MAX_DOCS])
+        if str(report_depth).strip().lower() == "deep":
+            return (
+                "You are CLARA Deep Research medical assistant.\n"
+                "Use retrieved context as primary evidence and avoid unsupported claims.\n"
+                "Output MUST be valid GitHub-Flavored Markdown (GFM) in Vietnamese, no HTML.\n"
+                "Do not wrap the full response in a single code fence.\n"
+                "Generate a long-form report with these sections in exact order:\n"
+                "1) ## Kết luận nhanh\n"
+                "2) ## Tóm tắt điều hành\n"
+                "3) ## Bối cảnh lâm sàng áp dụng\n"
+                "4) ## Phân tích chi tiết\n"
+                "5) ## Bảng tổng hợp bằng chứng\n"
+                "6) ## Ma trận quyết định an toàn\n"
+                "7) ## Kế hoạch theo dõi sau tư vấn\n"
+                "8) ## Cảnh báo pháp lý & giới hạn hệ thống\n"
+                "9) ## Nguồn tham chiếu\n"
+                "Requirements:\n"
+                "- Length should be detailed and structured (target >= 700 words).\n"
+                "- Include at least one markdown table in 'Bảng tổng hợp bằng chứng'.\n"
+                "- Include one fenced mermaid flowchart for decision flow.\n"
+                "- Include one fenced chart-spec block for key numeric signals.\n"
+                "- In Mermaid labels, do not include markdown links or square-bracket citations.\n"
+                "- Keep citations outside Mermaid and use inline [source-id].\n"
+                f"User query: {query}\n"
+                f"Retrieved context:\n{context}"
+            )
         return (
             "You are CLARA Deep Research medical assistant.\n"
             "Use retrieved context as primary evidence and avoid unsupported claims.\n"
@@ -1299,6 +1331,7 @@ class RagPipelineP1:
         strict_deepseek_required: bool = False,
         rag_reranker_enabled: bool | None = None,
         rag_graphrag_enabled: bool | None = None,
+        llm_runtime: dict[str, Any] | None = None,
     ) -> RagResult:
         run_started = perf_counter()
         planner_active = isinstance(planner_hints, dict) and bool(planner_hints)
@@ -2206,6 +2239,24 @@ class RagPipelineP1:
                 trace=trace,
             )
 
+        runtime_llm_client = self._llm_client
+        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
+        if isinstance(llm_runtime, dict):
+            runtime_llm_api_key = str(llm_runtime.get("api_key") or "").strip()
+            runtime_llm_base_url = str(llm_runtime.get("base_url") or "").strip()
+            runtime_llm_model = str(llm_runtime.get("model") or "").strip()
+            if runtime_llm_api_key and runtime_llm_base_url and runtime_llm_model:
+                runtime_llm_client = DeepSeekClient(
+                    api_key=runtime_llm_api_key,
+                    base_url=runtime_llm_base_url,
+                    model=runtime_llm_model,
+                    timeout_seconds=settings.deepseek_timeout_seconds,
+                    retries_per_base=settings.deepseek_retries_per_base,
+                    retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+                )
+            elif runtime_llm_api_key:
+                runtime_llm_client = None
+
         if not generation_enabled:
             used_stages.append("retrieval_only")
             flow_events.append(
@@ -2227,10 +2278,10 @@ class RagPipelineP1:
                 },
             )
 
-        if strict_deepseek_required and (not self._llm_client or not self._deepseek_api_key):
+        if strict_deepseek_required and (not runtime_llm_client or not runtime_llm_api_key):
             raise RuntimeError("deepseek_required_but_not_configured")
 
-        if self._llm_client and self._deepseek_api_key:
+        if runtime_llm_client and runtime_llm_api_key:
             try:
                 if (
                     not has_relevant_context
@@ -2281,26 +2332,40 @@ class RagPipelineP1:
                     )
                 )
                 prompt = (
-                    self._build_prompt(query, docs)
+                    self._build_prompt(
+                        query,
+                        docs,
+                        report_depth="deep" if orchestrator_mode == "deep" else "standard",
+                    )
                     if has_relevant_context
                     else self._build_no_rag_prompt(query)
                 )
-                response = self._llm_client.generate(
-                    prompt=prompt,
-                    system_prompt=(
-                        "You are CLARA clinical assistant. "
-                        "Be concise, safe, and citation-grounded. "
-                        "Return GFM markdown with these sections: "
-                        "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
-                        "Use markdown table for comparisons. "
-                        "Use fenced mermaid flowchart only when process explanation is needed. "
-                        "In Mermaid node labels, do not include square-bracket citations or markdown links; keep citations outside diagrams. "
-                        "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
-                        "Do not output HTML. "
-                        "Do not prescribe dosage or diagnose."
-                    ),
+                system_prompt_text = (
+                    "You are CLARA clinical assistant. "
+                    "Be concise, safe, and citation-grounded. "
+                    "Return GFM markdown with these sections: "
+                    "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
+                    "Use markdown table for comparisons. "
+                    "Use fenced mermaid flowchart only when process explanation is needed. "
+                    "In Mermaid node labels, do not include square-bracket citations or markdown links; keep citations outside diagrams. "
+                    "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
+                    "Do not output HTML. "
+                    "Do not prescribe dosage or diagnose."
                 )
-                response_model = response.model or self._llm_client.model
+                if orchestrator_mode == "deep":
+                    system_prompt_text = (
+                        "You are CLARA deep research clinical assistant. "
+                        "Produce a long-form, evidence-grounded Vietnamese report. "
+                        "Use GFM markdown only, no HTML. "
+                        "Prefer precise source-linked claims and explicitly note uncertainty. "
+                        "Include table + mermaid + chart-spec when they improve clarity. "
+                        "Do not prescribe dosage or diagnose."
+                    )
+                response = runtime_llm_client.generate(
+                    prompt=prompt,
+                    system_prompt=system_prompt_text,
+                )
+                response_model = response.model or runtime_llm_client.model
                 flow_events.append(
                     self._flow_event(
                         stage="llm_generation",
@@ -2338,7 +2403,7 @@ class RagPipelineP1:
                         )
                     )
                     try:
-                        retry_response = self._llm_client.generate(
+                        retry_response = runtime_llm_client.generate(
                             prompt=self._build_compact_retry_prompt(query, docs),
                             system_prompt=(
                                 "You are CLARA clinical assistant. "
@@ -2346,7 +2411,7 @@ class RagPipelineP1:
                                 "No HTML. Do not prescribe dosage or diagnose."
                             ),
                         )
-                        retry_model = retry_response.model or self._llm_client.model
+                        retry_model = retry_response.model or runtime_llm_client.model
                         flow_events.append(
                             self._flow_event(
                                 stage="llm_generation_retry",
