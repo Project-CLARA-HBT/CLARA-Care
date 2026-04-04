@@ -716,6 +716,10 @@ class WorkspaceConversationMetaUpdateRequest(BaseModel):
     touched: bool = True
 
 
+class WorkspaceConversationUpdateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+
+
 class WorkspaceConversationMetaResponse(BaseModel):
     conversation_id: int
     folder_id: int | None = None

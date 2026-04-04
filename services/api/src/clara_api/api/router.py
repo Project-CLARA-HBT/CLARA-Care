@@ -11,6 +11,7 @@ from clara_api.api.v1.endpoints import (
     scribe,
     search,
     system,
+    workspace,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -24,3 +25,4 @@ api_router.include_router(careguard.router, prefix="/careguard", tags=["careguar
 api_router.include_router(council.router, prefix="/council", tags=["council"])
 api_router.include_router(scribe.router, prefix="/scribe", tags=["scribe"])
 api_router.include_router(system.router, prefix="/system", tags=["system"])
+api_router.include_router(workspace.router, prefix="/workspace", tags=["workspace"])
