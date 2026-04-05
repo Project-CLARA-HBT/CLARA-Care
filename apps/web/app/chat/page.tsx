@@ -261,7 +261,6 @@ export default function ChatWorkspacePage() {
   const [folderManagerSearch, setFolderManagerSearch] = useState("");
 
   const [selectedFolderFilterId, setSelectedFolderFilterId] = useState<number | null>(null);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [bulkFolderTarget, setBulkFolderTarget] = useState<string>("skip");
 
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -497,7 +496,7 @@ export default function ChatWorkspacePage() {
       const items = await listWorkspaceConversations({
         limit: 80,
         folderId: selectedFolderFilterId ?? undefined,
-        favoritesOnly,
+        favoritesOnly: false,
       });
       setWorkspaceApiUnavailable(false);
       setConversations(items);
@@ -555,7 +554,6 @@ export default function ChatWorkspacePage() {
     }
   }, [
     activeConversationId,
-    favoritesOnly,
     selectedFolderFilterId,
     workspaceApiUnavailable,
   ]);
@@ -792,7 +790,7 @@ export default function ChatWorkspacePage() {
 
   useEffect(() => {
     setVisibleConversationLimit(40);
-  }, [searchText, selectedFolderFilterId, favoritesOnly]);
+  }, [searchText, selectedFolderFilterId]);
   const conversationVirtualizer = useVirtualizer({
     count: conversationVirtualItems.length,
     getScrollElement: () => conversationListViewportRef.current,
@@ -857,14 +855,6 @@ export default function ChatWorkspacePage() {
       }
       return prev.filter((id) => id !== conversationId);
     });
-  }, []);
-
-  const selectAllDisplayedConversations = useCallback(() => {
-    setSelectedConversationIds(displayedConversations.map((item) => item.conversation_id));
-  }, [displayedConversations]);
-
-  const clearConversationSelection = useCallback(() => {
-    setSelectedConversationIds([]);
   }, []);
 
   const applyBulkMetaUpdate = useCallback(
@@ -1807,24 +1797,6 @@ export default function ChatWorkspacePage() {
         run: () => setSelectedRetrievalStackMode("full"),
       },
       {
-        id: "toggle-favorites",
-        label: favoritesOnly ? "Disable favorites only filter" : "Enable favorites only filter",
-        keywords: ["favorite", "filter", "favorites only"],
-        run: () => setFavoritesOnly((prev) => !prev),
-      },
-      {
-        id: "select-all",
-        label: "Select all displayed conversations",
-        keywords: ["select", "all", "bulk"],
-        run: () => selectAllDisplayedConversations(),
-      },
-      {
-        id: "clear-selection",
-        label: "Clear selected conversations",
-        keywords: ["clear", "selection", "bulk"],
-        run: () => clearConversationSelection(),
-      },
-      {
         id: "export-docx",
         label: "Export active conversation as DOCX",
         disabled: !canExport,
@@ -1880,9 +1852,7 @@ export default function ChatWorkspacePage() {
     ];
   }, [
     activeConversationId,
-    clearConversationSelection,
     createNewConversation,
-    favoritesOnly,
     focusById,
     isFastResearchMode,
     latestAnswer,
@@ -1890,7 +1860,6 @@ export default function ChatWorkspacePage() {
     onExportActiveConversation,
     onRevokeShareActiveConversation,
     onShareActiveConversation,
-    selectAllDisplayedConversations,
     shareInfo,
     workspaceApiUnavailable,
   ]);
@@ -2038,34 +2007,9 @@ export default function ChatWorkspacePage() {
             {isSearching ? <p className="mt-1 text-[11px] text-[var(--text-muted)]">Đang tìm...</p> : null}
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setFavoritesOnly((prev) => !prev)}
-              className={[
-                "inline-flex min-h-[34px] items-center rounded-full border px-3 text-xs font-semibold",
-                favoritesOnly
-                  ? "border-amber-300/70 bg-amber-500/10 text-amber-700"
-                  : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
-              ].join(" ")}
-            >
-              Favorites only
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedFolderFilterId(null);
-                setFavoritesOnly(false);
-              }}
-              className="inline-flex min-h-[34px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-            >
-              Reset filters
-            </button>
-          </div>
-
-          <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
+          <div className="mt-3 flex-1 space-y-3 overflow-hidden pr-1">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-              <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
+              <section className="rounded-xl bg-[var(--surface-muted)] p-2.5">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                   Folder
                 </p>
@@ -2108,30 +2052,11 @@ export default function ChatWorkspacePage() {
             ) : null}
 
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-            <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
+            <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Conversations</p>
                 <span className="text-[11px] text-[var(--text-muted)]">
                   {visibleConversations.length}/{displayedConversations.length} chats · {displayedConversationMessageCount} msg
-                </span>
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={selectAllDisplayedConversations}
-                  className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
-                >
-                  Select all
-                </button>
-                <button
-                  type="button"
-                  onClick={clearConversationSelection}
-                  className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
-                >
-                  Clear
-                </button>
-                <span className="inline-flex items-center rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-[10px] text-[var(--text-muted)]">
-                  Selected: {selectedConversationIds.length}
                 </span>
               </div>
               {selectedConversationIds.length ? (
@@ -2222,7 +2147,7 @@ export default function ChatWorkspacePage() {
                 <div
                   ref={conversationListViewportRef}
                   onScroll={onConversationListScroll}
-                  className="h-[calc(100dvh-32rem)] min-h-[16rem] overflow-y-auto pr-1 lg:h-[calc(100dvh-34rem)]"
+                  className="flex-1 min-h-[16rem] overflow-y-auto pr-1"
                 >
                   <div
                     style={{ height: `${conversationVirtualizer.getTotalSize()}px` }}
