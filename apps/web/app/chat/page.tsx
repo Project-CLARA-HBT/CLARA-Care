@@ -279,6 +279,7 @@ export default function ChatWorkspacePage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [visibleConversationLimit, setVisibleConversationLimit] = useState(40);
   const [isScopeManagerOpen, setIsScopeManagerOpen] = useState(false);
@@ -787,6 +788,12 @@ export default function ChatWorkspacePage() {
     const visible = new Set(displayedConversations.map((item) => item.conversation_id));
     setSelectedConversationIds((prev) => prev.filter((id) => visible.has(id)));
   }, [displayedConversations, selectedConversationIds.length]);
+
+  useEffect(() => {
+    if (isSelectionMode) return;
+    if (!selectedConversationIds.length) return;
+    setSelectedConversationIds([]);
+  }, [isSelectionMode, selectedConversationIds.length]);
 
   useEffect(() => {
     setVisibleConversationLimit(40);
@@ -1905,7 +1912,7 @@ export default function ChatWorkspacePage() {
       variant="plain"
       title=""
     >
-      <div className="relative h-[100dvh] min-h-[100dvh]">
+      <div className="relative h-full min-h-0">
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -1918,7 +1925,7 @@ export default function ChatWorkspacePage() {
         <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside
           className={[
-            "chrome-panel fixed inset-y-3 left-3 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden rounded-[1.35rem] p-4 transition-transform duration-200 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0",
+            "chrome-panel fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden rounded-none p-4 transition-transform duration-200 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0 lg:rounded-[1.35rem]",
             isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0",
           ].join(" ")}
         >
@@ -2055,11 +2062,25 @@ export default function ChatWorkspacePage() {
             <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Conversations</p>
-                <span className="text-[11px] text-[var(--text-muted)]">
-                  {visibleConversations.length}/{displayedConversations.length} chats · {displayedConversationMessageCount} msg
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    {visibleConversations.length}/{displayedConversations.length} chats · {displayedConversationMessageCount} msg
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectionMode((prev) => !prev)}
+                    className={[
+                      "rounded border px-2 py-1 text-[10px] font-semibold",
+                      isSelectionMode
+                        ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                        : "border-[color:var(--shell-border)] text-[var(--text-secondary)]",
+                    ].join(" ")}
+                  >
+                    {isSelectionMode ? "Done" : "Select"}
+                  </button>
+                </div>
               </div>
-              {selectedConversationIds.length ? (
+              {isSelectionMode && selectedConversationIds.length ? (
                 <div className="mb-2 space-y-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Bulk actions
@@ -2189,8 +2210,12 @@ export default function ChatWorkspacePage() {
                             draggable
                             onDragStart={() => onDragConversationStart(item.conversation_id)}
                             onDragEnd={onDragConversationEnd}
+                            onClick={() => {
+                              if (isSelectionMode) return;
+                              void onSelectConversation(item);
+                            }}
                             className={[
-                              "w-full rounded-lg border px-2.5 py-2 text-left",
+                              "w-full cursor-pointer rounded-lg border px-2.5 py-2 text-left",
                               isActive
                                 ? "border-cyan-300/70 bg-cyan-500/10"
                                 : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
@@ -2200,17 +2225,19 @@ export default function ChatWorkspacePage() {
                             ].join(" ")}
                           >
                             <div className="flex items-start gap-2">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(event) =>
-                                  toggleConversationSelection(
-                                    item.conversation_id,
-                                    event.target.checked
-                                  )
-                                }
-                                className="mt-0.5 h-3.5 w-3.5"
-                              />
+                              {isSelectionMode ? (
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(event) =>
+                                    toggleConversationSelection(
+                                      item.conversation_id,
+                                      event.target.checked
+                                    )
+                                  }
+                                  className="mt-0.5 h-3.5 w-3.5"
+                                />
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => void onSelectConversation(item)}
