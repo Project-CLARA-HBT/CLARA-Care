@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-04-01T01:18:35.721830+00:00",
+  "generator": {
+    "script": "scripts/demo/generate_demo_artifacts.py",
+    "run_id": "local-ci-smoke"
+  },
+  "consistency_hints": [
+    "Snapshot generated from repository source files at generation time (not live runtime telemetry).",
+    "Checksums are for traceability; regenerate manifest after any source or dataset change.",
+    "DDI test set is derived from the first 50 local fallback rules for stable baseline comparison.",
+    "Refusal prompt set is a static red-team pre-check and does not replace end-to-end runtime benchmark.",
+    "Round2 scaffold refreshed under artifacts/round2/local-ci-smoke for this generation run."
+  ],
+  "items": [
+    {
+      "name": "VN Drug Dictionary",
+      "path": "services/api/src/clara_api/api/v1/endpoints/careguard.py",
+      "checksum_md5": "68f4525881750f61598f5896a1e6198a",
+      "coverage": {
+        "canonical_keys": 56,
+        "alias_entries": 217
+      },
+      "license": "Internal Team Asset for Demo",
+      "source": "CLARA internal mapping"
+    },
+    {
+      "name": "Local DDI Fallback Rules",
+      "path": "services/ml/src/clara_ml/nlp/seed_data/careguard_ddi_rules.v1.json",
+      "checksum_md5": "b184ab8577ed6e6d9a9d02531d9d5169",
+      "coverage": {
+        "ddi_pairs": 62
+      },
+      "license": "Internal Team Asset for Demo",
+      "source": "CLARA internal safety rules"
+    },
+    {
+      "name": "Hard Legal Guard Patterns",
+      "path": "services/ml/src/clara_ml/main.py",
+      "checksum_md5": "27a6233eaf37aa9a879d2e782f4484d6",
+      "license": "Internal Team Asset for Demo",
+      "source": "CLARA runtime policy"
+    },
+    {
+      "name": "DDI Test Set (50 cases)",
+      "path": "data/demo/ddi_internal_test_set.json",
+      "checksum_md5": "077336d7e1c1c652c0b366acd82d71a6",
+      "license": "Internal Team Asset for Demo",
+      "source": "Generated from local DDI rules"
+    },
+    {
+      "name": "DDI Goldset JSONL",
+      "path": "data/demo/ddi-goldset.jsonl",
+      "checksum_md5": "fc1f5cb13dc4c67d7c619f3e5df76628",
+      "license": "Internal Team Asset for Demo",
+      "source": "Hackathon executable KPI dataset"
+    },
+    {
+      "name": "Refusal Prompt Set (10 prompts)",
+      "path": "data/demo/chatbot_refusal_prompts_10.json",
+      "checksum_md5": "7a80c46047ed5a6bc589cb2c6889cbe6",
+      "license": "Internal Team Asset for Demo",
+      "source": "Hackathon red-team prompt set"
+    },
+    {
+      "name": "Refusal Scenarios JSONL",
+      "path": "data/demo/refusal-scenarios.jsonl",
+      "checksum_md5": "5261975623dc0da024092f544c6ecf76",
+      "license": "Internal Team Asset for Demo",
+      "source": "Hackathon executable KPI dataset"
+    },
+    {
+      "name": "Fallback Scenarios JSONL",
+      "path": "data/demo/fallback-scenarios.jsonl",
+      "checksum_md5": "4c2299403d0e2538f62195ae4eb14120",
+      "license": "Internal Team Asset for Demo",
+      "source": "Hackathon executable KPI dataset"
+    },
+    {
+      "name": "Latency Scenarios JSONL",
+      "path": "data/demo/latency-scenarios.jsonl",
+      "checksum_md5": "66a6dd4e942e8d5fcd0f2bbbc1fb5563",
+      "license": "Internal Team Asset for Demo",
+      "source": "Hackathon executable KPI dataset"
+    }
+  ]
+}

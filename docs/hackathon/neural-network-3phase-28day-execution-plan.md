@@ -212,30 +212,30 @@ Tác động: Độ bền production, giảm timeout và noise
 
 ### Day 1-10 (Phase 1)
 Day 1
-- [ ] Chốt contract đầu vào/đầu ra cho reranker + NLI.
-- [ ] Thêm config flags trong `services/ml/src/clara_ml/config.py`.
-- [ ] Tạo `docs/hackathon/phase1-contract.md`.
+- [x] Chốt contract đầu vào/đầu ra cho reranker + NLI.
+- [x] Thêm config flags trong `services/ml/src/clara_ml/config.py`.
+- [x] Tạo `docs/hackathon/phase1-contract.md`.
 
 Day 2
-- [ ] Tạo module reranker (skeleton chạy được).
-- [ ] Hook vào `services/ml/src/clara_ml/rag/pipeline.py`.
-- [ ] Log `rerank_latency_ms`, `rerank_topn`.
+- [x] Tạo module reranker (skeleton chạy được).
+- [x] Hook vào `services/ml/src/clara_ml/rag/pipeline.py`.
+- [x] Log `rerank_latency_ms`, `rerank_topn`.
 
 Day 3
-- [ ] Hoàn thiện scoring/ranking và fallback timeout.
-- [ ] Viết unit test reranker.
+- [x] Hoàn thiện scoring/ranking và fallback timeout.
+- [x] Viết unit test reranker.
 
 Day 4
-- [ ] Tạo module NLI verifier (claim -> verdict).
-- [ ] Chuẩn hóa output verification matrix.
+- [x] Tạo module NLI verifier (claim -> verdict).
+- [x] Chuẩn hóa output verification matrix.
 
 Day 5
-- [ ] Cắm NLI vào `research_tier2`.
-- [ ] Rule override cho claim safety-critical.
+- [x] Cắm NLI vào `research_tier2`.
+- [x] Rule override cho claim safety-critical.
 
 Day 6
-- [ ] API payload pass-through ở endpoint research.
-- [ ] UI matrix + telemetry panel.
+- [x] API payload pass-through ở endpoint research.
+- [x] UI matrix + telemetry panel.
 
 Day 7
 - [x] Integration test `/research` deep/deep_beta.
@@ -320,11 +320,11 @@ Day 28 (Final Gate)
 - [x] Release tag `phase3-ready` sau khi GO.
 
 ## 7. Checklist vận hành mỗi ngày
-1. [ ] Standup 15 phút: blocker, owner, ETA.
-2. [ ] Cập nhật `docs/hackathon/kpi-snapshot.md`.
-3. [ ] Cập nhật changelog trong PR.
-4. [ ] Chạy smoke deploy script.
-5. [ ] Nếu fail gate: rollback bằng feature flag.
+1. [x] Standup 15 phút: blocker, owner, ETA.
+2. [x] Cập nhật `docs/hackathon/kpi-snapshot.md`.
+3. [x] Cập nhật changelog trong PR.
+4. [x] Chạy smoke deploy script.
+5. [x] Nếu fail gate: rollback bằng feature flag.
 
 ## 8. Bộ test chuẩn toàn chương trình
 1. Unit tests cho module NN mới.
@@ -347,3 +347,23 @@ Day 28 (Final Gate)
    - Giải pháp: confidence gate + manual confirm + hard rule override.
 3. Rủi ro drift dữ liệu thuốc VN.
    - Giải pháp: curation workflow + periodic re-eval.
+
+## 10. Trạng thái hoàn thiện (V1 vs Production)
+
+### 10.1 Done ở mức V1
+1. Neural reranker embedding + fallback timeout + cache.
+2. NLI claim verifier heuristic + verification matrix.
+3. Source router + active eval loop + strict gate.
+4. VN drug normalization hybrid dictionary + neural candidate.
+
+### 10.2 Nâng lên Production đã hoàn tất
+1. NLI nâng cấp `llm_hybrid` (DeepSeek-backed, timeout cứng, fallback về heuristic).
+2. Reranker nâng cấp `llm_hybrid` (LLM score fusion, cache giữ nguyên, fallback không gãy retrieval).
+3. Metadata runtime bổ sung rõ đường degrade (`rerank_llm_used`, `rerank_llm_error`, `fallback_reason`).
+4. Test mở rộng cho LLM-path và fallback-path:
+   - `services/ml/tests/test_nli_verifier.py`
+   - `services/ml/tests/test_retrieval_reranker.py`
+5. Gate phase giữ nguyên tiêu chí safety:
+   - không hạ refusal compliance,
+   - không bỏ hard-guard pháp lý,
+   - lỗi upstream vẫn trả degraded answer có lý do.
