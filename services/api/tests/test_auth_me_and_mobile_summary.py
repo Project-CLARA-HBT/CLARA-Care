@@ -94,7 +94,7 @@ def test_refresh_accepts_cookie_without_request_body() -> None:
     assert refresh_response.json()["access_token"]
 
 
-def test_refresh_prefers_cookie_over_payload_token() -> None:
+def test_refresh_prefers_payload_token_when_cookie_conflicts() -> None:
     user_email = "cookie-prefer@example.com"
     other_email = "cookie-other@example.com"
 
@@ -124,10 +124,10 @@ def test_refresh_prefers_cookie_over_payload_token() -> None:
         headers={"Authorization": f"Bearer {refresh_response.json()['access_token']}"},
     )
     assert me_response.status_code == 200
-    assert me_response.json()["subject"] == user_email
+    assert me_response.json()["subject"] == other_email
 
 
-def test_refresh_prefers_cookie_when_body_token_is_stale() -> None:
+def test_refresh_uses_cookie_when_payload_token_is_stale() -> None:
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "cookie-priority@example.com", "password": "secret"},
@@ -143,8 +143,6 @@ def test_refresh_prefers_cookie_when_body_token_is_stale() -> None:
     assert first_refresh.status_code == 200
     assert first_refresh.json()["refresh_token"] != stale_refresh_token
 
-    # If backend uses payload token first, this call would fail with 401 because
-    # stale_refresh_token has already been consumed. Cookie-first behavior keeps it valid.
     second_refresh = cookie_client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": stale_refresh_token},

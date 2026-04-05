@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
+import random
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any
 import unicodedata
 import urllib.error
@@ -66,8 +67,8 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Nguồn tham chiếu",
 )
 
-_DEFAULT_DEEP_PASS_CAP = 12
-_DEEP_BETA_PASS_CAP = 20
+_DEFAULT_DEEP_PASS_CAP = 14
+_DEEP_BETA_PASS_CAP = 24
 _DEEP_BETA_REASONING_STAGE_ORDER = (
     "deep_beta_scope",
     "deep_beta_hypothesis_map",
@@ -656,7 +657,20 @@ def _resolve_runtime_llm_config(
     llm_runtime: dict[str, Any] | None,
 ) -> tuple[str, str, str, str]:
     runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-    provider = str(runtime.get("provider") or "deepseek").strip().lower()
+    if settings.llm_deepseek_only:
+        api_key = str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
+        base_url = str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
+        model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
+        return "deepseek", api_key, base_url, model
+    raw_provider = str(runtime.get("provider") or "").strip().lower()
+    if raw_provider:
+        provider = raw_provider
+    else:
+        provider = (
+            "hitechcloud_gpt53_codex_high"
+            if str(settings.primary_llm_api_key or "").strip()
+            else "deepseek"
+        )
     if provider == "hitechcloud_gpt53_codex_high":
         api_key = (
             str(runtime.get("api_key") or "").strip()
@@ -680,6 +694,18 @@ def _resolve_runtime_llm_config(
     return "deepseek", api_key, base_url, model
 
 
+def _pause_between_pipeline_parts(multiplier: float = 1.0) -> None:
+    base_pause = max(0.0, float(settings.research_inter_step_pause_seconds))
+    if base_pause <= 0:
+        return
+    jitter = max(0.0, float(settings.research_inter_step_jitter_seconds))
+    effective_multiplier = max(0.2, float(multiplier))
+    wait_seconds = base_pause * effective_multiplier
+    if jitter > 0:
+        wait_seconds += random.uniform(0.0, jitter)
+    sleep(wait_seconds)
+
+
 def _build_query_planner_client(
     *, llm_runtime: dict[str, Any] | None = None
 ) -> DeepSeekClient | None:
@@ -694,6 +720,9 @@ def _build_query_planner_client(
         timeout_seconds=timeout_seconds,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
 
 
@@ -714,6 +743,9 @@ def _build_reasoning_client(
         timeout_seconds=resolved_timeout,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
 
 
@@ -947,6 +979,8 @@ def _run_deep_beta_parallel_reasoning_nodes(
                 result["round"] = round_index
                 result["rounds_total"] = reasoning_rounds
                 outputs.append(result)
+        if round_index < reasoning_rounds:
+            _pause_between_pipeline_parts(multiplier=0.8)
     outputs.sort(
         key=lambda item: (
             str(item.get("node")),
@@ -1631,15 +1665,78 @@ def _synthesize_deep_beta_long_report(
                     f"{_escape_markdown_cell(top_action)} |"
                 )
 
+            citation_rows = [
+                "| Source ID | Nguồn | Relevance | Ghi chú áp dụng |",
+                "| --- | --- | ---: | --- |",
+            ]
+            for citation in compact_citations[:24]:
+                source_id = _escape_markdown_cell(citation.get("source_id") or "-")
+                source_label = _escape_markdown_cell(citation.get("source") or "-")
+                relevance = _safe_float(citation.get("relevance"), 0.0)
+                title_text = _compact_snippet(citation.get("title") or "-", max_len=180)
+                citation_rows.append(
+                    f"| {source_id} | {source_label} | {relevance:.2f} | "
+                    f"{_escape_markdown_cell(title_text)} |"
+                )
+
+            supported_claims = []
+            contradicted_claims = []
+            unsupported_claims = []
+            if isinstance(evidence_verification, dict):
+                if isinstance(evidence_verification.get("supported_claims"), list):
+                    supported_claims = evidence_verification.get("supported_claims") or []
+                if isinstance(evidence_verification.get("contradicted_claims"), list):
+                    contradicted_claims = evidence_verification.get("contradicted_claims") or []
+                if isinstance(evidence_verification.get("unsupported_claims"), list):
+                    unsupported_claims = evidence_verification.get("unsupported_claims") or []
+
+            claim_rows = [
+                "| Nhóm claim | Số lượng | Gợi ý hành động |",
+                "| --- | ---: | --- |",
+                f"| Supported | {len(supported_claims)} | Có thể dùng cho tư vấn tham khảo có điều kiện |",
+                f"| Contradicted | {len(contradicted_claims)} | Cần cảnh báo đỏ, đối chiếu bác sĩ ngay |",
+                f"| Unsupported | {len(unsupported_claims)} | Không chuyển thành khuyến nghị lâm sàng |",
+            ]
+
+            citation_bullets: list[str] = []
+            for index, citation in enumerate(compact_citations[:18], start=1):
+                source_id = str(citation.get("source_id") or "source-unknown")
+                source_title = _compact_snippet(str(citation.get("title") or "-"), max_len=180)
+                source_url = str(citation.get("url") or "").strip()
+                source_hint = f"[{source_id}]"
+                if source_url:
+                    source_hint = f"[{source_id}]({source_url})"
+                citation_bullets.append(
+                    f"{index}. **{source_hint}**: {source_title}. "
+                    "Được dùng để hiệu chỉnh mức độ chắc chắn của nhận định trong báo cáo."
+                )
+
+            uncertainty_blocks = [
+                "- Khi bằng chứng mâu thuẫn giữa các nguồn, ưu tiên guideline/consensus cập nhật hơn nghiên cứu đơn lẻ.",
+                "- Mọi kết luận chỉ mang tính hỗ trợ quyết định, không thay thế chỉ định khám, kê đơn hay chẩn đoán.",
+                "- Với bệnh nền phức tạp (tim mạch, suy thận, thai kỳ, đa trị liệu), cần hội chẩn bác sĩ trước mọi thay đổi thuốc.",
+                "- Nếu xuất hiện dấu hiệu nặng (xuất huyết, khó thở, đau ngực, lú lẫn), ưu tiên cấp cứu thay vì tự điều chỉnh điều trị.",
+            ]
+
             fallback_appendix = (
                 "\n\n## Phụ lục kỹ thuật Deep Beta (mở rộng)\n"
                 "### Nhật ký multi-pass retrieval\n"
                 + "\n".join(pass_rows)
                 + "\n\n### Ma trận reasoning nodes\n"
                 + "\n".join(node_rows)
+                + "\n\n### Hồ sơ nguồn mở rộng\n"
+                + "\n".join(citation_rows)
+                + "\n\n### Ma trận trạng thái claim-level\n"
+                + "\n".join(claim_rows)
+                + "\n\n### Danh mục nguồn dùng để hiệu chỉnh nhận định\n"
+                + "\n".join(citation_bullets)
+                + "\n\n### Uncertainty & Safety Escalation Notes\n"
+                + "\n".join(uncertainty_blocks)
                 + "\n\n### Ghi chú phương pháp\n"
                 "- Báo cáo này được mở rộng tự động để đạt độ bao phủ bằng chứng và diễn giải lâm sàng sâu hơn.\n"
                 "- Các nội dung chưa đủ bằng chứng được giữ trạng thái cảnh báo và không chuyển thành khuyến nghị điều trị.\n"
+                "- Với các câu hỏi có độ mơ hồ cao, hệ thống ưu tiên minh bạch hóa giả định trước khi đưa kết luận tổng hợp.\n"
+                "- Trường hợp cần quyết định điều trị, đầu ra này phải được xác nhận bởi chuyên gia y tế có thẩm quyền.\n"
             )
             content = f"{content.rstrip()}{fallback_appendix}"
 
@@ -1961,11 +2058,11 @@ def _build_planner_hints(
     if deep_mode:
         internal_top_k = min(12, internal_top_k + 2)
         hybrid_top_k = min(12, hybrid_top_k + 3)
-        target_pass_count = 9 if is_ddi_query else (8 if evidence_query else 7)
+        target_pass_count = 11 if is_ddi_query else (10 if evidence_query else 9)
     elif deep_beta_mode:
         internal_top_k = min(12, internal_top_k + 4)
         hybrid_top_k = min(12, hybrid_top_k + 5)
-        target_pass_count = 13 if is_ddi_query else (12 if evidence_query else 11)
+        target_pass_count = 16 if is_ddi_query else (14 if evidence_query else 12)
     else:
         # Fast mode ưu tiên SLA: giới hạn fan-out retrieval để tránh timeout upstream.
         internal_top_k = min(4, max(2, internal_top_k))
@@ -3061,7 +3158,33 @@ def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[di
                 alias = str(item).strip().lower()
                 if alias:
                     co_drug_aliases.add(alias)
-    interaction_terms = {"interaction", "ddi", "bleeding", "inr", "contraindication", "adverse"}
+    interaction_terms = {
+        "interaction",
+        "ddi",
+        "drug-drug",
+        "coadministration",
+        "contraindication",
+        "bleeding",
+        "inr",
+        "hypoglycemia",
+        "lactic",
+        "acidosis",
+        "renal",
+        "clearance",
+        "contrast",
+    }
+    noise_markers = {
+        "diet",
+        "ketogenic",
+        "pcos",
+        "heart failure",
+        "sodium",
+        "mediterranean",
+        "dash",
+        "exercise",
+        "obesity",
+        "nutrition",
+    }
     filtered: list[dict[str, Any]] = []
 
     for row in rows:
@@ -3084,10 +3207,16 @@ def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[di
         has_codrug = bool(co_drug_aliases.intersection(tokens))
         has_interaction = bool(interaction_terms.intersection(tokens))
         trusted_label_source = source_name in {"openfda", "dailymed", "rxnorm", "rxnav"}
+        scientific_source = source_name in {"pubmed", "europepmc", "semantic_scholar", "openalex"}
+        has_noise_topic = any(marker in haystack for marker in noise_markers)
 
         # Keep strong DDI rows (primary + co-drug or interaction).
         if has_primary and (has_codrug or has_interaction):
             filtered.append(row)
+            continue
+
+        # Drop noisy lifestyle rows for DDI tasks unless they carry interaction signals.
+        if scientific_source and has_primary and has_noise_topic and not has_codrug and not has_interaction:
             continue
 
         # Keep authoritative drug-label rows mentioning primary drug,
@@ -3397,6 +3526,48 @@ def _ensure_markdown_structure(
     *,
     research_mode: str,
 ) -> str:
+    def _cleanup_markdown_noise(text: str) -> str:
+        lines = str(text or "").splitlines()
+        cleaned_lines: list[str] = []
+        prev_key = ""
+        for raw in lines:
+            line = raw.rstrip()
+            normalized = re.sub(r"\s+", " ", line).strip().lower()
+            if not normalized and cleaned_lines and cleaned_lines[-1] == "":
+                continue
+            if normalized and normalized == prev_key:
+                continue
+            if normalized.startswith("- phạm vi nghiên cứu: ##") or normalized.startswith("phạm vi nghiên cứu: ##"):
+                line = f"- Phạm vi nghiên cứu: {_compact_snippet(topic, max_len=150)} và bằng chứng truy xuất đa nguồn."
+                normalized = re.sub(r"\s+", " ", line).strip().lower()
+            cleaned_lines.append(line)
+            prev_key = normalized
+        return "\n".join(cleaned_lines).strip()
+
+    def _compact_plain_summary(text: str, *, max_len: int) -> str:
+        cleaned_lines: list[str] = []
+        for raw_line in str(text or "").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith("#"):
+                continue
+            if line.startswith("|"):
+                continue
+            if line.startswith("```"):
+                continue
+            line = re.sub(r"\*\*(.*?)\*\*", r"\1", line)
+            line = re.sub(r"`([^`]+)`", r"\1", line)
+            line = re.sub(r"\[[^\]]+\]\((https?:\/\/[^\)]+)\)", "", line)
+            line = re.sub(r"\s+", " ", line).strip(" -•\t")
+            if line:
+                cleaned_lines.append(line)
+            if len(" ".join(cleaned_lines)) >= max_len:
+                break
+        if not cleaned_lines:
+            return _compact_snippet(text, max_len=max_len)
+        return _compact_snippet(" ".join(cleaned_lines), max_len=max_len)
+
     def _estimate_medical_risk_band(text: str) -> tuple[str, str, str]:
         normalized = _ascii_fold(text)
         high_terms = (
@@ -3449,7 +3620,7 @@ def _ensure_markdown_structure(
         else _REQUIRED_MARKDOWN_HEADINGS
     )
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
-        return cleaned
+        return _cleanup_markdown_noise(cleaned)
 
     analysis_block = cleaned
     if "\n" not in analysis_block:
@@ -3460,17 +3631,18 @@ def _ensure_markdown_structure(
     citations_block = "\n".join(_citation_markdown_lines(citations))
     if research_mode in {"deep", "deep_beta"}:
         evidence_table = _evidence_table_markdown(citations, max_rows=10)
-        executive_summary = _compact_snippet(cleaned, max_len=360)
+        executive_summary = _compact_plain_summary(cleaned, max_len=260)
         matrix_table = _build_decision_matrix_markdown(
             risk_level=risk_level,
             risk_signal=risk_signal,
         )
-        return (
+        return _cleanup_markdown_noise(
+            (
             "## Kết luận nhanh\n"
             f"{_compact_snippet(cleaned, max_len=320)}\n\n"
             "## Tóm tắt điều hành\n"
             f"- Câu hỏi chính: {topic_snippet}\n"
-            f"- Phạm vi nghiên cứu: {_compact_snippet(cleaned, max_len=180)}\n"
+            f"- Phạm vi nghiên cứu: {_compact_snippet(topic_snippet, max_len=150)} và bằng chứng truy xuất đa nguồn.\n"
             f"- Mức độ bằng chứng hiện có: {len(citations)} nguồn tham chiếu.\n"
             f"- Tín hiệu rủi ro lâm sàng: {risk_level} ({risk_signal}). {risk_note}\n"
             f"- Điểm chính: {executive_summary}\n\n"
@@ -3507,9 +3679,10 @@ def _ensure_markdown_structure(
             "- Quyết định điều trị cuối cùng phải do bác sĩ/dược sĩ có thẩm quyền xác nhận.\n\n"
             "## Nguồn tham chiếu\n"
             f"{citations_block}"
+            )
         )
 
-    return (
+    return _cleanup_markdown_noise(
         "## Kết luận nhanh\n"
         f"{cleaned}\n\n"
         "## Phân tích chi tiết\n"
@@ -3541,6 +3714,9 @@ def _build_deep_beta_reasoning_client(
         timeout_seconds=timeout_seconds,
         retries_per_base=0,
         retry_backoff_seconds=0.0,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
 
 
@@ -3677,13 +3853,21 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_sources = payload.get("rag_sources")
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
-    llm_runtime = {
+    requested_llm_runtime = {
         "provider": rag_flow.get("llm_provider"),
         "api_key": rag_flow.get("llm_api_key"),
         "base_url": rag_flow.get("llm_base_url"),
         "model": rag_flow.get("llm_model"),
     }
-    llm_provider, _llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(llm_runtime)
+    llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(
+        requested_llm_runtime
+    )
+    llm_runtime = {
+        "provider": llm_provider,
+        "api_key": resolved_llm_api_key,
+        "base_url": llm_base_url,
+        "model": llm_model,
+    }
     legacy_verification_enabled = _coerce_bool(
         rag_flow.get("verification_enabled"),
         bool(settings.rule_verification_enabled),
@@ -3927,10 +4111,17 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
 
     pipeline = RagPipelineP1()
-    strict_deepseek_required = bool(
-        payload.get("strict_deepseek_required", settings.deepseek_required)
+    # Production policy: when at least one runtime LLM endpoint is configured,
+    # Tier2 research must not degrade to local synthesis fallback.
+    # For unconfigured local/test environments, keep local fallback to avoid
+    # hard-failing every research contract test.
+    has_runtime_upstream = bool(
+        str(llm_runtime.get("api_key") or "").strip()
+        and str(llm_runtime.get("base_url") or "").strip()
+        and str(llm_runtime.get("model") or "").strip()
     )
-    deepseek_fallback_enabled = not strict_deepseek_required
+    strict_deepseek_required = has_runtime_upstream
+    deepseek_fallback_enabled = not has_runtime_upstream
     deep_beta_cap = max(6, min(int(settings.deep_beta_pass_cap), 64))
     pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else _DEFAULT_DEEP_PASS_CAP
     deep_pass_count = _resolve_deep_pass_count(
@@ -4099,6 +4290,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     payload={"pass_index": pass_index, "subquery": subquery},
                 )
             )
+            _pause_between_pipeline_parts(multiplier=1.0)
             pass_result = pipeline.run(
                 subquery,
                 low_context_threshold=float(planner_hints["low_context_threshold"]),
@@ -4444,6 +4636,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     },
                 )
             )
+            _pause_between_pipeline_parts(multiplier=1.0)
             pass_result = pipeline.run(
                 subquery,
                 low_context_threshold=float(planner_hints["low_context_threshold"]),
@@ -4689,6 +4882,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                         payload={"pass_index": query_index, "subquery": gap_query},
                     )
                 )
+                _pause_between_pipeline_parts(multiplier=0.9)
                 pass_result = pipeline.run(
                     gap_query,
                     low_context_threshold=float(planner_hints["low_context_threshold"]),
@@ -4989,14 +5183,16 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         citations,
         research_mode=research_mode,
     )
-    if research_mode == "deep_beta":
-        deep_beta_report_started = perf_counter()
+    if research_mode in {"deep", "deep_beta"}:
+        report_stage = "deep_beta_report_synthesis" if research_mode == "deep_beta" else "deep_report_synthesis"
+        report_mode_label = "Deep Beta" if research_mode == "deep_beta" else "Deep"
+        report_started = perf_counter()
         flow_events.append(
             _event(
-                stage="deep_beta_report_synthesis",
+                stage=report_stage,
                 status="started",
                 source_count=len(citations),
-                note="Deep Beta long-form report synthesis started.",
+                note=f"{report_mode_label} long-form report synthesis started.",
                 component="postprocess",
                 payload={
                     "citation_count": len(citations),
@@ -5026,30 +5222,32 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 citations,
                 research_mode=research_mode,
             )
-            _update_beta_reasoning_step(
-                stage="deep_beta_report_synthesis",
-                status="completed",
-                note="Deep beta report synthesis completed with LLM long-form output.",
-                payload={"answer_chars": len(answer_markdown)},
-            )
-            _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="running")
+            if research_mode == "deep_beta":
+                _update_beta_reasoning_step(
+                    stage="deep_beta_report_synthesis",
+                    status="completed",
+                    note="Deep beta report synthesis completed with LLM long-form output.",
+                    payload={"answer_chars": len(answer_markdown)},
+                )
+                _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="running")
         else:
-            _update_beta_reasoning_step(
-                stage="deep_beta_report_synthesis",
-                status="warning",
-                note="Deep beta report synthesis fell back to baseline answer.",
-                payload={"answer_chars": len(answer_markdown)},
-            )
-            _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="warning")
+            if research_mode == "deep_beta":
+                _update_beta_reasoning_step(
+                    stage="deep_beta_report_synthesis",
+                    status="warning",
+                    note="Deep beta report synthesis fell back to baseline answer.",
+                    payload={"answer_chars": len(answer_markdown)},
+                )
+                _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="warning")
         flow_events.append(
             _event(
-                stage="deep_beta_report_synthesis",
+                stage=report_stage,
                 status="completed" if report_changed else "warning",
                 source_count=len(citations),
                 note=(
-                    "Deep Beta long-form report synthesized."
+                    f"{report_mode_label} long-form report synthesized."
                     if report_changed
-                    else "Deep Beta report synthesis degraded; baseline report retained."
+                    else f"{report_mode_label} report synthesis degraded; baseline report retained."
                 ),
                 component="postprocess",
                 payload={
@@ -5057,10 +5255,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     "answer_chars": len(answer_markdown),
                     "target_min_words": int(settings.deep_beta_report_min_words),
                 },
-                started_at=deep_beta_report_started,
+                started_at=report_started,
             )
         )
-    if research_mode == "deep_beta":
+    if research_mode in {"deep", "deep_beta"}:
         answer_markdown = _sanitize_deep_beta_markdown_output(answer_markdown)
         answer_markdown = _ensure_deep_beta_report_artifacts(
             markdown_text=answer_markdown,

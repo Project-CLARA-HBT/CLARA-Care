@@ -73,6 +73,7 @@ from clara_api.schemas import (
 router = APIRouter()
 
 _MAX_RESEARCH_UPLOADS = 200
+_MAX_RESEARCH_UPLOAD_BYTES = 20 * 1024 * 1024
 _PREVIEW_CHAR_LIMIT = 500
 _MAX_EXTRACTED_TEXT_CHARS = 20_000
 _DEFAULT_SOURCE_NAME = "General Uploads"
@@ -155,11 +156,38 @@ _VN_HTML_SOURCE_DEFINITIONS: dict[str, dict[str, Any]] = {
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
-_research_job_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="research-tier2")
+_RESEARCH_JOB_MAX_WORKERS = max(
+    1,
+    min(32, int(os.getenv("RESEARCH_JOB_MAX_WORKERS", "8"))),
+)
+_research_job_executor = ThreadPoolExecutor(
+    max_workers=_RESEARCH_JOB_MAX_WORKERS,
+    thread_name_prefix="research-tier2",
+)
 _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
+
+
+def _validate_upload_safety(*, file_name: str, content_type: str, file_bytes: bytes) -> None:
+    size = len(file_bytes)
+    if size > _MAX_RESEARCH_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File vượt quá giới hạn {_MAX_RESEARCH_UPLOAD_BYTES // (1024 * 1024)}MB",
+        )
+
+    allowed = (
+        _is_text_file(file_name, content_type)
+        or _is_pdf_file(file_name, content_type)
+        or _is_image_file(file_name, content_type)
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Định dạng file không được hỗ trợ cho research upload",
+        )
 
 
 def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -1896,11 +1924,17 @@ def _invoke_ml_tier2_with_progress(
 ) -> dict[str, Any]:
     settings = get_settings()
     url = f"{settings.ml_service_url.rstrip('/')}/v1/research/tier2"
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
     timeout_seconds = max(settings.ml_service_timeout_seconds * 3.0, 480.0)
     started = datetime.now(tz=UTC)
+    request_kwargs: dict[str, Any] = {"json": ml_payload, "timeout": timeout_seconds}
+    if headers:
+        request_kwargs["headers"] = headers
 
     with ThreadPoolExecutor(max_workers=1, thread_name_prefix="research-ml-call") as executor:
-        future = executor.submit(httpx.post, url, json=ml_payload, timeout=timeout_seconds)
+        future = executor.submit(httpx.post, url, **request_kwargs)
         while True:
             try:
                 response = future.result(timeout=2.0)
@@ -3404,6 +3438,7 @@ async def upload_file_to_knowledge_source(
     file_bytes = await file.read()
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
+    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
 
     extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
     preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
@@ -3459,6 +3494,7 @@ async def upload_research_file(
     file_bytes = await file.read()
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
+    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
 
     extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
     preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
@@ -3525,6 +3561,7 @@ def research_tier2(
             if settings.deepseek_strict_mode
             else _research_tier2_fallback_payload(upstream_payload)
         ),
+        timeout_seconds=settings.ml_research_timeout_seconds,
     )
     normalized = _normalize_tier2_response(response)
     normalized = _enforce_request_execution_contract(

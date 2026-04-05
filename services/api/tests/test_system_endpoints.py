@@ -57,9 +57,11 @@ def test_system_dependencies_success(monkeypatch) -> None:
     class _MockResponse:
         status_code = 200
 
-    def _fake_get(url: str, *, timeout: float) -> _MockResponse:
+    def _fake_get(url: str, *, timeout: float, **kwargs) -> _MockResponse:
         assert url.endswith("/health")
         assert timeout > 0
+        headers = kwargs.get("headers")
+        assert headers is None or isinstance(headers, dict)
         return _MockResponse()
 
     monkeypatch.setattr("clara_api.api.v1.endpoints.system.httpx.get", _fake_get)
@@ -80,7 +82,7 @@ def test_system_dependencies_success(monkeypatch) -> None:
 def test_system_dependencies_handles_ml_unavailable(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
 
-    def _fake_get(_url: str, *, timeout: float) -> object:
+    def _fake_get(_url: str, *, timeout: float, **_kwargs) -> object:
         raise httpx.ConnectError("connection refused")
 
     monkeypatch.setattr("clara_api.api.v1.endpoints.system.httpx.get", _fake_get)
@@ -331,6 +333,59 @@ def test_rate_limiter_cleanup_removes_stale_buckets() -> None:
 
     assert "stale:/ping" not in middleware._buckets  # noqa: SLF001
     assert "fresh:/ping" in middleware._buckets  # noqa: SLF001
+
+
+def test_rate_limiter_uses_distributed_counter_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GLOBAL_RATE_LIMIT_PER_MIN", "1")
+    monkeypatch.setenv("RATE_LIMIT_WINDOW_SECONDS", "60")
+    monkeypatch.setenv("RATE_LIMIT_DISTRIBUTED_ENABLED", "true")
+    monkeypatch.setenv("REDIS_URL", "redis://test.invalid:6379/0")
+    get_settings.cache_clear()
+
+    rate_limit_app = FastAPI()
+    rate_limit_app.add_middleware(RateLimiterMiddleware)
+
+    @rate_limit_app.get("/ping")
+    def _ping() -> dict[str, bool]:
+        return {"ok": True}
+
+    rate_limit_client = TestClient(rate_limit_app)
+    middleware = next(
+        item
+        for item in rate_limit_client.app.user_middleware
+        if item.cls is RateLimiterMiddleware
+    )
+    assert middleware.cls is RateLimiterMiddleware
+
+    # Patch the class helper by monkeypatching instance after middleware stack build.
+    # First request builds stack and middleware instance.
+    first = rate_limit_client.get("/ping")
+    assert first.status_code == 200
+
+    # Reach into built middleware chain to replace redis method in test scope.
+    current = rate_limit_client.app.middleware_stack
+    target = None
+    while hasattr(current, "app"):
+        if isinstance(current, RateLimiterMiddleware):
+            target = current
+            break
+        current = current.app
+    assert target is not None
+
+    counter = {"count": 1}
+
+    def _fake_incr_with_ttl(_key: str, *, ttl_seconds: int) -> tuple[int, int] | None:
+        _ = ttl_seconds
+        counter["count"] += 1
+        return counter["count"], 30
+
+    monkeypatch.setattr(target._redis, "incr_with_ttl", _fake_incr_with_ttl)  # noqa: SLF001
+    second = rate_limit_client.get("/ping")
+    assert second.status_code == 429
+    assert second.json()["retry_after_seconds"] == 30
+    get_settings.cache_clear()
 
 
 def test_db_session_production_primary_failure_requires_explicit_fallback_gate(

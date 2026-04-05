@@ -5,7 +5,9 @@ import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeoutError
-from time import perf_counter
+from threading import Lock
+from time import monotonic, perf_counter, sleep
+import random
 from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlparse
@@ -28,6 +30,25 @@ class ExternalSourceGateway:
     DAILYMED_DRUGNAME_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v1/drugname"
     RXNAV_APPROXIMATE_TERM_URL = "https://rxnav.nlm.nih.gov/REST/approximateTerm.json"
     SEMANTIC_SCHOLAR_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
+    _HOST_RATE_LOCK = Lock()
+    _HOST_LAST_REQUEST_TS: dict[str, float] = {}
+
+    @classmethod
+    def _throttle_before_request(cls, url: str) -> None:
+        min_interval = max(0.0, float(settings.rag_external_min_interval_seconds))
+        if min_interval <= 0:
+            return
+        jitter = max(0.0, float(settings.rag_external_jitter_seconds))
+        host = cls._safe_host(url) or "global"
+        with cls._HOST_RATE_LOCK:
+            now = monotonic()
+            last = float(cls._HOST_LAST_REQUEST_TS.get(host, 0.0))
+            wait_seconds = min_interval - (now - last)
+            if wait_seconds > 0:
+                wait_seconds += random.uniform(0.0, jitter)
+                sleep(wait_seconds)
+                now = monotonic()
+            cls._HOST_LAST_REQUEST_TS[host] = now
 
     @staticmethod
     def _fetch_json(
@@ -36,6 +57,7 @@ class ExternalSourceGateway:
         *,
         headers: dict[str, str] | None = None,
     ) -> dict[str, Any] | list[Any] | None:
+        ExternalSourceGateway._throttle_before_request(url)
         merged_headers = {"User-Agent": "CLARA-ML/0.1"}
         if headers:
             merged_headers.update(headers)
@@ -54,6 +76,7 @@ class ExternalSourceGateway:
         *,
         headers: dict[str, str] | None = None,
     ) -> str:
+        ExternalSourceGateway._throttle_before_request(url)
         merged_headers = {"User-Agent": "CLARA-ML/0.1"}
         if headers:
             merged_headers.update(headers)
@@ -73,7 +96,8 @@ class ExternalSourceGateway:
         if not host:
             return False
         if not allowed_domains:
-            return True
+            # Secure-by-default: never allow open crawl when allowlist is empty.
+            return False
         if host in allowed_domains:
             return True
         return any(host.endswith(f".{domain}") for domain in allowed_domains)
@@ -1224,7 +1248,8 @@ class ExternalSourceGateway:
                     (perf_counter() - started) * 1000.0,
                 )
 
-        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+        max_workers = max(1, min(len(tasks), int(settings.rag_external_parallel_workers)))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
                 executor.submit(_run_provider, provider_name, provider_task): provider_name
                 for provider_name, provider_task in tasks

@@ -16,4 +16,4 @@ RUN python -m pip install --upgrade pip \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "clara_api.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port 8000 --workers ${API_UVICORN_WORKERS:-4}"]

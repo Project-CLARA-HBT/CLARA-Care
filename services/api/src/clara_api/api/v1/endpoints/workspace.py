@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -65,6 +66,11 @@ _DEFAULT_SUGGESTIONS: tuple[str, ...] = (
     "Tóm tắt ADR nghiêm trọng cần đi viện",
 )
 settings = get_settings()
+
+
+class WorkspaceDocxFromMarkdownRequest(BaseModel):
+    markdown: str = Field(min_length=1, max_length=1_500_000)
+    title: str | None = Field(default=None, max_length=200)
 
 
 def _get_user_by_token(db: Session, token: TokenPayload) -> User:
@@ -1239,6 +1245,39 @@ def export_workspace_conversation(
         content=markdown_text.encode("utf-8"),
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.post(
+    "/export/docx",
+    responses={
+        200: {
+            "content": {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
+            }
+        }
+    },
+)
+def export_docx_from_markdown(
+    payload: WorkspaceDocxFromMarkdownRequest,
+    token: TokenPayload = USER_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> Response:
+    _get_user_by_token(db, token)
+    markdown_text = (payload.markdown or "").strip()
+    if not markdown_text:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Markdown rỗng, không thể xuất DOCX.",
+        )
+
+    title = (payload.title or "").strip() or "research-export"
+    safe_name = _slug_file_name(title)
+    docx_bytes = _build_docx_bytes_from_markdown(markdown_text)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename={safe_name}.docx"},
     )
 
 

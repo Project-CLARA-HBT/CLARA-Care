@@ -76,6 +76,9 @@ async def council_intake(
 
     settings = get_settings()
     url = f"{settings.ml_service_url.rstrip('/')}/v1/council/intake"
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
 
     data: dict[str, str] = {"transcript": transcript_text}
     files: dict[str, tuple[str, bytes, str]] | None = None
@@ -90,11 +93,10 @@ async def council_intake(
 
     try:
         async with httpx.AsyncClient(timeout=settings.ml_service_timeout_seconds) as client:
-            response = await client.post(
-                url,
-                data=data,
-                files=files,
-            )
+            request_kwargs: dict[str, Any] = {"data": data, "files": files}
+            if headers:
+                request_kwargs["headers"] = headers
+            response = await client.post(url, **request_kwargs)
     except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError) as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

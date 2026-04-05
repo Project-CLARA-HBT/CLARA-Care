@@ -7,6 +7,8 @@ REQUIRE_DEEPSEEK="${REQUIRE_DEEPSEEK:-true}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 SKIP_ENV_GUARD="${SKIP_ENV_GUARD:-false}"
 ENV_GUARD_SCRIPT="${ENV_GUARD_SCRIPT:-${ROOT_DIR}/scripts/ops/validate_runtime_env.sh}"
+ML_INTERNAL_API_KEY_VALUE=""
+AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME:-clara_csrf_token}"
 
 if [[ ! -d "${ROOT_DIR}" ]]; then
   echo "[deploy] root dir not found: ${ROOT_DIR}" >&2
@@ -16,6 +18,25 @@ fi
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "[deploy] env file not found: ${ENV_FILE}" >&2
   exit 1
+fi
+
+if [[ -f "${ENV_FILE}" ]]; then
+  ml_key_line="$(grep -E '^[[:space:]]*ML_INTERNAL_API_KEY=' "${ENV_FILE}" | tail -n 1 || true)"
+  if [[ -n "${ml_key_line}" ]]; then
+    ML_INTERNAL_API_KEY_VALUE="${ml_key_line#*=}"
+    ML_INTERNAL_API_KEY_VALUE="${ML_INTERNAL_API_KEY_VALUE%\"}"
+    ML_INTERNAL_API_KEY_VALUE="${ML_INTERNAL_API_KEY_VALUE#\"}"
+    ML_INTERNAL_API_KEY_VALUE="${ML_INTERNAL_API_KEY_VALUE%\'}"
+    ML_INTERNAL_API_KEY_VALUE="${ML_INTERNAL_API_KEY_VALUE#\'}"
+  fi
+  csrf_cookie_line="$(grep -E '^[[:space:]]*AUTH_CSRF_COOKIE_NAME=' "${ENV_FILE}" | tail -n 1 || true)"
+  if [[ -n "${csrf_cookie_line}" ]]; then
+    AUTH_CSRF_COOKIE_NAME_VALUE="${csrf_cookie_line#*=}"
+    AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME_VALUE%\"}"
+    AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME_VALUE#\"}"
+    AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME_VALUE%\'}"
+    AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME_VALUE#\'}"
+  fi
 fi
 
 if [[ "${SKIP_ENV_GUARD}" != "true" ]]; then
@@ -83,8 +104,14 @@ smoke_research_mode() {
   local last_reason="no successful attempt"
 
   for attempt in 1 2 3; do
+    local curl_args=()
+    if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
+      curl_args+=(-H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}")
+    fi
+
     if curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
       -H 'Content-Type: application/json' \
+      "${curl_args[@]}" \
       -d "{\"query\":\"aspirin and ibuprofen interaction risk\",\"research_mode\":\"${research_mode}\",\"source_mode\":\"hybrid\"}" > "${output_file}"; then
       :
     else
@@ -154,8 +181,14 @@ smoke_ml() {
   deep_research_json="${tmp_dir}/research.deep.json"
   deep_beta_research_json="${tmp_dir}/research.deep_beta.json"
 
+  local curl_args=()
+  if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
+    curl_args+=(-H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}")
+  fi
+
   curl -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
+    "${curl_args[@]}" \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 
   if ! smoke_research_mode "${ml_url}" "deep" "${deep_research_json}" "${require_deepseek}"; then
@@ -172,6 +205,7 @@ smoke_ml() {
 
   curl -fsS -m 20 -X POST "${ml_url}/v1/careguard/analyze" \
     -H 'Content-Type: application/json' \
+    "${curl_args[@]}" \
     -d '{"medications":["Aspirin","Ibuprofen"],"symptoms":[],"allergies":[]}' > "${tmp_dir}/careguard.json"
 
   REQUIRE_DEEPSEEK="${REQUIRE_DEEPSEEK}" \
@@ -346,9 +380,17 @@ smoke_auth() {
   curl -fsS -b "${tmp_dir}/cookies.txt" \
     "${api_url}/auth/me" > "${tmp_dir}/me.json"
 
+  local csrf_token
+  csrf_token="$(awk -v name="${AUTH_CSRF_COOKIE_NAME_VALUE}" '$6 == name {print $7}' "${tmp_dir}/cookies.txt" | tail -n 1)"
+  local refresh_headers=()
+  if [[ -n "${csrf_token}" ]]; then
+    refresh_headers+=(-H "X-CSRF-Token: ${csrf_token}")
+  fi
+
   curl -fsS -b "${tmp_dir}/cookies.txt" \
     -X POST "${api_url}/auth/refresh" \
     -H 'Content-Type: application/json' \
+    "${refresh_headers[@]}" \
     -d '{}' > "${tmp_dir}/refresh.json"
 
   TMP_DIR="${tmp_dir}" python3 - <<'PY'
@@ -406,7 +448,24 @@ wait_json "http://127.0.0.1:3100/research/citations" "<html" 25 2
 wait_json "http://127.0.0.1:3100/research/details" "<html" 25 2
 
 if [[ "${REQUIRE_DEEPSEEK}" == "true" ]]; then
-  wait_json "http://127.0.0.1:8110/health/details" '"deepseek_configured":true' 20 2
+  if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
+    for ((i=1; i<=20; i++)); do
+      if output="$(curl -fsSL -H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}" "http://127.0.0.1:8110/health/details" 2>/dev/null)"; then
+        if [[ "${output}" == *'"deepseek_configured":true'* ]]; then
+          echo "[health] ok http://127.0.0.1:8110/health/details"
+          break
+        fi
+      fi
+      if (( i == 20 )); then
+        echo "[health] failed http://127.0.0.1:8110/health/details did not contain pattern: \"deepseek_configured\":true" >&2
+        exit 1
+      fi
+      echo "[health] waiting http://127.0.0.1:8110/health/details (${i}/20)"
+      sleep 2
+    done
+  else
+    wait_json "http://127.0.0.1:8110/health/details" '"deepseek_configured":true' 20 2
+  fi
 fi
 
 smoke_ml

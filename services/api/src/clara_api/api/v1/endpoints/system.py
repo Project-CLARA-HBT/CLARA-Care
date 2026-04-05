@@ -100,9 +100,15 @@ def get_dependencies(
     settings = get_settings()
     health_url = f"{settings.ml_service_url.rstrip('/')}/health"
     ml_status: dict[str, object] = {"url": health_url}
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
 
     try:
-        response = httpx.get(health_url, timeout=settings.ml_service_timeout_seconds)
+        request_kwargs: dict[str, Any] = {"timeout": settings.ml_service_timeout_seconds}
+        if headers:
+            request_kwargs["headers"] = headers
+        response = httpx.get(health_url, **request_kwargs)
         ml_status["reachable"] = response.status_code < 500
         ml_status["status"] = "ok" if response.status_code < 400 else "unhealthy"
         ml_status["upstream_status_code"] = response.status_code
@@ -641,7 +647,7 @@ def get_sources_registry(
 
 @router.get("/control-tower/config", response_model=SystemControlTowerConfig)
 def get_control_tower_config(
-    _token: TokenPayload = Depends(require_roles("doctor")),
+    _token: TokenPayload = Depends(require_roles("doctor", "admin")),
     db: Session = Depends(get_db),
 ) -> SystemControlTowerConfig:
     return get_control_tower_config_service().load(db)
@@ -650,7 +656,7 @@ def get_control_tower_config(
 @router.put("/control-tower/config", response_model=SystemControlTowerConfig)
 def update_control_tower_config(
     payload: SystemControlTowerConfig,
-    _token: TokenPayload = Depends(require_roles("doctor")),
+    _token: TokenPayload = Depends(require_roles("doctor", "admin")),
     db: Session = Depends(get_db),
 ) -> SystemControlTowerConfig:
     return get_control_tower_config_service().save(db, payload)

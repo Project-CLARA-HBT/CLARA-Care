@@ -180,7 +180,14 @@ def _decorate_safe_mode_answer(answer: str) -> str:
 
 
 def _post_to_ml(url: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
-    response = httpx.post(url, json=payload, timeout=timeout_seconds)
+    settings = get_settings()
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
+    request_kwargs: dict[str, Any] = {"json": payload, "timeout": timeout_seconds}
+    if headers:
+        request_kwargs["headers"] = headers
+    response = httpx.post(url, **request_kwargs)
     if response.status_code >= 500:
         raise httpx.HTTPStatusError(
             f"ML upstream 5xx: {response.status_code}",

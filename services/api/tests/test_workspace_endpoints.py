@@ -733,3 +733,88 @@ def test_workspace_export_docx_preserves_markdown_styles_and_mermaid_block() -> 
     assert "w:b" in document_xml
     assert "w:tbl" in document_xml
     assert "Mermaid Diagram" in document_xml
+
+
+def test_workspace_export_docx_normalizes_unfenced_mermaid_chart_and_unicode_bullets() -> None:
+    email = "workspace-export-normalize@example.com"
+    headers = _auth_headers(_login(email))
+    markdown_answer = (
+        "## Decision Flow (Deep Beta)\n\n"
+        "flowchart TD\n"
+        "A[Scope] --> B[Retrieve]\n"
+        "B --> C[Synthesize]\n\n"
+        "### Chart Spec (Deep Beta Signals)\n"
+        "type: bar\n"
+        "title: Deep Beta Evidence Signals\n"
+        "x: [supported_claims, contradicted_claims]\n"
+        "y:\n"
+        "  - 4\n"
+        "  - 1\n\n"
+        "• Kiểm tra mâu thuẫn claim-evidence.\n"
+        "• Gắn attribution theo từng claim.\n"
+    )
+    response_text = json.dumps({"result": {"answer_markdown": markdown_answer}}, ensure_ascii=False)
+    conversation_id = _create_conversation(
+        email,
+        "Kiểm tra chuẩn hóa export docx.",
+        title="Normalize Export Thread",
+        response_text=response_text,
+    )
+
+    docx_response = client.get(
+        f"/api/v1/workspace/conversations/{conversation_id}/export?format=docx",
+        headers=headers,
+    )
+    assert docx_response.status_code == 200
+    assert (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        in docx_response.headers["content-type"]
+    )
+
+    with zipfile.ZipFile(io.BytesIO(docx_response.content), mode="r") as archive:
+        document_xml = archive.read("word/document.xml").decode("utf-8")
+
+    assert "Normalize Export Thread" in document_xml
+    assert "Mermaid Diagram" in document_xml
+    assert "Deep Beta Evidence Signals" in document_xml
+    assert "supported_claims" in document_xml
+    assert "ListBullet" in document_xml
+
+
+def test_workspace_export_docx_from_markdown_endpoint() -> None:
+    email = "workspace-export-direct@example.com"
+    headers = _auth_headers(_login(email))
+    markdown = (
+        "## Decision Flow (Deep Beta)\n\n"
+        "flowchart TD\n"
+        "A[Scope] --> B[Retrieve]\n"
+        "B --> C[Synthesize]\n\n"
+        "### Chart Spec (Deep Beta Signals)\n"
+        "type: bar\n"
+        "title: Deep Beta Evidence Signals\n"
+        "x: [supported_claims, contradicted_claims]\n"
+        "y:\n"
+        "  - 4\n"
+        "  - 1\n\n"
+        "• claim-level verification\n"
+    )
+
+    response = client.post(
+        "/api/v1/workspace/export/docx",
+        headers=headers,
+        json={"markdown": markdown, "title": "direct-export"},
+    )
+    assert response.status_code == 200
+    assert (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        in response.headers["content-type"]
+    )
+    assert len(response.content) > 300
+
+    with zipfile.ZipFile(io.BytesIO(response.content), mode="r") as archive:
+        document_xml = archive.read("word/document.xml").decode("utf-8")
+
+    assert "Mermaid Diagram" in document_xml
+    assert "Deep Beta Evidence Signals" in document_xml
+    assert "supported_claims" in document_xml
+    assert "ListBullet" in document_xml

@@ -346,6 +346,15 @@ def run_fides_lite(
     if normalized_mode not in {"lite", "strict"}:
         normalized_mode = "lite"
     nli_runtime_enabled = bool(settings.rag_nli_enabled if nli_enabled is None else nli_enabled)
+    nli_strategy = str(settings.rag_nli_strategy or "").strip().lower()
+    llm_nli_enabled = bool(
+        nli_runtime_enabled
+        and (
+            settings.rag_nli_llm_enabled
+            or nli_strategy in {"llm", "llm_hybrid", "hybrid_llm"}
+        )
+    )
+    llm_nli_timeout_ms = int(settings.rag_nli_llm_timeout_ms)
 
     evidence_rows = _build_evidence_rows(retrieved_context)
     context_ids = [str(item.get("id", "")) for item in retrieved_context if item.get("id")]
@@ -386,7 +395,12 @@ def run_fides_lite(
         )
 
     if not evidence_rows:
-        verdict_rows = verify_claims(claims=claims, evidence_rows=evidence_rows)
+        verdict_rows = verify_claims(
+            claims=claims,
+            evidence_rows=evidence_rows,
+            llm_enabled=llm_nli_enabled,
+            llm_timeout_ms=llm_nli_timeout_ms,
+        )
         raw_verification_rows = [item.as_dict() for item in verdict_rows]
         verification_matrix = (
             _apply_nli_confidence_gate(raw_verification_rows)
@@ -428,7 +442,12 @@ def run_fides_lite(
             ),
         )
 
-    verdict_rows = verify_claims(claims=claims, evidence_rows=evidence_rows)
+    verdict_rows = verify_claims(
+        claims=claims,
+        evidence_rows=evidence_rows,
+        llm_enabled=llm_nli_enabled,
+        llm_timeout_ms=llm_nli_timeout_ms,
+    )
     raw_verification_rows = [item.as_dict() for item in verdict_rows]
     verification_matrix = (
         _apply_nli_confidence_gate(raw_verification_rows)

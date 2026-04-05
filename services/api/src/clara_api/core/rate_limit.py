@@ -1,5 +1,6 @@
 import ipaddress
 import os
+import hashlib
 import time
 from collections import defaultdict, deque
 from threading import Lock
@@ -9,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from clara_api.core.config import get_settings
+from clara_api.core.redis_security_store import RedisSecurityStore
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _CLEANUP_INTERVAL_SECONDS = 30.0
@@ -106,6 +108,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         self._buckets: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
         self._last_cleanup_at = time.monotonic()
+        self._redis = RedisSecurityStore()
 
     def _resolve_client_ip(self, request: Request) -> str:
         immediate_host = request.client.host if request.client else "unknown"
@@ -141,6 +144,28 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         settings = get_settings()
         limit = max(1, int(settings.rate_limit_requests))
         window_seconds = max(1, int(settings.rate_limit_window_seconds))
+        if settings.rate_limit_distributed_enabled and settings.redis_url.strip():
+            now_epoch = time.time()
+            bucket = int(now_epoch // window_seconds)
+            bucket_end = (bucket + 1) * window_seconds
+            ttl_seconds = max(1, int(bucket_end - now_epoch) + 1)
+            raw_key = f"{self._resolve_client_ip(request)}:{request.url.path}:{bucket}"
+            key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+            redis_key = f"{settings.security_redis_key_prefix}:rl:{window_seconds}:{key_hash}"
+            distributed = self._redis.incr_with_ttl(redis_key, ttl_seconds=ttl_seconds)
+            if distributed is not None:
+                count, retry_after = distributed
+                if count > limit:
+                    return JSONResponse(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        content={
+                            "detail": "Quá giới hạn request, vui lòng thử lại sau",
+                            "retry_after_seconds": retry_after,
+                        },
+                        headers={"Retry-After": str(retry_after)},
+                    )
+                return await call_next(request)
+
         now = time.monotonic()
         cutoff = now - window_seconds
         key = f"{self._resolve_client_ip(request)}:{request.url.path}"

@@ -87,6 +87,9 @@ class RagPipelineP1:
                 ),
                 retries_per_base=settings.deepseek_retries_per_base,
                 retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+                max_concurrency=settings.llm_global_max_concurrency,
+                min_interval_seconds=settings.llm_global_min_interval_seconds,
+                request_jitter_seconds=settings.llm_global_jitter_seconds,
             )
         self._graphrag = GraphRagSidecar()
 
@@ -2253,6 +2256,9 @@ class RagPipelineP1:
                     timeout_seconds=settings.deepseek_timeout_seconds,
                     retries_per_base=settings.deepseek_retries_per_base,
                     retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+                    max_concurrency=settings.llm_global_max_concurrency,
+                    min_interval_seconds=settings.llm_global_min_interval_seconds,
+                    request_jitter_seconds=settings.llm_global_jitter_seconds,
                 )
             elif runtime_llm_api_key:
                 runtime_llm_client = None

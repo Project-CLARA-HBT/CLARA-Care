@@ -400,7 +400,10 @@ class RagFlowConfig(BaseModel):
     scientific_retrieval_enabled: bool = True
     web_retrieval_enabled: bool = True
     file_retrieval_enabled: bool = True
-    llm_provider: Literal["deepseek", "hitechcloud_gpt53_codex_high"] = "hitechcloud_gpt53_codex_high"
+    llm_provider: Literal[
+        "deepseek",
+        "hitechcloud_gpt53_codex_high",
+    ] = "hitechcloud_gpt53_codex_high"
     llm_base_url: str = Field(default="https://platform.hitechcloud.one/v1", max_length=512)
     llm_model: str = Field(default="gpt-5.3-codex-high", max_length=255)
     llm_api_key: str = Field(default="", max_length=2048)
@@ -720,6 +723,19 @@ class WorkspaceConversationUpdateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
 
 
+class WorkspaceBulkConversationMetaUpdateRequest(BaseModel):
+    conversation_ids: list[int] = Field(default_factory=list, min_length=1, max_length=200)
+    folder_id: int | None = None
+    channel_id: int | None = None
+    is_favorite: bool | None = None
+    touched: bool = True
+
+
+class WorkspaceBulkConversationMetaUpdateResponse(BaseModel):
+    updated_count: int = 0
+    updated_ids: list[int] = Field(default_factory=list)
+
+
 class WorkspaceConversationMetaResponse(BaseModel):
     conversation_id: int
     folder_id: int | None = None
@@ -753,6 +769,19 @@ class WorkspaceConversationShareCreateRequest(BaseModel):
 
 class WorkspaceConversationShareResponse(BaseModel):
     conversation_id: int
+    share_token: str
+    public_url: str
+    is_active: bool
+    expires_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceConversationShareListItem(BaseModel):
+    conversation_id: int
+    conversation_title: str
+    message_count: int = 0
+    last_message_at: datetime | None = None
     share_token: str
     public_url: str
     is_active: bool
@@ -832,3 +861,8 @@ class WorkspaceSummaryResponse(BaseModel):
     channels: int = 0
     notes: int = 0
     pinned_notes: int = 0
+
+
+class WorkspaceExportFormatResponse(BaseModel):
+    format: Literal["markdown", "docx"]
+    filename: str

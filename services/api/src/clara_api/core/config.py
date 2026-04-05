@@ -55,8 +55,34 @@ class Settings(BaseSettings):
     auth_cookie_samesite: str = Field(default="lax", validation_alias="AUTH_COOKIE_SAMESITE")
     auth_cookie_domain: str = Field(default="", validation_alias="AUTH_COOKIE_DOMAIN")
     auth_cookie_path: str = Field(default="/", validation_alias="AUTH_COOKIE_PATH")
+    auth_csrf_enabled: bool = Field(default=True, validation_alias="AUTH_CSRF_ENABLED")
+    auth_csrf_cookie_name: str = Field(
+        default="clara_csrf_token",
+        validation_alias="AUTH_CSRF_COOKIE_NAME",
+    )
+    auth_csrf_header_name: str = Field(
+        default="X-CSRF-Token",
+        validation_alias="AUTH_CSRF_HEADER_NAME",
+    )
+    auth_refresh_reject_conflict: bool = Field(
+        default=False,
+        validation_alias="AUTH_REFRESH_REJECT_CONFLICT",
+    )
     auth_auto_provision_users: bool = Field(
         default=True, validation_alias="AUTH_AUTO_PROVISION_USERS"
+    )
+    redis_url: str = Field(default="", validation_alias="REDIS_URL")
+    security_redis_key_prefix: str = Field(
+        default="clara:sec",
+        validation_alias="SECURITY_REDIS_KEY_PREFIX",
+    )
+    rate_limit_distributed_enabled: bool = Field(
+        default=False,
+        validation_alias="RATE_LIMIT_DISTRIBUTED_ENABLED",
+    )
+    auth_login_distributed_enabled: bool = Field(
+        default=False,
+        validation_alias="AUTH_LOGIN_DISTRIBUTED_ENABLED",
     )
     auth_login_attempt_limit: int = Field(
         default=8,
@@ -145,11 +171,24 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
     pubmed_rate_limit_per_sec: int = Field(default=10, validation_alias="PUBMED_RATE_LIMIT_PER_SEC")
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
+    ml_internal_api_key: str = Field(default="", validation_alias="ML_INTERNAL_API_KEY")
     ml_service_timeout_seconds: float = Field(
         default=60.0,
         validation_alias="ML_SERVICE_TIMEOUT_SECONDS",
         gt=0,
     )
+    ml_research_timeout_seconds: float = Field(
+        default=300.0,
+        validation_alias="ML_RESEARCH_TIMEOUT_SECONDS",
+        gt=0,
+    )
+    research_job_max_workers: int = Field(
+        default=8,
+        validation_alias="RESEARCH_JOB_MAX_WORKERS",
+        ge=1,
+        le=32,
+    )
+    metrics_access_token: str = Field(default="", validation_alias="METRICS_ACCESS_TOKEN")
     deepseek_strict_mode: bool = Field(
         default=False,
         validation_alias="DEEPSEEK_STRICT_MODE",

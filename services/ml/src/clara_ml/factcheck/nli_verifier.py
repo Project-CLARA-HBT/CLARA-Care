@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
+
+from clara_ml.config import settings
+from clara_ml.llm.deepseek_client import DeepSeekClient
 
 
 _NEGATION_TERMS = {
@@ -189,6 +193,174 @@ def classify_claim(
     )
 
 
+def _strip_markdown_fence(raw: str) -> str:
+    text = str(raw or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+    return text
+
+
+def _clamp_confidence(value: Any, *, default: float = 0.5) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = float(default)
+    return max(0.01, min(0.99, parsed))
+
+
+def _normalize_llm_support_status(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"supported", "support", "entailment", "entailed"}:
+        return "supported"
+    if normalized in {"contradicted", "contradiction", "refuted", "conflict"}:
+        return "contradicted"
+    return "insufficient"
+
+
+def _should_use_llm_nli(*, llm_enabled: bool | None) -> bool:
+    strategy = str(settings.rag_nli_strategy or "").strip().lower()
+    strategy_enabled = strategy in {"llm", "llm_hybrid", "hybrid_llm"}
+    runtime_enabled = bool(settings.rag_nli_llm_enabled or strategy_enabled)
+    if llm_enabled is not None:
+        runtime_enabled = bool(llm_enabled)
+    return runtime_enabled and bool(str(settings.deepseek_api_key or "").strip())
+
+
+def _build_nli_client(*, timeout_ms: int) -> DeepSeekClient:
+    timeout_seconds = max(0.15, float(timeout_ms) / 1000.0)
+    return DeepSeekClient(
+        api_key=settings.deepseek_api_key,
+        base_url=settings.deepseek_base_url,
+        model=settings.deepseek_model,
+        timeout_seconds=timeout_seconds,
+        retries_per_base=0,
+        retry_backoff_seconds=0.0,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
+    )
+
+
+def _llm_verify_claims(
+    *,
+    claims: list[str],
+    evidence_rows: list[dict[str, str]],
+    timeout_ms: int,
+    llm_client: DeepSeekClient | None = None,
+) -> dict[int, dict[str, Any]]:
+    if not claims:
+        return {}
+    evidence_compact = [
+        {
+            "ref": str(item.get("ref") or "").strip(),
+            "text": _compact_snippet(str(item.get("text") or ""), max_len=240),
+        }
+        for item in evidence_rows[:16]
+    ]
+    system_prompt = (
+        "You are a strict clinical NLI verifier. Return STRICT JSON only. "
+        "Do not include markdown."
+    )
+    prompt = (
+        "Verify each claim against the provided evidence list.\n"
+        "Output EXACT JSON schema:\n"
+        "{\n"
+        '  "rows": [\n'
+        "    {\n"
+        '      "claim_index": 0,\n'
+        '      "support_status": "supported|contradicted|insufficient",\n'
+        '      "confidence": 0.0,\n'
+        '      "evidence_ref": "optional-ref",\n'
+        '      "rationale": "short reason"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Rules:\n"
+        "- If evidence does not clearly support claim, use insufficient.\n"
+        "- Use contradicted only when evidence clearly conflicts.\n"
+        "- confidence range [0,1].\n\n"
+        f"claims={json.dumps(claims, ensure_ascii=False)}\n"
+        f"evidence={json.dumps(evidence_compact, ensure_ascii=False)}\n"
+    )
+    client = llm_client or _build_nli_client(timeout_ms=timeout_ms)
+    response = client.generate(prompt=prompt, system_prompt=system_prompt)
+    cleaned = _strip_markdown_fence(response.content)
+    payload = json.loads(cleaned)
+    rows = payload.get("rows", []) if isinstance(payload, dict) else []
+    if not isinstance(rows, list):
+        return {}
+    available_refs = {str(item.get("ref") or "").strip() for item in evidence_rows}
+    normalized: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            claim_index = int(row.get("claim_index"))
+        except (TypeError, ValueError):
+            continue
+        if claim_index < 0 or claim_index >= len(claims):
+            continue
+        support_status = _normalize_llm_support_status(row.get("support_status"))
+        confidence = _clamp_confidence(row.get("confidence"), default=0.5)
+        evidence_ref = str(row.get("evidence_ref") or "").strip() or None
+        if evidence_ref and evidence_ref not in available_refs:
+            evidence_ref = None
+        rationale = _compact_snippet(str(row.get("rationale") or ""), max_len=200)
+        normalized[claim_index] = {
+            "support_status": support_status,
+            "confidence": confidence,
+            "evidence_ref": evidence_ref,
+            "rationale": rationale or "LLM NLI verification applied.",
+        }
+    return normalized
+
+
+def _apply_llm_nli_overrides(
+    *,
+    base_rows: list[ClaimVerdict],
+    llm_rows: dict[int, dict[str, Any]],
+    evidence_rows: list[dict[str, str]],
+) -> list[ClaimVerdict]:
+    if not llm_rows:
+        return base_rows
+    evidence_map = {
+        str(item.get("ref") or "").strip(): _compact_snippet(
+            str(item.get("text") or ""),
+            max_len=180,
+        )
+        for item in evidence_rows
+    }
+    merged: list[ClaimVerdict] = []
+    for idx, base in enumerate(base_rows):
+        override = llm_rows.get(idx)
+        if not override:
+            merged.append(base)
+            continue
+        status = str(override.get("support_status") or base.support_status).strip().lower()
+        evidence_ref = str(override.get("evidence_ref") or "").strip() or base.evidence_ref
+        evidence_snippet = evidence_map.get(evidence_ref or "", base.evidence_snippet or "")
+        rationale = str(override.get("rationale") or "").strip() or base.rationale
+        merged.append(
+            ClaimVerdict(
+                claim=base.claim,
+                claim_type=base.claim_type,
+                nli_label=status,
+                support_status=status,
+                confidence=_clamp_confidence(override.get("confidence"), default=base.confidence),
+                overlap_score=base.overlap_score,
+                evidence_ref=evidence_ref,
+                evidence_snippet=evidence_snippet,
+                rationale=rationale,
+            )
+        )
+    return merged
+
+
 def summarize_verdicts(rows: list[dict[str, Any]]) -> dict[str, Any]:
     total_claims = len(rows)
     supported_claims = 0
@@ -262,8 +434,39 @@ def build_verification_matrix(
 }
 
 
-def verify_claims(*, claims: list[str], evidence_rows: list[dict[str, str]]) -> list[ClaimVerdict]:
-    return [classify_claim(claim, evidence_rows=evidence_rows) for claim in claims]
+def verify_claims(
+    *,
+    claims: list[str],
+    evidence_rows: list[dict[str, str]],
+    llm_enabled: bool | None = None,
+    llm_timeout_ms: int | None = None,
+    llm_client: DeepSeekClient | None = None,
+) -> list[ClaimVerdict]:
+    base_rows = [classify_claim(claim, evidence_rows=evidence_rows) for claim in claims]
+    allow_llm = _should_use_llm_nli(llm_enabled=llm_enabled) or (
+        llm_client is not None and (llm_enabled is None or bool(llm_enabled))
+    )
+    if not allow_llm:
+        return base_rows
+
+    timeout_ms = int(
+        settings.rag_nli_llm_timeout_ms if llm_timeout_ms is None else llm_timeout_ms
+    )
+    timeout_ms = max(100, timeout_ms)
+    try:
+        llm_rows = _llm_verify_claims(
+            claims=claims,
+            evidence_rows=evidence_rows,
+            timeout_ms=timeout_ms,
+            llm_client=llm_client,
+        )
+        return _apply_llm_nli_overrides(
+            base_rows=base_rows,
+            llm_rows=llm_rows,
+            evidence_rows=evidence_rows,
+        )
+    except Exception:
+        return base_rows
 
 
 def summarize_verification_matrix(

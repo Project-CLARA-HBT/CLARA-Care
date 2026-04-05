@@ -1,6 +1,7 @@
 import logging
+import secrets
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -24,6 +25,15 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
+_CSRF_EXEMPT_PATHS = {
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
+    "/api/v1/auth/verify-email",
+    "/api/v1/auth/resend-verification",
+}
 
 raw_origins = [
     origin.strip()
@@ -42,6 +52,9 @@ cors_headers = [
     for header in settings.cors_allowed_headers.split(",")
     if header.strip()
 ]
+
+if settings.environment.lower() == "production" and "*" in raw_origins:
+    raise RuntimeError("CORS_ALLOWED_ORIGINS cannot contain wildcard in production.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,6 +75,26 @@ def init_db_schema() -> None:
             raise RuntimeError("JWT_SECRET_KEY must be configured in production.")
         if not settings.auth_cookie_secure:
             raise RuntimeError("AUTH_COOKIE_SECURE must be true in production.")
+        if settings.auth_csrf_enabled and not settings.auth_cookie_secure:
+            raise RuntimeError("CSRF protection requires AUTH_COOKIE_SECURE=true in production.")
+        if not settings.ml_internal_api_key.strip():
+            raise RuntimeError("ML_INTERNAL_API_KEY must be configured in production.")
+        if settings.auth_auto_provision_users:
+            raise RuntimeError("AUTH_AUTO_PROVISION_USERS must be disabled in production.")
+        insecure_bootstrap_passwords = {"wrongpass", "change-me", "admin", "password", "12345678"}
+        if (
+            settings.auth_bootstrap_admin_enabled
+            and settings.auth_bootstrap_admin_password.strip().lower() in insecure_bootstrap_passwords
+        ):
+            raise RuntimeError(
+                "AUTH_BOOTSTRAP_ADMIN_PASSWORD uses insecure default; configure a strong secret."
+            )
+        if (
+            settings.rate_limit_distributed_enabled or settings.auth_login_distributed_enabled
+        ) and not settings.redis_url.strip():
+            raise RuntimeError(
+                "REDIS_URL must be configured when distributed security limiters are enabled."
+            )
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
@@ -101,15 +134,60 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def enforce_csrf_for_cookie_session(request: Request, call_next):
+    if not settings.auth_csrf_enabled:
+        return await call_next(request)
+
+    if request.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return await call_next(request)
+    if request.url.path in _CSRF_EXEMPT_PATHS:
+        return await call_next(request)
+
+    auth_header = request.headers.get("authorization", "").strip().lower()
+    bearer_header_present = auth_header.startswith("bearer ")
+
+    auth_cookie_present = bool(
+        request.cookies.get(settings.auth_cookie_access_name)
+        or request.cookies.get(settings.auth_cookie_refresh_name)
+    )
+    # CSRF is required only when session cookies are actually used for auth.
+    # If client sends explicit Bearer token, browser CSRF vector does not apply.
+    if not auth_cookie_present or bearer_header_present:
+        return await call_next(request)
+
+    csrf_cookie = request.cookies.get(settings.auth_csrf_cookie_name, "").strip()
+    csrf_header = request.headers.get(settings.auth_csrf_header_name, "").strip()
+    if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "CSRF validation failed"},
+        )
+    return await call_next(request)
+
+
 @app.get("/health")
 def root_health() -> dict[str, str]:
     return {"status": "ok", "service": "clara-api"}
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
-def root_metrics() -> PlainTextResponse:
+def root_metrics(request: Request) -> PlainTextResponse:
+    expected = settings.metrics_access_token.strip()
+    if settings.environment.lower() == "production" and not expected:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if expected:
+        provided = (
+            request.headers.get("x-metrics-token", "").strip()
+            or request.query_params.get("token", "").strip()
+        )
+        if not provided or not secrets.compare_digest(provided, expected):
+            raise HTTPException(status_code=403, detail="Forbidden")
     payload = format_metrics_prometheus(get_api_metrics_store().snapshot())
     return PlainTextResponse(content=payload, media_type="text/plain; version=0.0.4")
 
 
 app.include_router(api_router)
+# Backward compatibility for stale frontend bundles that accidentally call
+# double-prefixed paths like /api/v1/api/v1/*.
+app.include_router(api_router, prefix="/api/v1")

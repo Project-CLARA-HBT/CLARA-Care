@@ -152,7 +152,21 @@ def _as_text(value: object, default: str = "") -> str:
 
 
 def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str, str]:
-    provider = _as_text(rag_flow.get("llm_provider"), "deepseek").lower()
+    if settings.llm_deepseek_only:
+        api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.deepseek_api_key
+        base_url = _as_text(rag_flow.get("llm_base_url"), "") or settings.deepseek_base_url
+        model = _as_text(rag_flow.get("llm_model"), "") or settings.deepseek_model
+        return {
+            "provider": "deepseek",
+            "api_key": api_key.strip(),
+            "base_url": base_url.strip(),
+            "model": model.strip(),
+        }
+
+    default_provider = (
+        "hitechcloud_gpt53_codex_high" if settings.primary_llm_api_key else "deepseek"
+    )
+    provider = _as_text(rag_flow.get("llm_provider"), default_provider).lower()
     if provider == "hitechcloud_gpt53_codex_high":
         api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.primary_llm_api_key
         base_url = (
@@ -323,101 +337,6 @@ def _research_emergency_escalation(*, role_hint: str | None) -> dict[str, object
             ],
         },
         default_action="escalate",
-    )
-
-
-def _research_fail_soft_payload(
-    *,
-    query: str,
-    role_hint: str | None,
-    reason: str,
-) -> dict[str, object]:
-    safe_role = (
-        role_hint
-        if role_hint in {"normal", "researcher", "doctor", "admin"}
-        else "normal"
-    )
-    fallback_text = (
-        "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
-        "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
-        "đối chiếu tương tác thuốc quan trọng, "
-        "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
-    )
-    public_reason = _sanitize_upstream_reason(reason)
-    fallback_markdown = (
-        "## Kết luận nhanh\n"
-        f"{fallback_text}\n\n"
-        "## Phân tích chi tiết\n"
-        "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, nên câu trả lời này dùng chế độ an toàn.\n"
-        "- Vui lòng kiểm chứng thêm với tài liệu chính thống và bác sĩ điều trị.\n\n"
-        "## Khuyến nghị an toàn\n"
-        "- Không tự ý kê đơn, không tự điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-        "- Nếu có bệnh nền hoặc đang dùng đa thuốc, nên tham khảo bác sĩ/dược sĩ sớm.\n\n"
-        "## Nguồn tham chiếu\n"
-        "- [1] Fallback an toàn khi upstream RAG/LLM không sẵn sàng."
-    )
-    return _ensure_policy_contract(
-        {
-            "role": safe_role,
-            "intent": "general_guidance",
-            "confidence": 0.35,
-            "emergency": False,
-            "answer": fallback_markdown,
-            "answer_markdown": fallback_markdown,
-            "summary": fallback_text,
-            "answer_format": "markdown",
-            "policy_action": "warn",
-            "fallback": True,
-            "fallback_reason": reason,
-            "model_used": "ml-safe-fallback-v1",
-            "retrieved_ids": [],
-            "flow_events": [
-                _flow_event(
-                    stage="rag_generation",
-                    status="failed",
-                    source_count=0,
-                    note=(
-                        "Upstream generation temporarily unavailable; "
-                        f"fallback mode enabled ({public_reason})."
-                    ),
-                ),
-                _flow_event(
-                    stage="fallback_response",
-                    status="completed",
-                    source_count=0,
-                    note="Returned safe markdown fallback instead of 500.",
-                ),
-            ],
-            "citations": [
-                {
-                    "id": "fallback-safe-1",
-                    "title": "Safety fallback notice",
-                    "source": "system_fallback",
-                    "url": "",
-                    "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
-                }
-            ],
-            "sources": [
-                {
-                    "id": "fallback-safe-1",
-                    "title": "Safety fallback notice",
-                    "source": "system_fallback",
-                    "url": "",
-                    "snippet": "Fallback an toàn khi upstream RAG/LLM chưa sẵn sàng.",
-                }
-            ],
-            "metadata": {
-                "query": query,
-                "policy_action": "warn",
-                "fallback_used": True,
-                "source_errors": {"upstream": [public_reason]},
-                "error_detail": public_reason,
-                "attributions": ["fallback-safe-1"],
-                "research_mode": "fast",
-                "deep_pass_count": 0,
-            },
-        },
-        default_action="warn",
     )
 
 
@@ -933,11 +852,12 @@ def research_tier2(payload: dict) -> dict:
         if detail:
             reason = f"{reason}:{detail[:180]}"
         logger.exception("research_tier2 upstream failure: %s", reason)
-        return _research_fail_soft_payload(
-            query=query,
-            role_hint=role_hint,
-            reason=reason,
-        )
+        # Do not return local fallback for research tier2.
+        # Caller should receive explicit upstream failure and retry.
+        raise HTTPException(
+            status_code=503,
+            detail=f"research_upstream_failed:{_sanitize_upstream_reason(reason)}",
+        ) from exc
 
 
 @app.post("/v1/careguard/analyze")

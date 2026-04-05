@@ -58,6 +58,13 @@ class Settings(BaseSettings):
             "HITECHCLOUD_MODEL",
         ),
     )
+    llm_deepseek_only: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LLM_DEEPSEEK_ONLY",
+            "DISABLE_PRIMARY_LLM",
+        ),
+    )
     deepseek_base_url: str = Field(
         default="https://api.deepseek.com",
         validation_alias="DEEPSEEK_BASE_URL",
@@ -71,8 +78,35 @@ class Settings(BaseSettings):
         default=45.0,
         validation_alias=AliasChoices("DEEPSEEK_TIMEOUT_SECONDS", "DEEPSEEK_TIMEOUT"),
     )
+    llm_global_max_concurrency: int = Field(
+        default=2,
+        validation_alias=AliasChoices(
+            "LLM_GLOBAL_MAX_CONCURRENCY",
+            "DEEPSEEK_MAX_CONCURRENCY",
+        ),
+        ge=1,
+        le=16,
+    )
+    llm_global_min_interval_seconds: float = Field(
+        default=0.4,
+        validation_alias=AliasChoices(
+            "LLM_GLOBAL_MIN_INTERVAL_SECONDS",
+            "DEEPSEEK_MIN_INTERVAL_SECONDS",
+        ),
+        ge=0.0,
+        le=10.0,
+    )
+    llm_global_jitter_seconds: float = Field(
+        default=0.15,
+        validation_alias=AliasChoices(
+            "LLM_GLOBAL_JITTER_SECONDS",
+            "DEEPSEEK_JITTER_SECONDS",
+        ),
+        ge=0.0,
+        le=5.0,
+    )
     deep_beta_pass_cap: int = Field(
-        default=20,
+        default=24,
         validation_alias="DEEP_BETA_PASS_CAP",
         ge=6,
         le=64,
@@ -85,7 +119,7 @@ class Settings(BaseSettings):
         ),
     )
     deep_beta_reasoning_llm_nodes: int = Field(
-        default=6,
+        default=8,
         validation_alias="DEEP_BETA_REASONING_LLM_NODES",
         ge=2,
         le=16,
@@ -100,25 +134,25 @@ class Settings(BaseSettings):
         le=120.0,
     )
     deep_beta_reasoning_parallel_workers: int = Field(
-        default=3,
+        default=6,
         validation_alias="DEEP_BETA_REASONING_PARALLEL_WORKERS",
         ge=1,
         le=8,
     )
     deep_beta_reasoning_rounds: int = Field(
-        default=2,
+        default=3,
         validation_alias="DEEP_BETA_REASONING_ROUNDS",
         ge=1,
         le=4,
     )
     deep_beta_gap_fill_max_passes: int = Field(
-        default=2,
+        default=4,
         validation_alias="DEEP_BETA_GAP_FILL_MAX_PASSES",
         ge=0,
         le=8,
     )
     deep_beta_gap_fill_max_queries: int = Field(
-        default=8,
+        default=12,
         validation_alias="DEEP_BETA_GAP_FILL_MAX_QUERIES",
         ge=1,
         le=24,
@@ -128,7 +162,7 @@ class Settings(BaseSettings):
         validation_alias="DEEP_BETA_REPORT_LLM_ENABLED",
     )
     deep_beta_report_min_words: int = Field(
-        default=2800,
+        default=4200,
         validation_alias=AliasChoices(
             "DEEP_BETA_REPORT_MIN_WORDS",
             "DEEP_BETA_REPORT_MIN_CHARS",
@@ -137,7 +171,7 @@ class Settings(BaseSettings):
         le=12000,
     )
     deep_beta_report_target_pages: int = Field(
-        default=7,
+        default=10,
         validation_alias="DEEP_BETA_REPORT_TARGET_PAGES",
         ge=3,
         le=12,
@@ -149,13 +183,13 @@ class Settings(BaseSettings):
         le=700,
     )
     deep_beta_report_expansion_rounds: int = Field(
-        default=2,
+        default=4,
         validation_alias="DEEP_BETA_REPORT_EXPANSION_ROUNDS",
         ge=0,
         le=5,
     )
     deep_beta_report_timeout_seconds: float = Field(
-        default=90.0,
+        default=120.0,
         validation_alias="DEEP_BETA_REPORT_TIMEOUT_SECONDS",
         ge=20.0,
         le=240.0,
@@ -187,13 +221,13 @@ class Settings(BaseSettings):
         le=120.0,
     )
     deepseek_retries_per_base: int = Field(
-        default=2,
+        default=1,
         validation_alias="DEEPSEEK_RETRIES_PER_BASE",
         ge=0,
         le=5,
     )
     deepseek_retry_backoff_seconds: float = Field(
-        default=0.35,
+        default=0.9,
         validation_alias="DEEPSEEK_RETRY_BACKOFF_SECONDS",
         ge=0.0,
         le=5.0,
@@ -245,6 +279,51 @@ class Settings(BaseSettings):
     rag_external_connectors_enabled: bool = Field(
         default=True,
         validation_alias="RAG_EXTERNAL_CONNECTORS_ENABLED",
+    )
+    rag_external_parallel_workers: int = Field(
+        default=3,
+        validation_alias=AliasChoices(
+            "RAG_EXTERNAL_PARALLEL_WORKERS",
+            "RAG_EXTERNAL_MAX_PARALLEL",
+        ),
+        ge=1,
+        le=16,
+    )
+    rag_external_min_interval_seconds: float = Field(
+        default=0.2,
+        validation_alias=AliasChoices(
+            "RAG_EXTERNAL_MIN_INTERVAL_SECONDS",
+            "RAG_EXTERNAL_THROTTLE_SECONDS",
+        ),
+        ge=0.0,
+        le=5.0,
+    )
+    rag_external_jitter_seconds: float = Field(
+        default=0.1,
+        validation_alias=AliasChoices(
+            "RAG_EXTERNAL_JITTER_SECONDS",
+            "RAG_EXTERNAL_THROTTLE_JITTER_SECONDS",
+        ),
+        ge=0.0,
+        le=2.0,
+    )
+    research_inter_step_pause_seconds: float = Field(
+        default=0.35,
+        validation_alias=AliasChoices(
+            "RESEARCH_INTER_STEP_PAUSE_SECONDS",
+            "RESEARCH_STAGE_PAUSE_SECONDS",
+        ),
+        ge=0.0,
+        le=10.0,
+    )
+    research_inter_step_jitter_seconds: float = Field(
+        default=0.15,
+        validation_alias=AliasChoices(
+            "RESEARCH_INTER_STEP_JITTER_SECONDS",
+            "RESEARCH_STAGE_PAUSE_JITTER_SECONDS",
+        ),
+        ge=0.0,
+        le=3.0,
     )
     rag_graphrag_enabled: bool = Field(
         default=False,

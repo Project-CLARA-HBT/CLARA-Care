@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import base64
 import io
 import re
@@ -16,6 +17,25 @@ from markdown_it.token import Token
 _MERMAID_RENDER_TIMEOUT_SECONDS = 8.0
 _MERMAID_MAX_BYTES = 4_500_000
 _MERMAID_INFO_PATTERN = re.compile(r"^mermaid(\s+|$)", flags=re.IGNORECASE)
+_CHART_SPEC_INFO_PATTERN = re.compile(
+    r"^(chart-spec|vega-lite|echarts-option)(\s+|$)",
+    flags=re.IGNORECASE,
+)
+_UNICODE_BULLET_PATTERN = re.compile(r"^(\s*)[•●▪◦]\s+(.*)$")
+
+_MERMAID_START_PREFIXES = (
+    "flowchart",
+    "graph ",
+    "sequencediagram",
+    "classdiagram",
+    "statediagram",
+    "erdiagram",
+    "journey",
+    "gantt",
+    "pie",
+    "mindmap",
+    "timeline",
+)
 
 
 def build_docx_bytes_from_markdown(markdown_text: str) -> bytes:
@@ -39,7 +59,123 @@ def _configure_document_styles(doc: DocumentObject) -> None:
 
 
 def _normalize_markdown(value: str) -> str:
-    return str(value or "").replace("\r\n", "\n").replace("\r", "\n")
+    normalized = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
+    normalized = _normalize_unicode_bullets(normalized)
+    return _auto_fence_special_blocks(normalized)
+
+
+def _normalize_unicode_bullets(text: str) -> str:
+    lines = text.split("\n")
+    in_fence = False
+    out: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+
+        match = _UNICODE_BULLET_PATTERN.match(line)
+        if match:
+            indent, content = match.groups()
+            out.append(f"{indent}- {content}")
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def _auto_fence_special_blocks(text: str) -> str:
+    lines = text.split("\n")
+    out: list[str] = []
+    in_fence = False
+    prev_nonempty = ""
+    index = 0
+
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            if stripped:
+                prev_nonempty = stripped
+            index += 1
+            continue
+
+        if in_fence:
+            out.append(line)
+            if stripped:
+                prev_nonempty = stripped
+            index += 1
+            continue
+
+        if _is_mermaid_start_line(stripped):
+            block, next_index = _collect_nonempty_block(lines, index)
+            out.append("```mermaid")
+            out.extend(block)
+            out.append("```")
+            if next_index < len(lines) and lines[next_index].strip() == "":
+                out.append(lines[next_index])
+                next_index += 1
+            prev_nonempty = "```mermaid"
+            index = next_index
+            continue
+
+        if _is_chart_spec_start_line(stripped, prev_nonempty):
+            block, next_index = _collect_nonempty_block(lines, index)
+            out.append("```chart-spec")
+            out.extend(block)
+            out.append("```")
+            if next_index < len(lines) and lines[next_index].strip() == "":
+                out.append(lines[next_index])
+                next_index += 1
+            prev_nonempty = "```chart-spec"
+            index = next_index
+            continue
+
+        out.append(line)
+        if stripped:
+            prev_nonempty = stripped
+        index += 1
+
+    return "\n".join(out)
+
+
+def _collect_nonempty_block(lines: list[str], start: int) -> tuple[list[str], int]:
+    block: list[str] = []
+    cursor = start
+    while cursor < len(lines):
+        candidate = lines[cursor]
+        stripped = candidate.strip()
+        if not stripped:
+            break
+        if stripped.startswith("```"):
+            break
+        if cursor > start and stripped.startswith("#"):
+            break
+        block.append(candidate)
+        cursor += 1
+    return block, cursor
+
+
+def _is_mermaid_start_line(value: str) -> bool:
+    lowered = (value or "").strip().lower()
+    if not lowered:
+        return False
+    return any(lowered.startswith(prefix) for prefix in _MERMAID_START_PREFIXES)
+
+
+def _is_chart_spec_start_line(value: str, prev_nonempty: str) -> bool:
+    lowered = (value or "").strip().lower()
+    prev = (prev_nonempty or "").strip().lower()
+    if not lowered.startswith("type:"):
+        return False
+    return "chart spec" in prev or "chart-spec" in prev
 
 
 def _render_markdown_tokens(doc: DocumentObject, tokens: list[Token]) -> None:
@@ -73,6 +209,8 @@ def _render_markdown_tokens(doc: DocumentObject, tokens: list[Token]) -> None:
             code = token.content or ""
             if _MERMAID_INFO_PATTERN.match(info):
                 _append_mermaid_block(doc, code)
+            elif _CHART_SPEC_INFO_PATTERN.match(info):
+                _append_chart_spec_block(doc, code)
             else:
                 _append_code_block(doc, code)
             index += 1
@@ -257,6 +395,120 @@ def _append_code_block(doc: DocumentObject, code: str) -> None:
         run = paragraph.add_run(line)
         run.font.name = "Consolas"
         run.font.size = Pt(10.5)
+
+
+def _append_chart_spec_block(doc: DocumentObject, code: str) -> None:
+    parsed = _parse_chart_spec(code)
+
+    title = doc.add_paragraph(parsed.get("title") or "Chart Spec")
+    title.runs[0].bold = True
+
+    labels = parsed.get("x") or []
+    values = parsed.get("y") or []
+    row_count = min(len(labels), len(values))
+    if row_count:
+        table = doc.add_table(rows=row_count + 1, cols=3)
+        table.style = "Table Grid"
+        table.cell(0, 0).text = "Metric"
+        table.cell(0, 1).text = "Value"
+        table.cell(0, 2).text = "Bar"
+
+        numeric_values = [item for item in (_coerce_float(v) for v in values) if item is not None]
+        max_value = max((abs(item) for item in numeric_values), default=0.0)
+
+        for idx in range(row_count):
+            label = str(labels[idx])
+            value = values[idx]
+            numeric = _coerce_float(value)
+            bar = ""
+            if numeric is not None and max_value > 0:
+                bar_units = max(1, int(round((abs(numeric) / max_value) * 20)))
+                bar = "█" * bar_units
+            table.cell(idx + 1, 0).text = label
+            table.cell(idx + 1, 1).text = str(value)
+            table.cell(idx + 1, 2).text = bar
+        return
+
+    _append_code_block(doc, code)
+
+
+def _parse_chart_spec(code: str) -> dict[str, Any]:
+    lines = [line.rstrip() for line in (code or "").splitlines() if line.strip()]
+    parsed: dict[str, Any] = {"title": "Chart Spec", "x": [], "y": []}
+    index = 0
+    while index < len(lines):
+        line = lines[index].strip()
+        if ":" not in line:
+            index += 1
+            continue
+        key, raw_value = line.split(":", 1)
+        normalized_key = key.strip().lower()
+        value = raw_value.strip()
+
+        if normalized_key == "title" and value:
+            parsed["title"] = value
+            index += 1
+            continue
+        if normalized_key == "x":
+            parsed["x"] = _parse_inline_list(value)
+            index += 1
+            continue
+        if normalized_key == "y":
+            if value.startswith("["):
+                parsed["y"] = _parse_inline_list(value)
+                index += 1
+                continue
+
+            y_values: list[Any] = []
+            cursor = index + 1
+            while cursor < len(lines):
+                candidate = lines[cursor].strip()
+                if not candidate.startswith("-"):
+                    break
+                y_values.append(_parse_scalar(candidate[1:].strip()))
+                cursor += 1
+            parsed["y"] = y_values
+            index = cursor
+            continue
+
+        index += 1
+    return parsed
+
+
+def _parse_inline_list(raw: str) -> list[Any]:
+    value = (raw or "").strip()
+    if not value:
+        return []
+    try:
+        parsed = ast.literal_eval(value)
+    except Exception:
+        parsed = None
+    if isinstance(parsed, list):
+        return [_parse_scalar(item) for item in parsed]
+
+    if value.startswith("[") and value.endswith("]"):
+        inner = value[1:-1]
+    else:
+        inner = value
+    items = [part.strip() for part in inner.split(",") if part.strip()]
+    return [_parse_scalar(item) for item in items]
+
+
+def _parse_scalar(raw: Any) -> Any:
+    if isinstance(raw, (int, float)):
+        return raw
+    text = str(raw).strip().strip("'\"")
+    if not text:
+        return ""
+    number = _coerce_float(text)
+    return number if number is not None else text
+
+
+def _coerce_float(value: Any) -> float | None:
+    try:
+        return float(str(value).strip())
+    except Exception:
+        return None
 
 
 def _append_mermaid_block(doc: DocumentObject, code: str) -> None:

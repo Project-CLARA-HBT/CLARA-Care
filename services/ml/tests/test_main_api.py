@@ -516,7 +516,7 @@ def test_research_tier2_emergency_escalates_fastpath():
     assert body["model_used"] == "research-emergency-guard-v1"
 
 
-def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPatch):
+def test_research_tier2_returns_503_when_upstream_fails(monkeypatch: pytest.MonkeyPatch):
     import clara_ml.main as main_module
 
     original_runner = main_module.run_research_tier2
@@ -533,23 +533,9 @@ def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPa
     finally:
         monkeypatch.setattr(main_module, "run_research_tier2", original_runner)
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     body = response.json()
-    assert body["model_used"] == "ml-safe-fallback-v1"
-    assert body["fallback"] is True
-    assert body["policy_action"] == "warn"
-    assert str(body["fallback_reason"]).startswith("RuntimeError")
-    assert isinstance(body.get("answer_markdown"), str)
-    assert "kết luận nhanh" in body["answer_markdown"].lower()
-    assert isinstance(body.get("sources"), list)
-    assert len(body["sources"]) >= 1
-    assert isinstance(body.get("flow_events"), list)
-    assert any(event.get("stage") == "fallback_response" for event in body["flow_events"])
-    generation_events = [
-        event for event in body["flow_events"] if event.get("stage") == "rag_generation"
-    ]
-    assert generation_events
-    assert "deepseek_generation_failed" not in str(generation_events[0].get("note", "")).lower()
+    assert body["detail"].startswith("research_upstream_failed:")
 
 
 def test_research_tier2_flow_search_index_events_precede_synthesis():
