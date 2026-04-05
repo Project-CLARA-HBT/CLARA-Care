@@ -1,0 +1,13 @@
+{
+  "run_dir": "/Users/nguyennt/Documents/CLARA-Care/artifacts/round2/phase1-day9-20260402-224131-base",
+  "source_run": "phase1-day9-20260402-224131-base",
+  "input_candidates": 104,
+  "output_count": 96,
+  "limit": 200,
+  "output_path": "/Users/nguyennt/Documents/CLARA-Care/data/demo/hard-negative-mined-phase1-day9-20260402-224131.jsonl",
+  "reason_breakdown": {
+    "critical_ddi_miss": 30,
+    "failed_case": 66
+  },
+  "conversation_log_inputs": []
+}

@@ -1,0 +1,12 @@
+{
+  "run_dir": "/Users/nguyennt/Documents/CLARA-Care/artifacts/round2/day24-scope-final-smoke-021904-base",
+  "source_run": "day24-scope-final-smoke-021904-base",
+  "input_candidates": 104,
+  "output_count": 2,
+  "limit": 2,
+  "output_path": "/Users/nguyennt/Documents/CLARA-Care/data/demo/hard-negative-mined-day24-scope-final-smoke-021904.jsonl",
+  "reason_breakdown": {
+    "critical_ddi_miss": 2
+  },
+  "conversation_log_inputs": []
+}

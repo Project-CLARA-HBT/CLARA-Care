@@ -1,0 +1,14 @@
+{
+  "run_dir": "/Users/nguyennt/Documents/CLARA-Care/artifacts/round2/day24-phase3-live-20260403-rerun-base",
+  "source_run": "day24-phase3-live-20260403-rerun-base",
+  "input_candidates": 58,
+  "output_count": 50,
+  "limit": 120,
+  "output_path": "/Users/nguyennt/Documents/CLARA-Care/data/demo/hard-negative-mined-day24-phase3-live-20260403-rerun.jsonl",
+  "reason_breakdown": {
+    "source_errors": 50
+  },
+  "conversation_log_inputs": [
+    "/Users/nguyennt/Documents/CLARA-Care/artifacts/round2/day24-phase3-live-20260403-rerun/production-flow-events.json"
+  ]
+}

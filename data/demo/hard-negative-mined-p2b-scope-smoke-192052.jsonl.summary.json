@@ -1,0 +1,12 @@
+{
+  "run_dir": "/Users/nguyennt/Documents/CLARA-Care/artifacts/round2/p2b-scope-smoke-192052-base",
+  "source_run": "p2b-scope-smoke-192052-base",
+  "input_candidates": 104,
+  "output_count": 10,
+  "limit": 10,
+  "output_path": "/Users/nguyennt/Documents/CLARA-Care/data/demo/hard-negative-mined-p2b-scope-smoke-192052.jsonl",
+  "reason_breakdown": {
+    "critical_ddi_miss": 10
+  },
+  "conversation_log_inputs": []
+}
