@@ -14,7 +14,7 @@
     "docx": "^9.1.1",
     "html-to-image": "^1.11.11",
     "mermaid": "10.9.5",
-    "next": "15.5.14",
+    "next": "16.2.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-markdown": "^9.0.1",
