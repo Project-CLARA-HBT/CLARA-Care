@@ -1912,7 +1912,7 @@ export default function ChatWorkspacePage() {
       variant="plain"
       title=""
     >
-      <div className="relative h-full min-h-0">
+      <div className="relative h-[100dvh] min-h-[100dvh]">
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -2014,7 +2014,7 @@ export default function ChatWorkspacePage() {
             {isSearching ? <p className="mt-1 text-[11px] text-[var(--text-muted)]">Đang tìm...</p> : null}
           </div>
 
-          <div className="mt-3 flex-1 space-y-3 overflow-hidden pr-1">
+          <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
               <section className="rounded-xl bg-[var(--surface-muted)] p-2.5">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
@@ -2168,7 +2168,7 @@ export default function ChatWorkspacePage() {
                 <div
                   ref={conversationListViewportRef}
                   onScroll={onConversationListScroll}
-                  className="flex-1 min-h-[16rem] overflow-y-auto pr-1"
+                  className="min-h-0 flex-1 overflow-y-auto pr-1"
                 >
                   <div
                     style={{ height: `${conversationVirtualizer.getTotalSize()}px` }}
@@ -2635,7 +2635,7 @@ export default function ChatWorkspacePage() {
             ) : null}
           </header>
 
-          <div ref={conversationScrollRef} className="flex-1 space-y-4 overflow-y-auto py-4 pr-1">
+          <div ref={conversationScrollRef} className="flex-1 min-h-0 space-y-4 overflow-y-auto py-4 pr-1">
             {isLoadingTurns && !conversationTurns.length ? (
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                 Đang tải nội dung conversation...
