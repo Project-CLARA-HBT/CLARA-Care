@@ -1123,7 +1123,7 @@ def test_research_tier2_forwards_deep_beta_mode_to_ml(
     assert forwarded["role"] == "researcher"
 
 
-def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
+def test_research_tier2_ignores_client_verification_flags_in_rag_flow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1148,9 +1148,12 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
         "/api/v1/research/tier2",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "query": "legacy verification mapping",
+            "query": "verification guardrails cannot be disabled by clients",
             "rag_flow": {
                 "verification_enabled": False,
+                "rule_verification_enabled": False,
+                "nli_model_enabled": False,
+                "rag_nli_enabled": False,
             },
         },
     )
@@ -1159,7 +1162,9 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
     forwarded = captured["json"]
     assert isinstance(forwarded, dict)
     rag_flow = forwarded["rag_flow"]
-    assert rag_flow["rule_verification_enabled"] is False
+    assert rag_flow["rule_verification_enabled"] is True
+    assert rag_flow["nli_model_enabled"] is True
+    assert rag_flow["rag_nli_enabled"] is True
     assert "verification_enabled" not in rag_flow
 
 

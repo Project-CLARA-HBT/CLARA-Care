@@ -1628,6 +1628,11 @@ def _build_tier2_upstream_payload(
             normalized_incoming_rag_flow["rule_verification_enabled"] = (
                 normalized_incoming_rag_flow.get("verification_enabled")
             )
+        # Never trust client-supplied verification toggles for tier2 safety guardrails.
+        normalized_incoming_rag_flow.pop("verification_enabled", None)
+        normalized_incoming_rag_flow.pop("rule_verification_enabled", None)
+        normalized_incoming_rag_flow.pop("nli_model_enabled", None)
+        normalized_incoming_rag_flow.pop("rag_nli_enabled", None)
         merged_rag_flow = {**runtime_rag_flow, **normalized_incoming_rag_flow}
     else:
         merged_rag_flow = runtime_rag_flow
