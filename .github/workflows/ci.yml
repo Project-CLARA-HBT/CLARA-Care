@@ -96,14 +96,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: |
-            services/api/pyproject.toml
-            services/ml/pyproject.toml
+          cache-dependency-path: .github/requirements-quality.txt
 
       - name: Install quality tools
         run: |
           python -m pip install --upgrade pip
-          pip install "ruff==0.6.9" "mypy==1.11.2" "pytest==8.3.2"
+          pip install -r .github/requirements-quality.txt
 
       - name: Install ripgrep
         run: |
@@ -411,13 +409,14 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: |
+            .github/requirements-security-audit.txt
             services/api/pyproject.toml
             services/ml/pyproject.toml
 
       - name: Run pip-audit
         run: |
           python -m pip install --upgrade pip
-          pip install "pip-audit>=2.7.0"
+          pip install -r .github/requirements-security-audit.txt
           pip install -e services/api -e services/ml
           pip-audit --progress-spinner=off
 
