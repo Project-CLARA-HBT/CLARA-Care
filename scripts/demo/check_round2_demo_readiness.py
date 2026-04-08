@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -79,12 +80,30 @@ def _write_report(out_dir: Path, run_id: str, gates: list[Gate]) -> None:
     print(f"Ready: {'YES' if payload['ready'] else 'NO'}")
 
 
+_RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _resolve_run_base(run_id: str) -> Path:
+    if not _RUN_ID_PATTERN.fullmatch(run_id):
+        raise ValueError("run-id must contain only letters, digits, dot (.), underscore (_), or hyphen (-).")
+
+    round2_root = (Path("artifacts") / "round2").resolve()
+    base = (round2_root / run_id).resolve()
+    if base.parent != round2_root:
+        raise ValueError("run-id resolves outside artifacts/round2.")
+    return base
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate Round2 demo readiness from canonical artifacts.")
     parser.add_argument("--run-id", required=True)
     args = parser.parse_args()
 
-    base = Path("artifacts") / "round2" / args.run_id
+    try:
+        base = _resolve_run_base(args.run_id)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     gates = [
         _gate_file_exists(base / "data-manifest" / "data-manifest.json", "artifact_data_manifest"),
         _gate_file_exists(base / "test-report" / "test-report.json", "artifact_test_report"),
