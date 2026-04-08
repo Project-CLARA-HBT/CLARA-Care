@@ -101,45 +101,12 @@ function formatPercent(value: number): string {
   return `${Math.max(0, value).toFixed(1)}%`;
 }
 
-function getGreeting(now: Date): { title: string; subtitle: string } {
-  const hour = now.getHours();
-  if (hour < 12) {
-    return {
-      title: "Chào buổi sáng",
-      subtitle: "Hệ thống đang sẵn sàng cho chu kỳ vận hành lâm sàng mới.",
-    };
-  }
-  if (hour < 18) {
-    return {
-      title: "Chào buổi chiều",
-      subtitle: "Các module đang đồng bộ ổn định, bạn có thể tiếp tục xử lý ca bệnh.",
-    };
-  }
-  return {
-    title: "Chào buổi tối",
-    subtitle: "Tổng hợp tín hiệu vận hành để đóng ca trong ngày một cách an toàn.",
-  };
-}
-
 function toneFromStatus(status: string): StatusTone {
   const normalized = status.toLowerCase();
   if (["ok", "healthy", "up", "pass", "ready", "reachable"].some((token) => normalized.includes(token))) return "ok";
   if (["warn", "warning", "degraded", "slow", "unstable"].some((token) => normalized.includes(token))) return "warn";
   if (["down", "fail", "error", "critical", "unhealthy", "offline"].some((token) => normalized.includes(token))) return "error";
   return "neutral";
-}
-
-function reliabilityScore(params: {
-  healthTone: StatusTone;
-  mlTone: StatusTone;
-  errorRate: number;
-  latencyMs: number;
-}): number {
-  const healthPart = params.healthTone === "ok" ? 34 : params.healthTone === "warn" ? 20 : 8;
-  const mlPart = params.mlTone === "ok" ? 28 : params.mlTone === "warn" ? 16 : 6;
-  const errorPart = Math.max(0, 24 - params.errorRate * 1.5);
-  const latencyPart = Math.max(0, 14 - Math.max(0, params.latencyMs - 280) / 90);
-  return Math.max(0, Math.min(100, healthPart + mlPart + errorPart + latencyPart));
 }
 
 function taskToneClass(tone: TodayTask["tone"]): string {
@@ -150,7 +117,6 @@ function taskToneClass(tone: TodayTask["tone"]): string {
 
 export default function DashboardPage() {
   const [role, setRole] = useState<UserRole>("normal");
-  const [displayName, setDisplayName] = useState("bạn");
   const [userSubject, setUserSubject] = useState("");
 
   const [healthStatus, setHealthStatus] = useState("unknown");
@@ -191,7 +157,6 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const roleLabel = useMemo(() => ROLE_LABELS[role] ?? ROLE_LABELS.normal, [role]);
-  const greeting = useMemo(() => getGreeting(new Date()), []);
 
   const ddiRiskLabel = useMemo(() => {
     const total = cabinetCount ?? 0;
@@ -366,9 +331,6 @@ export default function DashboardPage() {
           setRole(me.role);
         }
         const subject = String(me.subject ?? "");
-        const fullName = String(me.full_name ?? "").trim();
-        const inferredName = subject.includes("@") ? subject.split("@")[0] : "bạn";
-        setDisplayName(fullName || inferredName || "bạn");
         setUserSubject(subject);
       }
 
@@ -405,31 +367,7 @@ export default function DashboardPage() {
   const latencySafe = Math.max(0, Math.round(avgLatencyMs ?? 0));
   const sourceCoverage = totalSources > 0 ? (enabledSources / totalSources) * 100 : 0;
   const errorRate = requestSafe > 0 ? (errorSafe / requestSafe) * 100 : 0;
-  const reliability = reliabilityScore({
-    healthTone,
-    mlTone,
-    errorRate,
-    latencyMs: latencySafe,
-  });
-
   const verificationStackEnabled = flowFlags.ruleVerification && flowFlags.nliModel && flowFlags.ragNli;
-
-  const friendlySummary = useMemo(() => {
-    if (alerts.length > 0) {
-      return "Hệ thống đang có lưu ý cần kiểm tra. Nên xử lý cảnh báo trước khi chạy tác vụ chuyên sâu.";
-    }
-    if (pendingActions > 0) {
-      return `Hiện có ${formatCount(pendingActions)} việc cần xử lý. Ưu tiên thuốc hết hạn và dữ liệu thiếu liều dùng.`;
-    }
-    if (reliability >= 80) {
-      return "Mọi thứ đang ổn định. Bạn có thể tiếp tục careguard, council hoặc research theo nhu cầu.";
-    }
-    return "Hệ thống hoạt động bình thường, nên theo dõi thêm để giữ độ ổn định cao.";
-  }, [alerts.length, pendingActions, reliability]);
-
-  const stabilityScore = Math.max(0, Math.min(100, reliability));
-  const semiGaugeRatio = 141;
-  const semiGaugeProgress = Number((semiGaugeRatio * (stabilityScore / 100)).toFixed(1));
 
   const runtimeTiles = [
     { key: "api", label: "API HEALTH", value: healthStatus.toUpperCase(), tone: healthTone },
@@ -469,33 +407,11 @@ export default function DashboardPage() {
 
   return (
     <PageShell
-      title="Clinical Overview"
-      description={`${greeting.title}, ${displayName}. ${friendlySummary}`}
+      title=""
+      description=""
       variant="plain"
     >
       <div className="space-y-8">
-        <section className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-8 flex flex-col justify-end pb-4">
-            <h2 className="text-4xl font-extrabold tracking-tight text-[var(--text-primary)] mb-2">{greeting.title}, {displayName}</h2>
-            <p className="max-w-2xl text-[var(--text-secondary)]">{greeting.subtitle}</p>
-          </div>
-
-          <article className="col-span-12 lg:col-span-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[200px]">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_120%,#28d9f3,transparent)]" />
-            <div className="relative w-32 h-32">
-              <svg className="w-full h-full" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" fill="none" r="45" stroke="#1f4876" strokeDasharray="141 141" strokeLinecap="round" strokeWidth="4" transform="rotate(135 50 50)" />
-                <circle className="clara-glow-cyan" cx="50" cy="50" fill="none" r="45" stroke="#28d9f3" strokeDasharray={`${semiGaugeProgress} ${semiGaugeRatio}`} strokeLinecap="round" strokeWidth="6" transform="rotate(135 50 50)" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-extrabold text-cyan-400">{Math.round(stabilityScore)}%</span>
-                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Stability</span>
-              </div>
-            </div>
-            <p className="text-xs text-[var(--text-secondary)] mt-4 font-medium uppercase tracking-widest">Overall Stability</p>
-          </article>
-        </section>
-
         <section className="grid grid-cols-12 gap-6">
           <article className="col-span-12 md:col-span-4 rounded-lg p-5 border-l-2 border-cyan-400/40 border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
             <div className="flex justify-between items-start mb-4">

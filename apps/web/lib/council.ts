@@ -153,6 +153,7 @@ export type CouncilRunSnapshot = {
 
 let councilDraftMemory: CouncilCaseDraft | null = null;
 let councilSnapshotMemory: CouncilRunSnapshot | null = null;
+const ACTIVE_COUNCIL_CASE_KEY = "clara_active_council_case_id";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -724,4 +725,161 @@ export function saveCouncilSnapshot(snapshot: CouncilRunSnapshot): void {
 
 export function clearCouncilSnapshot(): void {
   councilSnapshotMemory = null;
+}
+
+export function setActiveCouncilCaseId(caseId: number): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ACTIVE_COUNCIL_CASE_KEY, String(caseId));
+}
+
+export function getActiveCouncilCaseId(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(ACTIVE_COUNCIL_CASE_KEY);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
+export function clearActiveCouncilCaseId(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ACTIVE_COUNCIL_CASE_KEY);
+}
+
+export type CouncilCaseRecord = {
+  id: number;
+  title: string;
+  status: string;
+  intake_mode: string;
+  transcript: string;
+  intake?: Record<string, unknown> | null;
+  request?: Record<string, unknown> | null;
+  result?: CouncilRunRawResponse | null;
+  raw_result?: CouncilRunRawResponse | null;
+  last_run_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CouncilCaseListResponse = {
+  items: CouncilCaseRecord[];
+  total: number;
+};
+
+export type CouncilCaseCreatePayload = {
+  title?: string;
+  intake_mode?: string;
+  transcript?: string;
+  request?: Record<string, unknown>;
+};
+
+export type CouncilCaseUpdatePayload = {
+  title?: string;
+  status?: string;
+  intake_mode?: string;
+  transcript?: string;
+  intake?: Record<string, unknown>;
+  request?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  raw_result?: Record<string, unknown>;
+};
+
+export async function listCouncilCases(limit = 20, offset = 0): Promise<CouncilCaseListResponse> {
+  const response = await api.get<CouncilCaseListResponse>("/council/cases", {
+    params: { limit, offset },
+  });
+  return response.data;
+}
+
+export async function getLatestCouncilCase(): Promise<CouncilCaseRecord> {
+  const response = await api.get<CouncilCaseRecord>("/council/cases/latest");
+  return response.data;
+}
+
+export async function getCouncilCase(caseId: number): Promise<CouncilCaseRecord> {
+  const response = await api.get<CouncilCaseRecord>(`/council/cases/${caseId}`);
+  return response.data;
+}
+
+export async function createCouncilCase(payload: CouncilCaseCreatePayload): Promise<CouncilCaseRecord> {
+  const response = await api.post<CouncilCaseRecord>("/council/cases", payload);
+  return response.data;
+}
+
+export async function updateCouncilCase(
+  caseId: number,
+  payload: CouncilCaseUpdatePayload
+): Promise<CouncilCaseRecord> {
+  const response = await api.patch<CouncilCaseRecord>(`/council/cases/${caseId}`, payload);
+  return response.data;
+}
+
+export async function runCouncilCaseIntake(
+  caseId: number,
+  payload: CouncilIntakeRequest
+): Promise<CouncilCaseRecord> {
+  const formData = new FormData();
+  const transcript = (payload.transcript ?? "").trim();
+  if (transcript) {
+    formData.append("transcript", transcript);
+  }
+  if (payload.audioFile) {
+    formData.append("audio_file", payload.audioFile);
+  }
+  const response = await api.post<CouncilCaseRecord>(`/council/cases/${caseId}/intake`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
+export async function runCouncilCaseById(
+  caseId: number,
+  payload: { request?: Record<string, unknown>; specialist_count?: number; specialists?: string[] } = {}
+): Promise<CouncilCaseRecord> {
+  const response = await api.post<CouncilCaseRecord>(`/council/cases/${caseId}/run`, payload);
+  return response.data;
+}
+
+export function buildSnapshotFromCouncilCase(caseItem: CouncilCaseRecord): CouncilRunSnapshot | null {
+  const raw = (caseItem.raw_result ?? caseItem.result) as CouncilRunRawResponse | null;
+  const requestRaw = (caseItem.request ?? {}) as Record<string, unknown>;
+  if (!raw) return null;
+
+  const historyValue = requestRaw.history;
+  const history =
+    typeof historyValue === "string"
+      ? historyValue
+      : Array.isArray(historyValue)
+        ? historyValue.map((item) => String(item).trim()).filter(Boolean).join("\n")
+        : asRecord(historyValue)
+          ? objectToText(asRecord(historyValue) as Record<string, unknown>)
+          : "";
+  const specialistCount =
+    typeof requestRaw.specialist_count === "number" && Number.isFinite(requestRaw.specialist_count)
+      ? Math.min(5, Math.max(2, Math.trunc(requestRaw.specialist_count)))
+      : 3;
+  const request: CouncilRunRequest = {
+    symptoms: Array.isArray(requestRaw.symptoms) ? parseStringArray(requestRaw.symptoms) : [],
+    labs:
+      typeof requestRaw.labs === "object" && requestRaw.labs && !Array.isArray(requestRaw.labs)
+        ? (requestRaw.labs as Record<string, number | string>)
+        : {},
+    medications: Array.isArray(requestRaw.medications) ? parseStringArray(requestRaw.medications) : [],
+    history,
+    specialistCount,
+    specialists: Array.isArray(requestRaw.specialists) ? parseStringArray(requestRaw.specialists) : [],
+  };
+
+  return {
+    request: {
+      symptoms: request.symptoms,
+      labs: request.labs,
+      medications: request.medications,
+      history: request.history,
+      specialistCount: request.specialistCount,
+      specialists: request.specialists,
+    },
+    result: normalizeCouncilRunResult(raw),
+    raw,
+    createdAt: caseItem.last_run_at ?? caseItem.updated_at ?? caseItem.created_at,
+  };
 }

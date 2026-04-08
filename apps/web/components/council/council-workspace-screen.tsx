@@ -5,7 +5,14 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
-import { CouncilRunSnapshot, loadCouncilSnapshot } from "@/lib/council";
+import {
+  CouncilCaseRecord,
+  buildSnapshotFromCouncilCase,
+  getActiveCouncilCaseId,
+  getCouncilCase,
+  getLatestCouncilCase,
+  setActiveCouncilCaseId,
+} from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
 
 type WorkspaceTab = "analyze" | "details" | "citations" | "research" | "deepdive";
@@ -39,11 +46,41 @@ const TAB_META: Record<WorkspaceTab, { title: string; description: string; eyebr
 };
 
 export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
-  const [snapshot, setSnapshot] = useState<CouncilRunSnapshot | null>(null);
+  const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
+  const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
+  const [loadError, setLoadError] = useState("");
   useEffect(() => {
-    setSnapshot(loadCouncilSnapshot());
+    const raw = new URLSearchParams(window.location.search).get("caseId");
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setQueryCaseId(Math.trunc(parsed));
+      return;
+    }
+    setQueryCaseId(getActiveCouncilCaseId());
   }, []);
 
+  useEffect(() => {
+    const load = async () => {
+      setLoadError("");
+      try {
+        let loaded: CouncilCaseRecord;
+        if (queryCaseId) {
+          loaded = await getCouncilCase(queryCaseId);
+        } else {
+          loaded = await getLatestCouncilCase();
+        }
+        setActiveCouncilCaseId(loaded.id);
+        setCaseItem(loaded);
+      } catch (cause) {
+        setLoadError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu council.");
+      }
+    };
+    if (queryCaseId !== null) {
+      void load();
+    }
+  }, [queryCaseId]);
+
+  const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
   const meta = TAB_META[tab];
 
@@ -55,7 +92,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
         {!view ? (
           <CouncilEmptyState
             title="Chưa có dữ liệu hội chẩn"
-            description="Hãy tạo ca mới để mở khóa các tab workspace."
+            description={loadError || "Hãy tạo ca mới để mở khóa các tab workspace."}
           />
         ) : null}
 

@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
-import { CouncilRunSnapshot, loadCouncilSnapshot } from "@/lib/council";
+import {
+  CouncilCaseRecord,
+  buildSnapshotFromCouncilCase,
+  getActiveCouncilCaseId,
+  getCouncilCase,
+  getLatestCouncilCase,
+  setActiveCouncilCaseId,
+} from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
 
 type SeverityLevel = "stable" | "warning" | "critical";
@@ -43,12 +51,42 @@ function severityClasses(severity: SeverityLevel): string {
 }
 
 export default function CouncilPage() {
-  const [snapshot, setSnapshot] = useState<CouncilRunSnapshot | null>(null);
+  const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
+  const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    setSnapshot(loadCouncilSnapshot());
+    const raw = new URLSearchParams(window.location.search).get("caseId");
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setQueryCaseId(Math.trunc(parsed));
+      return;
+    }
+    setQueryCaseId(getActiveCouncilCaseId());
   }, []);
 
+  useEffect(() => {
+    const load = async () => {
+      setLoadError("");
+      try {
+        let loaded: CouncilCaseRecord;
+        if (queryCaseId) {
+          loaded = await getCouncilCase(queryCaseId);
+        } else {
+          loaded = await getLatestCouncilCase();
+        }
+        setActiveCouncilCaseId(loaded.id);
+        setCaseItem(loaded);
+      } catch (cause) {
+        setLoadError(cause instanceof Error ? cause.message : "Chưa có case để hiển thị.");
+      }
+    };
+    if (queryCaseId !== null) {
+      void load();
+    }
+  }, [queryCaseId]);
+
+  const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
   const severity = useMemo(() => getSeverity(view), [view]);
 
@@ -114,6 +152,24 @@ export default function CouncilPage() {
       },
     ];
   }, [view]);
+
+  if (!view) {
+    return (
+      <PageShell
+        title="CLARA AI Council"
+        description="Flow đúng: New Case -> Intake -> Specialists -> Run. Chưa có case thì chưa có phân tích."
+        variant="plain"
+      >
+        <div className="space-y-5">
+          <CouncilWorkspaceNav />
+          <CouncilEmptyState
+            title="Chưa có dữ liệu phân tích"
+            description={loadError || "Hãy tạo New Case trước khi mở phần synthesis và telemetry."}
+          />
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell

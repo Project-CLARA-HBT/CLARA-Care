@@ -2,20 +2,59 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilMetricCard, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
-import { clearCouncilSnapshot, CouncilRunSnapshot, loadCouncilSnapshot } from "@/lib/council";
+import {
+  CouncilCaseRecord,
+  buildSnapshotFromCouncilCase,
+  getActiveCouncilCaseId,
+  getCouncilCase,
+  getLatestCouncilCase,
+  setActiveCouncilCaseId,
+} from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
 
 export default function CouncilResultPage() {
-  const [snapshot, setSnapshot] = useState<CouncilRunSnapshot | null>(null);
+  const router = useRouter();
+  const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
+  const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setSnapshot(loadCouncilSnapshot());
+    const raw = new URLSearchParams(window.location.search).get("caseId");
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setQueryCaseId(Math.trunc(parsed));
+      return;
+    }
+    setQueryCaseId(getActiveCouncilCaseId());
   }, []);
 
+  useEffect(() => {
+    const load = async () => {
+      setError("");
+      try {
+        let loaded: CouncilCaseRecord;
+        if (queryCaseId) {
+          loaded = await getCouncilCase(queryCaseId);
+        } else {
+          loaded = await getLatestCouncilCase();
+        }
+        setActiveCouncilCaseId(loaded.id);
+        setCaseItem(loaded);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Không thể tải case.");
+      }
+    };
+    if (queryCaseId !== null) {
+      void load();
+    }
+  }, [queryCaseId]);
+
+  const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
   const fmtPercent = (value: number | null): string => {
     if (value == null || Number.isNaN(value)) return "-";
@@ -38,7 +77,7 @@ export default function CouncilResultPage() {
         {!view ? (
           <CouncilEmptyState
             title="Chưa có dữ liệu hội chẩn"
-            description="Hãy tạo ca mới để có kết quả hiển thị ở đây."
+            description={error || "Hãy tạo ca mới để có kết quả hiển thị ở đây."}
           />
         ) : (
           <>
@@ -171,12 +210,11 @@ export default function CouncilResultPage() {
               <button
                 type="button"
                 onClick={() => {
-                  clearCouncilSnapshot();
-                  setSnapshot(null);
+                  router.push("/council/new");
                 }}
                 className="inline-flex min-h-[44px] items-center rounded-xl border border-red-300/55 bg-red-100/80 px-4 text-sm font-semibold text-red-800 dark:border-red-700/45 dark:bg-red-950/30 dark:text-red-200"
               >
-                Xóa snapshot cục bộ
+                Mở case mới
               </button>
             </section>
           </>

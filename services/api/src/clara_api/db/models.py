@@ -55,6 +55,58 @@ class Query(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ScribeSession(Base):
+    __tablename__ = "scribe_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    transcript: Mapped[str] = mapped_column(Text, default="")
+    soap_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    insights_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    last_processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship("User")
+
+
+class CouncilCase(Base):
+    __tablename__ = "council_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), default="New Case")
+    status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    intake_mode: Mapped[str] = mapped_column(String(32), default="transcript")
+    transcript: Mapped[str] = mapped_column(Text, default="")
+    intake_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    request_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    raw_result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship("User")
+
+
 class ResearchJob(Base):
     __tablename__ = "research_jobs"
 
