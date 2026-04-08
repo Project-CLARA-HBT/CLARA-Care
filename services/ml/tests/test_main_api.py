@@ -1043,3 +1043,25 @@ def test_council_intake_runtime_error_returns_400(monkeypatch: pytest.MonkeyPatc
 
     assert response.status_code == 400
     assert response.json()["detail"] == "deepseek unavailable"
+
+
+def test_council_intake_rejects_unsupported_audio_type():
+    response = client.post(
+        "/v1/council/intake",
+        data={"transcript": ""},
+        files={"audio_file": ("visit.txt", b"fake-audio", "text/plain")},
+    )
+
+    assert response.status_code == 415
+    assert "Unsupported audio content type" in response.json()["detail"]
+
+
+def test_council_intake_rejects_too_large_audio():
+    response = client.post(
+        "/v1/council/intake",
+        data={"transcript": ""},
+        files={"audio_file": ("visit.wav", b"0" * (15 * 1024 * 1024 + 1), "audio/wav")},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Audio file too large. Maximum size is 15MB."
