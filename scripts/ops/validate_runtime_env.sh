@@ -13,16 +13,27 @@ fi
 tmp_env="$(mktemp)"
 trap 'rm -f "${tmp_env}"' EXIT
 
-# Keep only key=value rows so shell sourcing is deterministic.
+# Keep only key=value rows and parse without shell evaluation.
 grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "${ENV_FILE}" > "${tmp_env}" || true
-# shellcheck disable=SC1090
-source "${tmp_env}"
+
+declare -A ENV_VALUES=()
+while IFS= read -r line; do
+  [[ -z "${line}" ]] && continue
+  key="${line%%=*}"
+  value="${line#*=}"
+  if [[ "${value}" == \"*\" && "${value}" == *\" ]]; then
+    value="${value:1:${#value}-2}"
+  elif [[ "${value}" == \'*\' && "${value}" == *\' ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  ENV_VALUES["${key}"]="${value}"
+done < "${tmp_env}"
 
 errors=0
 
 must_set_non_empty() {
   local var_name="$1"
-  local value="${!var_name:-}"
+  local value="${ENV_VALUES[${var_name}]:-}"
   if [[ -z "${value}" ]]; then
     echo "[env-guard] missing required variable: ${var_name}" >&2
     errors=$((errors + 1))
@@ -32,7 +43,7 @@ must_set_non_empty() {
 warn_if_equals() {
   local var_name="$1"
   local bad_value="$2"
-  local value="${!var_name:-}"
+  local value="${ENV_VALUES[${var_name}]:-}"
   if [[ "${value}" == "${bad_value}" ]]; then
     echo "[env-guard] invalid ${var_name}=${value}; expected non-${bad_value} for containerized runtime" >&2
     errors=$((errors + 1))
@@ -44,11 +55,11 @@ must_set_non_empty "POSTGRES_HOST"
 warn_if_equals "POSTGRES_HOST" "localhost"
 warn_if_equals "POSTGRES_HOST" "127.0.0.1"
 
-if [[ "${POSTGRES_HOST:-}" != "${EXPECTED_POSTGRES_HOST}" ]]; then
-  echo "[env-guard] warning: POSTGRES_HOST=${POSTGRES_HOST:-} (expected ${EXPECTED_POSTGRES_HOST} for compose network)"
+if [[ "${ENV_VALUES[POSTGRES_HOST]:-}" != "${EXPECTED_POSTGRES_HOST}" ]]; then
+  echo "[env-guard] warning: POSTGRES_HOST=${ENV_VALUES[POSTGRES_HOST]:-} (expected ${EXPECTED_POSTGRES_HOST} for compose network)"
 fi
 
-if [[ "${DATABASE_URL:-}" == *"@localhost:"* ]] || [[ "${DATABASE_URL:-}" == *"@127.0.0.1:"* ]]; then
+if [[ "${ENV_VALUES[DATABASE_URL]:-}" == *"@localhost:"* ]] || [[ "${ENV_VALUES[DATABASE_URL]:-}" == *"@127.0.0.1:"* ]]; then
   echo "[env-guard] invalid DATABASE_URL host (localhost/127.0.0.1) for containerized runtime" >&2
   errors=$((errors + 1))
 fi
