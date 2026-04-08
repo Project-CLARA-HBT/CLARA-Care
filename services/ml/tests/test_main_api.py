@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from clara_ml.main import app
-from clara_ml.observability import metrics_collector
+from clara_ml.observability import InMemoryMetricsCollector, metrics_collector
 
 client = TestClient(app)
 
@@ -12,6 +12,27 @@ def reset_in_memory_metrics():
     metrics_collector.reset()
     yield
     metrics_collector.reset()
+
+
+def test_in_memory_metrics_collector_caps_high_cardinality_paths():
+    collector = InMemoryMetricsCollector(max_paths=3, overflow_label="__overflow__")
+
+    collector.record(path="/metrics", latency_ms=1.0, status_code=200)
+    collector.record(path="/v1/chat/routed", latency_ms=1.0, status_code=200)
+    collector.record(path="/health", latency_ms=1.0, status_code=200)
+    collector.record(path="/random-1", latency_ms=1.0, status_code=404)
+    collector.record(path="/random-2", latency_ms=1.0, status_code=404)
+
+    snapshot = collector.snapshot()
+    assert snapshot["requests_total"] == 5
+    assert snapshot["by_path"] == {
+        "/health": 1,
+        "/metrics": 1,
+        "/v1/chat/routed": 1,
+        "__overflow__": 2,
+    }
+    assert snapshot["error_total"] == 2
+
 
 
 def test_metrics_endpoint_returns_prometheus_text_and_json_snapshot():
