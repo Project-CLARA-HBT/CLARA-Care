@@ -74,6 +74,7 @@ router = APIRouter()
 
 _MAX_RESEARCH_UPLOADS = 200
 _MAX_RESEARCH_UPLOAD_BYTES = 20 * 1024 * 1024
+_RESEARCH_UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 _PREVIEW_CHAR_LIMIT = 500
 _MAX_EXTRACTED_TEXT_CHARS = 20_000
 _DEFAULT_SOURCE_NAME = "General Uploads"
@@ -168,6 +169,23 @@ _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
+
+
+async def _read_upload_bytes_limited(file: UploadFile, *, max_bytes: int) -> bytes:
+    chunks: list[bytes] = []
+    total_bytes = 0
+    while True:
+        chunk = await file.read(_RESEARCH_UPLOAD_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File vượt quá giới hạn {max_bytes // (1024 * 1024)}MB",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _validate_upload_safety(*, file_name: str, content_type: str, file_bytes: bytes) -> None:
@@ -3435,7 +3453,7 @@ async def upload_file_to_knowledge_source(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await _read_upload_bytes_limited(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
     _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
@@ -3491,7 +3509,7 @@ async def upload_research_file(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await _read_upload_bytes_limited(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
     _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
