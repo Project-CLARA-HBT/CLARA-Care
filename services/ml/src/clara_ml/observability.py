@@ -8,18 +8,24 @@ from threading import Lock
 class InMemoryMetricsCollector:
     """Minimal in-memory metrics for service observability."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_paths: int = 512, overflow_label: str = "__other__") -> None:
         self._lock = Lock()
         self._requests_total = 0
         self._error_total = 0
         self._total_latency_ms = 0.0
         self._by_path: dict[str, int] = defaultdict(int)
+        self._max_paths = max(int(max_paths), 1)
+        self._overflow_label = overflow_label or "__other__"
 
     def record(self, *, path: str, latency_ms: float, status_code: int) -> None:
         with self._lock:
             self._requests_total += 1
             self._total_latency_ms += max(0.0, latency_ms)
-            self._by_path[path or "/"] += 1
+            normalized_path = path or "/"
+            if normalized_path in self._by_path or len(self._by_path) < self._max_paths:
+                self._by_path[normalized_path] += 1
+            else:
+                self._by_path[self._overflow_label] += 1
             if status_code >= 400:
                 self._error_total += 1
 
