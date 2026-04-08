@@ -99,7 +99,11 @@ jobs:
       - name: Prepare env
         run: |
           set -euo pipefail
-          cp .env.example .env
+          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
+            echo "[error] DEPLOY_ENV_FILE secret is required for staging deployments"
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
           {
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
@@ -217,7 +221,11 @@ jobs:
       - name: Prepare env
         run: |
           set -euo pipefail
-          cp .env.example .env
+          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
+            echo "[error] DEPLOY_ENV_FILE secret is required for production deployments"
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
           {
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
