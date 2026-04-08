@@ -429,6 +429,49 @@ def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPa
     assert "metformin" in uploaded_document["text"]
 
 
+def test_research_tier2_forwards_source_language_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"ok": True}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "warfarin interaction profile by source",
+            "source_language_profile": {
+                "scientific": "tv",
+                "web": "ta",
+                "unknown": "vi",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    forwarded_payload = captured["json"]
+    assert isinstance(forwarded_payload, dict)
+    assert forwarded_payload["source_language_profile"] == {
+        "scientific": "vi",
+        "web": "en",
+    }
+
+
 def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> None:
     token = _login("alice@research.clara")
 
@@ -522,6 +565,44 @@ def test_research_tier2_job_create_forwards_full_retrieval_stack_mode(
         assert isinstance(row.request_payload, dict)
         assert row.request_payload["retrieval_stack_mode"] == "full"
         assert "stack_mode" not in row.request_payload
+
+
+def test_research_tier2_job_create_persists_source_language_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Persist source language profile",
+            "research_mode": "deep",
+            "source_language_profile": {
+                "internal": "tv",
+                "scientific": "en",
+                "web": "ta",
+                "custom": "vi",
+            },
+        },
+    )
+    assert create_response.status_code == 200
+    job_id = create_response.json()["job_id"]
+
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).first()
+        assert row is not None
+        assert isinstance(row.request_payload, dict)
+        assert row.request_payload["source_language_profile"] == {
+            "internal": "vi",
+            "scientific": "en",
+            "web": "en",
+        }
 
 
 def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1355,10 +1436,21 @@ def test_research_tier2_integration_preserves_deep_runtime_contract(
                 "index_summary": {
                     "retrieved_count": 12,
                     "selected_count": 6,
+                    "cache_summary": {
+                        "observed": True,
+                        "observation_count": 2,
+                        "hit_count": 1,
+                        "miss_count": 1,
+                        "hit_rate": 0.5,
+                        "latest_cache_hit": True,
+                        "latest_cache_age_ms": 12.3,
+                    },
                     "rerank": {
                         "rerank_latency_ms": 21.5,
                         "rerank_topn": 6,
-                        "rerank_reason": "ok",
+                        "rerank_reason": "cache_hit",
+                        "rerank_cache_hit": True,
+                        "rerank_cache_age_ms": 12.3,
                     },
                 },
             },
@@ -1397,8 +1489,10 @@ def test_research_tier2_integration_preserves_deep_runtime_contract(
     assert telemetry["search_plan"]["query"] == "warfarin ibuprofen bleeding risk"
     assert telemetry["verification_matrix"]["summary"]["total_claims"] == 1
     assert telemetry["index_summary"]["rerank"]["rerank_latency_ms"] == 21.5
+    assert telemetry["cache_summary"]["hit_count"] == 1
+    assert telemetry["cache_summary"]["latest_cache_hit"] is True
     assert telemetry["index_summary"]["rerank"]["rerank_topn"] == 6
-    assert telemetry["index_summary"]["rerank"]["rerank_reason"] == "ok"
+    assert telemetry["index_summary"]["rerank"]["rerank_reason"] == "cache_hit"
 
 
 def test_research_tier2_forwards_full_retrieval_stack_mode_to_ml(

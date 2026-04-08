@@ -180,6 +180,7 @@ def test_rag_pipeline_context_debug_includes_retrieval_trace():
     assert isinstance(rerank, dict)
     assert "rerank_topn" in rerank
     assert isinstance(rerank.get("rerank_latency_ms"), float)
+    assert isinstance(rerank.get("rerank_cache_hit"), bool)
     assert isinstance(result.trace, dict)
     assert isinstance(result.trace.get("planner"), dict)
     assert isinstance(result.trace.get("retrieval"), dict)
@@ -330,6 +331,10 @@ def test_rag_pipeline_emits_search_and_index_events():
     assert isinstance(retrieval_trace.get("search_plan"), dict)
     assert isinstance(retrieval_trace.get("index_summary"), dict)
     assert isinstance(retrieval_trace.get("index_summary", {}).get("rerank"), dict)
+    assert isinstance(
+        retrieval_trace.get("index_summary", {}).get("rerank", {}).get("rerank_cache_hit"),
+        bool,
+    )
     assert "source_attempts" in retrieval_trace
 
     assert any(

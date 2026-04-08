@@ -654,6 +654,7 @@ class ResearchTier2JobCreateRequest(BaseModel):
     response_format: str = "markdown"
     render_hints: dict[str, object] = Field(default_factory=dict)
     source_mode: str | None = None
+    source_language_profile: dict[str, str] = Field(default_factory=dict)
     uploaded_file_ids: list[str] = Field(default_factory=list)
     source_ids: list[int] = Field(default_factory=list)
     source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)

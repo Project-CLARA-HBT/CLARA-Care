@@ -4,6 +4,10 @@ import { getCsrfToken } from "@/lib/auth-store";
 export type ResearchTier = "tier1" | "tier2";
 export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 export type ResearchRetrievalStackMode = "auto" | "full";
+export type SourceLanguageCode = "vi" | "en" | "mixed" | "tv" | "ta";
+export type SourceLanguageProfile = Partial<
+  Record<"internal" | "scientific" | "web", SourceLanguageCode>
+>;
 
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
 export const RESEARCH_TIER2_TIMEOUT_MS = 120000;
@@ -183,6 +187,9 @@ export type ResearchTier2IndexSummary = {
   rerankLatencyMs?: number;
   rerankTopN?: number;
   rerankModel?: string;
+  rerankReason?: string;
+  rerankCacheHit?: boolean;
+  rerankCacheAgeMs?: number;
 };
 
 export type ResearchTier2CrawlSummary = {
@@ -524,6 +531,29 @@ function normalizeResearchRetrievalStackMode(
 ): ResearchRetrievalStackMode {
   if (mode === "full") return "full";
   return "auto";
+}
+
+function normalizeSourceLanguageProfile(
+  profile?: SourceLanguageProfile
+): Partial<Record<"internal" | "scientific" | "web", "vi" | "en" | "mixed">> | null {
+  if (!profile) return null;
+  const normalized: Partial<Record<"internal" | "scientific" | "web", "vi" | "en" | "mixed">> = {};
+
+  const normalizeCode = (value?: SourceLanguageCode): "vi" | "en" | "mixed" | null => {
+    if (value === "tv" || value === "vi") return "vi";
+    if (value === "ta" || value === "en") return "en";
+    if (value === "mixed") return "mixed";
+    return null;
+  };
+
+  (["internal", "scientific", "web"] as const).forEach((bucket) => {
+    const code = normalizeCode(profile[bucket]);
+    if (code) normalized[bucket] = code;
+  });
+
+  const keys = Object.keys(normalized);
+  if (!keys.length) return null;
+  return normalized;
 }
 
 function resolveApiBaseUrl(): string {
@@ -2211,6 +2241,8 @@ function pickStageSpansPayload(
 
 function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
   const item = asRecord(value) ?? {};
+  const rerank = asRecord(item.rerank);
+  const cacheSummary = asRecord(item.cache_summary) ?? asRecord(item.cacheSummary);
   const sourceCountsRecord = asRecord(item.source_counts) ?? asRecord(item.sourceCounts);
   const sourceCounts = sourceCountsRecord
     ? Object.fromEntries(
@@ -2239,12 +2271,32 @@ function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
     durationMs: asNumber(item.duration_ms) ?? asNumber(item.durationMs),
     rerankLatencyMs:
       asNumber(item.rerank_latency_ms) ??
+      asNumber(rerank?.rerank_latency_ms) ??
       asNumber(item.rerankLatencyMs),
     rerankTopN:
       asNumber(item.rerank_topn) ??
       asNumber(item.rerank_top_n) ??
+      asNumber(rerank?.rerank_topn) ??
+      asNumber(rerank?.rerank_top_n) ??
       asNumber(item.rerankTopN),
-    rerankModel: asText(item.rerank_model) ?? asText(item.rerankModel)
+    rerankModel:
+      asText(item.rerank_model) ??
+      asText(rerank?.rerank_model) ??
+      asText(item.rerankModel),
+    rerankReason:
+      asText(item.rerank_reason) ??
+      asText(rerank?.rerank_reason) ??
+      asText(item.rerankReason),
+    rerankCacheHit:
+      asBoolean(item.rerank_cache_hit) ??
+      asBoolean(rerank?.rerank_cache_hit) ??
+      asBoolean(item.rerankCacheHit) ??
+      asBoolean(cacheSummary?.latest_cache_hit),
+    rerankCacheAgeMs:
+      asNumber(item.rerank_cache_age_ms) ??
+      asNumber(rerank?.rerank_cache_age_ms) ??
+      asNumber(item.rerankCacheAgeMs) ??
+      asNumber(cacheSummary?.latest_cache_age_ms)
   };
 }
 
@@ -2412,6 +2464,7 @@ export async function runResearchTier2(
     sourceIds?: number[];
     researchMode?: ResearchExecutionMode;
     retrievalStackMode?: ResearchRetrievalStackMode;
+    sourceLanguageProfile?: SourceLanguageProfile;
   }
 ): Promise<ResearchTier2RawResponse> {
   const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
@@ -2421,6 +2474,7 @@ export async function runResearchTier2(
   const payload: Record<string, unknown> = { query, message: query };
   const researchMode = normalizeResearchExecutionMode(options?.researchMode);
   const retrievalStackMode = normalizeResearchRetrievalStackMode(options?.retrievalStackMode);
+  const sourceLanguageProfile = normalizeSourceLanguageProfile(options?.sourceLanguageProfile);
   payload.research_mode = researchMode;
   payload.retrieval_stack_mode = retrievalStackMode;
   payload.answer_format = "markdown";
@@ -2438,6 +2492,9 @@ export async function runResearchTier2(
   if (sourceIds.length) {
     payload.source_ids = sourceIds;
   }
+  if (sourceLanguageProfile) {
+    payload.source_language_profile = sourceLanguageProfile;
+  }
 
   const response = await api.post<ResearchTier2RawResponse>("/api/v1/research/tier2", payload, {
     timeout: RESEARCH_TIER2_TIMEOUT_MS
@@ -2453,6 +2510,7 @@ export async function createResearchTier2Job(
     sourceHubSources?: SourceHubSourceKey[];
     researchMode?: ResearchExecutionMode;
     retrievalStackMode?: ResearchRetrievalStackMode;
+    sourceLanguageProfile?: SourceLanguageProfile;
   }
 ): Promise<ResearchTier2JobResponse> {
   const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
@@ -2462,6 +2520,7 @@ export async function createResearchTier2Job(
   const sourceHubSources = uniqueText((options?.sourceHubSources ?? []).map((item) => String(item))) as SourceHubSourceKey[];
   const researchMode = normalizeResearchExecutionMode(options?.researchMode);
   const retrievalStackMode = normalizeResearchRetrievalStackMode(options?.retrievalStackMode);
+  const sourceLanguageProfile = normalizeSourceLanguageProfile(options?.sourceLanguageProfile);
 
   const payload: Record<string, unknown> = {
     query,
@@ -2481,6 +2540,7 @@ export async function createResearchTier2Job(
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
+  if (sourceLanguageProfile) payload.source_language_profile = sourceLanguageProfile;
 
   const response = await api.post<ResearchTier2JobResponse>("/api/v1/research/tier2/jobs", payload, {
     timeout: 30000

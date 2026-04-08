@@ -176,6 +176,27 @@ _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
+_SOURCE_LANGUAGE_BUCKETS = {"internal", "scientific", "web"}
+_SOURCE_LANGUAGE_BUCKET_ALIASES: dict[str, str] = {
+    "internal": "internal",
+    "inhouse": "internal",
+    "local": "internal",
+    "scientific": "scientific",
+    "science": "scientific",
+    "web": "web",
+    "internet": "web",
+    "online": "web",
+}
+_SOURCE_LANGUAGE_ALIASES: dict[str, str] = {
+    "vi": "vi",
+    "tv": "vi",
+    "vietnamese": "vi",
+    "en": "en",
+    "ta": "en",
+    "english": "en",
+    "mixed": "mixed",
+    "mix": "mixed",
+}
 
 
 async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -894,6 +915,23 @@ def _extract_source_ids(payload: dict[str, Any]) -> list[int]:
     return parsed
 
 
+def _normalize_source_language_profile_payload(raw_value: Any) -> dict[str, str]:
+    if not isinstance(raw_value, dict):
+        return {}
+    normalized_profile: dict[str, str] = {}
+    for raw_bucket, raw_language in raw_value.items():
+        bucket_key = str(raw_bucket or "").strip().lower().replace("-", "_")
+        bucket = _SOURCE_LANGUAGE_BUCKET_ALIASES.get(bucket_key, bucket_key)
+        if bucket not in _SOURCE_LANGUAGE_BUCKETS:
+            continue
+        language_key = str(raw_language or "").strip().lower().replace("-", "_")
+        language = _SOURCE_LANGUAGE_ALIASES.get(language_key)
+        if language not in {"vi", "en", "mixed"}:
+            continue
+        normalized_profile[bucket] = language
+    return normalized_profile
+
+
 def _coerce_research_mode(payload: dict[str, Any]) -> str:
     return _normalize_research_mode_value(
         payload.get("research_mode") or payload.get("mode"),
@@ -1195,6 +1233,24 @@ def _build_tier2_telemetry(
             index_summary = retriever_debug.get("index_summary")
         if index_summary is not None:
             telemetry["index_summary"] = index_summary
+
+    if "cache_summary" not in telemetry:
+        cache_summary = _first_value(
+            sources,
+            keys=("cache_summary", "retrieval_cache_summary"),
+        )
+        if cache_summary is None and isinstance(telemetry.get("index_summary"), dict):
+            cache_summary = telemetry.get("index_summary", {}).get("cache_summary")
+        if cache_summary is None and isinstance(retrieval_trace, dict):
+            index_summary = (
+                retrieval_trace.get("index_summary")
+                if isinstance(retrieval_trace.get("index_summary"), dict)
+                else {}
+            )
+            if isinstance(index_summary, dict):
+                cache_summary = index_summary.get("cache_summary")
+        if cache_summary is not None:
+            telemetry["cache_summary"] = cache_summary
 
     if "crawl_summary" not in telemetry:
         crawl_summary = _first_value(
@@ -1625,6 +1681,13 @@ def _build_tier2_upstream_payload(
     else:
         merged_render_hints = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
     upstream_payload["render_hints"] = merged_render_hints
+    source_language_profile = _normalize_source_language_profile_payload(
+        upstream_payload.get("source_language_profile")
+    )
+    if source_language_profile:
+        upstream_payload["source_language_profile"] = source_language_profile
+    else:
+        upstream_payload.pop("source_language_profile", None)
     transient_documents = _build_uploaded_documents(payload.get("uploaded_file_ids"))
     source_ids = _extract_source_ids(payload)
     source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)
