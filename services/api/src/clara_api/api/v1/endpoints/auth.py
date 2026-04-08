@@ -603,11 +603,10 @@ def forgot_password(
         recipient=user.email,
         token=reset_token,
     )
-    reset_token_preview = reset_token if should_expose_action_token_preview(settings) else None
     return ForgotPasswordResponse(
         accepted=True,
         email_delivery_status=email_delivery_status,
-        reset_token_preview=reset_token_preview,
+        reset_token_preview=None,
     )
 
 
