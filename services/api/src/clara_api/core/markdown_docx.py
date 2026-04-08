@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import ast
-import base64
 import io
 import re
 from typing import Any
 
-import httpx
 from docx import Document
 from docx.document import Document as DocumentObject
 from docx.oxml.ns import qn
@@ -14,8 +12,6 @@ from docx.shared import Inches, Pt, RGBColor
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
-_MERMAID_RENDER_TIMEOUT_SECONDS = 8.0
-_MERMAID_MAX_BYTES = 4_500_000
 _MERMAID_INFO_PATTERN = re.compile(r"^mermaid(\s+|$)", flags=re.IGNORECASE)
 _CHART_SPEC_INFO_PATTERN = re.compile(
     r"^(chart-spec|vega-lite|echarts-option)(\s+|$)",
@@ -515,38 +511,9 @@ def _append_mermaid_block(doc: DocumentObject, code: str) -> None:
     title = doc.add_paragraph("Mermaid Diagram")
     title.runs[0].bold = True
 
-    png_bytes = _render_mermaid_png(code)
-    if png_bytes:
-        doc.add_picture(io.BytesIO(png_bytes), width=Inches(6.2))
-        return
-
-    warning = doc.add_paragraph("[Mermaid render unavailable - included as code]")
+    warning = doc.add_paragraph("[Mermaid render disabled for privacy - included as code]")
     warning.runs[0].italic = True
     _append_code_block(doc, code)
-
-
-def _render_mermaid_png(code: str) -> bytes | None:
-    payload = (code or "").strip()
-    if not payload:
-        return None
-
-    encoded = base64.urlsafe_b64encode(payload.encode("utf-8")).decode("ascii").rstrip("=")
-    url = f"https://mermaid.ink/img/{encoded}"
-
-    try:
-        with httpx.Client(timeout=_MERMAID_RENDER_TIMEOUT_SECONDS, follow_redirects=True) as client:
-            response = client.get(url)
-            if response.status_code != 200:
-                return None
-            content_type = str(response.headers.get("content-type") or "").lower()
-            if not content_type.startswith("image/"):
-                return None
-            data = response.content
-            if not data or len(data) > _MERMAID_MAX_BYTES:
-                return None
-            return data
-    except Exception:
-        return None
 
 
 def _token_attr(token: Token, key: str) -> str | None:
