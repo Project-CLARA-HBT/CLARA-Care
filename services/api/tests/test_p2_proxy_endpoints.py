@@ -548,6 +548,53 @@ def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPat
     assert other_user_response.status_code == 404
 
 
+def test_research_tier2_job_create_rejects_when_user_limit_reached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    monkeypatch.setattr(research_endpoint, "_RESEARCH_JOB_MAX_ACTIVE_PER_USER", 1)
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    first = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "first job"},
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "second job"},
+    )
+    assert second.status_code == 429
+
+
+def test_research_tier2_job_create_rejects_when_global_queue_is_full(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    monkeypatch.setattr(research_endpoint, "_RESEARCH_JOB_MAX_PENDING", 1)
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._count_pending_research_jobs",
+        lambda: 1,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "queue full"},
+    )
+    assert create_response.status_code == 429
+
+
 def test_research_job_progress_prefers_ml_event_stage_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

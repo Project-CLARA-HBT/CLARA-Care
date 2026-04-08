@@ -169,6 +169,14 @@ _RESEARCH_JOB_MAX_WORKERS = max(
     1,
     min(32, int(os.getenv("RESEARCH_JOB_MAX_WORKERS", "8"))),
 )
+_RESEARCH_JOB_MAX_PENDING = max(
+    1,
+    min(2_000, int(os.getenv("RESEARCH_JOB_MAX_PENDING", "200"))),
+)
+_RESEARCH_JOB_MAX_ACTIVE_PER_USER = max(
+    1,
+    min(100, int(os.getenv("RESEARCH_JOB_MAX_ACTIVE_PER_USER", "5"))),
+)
 _research_job_executor = ThreadPoolExecutor(
     max_workers=_RESEARCH_JOB_MAX_WORKERS,
     thread_name_prefix="research-tier2",
@@ -2162,8 +2170,21 @@ def _run_research_job(job_id: str) -> None:
 
 def _queue_research_job(job_id: str) -> None:
     with _research_job_lock:
+        stale_job_ids = [future_job_id for future_job_id, future in _research_job_futures.items() if future.done()]
+        for stale_job_id in stale_job_ids:
+            _research_job_futures.pop(stale_job_id, None)
+        if len(_research_job_futures) >= _RESEARCH_JOB_MAX_PENDING:
+            raise RuntimeError("research_job_queue_full")
         future = _research_job_executor.submit(_run_research_job, job_id)
         _research_job_futures[job_id] = future
+
+
+def _count_pending_research_jobs() -> int:
+    with _research_job_lock:
+        stale_job_ids = [job_id for job_id, future in _research_job_futures.items() if future.done()]
+        for job_id in stale_job_ids:
+            _research_job_futures.pop(job_id, None)
+        return len(_research_job_futures)
 
 
 _SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
@@ -3612,6 +3633,27 @@ def create_research_tier2_job(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="query không được rỗng.",
         )
+    user_active_jobs = db.scalar(
+        select(func.count())
+        .select_from(ResearchJob)
+        .where(
+            ResearchJob.user_id == user.id,
+            ResearchJob.status.in_(("queued", "running")),
+        )
+    )
+    if int(user_active_jobs or 0) >= _RESEARCH_JOB_MAX_ACTIVE_PER_USER:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Bạn đang có quá nhiều research job đang xử lý. "
+                "Vui lòng chờ job hiện tại hoàn tất rồi thử lại."
+            ),
+        )
+    if _count_pending_research_jobs() >= _RESEARCH_JOB_MAX_PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Hệ thống đang bận xử lý research jobs. Vui lòng thử lại sau ít phút.",
+        )
 
     input_payload = payload.model_dump()
     input_payload["query"] = query_text
@@ -3636,6 +3678,17 @@ def create_research_tier2_job(
     db.add(job)
     db.commit()
     db.refresh(job)
+    try:
+        _queue_research_job(job_id)
+    except RuntimeError as exc:
+        db.delete(job)
+        db.commit()
+        if str(exc) == "research_job_queue_full":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Hệ thống đang bận xử lý research jobs. Vui lòng thử lại sau ít phút.",
+            ) from exc
+        raise
     _append_job_event(
         db,
         job=job,
@@ -3643,7 +3696,6 @@ def create_research_tier2_job(
         status_text="completed",
         note="Đã tạo research job. Chuẩn bị chạy truy xuất chuyên sâu.",
     )
-    _queue_research_job(job_id)
     db.refresh(job)
     return _serialize_research_job(job)
 
