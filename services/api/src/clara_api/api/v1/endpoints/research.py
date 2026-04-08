@@ -1618,28 +1618,12 @@ def _build_tier2_upstream_payload(
     upstream_payload["strict_deepseek_required"] = bool(settings.deepseek_strict_mode)
     runtime_rag_flow, runtime_rag_sources = _load_research_rag_runtime(db)
 
-    incoming_rag_flow = upstream_payload.get("rag_flow")
-    if isinstance(incoming_rag_flow, dict):
-        normalized_incoming_rag_flow = dict(incoming_rag_flow)
-        if (
-            "rule_verification_enabled" not in normalized_incoming_rag_flow
-            and "verification_enabled" in normalized_incoming_rag_flow
-        ):
-            normalized_incoming_rag_flow["rule_verification_enabled"] = (
-                normalized_incoming_rag_flow.get("verification_enabled")
-            )
-        merged_rag_flow = {**runtime_rag_flow, **normalized_incoming_rag_flow}
-    else:
-        merged_rag_flow = runtime_rag_flow
-
     try:
-        upstream_payload["rag_flow"] = RagFlowConfig.model_validate(merged_rag_flow).model_dump()
-    except Exception:
         upstream_payload["rag_flow"] = RagFlowConfig.model_validate(runtime_rag_flow).model_dump()
+    except Exception:
+        upstream_payload["rag_flow"] = RagFlowConfig().model_dump()
 
-    incoming_rag_sources = upstream_payload.get("rag_sources")
-    if not isinstance(incoming_rag_sources, list):
-        upstream_payload["rag_sources"] = runtime_rag_sources
+    upstream_payload["rag_sources"] = runtime_rag_sources
 
     return upstream_payload
 
