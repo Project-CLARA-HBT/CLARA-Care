@@ -3,8 +3,6 @@ export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 const ROLE_KEY = "clara_role";
 const ACCESS_TOKEN_SESSION_KEY = "clara_access_token_session";
 const REFRESH_TOKEN_SESSION_KEY = "clara_refresh_token_session";
-const ACCESS_TOKEN_LOCAL_KEY = "clara_access_token_local";
-const REFRESH_TOKEN_LOCAL_KEY = "clara_refresh_token_local";
 const CLIENT_SESSION_COOKIE = "clara_client_session";
 const CSRF_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_CSRF_COOKIE?.trim() || "clara_csrf_token";
@@ -53,8 +51,7 @@ function setClientSessionCookie(enabled: boolean): void {
 export function getAccessToken(): string | null {
   if (!accessTokenMemory && isBrowser()) {
     const sessionCached = tryGetStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
-    const localCached = tryGetStorageItem(window.localStorage, ACCESS_TOKEN_LOCAL_KEY);
-    accessTokenMemory = sessionCached?.trim() || localCached?.trim() || null;
+    accessTokenMemory = sessionCached?.trim() || null;
   }
   return accessTokenMemory;
 }
@@ -65,19 +62,16 @@ export function setAccessToken(token: string): void {
   if (!isBrowser()) return;
   if (next) {
     trySetStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY, next);
-    trySetStorageItem(window.localStorage, ACCESS_TOKEN_LOCAL_KEY, next);
     setClientSessionCookie(true);
   } else {
     tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
-    tryRemoveStorageItem(window.localStorage, ACCESS_TOKEN_LOCAL_KEY);
   }
 }
 
 export function getRefreshToken(): string | null {
   if (!refreshTokenMemory && isBrowser()) {
     const sessionCached = tryGetStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
-    const localCached = tryGetStorageItem(window.localStorage, REFRESH_TOKEN_LOCAL_KEY);
-    refreshTokenMemory = sessionCached?.trim() || localCached?.trim() || null;
+    refreshTokenMemory = sessionCached?.trim() || null;
   }
   return refreshTokenMemory;
 }
@@ -90,11 +84,9 @@ export function setRefreshToken(token: string): void {
   if (!isBrowser()) return;
   if (next) {
     trySetStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY, next);
-    trySetStorageItem(window.localStorage, REFRESH_TOKEN_LOCAL_KEY, next);
     setClientSessionCookie(true);
   } else {
     tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
-    tryRemoveStorageItem(window.localStorage, REFRESH_TOKEN_LOCAL_KEY);
   }
 }
 
@@ -104,8 +96,6 @@ export function clearTokens(): void {
   if (!isBrowser()) return;
   tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
   tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
-  tryRemoveStorageItem(window.localStorage, ACCESS_TOKEN_LOCAL_KEY);
-  tryRemoveStorageItem(window.localStorage, REFRESH_TOKEN_LOCAL_KEY);
   tryRemoveStorageItem(window.localStorage, ROLE_KEY);
   setClientSessionCookie(false);
 }
