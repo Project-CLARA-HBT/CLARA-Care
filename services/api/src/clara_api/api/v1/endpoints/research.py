@@ -154,6 +154,15 @@ _VN_HTML_SOURCE_DEFINITIONS: dict[str, dict[str, Any]] = {
     },
 }
 
+_RAG_FLOW_LOCKED_RUNTIME_KEYS: frozenset[str] = frozenset(
+    {
+        "llm_provider",
+        "llm_base_url",
+        "llm_model",
+        "llm_api_key",
+    }
+)
+
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
 _RESEARCH_JOB_MAX_WORKERS = max(
@@ -1628,6 +1637,8 @@ def _build_tier2_upstream_payload(
             normalized_incoming_rag_flow["rule_verification_enabled"] = (
                 normalized_incoming_rag_flow.get("verification_enabled")
             )
+        for runtime_key in _RAG_FLOW_LOCKED_RUNTIME_KEYS:
+            normalized_incoming_rag_flow.pop(runtime_key, None)
         merged_rag_flow = {**runtime_rag_flow, **normalized_incoming_rag_flow}
     else:
         merged_rag_flow = runtime_rag_flow
