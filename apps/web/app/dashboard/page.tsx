@@ -14,7 +14,7 @@ import {
   getSystemMetrics,
   normalizeApiHealth,
   normalizeSystemDependencies,
-  normalizeSystemMetrics
+  normalizeSystemMetrics,
 } from "@/lib/system";
 
 type AuthMePayload = {
@@ -23,11 +23,14 @@ type AuthMePayload = {
   full_name?: string;
 };
 
+type StatusTone = "ok" | "warn" | "error" | "neutral";
+
 type QuickAction = {
   href: string;
   tag: string;
   label: string;
   detail: string;
+  icon: string;
 };
 
 type TodayTask = {
@@ -38,40 +41,42 @@ type TodayTask = {
   href: string;
 };
 
-type StatusTone = "ok" | "warn" | "error" | "neutral";
-
 const ROLE_LABELS: Record<UserRole, string> = {
   normal: "Người dùng cá nhân",
   researcher: "Nhà nghiên cứu",
   doctor: "Bác sĩ",
-  admin: "Quản trị hệ thống"
+  admin: "Quản trị hệ thống",
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
     href: "/selfmed",
     tag: "SelfMed",
-    label: "Rà soát tủ thuốc",
-    detail: "Kiểm tra hạn dùng, liều dùng và bổ sung thông tin còn thiếu."
+    label: "Open Cabinet",
+    detail: "Theo dõi thuốc, liều dùng, hạn dùng và nguồn OCR theo thời gian thực.",
+    icon: "fa-medkit",
   },
   {
     href: "/careguard",
     tag: "CareGuard",
-    label: "Kiểm tra tương tác DDI",
-    detail: "Chạy kiểm tra rủi ro tương tác giữa các thuốc hiện có."
+    label: "Run DDI Check",
+    detail: "Đối chiếu tương tác thuốc và đưa cảnh báo theo độ ưu tiên.",
+    icon: "fa-shield",
   },
   {
     href: "/council",
     tag: "Council",
-    label: "Mở hội chẩn",
-    detail: "Tổng hợp ý kiến đa chuyên gia cho ca cần quyết định nhanh."
+    label: "Consensus Board",
+    detail: "Tổng hợp quan điểm đa tác tử cho ca lâm sàng phức tạp.",
+    icon: "fa-users",
   },
   {
     href: "/research",
     tag: "Research",
-    label: "Nghiên cứu có trích dẫn",
-    detail: "Tra cứu tài liệu, đối chiếu bằng chứng và ghi lại kết luận."
-  }
+    label: "Evidence Sync",
+    detail: "Truy xuất tài liệu và kiểm chứng phản hồi bằng trích dẫn rõ ràng.",
+    icon: "fa-flask",
+  },
 ];
 
 function formatCount(value: number | null): string {
@@ -88,7 +93,7 @@ function formatDateTime(value: number): string {
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
@@ -101,18 +106,18 @@ function getGreeting(now: Date): { title: string; subtitle: string } {
   if (hour < 12) {
     return {
       title: "Chào buổi sáng",
-      subtitle: "Kiểm tra nhanh tủ thuốc và tín hiệu hệ thống trước khi bắt đầu."
+      subtitle: "Hệ thống đang sẵn sàng cho chu kỳ vận hành lâm sàng mới.",
     };
   }
   if (hour < 18) {
     return {
       title: "Chào buổi chiều",
-      subtitle: "Theo dõi checklist chăm sóc trong ngày và xử lý các cảnh báo đang mở."
+      subtitle: "Các module đang đồng bộ ổn định, bạn có thể tiếp tục xử lý ca bệnh.",
     };
   }
   return {
     title: "Chào buổi tối",
-    subtitle: "Tổng kết các hoạt động trong ngày để chuẩn bị kế hoạch tiếp theo."
+    subtitle: "Tổng hợp tín hiệu vận hành để đóng ca trong ngày một cách an toàn.",
   };
 }
 
@@ -122,35 +127,6 @@ function toneFromStatus(status: string): StatusTone {
   if (["warn", "warning", "degraded", "slow", "unstable"].some((token) => normalized.includes(token))) return "warn";
   if (["down", "fail", "error", "critical", "unhealthy", "offline"].some((token) => normalized.includes(token))) return "error";
   return "neutral";
-}
-
-function badgeClassForTone(tone: StatusTone): string {
-  if (tone === "ok") {
-    return "border-[color:var(--status-ok-border)] bg-[color:var(--status-ok-bg)] text-[color:var(--status-ok-text)]";
-  }
-  if (tone === "warn") {
-    return "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] text-[color:var(--status-warn-text)]";
-  }
-  if (tone === "error") {
-    return "border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] text-[color:var(--status-danger-text)]";
-  }
-  return "border-[color:var(--status-neutral-border)] bg-[color:var(--status-neutral-bg)] text-[color:var(--status-neutral-text)]";
-}
-
-function cardClassForTaskTone(tone: TodayTask["tone"]): string {
-  if (tone === "critical") {
-    return "border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)]";
-  }
-  if (tone === "warn") {
-    return "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)]";
-  }
-  return "border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
-}
-
-function taskToneLabel(tone: TodayTask["tone"]): string {
-  if (tone === "critical") return "Ưu tiên cao";
-  if (tone === "warn") return "Theo dõi";
-  return "Bình thường";
 }
 
 function reliabilityScore(params: {
@@ -164,6 +140,12 @@ function reliabilityScore(params: {
   const errorPart = Math.max(0, 24 - params.errorRate * 1.5);
   const latencyPart = Math.max(0, 14 - Math.max(0, params.latencyMs - 280) / 90);
   return Math.max(0, Math.min(100, healthPart + mlPart + errorPart + latencyPart));
+}
+
+function taskToneClass(tone: TodayTask["tone"]): string {
+  if (tone === "critical") return "border-red-300/50 bg-red-500/10 text-red-200";
+  if (tone === "warn") return "border-amber-300/50 bg-amber-500/10 text-amber-200";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]";
 }
 
 export default function DashboardPage() {
@@ -200,7 +182,7 @@ export default function DashboardPage() {
     deepseekFallback: false,
     scientificRetrieval: false,
     webRetrieval: false,
-    fileRetrieval: false
+    fileRetrieval: false,
   });
 
   const [recentQueries, setRecentQueries] = useState<Array<{ id: string; query: string; createdAt: number }>>([]);
@@ -235,7 +217,7 @@ export default function DashboardPage() {
         title: `Loại bỏ ${expiredCount} thuốc đã hết hạn`,
         detail: "Dọn ngay để tránh nhầm thuốc trong lần dùng tiếp theo.",
         tone: "critical",
-        href: "/selfmed"
+        href: "/selfmed",
       });
     }
     if ((expiringSoonCount ?? 0) > 0) {
@@ -244,7 +226,7 @@ export default function DashboardPage() {
         title: `Rà soát ${expiringSoonCount} thuốc sắp hết hạn`,
         detail: "Chuẩn bị thay thế để không gián đoạn điều trị.",
         tone: "warn",
-        href: "/selfmed"
+        href: "/selfmed",
       });
     }
     if ((cabinetCount ?? 0) >= 2) {
@@ -253,7 +235,7 @@ export default function DashboardPage() {
         title: "Chạy kiểm tra tương tác DDI hôm nay",
         detail: "Kiểm tra nhanh các cặp nguy cơ cao trước khi dùng thuốc.",
         tone: "normal",
-        href: "/careguard"
+        href: "/careguard",
       });
     }
     if ((missingDosageCount ?? 0) > 0) {
@@ -262,7 +244,7 @@ export default function DashboardPage() {
         title: `Bổ sung liều dùng cho ${missingDosageCount} thuốc`,
         detail: "Dữ liệu đầy đủ giúp pipeline DDI và advisor chính xác hơn.",
         tone: "warn",
-        href: "/selfmed"
+        href: "/selfmed",
       });
     }
     if (tasks.length === 0) {
@@ -271,7 +253,7 @@ export default function DashboardPage() {
         title: "Hôm nay không có cảnh báo lớn",
         detail: "Bạn có thể chuyển sang council hoặc research cho ca cần phân tích sâu.",
         tone: "normal",
-        href: "/research"
+        href: "/research",
       });
     }
     return tasks.slice(0, 4);
@@ -289,7 +271,7 @@ export default function DashboardPage() {
         getCabinet(),
         api.get<AuthMePayload>("/auth/me"),
         listResearchConversations(6),
-        getControlTowerConfig()
+        getControlTowerConfig(),
       ]);
 
       if (healthResult.status === "fulfilled") {
@@ -368,7 +350,7 @@ export default function DashboardPage() {
           deepseekFallback: Boolean(ragFlow.deepseek_fallback_enabled),
           scientificRetrieval: Boolean(ragFlow.scientific_retrieval_enabled),
           webRetrieval: Boolean(ragFlow.web_retrieval_enabled),
-          fileRetrieval: Boolean(ragFlow.file_retrieval_enabled)
+          fileRetrieval: Boolean(ragFlow.file_retrieval_enabled),
         };
 
         setFlowFlags(flow);
@@ -395,7 +377,7 @@ export default function DashboardPage() {
           .map((item) => ({
             id: String(item.id),
             query: String(item.query ?? "").trim(),
-            createdAt: Number(item.createdAt ?? Date.now())
+            createdAt: Number(item.createdAt ?? Date.now()),
           }))
           .filter((item) => item.query);
         setRecentQueries(mapped);
@@ -416,9 +398,7 @@ export default function DashboardPage() {
   }, [refreshDashboard]);
 
   const healthTone = toneFromStatus(healthStatus);
-  const mlTone = toneFromStatus(
-    mlReachable === true ? "ok" : mlReachable === false ? "error" : mlStatus
-  );
+  const mlTone = toneFromStatus(mlReachable === true ? "ok" : mlReachable === false ? "error" : mlStatus);
 
   const requestSafe = Math.max(0, Math.trunc(requestCount ?? 0));
   const errorSafe = Math.max(0, Math.trunc(errorCount ?? 0));
@@ -429,91 +409,10 @@ export default function DashboardPage() {
     healthTone,
     mlTone,
     errorRate,
-    latencyMs: latencySafe
+    latencyMs: latencySafe,
   });
 
   const verificationStackEnabled = flowFlags.ruleVerification && flowFlags.nliModel && flowFlags.ragNli;
-
-  const runtimeSignals = [
-    {
-      label: "API",
-      value: healthStatus,
-      detail: healthMessage,
-      tone: healthTone
-    },
-    {
-      label: "ML",
-      value: mlReachable === true ? "sẵn sàng" : mlReachable === false ? "mất kết nối" : mlStatus,
-      detail: mlReachable === true ? "Đủ điều kiện chạy DDI, council và research." : "Nên kiểm tra service ML hoặc cơ chế fallback.",
-      tone: mlTone
-    },
-    {
-      label: "Độ trễ",
-      value: `${latencySafe} ms`,
-      detail: "Độ trễ trung bình gần nhất",
-      tone: latencySafe > 1200 ? "error" : latencySafe > 850 ? "warn" : "ok"
-    },
-    {
-      label: "Tỷ lệ lỗi",
-      value: formatPercent(errorRate),
-      detail: `${formatCount(errorSafe)} lỗi trên ${formatCount(requestSafe)} request`,
-      tone: errorRate >= 10 ? "error" : errorRate >= 5 ? "warn" : "ok"
-    }
-  ] as const;
-
-  const quickStatusCards = [
-    {
-      label: "Độ ổn định",
-      value: `${Math.round(reliability)}%`,
-      detail: "Điểm tổng hợp API, ML, lỗi và độ trễ"
-    },
-    {
-      label: "Việc cần xử lý",
-      value: formatCount(pendingActions),
-      detail: "Checklist ưu tiên trong ngày"
-    },
-    {
-      label: "Tủ thuốc",
-      value: formatCount(cabinetCount),
-      detail: `${formatCount(expiredCount)} hết hạn, ${formatCount(expiringSoonCount)} sắp hết hạn`
-    },
-    {
-      label: "Nguồn Research",
-      value: `${enabledSources}/${totalSources}`,
-      detail: `${formatPercent(sourceCoverage)} nguồn đang bật`
-    }
-  ];
-
-  const moduleCards = [
-    {
-      module: "SelfMed",
-      href: "/selfmed",
-      summary: "Quản lý thuốc, liều dùng và hạn dùng để giảm sai sót khi sử dụng.",
-      stat: `${formatCount(cabinetCount)} thuốc`,
-      signal: (expiredCount ?? 0) > 0 ? `${formatCount(expiredCount)} đã hết hạn` : "Không có thuốc hết hạn"
-    },
-    {
-      module: "CareGuard",
-      href: "/careguard",
-      summary: "Đánh giá tương tác DDI theo dữ liệu tủ thuốc hiện tại.",
-      stat: `Rủi ro DDI: ${ddiRiskLabel}`,
-      signal: (cabinetCount ?? 0) >= 2 ? "Đủ dữ liệu để kiểm tra DDI" : "Cần ít nhất 2 thuốc để so cặp"
-    },
-    {
-      module: "Council",
-      href: "/council",
-      summary: "Hội chẩn đa tác tử để hỗ trợ quyết định với ca phức tạp.",
-      stat: verificationStackEnabled ? "Stack kiểm chứng: bật" : "Stack kiểm chứng: một phần",
-      signal: `Flow đang bật ${flowEnabledCount}/11`
-    },
-    {
-      module: "Research",
-      href: "/research",
-      summary: "Tra cứu tài liệu có trích dẫn, lưu hội thoại và tái sử dụng kết quả.",
-      stat: `${recentQueries.length} truy vấn gần đây`,
-      signal: `Ngưỡng low-context ${Math.round(lowContextThreshold * 100)}%`
-    }
-  ];
 
   const friendlySummary = useMemo(() => {
     if (alerts.length > 0) {
@@ -528,280 +427,323 @@ export default function DashboardPage() {
     return "Hệ thống hoạt động bình thường, nên theo dõi thêm để giữ độ ổn định cao.";
   }, [alerts.length, pendingActions, reliability]);
 
+  const stabilityScore = Math.max(0, Math.min(100, reliability));
+  const semiGaugeRatio = 141;
+  const semiGaugeProgress = Number((semiGaugeRatio * (stabilityScore / 100)).toFixed(1));
+
+  const runtimeTiles = [
+    { key: "api", label: "API HEALTH", value: healthStatus.toUpperCase(), tone: healthTone },
+    { key: "ml", label: "ML SERVICE", value: mlReachable === false ? "OFFLINE" : "ACTIVE", tone: mlTone },
+    { key: "latency", label: "LATENCY", value: `${latencySafe}ms`, tone: latencySafe > 1200 ? "error" : latencySafe > 850 ? "warn" : "ok" },
+    { key: "error", label: "ERROR RATE", value: formatPercent(errorRate), tone: errorRate >= 10 ? "error" : errorRate >= 5 ? "warn" : "ok" },
+  ] as const;
+
+  const moduleOverview = [
+    {
+      key: "med",
+      label: "Medication Status",
+      value: `${formatCount(cabinetCount)} meds`,
+      sub: (expiredCount ?? 0) > 0 ? `${formatCount(expiredCount)} thuốc hết hạn` : "Ổn định",
+    },
+    {
+      key: "ddi",
+      label: "DDI Analysis",
+      value: ddiRiskLabel,
+      sub: `${formatCount(cabinetCount)} thuốc trong tủ`,
+    },
+    {
+      key: "ai",
+      label: "AI Nodes",
+      value: `${flowEnabledCount}/11`,
+      sub: verificationStackEnabled ? "Verification stack active" : "Verification stack partial",
+    },
+    {
+      key: "db",
+      label: "Database",
+      value: `${enabledSources}/${totalSources}`,
+      sub: `${formatPercent(sourceCoverage)} bật · low-context ${Math.round(lowContextThreshold * 100)}%`,
+    },
+  ];
+
+  const taskCompletionRatio = Math.max(0, Math.min(100, Math.round((flowEnabledCount / 11) * 100)));
+
   return (
     <PageShell
-      title="Dashboard"
-      description="Bảng điều khiển người dùng CLARA: rõ ràng theo luồng hằng ngày từ tủ thuốc, an toàn thuốc đến hội chẩn và nghiên cứu."
+      title="Clinical Overview"
+      description={`${greeting.title}, ${displayName}. ${friendlySummary}`}
       variant="plain"
     >
-      <div className="space-y-4 sm:space-y-5">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-[color:var(--shell-border)] bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(224,242,254,0.68))] p-4 shadow-soft sm:p-5 lg:p-6 dark:bg-[linear-gradient(145deg,rgba(2,6,23,0.92),rgba(8,47,73,0.72))]">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-500/12" />
-          <div className="pointer-events-none absolute -left-20 bottom-0 h-40 w-40 rounded-full bg-sky-300/20 blur-3xl dark:bg-sky-500/12" />
-
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="max-w-3xl space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Daily Flow Dashboard</p>
-              <h2 className="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">
-                {greeting.title}, {displayName}
-              </h2>
-              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{greeting.subtitle}</p>
-            </div>
-
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-              <button
-                type="button"
-                onClick={refreshDashboard}
-                disabled={isRefreshing}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-sky-600 bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isRefreshing ? "Đang làm mới..." : "Làm mới"}
-              </button>
-              <Link
-                href="/role-select"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                Đổi vai trò
-              </Link>
-            </div>
+      <div className="space-y-8">
+        <section className="grid grid-cols-12 gap-6">
+          <div className="col-span-12 lg:col-span-8 flex flex-col justify-end pb-4">
+            <h2 className="text-4xl font-extrabold tracking-tight text-[var(--text-primary)] mb-2">{greeting.title}, {displayName}</h2>
+            <p className="max-w-2xl text-[var(--text-secondary)]">{greeting.subtitle}</p>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Vai trò</p>
-              <p className="mt-1 font-semibold text-[var(--text-primary)]">{roleLabel}</p>
-            </div>
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Ổn định tổng quan</p>
-              <p className="mt-1 font-semibold text-[var(--text-primary)]">{Math.round(reliability)}%</p>
-            </div>
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Việc cần làm</p>
-              <p className="mt-1 font-semibold text-[var(--text-primary)]">{formatCount(pendingActions)} mục</p>
-            </div>
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Cập nhật</p>
-              <p className="mt-1 font-semibold text-[var(--text-primary)]">{checkedAt ?? "Đang đồng bộ..."}</p>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-            {friendlySummary}
-            {userSubject ? <span className="ml-1 text-[var(--text-muted)]">({userSubject})</span> : null}
-          </div>
-        </section>
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {quickStatusCards.map((card) => (
-            <article key={card.label} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{card.label}</p>
-              <p className="mt-1 text-xl font-semibold text-[var(--text-primary)]">{card.value}</p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">{card.detail}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-          <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Luồng Hằng Ngày</p>
-                <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Bắt đầu theo thứ tự ưu tiên</h3>
+          <article className="col-span-12 lg:col-span-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[200px]">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_120%,#28d9f3,transparent)]" />
+            <div className="relative w-32 h-32">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" fill="none" r="45" stroke="#1f4876" strokeDasharray="141 141" strokeLinecap="round" strokeWidth="4" transform="rotate(135 50 50)" />
+                <circle className="clara-glow-cyan" cx="50" cy="50" fill="none" r="45" stroke="#28d9f3" strokeDasharray={`${semiGaugeProgress} ${semiGaugeRatio}`} strokeLinecap="round" strokeWidth="6" transform="rotate(135 50 50)" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-extrabold text-cyan-400">{Math.round(stabilityScore)}%</span>
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Stability</span>
               </div>
             </div>
+            <p className="text-xs text-[var(--text-secondary)] mt-4 font-medium uppercase tracking-widest">Overall Stability</p>
+          </article>
+        </section>
 
-            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-              <Link
-                href="/selfmed"
-                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 1</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">SelfMed: rà soát dữ liệu thuốc</p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCount(expiredCount)} hết hạn, {formatCount(missingDosageCount)} thiếu liều dùng.</p>
-              </Link>
-
-              <Link
-                href="/careguard"
-                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 2</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">CareGuard: kiểm tra tương tác DDI</p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">Mức rủi ro hiện tại: {ddiRiskLabel}. Nên chạy kiểm tra mỗi ngày.</p>
-              </Link>
-
-              <Link
-                href="/council"
-                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 3</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Council: hội chẩn ca phức tạp</p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">Flow đang bật {flowEnabledCount}/11, sẵn sàng tổng hợp nhiều góc nhìn.</p>
-              </Link>
-
-              <Link
-                href="/research"
-                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 4</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Research: kiểm chứng và ghi nhận bằng chứng</p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">{enabledSources}/{totalSources} nguồn bật, phù hợp để đi sâu chuyên đề.</p>
-              </Link>
+        <section className="grid grid-cols-12 gap-6">
+          <article className="col-span-12 md:col-span-4 rounded-lg p-5 border-l-2 border-cyan-400/40 border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+            <div className="flex justify-between items-start mb-4">
+              <i className="fa fa-check-square-o text-cyan-400" aria-hidden="true" />
+              <span className="text-[10px] text-cyan-300/70 font-mono">012-TASKS</span>
+            </div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">Tasks</div>
+            <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{formatCount(pendingActions)} đang mở</div>
+            <div className="mt-4 h-1 w-full bg-[var(--surface-muted)] rounded-full overflow-hidden">
+              <div className="h-full bg-cyan-400" style={{ width: `${Math.max(12, Math.min(100, pendingActions * 12))}%` }} />
             </div>
           </article>
 
-          <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Runtime Signals</p>
-                <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Tín hiệu vận hành ngắn gọn</h3>
-              </div>
+          <article className="col-span-12 md:col-span-4 rounded-lg p-5 border-l-2 border-red-300/40 border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+            <div className="flex justify-between items-start mb-4">
+              <i className="fa fa-medkit text-red-300" aria-hidden="true" />
+              <span className="text-[10px] text-red-200/60 font-mono">CAB-EXP</span>
+            </div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">Cabinet Expiry</div>
+            <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{formatCount(expiredCount)} hết hạn · {formatCount(expiringSoonCount)} sắp hết hạn</div>
+            <div className="mt-4 h-1 w-full bg-[var(--surface-muted)] rounded-full overflow-hidden">
+              <div className="h-full bg-red-300" style={{ width: `${Math.max(8, Math.min(100, ((expiredCount ?? 0) + (expiringSoonCount ?? 0)) * 14))}%` }} />
+            </div>
+          </article>
+
+          <article className="col-span-12 md:col-span-4 rounded-lg p-5 border-l-2 border-sky-300/40 border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+            <div className="flex justify-between items-start mb-4">
+              <i className="fa fa-globe text-sky-300" aria-hidden="true" />
+              <span className="text-[10px] text-sky-200/60 font-mono">SRC-HNB</span>
+            </div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">Research Sources</div>
+            <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{enabledSources}/{totalSources} nguồn đang bật</div>
+            <div className="mt-4 h-1 w-full bg-[var(--surface-muted)] rounded-full overflow-hidden">
+              <div className="h-full bg-sky-300" style={{ width: `${Math.max(5, sourceCoverage)}%` }} />
+            </div>
+          </article>
+        </section>
+
+        <section className="grid grid-cols-12 gap-8">
+          <article className="col-span-12 lg:col-span-5">
+            <div className="mb-6 flex justify-between items-end">
+              <h3 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Daily Flow Progress</h3>
+              <span className="text-[10px] font-mono text-cyan-400/80">SEQUENCE_ACTIVE</span>
             </div>
 
-            <div className="mt-3 space-y-2.5">
-              {runtimeSignals.map((signal) => (
-                <div key={signal.label} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{signal.label}</p>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeClassForTone(signal.tone)}`}>
-                      {signal.value}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">{signal.detail}</p>
+            <div className="space-y-0 relative">
+              <div className="absolute left-[15px] top-4 bottom-4 w-[1px] bg-[color:var(--shell-border)]" />
+
+              <div className="relative pl-12 pb-8">
+                <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center z-10 border border-cyan-300/40">
+                  <i className="fa fa-check-circle text-[16px] text-cyan-300" aria-hidden="true" />
                 </div>
-              ))}
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[var(--text-primary)]">Step 1: SelfMed</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Phân tích đơn thuốc cá nhân hoàn tất.</span>
+                  <div className="mt-2 text-[10px] font-bold text-cyan-300 px-2 py-0.5 bg-cyan-500/10 rounded self-start">COMPLETED</div>
+                </div>
+              </div>
+
+              <div className="relative pl-12 pb-8">
+                <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center z-10 border border-cyan-300/60">
+                  <i className="fa fa-refresh text-[16px] text-cyan-300 animate-spin" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[var(--text-primary)]">Step 2: CareGuard/DDI</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Đang kiểm tra tương tác thuốc thời gian thực.</span>
+                  <div className="mt-2 text-[10px] font-bold text-cyan-300 px-2 py-0.5 bg-cyan-500/10 rounded self-start">PROCESSING</div>
+                </div>
+              </div>
+
+              <div className="relative pl-12 pb-8">
+                <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-[var(--surface-muted)] flex items-center justify-center z-10 border border-[color:var(--shell-border)]">
+                  <i className="fa fa-clock-o text-[16px] text-[var(--text-muted)]" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col opacity-70">
+                  <span className="text-sm font-bold text-[var(--text-primary)]">Step 3: Council</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Hội đồng chuyên gia AI đang chờ lệnh.</span>
+                </div>
+              </div>
+
+              <div className="relative pl-12">
+                <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-[var(--surface-muted)] flex items-center justify-center z-10 border border-[color:var(--shell-border)]">
+                  <i className="fa fa-clock-o text-[16px] text-[var(--text-muted)]" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col opacity-70">
+                  <span className="text-sm font-bold text-[var(--text-primary)]">Step 4: Research</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Tổng hợp các nghiên cứu y khoa liên quan.</span>
+                </div>
+              </div>
             </div>
           </article>
-        </section>
 
-        <section className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Thao Tác Nhanh</p>
-              <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Đi tắt vào các thao tác chính</h3>
-            </div>
-            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
-              {QUICK_ACTIONS.length} mục
-            </span>
-          </div>
+          <div className="col-span-12 lg:col-span-7 space-y-8">
+            <article className="rounded-xl p-6 border border-cyan-500/15 bg-[var(--surface-panel)]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Runtime Signals</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 clara-glow-cyan" />
+                  <span className="text-[10px] font-mono text-cyan-300">SYSTEM_LIVE</span>
+                </div>
+              </div>
 
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            {QUICK_ACTIONS.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="group rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <span className="inline-flex rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]">
-                  {action.tag}
-                </span>
-                <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{action.label}</p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{action.detail}</p>
-                <p className="mt-2 text-xs font-semibold text-[var(--text-brand)] transition group-hover:translate-x-0.5">Mở ngay</p>
-              </Link>
-            ))}
-          </div>
-        </section>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {runtimeTiles.map((tile) => (
+                  <div className="flex flex-col" key={tile.key}>
+                    <span className="text-[10px] text-[var(--text-muted)] mb-1">{tile.label}</span>
+                    <span className="text-sm font-mono text-[var(--text-primary)]">{tile.value}</span>
+                  </div>
+                ))}
+              </div>
 
-        <section className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Các Module Chính</p>
-              <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Tổng quan theo chức năng</h3>
-            </div>
-          </div>
+              <div className="mt-6 h-12 flex items-end gap-1">
+                {[4, 6, 5, 8, 4, 10, 7, 5, 8, 3, 4, 6, 10, 7].map((h, idx) => (
+                  <div
+                    key={`bar-${idx}`}
+                    className={`flex-1 rounded-t-sm ${idx % 3 === 0 ? "bg-cyan-400/20" : idx % 3 === 1 ? "bg-cyan-400/40" : "bg-cyan-400/60"}`}
+                    style={{ height: `${h * 4}px` }}
+                  />
+                ))}
+              </div>
+            </article>
 
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-            {moduleCards.map((moduleCard) => (
-              <article key={moduleCard.module} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{moduleCard.module}</p>
-                <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{moduleCard.summary}</p>
-                <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{moduleCard.stat}</p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">{moduleCard.signal}</p>
-                <Link
-                  href={moduleCard.href}
-                  className="mt-3 inline-flex min-h-9 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border-strong)]"
+            <article>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Quick Actions</h3>
+                <button
+                  type="button"
+                  onClick={refreshDashboard}
+                  disabled={isRefreshing}
+                  className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
                 >
-                  Mở {moduleCard.module}
-                </Link>
+                  {isRefreshing ? "Đang đồng bộ..." : "Refresh"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {QUICK_ACTIONS.map((action) => (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="clara-glass-panel p-4 rounded-lg border border-white/5 hover:border-cyan-400/30 transition-all group"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded bg-cyan-500/10 text-cyan-300">
+                        <i className={`fa ${action.icon} text-[20px]`} aria-hidden="true" />
+                      </div>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">{action.tag}</span>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] mb-3">{action.detail}</p>
+                    <div className="w-full py-2 rounded bg-[var(--surface-muted)] text-[10px] text-center font-bold uppercase tracking-widest text-cyan-300 group-hover:bg-cyan-500 group-hover:text-white transition-all">
+                      Open Now
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-6">Module Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {moduleOverview.map((module) => (
+              <article key={module.key} className="bg-[var(--surface-panel)] p-6 rounded-xl border border-[color:var(--shell-border)]">
+                <div className="text-[10px] text-[var(--text-muted)] mb-4 uppercase">{module.label}</div>
+                <div className="text-3xl font-light mb-1 text-[var(--text-primary)]">{module.value}</div>
+                <div className="text-xs text-[var(--text-secondary)]">{module.sub}</div>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
-          <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Hoạt Động Gần Đây</p>
-                <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Lịch sử research gần nhất</h3>
-              </div>
-              <Link
-                href="/research"
-                className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
-              >
-                Mở research
-              </Link>
+        <section className="grid gap-6 lg:grid-cols-3">
+          <article className="lg:col-span-2 bg-[var(--surface-panel)] rounded-xl border border-[color:var(--shell-border)] overflow-hidden">
+            <div className="px-6 py-4 bg-[var(--surface-muted)] flex justify-between items-center border-b border-[color:var(--shell-border)]">
+              <h4 className="text-xs font-bold tracking-widest uppercase text-[var(--text-primary)]">System Events Log</h4>
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">{checkedAt ?? formatDateTime(Date.now())}</span>
             </div>
-
-            <div className="mt-3 space-y-2.5">
+            <div className="p-6 font-mono text-[11px] leading-6 max-h-64 overflow-y-auto clara-scrollbar">
               {recentQueries.length > 0 ? (
-                recentQueries.slice(0, 5).map((query) => (
-                  <article
-                    key={query.id}
-                    className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3"
-                  >
-                    <p className="line-clamp-2 text-sm text-[var(--text-primary)]">{query.query}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">{formatDateTime(query.createdAt)}</p>
-                  </article>
+                recentQueries.slice(0, 6).map((query) => (
+                  <div className="flex gap-3 text-[var(--text-secondary)]" key={query.id}>
+                    <span className="text-cyan-300">[{formatDateTime(query.createdAt)}]</span>
+                    <span>{query.query}</span>
+                  </div>
                 ))
               ) : (
-                <p className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-secondary)]">
-                  Chưa có lịch sử research gần đây.
-                </p>
+                <div className="text-[var(--text-secondary)]">Chưa có sự kiện truy vấn gần đây.</div>
               )}
+              {alerts.map((alert) => (
+                <div key={alert} className="flex gap-3 text-amber-300">
+                  <span className="text-cyan-300">[ALERT]</span>
+                  <span>{alert}</span>
+                </div>
+              ))}
+              <div className="flex gap-3 text-cyan-300/90">
+                <span>[INFO]</span>
+                <span>Role: {roleLabel} {userSubject ? `| ${userSubject}` : ""}</span>
+              </div>
+              <div className="flex gap-3 text-sky-300/90">
+                <span>[HEALTH]</span>
+                <span>{healthMessage}</span>
+              </div>
             </div>
           </article>
 
-          <article className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-soft sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Checklist Hôm Nay</p>
-                <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Việc cần làm ngay</h3>
-              </div>
-              <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
-                {todayTasks.length} mục
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-2.5">
+          <article className="bg-[var(--surface-panel)] rounded-xl p-6 border border-cyan-500/20">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] mb-6">Today&apos;s Checklist</h4>
+            <div className="space-y-3">
               {todayTasks.map((task) => (
                 <Link
                   key={task.id}
                   href={task.href}
-                  className={`block rounded-xl border p-3 transition hover:border-[color:var(--shell-border-strong)] ${cardClassForTaskTone(task.tone)}`}
+                  className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition ${taskToneClass(task.tone)}`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{task.title}</p>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]">
-                      {taskToneLabel(task.tone)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{task.detail}</p>
+                  <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded border border-cyan-300/60 text-cyan-200">
+                    <i className="fa fa-check text-[10px]" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <p className="text-xs font-semibold">{task.title}</p>
+                    <p className="mt-1 text-[11px] opacity-80">{task.detail}</p>
+                  </span>
                 </Link>
               ))}
             </div>
+
+            <div className="mt-6">
+              <div className="mb-2 flex justify-between text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+                <span>Flow completion</span>
+                <span>{taskCompletionRatio}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-[var(--surface-muted)] overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-500 to-sky-400" style={{ width: `${taskCompletionRatio}%` }} />
+              </div>
+            </div>
+
+            <button className="mt-8 w-full py-2 clinical-gradient text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-lg clara-glow-cyan" type="button">
+              View All Alerts
+            </button>
           </article>
         </section>
 
         {alerts.length > 0 ? (
-          <section className="rounded-[1.4rem] border border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--status-danger-text)]">Lưu Ý Nhanh</p>
+          <section className="rounded-2xl border border-red-300/50 bg-red-500/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">Critical Warnings</p>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {alerts.map((alert) => (
-                <p
-                  key={alert}
-                  className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[color:var(--status-danger-text)]"
-                >
+                <p key={alert} className="rounded-lg border border-red-300/40 bg-red-900/20 px-3 py-2 text-sm text-red-100">
                   {alert}
                 </p>
               ))}

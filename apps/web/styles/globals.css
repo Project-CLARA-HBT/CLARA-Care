@@ -242,6 +242,23 @@ a {
   box-shadow: 0 0 15px rgba(40, 217, 243, 0.2);
 }
 
+.clinical-gradient {
+  background: linear-gradient(135deg, #28d9f3 0%, #00abc0 100%);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 15px rgba(40, 217, 243, 0.3);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .clara-scrollbar::-webkit-scrollbar {
   width: 4px;
   height: 4px;
