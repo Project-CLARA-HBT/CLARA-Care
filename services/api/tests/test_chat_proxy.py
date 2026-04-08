@@ -193,6 +193,29 @@ def test_chat_returns_smalltalk_safe_fallback_for_greeting(monkeypatch) -> None:
     assert body["fallback_reason"].startswith("ml_unavailable:")
 
 
+def test_chat_returns_503_when_control_tower_config_unavailable(monkeypatch) -> None:
+    token = _login("dr@doctor.clara")
+
+    class _FailingControlTowerService:
+        @staticmethod
+        def load(_db: object) -> object:
+            raise RuntimeError("db unavailable")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.chat.get_control_tower_config_service",
+        lambda: _FailingControlTowerService(),
+    )
+
+    response = client.post(
+        "/api/v1/chat/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "test"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "control_tower_config_unavailable:RuntimeError"
+
+
 def test_chat_recovers_with_safe_mode_retry_when_primary_5xx(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
     captured_payloads: list[dict[str, object]] = []
