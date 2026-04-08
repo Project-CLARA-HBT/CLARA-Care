@@ -109,6 +109,13 @@ for i in "${!services[@]}"; do
     build_args+=(--build-arg "NEXT_PUBLIC_API_URL=/api/v1")
   fi
 
+  cache_args=()
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    cache_scope="release-${service}"
+    cache_args+=(--cache-from "type=gha,scope=${cache_scope}")
+    cache_args+=(--cache-to "type=gha,scope=${cache_scope},mode=max")
+  fi
+
   docker buildx build \
     --platform linux/amd64 \
     --file "$dockerfile" \
@@ -119,6 +126,7 @@ for i in "${!services[@]}"; do
     -t "${image_base}:${tag_full}" \
     -t "${image_base}:${tag_minor}" \
     -t "${image_base}:${tag_major}" \
+    "${cache_args[@]}" \
     "${build_args[@]}" \
     "$context"
 

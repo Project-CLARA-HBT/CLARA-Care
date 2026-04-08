@@ -281,7 +281,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: services/api/pyproject.toml
+          cache-dependency-path: |
+            services/api/pyproject.toml
+            services/api/uv.lock
 
       - name: Install pytest
         run: |
@@ -324,7 +326,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: services/ml/pyproject.toml
+          cache-dependency-path: |
+            services/ml/pyproject.toml
+            services/ml/uv.lock
 
       - name: Install pytest
         run: |
@@ -411,7 +415,9 @@ jobs:
           cache-dependency-path: |
             .github/requirements-security-audit.txt
             services/api/pyproject.toml
+            services/api/uv.lock
             services/ml/pyproject.toml
+            services/ml/uv.lock
 
       - name: Run pip-audit
         run: |
