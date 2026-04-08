@@ -84,6 +84,17 @@ _GREETING_HINTS: tuple[str, ...] = (
 _VALID_POLICY_ACTIONS = {"allow", "warn", "block", "escalate"}
 _PROTECTED_ML_PATH_PREFIXES = ("/v1/",)
 _PROTECTED_ML_PATH_EXACT = {"/metrics", "/metrics/json", "/health/details"}
+_MAX_AUDIO_BYTES = 15 * 1024 * 1024
+_ALLOWED_AUDIO_TYPES = {
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/webm",
+    "audio/mp4",
+    "audio/x-m4a",
+    "application/octet-stream",
+}
 
 
 def _now_iso() -> str:
@@ -964,8 +975,16 @@ async def council_intake(
 
     if audio_file is not None and audio_file.filename:
         audio_bytes = await audio_file.read()
-        audio_filename = audio_file.filename or audio_filename
-        audio_content_type = audio_file.content_type or audio_content_type
+        if audio_bytes:
+            if len(audio_bytes) > _MAX_AUDIO_BYTES:
+                raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 15MB.")
+            audio_filename = audio_file.filename or audio_filename
+            audio_content_type = audio_file.content_type or audio_content_type
+            if audio_content_type not in _ALLOWED_AUDIO_TYPES:
+                raise HTTPException(
+                    status_code=415,
+                    detail=f"Unsupported audio content type: {audio_content_type}",
+                )
 
     if not transcript_text and not audio_bytes:
         raise HTTPException(status_code=400, detail="Either transcript or audio_file is required.")
