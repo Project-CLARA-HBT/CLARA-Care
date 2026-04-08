@@ -501,7 +501,7 @@ class Settings(BaseSettings):
         le=30000,
     )
     rag_reranker_cache_enabled: bool = Field(
-        default=True,
+        default=False,
         validation_alias="RAG_RERANKER_CACHE_ENABLED",
     )
     rag_reranker_cache_ttl_seconds: int = Field(

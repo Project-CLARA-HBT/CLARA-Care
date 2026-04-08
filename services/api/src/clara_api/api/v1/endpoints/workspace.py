@@ -65,6 +65,7 @@ _DEFAULT_SUGGESTIONS: tuple[str, ...] = (
     "Cảnh báo chống chỉ định trên bệnh thận",
     "Tóm tắt ADR nghiêm trọng cần đi viện",
 )
+_PUBLIC_SHARE_MESSAGE_LIMIT = 200
 settings = get_settings()
 
 
@@ -1327,6 +1328,7 @@ def get_public_conversation_by_share_token(
             select(QueryModel)
             .where(QueryModel.session_id == session_obj.id)
             .order_by(QueryModel.created_at.asc(), QueryModel.id.asc())
+            .limit(_PUBLIC_SHARE_MESSAGE_LIMIT)
         )
         .scalars()
         .all()

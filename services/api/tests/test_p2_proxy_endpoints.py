@@ -352,6 +352,25 @@ def test_research_upload_file_pdf_uses_parsed_text(monkeypatch: pytest.MonkeyPat
     assert payload["token_count"] > 0
 
 
+def test_research_upload_file_rejects_payload_over_size_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._MAX_RESEARCH_UPLOAD_BYTES",
+        8,
+    )
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("note.txt", b"123456789", "text/plain")},
+    )
+
+    assert response.status_code == 413
+    assert "File vượt quá giới hạn" in response.json()["detail"]
+
+
 def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPatch) -> None:
     token = _login("alice@research.clara")
 
@@ -527,6 +546,53 @@ def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPat
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert other_user_response.status_code == 404
+
+
+def test_research_tier2_job_create_rejects_when_user_limit_reached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    monkeypatch.setattr(research_endpoint, "_RESEARCH_JOB_MAX_ACTIVE_PER_USER", 1)
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    first = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "first job"},
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "second job"},
+    )
+    assert second.status_code == 429
+
+
+def test_research_tier2_job_create_rejects_when_global_queue_is_full(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    monkeypatch.setattr(research_endpoint, "_RESEARCH_JOB_MAX_PENDING", 1)
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._count_pending_research_jobs",
+        lambda: 1,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "queue full"},
+    )
+    assert create_response.status_code == 429
 
 
 def test_research_job_progress_prefers_ml_event_stage_status(
@@ -1123,7 +1189,7 @@ def test_research_tier2_forwards_deep_beta_mode_to_ml(
     assert forwarded["role"] == "researcher"
 
 
-def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
+def test_research_tier2_enforces_runtime_rag_policy_over_client_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1148,9 +1214,70 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
         "/api/v1/research/tier2",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "query": "legacy verification mapping",
+            "query": "attempt policy bypass",
             "rag_flow": {
                 "verification_enabled": False,
+                "rule_verification_enabled": False,
+                "web_retrieval_enabled": False,
+                "nli_model_enabled": False,
+                "rag_nli_enabled": False,
+            },
+            "rag_sources": [
+                {"id": "web", "enabled": True},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    forwarded = captured["json"]
+    assert isinstance(forwarded, dict)
+    rag_flow = forwarded["rag_flow"]
+    assert rag_flow["rule_verification_enabled"] is True
+    assert rag_flow["web_retrieval_enabled"] is True
+    assert rag_flow["nli_model_enabled"] is True
+    assert rag_flow["rag_nli_enabled"] is True
+    assert "verification_enabled" not in rag_flow
+    assert isinstance(forwarded.get("rag_sources"), list)
+    ids = {
+        source.get("id")
+        for source in forwarded["rag_sources"]
+        if isinstance(source, dict) and isinstance(source.get("id"), str)
+    }
+    assert "pubmed" in ids
+    assert "web" not in ids
+
+
+def test_research_tier2_ignores_caller_llm_runtime_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"answer": "ok", "metadata": {"research_mode": "fast"}}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "ignore attacker runtime llm overrides",
+            "rag_flow": {
+                "llm_provider": "deepseek",
+                "llm_base_url": "https://attacker.invalid/v1",
+                "llm_model": "attacker-model",
+                "llm_api_key": "attacker-key",
             },
         },
     )
@@ -1159,8 +1286,10 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
     forwarded = captured["json"]
     assert isinstance(forwarded, dict)
     rag_flow = forwarded["rag_flow"]
-    assert rag_flow["rule_verification_enabled"] is False
-    assert "verification_enabled" not in rag_flow
+    assert rag_flow["llm_provider"] == "hitechcloud_gpt53_codex_high"
+    assert rag_flow["llm_base_url"] == "https://platform.hitechcloud.one/v1"
+    assert rag_flow["llm_model"] == "gpt-5.3-codex-high"
+    assert rag_flow["llm_api_key"] == ""
 
 
 @pytest.mark.parametrize(

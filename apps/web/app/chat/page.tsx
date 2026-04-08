@@ -12,6 +12,7 @@ import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
 import { clearTokens, getRole, type UserRole } from "@/lib/auth-store";
+import api from "@/lib/http-client";
 import {
   RESEARCH_TIER2_JOB_POLL_MS,
   ResearchExecutionMode,
@@ -70,7 +71,6 @@ const JOB_FETCH_RETRY_ATTEMPTS = 3;
 const JOB_FETCH_RETRY_BACKOFF_MS = 600;
 const JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS = 5;
 const JOB_COMPLETED_RESULT_REFETCH_MS = 900;
-const LOCAL_WORKSPACE_CACHE_KEY = "clara_chat_workspace_local_v1";
 const LOCAL_WORKSPACE_MAX_ITEMS = 80;
 
 type WorkspaceLeftView = "all" | "chat" | "notes" | "discover" | "shares";
@@ -402,33 +402,6 @@ export default function ChatWorkspacePage() {
     if (storedStack === "auto" || storedStack === "full") {
       setSelectedRetrievalStackMode(storedStack);
     }
-    try {
-      const raw = window.localStorage.getItem(LOCAL_WORKSPACE_CACHE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as {
-          conversations?: WorkspaceConversationItem[];
-          turnsByConversationId?: Record<number, ConversationItem[]>;
-        };
-        if (Array.isArray(parsed.conversations)) {
-          setLocalFallbackConversations(
-            parsed.conversations.filter(
-              (item) =>
-                Number.isFinite(item?.conversation_id) &&
-                item.conversation_id > 0 &&
-                typeof item.title === "string"
-            )
-          );
-        }
-        if (
-          parsed.turnsByConversationId &&
-          typeof parsed.turnsByConversationId === "object"
-        ) {
-          setLocalTurnsByConversationId(parsed.turnsByConversationId);
-        }
-      }
-    } catch {
-      // Ignore local cache parse errors.
-    }
     setIsHydrated(true);
   }, []);
 
@@ -441,15 +414,6 @@ export default function ChatWorkspacePage() {
     if (!isHydrated || typeof window === "undefined") return;
     window.localStorage.setItem("clara_chat_retrieval_stack_mode", selectedRetrievalStackMode);
   }, [isHydrated, selectedRetrievalStackMode]);
-
-  useEffect(() => {
-    if (!isHydrated || typeof window === "undefined") return;
-    const payload = {
-      conversations: localFallbackConversations.slice(0, LOCAL_WORKSPACE_MAX_ITEMS),
-      turnsByConversationId: localTurnsByConversationId,
-    };
-    window.localStorage.setItem(LOCAL_WORKSPACE_CACHE_KEY, JSON.stringify(payload));
-  }, [isHydrated, localFallbackConversations, localTurnsByConversationId]);
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -1104,8 +1068,16 @@ export default function ChatWorkspacePage() {
   }, []);
 
   const onLogout = useCallback(() => {
-    clearTokens();
-    window.location.href = "/login";
+    void (async () => {
+      try {
+        await api.post("/auth/logout");
+      } catch {
+        // Fall back to client-side token cleanup on API failures.
+      } finally {
+        clearTokens();
+        window.location.href = "/login";
+      }
+    })();
   }, []);
 
   useEffect(() => {

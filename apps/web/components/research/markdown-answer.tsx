@@ -115,8 +115,8 @@ function sanitizeMermaidSvg(svg: string): string {
       return "";
     }
 
-    // Keep foreignObject because Mermaid may put labels there; removing it can erase all text.
-    parsed.querySelectorAll("script, iframe, object, embed").forEach((node) => {
+    // Remove risky containers/tags before injecting into the DOM.
+    parsed.querySelectorAll("script, iframe, object, embed, foreignObject").forEach((node) => {
       node.remove();
     });
 
@@ -147,17 +147,10 @@ function sanitizeMermaidSvg(svg: string): string {
       }
     });
 
-    parsed.querySelectorAll("foreignObject *").forEach((node) => {
-      const currentStyle = node.getAttribute("style") ?? "";
-      const nextStyle = `${currentStyle}${currentStyle ? ";" : ""}color:#0f172a !important;`;
-      node.setAttribute("style", nextStyle);
-    });
-
     const svgEl = parsed.documentElement;
     const styleEl = parsed.createElementNS("http://www.w3.org/2000/svg", "style");
     styleEl.textContent = `
       text, tspan, .label, .nodeLabel { fill: #0f172a !important; color: #0f172a !important; }
-      foreignObject *, .label foreignObject * { color: #0f172a !important; fill: #0f172a !important; }
     `;
     svgEl.insertBefore(styleEl, svgEl.firstChild);
 

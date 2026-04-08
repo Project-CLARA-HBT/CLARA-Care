@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from types import SimpleNamespace
+import urllib.error
 
 import pytest
 
@@ -142,7 +143,36 @@ def test_build_planner_hints_fast_mode_downgrades_full_stack_mode_to_auto():
     assert "stack_mode_full_force_graphrag" not in hints["reason_codes"]
 
 
-def test_build_planner_hints_deep_mode_full_stack_still_forces_connectors_and_graphrag():
+def test_emit_otel_trace_best_effort_does_not_expose_endpoint_or_error_details(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(tier2.settings, "otel_export_enabled", True)
+    monkeypatch.setattr(tier2.settings, "otel_export_endpoint", "http://internal-collector.local:4318/v1/traces")
+
+    def _raise_http_error(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url="http://internal-collector.local:4318/v1/traces",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,
+            fp=None,
+        )
+
+    monkeypatch.setattr(tier2.urllib.request, "urlopen", _raise_http_error)
+    status = tier2._emit_otel_trace_best_effort(
+        otel_trace_metadata={"trace_id": "trace-123"},
+        flow_events=[{"stage": "planner"}],
+    )
+
+    assert status["enabled"] is True
+    assert status["sent"] is False
+    assert status["http_status"] == 403
+    assert status["error"] == "export_failed"
+    assert "endpoint" not in status
+    assert "internal-collector.local" not in str(status)
+
+
+def test_build_planner_hints_deep_mode_full_stack_forces_connectors_only():
     hints = tier2._build_planner_hints(
         topic="Tương tác warfarin với ibuprofen ở người cao tuổi",
         source_mode=None,
@@ -156,12 +186,12 @@ def test_build_planner_hints_deep_mode_full_stack_still_forces_connectors_and_gr
     assert hints["retrieval_stack_mode"] == "full"
     assert hints["scientific_retrieval_enabled"] is True
     assert hints["web_retrieval_enabled"] is True
-    assert hints["graphrag_enabled_override"] is True
+    assert hints["graphrag_enabled_override"] is None
     assert "retrieval_stack_mode_full" in hints["reason_codes"]
     assert "stack_mode_full_downgraded_for_fast_mode" not in hints["reason_codes"]
     assert "stack_mode_full_force_scientific" in hints["reason_codes"]
     assert "stack_mode_full_force_web" in hints["reason_codes"]
-    assert "stack_mode_full_force_graphrag" in hints["reason_codes"]
+    assert "stack_mode_full_force_graphrag" not in hints["reason_codes"]
 
 
 def test_apply_keyword_filter_to_query_plan_aligns_keywords_by_source_language():
@@ -466,6 +496,73 @@ def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
         event.get("stage") == "graphrag_sidecar" and event.get("status") == "completed"
         for event in result.flow_events
     )
+
+
+def test_rag_pipeline_full_stack_does_not_override_disabled_runtime_toggles(monkeypatch):
+    class _FakeRetriever:
+        def __init__(self) -> None:
+            self.last_trace: dict = {}
+
+        def retrieve_internal(self, query: str, top_k: int = 3, **_kwargs) -> list[Document]:
+            self.last_trace = {
+                "search_phase": {
+                    "query_terms": ["warfarin", "ibuprofen"],
+                    "connectors_attempted": [
+                        {"provider": "internal_corpus", "status": "completed", "documents": 1}
+                    ],
+                    "source_errors": {},
+                    "total_candidates": 1,
+                },
+                "index_phase": {
+                    "before_dedupe_count": 1,
+                    "after_dedupe_count": 1,
+                    "selected_count": 1,
+                    "duration_ms": 1.0,
+                },
+                "source_attempts": [
+                    {"provider": "internal_corpus", "status": "completed", "documents": 1}
+                ],
+                "source_errors": {},
+                "index_summary": {"selected_count": 1},
+            }
+            return [
+                Document(
+                    id="internal-1",
+                    text="warfarin ibuprofen interaction warning",
+                    metadata={"source": "internal", "url": "https://internal.example/1", "score": 0.9},
+                )
+            ]
+
+        def retrieve(self, *args, **kwargs) -> list[Document]:  # pragma: no cover - defensive
+            raise AssertionError("Hybrid retrieve should not be called in this test.")
+
+    class _FakeGraphSidecar:
+        def __init__(self) -> None:
+            self.expand_calls = 0
+
+        def expand(self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int):
+            self.expand_calls += 1
+            return SimpleNamespace(summary={"enabled": True}, expansion_docs=[])
+
+    monkeypatch.setattr(tier2.settings, "rag_external_connectors_enabled", False)
+    monkeypatch.setattr(tier2.settings, "rag_graphrag_enabled", False)
+    pipeline = RagPipelineP1(retriever=_FakeRetriever(), llm_client=None, deepseek_api_key="")
+    fake_sidecar = _FakeGraphSidecar()
+    pipeline._graphrag = fake_sidecar
+
+    result = pipeline.run(
+        "warfarin ibuprofen interaction",
+        generation_enabled=False,
+        planner_hints={"retrieval_stack_mode": "full"},
+    )
+
+    retrieval_trace = result.trace["retrieval"]
+    assert retrieval_trace["stack_mode_requested"] == "full"
+    assert retrieval_trace["graphrag_enabled"] is False
+    assert retrieval_trace["stack_coverage"]["scientific_used"] is False
+    assert retrieval_trace["stack_coverage"]["web_used"] is False
+    assert retrieval_trace["stack_coverage"]["graph_used"] is False
+    assert fake_sidecar.expand_calls == 0
 
 
 def test_rag_pipeline_full_stack_mode_degrades_when_web_provider_missing(monkeypatch):

@@ -151,8 +151,8 @@ export type CouncilRunSnapshot = {
   createdAt: string;
 };
 
-const COUNCIL_DRAFT_KEY = "clara.council.draft.v1";
-const COUNCIL_RESULT_KEY = "clara.council.result.v1";
+let councilDraftMemory: CouncilCaseDraft | null = null;
+let councilSnapshotMemory: CouncilRunSnapshot | null = null;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -694,44 +694,34 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
   };
 }
 
-function readStorageJson<T>(key: string): T | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return null;
+function cloneSnapshot<T>(value: T): T {
   try {
-    return JSON.parse(raw) as T;
+    return JSON.parse(JSON.stringify(value)) as T;
   } catch {
-    return null;
+    return value;
   }
 }
 
-function writeStorageJson<T>(key: string, value: T): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
 export function loadCouncilDraft(): CouncilCaseDraft | null {
-  return readStorageJson<CouncilCaseDraft>(COUNCIL_DRAFT_KEY);
+  return councilDraftMemory ? cloneSnapshot(councilDraftMemory) : null;
 }
 
 export function saveCouncilDraft(draft: CouncilCaseDraft): void {
-  writeStorageJson(COUNCIL_DRAFT_KEY, draft);
+  councilDraftMemory = cloneSnapshot(draft);
 }
 
 export function clearCouncilDraft(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(COUNCIL_DRAFT_KEY);
+  councilDraftMemory = null;
 }
 
 export function loadCouncilSnapshot(): CouncilRunSnapshot | null {
-  return readStorageJson<CouncilRunSnapshot>(COUNCIL_RESULT_KEY);
+  return councilSnapshotMemory ? cloneSnapshot(councilSnapshotMemory) : null;
 }
 
 export function saveCouncilSnapshot(snapshot: CouncilRunSnapshot): void {
-  writeStorageJson(COUNCIL_RESULT_KEY, snapshot);
+  councilSnapshotMemory = cloneSnapshot(snapshot);
 }
 
 export function clearCouncilSnapshot(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(COUNCIL_RESULT_KEY);
+  councilSnapshotMemory = null;
 }

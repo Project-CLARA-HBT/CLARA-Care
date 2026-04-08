@@ -8,7 +8,7 @@ DOCKER_IMAGE_RETENTION_HOURS="${DOCKER_IMAGE_RETENTION_HOURS:-168}"
 DOCKER_BUILDER_RETENTION_HOURS="${DOCKER_BUILDER_RETENTION_HOURS:-24}"
 TRUNCATE_DOCKER_JSON_LOGS="${TRUNCATE_DOCKER_JSON_LOGS:-false}"
 DOCKER_JSON_LOG_MAX_MB="${DOCKER_JSON_LOG_MAX_MB:-200}"
-LOCK_FILE="${LOCK_FILE:-/tmp/clara-disk-cleanup.lock}"
+LOCK_DIR="${LOCK_DIR:-/var/lock/clara-disk-cleanup}"
 FORCE_RUN="false"
 DRY_RUN="false"
 
@@ -110,13 +110,11 @@ disk_free_gb() {
   echo $((available_kb / 1024 / 1024))
 }
 
-if command -v flock >/dev/null 2>&1; then
-  exec 9>"$LOCK_FILE"
-  if ! flock -n 9; then
-    log "another cleanup process is running, skip"
-    exit 0
-  fi
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  log "another cleanup process is running, skip"
+  exit 0
 fi
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 before_used="$(disk_used_pct)"
 before_free="$(disk_free_gb)"

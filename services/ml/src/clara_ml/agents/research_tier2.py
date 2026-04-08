@@ -2313,10 +2313,8 @@ def _build_planner_hints(
     if stack_mode == "full":
         scientific_enabled = True
         web_enabled = True
-        graphrag_enabled_override = True
         reason_codes.append("stack_mode_full_force_scientific")
         reason_codes.append("stack_mode_full_force_web")
-        reason_codes.append("stack_mode_full_force_graphrag")
 
     pass_cap = _DEEP_BETA_PASS_CAP if deep_beta_mode else _DEFAULT_DEEP_PASS_CAP
     retrieval_budget = {
@@ -3180,7 +3178,6 @@ def _emit_otel_trace_best_effort(
     enabled = bool(settings.otel_export_enabled) and bool(endpoint)
     status: dict[str, Any] = {
         "enabled": enabled,
-        "endpoint": endpoint if enabled else "",
         "sent": False,
     }
     if not enabled:
@@ -3209,10 +3206,11 @@ def _emit_otel_trace_best_effort(
             return status
     except urllib.error.HTTPError as exc:
         status["http_status"] = int(exc.code)
-        status["error"] = f"HTTPError:{exc.code}"
+        status["error"] = "export_failed"
         return status
     except Exception as exc:  # noqa: BLE001
-        status["error"] = f"{type(exc).__name__}:{exc}"
+        logger.warning("OTel export failed: %s", type(exc).__name__)
+        status["error"] = "export_failed"
         return status
 
 

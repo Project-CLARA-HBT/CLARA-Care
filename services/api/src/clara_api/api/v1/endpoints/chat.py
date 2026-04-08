@@ -14,7 +14,6 @@ from clara_api.core.attribution import (
 )
 from clara_api.core.config import get_settings
 from clara_api.core.control_tower import get_control_tower_config_service
-from clara_api.core.control_tower.defaults import get_default_control_tower_config
 from clara_api.core.flow import get_chat_flow_event_persister
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
@@ -320,10 +319,12 @@ def _load_rag_runtime(db: Session) -> tuple[RagFlowConfig, list[dict[str, Any]]]
         rag_flow = control_tower.rag_flow
         rag_sources = [item.model_dump() for item in control_tower.rag_sources]
         return rag_flow, rag_sources
-    except Exception:  # pragma: no cover - defensive path for runtime resilience
-        logger.exception("Failed to load control tower config; falling back to defaults")
-        fallback = get_default_control_tower_config()
-        return fallback.rag_flow, [item.model_dump() for item in fallback.rag_sources]
+    except Exception as exc:  # pragma: no cover - defensive path for runtime resilience
+        logger.exception("Failed to load control tower config")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"control_tower_config_unavailable:{exc.__class__.__name__}",
+        ) from exc
 
 
 @router.post("/", response_model=ChatResponse, response_model_exclude_none=True)

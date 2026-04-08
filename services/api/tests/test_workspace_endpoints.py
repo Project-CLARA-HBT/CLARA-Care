@@ -526,6 +526,40 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
     assert public_after_revoke_response.status_code == 404
 
 
+def test_workspace_public_share_caps_message_count() -> None:
+    email = "workspace-share-limit@example.com"
+    owner_headers = _auth_headers(_login(email))
+    conversation_id = _create_conversation(
+        email,
+        "Initial shared conversation message",
+        title="Long conversation for share cap",
+    )
+    with SessionLocal() as db:
+        for index in range(350):
+            db.add(
+                QueryModel(
+                    session_id=conversation_id,
+                    role="normal",
+                    user_input=f"Question {index}",
+                    response_text=f"Answer {index}",
+                )
+            )
+        db.commit()
+
+    create_share_response = client.post(
+        f"/api/v1/workspace/conversations/{conversation_id}/share",
+        headers=owner_headers,
+        json={"expires_in_hours": 24},
+    )
+    assert create_share_response.status_code == 200
+    share_token = create_share_response.json()["share_token"]
+
+    public_response = client.get(f"/api/v1/workspace/public/conversations/{share_token}")
+    assert public_response.status_code == 200
+    public_payload = public_response.json()
+    assert len(public_payload["messages"]) == 200
+
+
 def test_workspace_conversation_share_requires_owner() -> None:
     owner_email = "workspace-share-owner2@example.com"
     outsider_email = "workspace-share-outsider2@example.com"

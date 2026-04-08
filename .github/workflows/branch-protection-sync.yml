@@ -13,16 +13,6 @@ on:
         required: true
         default: "required-ci-gates"
         type: string
-      required_approvals:
-        description: "Required approving review count (0-6)"
-        required: true
-        default: "2"
-        type: string
-      require_code_owner_reviews:
-        description: "Require code owner reviews"
-        required: true
-        default: true
-        type: boolean
       dry_run:
         description: "Only print payload (do not apply)"
         required: true
@@ -69,8 +59,6 @@ jobs:
         env:
           INPUT_BRANCH: ${{ github.event.inputs.branch }}
           INPUT_CHECKS: ${{ github.event.inputs.required_checks }}
-          INPUT_REQUIRED_APPROVALS: ${{ github.event.inputs.required_approvals }}
-          INPUT_REQUIRE_CODE_OWNER_REVIEWS: ${{ github.event.inputs.require_code_owner_reviews }}
           EVENT_NAME: ${{ github.event_name }}
           CHECKS_RAW: ${{ github.event.inputs.required_checks }}
         run: |
@@ -84,15 +72,6 @@ jobs:
           if [ "${EVENT_NAME}" = "schedule" ]; then
             checks_raw="required-ci-gates"
           fi
-          approvals_raw="${INPUT_REQUIRED_APPROVALS:-1}"
-          if [ "${EVENT_NAME}" = "schedule" ]; then
-            approvals_raw="2"
-          fi
-          code_owner_raw="${INPUT_REQUIRE_CODE_OWNER_REVIEWS:-true}"
-          if [ "${EVENT_NAME}" = "schedule" ]; then
-            code_owner_raw="true"
-          fi
-
           checks_json="$(python - <<'PY'
           import json
           import os
@@ -104,37 +83,12 @@ jobs:
           print(json.dumps(values))
           PY
           )"
-          required_approvals="$(APPROVALS_RAW="${approvals_raw}" python - <<'PY'
-          import os
-
-          raw = os.getenv("APPROVALS_RAW", "1").strip()
-          try:
-              value = int(raw)
-          except ValueError as exc:
-              raise SystemExit(f"required_approvals must be an integer, got: {raw}") from exc
-          if value < 0 or value > 6:
-              raise SystemExit(f"required_approvals out of range (0-6): {value}")
-          print(value)
-          PY
-          )"
-          require_code_owner_reviews="$(CODE_OWNER_RAW="${code_owner_raw}" python - <<'PY'
-          import os
-
-          raw = os.getenv("CODE_OWNER_RAW", "true").strip().lower()
-          if raw in {"1", "true", "yes", "y", "on"}:
-              print("true")
-          elif raw in {"0", "false", "no", "n", "off"}:
-              print("false")
-          else:
-              raise SystemExit(f"require_code_owner_reviews must be boolean-like, got: {raw}")
-          PY
-          )"
 
           {
             echo "branch=${branch}"
             echo "checks_json=${checks_json}"
-            echo "required_approvals=${required_approvals}"
-            echo "require_code_owner_reviews=${require_code_owner_reviews}"
+            echo "required_approvals=2"
+            echo "require_code_owner_reviews=true"
           } >> "$GITHUB_OUTPUT"
 
       - name: Apply branch protection

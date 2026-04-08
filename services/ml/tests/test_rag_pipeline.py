@@ -417,3 +417,22 @@ def test_rag_pipeline_graphrag_sidecar_disabled_keeps_default_trace():
     graphrag = retrieval_trace.get("graphrag", {})
     assert graphrag.get("enabled") is False
     assert int(retrieval_trace.get("graphrag_expansion_count") or 0) == 0
+
+
+def test_rag_pipeline_full_stack_request_does_not_override_runtime_disable_flags(monkeypatch):
+    monkeypatch.setattr(settings, "rag_external_connectors_enabled", False)
+    monkeypatch.setattr(settings, "rag_graphrag_enabled", False)
+
+    pipe = RagPipelineP0(deepseek_api_key="")
+    result = pipe.run(
+        "warfarin ibuprofen interaction",
+        planner_hints={"retrieval_stack_mode": "full"},
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=True,
+    )
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    assert retrieval_trace.get("stack_mode_requested") == "full"
+    assert retrieval_trace.get("graphrag_enabled") is False
+    assert retrieval_trace.get("runtime_flags", {}).get("rag_graphrag_enabled") is False
+    assert retrieval_trace.get("external_attempted") is False
