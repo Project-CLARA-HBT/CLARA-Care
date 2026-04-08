@@ -20,7 +20,7 @@ from clara_api.core.consent import (
 )
 from clara_api.core.login_guard import login_guard
 from clara_api.core.passwords import hash_password, verify_password
-from clara_api.core.rbac import get_current_token
+from clara_api.core.rbac import get_current_token, get_optional_current_token
 from clara_api.core.security import (
     TokenPayload,
     create_access_token,
@@ -715,10 +715,12 @@ def change_password(
 @router.post("/logout")
 def logout(
     response: Response,
-    token_payload: TokenPayload = Depends(get_current_token),
+    token_payload: TokenPayload | None = Depends(get_optional_current_token),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
+    user = None
+    if token_payload and token_payload.sub:
+        user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
     revoked_count = 0
     if user:
         revoked_count = _revoke_refresh_sessions(db, user_id=user.id)

@@ -50,6 +50,7 @@ const api = axios.create({
 });
 
 let refreshPromise: Promise<string | null> | null = null;
+let authFailureRedirectInProgress = false;
 
 function isRetryableRefreshError(error: unknown): boolean {
   if (!(error instanceof AxiosError)) return false;
@@ -154,7 +155,35 @@ async function runTokenRefresh(): Promise<string | null> {
   if (nextRefreshToken) {
     setRefreshToken(nextRefreshToken);
   }
+  authFailureRedirectInProgress = false;
   return nextAccessToken;
+}
+
+async function bestEffortServerLogout(): Promise<void> {
+  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = {};
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  try {
+    await axios.post(`${apiBaseUrl}/auth/logout`, {}, {
+      timeout: REFRESH_TIMEOUT_MS,
+      withCredentials: true,
+      headers,
+      validateStatus: () => true
+    });
+  } catch {
+    // Ignore network/logout failures; local token clear + redirect still proceeds.
+  }
+}
+
+function redirectToLoginAfterAuthFailure(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/login")) return;
+  if (authFailureRedirectInProgress) return;
+  authFailureRedirectInProgress = true;
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(`/login?next=${encodeURIComponent(next)}`);
 }
 
 async function ensureSingleFlightRefresh(): Promise<string | null> {
@@ -218,12 +247,10 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
         return api(originalRequest);
       } catch {
+        await bestEffortServerLogout();
         clearTokens();
-        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          const next = `${window.location.pathname}${window.location.search}`;
-          window.location.href = `/login?next=${encodeURIComponent(next)}`;
-        }
-        return Promise.reject(new Error("Không thể làm mới phiên đăng nhập."));
+        redirectToLoginAfterAuthFailure();
+        return Promise.reject(new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
       }
     }
 
