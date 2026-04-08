@@ -74,19 +74,19 @@ class Settings(BaseSettings):
         gt=0,
     )
     auth_bootstrap_admin_enabled: bool = Field(
-        default=True,
+        default=False,
         validation_alias="AUTH_BOOTSTRAP_ADMIN_ENABLED",
     )
     auth_bootstrap_admin_email: str = Field(
-        default="admin@example.com",
+        default="",
         validation_alias="AUTH_BOOTSTRAP_ADMIN_EMAIL",
     )
     auth_bootstrap_admin_password: str = Field(
-        default="wrongpass",
+        default="",
         validation_alias="AUTH_BOOTSTRAP_ADMIN_PASSWORD",
     )
     auth_bootstrap_admin_force_reset_password: bool = Field(
-        default=True,
+        default=False,
         validation_alias="AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD",
     )
     auth_require_email_verification: bool = Field(
