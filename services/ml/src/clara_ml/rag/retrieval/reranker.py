@@ -277,25 +277,34 @@ class NeuralReranker:
         candidates: list[Document],
         top_k: int | None,
     ) -> str:
-        payload: list[str] = [
+        hasher = sha1()
+        payload: tuple[str, ...] = (
             f"q={query.strip().lower()}",
             f"top_k={top_k}",
             f"top_n={self.top_n}",
             f"model={self.model_name}",
             f"strategy={self.strategy}",
             f"llm={self.llm_enabled}",
-        ]
+        )
+        hasher.update("\n".join(payload).encode("utf-8"))
         for doc in candidates:
             metadata = doc.metadata or {}
-            payload.extend(
-                [
-                    str(doc.id),
-                    str(doc.text),
-                    str(metadata.get("score", "")),
-                    str(metadata.get("source", "")),
-                ]
+            text = str(doc.text)
+            text_digest = sha1(text.encode("utf-8")).hexdigest()
+            hasher.update(
+                (
+                    "\n".join(
+                        [
+                            str(doc.id),
+                            text_digest,
+                            str(len(text)),
+                            str(metadata.get("score", "")),
+                            str(metadata.get("source", "")),
+                        ]
+                    )
+                ).encode("utf-8")
             )
-        digest = sha1("\n".join(payload).encode("utf-8")).hexdigest()
+        digest = hasher.hexdigest()
         return f"rerank:{digest}"
 
     def _cache_get(
