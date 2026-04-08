@@ -188,6 +188,7 @@ jobs:
             --mode "${{ steps.ctx.outputs.mode }}" \
             --api-base "${CLARA_API_BASE_URL:-http://127.0.0.1:8000}" \
             --ml-base "${CLARA_ML_BASE_URL:-http://127.0.0.1:8001}" \
+            --pull-production-logs "false" \
             --email "${CLARA_DEMO_EMAIL:-}" \
             --password "${CLARA_DEMO_PASSWORD:-}" \
             --doctor-email "${CLARA_DOCTOR_EMAIL:-}" \
