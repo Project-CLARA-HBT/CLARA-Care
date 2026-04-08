@@ -16,7 +16,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from clara_api.core.passwords import hash_password
 from clara_api.db.models import User, VnDrugMapping, VnDrugMappingAlias
 from clara_api.db.session import SessionLocal
 
@@ -154,15 +153,10 @@ def _ensure_import_user(db: Session, email: str) -> User:
     if user is not None:
         return user
 
-    user = User(
-        email=normalized_email,
-        hashed_password=hash_password("Clara#SeedImport2026!"),
-        role="admin",
+    raise RuntimeError(
+        "Import user does not exist. "
+        f"Please create it first and re-run with --import-user-email={normalized_email!r}.",
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 def _load_existing_maps(
@@ -425,7 +419,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Delay giữa các page để tránh quá tải nguồn.",
     )
     parser.add_argument("--commit-every", type=int, default=DEFAULT_COMMIT_EVERY)
-    parser.add_argument("--import-user-email", default="seed-import@clara.local")
+    parser.add_argument(
+        "--import-user-email",
+        required=True,
+        help="Email của user đã tồn tại để ghi created_by_user_id cho dữ liệu import.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
         "--summary-json",
