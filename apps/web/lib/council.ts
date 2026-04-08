@@ -696,7 +696,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
 
 function readStorageJson<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(key);
+  const raw = window.sessionStorage.getItem(key);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as T;
@@ -707,7 +707,7 @@ function readStorageJson<T>(key: string): T | null {
 
 function writeStorageJson<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  window.sessionStorage.setItem(key, JSON.stringify(value));
 }
 
 export function loadCouncilDraft(): CouncilCaseDraft | null {
@@ -720,7 +720,7 @@ export function saveCouncilDraft(draft: CouncilCaseDraft): void {
 
 export function clearCouncilDraft(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(COUNCIL_DRAFT_KEY);
+  window.sessionStorage.removeItem(COUNCIL_DRAFT_KEY);
 }
 
 export function loadCouncilSnapshot(): CouncilRunSnapshot | null {
@@ -733,5 +733,5 @@ export function saveCouncilSnapshot(snapshot: CouncilRunSnapshot): void {
 
 export function clearCouncilSnapshot(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(COUNCIL_RESULT_KEY);
+  window.sessionStorage.removeItem(COUNCIL_RESULT_KEY);
 }
