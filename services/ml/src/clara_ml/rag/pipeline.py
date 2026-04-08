@@ -1353,14 +1353,10 @@ class RagPipelineP1:
             graphrag_enabled_runtime = rag_graphrag_enabled
         elif isinstance(graphrag_enabled_override, bool):
             graphrag_enabled_runtime = graphrag_enabled_override
-        elif requested_stack_mode == "full":
-            graphrag_enabled_runtime = True
         external_connectors_override = normalized_hints.get("external_connectors_enabled_override")
         external_connectors_runtime_enabled = bool(settings.rag_external_connectors_enabled)
         if isinstance(external_connectors_override, bool):
             external_connectors_runtime_enabled = external_connectors_override
-        if requested_stack_mode == "full":
-            external_connectors_runtime_enabled = True
         query_plan = self._build_query_plan(
             query,
             planner_query_plan=normalized_hints.get("query_plan"),
