@@ -179,6 +179,23 @@ _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
 
 
+async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File vượt quá giới hạn {max_bytes // (1024 * 1024)}MB",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 def _validate_upload_safety(*, file_name: str, content_type: str, file_bytes: bytes) -> None:
     size = len(file_bytes)
     if size > _MAX_RESEARCH_UPLOAD_BYTES:
@@ -3446,7 +3463,7 @@ async def upload_file_to_knowledge_source(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
     _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
@@ -3502,7 +3519,7 @@ async def upload_research_file(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
     _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)

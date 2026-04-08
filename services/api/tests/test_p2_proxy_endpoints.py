@@ -352,6 +352,25 @@ def test_research_upload_file_pdf_uses_parsed_text(monkeypatch: pytest.MonkeyPat
     assert payload["token_count"] > 0
 
 
+def test_research_upload_file_rejects_payload_over_size_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._MAX_RESEARCH_UPLOAD_BYTES",
+        8,
+    )
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("note.txt", b"123456789", "text/plain")},
+    )
+
+    assert response.status_code == 413
+    assert "File vượt quá giới hạn" in response.json()["detail"]
+
+
 def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPatch) -> None:
     token = _login("alice@research.clara")
 
