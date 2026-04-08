@@ -194,6 +194,7 @@ OCR_CORRECTION_MAX_CHARS = 12000
 _CANDIDATE_DB_LIMIT = 120
 _CANDIDATE_MIN_SCORE = 0.78
 _CANDIDATE_MIN_MARGIN = 0.05
+_CANDIDATE_MAX_INPUT_LENGTH = 255
 _ITEM_NOTE_META_PREFIX = "[meta]"
 _OCR_NOISY_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("paracetarnol", "paracetamol"),
@@ -334,8 +335,8 @@ def _find_db_mapping_by_alias(db: Session, normalized_input: str) -> VnDrugMappi
 
 
 def _compute_candidate_similarity(query: str, candidate: str) -> float:
-    query_fold = _ascii_fold(query)
-    candidate_fold = _ascii_fold(candidate)
+    query_fold = _ascii_fold(query)[:_CANDIDATE_MAX_INPUT_LENGTH]
+    candidate_fold = _ascii_fold(candidate)[:_CANDIDATE_MAX_INPUT_LENGTH]
     sequence_ratio = SequenceMatcher(a=query_fold, b=candidate_fold).ratio()
     query_terms = _tokenize_terms(query_fold)
     candidate_terms = _tokenize_terms(candidate_fold)
@@ -391,7 +392,12 @@ def _find_db_mapping_candidate(
     normalized_input: str,
 ) -> tuple[VnDrugMapping | None, float, int, int]:
     started_at = perf_counter()
-    candidates = _collect_db_candidate_mappings(db, normalized_input)
+    bounded_input = normalized_input[:_CANDIDATE_MAX_INPUT_LENGTH].strip()
+    if not bounded_input:
+        elapsed = int((perf_counter() - started_at) * 1000)
+        return None, 0.0, 0, elapsed
+
+    candidates = _collect_db_candidate_mappings(db, bounded_input)
     if not candidates:
         elapsed = int((perf_counter() - started_at) * 1000)
         return None, 0.0, 0, elapsed
@@ -403,7 +409,7 @@ def _find_db_mapping_candidate(
         for name in names:
             if not name:
                 continue
-            best_score = max(best_score, _compute_candidate_similarity(normalized_input, name))
+            best_score = max(best_score, _compute_candidate_similarity(bounded_input, name))
         ranked.append((best_score, mapping))
 
     ranked.sort(key=lambda entry: entry[0], reverse=True)
