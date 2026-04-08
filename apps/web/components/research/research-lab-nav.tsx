@@ -27,7 +27,7 @@ export default function ResearchLabNav({ className, pathname: pathnameProp }: Re
   const currentPathname = usePathname();
   const pathname = pathnameProp ?? currentPathname ?? "";
   const panelClassName = [
-    "chrome-panel rounded-[1.35rem] border border-[color:var(--shell-border)] p-2.5 sm:p-3",
+    "chrome-panel research-panel-modern rounded-[1.35rem] border border-[color:var(--shell-border)] p-2.5 sm:p-3",
     className
   ]
     .filter(Boolean)
@@ -49,7 +49,7 @@ export default function ResearchLabNav({ className, pathname: pathnameProp }: Re
                 aria-current={active ? "page" : undefined}
                 className={`chrome-nav-link inline-flex min-h-[42px] items-center rounded-xl border px-3.5 text-sm font-semibold whitespace-nowrap transition ${
                   active
-                    ? "border-[color:var(--shell-border-strong)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                    ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200"
                     : "border-transparent bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)]"
                 }`}
               >

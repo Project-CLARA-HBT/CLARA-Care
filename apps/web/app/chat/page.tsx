@@ -1907,12 +1907,42 @@ export default function ChatWorkspacePage() {
     [displayedConversations.length]
   );
 
+  const latestTier2Turn = useMemo(
+    () =>
+      [...conversationTurns]
+        .reverse()
+        .find((item) => item.result.tier === "tier2") ?? null,
+    [conversationTurns]
+  );
+
+  const latestTier2Result = latestTier2Turn?.result.tier === "tier2" ? latestTier2Turn.result : null;
+  const flowTimeline = latestTier2Result?.flowStages.slice(0, 4) ?? [];
+  const verificationConfidence =
+    typeof latestTier2Result?.verificationStatus?.confidence === "number"
+      ? latestTier2Result.verificationStatus.confidence
+      : latestTier2Result?.debug.routing?.confidence;
+  const confidencePercent = Math.max(
+    0,
+    Math.min(100, (verificationConfidence ?? 0) > 1 ? verificationConfidence ?? 0 : (verificationConfidence ?? 0) * 100)
+  );
+  const telemetryBars = latestTier2Result
+    ? [
+        Math.min(96, Math.max(18, latestTier2Result.debug.flowEventCount * 4)),
+        Math.min(96, Math.max(22, latestTier2Result.debug.telemetryDocCount * 5)),
+        Math.min(96, Math.max(20, latestTier2Result.debug.telemetryKeywordCount * 6)),
+        Math.min(96, Math.max(24, latestTier2Result.citations.length * 14)),
+        Math.min(96, Math.max(20, latestTier2Result.debug.telemetrySourceAttemptCount * 12)),
+        Math.min(96, Math.max(18, latestTier2Result.telemetry.errors.length ? 88 : 42)),
+        Math.min(96, Math.max(16, latestTier2Result.debug.stageCount * 10)),
+      ]
+    : [30, 45, 60, 85, 70, 50, 35];
+
   return (
     <PageShell
       variant="plain"
       title=""
     >
-      <div className="relative h-[100dvh] min-h-[100dvh]">
+      <div className="relative h-[100dvh] min-h-[100dvh] overflow-hidden">
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -1922,16 +1952,16 @@ export default function ChatWorkspacePage() {
           />
         ) : null}
 
-        <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)_22rem]">
         <aside
           className={[
-            "chrome-panel fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden rounded-none p-4 transition-transform duration-200 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0 lg:rounded-[1.35rem]",
+            "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#eceef0] p-4 shadow-[inset_-1px_0_0_rgba(0,0,0,0.05)] transition-transform duration-200 dark:bg-slate-900 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0 lg:rounded-xl lg:border lg:shadow-none",
             isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0",
           ].join(" ")}
         >
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
                 Clara Chat
               </p>
               <h2 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Workspace</h2>
@@ -1941,16 +1971,17 @@ export default function ChatWorkspacePage() {
               onClick={() => setIsMobileSidebarOpen(false)}
               className="inline-flex min-h-[34px] min-w-[34px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)] lg:hidden"
             >
-              ✕
+              <span className="material-symbols-outlined text-base">close</span>
             </button>
           </div>
 
           <button
             type="button"
             onClick={createNewConversation}
-            className="mt-3 inline-flex min-h-[38px] w-full items-center justify-center rounded-xl border border-cyan-300/70 bg-gradient-to-r from-cyan-500/20 to-sky-500/20 px-3 text-xs font-semibold text-cyan-800 dark:text-cyan-200"
+            className="mt-3 inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
           >
-            + New chat
+            <span className="material-symbols-outlined text-sm">add</span>
+            New chat
           </button>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -2495,8 +2526,8 @@ export default function ChatWorkspacePage() {
           </div>
         </aside>
 
-        <section className="chrome-panel flex h-full min-h-0 flex-col overflow-hidden rounded-[1.35rem] p-4 sm:p-5">
-          <header className="border-b border-[color:var(--shell-border)] pb-3">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-4 sm:p-5">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)] bg-[var(--surface-header)]/85 pb-3 backdrop-blur-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-start gap-2">
                 <button
@@ -2505,11 +2536,11 @@ export default function ChatWorkspacePage() {
                   className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
                   aria-label="Mở sidebar"
                 >
-                  ☰
+                  <span className="material-symbols-outlined text-base">menu</span>
                 </button>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    Active Conversation
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    Chat-first workspace
                   </p>
                   <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                     {activeConversationMeta
@@ -2525,7 +2556,7 @@ export default function ChatWorkspacePage() {
                   onClick={createNewConversation}
                   className="inline-flex min-h-[36px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
                 >
-                  + New chat
+                  New chat
                 </button>
                 <button
                   type="button"
@@ -2635,7 +2666,7 @@ export default function ChatWorkspacePage() {
             ) : null}
           </header>
 
-          <div ref={conversationScrollRef} className="flex-1 min-h-0 space-y-4 overflow-y-auto py-4 pr-1">
+          <div ref={conversationScrollRef} className="clara-scrollbar flex-1 min-h-0 space-y-4 overflow-y-auto py-4 pr-1">
             {isLoadingTurns && !conversationTurns.length ? (
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                 Đang tải nội dung conversation...
@@ -2673,6 +2704,108 @@ export default function ChatWorkspacePage() {
             notice={notice}
           />
         </section>
+
+        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/35 p-5 xl:flex">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-primary)]">Chuyên sâu</h2>
+            <span className="material-symbols-outlined text-[var(--text-muted)]">more_vert</span>
+          </div>
+
+          <section className="mb-7">
+            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Flow Timeline</h3>
+            <div className="space-y-5 border-l border-[color:var(--shell-border)] pl-5">
+              {flowTimeline.length ? (
+                flowTimeline.map((stage, index) => {
+                  const isWarn = stage.status === "warning" || stage.status === "failed";
+                  const isInProgress = stage.status === "in_progress";
+                  return (
+                    <div key={`timeline-${stage.id}-${index}`} className="relative">
+                      <span
+                        className={[
+                          "absolute -left-[26px] top-0 h-3 w-3 rounded-full border-4 border-[var(--bg-canvas)]",
+                          isWarn
+                            ? "bg-amber-400"
+                            : isInProgress
+                              ? "animate-pulse bg-[var(--text-muted)]"
+                              : "clara-glow-cyan bg-cyan-400"
+                        ].join(" ")}
+                      />
+                      <p className="text-xs font-bold text-[var(--text-primary)]">{stage.label}</p>
+                      <p className={isWarn ? "text-[10px] text-amber-300/90" : "text-[10px] text-[var(--text-muted)]"}>
+                        {stage.detail || stage.status}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-[var(--text-muted)]">Chưa có flow timeline cho conversation hiện tại.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="mb-7">
+            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Runtime Metadata</h3>
+            <div className="space-y-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-elev-1)] p-4 font-mono text-[10px]">
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">query_plan:</span>
+                <span className="text-cyan-300">{selectedResearchMode.toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">retrieval:</span>
+                <span className="text-[var(--text-primary)]">{selectedRetrievalStackMode.toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">conversation_id:</span>
+                <span className="text-[var(--text-primary)]">{activeConversationId ?? "N/A"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">confidence:</span>
+                <span className="text-[var(--text-primary)]">{confidencePercent.toFixed(0)}%</span>
+              </div>
+              <div className="mt-3 border-t border-[color:var(--shell-border)] pt-3">
+                <p className="mb-1 text-[var(--text-muted)]">active_sources:</p>
+                <div className="flex flex-wrap gap-1">
+                  {(latestTier2Result?.citations.slice(0, 3) ?? []).map((citation, index) => (
+                    <span
+                      key={`source-chip-${index}`}
+                      className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300"
+                    >
+                      {(citation.source || citation.title || `SRC_${index + 1}`).slice(0, 14)}
+                    </span>
+                  ))}
+                  {!latestTier2Result?.citations.length ? (
+                    <span className="rounded bg-[var(--surface-panel)] px-1.5 py-0.5 text-[var(--text-muted)]">N/A</span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="flex min-h-[220px] flex-1 flex-col">
+            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Live Analysis Engine</h3>
+            <div className="relative flex-1 overflow-hidden rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-elev-1)] p-4">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(40,217,243,0.15),_transparent_60%)]" />
+              <div className="relative flex h-full items-end gap-1">
+                {telemetryBars.map((value, index) => (
+                  <div
+                    key={`telemetry-bar-${index}`}
+                    className={[
+                      "flex-1 rounded-t-sm bg-cyan-400/30",
+                      index === 3 ? "clara-glow-cyan bg-cyan-400" : ""
+                    ].join(" ")}
+                    style={{ height: `${value}%` }}
+                  />
+                ))}
+              </div>
+              <div className="absolute right-4 top-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300" />
+                </span>
+              </div>
+            </div>
+          </section>
+        </aside>
       </div>
         {isScopeManagerOpen ? (
           <div className="fixed inset-0 z-[68] flex items-start justify-center bg-slate-950/40 px-4 pt-[8vh] backdrop-blur-sm">

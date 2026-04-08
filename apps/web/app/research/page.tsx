@@ -639,11 +639,11 @@ export default function ResearchPage() {
 
   return (
     <PageShell
-      title="CLARA Chat"
-      description="Mở ứng dụng là chat ngay. Luồng chuyên sâu vẫn có sẵn nhưng nằm ở lớp mở rộng phía dưới."
+      title="CLARA Research"
+      description="Clinical Intelligence workspace cho truy vấn nhanh, research sâu và telemetry runtime theo thời gian thực."
     >
-      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="chrome-panel hidden rounded-[1.35rem] p-4 lg:block">
+      <div className="research-workspace grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="chrome-panel research-panel-modern hidden rounded-[1.35rem] p-4 lg:block">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Conversations
@@ -674,19 +674,19 @@ export default function ResearchPage() {
         </aside>
 
         <section className="space-y-4">
-          <section className="chrome-panel rounded-[1.4rem] p-4 sm:p-5">
+          <section className="chrome-panel research-panel-modern rounded-[1.4rem] p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2.5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  Chat-first workspace
+                  Clinical Intelligence Workspace
                 </p>
-                <h2 className="mt-1.5 text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+                <h2 className="research-hero-heading mt-1.5 text-xl font-semibold sm:text-2xl">
                   Hôm nay bạn muốn hỏi gì?
                 </h2>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex min-h-[36px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="research-chip inline-flex min-h-[36px] items-center rounded-full px-3 text-xs font-semibold">
                   Vai trò: {role}
                 </span>
 
@@ -745,7 +745,7 @@ export default function ResearchPage() {
             </div>
           </section>
 
-          <details className="chrome-panel rounded-[1.3rem] p-3 lg:hidden">
+          <details className="chrome-panel research-panel-modern rounded-[1.3rem] p-3 lg:hidden">
             <summary className="cursor-pointer text-sm font-semibold text-[var(--text-primary)]">
               Lịch sử hội thoại ({history.length})
             </summary>
@@ -763,7 +763,7 @@ export default function ResearchPage() {
             </div>
           </details>
 
-          <section className="chrome-panel flex min-h-[66vh] max-h-[80vh] flex-col overflow-hidden rounded-[1.35rem] p-4 sm:p-5 lg:p-6">
+          <section className="chrome-panel research-panel-modern flex min-h-[66vh] max-h-[80vh] flex-col overflow-hidden rounded-[1.35rem] p-4 sm:p-5 lg:p-6">
             <div ref={conversationScrollRef} className="flex-1 space-y-4 overflow-y-auto pr-1 pb-4">
               {isLoadingConversation && !conversationTurns.length ? (
                 <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-4 text-sm text-[var(--text-secondary)]">
@@ -804,23 +804,23 @@ export default function ResearchPage() {
                         </div>
 
                         <div className="flex justify-start">
-                          <article className="w-full max-w-[96%] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-4 sm:px-5">
+                          <article className="w-full max-w-[96%] rounded-2xl border border-cyan-200/35 bg-[var(--surface-panel)] px-4 py-4 sm:px-5 dark:border-cyan-900/45">
                             <div className="mb-3 flex flex-wrap items-center gap-2">
-                              <span className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                              <span className="research-chip inline-flex min-h-[30px] items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.08em]">
                                 CLARA
                               </span>
-                              <span className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                              <span className="research-chip-cyan inline-flex min-h-[30px] items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.08em]">
                                 {tierLabel}
                               </span>
                               {result.tier === "tier2" && typeof result.fallbackUsed === "boolean" ? (
-                                <span className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                <span className="research-chip inline-flex min-h-[30px] items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.08em]">
                                   path: {result.fallbackUsed ? "fallback" : "rag"}
                                 </span>
                               ) : null}
                               <button
                                 type="button"
                                 onClick={() => void copyAnswer(answerText)}
-                                className="ml-auto inline-flex min-h-[34px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
+                                className="research-chip ml-auto inline-flex min-h-[34px] items-center rounded-lg px-3 text-xs font-semibold"
                               >
                                 Copy
                               </button>
@@ -889,7 +889,7 @@ export default function ResearchPage() {
               )}
             </div>
 
-            <div className="sticky bottom-0 z-10 mt-2 -mx-4 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/95 px-4 pt-4 backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6">
+            <div className="sticky bottom-0 z-10 mt-2 -mx-4 border-t border-cyan-200/25 bg-[var(--surface-panel)]/95 px-4 pt-4 backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 dark:border-cyan-900/40">
               <div className="mb-3 flex flex-wrap gap-2">
                 {QUICK_PROMPTS.map((prompt) => (
                   <button
@@ -909,7 +909,7 @@ export default function ResearchPage() {
                   onChange={(event) => setQuery(event.target.value)}
                   disabled={isSubmitting}
                   placeholder="Nhập câu hỏi y khoa..."
-                  className="min-h-[120px] w-full rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-7 text-[var(--text-primary)] outline-none transition focus:border-[color:var(--shell-border-strong)]"
+                  className="min-h-[120px] w-full rounded-2xl border border-cyan-200/35 bg-[var(--surface-muted)] px-4 py-3 text-sm leading-7 text-[var(--text-primary)] outline-none transition focus:border-cyan-300/75 dark:border-cyan-900/45"
                 />
 
                 {selectedTier === "tier2" ? (
@@ -961,7 +961,7 @@ export default function ResearchPage() {
                       type="button"
                       onClick={createNewConversation}
                       disabled={isSubmitting}
-                      className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
+                      className="research-chip inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-semibold"
                     >
                       Chat mới
                     </button>
@@ -986,7 +986,7 @@ export default function ResearchPage() {
                     <button
                       type="button"
                       onClick={() => setShowLiveResearchTrace((prev) => !prev)}
-                      className="inline-flex min-h-[30px] items-center rounded-md border border-cyan-400/60 bg-white/70 px-2.5 text-[11px] font-semibold text-cyan-800 dark:bg-cyan-950/35 dark:text-cyan-100"
+                      className="research-chip-cyan inline-flex min-h-[30px] items-center rounded-md px-2.5 text-[11px] font-semibold"
                     >
                       {showLiveResearchTrace ? "Ẩn luồng live" : "Hiện luồng live"}
                     </button>
@@ -1055,12 +1055,36 @@ export default function ResearchPage() {
                       </div>
                     </div>
                   ) : null}
+
+                  <div className="research-live-engine mt-2 p-2.5">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-cyan-100">Live Analysis Engine</p>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-cyan-100">
+                        <span className="research-pulse-dot" />
+                        Running
+                      </span>
+                    </div>
+                    <div className="h-12">
+                      <div className="research-live-bars">
+                        {[30, 45, 60, 85, 72, 50, 36].map((height, index) => (
+                          <span
+                            key={`live-engine-bar-${index}`}
+                            className="research-live-bar"
+                            style={{
+                              height: `${height}%`,
+                              opacity: `${0.4 + index * 0.08}`
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </section>
               ) : null}
             </div>
           </section>
 
-          <section className="chrome-panel rounded-[1.35rem] p-4 sm:p-5">
+          <section className="chrome-panel research-panel-modern rounded-[1.35rem] p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 Chuyên sâu
@@ -1068,7 +1092,7 @@ export default function ResearchPage() {
               <button
                 type="button"
                 onClick={() => setShowAdvanced((prev) => !prev)}
-                className="inline-flex min-h-[34px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
+                className="research-chip inline-flex min-h-[34px] items-center rounded-lg px-3 text-xs font-semibold"
               >
                 {showAdvanced ? "Ẩn panel" : "Mở panel"}
               </button>

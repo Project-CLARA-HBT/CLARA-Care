@@ -436,7 +436,7 @@ export const SPONSORS = [
   {
     name: "HiTechCloud",
     href: "https://hitechcloud.vn",
-    logo: "/partners/hitechcloud.svg",
+    logo: "/partners/hitechcloudvntrang.png",
   },
   {
     name: "BNIX",

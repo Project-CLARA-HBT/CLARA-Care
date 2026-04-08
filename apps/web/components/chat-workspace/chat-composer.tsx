@@ -48,104 +48,121 @@ export default function ChatComposer(props: ChatComposerProps) {
   } = props;
 
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/90 px-4 pb-2 pt-3 backdrop-blur-xl sm:-mx-5 sm:px-5">
-      <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-        {quickPrompts.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => onChangeQuery(prompt)}
-            className="inline-flex min-h-[32px] shrink-0 items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-medium text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
+    <footer className="sticky bottom-0 z-20 bg-gradient-to-t from-[var(--bg-canvas)] to-transparent pt-4">
+      <div className="mx-auto max-w-4xl">
+        <div className="clara-glass-panel rounded-2xl border border-[color:var(--shell-border)] p-2 shadow-2xl">
+          <form onSubmit={onSubmit} className="flex items-end gap-2">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:text-cyan-300"
+              aria-label="Đính kèm"
+            >
+              <span className="material-symbols-outlined">attach_file</span>
+            </button>
 
-      <form onSubmit={onSubmit} className="space-y-2.5">
-        <textarea
-          id="chat-composer-input"
-          value={query}
-          onChange={(event) => onChangeQuery(event.target.value)}
-          disabled={isSubmitting}
-          aria-label="Chat composer input"
-          placeholder="Hỏi CLARA bất cứ điều gì về an toàn thuốc, DDI, guideline..."
-          className="min-h-[102px] w-full rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-7 text-[var(--text-primary)] outline-none transition focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-200/40 dark:focus:ring-cyan-900/40"
-        />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <textarea
+                id="chat-composer-input"
+                value={query}
+                onChange={(event) => onChangeQuery(event.target.value)}
+                disabled={isSubmitting}
+                aria-label="Chat composer input"
+                placeholder="Nhập câu hỏi chuyên sâu hoặc yêu cầu phân tích mới..."
+                rows={1}
+                className="min-h-[52px] max-h-36 w-full resize-y rounded-xl border border-transparent bg-transparent px-2 py-3 text-sm text-[var(--text-primary)] outline-none"
+              />
 
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex flex-wrap gap-2.5">
-            <fieldset className="inline-flex rounded-full border border-cyan-300/70 bg-cyan-500/10 p-1">
-              <legend className="sr-only">Research mode</legend>
-              {RESEARCH_MODE_OPTIONS.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => onChangeResearchMode(mode.id)}
-                  disabled={isSubmitting}
-                  className={[
-                    "rounded-full px-3 py-1 text-xs font-semibold",
-                    selectedResearchMode === mode.id
-                      ? "bg-cyan-500 text-white"
-                      : "text-cyan-800 dark:text-cyan-200",
-                  ].join(" ")}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </fieldset>
+              <div className="flex flex-wrap items-center gap-2 pb-1">
+                <fieldset className="inline-flex rounded-full border border-cyan-300/50 bg-cyan-500/10 p-1">
+                  <legend className="sr-only">Research mode</legend>
+                  {RESEARCH_MODE_OPTIONS.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => onChangeResearchMode(mode.id)}
+                      disabled={isSubmitting}
+                      className={[
+                        "rounded-full px-3 py-1 text-[11px] font-semibold",
+                        selectedResearchMode === mode.id
+                          ? "bg-cyan-500 text-slate-900"
+                          : "text-cyan-200"
+                      ].join(" ")}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </fieldset>
 
-            <fieldset className="inline-flex rounded-full border border-violet-300/70 bg-violet-500/10 p-1">
-              <legend className="sr-only">Retrieval stack mode</legend>
-              {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
-                const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => onChangeRetrievalStackMode(mode.id)}
-                    disabled={disabled}
-                    className={[
-                      "rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50",
-                      selectedRetrievalStackMode === mode.id
-                        ? "bg-violet-500 text-white"
-                        : "text-violet-800 dark:text-violet-200",
-                    ].join(" ")}
-                  >
-                    {mode.label}
-                  </button>
-                );
-              })}
-            </fieldset>
-          </div>
+                <fieldset className="inline-flex rounded-full border border-blue-300/40 bg-blue-500/10 p-1">
+                  <legend className="sr-only">Retrieval stack mode</legend>
+                  {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
+                    const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => onChangeRetrievalStackMode(mode.id)}
+                        disabled={disabled}
+                        className={[
+                          "rounded-full px-3 py-1 text-[11px] font-semibold disabled:opacity-50",
+                          selectedRetrievalStackMode === mode.id
+                            ? "bg-blue-400 text-slate-900"
+                            : "text-blue-200"
+                        ].join(" ")}
+                      >
+                        {mode.label}
+                      </button>
+                    );
+                  })}
+                </fieldset>
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !query.trim()}
-            className="inline-flex min-h-[42px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white shadow-[0_10px_24px_-16px_rgba(6,182,212,0.75)] disabled:opacity-60"
-          >
-            {isSubmitting ? "Đang xử lý..." : "Gửi"}
-          </button>
+            <div className="flex items-center gap-2 pr-1">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:text-cyan-300"
+                aria-label="Mic"
+              >
+                <span className="material-symbols-outlined">mic</span>
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !query.trim()}
+                className="clara-glow-cyan inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400 text-slate-900 transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Gửi"
+              >
+                <span className="material-symbols-outlined">send</span>
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
 
-      <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-        Shortcuts: <kbd className="rounded border border-[color:var(--shell-border)] px-1">Ctrl/⌘+K</kbd> search,{" "}
-        <kbd className="rounded border border-[color:var(--shell-border)] px-1">Ctrl/⌘+Shift+N</kbd> new chat,{" "}
-        <kbd className="rounded border border-[color:var(--shell-border)] px-1">Ctrl/⌘+Shift+P</kbd> command,{" "}
-        <kbd className="rounded border border-[color:var(--shell-border)] px-1">/</kbd> focus input
-      </p>
+        <div className="mt-3 flex flex-wrap justify-center gap-3 text-[11px] text-[var(--text-muted)]">
+          {quickPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => onChangeQuery(prompt)}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 transition hover:text-cyan-300"
+            >
+              <span className="material-symbols-outlined text-sm">history</span>
+              {prompt}
+            </button>
+          ))}
+        </div>
 
-      <div className="mt-1 min-h-[1.2rem] text-xs">
-        {liveJobId || liveStatusNote ? (
-          <p className="text-cyan-700 dark:text-cyan-300">
-            {liveStatusNote || "Đang xử lý tier2 job..."}
-            {liveJobId ? ` (job_id: ${liveJobId})` : ""}
-          </p>
-        ) : null}
-        {error ? <p className="text-rose-600">{error}</p> : null}
-        {!error && notice ? <p className="text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
+        <div className="mt-1 min-h-[1.2rem] text-center text-xs">
+          {liveJobId || liveStatusNote ? (
+            <p className="text-cyan-300">
+              {liveStatusNote || "Đang xử lý tier2 job..."}
+              {liveJobId ? ` (job_id: ${liveJobId})` : ""}
+            </p>
+          ) : null}
+          {error ? <p className="text-rose-400">{error}</p> : null}
+          {!error && notice ? <p className="text-emerald-300">{notice}</p> : null}
+        </div>
       </div>
-    </div>
+    </footer>
   );
 }

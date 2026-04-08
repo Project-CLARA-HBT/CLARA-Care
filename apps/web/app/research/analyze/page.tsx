@@ -69,7 +69,7 @@ export default function ResearchAnalyzePage() {
         <ResearchLabNav />
 
         {isLoading ? (
-          <section className="chrome-panel rounded-[1.35rem] p-4 text-sm text-[var(--text-secondary)]">
+          <section className="chrome-panel research-panel-modern rounded-[1.35rem] p-4 text-sm text-[var(--text-secondary)]">
             Đang tải dữ liệu phân tích...
           </section>
         ) : null}
@@ -89,7 +89,7 @@ export default function ResearchAnalyzePage() {
 
         {conversation ? (
           <>
-            <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
+            <section className="chrome-panel research-panel-modern rounded-[1.35rem] p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 Latest Tier2 Conversation
               </p>

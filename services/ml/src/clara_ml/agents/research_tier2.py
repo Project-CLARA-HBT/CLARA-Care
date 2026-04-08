@@ -877,6 +877,21 @@ def _resolve_runtime_llm_config(
             or str(settings.primary_llm_model or "").strip()
             or "gpt-5.3-codex-high"
         )
+        if not api_key:
+            deepseek_api_key = (
+                str(settings.deepseek_api_key or "").strip()
+                or str(runtime.get("api_key") or "").strip()
+            )
+            deepseek_base_url = (
+                str(settings.deepseek_base_url or "").strip()
+                or str(runtime.get("base_url") or "").strip()
+            )
+            deepseek_model = (
+                str(settings.deepseek_model or "").strip()
+                or str(runtime.get("model") or "").strip()
+            )
+            if deepseek_api_key and deepseek_base_url and deepseek_model:
+                return "deepseek", deepseek_api_key, deepseek_base_url, deepseek_model
         return provider, api_key, base_url, model
 
     api_key = str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()

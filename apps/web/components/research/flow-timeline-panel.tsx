@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ResearchFlowEvent, ResearchFlowStage, ResearchFlowStageStatus } from "@/lib/research";
 
 type FlowTimelineMode =
@@ -232,6 +233,11 @@ function safeStringifyPayload(payload?: Record<string, unknown>): string {
   }
 }
 
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(96, Math.max(14, Math.round(value)));
+}
+
 export default function FlowTimelinePanel({
   stages,
   events,
@@ -242,40 +248,108 @@ export default function FlowTimelinePanel({
   const progressPercent = getProgressPercent(summary);
   const totalDurationMs = stages.reduce((acc, stage) => acc + (stage.durationMs ?? 0), 0);
   const durationText = totalDurationMs > 0 ? formatDuration(totalDurationMs) : null;
+  const liveBars = useMemo(() => {
+    if (!events.length) {
+      const baseline = [
+        26 + summary.pending * 2,
+        41 + summary.inProgress * 6,
+        55 + summary.completed * 3,
+        78 + summary.inProgress * 4,
+        66 + summary.warning * 6,
+        49 + summary.completed * 2,
+        33 + summary.failed * 8
+      ];
+      return baseline.map((value) => clampPercent(value));
+    }
+
+    const recent = events.slice(-7);
+    const computed = recent.map((event, index) => {
+      const payload = event.payload;
+      const status = normalizeStatus(event.status);
+      const progress =
+        payload && typeof payload.progress_percent === "number"
+          ? payload.progress_percent
+          : undefined;
+      const elapsed =
+        payload && typeof payload.elapsed_seconds === "number"
+          ? payload.elapsed_seconds
+          : undefined;
+
+      let score = progress ?? 34 + index * 7;
+      if (elapsed !== undefined) score = Math.max(score, 22 + elapsed * 8);
+      if (status === "completed") score += 11;
+      if (status === "in_progress") score += 7;
+      if (status === "warning") score += 3;
+      if (status === "failed") score = Math.max(22, score - 8);
+      return clampPercent(score);
+    });
+
+    const fallback = [28, 43, 57, 82, 68, 52, 38];
+    while (computed.length < 7) {
+      computed.unshift(fallback[computed.length] ?? 36);
+    }
+    return computed.slice(-7);
+  }, [events, summary.completed, summary.failed, summary.inProgress, summary.pending, summary.warning]);
 
   return (
-    <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="research-panel-modern rounded-[1.35rem] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Flow Timeline</p>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Flow Timeline</p>
+        <span className="research-chip rounded-full px-2 py-0.5 text-[11px]">
           {stages.length}
         </span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <span className="research-chip rounded-full px-2.5 py-1 text-[11px] font-medium">
           {resolveModeLabel(mode)}
         </span>
         {durationText ? (
-          <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-700 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+          <span className="research-chip rounded-full border-cyan-300/60 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-200">
             tổng thời lượng: {durationText}
           </span>
         ) : null}
         {isProcessing ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+          <span className="research-chip-cyan inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
             Đang xử lý
           </span>
         ) : null}
       </div>
 
-      {stages.length ? (
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <p className="font-semibold text-slate-700 dark:text-slate-200">Tiến độ xử lý</p>
-            <p className="text-slate-600 dark:text-slate-300">{progressPercent}%</p>
+      <div className="research-live-engine mt-3 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-cyan-200/95 dark:text-cyan-100">
+            Live Analysis Engine
+          </p>
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-200 dark:text-cyan-100">
+            <span className="research-pulse-dot" />
+            Active
+          </span>
+        </div>
+        <div className="h-16">
+          <div className="research-live-bars">
+            {liveBars.map((height, index) => (
+              <span
+                key={`flow-live-bar-${index}`}
+                className="research-live-bar"
+                style={{
+                  height: `${height}%`,
+                  opacity: `${0.42 + index * 0.08}`
+                }}
+              />
+            ))}
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        </div>
+      </div>
+
+      {stages.length ? (
+        <div className="mt-3 rounded-xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/20">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <p className="font-semibold text-[var(--text-primary)]">Tiến độ xử lý</p>
+            <p className="text-[var(--text-secondary)]">{progressPercent}%</p>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
             <div
               className={[
                 "h-full transition-all",
@@ -310,7 +384,7 @@ export default function FlowTimelinePanel({
             const status = STATUS_META[normalizeStatus(stage.status)];
             const isLast = index === stages.length - 1;
             return (
-              <li key={`${stage.id}-${index}`} className="relative rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70">
+              <li key={`${stage.id}-${index}`} className="relative rounded-2xl border border-cyan-200/30 bg-white/55 p-3 dark:border-cyan-900/40 dark:bg-slate-900/45">
                 <div className="flex items-start gap-3">
                   <div className="relative mt-0.5 flex w-4 justify-center">
                     <span className={["h-3.5 w-3.5 rounded-full border-2", status.markerClass].join(" ")} />
@@ -375,15 +449,15 @@ export default function FlowTimelinePanel({
       )}
 
       {events.length ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Event Log</p>
+        <div className="mt-4 rounded-2xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/55 dark:bg-cyan-950/18">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Event Log</p>
           <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto pr-1">
             {events.slice(-10).map((event) => {
               const status = STATUS_META[normalizeStatus(event.status)];
               const payloadPreview = formatPayloadPreview(event.payload);
               const payloadChips = extractPayloadChips(event.payload);
               return (
-                <li key={event.id} className="rounded-lg border border-slate-200 bg-white/80 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
+                <li key={event.id} className="rounded-lg border border-cyan-200/35 bg-white/80 p-2 text-xs text-slate-600 dark:border-cyan-900/45 dark:bg-slate-900/55 dark:text-slate-300">
                   <div className="flex flex-wrap items-center gap-1">
                     <span className="font-semibold text-slate-700 dark:text-slate-200">{event.label}</span>
                     {event.component ? (

@@ -179,6 +179,17 @@ def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str,
             or settings.primary_llm_model
             or "gpt-5.3-codex-high"
         )
+        if not api_key:
+            deepseek_api_key = settings.deepseek_api_key or _as_text(rag_flow.get("llm_api_key"), "")
+            deepseek_base_url = settings.deepseek_base_url or _as_text(rag_flow.get("llm_base_url"), "")
+            deepseek_model = settings.deepseek_model or _as_text(rag_flow.get("llm_model"), "")
+            if deepseek_api_key and deepseek_base_url and deepseek_model:
+                return {
+                    "provider": "deepseek",
+                    "api_key": deepseek_api_key.strip(),
+                    "base_url": deepseek_base_url.strip(),
+                    "model": deepseek_model.strip(),
+                }
         return {
             "provider": "hitechcloud_gpt53_codex_high",
             "api_key": api_key.strip(),

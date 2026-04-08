@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ResearchTier2Telemetry } from "@/lib/research";
 
 type TelemetryDetailsPanelProps = {
@@ -58,6 +59,11 @@ function supportStatusBadgeClass(status?: string): string {
     return "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300";
   }
   return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300";
+}
+
+function clampTelemetryBar(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(95, Math.max(14, Math.round(value)));
 }
 
 export default function TelemetryDetailsPanel({
@@ -123,29 +129,75 @@ export default function TelemetryDetailsPanel({
     stageSpans.length > 0 ||
     traceEntries.length > 0 ||
     telemetry.errors.length > 0;
+  const telemetryBars = useMemo(() => {
+    const raw = [
+      24 + telemetry.keywords.length * 2.2,
+      28 + telemetry.searchPlan.subqueries.length * 6.4,
+      22 + telemetry.docs.length * 8.4,
+      30 + telemetry.sourceAttempts.length * 5.8,
+      20 + telemetry.verificationMatrix.length * 8.2,
+      18 + stageSpans.length * 5.5,
+      14 + telemetry.errors.length * 18
+    ];
+    return raw.map((value) => clampTelemetryBar(value));
+  }, [
+    stageSpans.length,
+    telemetry.docs.length,
+    telemetry.errors.length,
+    telemetry.keywords.length,
+    telemetry.searchPlan.subqueries.length,
+    telemetry.sourceAttempts.length,
+    telemetry.verificationMatrix.length
+  ]);
 
   return (
-    <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="research-panel-modern rounded-[1.35rem] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           Telemetry Detail
         </p>
         <div className="flex items-center gap-1.5 text-[11px]">
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="research-chip rounded-full px-2 py-0.5">
             kw:{telemetry.keywords.length}
           </span>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="research-chip rounded-full px-2 py-0.5">
             docs:{telemetry.docs.length}
           </span>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className="research-chip rounded-full border-amber-300/60 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">
             vm:{telemetry.verificationMatrix.length}
           </span>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="research-chip rounded-full px-2 py-0.5">
             trace:{traceEntries.length}
           </span>
-          <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+          <span className="research-chip rounded-full border-rose-300/60 bg-rose-500/10 px-2 py-0.5 text-rose-700 dark:text-rose-300">
             err:{telemetry.errors.length}
           </span>
+        </div>
+      </div>
+
+      <div className="research-live-engine mt-3 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-cyan-200/95 dark:text-cyan-100">
+            Neural Reasoning
+          </p>
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-200 dark:text-cyan-100">
+            <span className="research-pulse-dot" />
+            Runtime
+          </span>
+        </div>
+        <div className="h-16">
+          <div className="research-live-bars">
+            {telemetryBars.map((height, index) => (
+              <span
+                key={`telemetry-bar-${index}`}
+                className="research-live-bar"
+                style={{
+                  height: `${height}%`,
+                  opacity: `${0.36 + index * 0.08}`
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
