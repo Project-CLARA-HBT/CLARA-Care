@@ -8,7 +8,7 @@ MAX_RECORDS="${MAX_RECORDS:-0}"
 COMMIT_EVERY="${COMMIT_EVERY:-500}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-45}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-0.02}"
-IMPORT_USER_EMAIL="${IMPORT_USER_EMAIL:-seed-import@clara.local}"
+IMPORT_USER_EMAIL="${IMPORT_USER_EMAIL:-}"
 DRY_RUN="${DRY_RUN:-false}"
 SUMMARY_JSON="${SUMMARY_JSON:-${ROOT_DIR}/data/demo/vn_davidrug_seed_summary.json}"
 
@@ -19,6 +19,11 @@ fi
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "[seed-vn-davidrug] env file not found: ${ENV_FILE}" >&2
+  exit 1
+fi
+
+if [[ -z "${IMPORT_USER_EMAIL}" ]]; then
+  echo "[seed-vn-davidrug] IMPORT_USER_EMAIL is required and must reference an existing user account." >&2
   exit 1
 fi
 
@@ -50,4 +55,3 @@ echo "[seed-vn-davidrug] running: ${ARGS[*]}"
 "${COMPOSE[@]}" exec -T api "${ARGS[@]}"
 
 echo "[seed-vn-davidrug] done. summary=${SUMMARY_JSON}"
-
