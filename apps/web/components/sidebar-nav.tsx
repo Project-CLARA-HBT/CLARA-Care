@@ -6,6 +6,8 @@ import { getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigati
 
 type SidebarNavProps = {
   role: UserRole;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -38,30 +40,51 @@ function getNavIcon(href: string): string {
   return "widgets";
 }
 
-export default function SidebarNav({ role }: SidebarNavProps) {
+export default function SidebarNav({ role, collapsed = false, onToggleCollapse }: SidebarNavProps) {
   const pathname = usePathname();
   const groups = getGroupedNavItems(role);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-slate-200/70 bg-[#eceef0] px-4 py-6 shadow-[inset_-1px_0_0_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900 lg:flex lg:flex-col">
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded bg-gradient-to-br from-cyan-400 to-cyan-700 text-slate-900">
+    <aside
+      className={[
+        "sticky top-0 hidden h-screen shrink-0 border-r border-slate-200/70 bg-[#eceef0] py-6 shadow-[inset_-1px_0_0_rgba(0,0,0,0.05)] transition-[width,padding] dark:border-slate-800 dark:bg-slate-900 lg:flex lg:flex-col",
+        collapsed ? "w-[5.5rem] px-2" : "w-64 px-4",
+      ].join(" ")}
+    >
+      <div className={["mb-8 flex items-center", collapsed ? "justify-center" : "gap-3 px-2"].join(" ")}>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gradient-to-br from-cyan-400 to-cyan-700 text-slate-900">
           <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
             clinical_notes
           </span>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tighter text-[#003461] dark:text-blue-400">CLARA Care</h1>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">Digital Surgeon AI</p>
-        </div>
+        {!collapsed ? (
+          <div>
+            <h1 className="text-xl font-bold tracking-tighter text-[#003461] dark:text-blue-400">CLARA Care</h1>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">Digital Surgeon AI</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className={collapsed ? "mb-4 flex justify-center" : "mb-4 flex justify-end px-2"}>
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300"
+          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+        >
+          <span className="material-symbols-outlined text-base">{collapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}</span>
+        </button>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto pr-1 clara-scrollbar">
         {groups.map((group) => (
           <section key={group.key}>
-            <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
-              {GROUP_LABEL_OVERRIDES[group.key] ?? group.label}
-            </p>
+            {!collapsed ? (
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
+                {GROUP_LABEL_OVERRIDES[group.key] ?? group.label}
+              </p>
+            ) : null}
             <nav className="space-y-1">
               {group.items.map((item) => {
                 const active = isActiveRoute(pathname, item.href);
@@ -70,15 +93,17 @@ export default function SidebarNav({ role }: SidebarNavProps) {
                     key={item.href}
                     href={item.href}
                     aria-current={active ? "page" : undefined}
+                    title={item.label}
                     className={[
-                      "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      "group flex items-center rounded-lg py-2 text-sm transition-colors",
+                      collapsed ? "justify-center px-2" : "gap-3 px-3",
                       active
                         ? "bg-white font-semibold text-[#003461] shadow-sm dark:bg-slate-800 dark:text-blue-300"
                         : "text-[#424750] hover:bg-[#e0e3e5] hover:text-[#003461] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-200",
                     ].join(" ")}
                   >
                     <span className="material-symbols-outlined text-lg">{getNavIcon(item.href)}</span>
-                    <span className="truncate">{item.label}</span>
+                    {!collapsed ? <span className="truncate">{item.label}</span> : null}
                   </Link>
                 );
               })}
@@ -87,15 +112,17 @@ export default function SidebarNav({ role }: SidebarNavProps) {
         ))}
       </div>
 
-      <div className="mt-6 border-t border-slate-200/70 px-2 pt-4 dark:border-slate-800">
-        <div className="flex items-center gap-3">
+      <div className={["mt-6 border-t border-slate-200/70 pt-4 dark:border-slate-800", collapsed ? "px-0" : "px-2"].join(" ")}>
+        <div className={["flex items-center", collapsed ? "justify-center" : "gap-3"].join(" ")}>
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300/70 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
             {ROLE_LABELS[role].slice(0, 1)}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">CLARA Operator</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{ROLE_LABELS[role]}</p>
-          </div>
+          {!collapsed ? (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">CLARA Operator</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">{ROLE_LABELS[role]}</p>
+            </div>
+          ) : null}
         </div>
       </div>
     </aside>

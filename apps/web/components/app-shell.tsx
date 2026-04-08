@@ -37,6 +37,18 @@ const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
   { value: "system", label: "Hệ thống" },
 ];
 
+const TOP_NAV_ICON_BY_LABEL: Record<string, string> = {
+  "Lâm sàng": "fa-stethoscope",
+  "Thuốc và an toàn": "fa-shield",
+  "Quản trị hệ thống": "fa-cogs",
+};
+
+const NAVBAR_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string }> = [
+  { id: "notifications", iconClass: "fa-bell-o", ariaLabel: "Thông báo" },
+  { id: "settings", iconClass: "fa-cog", ariaLabel: "Cài đặt" },
+  { id: "help", iconClass: "fa-life-ring", ariaLabel: "Trợ giúp" },
+];
+
 const WIDE_WORKSPACE_PREFIXES = [
   "/admin",
   "/research",
@@ -45,19 +57,18 @@ const WIDE_WORKSPACE_PREFIXES = [
   "/dashboard",
   "/council",
   "/scribe",
+  "/chat",
 ];
-const CHROME_HIDDEN_PREFIXES = ["/chat"];
+const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
 
 export default function AppShell({ children }: Props) {
   const pathname = usePathname();
   const [role, setRole] = useState<UserRole>("normal");
   const [themePreference, setThemePreference] = useState<ThemePreference>("dark");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
-  const hideChrome = CHROME_HIDDEN_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
@@ -118,6 +129,15 @@ export default function AppShell({ children }: Props) {
   }, []);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY);
+      setIsSidebarCollapsed(raw === "1");
+    } catch {
+      setIsSidebarCollapsed(false);
+    }
+  }, []);
+
+  useEffect(() => {
     if (themePreference !== "system") {
       return;
     }
@@ -154,7 +174,19 @@ export default function AppShell({ children }: Props) {
     applyThemePreference(nextTheme);
   };
 
-  if (hideSidebar || hideChrome) {
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // noop
+      }
+      return next;
+    });
+  };
+
+  if (hideSidebar) {
     return <main className="h-[100dvh] min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">{children}</main>;
   }
 
@@ -166,7 +198,7 @@ export default function AppShell({ children }: Props) {
           isWideWorkspace ? "max-w-[2520px]" : "max-w-[1840px]"
         ].join(" ")}
       >
-        <SidebarNav role={role} />
+        <SidebarNav role={role} collapsed={isSidebarCollapsed} onToggleCollapse={toggleSidebarCollapse} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#c2c6d1]/20 bg-[#f7f9fb]/85 px-4 backdrop-blur-xl dark:bg-slate-950/80 sm:px-6 lg:px-8">
@@ -189,29 +221,38 @@ export default function AppShell({ children }: Props) {
               <nav className="hidden items-center gap-6 lg:flex">
                 {topNavLinks.map((item) => {
                   const active = isActiveRoute(pathname, item.href);
+                  const iconClass = TOP_NAV_ICON_BY_LABEL[item.label] ?? "fa-circle-o";
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       className={[
-                        "py-5 text-sm transition-all",
+                        "inline-flex items-center gap-2 py-5 text-sm transition-all",
                         active
                           ? "border-b-2 border-[#003461] text-[#003461] dark:border-blue-300 dark:text-blue-300"
                           : "text-[#424750] hover:text-[#004b87] dark:text-slate-400 dark:hover:text-blue-200"
                       ].join(" ")}
                     >
+                      <i className={`fa ${iconClass} text-[12px]`} aria-hidden="true" />
                       {item.label}
                     </Link>
                   );
                 })}
               </nav>
+              <button
+                type="button"
+                onClick={toggleSidebarCollapse}
+                className="hidden h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300 lg:inline-flex"
+                aria-label={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+                title={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+              >
+                <span className="material-symbols-outlined text-base">{isSidebarCollapsed ? "left_panel_open" : "left_panel_close"}</span>
+              </button>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative hidden md:block">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
-                  search
-                </span>
+                <i className="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--text-muted)]" aria-hidden="true" />
                 <input
                   placeholder="Tìm kiếm tài liệu y khoa..."
                   className="h-9 w-64 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] pl-10 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-cyan-300/70"
@@ -219,14 +260,14 @@ export default function AppShell({ children }: Props) {
               </div>
 
               <div className="hidden items-center gap-1 sm:flex">
-                {["notifications", "settings", "help_outline"].map((icon) => (
+                {NAVBAR_ACTIONS.map((action) => (
                   <button
-                    key={icon}
+                    key={action.id}
                     type="button"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-panel)] hover:text-cyan-400"
-                    aria-label={icon}
+                    aria-label={action.ariaLabel}
                   >
-                    <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                    <i className={`fa ${action.iconClass} text-[15px]`} aria-hidden="true" />
                   </button>
                 ))}
               </div>
