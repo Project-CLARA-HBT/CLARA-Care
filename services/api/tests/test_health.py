@@ -32,3 +32,16 @@ def test_root_metrics_endpoint_returns_prometheus_text() -> None:
     assert "# TYPE by_route counter" in body
     assert "# TYPE by_status counter" in body
     assert 'by_status{status="200"}' in body
+
+
+def test_metrics_unknown_routes_are_bucketed() -> None:
+    unique_path = "/definitely-missing-route-12345"
+    response = client.get(unique_path)
+    assert response.status_code == 404
+
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+
+    body = metrics.text
+    assert 'by_route{route="__unknown__"}' in body
+    assert unique_path not in body

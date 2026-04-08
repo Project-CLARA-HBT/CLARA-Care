@@ -35,13 +35,16 @@ class APIMetricsStore:
             }
 
 
+_UNKNOWN_ROUTE_LABEL = "__unknown__"
+
+
 def _resolve_route(request: Request) -> str:
     route = request.scope.get("route")
     if route is not None:
         route_path = getattr(route, "path", None)
         if isinstance(route_path, str) and route_path:
             return route_path
-    return request.url.path
+    return _UNKNOWN_ROUTE_LABEL
 
 
 class APIMetricsMiddleware(BaseHTTPMiddleware):
