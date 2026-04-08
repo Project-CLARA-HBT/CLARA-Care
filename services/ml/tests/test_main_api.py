@@ -687,7 +687,6 @@ def test_research_tier2_deep_beta_mode_returns_runtime_contract():
     assert isinstance(rerank, dict)
     assert "rerank_topn" in rerank
     assert "rerank_latency_ms" in rerank
-    assert "rerank_cache_hit" in rerank
 
     stage_spans = body["metadata"].get("stage_spans")
     assert isinstance(stage_spans, list)

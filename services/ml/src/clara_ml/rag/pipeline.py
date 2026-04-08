@@ -382,16 +382,10 @@ class RagPipelineP1:
             rerank_payload["rerank_latency_ms"] = neural_payload.get("rerank_latency_ms")
         if "rerank_topn" not in rerank_payload:
             rerank_payload["rerank_topn"] = neural_payload.get("rerank_topn")
-        if "rerank_model" not in rerank_payload:
-            rerank_payload["rerank_model"] = neural_payload.get("rerank_model")
         if "rerank_timed_out" not in rerank_payload:
             rerank_payload["rerank_timed_out"] = bool(neural_payload.get("rerank_timed_out"))
         if "rerank_reason" not in rerank_payload:
             rerank_payload["rerank_reason"] = neural_payload.get("rerank_reason")
-        if "rerank_cache_hit" not in rerank_payload:
-            rerank_payload["rerank_cache_hit"] = bool(neural_payload.get("rerank_cache_hit"))
-        if "rerank_cache_age_ms" not in rerank_payload:
-            rerank_payload["rerank_cache_age_ms"] = neural_payload.get("rerank_cache_age_ms")
         return {
             "retrieved_count": len(docs),
             "source_counts": self._source_counts(docs),
@@ -401,13 +395,6 @@ class RagPipelineP1:
             "after_dedupe": after,
             "selected_count": selected,
             "duration_ms": parsed_duration,
-            "rerank_latency_ms": rerank_payload.get("rerank_latency_ms"),
-            "rerank_topn": rerank_payload.get("rerank_topn"),
-            "rerank_model": rerank_payload.get("rerank_model"),
-            "rerank_timed_out": rerank_payload.get("rerank_timed_out"),
-            "rerank_reason": rerank_payload.get("rerank_reason"),
-            "rerank_cache_hit": rerank_payload.get("rerank_cache_hit"),
-            "rerank_cache_age_ms": rerank_payload.get("rerank_cache_age_ms"),
             "rerank": rerank_payload,
         }
 

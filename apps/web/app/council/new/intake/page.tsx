@@ -82,30 +82,6 @@ export default function CouncilNewIntakePage() {
     }
   };
 
-  const onGenerateSyntheticCase = () => {
-    const seededTranscript = [
-      "Benh nhan nam 68 tuoi, tang huyet ap, dai thao duong type 2, than met moi va choang vang.",
-      "Dang dung warfarin 3mg/ngay va ibuprofen 400mg khi dau khop.",
-      "Xet nghiem: INR 3.4, creatinine 1.9 mg/dL, eGFR 38.",
-      "Khong dau nguc cap, khong kho tho luc nghi, co xuat huyet duoi da nhe o cang tay.",
-    ].join(" ");
-
-    setTranscriptInput(seededTranscript);
-    setDraft((current) => ({
-      ...current,
-      symptomsInput: "choang vang, met moi, bam tim nhe, dau khop",
-      labsInput: "INR=3.4\\ncreatinine=1.9\\neGFR=38",
-      medicationsInput: "warfarin 3mg qd\\nibuprofen 400mg prn\\nmetformin 500mg bid",
-      historyInput: "Tang huyet ap, dai thao duong type 2, theo doi tim mach",
-    }));
-    setExtractWarnings([
-      "Synthetic case for workflow testing only.",
-      "Do not use this sample for real clinical decisions.",
-    ]);
-    setExtractNotice("Da nap du lieu test mau. Ban co the bam 'Chuan hoa intake' de thu full luong.");
-    setError("");
-  };
-
   return (
     <PageShell
       title="Council Wizard - Intake"
@@ -141,13 +117,6 @@ export default function CouncilNewIntakePage() {
               }`}
             >
               Audio
-            </button>
-            <button
-              type="button"
-              onClick={onGenerateSyntheticCase}
-              className="min-h-[42px] rounded-lg border border-sky-300/65 bg-sky-500/20 px-3 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30"
-            >
-              Tao data test
             </button>
           </div>
 

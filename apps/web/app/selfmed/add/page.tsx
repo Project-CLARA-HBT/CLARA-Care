@@ -24,9 +24,18 @@ function getDetectionKey(item: ScanDetection, index: number): string {
   return `${item.normalized_name}-${item.evidence}-${index}`;
 }
 
-function isHandwritingLikeEvidence(evidence: string): boolean {
-  const normalized = evidence.trim().toLowerCase();
-  return normalized.startsWith("fuzzy:") || normalized.includes("->");
+function normalizationLabel(source: string | null | undefined): string {
+  if (source === "db") return "Dictionary exact";
+  if (source === "candidate") return "Candidate match";
+  if (source === "fallback") return "Fallback";
+  return "Unknown";
+}
+
+function normalizationClass(source: string | null | undefined): string {
+  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
+  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
+  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
+  return "border-slate-300/60 bg-slate-500/15 text-slate-100";
 }
 
 export default function SelfMedAddPage() {
@@ -63,10 +72,6 @@ export default function SelfMedAddPage() {
 
   const lowConfidenceTotal = useMemo(
     () => detections.filter((item) => isLowConfidenceDetection(item)).length,
-    [detections]
-  );
-  const handwritingLikeCount = useMemo(
-    () => detections.filter((item) => isHandwritingLikeEvidence(item.evidence)).length,
     [detections]
   );
 
@@ -321,11 +326,6 @@ export default function SelfMedAddPage() {
                     Còn {pendingLowConfidenceSelections.length}/{lowConfidenceTotal} thuốc độ tin cậy thấp cần xác nhận thủ công trước khi nhập.
                   </p>
                 ) : null}
-                {handwritingLikeCount > 0 ? (
-                  <p className="rounded-xl border border-sky-300/70 bg-sky-500/20 px-3 py-2 text-sm font-semibold text-sky-100">
-                    Phát hiện {handwritingLikeCount} mục OCR nghi chữ viết tay/fuzzy. Nên kiểm tra thủ công trước khi nhập tủ.
-                  </p>
-                ) : null}
 
                 <ul className="grid gap-2 lg:grid-cols-2">
                   {detections.map((item, index) => {
@@ -353,19 +353,27 @@ export default function SelfMedAddPage() {
                           />
                           <div>
                             <p className="text-base font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
-                            <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
-                              Liều: {item.dosage || "N/A"}
-                            </p>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              Brand: {item.brand_name || "N/A"} {" · "} Hãng: {item.manufacturer || "N/A"}
-                            </p>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">Bằng chứng OCR: {item.evidence}</p>
+                            {(item.dosage || item.brand_name || item.manufacturer) ? (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {item.dosage ? `Liều: ${item.dosage}` : "Liều: N/A"}
+                                {" · "}
+                                {item.brand_name ? `Brand: ${item.brand_name}` : "Brand: N/A"}
+                                {" · "}
+                                {item.manufacturer ? `Hãng: ${item.manufacturer}` : "Hãng: N/A"}
+                              </p>
+                            ) : null}
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">Bằng chứng: {item.evidence}</p>
                             <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceClass(item.confidence)}`}>
                               OCR {Math.round(item.confidence * 100)}%
                             </span>
-                            {isHandwritingLikeEvidence(item.evidence) ? (
-                              <span className="ml-2 mt-2 inline-flex rounded-full border border-sky-300/70 bg-sky-500/20 px-2.5 py-1 text-xs font-semibold text-sky-100">
-                                Nghi chữ viết tay/fuzzy
+                            {item.mapping_source ? (
+                              <span
+                                className={`ml-2 mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${normalizationClass(item.mapping_source)}`}
+                              >
+                                {normalizationLabel(item.mapping_source)}
+                                {typeof item.mapping_confidence === "number"
+                                  ? ` · ${Math.round(item.mapping_confidence * 100)}%`
+                                  : ""}
                               </span>
                             ) : null}
                           </div>

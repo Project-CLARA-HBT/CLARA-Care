@@ -142,34 +142,6 @@ _VI_GENERIC_KEYWORD_HINTS = {
     "theo",
     "doi",
 }
-_SOURCE_BUCKETS = ("internal", "scientific", "web")
-_SOURCE_BUCKET_ALIASES: dict[str, str] = {
-    "internal": "internal",
-    "inhouse": "internal",
-    "local": "internal",
-    "knowledge": "internal",
-    "scientific": "scientific",
-    "science": "scientific",
-    "pubmed": "scientific",
-    "paper": "scientific",
-    "papers": "scientific",
-    "journal": "scientific",
-    "web": "web",
-    "internet": "web",
-    "online": "web",
-}
-_LANGUAGE_ALIAS_MAP: dict[str, str] = {
-    "vi": "vi",
-    "tv": "vi",
-    "vietnamese": "vi",
-    "tieng_viet": "vi",
-    "en": "en",
-    "ta": "en",
-    "english": "en",
-    "tieng_anh": "en",
-    "mixed": "mixed",
-    "mix": "mixed",
-}
 
 
 def _now_iso() -> str:
@@ -329,45 +301,12 @@ def _normalize_source_mode_key(value: Any) -> str:
     return str(value or "").strip().lower().replace("-", "_")
 
 
-def _normalize_target_language(value: Any) -> str | None:
-    normalized = _normalize_source_mode_key(value)
-    mapped = _LANGUAGE_ALIAS_MAP.get(normalized)
-    if mapped in {"vi", "en", "mixed"}:
-        return mapped
-    return None
-
-
-def _normalize_source_bucket(value: Any) -> str:
-    normalized = _normalize_source_mode_key(value)
-    return _SOURCE_BUCKET_ALIASES.get(normalized, "")
-
-
-def _normalize_source_language_profile(value: Any) -> dict[str, str]:
-    if not isinstance(value, dict):
-        return {}
-    normalized_profile: dict[str, str] = {}
-    for raw_bucket, raw_language in value.items():
-        bucket = _normalize_source_bucket(raw_bucket)
-        if not bucket:
-            continue
-        target_language = _normalize_target_language(raw_language)
-        if target_language is None:
-            continue
-        normalized_profile[bucket] = target_language
-    return normalized_profile
-
-
 def _resolve_target_language_for_query_bucket(
     *,
     bucket: str,
     source_mode: str | None,
     language_hint: str,
-    source_language_profile: dict[str, str] | None = None,
 ) -> str:
-    if isinstance(source_language_profile, dict):
-        explicit_target = _normalize_target_language(source_language_profile.get(bucket))
-        if explicit_target is not None:
-            return explicit_target
     normalized_source_mode = _normalize_source_mode_key(source_mode)
     if bucket == "scientific":
         return "en"
@@ -410,14 +349,13 @@ def _apply_keyword_filter_to_query_plan(
     query_plan: dict[str, Any],
     planner_keywords: list[str],
     source_mode: str | None,
-    source_language_profile: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     safe_plan = dict(query_plan or {})
     source_queries_raw = safe_plan.get("source_queries")
     source_queries = (
         dict(source_queries_raw)
         if isinstance(source_queries_raw, dict)
-        else {bucket: [] for bucket in _SOURCE_BUCKETS}
+        else {"internal": [], "scientific": [], "web": []}
     )
 
     fallback_seed = _dedupe_query_list(
@@ -433,23 +371,17 @@ def _apply_keyword_filter_to_query_plan(
     language_hint = str(safe_plan.get("language_hint") or "").strip().lower()
     if language_hint not in {"vi", "en", "mixed"}:
         _, _, language_hint = _detect_language_hint(topic)
-    normalized_source_language_profile = _normalize_source_language_profile(
-        source_language_profile
-        if source_language_profile is not None
-        else safe_plan.get("source_language_profile")
-    )
 
     keywords_by_source: dict[str, list[str]] = {}
     target_language_by_source: dict[str, str] = {}
     source_query_updates: dict[str, list[str]] = {}
     fallback_buckets: list[str] = []
 
-    for bucket in _SOURCE_BUCKETS:
+    for bucket in ("internal", "scientific", "web"):
         target_language = _resolve_target_language_for_query_bucket(
             bucket=bucket,
             source_mode=source_mode,
             language_hint=language_hint,
-            source_language_profile=normalized_source_language_profile,
         )
         target_language_by_source[bucket] = target_language
         filtered_keywords = _filter_keywords_by_language(
@@ -489,12 +421,9 @@ def _apply_keyword_filter_to_query_plan(
 
     safe_plan["source_queries"] = source_query_updates
     safe_plan["query_terms"] = merged_keywords[:10]
-    if normalized_source_language_profile:
-        safe_plan["source_language_profile"] = normalized_source_language_profile
     safe_plan["keyword_filter"] = {
         "source_mode": source_mode or "default",
         "language_hint": language_hint,
-        "source_language_profile": normalized_source_language_profile,
         "target_language_by_source": target_language_by_source,
         "keywords_by_source": keywords_by_source,
         "fallback_buckets": fallback_buckets,
@@ -506,7 +435,6 @@ def _apply_keyword_filter_to_query_plan(
         "target_language_by_source": target_language_by_source,
         "fallback_buckets": fallback_buckets,
         "language_hint": language_hint,
-        "source_language_profile": normalized_source_language_profile,
     }
 
 
@@ -2557,71 +2485,6 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
-def _extract_rerank_cache_observation(
-    index_summary: dict[str, Any] | None,
-) -> tuple[bool | None, float | None]:
-    if not isinstance(index_summary, dict):
-        return None, None
-
-    rerank = index_summary.get("rerank") if isinstance(index_summary.get("rerank"), dict) else {}
-    cache_hit_raw = (
-        index_summary.get("rerank_cache_hit")
-        if index_summary.get("rerank_cache_hit") is not None
-        else rerank.get("rerank_cache_hit")
-    )
-    cache_hit = _coerce_optional_bool(cache_hit_raw)
-
-    cache_age_raw = (
-        index_summary.get("rerank_cache_age_ms")
-        if index_summary.get("rerank_cache_age_ms") is not None
-        else rerank.get("rerank_cache_age_ms")
-    )
-    cache_age_ms: float | None = None
-    if cache_age_raw is not None:
-        try:
-            cache_age_ms = round(float(cache_age_raw), 3)
-        except (TypeError, ValueError):
-            cache_age_ms = None
-    return cache_hit, cache_age_ms
-
-
-def _build_retrieval_cache_summary(
-    *,
-    index_summary: dict[str, Any] | None,
-    deep_pass_summaries: list[dict[str, Any]],
-) -> dict[str, Any]:
-    observations: list[bool] = []
-    cache_ages_ms: list[float] = []
-
-    for current in [index_summary, *[
-        item.get("index_summary") if isinstance(item, dict) else None
-        for item in deep_pass_summaries
-    ]]:
-        cache_hit, cache_age_ms = _extract_rerank_cache_observation(
-            current if isinstance(current, dict) else None
-        )
-        if cache_hit is not None:
-            observations.append(bool(cache_hit))
-        if cache_age_ms is not None:
-            cache_ages_ms.append(cache_age_ms)
-
-    hit_count = sum(1 for item in observations if item)
-    miss_count = max(0, len(observations) - hit_count)
-    hit_rate = round(hit_count / len(observations), 4) if observations else None
-    latest_cache_hit = observations[-1] if observations else None
-    latest_cache_age_ms = cache_ages_ms[-1] if cache_ages_ms else None
-
-    return {
-        "observed": bool(observations),
-        "observation_count": len(observations),
-        "hit_count": hit_count,
-        "miss_count": miss_count,
-        "hit_rate": hit_rate,
-        "latest_cache_hit": latest_cache_hit,
-        "latest_cache_age_ms": latest_cache_age_ms,
-    }
-
-
 def _build_evidence_review_summary(
     *,
     effective_context: list[dict[str, Any]],
@@ -4301,9 +4164,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     retrieval_stack_mode = _normalize_retrieval_stack_mode(payload)
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
-    source_language_profile = _normalize_source_language_profile(
-        payload.get("source_language_profile")
-    )
     role_hint = str(payload.get("role") or "").strip().lower() or None
     uploaded_documents_raw = payload.get("uploaded_documents")
     uploaded_documents: list[dict[str, Any]] = (
@@ -4399,7 +4259,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     planner_hints["retrieval_route"] = _normalize_retrieval_route(source_route.retrieval_route)
     planner_hints["router_confidence"] = _normalize_router_confidence(source_route.confidence)
     planner_hints["router_reason_codes"] = list(source_route.reason_codes)
-    planner_hints["source_language_profile"] = source_language_profile
 
     base_query_plan = _build_source_aware_query_plan(
         topic=topic,
@@ -4562,7 +4421,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             component="planner",
             payload={
                 "source_mode": source_mode or "default",
-                "source_language_profile": source_language_profile,
                 "language_hint": planner_hints.get("language_hint"),
                 "keywords_before": planner_hints.get("keywords", []),
             },
@@ -4581,17 +4439,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             else []
         ),
         source_mode=source_mode,
-        source_language_profile=source_language_profile,
     )
     planner_hints["query_plan"] = keyword_filter_report.get("query_plan", planner_hints.get("query_plan"))
     planner_hints["keywords"] = keyword_filter_report.get("keywords", planner_hints.get("keywords", []))
     planner_hints["keywords_by_source"] = keyword_filter_report.get("keywords_by_source", {})
     planner_hints["target_language_by_source"] = keyword_filter_report.get(
         "target_language_by_source", {}
-    )
-    planner_hints["source_language_profile"] = keyword_filter_report.get(
-        "source_language_profile",
-        source_language_profile,
     )
     keyword_filter_status = (
         "warning"
@@ -6439,11 +6292,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         if isinstance(retrieval_trace.get("index_summary"), dict)
         else {}
     )
-    rerank_summary = (
-        index_summary.get("rerank")
-        if isinstance(index_summary.get("rerank"), dict)
-        else {}
-    )
     index_summary = {
         **index_summary,
         "retrieved_count": index_summary.get("retrieved_count", retrieval_trace.get("retrieved_count")),
@@ -6468,44 +6316,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "selected_count",
             retrieval_trace.get("retrieved_count"),
         ),
-        "rerank_latency_ms": index_summary.get(
-            "rerank_latency_ms",
-            rerank_summary.get("rerank_latency_ms"),
-        ),
-        "rerank_topn": index_summary.get(
-            "rerank_topn",
-            rerank_summary.get("rerank_topn"),
-        ),
-        "rerank_model": index_summary.get(
-            "rerank_model",
-            rerank_summary.get("rerank_model"),
-        ),
-        "rerank_timed_out": bool(
-            index_summary.get(
-                "rerank_timed_out",
-                rerank_summary.get("rerank_timed_out"),
-            )
-        ),
-        "rerank_reason": index_summary.get(
-            "rerank_reason",
-            rerank_summary.get("rerank_reason"),
-        ),
-        "rerank_cache_hit": bool(
-            index_summary.get(
-                "rerank_cache_hit",
-                rerank_summary.get("rerank_cache_hit"),
-            )
-        ),
-        "rerank_cache_age_ms": index_summary.get(
-            "rerank_cache_age_ms",
-            rerank_summary.get("rerank_cache_age_ms"),
-        ),
     }
-    retrieval_cache_summary = _build_retrieval_cache_summary(
-        index_summary=index_summary,
-        deep_pass_summaries=deep_pass_summaries,
-    )
-    index_summary["cache_summary"] = retrieval_cache_summary
     crawl_summary = (
         retrieval_trace.get("crawl_summary")
         if isinstance(retrieval_trace.get("crawl_summary"), dict)
@@ -6729,7 +6540,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "retrieval_route": retrieval_route,
         "router_confidence": router_confidence,
         "index_summary": index_summary,
-        "cache_summary": retrieval_cache_summary,
         "crawl_summary": crawl_summary,
         "stack_mode": {
             "requested": stack_mode_requested,
@@ -6835,7 +6645,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             ),
             "keyword_filter": keyword_filter_report,
             "evidence_review": evidence_review_summary,
-            "cache_summary": retrieval_cache_summary,
             "pass_summaries": deep_pass_summaries if research_mode == "deep_beta" else [],
             "retrieval_budgets": (
                 deep_beta_retrieval_budgets
@@ -6902,7 +6711,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         ),
         "keyword_filter": keyword_filter_report,
         "evidence_review": evidence_review_summary,
-        "cache_summary": retrieval_cache_summary,
         "pass_summaries": deep_pass_summaries if research_mode == "deep_beta" else [],
         "retrieval_budgets": (
             deep_beta_retrieval_budgets

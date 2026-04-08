@@ -23,7 +23,6 @@ export type ScribeSoapRawResponse = {
     A?: string;
     P?: string;
   };
-  medical_record_note?: unknown;
   [key: string]: unknown;
 };
 
@@ -32,17 +31,6 @@ export type SoapSections = {
   objective: string;
   assessment: string;
   plan: string;
-};
-
-export type MedicalRecordNote = {
-  chiefComplaint: string;
-  hpi: string;
-  objective: string;
-  assessment: string[];
-  plan: string[];
-  medications: string[];
-  followUp: string;
-  warnings: string[];
 };
 
 function asText(value: unknown): string {
@@ -79,36 +67,6 @@ function formatSection(value: unknown): string {
   return parts.join("\n");
 }
 
-function toStringList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => asText(item))
-    .filter(Boolean);
-}
-
-function objectiveToText(value: unknown): string {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return formatSection(value);
-  }
-  const record = value as Record<string, unknown>;
-  const vitals = record.vitals;
-  const findings = record.findings;
-  const parts: string[] = [];
-  if (vitals && typeof vitals === "object" && !Array.isArray(vitals)) {
-    const vitalParts = Object.entries(vitals as Record<string, unknown>)
-      .map(([key, item]) => {
-        const text = asText(item);
-        return text ? `${key}=${text}` : "";
-      })
-      .filter(Boolean);
-    if (vitalParts.length) parts.push(`vitals: ${vitalParts.join(", ")}`);
-  }
-  const findingList = toStringList(findings);
-  if (findingList.length) parts.push(`findings: ${findingList.join("; ")}`);
-  if (!parts.length) return formatSection(value);
-  return parts.join("\n");
-}
-
 export async function createSoap(payload: ScribeSoapRequest): Promise<ScribeSoapRawResponse> {
   const response = await api.post<ScribeSoapRawResponse>("/scribe/soap", payload);
   return response.data;
@@ -122,46 +80,5 @@ export function normalizeSoapSections(data: ScribeSoapRawResponse): SoapSections
     objective: formatSection(data.objective ?? data.O ?? nested?.objective ?? nested?.O),
     assessment: formatSection(data.assessment ?? data.A ?? nested?.assessment ?? nested?.A),
     plan: formatSection(data.plan ?? data.P ?? nested?.plan ?? nested?.P)
-  };
-}
-
-export function normalizeMedicalRecordNote(data: ScribeSoapRawResponse): MedicalRecordNote | null {
-  const payload =
-    data.medical_record_note && typeof data.medical_record_note === "object" && !Array.isArray(data.medical_record_note)
-      ? (data.medical_record_note as Record<string, unknown>)
-      : null;
-  if (!payload) return null;
-
-  const chiefComplaint = asText(payload.chief_complaint);
-  const hpi = asText(payload.hpi);
-  const objective = objectiveToText(payload.objective);
-  const assessment = toStringList(payload.assessment);
-  const plan = toStringList(payload.plan);
-  const medications = toStringList(payload.medications);
-  const followUp = asText(payload.follow_up);
-  const warnings = toStringList(payload.warnings);
-
-  if (
-    !chiefComplaint &&
-    !hpi &&
-    !objective &&
-    !assessment.length &&
-    !plan.length &&
-    !medications.length &&
-    !followUp &&
-    !warnings.length
-  ) {
-    return null;
-  }
-
-  return {
-    chiefComplaint,
-    hpi,
-    objective,
-    assessment,
-    plan,
-    medications,
-    followUp,
-    warnings,
   };
 }
