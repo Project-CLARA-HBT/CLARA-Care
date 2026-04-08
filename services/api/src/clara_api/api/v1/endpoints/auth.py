@@ -300,8 +300,8 @@ def _extract_refresh_token_candidates(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token conflict between cookie and payload",
             )
-        # Graceful mode for mobile/webview cookie skew: try payload first, then cookie.
-        return [payload_token, cookie_token]
+        # Graceful mode for mobile/webview cookie skew: prefer HttpOnly cookie, then payload.
+        return [cookie_token, payload_token]
     if payload_token:
         return [payload_token]
     if cookie_token:

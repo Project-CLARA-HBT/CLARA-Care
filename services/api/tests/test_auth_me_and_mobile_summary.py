@@ -94,7 +94,7 @@ def test_refresh_accepts_cookie_without_request_body() -> None:
     assert refresh_response.json()["access_token"]
 
 
-def test_refresh_prefers_payload_token_when_cookie_conflicts() -> None:
+def test_refresh_prefers_cookie_token_when_payload_conflicts() -> None:
     user_email = "cookie-prefer@example.com"
     other_email = "cookie-other@example.com"
 
@@ -124,7 +124,7 @@ def test_refresh_prefers_payload_token_when_cookie_conflicts() -> None:
         headers={"Authorization": f"Bearer {refresh_response.json()['access_token']}"},
     )
     assert me_response.status_code == 200
-    assert me_response.json()["subject"] == other_email
+    assert me_response.json()["subject"] == user_email
 
 
 def test_refresh_uses_cookie_when_payload_token_is_stale() -> None:
