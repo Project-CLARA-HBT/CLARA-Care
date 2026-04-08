@@ -3165,7 +3165,6 @@ def _emit_otel_trace_best_effort(
     enabled = bool(settings.otel_export_enabled) and bool(endpoint)
     status: dict[str, Any] = {
         "enabled": enabled,
-        "endpoint": endpoint if enabled else "",
         "sent": False,
     }
     if not enabled:
@@ -3194,10 +3193,11 @@ def _emit_otel_trace_best_effort(
             return status
     except urllib.error.HTTPError as exc:
         status["http_status"] = int(exc.code)
-        status["error"] = f"HTTPError:{exc.code}"
+        status["error"] = "export_failed"
         return status
     except Exception as exc:  # noqa: BLE001
-        status["error"] = f"{type(exc).__name__}:{exc}"
+        logger.warning("OTel export failed: %s", type(exc).__name__)
+        status["error"] = "export_failed"
         return status
 
 
