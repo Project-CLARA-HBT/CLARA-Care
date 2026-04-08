@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from types import SimpleNamespace
+import urllib.error
 
 import pytest
 
@@ -140,6 +141,35 @@ def test_build_planner_hints_fast_mode_downgrades_full_stack_mode_to_auto():
     assert "stack_mode_full_force_scientific" not in hints["reason_codes"]
     assert "stack_mode_full_force_web" not in hints["reason_codes"]
     assert "stack_mode_full_force_graphrag" not in hints["reason_codes"]
+
+
+def test_emit_otel_trace_best_effort_does_not_expose_endpoint_or_error_details(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(tier2.settings, "otel_export_enabled", True)
+    monkeypatch.setattr(tier2.settings, "otel_export_endpoint", "http://internal-collector.local:4318/v1/traces")
+
+    def _raise_http_error(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url="http://internal-collector.local:4318/v1/traces",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,
+            fp=None,
+        )
+
+    monkeypatch.setattr(tier2.urllib.request, "urlopen", _raise_http_error)
+    status = tier2._emit_otel_trace_best_effort(
+        otel_trace_metadata={"trace_id": "trace-123"},
+        flow_events=[{"stage": "planner"}],
+    )
+
+    assert status["enabled"] is True
+    assert status["sent"] is False
+    assert status["http_status"] == 403
+    assert status["error"] == "export_failed"
+    assert "endpoint" not in status
+    assert "internal-collector.local" not in str(status)
 
 
 def test_build_planner_hints_deep_mode_full_stack_forces_connectors_only():

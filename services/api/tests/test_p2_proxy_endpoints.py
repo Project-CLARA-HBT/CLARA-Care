@@ -1189,7 +1189,7 @@ def test_research_tier2_forwards_deep_beta_mode_to_ml(
     assert forwarded["role"] == "researcher"
 
 
-def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
+def test_research_tier2_enforces_runtime_rag_policy_over_client_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1214,10 +1214,17 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
         "/api/v1/research/tier2",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "query": "legacy verification mapping",
+            "query": "attempt policy bypass",
             "rag_flow": {
                 "verification_enabled": False,
+                "rule_verification_enabled": False,
+                "web_retrieval_enabled": False,
+                "nli_model_enabled": False,
+                "rag_nli_enabled": False,
             },
+            "rag_sources": [
+                {"id": "web", "enabled": True},
+            ],
         },
     )
 
@@ -1225,8 +1232,19 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
     forwarded = captured["json"]
     assert isinstance(forwarded, dict)
     rag_flow = forwarded["rag_flow"]
-    assert rag_flow["rule_verification_enabled"] is False
+    assert rag_flow["rule_verification_enabled"] is True
+    assert rag_flow["web_retrieval_enabled"] is True
+    assert rag_flow["nli_model_enabled"] is True
+    assert rag_flow["rag_nli_enabled"] is True
     assert "verification_enabled" not in rag_flow
+    assert isinstance(forwarded.get("rag_sources"), list)
+    ids = {
+        source.get("id")
+        for source in forwarded["rag_sources"]
+        if isinstance(source, dict) and isinstance(source.get("id"), str)
+    }
+    assert "pubmed" in ids
+    assert "web" not in ids
 
 
 def test_research_tier2_ignores_caller_llm_runtime_overrides(
