@@ -190,6 +190,7 @@ DRUG_RXCUI_MAP: dict[str, str] = {
 
 LOW_CONFIDENCE_OCR_THRESHOLD = 0.9
 OCR_CORRECTION_CUTOFF = 0.86
+OCR_CORRECTION_MAX_CHARS = 12000
 _CANDIDATE_DB_LIMIT = 120
 _CANDIDATE_MIN_SCORE = 0.78
 _CANDIDATE_MIN_MARGIN = 0.05
@@ -800,8 +801,9 @@ def _get_or_create_cabinet(db: Session, user_id: int) -> MedicineCabinet:
 
 
 def _apply_ocr_correction(text: str) -> OcrCorrectionResult:
+    bounded_text = str(text or "")[:OCR_CORRECTION_MAX_CHARS]
     return correct_ocr_text(
-        text,
+        bounded_text,
         vocabulary=OCR_DRUG_VOCABULARY,
         cutoff=OCR_CORRECTION_CUTOFF,
         max_events=24,

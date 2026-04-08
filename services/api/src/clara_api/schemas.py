@@ -266,7 +266,7 @@ class MedicineCabinetResponse(BaseModel):
 
 
 class CabinetScanTextRequest(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=12000)
 
 
 class CabinetScanDetection(BaseModel):
