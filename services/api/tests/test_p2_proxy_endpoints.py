@@ -1163,6 +1163,51 @@ def test_research_tier2_maps_legacy_verification_enabled_in_rag_flow(
     assert "verification_enabled" not in rag_flow
 
 
+def test_research_tier2_ignores_caller_llm_runtime_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"answer": "ok", "metadata": {"research_mode": "fast"}}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "ignore attacker runtime llm overrides",
+            "rag_flow": {
+                "llm_provider": "deepseek",
+                "llm_base_url": "https://attacker.invalid/v1",
+                "llm_model": "attacker-model",
+                "llm_api_key": "attacker-key",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    forwarded = captured["json"]
+    assert isinstance(forwarded, dict)
+    rag_flow = forwarded["rag_flow"]
+    assert rag_flow["llm_provider"] == "hitechcloud_gpt53_codex_high"
+    assert rag_flow["llm_base_url"] == "https://platform.hitechcloud.one/v1"
+    assert rag_flow["llm_model"] == "gpt-5.3-codex-high"
+    assert rag_flow["llm_api_key"] == ""
+
+
 @pytest.mark.parametrize(
     ("mode", "expected_pipeline"),
     [
