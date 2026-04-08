@@ -18,6 +18,11 @@ export type NavigationItem = {
 
 export const PUBLIC_ROUTES = new Set([
   "/",
+  "/legal",
+  "/legal/privacy",
+  "/legal/terms",
+  "/legal/consent",
+  "/legal/cookies",
   "/huong-dan",
   "/login",
   "/register",
@@ -39,6 +44,17 @@ const ROLE_HOME_PATHS: Record<UserRole, string> = {
 };
 
 const NAV_ITEMS: NavigationItem[] = [
+  {
+    href: "/chat",
+    label: "Chat",
+    desc: "Trải nghiệm chat thuần",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "CLARA Chat",
+      subtitle: "Không gian chat tập trung với 3 mode Clara Research: Fast, Deep, Deep Beta."
+    }
+  },
   {
     href: "/research",
     label: "Hỏi đáp y tế",

@@ -35,7 +35,11 @@ export default function AdminAnswerFlowPanel() {
     save,
     flowToggleKeys,
     setFlowToggle,
-    setLowContextThreshold
+    setLowContextThreshold,
+    setLlmProvider,
+    setLlmBaseUrl,
+    setLlmModel,
+    setLlmApiKey
   } = useControlTowerConfig();
 
   useEffect(() => {
@@ -83,6 +87,22 @@ export default function AdminAnswerFlowPanel() {
       config?.rag_flow.file_retrieval_enabled
     );
   const councilConfidenceScore = Number(Math.max(0.12, Math.min(0.98, 1 - debugLowContextScore * 0.7)).toFixed(2));
+  const llmProvider = config?.rag_flow.llm_provider ?? "hitechcloud_gpt53_codex_high";
+  const llmBaseUrl = config?.rag_flow.llm_base_url ?? "https://platform.hitechcloud.one/v1";
+  const llmModel = config?.rag_flow.llm_model ?? "gpt-5.3-codex-high";
+  const llmApiKey = config?.rag_flow.llm_api_key ?? "";
+
+  const applyHitechcloudPreset = () => {
+    setLlmProvider("hitechcloud_gpt53_codex_high");
+    setLlmBaseUrl("https://platform.hitechcloud.one/v1");
+    setLlmModel("gpt-5.3-codex-high");
+  };
+
+  const applyDeepseekPreset = () => {
+    setLlmProvider("deepseek");
+    if (!llmBaseUrl) setLlmBaseUrl("");
+    if (!llmModel) setLlmModel("");
+  };
 
   return (
     <div className="space-y-4">
@@ -137,6 +157,90 @@ export default function AdminAnswerFlowPanel() {
             </p>
           </div>
         </div>
+
+        <section className="mt-3 rounded-2xl border border-slate-200 bg-white/85 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">LLM Runtime</p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                Chọn nhanh provider cho toàn bộ chat/research runtime từ Control Tower.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={applyHitechcloudPreset}
+                className="rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 dark:border-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300"
+              >
+                Preset HitechCloud GPT-5.3
+              </button>
+              <button
+                type="button"
+                onClick={applyDeepseekPreset}
+                className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+              >
+                Preset DeepSeek Installed
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <label className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+              Provider
+              <select
+                value={llmProvider}
+                onChange={(event) =>
+                  setLlmProvider(
+                    event.target.value === "hitechcloud_gpt53_codex_high"
+                      ? "hitechcloud_gpt53_codex_high"
+                      : "deepseek"
+                  )
+                }
+                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="hitechcloud_gpt53_codex_high">hitechcloud + gpt-5.3-codex-high</option>
+                <option value="deepseek">deepseek (installed)</option>
+              </select>
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+              Model
+              <input
+                type="text"
+                value={llmModel}
+                onChange={(event) => setLlmModel(event.target.value)}
+                placeholder={llmProvider === "deepseek" ? "deepseek-v3.2" : "gpt-5.3-codex-high"}
+                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-600 dark:text-slate-300 md:col-span-2">
+              Base URL
+              <input
+                type="url"
+                value={llmBaseUrl}
+                onChange={(event) => setLlmBaseUrl(event.target.value)}
+                placeholder={
+                  llmProvider === "deepseek"
+                    ? "https://api.deepseek.com"
+                    : "https://platform.hitechcloud.one/v1"
+                }
+                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-600 dark:text-slate-300 md:col-span-2">
+              API Key
+              <input
+                type="password"
+                value={llmApiKey}
+                onChange={(event) => setLlmApiKey(event.target.value)}
+                placeholder="sk-..."
+                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </label>
+          </div>
+        </section>
 
         {error ? (
           <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">

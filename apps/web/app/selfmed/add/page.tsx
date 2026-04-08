@@ -50,6 +50,8 @@ export default function SelfMedAddPage() {
   const [isImporting, setIsImporting] = useState(false);
 
   const [manualDrugName, setManualDrugName] = useState("");
+  const [manualBrandName, setManualBrandName] = useState("");
+  const [manualManufacturer, setManualManufacturer] = useState("");
   const [manualDosage, setManualDosage] = useState("");
   const [manualQuantity, setManualQuantity] = useState("1");
   const [manualNotice, setManualNotice] = useState("");
@@ -187,6 +189,8 @@ export default function SelfMedAddPage() {
 
     const payload: AddCabinetItemPayload = {
       drug_name: manualDrugName.trim(),
+      brand_name: manualBrandName.trim(),
+      manufacturer: manualManufacturer.trim(),
       dosage: manualDosage.trim(),
       quantity: Number.isFinite(Number(manualQuantity)) ? Number(manualQuantity) : 1,
       source: "manual"
@@ -195,6 +199,8 @@ export default function SelfMedAddPage() {
     try {
       await addCabinetItem(payload);
       setManualDrugName("");
+      setManualBrandName("");
+      setManualManufacturer("");
       setManualDosage("");
       setManualQuantity("1");
       setManualNotice("Đã thêm thuốc thủ công vào tủ thuốc.");
@@ -347,6 +353,15 @@ export default function SelfMedAddPage() {
                           />
                           <div>
                             <p className="text-base font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
+                            {(item.dosage || item.brand_name || item.manufacturer) ? (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {item.dosage ? `Liều: ${item.dosage}` : "Liều: N/A"}
+                                {" · "}
+                                {item.brand_name ? `Brand: ${item.brand_name}` : "Brand: N/A"}
+                                {" · "}
+                                {item.manufacturer ? `Hãng: ${item.manufacturer}` : "Hãng: N/A"}
+                              </p>
+                            ) : null}
                             <p className="mt-1 text-sm text-[var(--text-secondary)]">Bằng chứng: {item.evidence}</p>
                             <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceClass(item.confidence)}`}>
                               OCR {Math.round(item.confidence * 100)}%
@@ -398,7 +413,7 @@ export default function SelfMedAddPage() {
             <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">Thêm thủ công</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">Dùng khi đơn thuốc khó OCR hoặc muốn nhập nhanh từng thuốc.</p>
 
-            <form onSubmit={onAddManual} className="mt-4 grid gap-3 md:grid-cols-3">
+            <form onSubmit={onAddManual} className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="space-y-1 md:col-span-1">
                 <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Tên thuốc</span>
                 <input
@@ -406,6 +421,26 @@ export default function SelfMedAddPage() {
                   onChange={(event) => setManualDrugName(event.target.value)}
                   required
                   placeholder="Ví dụ: Metformin"
+                  className="h-12 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Brand (tuỳ chọn)</span>
+                <input
+                  value={manualBrandName}
+                  onChange={(event) => setManualBrandName(event.target.value)}
+                  placeholder="Ví dụ: Panadol Extra"
+                  className="h-12 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Hãng (tuỳ chọn)</span>
+                <input
+                  value={manualManufacturer}
+                  onChange={(event) => setManualManufacturer(event.target.value)}
+                  placeholder="Ví dụ: STADA"
                   className="h-12 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
                 />
               </label>

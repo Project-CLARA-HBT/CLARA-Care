@@ -112,6 +112,10 @@ export type ControlTowerRagFlow = {
   scientific_retrieval_enabled: boolean;
   web_retrieval_enabled: boolean;
   file_retrieval_enabled: boolean;
+  llm_provider: "deepseek" | "hitechcloud_gpt53_codex_high";
+  llm_base_url: string;
+  llm_model: string;
+  llm_api_key: string;
 };
 
 export type ControlTowerRagFlowMetrics = {

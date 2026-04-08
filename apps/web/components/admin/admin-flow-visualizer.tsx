@@ -23,6 +23,9 @@ export type FlowNodeId =
   | "deep_beta_hypothesis"
   | "deep_beta_critic"
   | "deep_beta_consensus"
+  | "deep_beta_reasoning"
+  | "deep_beta_report"
+  | "deep_beta_quality_gate"
   | "retrieval_internal"
   | "retrieval_scientific"
   | "retrieval_web"
@@ -237,30 +240,36 @@ const NODES: FlowNodeDef[] = [
   },
   {
     id: "deep_research",
-    title: "Deep Research Loop",
-    subtitle: "multi-pass + reasoning loop",
-    description: "Vòng lặp deep mode: breadth scan, contradiction scan, cross-source consistency và refine query.",
-    riskNote: "Nếu chỉ giả lập bước này bằng client animation, UX sẽ đẹp nhưng pipeline sẽ giả.",
+    title: "deep_research / deep_retrieval_pass",
+    subtitle: "multi-pass retrieval in deep mode",
+    description:
+      "Chạy nhiều retrieval pass cho deep mode, gom bằng chứng theo vòng lặp trước khi hợp nhất về evidence index.",
+    riskNote:
+      "Nếu deep mode không thực sự chạy pass retrieval, timeline sẽ hiển thị đẹp nhưng không phản ánh runtime thật.",
     x: 1280,
     y: 220,
     tone: "amber",
   },
   {
     id: "deep_beta_router",
-    title: "Deep Beta Router",
-    subtitle: "adaptive branch selection",
-    description: "Bật nhánh deep_beta cho truy vấn khó: tăng depth budget, chọn critic profile và strategy động.",
-    riskNote: "Nếu route nhầm sang deep_beta sẽ đội chi phí; nếu bỏ qua sẽ mất nhánh suy luận nâng cao.",
+    title: "deep_beta_scope",
+    subtitle: "scope normalization + topic framing",
+    description:
+      "Chuẩn hóa phạm vi research mode deep_beta, xác định phạm vi chủ đề và câu hỏi lõi trước khi lập giả thuyết.",
+    riskNote:
+      "Scope sai sẽ kéo toàn bộ retrieval budget lệch chủ đề và làm giảm chất lượng evidence downstream.",
     x: 1640,
     y: 220,
     tone: "indigo",
   },
   {
     id: "deep_beta_hypothesis",
-    title: "Deep Beta Hypothesis Graph",
-    subtitle: "claim lattice + uncertainty probes",
-    description: "Xây đồ thị giả thuyết, mở rộng phản giả thuyết và đánh dấu vùng bất định cần truy xuất thêm.",
-    riskNote: "Không có hypothesis graph thì deep_beta khó vượt chất lượng của deep cũ.",
+    title: "deep_beta_hypothesis_map",
+    subtitle: "claim map + counter-claim map",
+    description:
+      "Sinh hypothesis map và counter-claims để bám sát stage `deep_beta_hypothesis_map` từ ML runtime.",
+    riskNote:
+      "Thiếu hypothesis map sẽ làm deep_beta mất định hướng trong multi-pass retrieval.",
     x: 1640,
     y: 470,
     tone: "indigo",
@@ -268,23 +277,65 @@ const NODES: FlowNodeDef[] = [
   },
   {
     id: "deep_beta_critic",
-    title: "Deep Beta Critic Loop",
-    subtitle: "cross-source critique passes",
-    description: "Chạy critic pass để bẻ gãy lập luận yếu, buộc pipeline thu thập bằng chứng phản biện.",
-    riskNote: "Nếu critic loop quá nhẹ, output vẫn có nguy cơ overconfident trên evidence mỏng.",
+    title: "deep_beta_retrieval_budget",
+    subtitle: "budget split + source budget caps",
+    description:
+      "Tính retrieval budget cho deep_beta (max docs/pass caps) theo difficulty và mục tiêu độ phủ evidence.",
+    riskNote:
+      "Budget phân bổ sai làm tăng timeout hoặc bỏ sót nguồn quan trọng ở truy vấn khó.",
     x: 2000,
     y: 220,
     tone: "amber",
   },
   {
     id: "deep_beta_consensus",
-    title: "Deep Beta Consensus",
-    subtitle: "merge verdict + retrieval focus",
-    description: "Hợp nhất kết quả critic/hypothesis thành kế hoạch retrieval và verification tập trung hơn.",
-    riskNote: "Consensus sai sẽ lan lỗi sang verification và citation selection.",
+    title: "deep_beta_multi_pass_retrieval",
+    subtitle: "deep_beta_retrieval_pass aggregation",
+    description:
+      "Chạy và hợp nhất nhiều `deep_beta_retrieval_pass`, tổng hợp source errors và trace cho chain synthesis.",
+    riskNote:
+      "Nếu aggregate pass lỗi, chain synthesis sẽ thiếu bằng chứng dù các connector vẫn hoạt động.",
     x: 2000,
     y: 380,
     tone: "teal",
+  },
+  {
+    id: "deep_beta_reasoning",
+    title: "deep_beta_evidence_audit / claim_graph / gap_fill",
+    subtitle: "parallel reasoning nodes",
+    description:
+      "Chạy nhiều reasoning node song song để audit chất lượng evidence, dựng claim graph và đề xuất gap-fill queries.",
+    riskNote:
+      "Nếu reasoning node chỉ là skeleton hoặc không đồng bộ với runtime stage, timeline sẽ lệch thực tế.",
+    x: 2360,
+    y: 220,
+    tone: "indigo",
+    toggleKey: "rag_nli_enabled",
+  },
+  {
+    id: "deep_beta_report",
+    title: "deep_report_synthesis / deep_beta_report_synthesis",
+    subtitle: "long-form markdown report writer",
+    description:
+      "Sinh báo cáo dài dạng markdown có bảng/mermaid/chart-spec cho cả deep và deep_beta trước khi qua quality gate và verification cuối.",
+    riskNote:
+      "Report synthesis yếu sẽ làm câu trả lời ngắn, thiếu chiều sâu dù retrieval tốt.",
+    x: 2360,
+    y: 500,
+    tone: "amber",
+  },
+  {
+    id: "deep_beta_quality_gate",
+    title: "deep_beta_quality_gate",
+    subtitle: "groundedness/completeness gate",
+    description:
+      "Đánh giá groundedness, completeness, revision_required trước khi phát hành câu trả lời cuối.",
+    riskNote:
+      "Bỏ quality gate tăng nguy cơ claim không đủ bằng chứng đi thẳng ra responder.",
+    x: 2360,
+    y: 780,
+    tone: "rose",
+    toggleKey: "rule_verification_enabled",
   },
   {
     id: "retrieval_internal",
@@ -332,9 +383,9 @@ const NODES: FlowNodeDef[] = [
   {
     id: "evidence_index",
     title: "Evidence Index + Rerank",
-    subtitle: "dedupe / hybrid score / neural reranker",
+    subtitle: "evidence_search / evidence_index / graphrag_sidecar",
     description:
-      "Dedupe, hybrid dense+sparse score, biomedical boost và neural reranker sidecar (timeout-safe fallback + input cache TTL) để chọn evidence chất lượng cao.",
+      "Dedupe + evidence search + hybrid ranking, sau đó đi qua neural reranker và GraphRAG sidecar (khi bật) để chọn evidence chất lượng cao.",
     riskNote:
       "Nếu reranker không có timeout-safe fallback thì một connector chậm có thể làm gãy toàn bộ flow.",
     x: 1640,
@@ -355,20 +406,24 @@ const NODES: FlowNodeDef[] = [
   },
   {
     id: "synthesis",
-    title: "Answer Synthesis",
-    subtitle: "DeepSeek generation, Markdown contract",
-    description: "Tổng hợp câu trả lời theo contract Markdown, bảng so sánh, mermaid và citation inline.",
-    riskNote: "Nếu synthesis không bị ép contract, output sẽ rất khó render nhất quán trên UI.",
+    title: "llm_generation -> answer_synthesis",
+    subtitle: "DeepSeek generation + markdown contract",
+    description:
+      "Gọi `llm_generation` (kèm retry khi cần), sau đó chuẩn hóa về `answer_synthesis` để render thống nhất trên UI.",
+    riskNote:
+      "Nếu generation và synthesis không tách rõ, lỗi fallback/timeout sẽ khó truy vết trong flow events.",
     x: 2000,
     y: 760,
     tone: "amber",
   },
   {
     id: "verification",
-    title: "FIDES Verification",
-    subtitle: "Claim support and contradiction check",
-    description: "Đối chiếu claim với retrieved evidence, đo coverage và phát hiện mâu thuẫn.",
-    riskNote: "Không có verification thì không biết câu trả lời grounded đến mức nào.",
+    title: "verification + contradiction_miner",
+    subtitle: "claim support + contradiction extraction",
+    description:
+      "Đối chiếu claim với evidence, chạy contradiction miner và sinh tín hiệu safety trước khi policy gate.",
+    riskNote:
+      "Bỏ bước này thì câu trả lời có thể trông hợp lý nhưng không chứng minh được mức độ grounded.",
     x: 2000,
     y: 560,
     tone: "indigo",
@@ -376,10 +431,10 @@ const NODES: FlowNodeDef[] = [
   },
   {
     id: "verification_matrix",
-    title: "Claim Matrix",
-    subtitle: "supported / unsupported / confidence / NLI",
+    title: "verification_matrix (claim-v2-nli)",
+    subtitle: "supported / unsupported / contradicted / confidence",
     description:
-      "Chuẩn hóa verdict claim-level (NLI style), severity và unsupported claims trước khi policy gate ra quyết định.",
+      "Chuẩn hóa verdict claim-level (NLI style), severity, unsupported claims và safety override trước policy gate.",
     riskNote:
       "Claim matrix lệch hoặc thiếu contradiction signal sẽ đẩy policy gate về nhánh quyết định sai.",
     x: 2220,
@@ -390,7 +445,7 @@ const NODES: FlowNodeDef[] = [
   {
     id: "citation_selection",
     title: "Citation Selection",
-    subtitle: "Top evidence, attribution payload",
+    subtitle: "Top evidence + source attribution payload",
     description: "Chọn nguồn được giữ lại cho UI, source attribution và telemetry chi tiết.",
     riskNote: "Citation bị chọn sai sẽ làm người dùng tin vào nguồn không liên quan.",
     x: 2360,
@@ -593,14 +648,17 @@ const NODE_GRID_LAYOUT: Record<FlowNodeId, { col: number; row: number }> = {
   deep_beta_hypothesis: { col: 4, row: 1 },
   deep_beta_critic: { col: 4, row: 2 },
   deep_beta_consensus: { col: 4, row: 3 },
+  deep_beta_reasoning: { col: 5, row: 0 },
+  deep_beta_report: { col: 5, row: 1 },
+  deep_beta_quality_gate: { col: 5, row: 2 },
   evidence_index: { col: 4, row: 4 },
   contradiction_miner: { col: 4, row: 5 },
 
-  citation_selection: { col: 5, row: 2 },
+  citation_selection: { col: 5, row: 3 },
   api_contract_passthrough: { col: 6, row: 3 },
-  verification: { col: 5, row: 3 },
-  synthesis: { col: 5, row: 4 },
-  verification_matrix: { col: 5, row: 5 },
+  verification: { col: 5, row: 4 },
+  synthesis: { col: 5, row: 5 },
+  verification_matrix: { col: 5, row: 6 },
 
   research_ui_telemetry: { col: 7, row: 3 },
   responder: { col: 6, row: 4 },
@@ -701,33 +759,37 @@ const EDGES: FlowEdgeDef[] = [
   { from: "intent_router", to: "planner", bend: -40 },
   { from: "vn_drug_dictionary", to: "planner", bend: -40 },
   { from: "vn_drug_dictionary", to: "retrieval_scientific", bend: 160, label: "rxnorm aligned" },
-  { from: "planner", to: "source_router", bend: 42, label: "route decision" },
+  { from: "planner", to: "source_router", bend: 42, label: "retrieval route decision" },
   { from: "source_router", to: "retrieval_orchestrator", bend: 56, label: "retrieval_route" },
   { from: "source_router", to: "retrieval_scientific", bend: 132, label: "scientific-heavy" },
   { from: "source_router", to: "retrieval_web", bend: 186, label: "web-assisted" },
   { from: "planner", to: "query_decomposition", bend: 46, label: "decompose" },
   { from: "planner", to: "deep_research", bend: -170, label: "deep mode" },
-  { from: "planner", to: "deep_beta_router", bend: -250, label: "deep_beta mode" },
+  { from: "planner", to: "deep_beta_router", bend: -250, label: "stage: deep_beta_scope" },
   { from: "planner", to: "retrieval_orchestrator", bend: 150 },
   { from: "query_decomposition", to: "deep_research", bend: -88 },
-  { from: "query_decomposition", to: "deep_beta_router", bend: -160 },
+  { from: "query_decomposition", to: "deep_beta_router", bend: -160, label: "topic scope" },
   { from: "query_decomposition", to: "retrieval_orchestrator", bend: 48 },
   { from: "deep_research", to: "deep_beta_router", bend: -118, label: "beta escalation" },
-  { from: "deep_beta_router", to: "deep_beta_hypothesis", bend: 48 },
-  { from: "deep_beta_hypothesis", to: "deep_beta_critic", bend: -92, label: "critic pass" },
-  { from: "deep_beta_critic", to: "deep_beta_consensus", bend: 24, label: "consensus" },
-  { from: "deep_beta_consensus", to: "retrieval_scientific", bend: 108, label: "targeted retrieval" },
-  { from: "deep_beta_consensus", to: "verification", bend: 24 },
-  { from: "deep_beta_consensus", to: "citation_selection", bend: -36 },
+  { from: "deep_beta_router", to: "deep_beta_hypothesis", bend: 48, label: "hypothesis map" },
+  { from: "deep_beta_hypothesis", to: "deep_beta_critic", bend: -92, label: "budget planning" },
+  { from: "deep_beta_critic", to: "deep_beta_consensus", bend: 24, label: "multi-pass retrieval" },
+  { from: "deep_beta_consensus", to: "deep_beta_reasoning", bend: -46, label: "evidence audit" },
+  { from: "deep_beta_reasoning", to: "deep_beta_report", bend: 26, label: "reasoning digest" },
+  { from: "deep_beta_report", to: "deep_beta_quality_gate", bend: 24, label: "quality gate" },
+  { from: "deep_beta_quality_gate", to: "verification", bend: 42, label: "gate->verify" },
+  { from: "deep_beta_quality_gate", to: "verification_matrix", bend: 88, label: "matrix alignment" },
+  { from: "deep_beta_consensus", to: "retrieval_scientific", bend: 108, label: "targeted scientific pass" },
+  { from: "deep_beta_consensus", to: "evidence_index", bend: 78, label: "aggregated evidence" },
   { from: "retrieval_orchestrator", to: "retrieval_internal", bend: -120 },
   { from: "retrieval_orchestrator", to: "retrieval_scientific", bend: -40 },
   { from: "retrieval_orchestrator", to: "retrieval_web", bend: 30 },
   { from: "retrieval_orchestrator", to: "retrieval_file", bend: 80 },
   { from: "deep_research", to: "retrieval_scientific", bend: 82 },
-  { from: "retrieval_internal", to: "evidence_index", bend: -54 },
-  { from: "retrieval_scientific", to: "evidence_index" },
-  { from: "retrieval_web", to: "evidence_index", bend: 28 },
-  { from: "retrieval_file", to: "evidence_index", bend: 84 },
+  { from: "retrieval_internal", to: "evidence_index", bend: -54, label: "internal_retrieval" },
+  { from: "retrieval_scientific", to: "evidence_index", label: "external_scientific_retrieval" },
+  { from: "retrieval_web", to: "evidence_index", bend: 28, label: "web retrieval" },
+  { from: "retrieval_file", to: "evidence_index", bend: 84, label: "file retrieval" },
   {
     from: "evidence_index",
     to: "contradiction_miner",
@@ -738,11 +800,11 @@ const EDGES: FlowEdgeDef[] = [
     labelOffsetX: -12,
     labelOffsetY: 18,
   },
-  { from: "evidence_index", to: "synthesis", fromAnchor: "right", toAnchor: "left", bend: -26 },
+  { from: "evidence_index", to: "synthesis", fromAnchor: "right", toAnchor: "left", bend: -26, label: "llm_generation" },
   { from: "contradiction_miner", to: "verification_matrix", fromAnchor: "right", toAnchor: "left", bend: 20 },
-  { from: "synthesis", to: "verification", fromAnchor: "top", toAnchor: "bottom", bend: -42 },
+  { from: "synthesis", to: "verification", fromAnchor: "top", toAnchor: "bottom", bend: -42, label: "answer_synthesis" },
   { from: "synthesis", to: "verification_matrix", fromAnchor: "bottom", toAnchor: "top", bend: 52 },
-  { from: "verification", to: "citation_selection", fromAnchor: "top", toAnchor: "bottom", bend: -28 },
+  { from: "verification", to: "citation_selection", fromAnchor: "top", toAnchor: "bottom", bend: -28, label: "citation_selection" },
   {
     from: "verification_matrix",
     to: "api_contract_passthrough",

@@ -20,8 +20,8 @@ export default function LandingFaqAccordion({ items }: Props) {
             className={[
               "overflow-hidden rounded-2xl border transition-all duration-200",
               opened
-                ? "border-blue-300 bg-slate-900/90 shadow-[0_0_0_1px_rgba(96,165,250,0.35),0_18px_46px_-30px_rgba(37,99,235,0.8)]"
-                : "border-slate-700 bg-slate-900/75"
+                ? "border-cyan-300 bg-cyan-50/80 shadow-[0_10px_30px_-25px_rgba(34,211,238,0.9)] dark:border-cyan-700 dark:bg-cyan-950/30"
+                : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900",
             ].join(" ")}
           >
             <h3>
@@ -31,13 +31,13 @@ export default function LandingFaqAccordion({ items }: Props) {
                 onClick={() => setOpenIndex(opened ? -1 : index)}
                 aria-expanded={opened}
               >
-                <span className="text-base font-semibold text-slate-100">{item.question}</span>
+                <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.question}</span>
                 <span
                   className={[
                     "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-lg font-semibold transition",
                     opened
-                      ? "border-blue-300 bg-blue-100/90 text-blue-700"
-                      : "border-slate-600 bg-slate-800 text-slate-200"
+                      ? "border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/70 dark:text-cyan-200"
+                      : "border-slate-300 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-300",
                   ].join(" ")}
                   aria-hidden="true"
                 >
@@ -46,8 +46,8 @@ export default function LandingFaqAccordion({ items }: Props) {
               </button>
             </h3>
             {opened ? (
-              <div className="border-t border-slate-700 px-5 pb-5 pt-4">
-                <p className="text-sm leading-7 text-slate-300">{item.answer}</p>
+              <div className="border-t border-slate-200 px-5 pb-5 pt-4 dark:border-slate-700">
+                <p className="text-sm leading-7 text-slate-700 dark:text-slate-300">{item.answer}</p>
               </div>
             ) : null}
           </div>

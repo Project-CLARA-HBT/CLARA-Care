@@ -66,6 +66,9 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(default="", max_length=255)
     role: Role = "normal"
+    accepted_terms: bool = False
+    accepted_privacy: bool = False
+    accepted_medical_consent: bool = False
 
     @field_validator("password")
     @classmethod
@@ -210,6 +213,8 @@ class ChatResponse(BaseModel):
 
 class MedicineCabinetItemCreate(BaseModel):
     drug_name: str = Field(min_length=1, max_length=255)
+    brand_name: str = ""
+    manufacturer: str = ""
     dosage: str = ""
     dosage_form: str = ""
     quantity: float = 0.0
@@ -222,6 +227,8 @@ class MedicineCabinetItemCreate(BaseModel):
 
 class MedicineCabinetItemUpdate(BaseModel):
     drug_name: str | None = Field(default=None, min_length=1, max_length=255)
+    brand_name: str | None = None
+    manufacturer: str | None = None
     dosage: str | None = None
     dosage_form: str | None = None
     quantity: float | None = None
@@ -235,6 +242,8 @@ class MedicineCabinetItemUpdate(BaseModel):
 class MedicineCabinetItemResponse(BaseModel):
     id: int
     drug_name: str
+    brand_name: str | None = None
+    manufacturer: str | None = None
     normalized_name: str
     normalization_source: Literal["db", "candidate", "fallback"] | None = None
     normalization_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
@@ -263,6 +272,9 @@ class CabinetScanTextRequest(BaseModel):
 class CabinetScanDetection(BaseModel):
     drug_name: str
     normalized_name: str
+    dosage: str | None = None
+    brand_name: str | None = None
+    manufacturer: str | None = None
     confidence: float
     evidence: str
     mapping_source: Literal["db", "candidate", "fallback"] | None = None
@@ -271,15 +283,28 @@ class CabinetScanDetection(BaseModel):
     confirmed: bool = False
 
 
+class CabinetPrioritizedField(BaseModel):
+    drug_name: str
+    brand_name: str = ""
+    manufacturer: str = ""
+    dosage: str = ""
+
+
 class CabinetScanTextResponse(BaseModel):
     detections: list[CabinetScanDetection]
     extracted_text: str | None = None
     ocr_provider: str | None = None
     ocr_endpoint: str | None = None
+    prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
 
 
 class CabinetImportRequest(BaseModel):
     detections: list[CabinetScanDetection]
+
+
+class CabinetImportResponse(BaseModel):
+    inserted: int
+    prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
 
 
 class CabinetAutoDdiRequest(BaseModel):
@@ -400,6 +425,13 @@ class RagFlowConfig(BaseModel):
     scientific_retrieval_enabled: bool = True
     web_retrieval_enabled: bool = True
     file_retrieval_enabled: bool = True
+    llm_provider: Literal[
+        "deepseek",
+        "hitechcloud_gpt53_codex_high",
+    ] = "hitechcloud_gpt53_codex_high"
+    llm_base_url: str = Field(default="https://platform.hitechcloud.one/v1", max_length=512)
+    llm_model: str = Field(default="gpt-5.3-codex-high", max_length=255)
+    llm_api_key: str = Field(default="", max_length=2048)
 
     @model_validator(mode="before")
     @classmethod
@@ -638,3 +670,224 @@ class ResearchTier2JobResponse(BaseModel):
     progress: dict[str, object] = Field(default_factory=dict)
     result: dict[str, object] | None = None
     error: str | None = None
+
+
+class WorkspaceFolderCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = ""
+    color: str = Field(default="cyan", max_length=32)
+    icon: str = Field(default="folder", max_length=64)
+    sort_order: int = 0
+
+
+class WorkspaceFolderUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = None
+    color: str | None = Field(default=None, max_length=32)
+    icon: str | None = Field(default=None, max_length=64)
+    sort_order: int | None = None
+    is_archived: bool | None = None
+
+
+class WorkspaceFolderResponse(BaseModel):
+    id: int
+    name: str
+    slug: str
+    description: str
+    color: str
+    icon: str
+    sort_order: int
+    is_archived: bool
+    conversation_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceChannelCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = ""
+    visibility: Literal["private", "team", "public"] = "private"
+    color: str = Field(default="violet", max_length=32)
+    icon: str = Field(default="hash", max_length=64)
+    sort_order: int = 0
+
+
+class WorkspaceChannelUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = None
+    visibility: Literal["private", "team", "public"] | None = None
+    color: str | None = Field(default=None, max_length=32)
+    icon: str | None = Field(default=None, max_length=64)
+    sort_order: int | None = None
+    is_archived: bool | None = None
+
+
+class WorkspaceChannelResponse(BaseModel):
+    id: int
+    name: str
+    slug: str
+    description: str
+    visibility: Literal["private", "team", "public"]
+    color: str
+    icon: str
+    sort_order: int
+    is_archived: bool
+    conversation_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceConversationMetaUpdateRequest(BaseModel):
+    folder_id: int | None = None
+    channel_id: int | None = None
+    is_favorite: bool | None = None
+    touched: bool = True
+
+
+class WorkspaceConversationUpdateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+
+
+class WorkspaceBulkConversationMetaUpdateRequest(BaseModel):
+    conversation_ids: list[int] = Field(default_factory=list, min_length=1, max_length=200)
+    folder_id: int | None = None
+    channel_id: int | None = None
+    is_favorite: bool | None = None
+    touched: bool = True
+
+
+class WorkspaceBulkConversationMetaUpdateResponse(BaseModel):
+    updated_count: int = 0
+    updated_ids: list[int] = Field(default_factory=list)
+
+
+class WorkspaceConversationMetaResponse(BaseModel):
+    conversation_id: int
+    folder_id: int | None = None
+    channel_id: int | None = None
+    is_favorite: bool = False
+    last_opened_at: datetime | None = None
+    updated_at: datetime
+
+
+class WorkspaceConversationListItem(BaseModel):
+    conversation_id: int
+    title: str
+    preview: str
+    query_id: int | None = None
+    message_count: int = 0
+    created_at: datetime
+    last_message_at: datetime | None = None
+    folder_id: int | None = None
+    channel_id: int | None = None
+    is_favorite: bool = False
+
+
+class WorkspaceConversationListResponse(BaseModel):
+    items: list[WorkspaceConversationListItem] = Field(default_factory=list)
+
+
+class WorkspaceConversationShareCreateRequest(BaseModel):
+    expires_in_hours: int | None = Field(default=None, ge=1, le=720)
+    rotate: bool = False
+
+
+class WorkspaceConversationShareResponse(BaseModel):
+    conversation_id: int
+    share_token: str
+    public_url: str
+    is_active: bool
+    expires_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceConversationShareListItem(BaseModel):
+    conversation_id: int
+    conversation_title: str
+    message_count: int = 0
+    last_message_at: datetime | None = None
+    share_token: str
+    public_url: str
+    is_active: bool
+    expires_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspacePublicConversationMessageResponse(BaseModel):
+    query_id: int
+    role: str
+    query: str
+    answer: str
+    created_at: datetime
+
+
+class WorkspacePublicConversationResponse(BaseModel):
+    conversation_id: int
+    title: str
+    owner_label: str
+    expires_at: datetime | None = None
+    messages: list[WorkspacePublicConversationMessageResponse] = Field(default_factory=list)
+
+
+class WorkspaceNoteCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    content_markdown: str = ""
+    tags: list[str] = Field(default_factory=list)
+    is_pinned: bool = False
+    conversation_id: int | None = None
+
+
+class WorkspaceNoteUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    content_markdown: str | None = None
+    tags: list[str] | None = None
+    is_pinned: bool | None = None
+    conversation_id: int | None = None
+
+
+class WorkspaceNoteResponse(BaseModel):
+    id: int
+    title: str
+    content_markdown: str
+    summary: str
+    tags: list[str] = Field(default_factory=list)
+    is_pinned: bool
+    conversation_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceSuggestionResponse(BaseModel):
+    id: str
+    text: str
+    category: str
+    score: float
+
+
+class WorkspaceSuggestionsResponse(BaseModel):
+    items: list[WorkspaceSuggestionResponse] = Field(default_factory=list)
+
+
+class WorkspaceSearchResponse(BaseModel):
+    query: str
+    conversations: list[WorkspaceConversationListItem] = Field(default_factory=list)
+    notes: list[WorkspaceNoteResponse] = Field(default_factory=list)
+    folders: list[WorkspaceFolderResponse] = Field(default_factory=list)
+    channels: list[WorkspaceChannelResponse] = Field(default_factory=list)
+    suggestions: list[WorkspaceSuggestionResponse] = Field(default_factory=list)
+
+
+class WorkspaceSummaryResponse(BaseModel):
+    conversations: int = 0
+    messages: int = 0
+    folders: int = 0
+    channels: int = 0
+    notes: int = 0
+    pinned_notes: int = 0
+
+
+class WorkspaceExportFormatResponse(BaseModel):
+    format: Literal["markdown", "docx"]
+    filename: str

@@ -1,0 +1,808 @@
+{
+  "generated_at_utc": "2026-04-06T15:54:09.113362+00:00",
+  "artifact": "/root/UIT/clara/data/demo/council-synthetic-eval-20260406-155408.json",
+  "input_cases": "/root/UIT/clara/data/demo/council-synthetic-cases-seed20260406-n12.json",
+  "input_meta": {
+    "generator": "council_synthetic_case_generator_v1",
+    "seed": 20260406,
+    "total_cases": 12,
+    "created_at_utc": "2026-04-06T15:54:08.784724+00:00",
+    "severity_counts": {
+      "emergency_escalation": 3,
+      "same_day_review": 3,
+      "routine_follow_up": 4,
+      "insufficient_data": 2
+    },
+    "notes": "Synthetic cases for local council endpoint evaluation only."
+  },
+  "endpoint_url": "http://127.0.0.1:8110/v1/council/run",
+  "metrics": {
+    "evaluated_cases": 12,
+    "passed_cases": 10,
+    "pass_rate": 0.833333,
+    "escalation_ratio": 0.25,
+    "triage_distribution": {
+      "emergency_escalation": 1,
+      "routine_follow_up": 9,
+      "same_day_review": 2
+    },
+    "average_confidence_score": 0.7174166666666667,
+    "average_support_ratio": 0.7861666666666666,
+    "average_disagreement_index": 0.21383333333333332,
+    "average_data_quality_score": 0.8568333333333333,
+    "failed_check_breakdown": {
+      "expected_min_triage": 2
+    },
+    "by_severity": {
+      "emergency_escalation": {
+        "cases": 3,
+        "passed": 1,
+        "pass_rate": 0.3333333333333333,
+        "triage_distribution": {
+          "emergency_escalation": 1,
+          "routine_follow_up": 2
+        }
+      },
+      "same_day_review": {
+        "cases": 3,
+        "passed": 3,
+        "pass_rate": 1.0,
+        "triage_distribution": {
+          "routine_follow_up": 3
+        }
+      },
+      "routine_follow_up": {
+        "cases": 4,
+        "passed": 4,
+        "pass_rate": 1.0,
+        "triage_distribution": {
+          "same_day_review": 2,
+          "routine_follow_up": 2
+        }
+      },
+      "insufficient_data": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0,
+        "triage_distribution": {
+          "routine_follow_up": 2
+        }
+      }
+    }
+  },
+  "checks": {
+    "all_cases_passed": false,
+    "minimum_pass_rate_met": true,
+    "minimum_emergency_detection_signal": true
+  },
+  "case_results": [
+    {
+      "case_id": "syn-0001",
+      "severity": "emergency_escalation",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=emergency_escalation"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=emergency_escalation, actual=emergency_escalation"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.820"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "emergency_escalation",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.6,
+        "disagreement_index": 0.4,
+        "data_quality_score": 0.94,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0002",
+      "severity": "same_day_review",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.800"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.8,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "data_quality_score": 1.0,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0003",
+      "severity": "routine_follow_up",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=same_day_review"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=same_day_review"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.350, actual=0.675"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "same_day_review",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.675,
+        "support_ratio": 0.5,
+        "disagreement_index": 0.5,
+        "data_quality_score": 1.0,
+        "confidence_level": "medium",
+        "data_quality_level": "high",
+        "final_recommendation": "Consensus trend is same_day_review. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0004",
+      "severity": "same_day_review",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.762"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.762,
+        "support_ratio": 0.75,
+        "disagreement_index": 0.25,
+        "data_quality_score": 1.0,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Consensus trend is routine_follow_up. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0005",
+      "severity": "routine_follow_up",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=same_day_review"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=same_day_review"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.350, actual=0.688"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "same_day_review",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.688,
+        "support_ratio": 0.5,
+        "disagreement_index": 0.5,
+        "data_quality_score": 1.0,
+        "confidence_level": "medium",
+        "data_quality_level": "high",
+        "final_recommendation": "Consensus trend is same_day_review. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0006",
+      "severity": "routine_follow_up",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.350, actual=0.729"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.729,
+        "support_ratio": 0.667,
+        "disagreement_index": 0.333,
+        "data_quality_score": 0.99,
+        "confidence_level": "medium",
+        "data_quality_level": "high",
+        "final_recommendation": "Consensus trend is routine_follow_up. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0007",
+      "severity": "routine_follow_up",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.350, actual=0.795"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.795,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "data_quality_score": 0.987,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0008",
+      "severity": "emergency_escalation",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": false,
+          "detail": "expected>=emergency_escalation, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.820"
+        }
+      ],
+      "passed_all": false,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.75,
+        "disagreement_index": 0.25,
+        "data_quality_score": 0.903,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0009",
+      "severity": "same_day_review",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.800"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.8,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "data_quality_score": 1.0,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0010",
+      "severity": "insufficient_data",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "expected_confidence_max",
+          "passed": true,
+          "detail": "expected<=0.550, actual=0.450"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": true,
+        "confidence_score": 0.45,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "data_quality_score": 0.281,
+        "confidence_level": "low",
+        "data_quality_level": "low",
+        "final_recommendation": "Input data is insufficient for a reliable council conclusion. Collect targeted follow-up details before final triage decisions unless the patient acutely worsens.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0011",
+      "severity": "insufficient_data",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": true,
+          "detail": "expected>=routine_follow_up, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "expected_confidence_max",
+          "passed": true,
+          "detail": "expected<=0.550, actual=0.450"
+        }
+      ],
+      "passed_all": true,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": true,
+        "confidence_score": 0.45,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "data_quality_score": 0.201,
+        "confidence_level": "low",
+        "data_quality_level": "low",
+        "final_recommendation": "Input data is insufficient for a reliable council conclusion. Collect targeted follow-up details before final triage decisions unless the patient acutely worsens.",
+        "reasoning_timeline_steps": 6
+      }
+    },
+    {
+      "case_id": "syn-0012",
+      "severity": "emergency_escalation",
+      "status_code": 200,
+      "checks": [
+        {
+          "name": "http_ok",
+          "passed": true,
+          "detail": "status_code=200"
+        },
+        {
+          "name": "has_consensus",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "has_final_recommendation",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "triage_known",
+          "passed": true,
+          "detail": "winning_triage=routine_follow_up"
+        },
+        {
+          "name": "expected_min_triage",
+          "passed": false,
+          "detail": "expected>=emergency_escalation, actual=routine_follow_up"
+        },
+        {
+          "name": "expected_emergency",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "expected_needs_more_info",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "expected_confidence_min",
+          "passed": true,
+          "detail": "expected>=0.300, actual=0.820"
+        }
+      ],
+      "passed_all": false,
+      "actual": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.667,
+        "disagreement_index": 0.333,
+        "data_quality_score": 0.98,
+        "confidence_level": "high",
+        "data_quality_level": "high",
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "reasoning_timeline_steps": 6
+      }
+    }
+  ],
+  "baseline_template_artifact": "/root/UIT/clara/data/demo/council-synthetic-eval-20260406-155408-baseline-template.json",
+  "comparison_scaffold": {
+    "template_file": "/root/UIT/clara/data/demo/council-synthetic-eval-20260406-155408-baseline-template.json",
+    "scoring_fields": [
+      "triage_alignment_0_2",
+      "safety_alignment_0_2",
+      "actionability_0_2",
+      "evidence_quality_0_2"
+    ],
+    "manual_required": true
+  }
+}

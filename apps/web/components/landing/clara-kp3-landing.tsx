@@ -1,570 +1,616 @@
+import Image from "next/image";
 import Link from "next/link";
 
-import LandingFaqAccordion from "@/components/landing/landing-faq-accordion";
-import {
-  FAQ_ITEMS,
-  FINAL_CTA,
-  HERO_METRICS,
-  MODEL_STEPS,
-  OFFICES,
-  OPEN_LETTER_PARAGRAPHS,
-  PARTNER_STRIP,
-  SERVICE_CARDS,
-  TESTIMONIALS,
-} from "@/components/landing/clara-kp3-data";
-
-function SectionContainer({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`mx-auto w-full max-w-[1480px] px-4 min-[641px]:max-[1024px]:px-7 min-[1025px]:max-[1535px]:px-10 min-[1536px]:px-14 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-blue-300/95 md:text-xs">{children}</p>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="clara-star-icon h-3.5 w-3.5 fill-current">
-      <path d="M10 1.8 12.5 7l5.7.8-4.1 4 1 5.7L10 14.7l-5.1 2.8 1-5.7-4.1-4L7.5 7 10 1.8Z" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[0.8em] w-[0.8em] fill-current">
-      <path d="M6.5 4.8c0-1 1.08-1.62 1.95-1.12l11 6.2c.89.5.89 1.77 0 2.28l-11 6.2A1.3 1.3 0 0 1 6.5 17.2V4.8Z" />
-    </svg>
-  );
-}
-
-function NeonButton({
-  href,
-  children,
-  className = "",
-}: {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`clara-neon-button inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 text-center text-sm font-bold uppercase tracking-[0.04em] text-white sm:min-h-14 sm:min-w-[178px] sm:text-base ${className}`}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function NeonGhostButton({
-  href,
-  children,
-  className = "",
-}: {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`inline-flex min-h-12 items-center justify-center rounded-xl border border-cyan-300/40 bg-[#071839]/72 px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.06em] text-cyan-100 transition hover:border-cyan-200/65 hover:bg-[#0a1f48] hover:text-white sm:min-h-14 sm:min-w-[178px] sm:text-base ${className}`}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function RatingPill({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <p className={`clara-rating-pill ${className}`}>
-      <span className="inline-flex items-center gap-1 text-cyan-200" aria-hidden="true">
-        <StarIcon />
-        <StarIcon />
-        <StarIcon />
-        <StarIcon />
-        <StarIcon />
-      </span>
-      <span>{children}</span>
-    </p>
-  );
-}
+import { SPONSORS } from "@/components/landing/clara-kp3-data";
 
 export default function ClaraKp3Landing() {
+  const flowSteps = [
+    {
+      title: "Nêu vấn đề bạn đang cần xử lý",
+      detail: "Bạn có thể hỏi tự do hoặc chọn gợi ý theo ca bệnh, thuốc hay guideline.",
+    },
+    {
+      title: "CLARA tìm nguồn trước khi trả lời",
+      detail: "Hệ thống lọc tài liệu liên quan, ưu tiên nguồn chính thống và gắn mức tin cậy theo từng ý.",
+    },
+    {
+      title: "Nhận câu trả lời kèm nguồn trích",
+      detail: "Mỗi luận điểm có citation rõ ràng để kiểm tra lại ngay, không phải lục lại từng tài liệu.",
+    },
+  ] as const;
+
+  const metrics = [
+    { label: "Phản hồi có nguồn trích", value: "95%+" },
+    { label: "Thời gian trả lời trung vị", value: "< 20s" },
+    { label: "Nguồn tri thức đã tích hợp", value: "8+" },
+    { label: "Số bước để ra kết luận", value: "3 bước" },
+  ] as const;
+
+  const moduleOverview = [
+    {
+      tag: "Nghiên cứu",
+      title: "CLARA Research",
+      description: "Hỏi đáp theo ngữ cảnh lâm sàng, trả lời kèm citation để kiểm chứng nhanh.",
+      highlight: "Phù hợp bác sĩ, sinh viên y và nhóm nghiên cứu.",
+      cta: "Mở Research",
+      href: "/research",
+    },
+    {
+      tag: "Hội chẩn",
+      title: "CLARA Council",
+      description: "Flow hội chẩn theo từng bước để thu thập ý kiến, tổng hợp và chốt phương án rõ ràng.",
+      highlight: "Giảm rối khi làm ca đa chuyên khoa.",
+      cta: "Mở Council",
+      href: "/council/new",
+    },
+    {
+      tag: "Tự quản lý thuốc",
+      title: "CLARA Self-Med",
+      description: "Quản lý tủ thuốc cá nhân, nhắc lịch dùng thuốc và theo dõi theo tài khoản.",
+      highlight: "Dễ dùng cho bệnh nhân và người chăm sóc.",
+      cta: "Mở Self-Med",
+      href: "/selfmed",
+    },
+    {
+      tag: "An toàn thuốc",
+      title: "CLARA CareGuard",
+      description: "Cảnh báo tương tác thuốc theo mức độ để ưu tiên xử lý đúng việc cần làm trước.",
+      highlight: "Hữu ích cho ca đa thuốc và ngoại trú.",
+      cta: "Mở CareGuard",
+      href: "/careguard",
+    },
+    {
+      tag: "Ghi chép",
+      title: "CLARA Scribe",
+      description: "Chuẩn hóa ghi chú lâm sàng sau ca, giảm bớt thao tác hành chính lặp lại.",
+      highlight: "Giúp bàn giao ca trực gọn và rõ.",
+      cta: "Mở Scribe",
+      href: "/scribe",
+    },
+    {
+      tag: "Quản trị",
+      title: "Control Tower",
+      description: "Theo dõi nguồn tri thức, luồng trả lời và chất lượng vận hành trong một nơi.",
+      highlight: "Dành cho admin và nhóm vận hành hệ thống.",
+      cta: "Mở Control Tower",
+      href: "/admin/overview",
+    },
+  ] as const;
+
+  const differentiators = [
+    {
+      title: "Kiểm chứng nguồn theo từng bước",
+      detail:
+        "Research tách rõ `details`, `citations`, `deepdive`, `analyze` để bạn kiểm tra nguồn mạch lạc, không phải đọc một đoạn quá dài rồi tự dò lại.",
+    },
+    {
+      title: "Hội chẩn có wizard rõ ràng",
+      detail:
+        "Council đi theo các bước intake → specialists → review trước khi tổng hợp, nên ca phức tạp vẫn giữ được trật tự.",
+    },
+    {
+      title: "Tập trung vào an toàn thuốc thực tế",
+      detail:
+        "Từ tủ thuốc cá nhân, nhắc giờ dùng đến cảnh báo DDI theo mức độ, đủ dùng cho cả gia đình và phòng khám nhỏ.",
+    },
+    {
+      title: "Cơ chế an toàn có thể bật/tắt theo môi trường",
+      detail:
+        "Hệ thống đã có các lớp guardrail như reranker, NLI, policy gate, confidence và fallback để kiểm soát chất lượng phản hồi.",
+    },
+    {
+      title: "Control Tower cho vận hành hằng ngày",
+      detail:
+        "Admin có sẵn các trang observability, answer-flow, source-hub, knowledge-sources để theo dõi và kiểm tra chất lượng.",
+    },
+    {
+      title: "Nguồn tri thức quốc tế và nội địa",
+      detail:
+        "Kết hợp nguồn chuẩn quốc tế với hướng dẫn trong nước để câu trả lời phù hợp bối cảnh Việt Nam hơn.",
+    },
+  ] as const;
+
+  const testimonials = [
+    {
+      name: "Trần Đức Phúc",
+      role: "Sinh viên Y6",
+      quote: "Mình không còn phải mở quá nhiều tab để tìm nguồn. Câu trả lời có citation giúp làm seminar nhanh và chắc hơn.",
+    },
+    {
+      name: "BS. Nguyễn Hoài Nam",
+      role: "Bác sĩ Nội tổng quát",
+      quote: "Phần mạnh nhất là tách rõ kết luận, nguồn tham chiếu và giới hạn. Dùng trong chuẩn bị hội chẩn rất ổn.",
+    },
+    {
+      name: "Dương Quốc Bảo",
+      role: "Research Assistant",
+      quote: "Research flow gọn, follow-up tự nhiên và kiểm tra nguồn rất nhanh khi cần đối chiếu nhiều guideline.",
+    },
+  ] as const;
+
+  const faqs = [
+    {
+      q: "CLARA có thay thế quyết định bác sĩ không?",
+      a: "Không. CLARA là trợ lý Research và Chatbot có citation để hỗ trợ tham khảo. Quyết định chuyên môn cuối cùng vẫn do bác sĩ và cơ sở y tế.",
+    },
+    {
+      q: "Điểm khác biệt so với chatbot thông thường là gì?",
+      a: "CLARA tối ưu cho truy xuất bằng chứng: câu trả lời ưu tiên nguồn, hiển thị mức tin cậy và nêu rõ giới hạn khi thiếu dữ liệu.",
+    },
+    {
+      q: "Bắt đầu onboarding nên đi từ đâu?",
+      a: "Bắt đầu từ flow Research 3 bước: hỏi, kiểm chứng citation, chốt ghi chú. Khi KPI ổn định mới mở rộng sang Council hoặc SelfMed.",
+    },
+  ] as const;
+
   return (
-    <main className="clara-shell relative overflow-hidden text-slate-100">
-      <div className="clara-grid-overlay pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
-      <div className="clara-ambient-layers pointer-events-none absolute inset-0" aria-hidden="true" />
+    <main className="relative overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-36 -top-28 h-80 w-80 rounded-full bg-cyan-200/55 blur-3xl dark:bg-cyan-900/35" />
+        <div className="absolute right-0 top-16 h-[26rem] w-[26rem] rounded-full bg-blue-200/45 blur-3xl dark:bg-blue-900/25" />
+      </div>
 
-      <SectionContainer className="relative z-30 pt-6">
-        <header className="clara-nav-frame sticky top-3 z-30 flex flex-col gap-3 rounded-[2rem] border border-blue-400/25 bg-[#07122a]/84 px-4 py-3 backdrop-blur-xl min-[641px]:max-[1024px]:flex-row min-[641px]:max-[1024px]:items-center min-[641px]:max-[1024px]:justify-between min-[1025px]:max-[1535px]:flex-row min-[1025px]:max-[1535px]:items-center min-[1025px]:max-[1535px]:justify-between min-[1025px]:max-[1535px]:px-6 min-[1025px]:max-[1535px]:py-4 min-[1536px]:flex-row min-[1536px]:items-center min-[1536px]:justify-between min-[1536px]:px-8 min-[1536px]:py-5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200">CLARA.CARE</p>
-            <p className="text-sm text-slate-300">Clinical Agent for Retrieval & Analysis</p>
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-2 text-xs font-semibold min-[641px]:max-[1024px]:w-auto min-[641px]:max-[1024px]:text-sm min-[1025px]:max-[1535px]:w-auto min-[1025px]:max-[1535px]:gap-3 min-[1025px]:max-[1535px]:text-sm min-[1536px]:w-auto min-[1536px]:gap-4">
-            <Link href="/huong-dan" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
-              Hướng dẫn
-            </Link>
-            <Link href="/research" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
-              CLARA Research
-            </Link>
-            <Link href="/council" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
-              Hội chẩn AI
-            </Link>
-            <Link href="/selfmed" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
-              CLARA Self-Med
-            </Link>
-            <Link href="/careguard" className="clara-nav-link rounded-lg border border-blue-300/30 px-3 py-2 text-blue-100 hover:bg-blue-500/10">
-              CareGuard
-            </Link>
-            <NeonButton href="/register">Bắt đầu miễn phí</NeonButton>
-          </div>
-        </header>
-      </SectionContainer>
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/85 bg-white/90 px-4 py-4 backdrop-blur-xl dark:border-slate-800/85 dark:bg-slate-950/85 min-[1024px]:px-8">
+        <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-3">
+          <span className="text-xl font-black tracking-tight">Project CLARA</span>
 
-      <SectionContainer className="relative z-10 mt-5 pb-12 min-[641px]:max-[1024px]:mt-8 min-[641px]:max-[1024px]:pb-16 min-[1025px]:max-[1535px]:mt-10 min-[1025px]:max-[1535px]:pb-24 min-[1536px]:mt-12 min-[1536px]:pb-28">
-        <article className="clara-wave-top clara-hero-panel relative overflow-hidden rounded-[1.5rem] border border-blue-300/20 px-4 py-8 min-[641px]:max-[1024px]:rounded-[2rem] min-[641px]:max-[1024px]:px-8 min-[641px]:max-[1024px]:py-14 min-[1025px]:max-[1535px]:px-12 min-[1025px]:max-[1535px]:py-20 min-[1536px]:rounded-[2.5rem] min-[1536px]:px-16 min-[1536px]:py-24">
-          <div className="clara-hero-constellation" aria-hidden="true">
-            <span className="clara-const-node clara-const-node-a" />
-            <span className="clara-const-node clara-const-node-b" />
-            <span className="clara-const-node clara-const-node-c" />
-            <span className="clara-const-node clara-const-node-d" />
-            <span className="clara-const-link clara-const-link-a" />
-            <span className="clara-const-link clara-const-link-b" />
+          <div className="hidden items-center gap-8 min-[900px]:flex">
+            <a className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#flow">
+              Cách hoạt động
+            </a>
+            <a className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#modules">
+              Tính năng
+            </a>
+            <a className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#workspace">
+              Màn hình mẫu
+            </a>
+            <a className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#faq">
+              Câu hỏi thường gặp
+            </a>
           </div>
-          <div className="mx-auto max-w-5xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-200">Hệ sinh thái AI y tế có kiểm soát</p>
-            <h1 className="clara-display-title mt-4 text-[2.6rem] font-black uppercase text-white min-[641px]:max-[1024px]:text-[4.8rem] min-[1025px]:max-[1535px]:text-[6.7rem] min-[1536px]:text-[8.4rem]">
-              AI Y TẾ
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/research"
+              className="inline-flex min-h-10 items-center rounded-lg bg-slate-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
+            >
+              Vào CLARA Research
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <section className="relative px-4 pb-20 pt-28 min-[1024px]:px-8 min-[1024px]:pt-32">
+        <div className="mx-auto grid w-full max-w-[1320px] items-center gap-12 min-[1100px]:grid-cols-2">
+          <div className="relative z-10">
+            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-800 dark:border-cyan-900/60 dark:bg-cyan-950/40 dark:text-cyan-200">
+              <span className="inline-block h-2 w-2 rounded-full bg-cyan-500 dark:bg-cyan-300" />
+              Trợ lý nghiên cứu y khoa
+            </span>
+
+            <h1 className="mb-6 text-4xl font-black leading-tight tracking-tight min-[640px]:text-5xl min-[1280px]:text-6xl">
+              Hỏi nhanh.
               <br />
-              <span className="clara-neon-text">HIỆU SUẤT CAO</span>
+              Có nguồn rõ ràng.
+              <br />
+              <span className="text-cyan-700 dark:text-cyan-300">Dễ chốt hướng xử lý.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-3xl text-[0.95rem] leading-7 text-slate-200 min-[641px]:max-[1024px]:text-[1.05rem] min-[641px]:max-[1024px]:leading-8 min-[1025px]:max-[1535px]:max-w-4xl min-[1025px]:max-[1535px]:text-[1.15rem] min-[1025px]:max-[1535px]:leading-8 min-[1536px]:text-xl min-[1536px]:leading-9">
-              Một nền tảng duy nhất cho toàn bộ vòng đời quyết định: hỏi đáp có citation, hội chẩn đa chuyên khoa, quản lý tủ thuốc,
-              kiểm tra tương tác DDI, medical scribe và control tower vận hành.
+
+            <p className="mb-8 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+              CLARA giúp bạn đi từ câu hỏi đến bằng chứng trong một luồng gọn: hỏi, kiểm tra nguồn, rồi quyết định.
+              Mọi thứ tập trung vào khả năng dùng được ngay trong công việc thật.
             </p>
 
-            <div className="clara-cta-panel mx-auto mt-8 flex w-full max-w-[980px] flex-col gap-3 rounded-2xl border border-blue-200/20 bg-[#091431]/80 p-3 min-[641px]:max-[1024px]:flex-row min-[641px]:max-[1024px]:items-center min-[1025px]:max-[1535px]:p-4 min-[1536px]:p-5">
-              <input
-                className="h-[52px] flex-1 rounded-xl border border-blue-200/25 bg-white/95 px-4 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-blue-400 min-[641px]:max-[1024px]:h-14 min-[641px]:max-[1024px]:text-base min-[1025px]:max-[1535px]:h-16 min-[1025px]:max-[1535px]:px-5 min-[1025px]:max-[1535px]:text-base min-[1536px]:h-[72px] min-[1536px]:text-lg"
-                placeholder="Nhập email để nhận chiến lược triển khai CLARA"
-                aria-label="Email nhận chiến lược"
-              />
-              <div className="flex w-full flex-col gap-2 min-[641px]:max-[1024px]:w-auto min-[1025px]:max-[1535px]:w-auto">
-                <NeonButton href="/register" className="min-[641px]:max-[1024px]:w-auto min-[1025px]:max-[1535px]:px-8 min-[1536px]:px-10">
-                  Bắt đầu miễn phí
-                </NeonButton>
-                <NeonGhostButton href="/research" className="min-[641px]:max-[1024px]:min-h-12 min-[641px]:max-[1024px]:text-sm">
-                  Dùng thử ngay
-                </NeonGhostButton>
-              </div>
-            </div>
-
-            <RatingPill>4.8/5 từ nhóm dùng thử nội bộ và đối tác đào tạo y khoa</RatingPill>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
-              Không cần tích hợp phức tạp. Khởi tạo pilot trong 7 ngày.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-3 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4 min-[1536px]:gap-5">
-            {HERO_METRICS.map((item) => (
-              <div key={item.label} className="clara-kpi-card clara-glass-panel rounded-2xl border border-blue-300/25 bg-[#091431]/88 p-4 text-left min-h-[116px] min-[641px]:max-[1024px]:min-h-[138px] min-[1025px]:max-[1535px]:min-h-[152px] min-[1536px]:min-h-[168px] md:p-5">
-                <p className="text-3xl font-black text-white">{item.value}</p>
-                <p className="mt-2 text-sm leading-6 text-blue-100/90">{item.label}</p>
-              </div>
-            ))}
-          </div>
-        </article>
-      </SectionContainer>
-
-      <SectionContainer className="relative z-10 pb-12">
-        <article className="clara-dome-panel overflow-hidden rounded-[1.75rem] border border-blue-200/20 bg-[#0b1738] p-3 min-[641px]:max-[1024px]:p-5 min-[1025px]:max-[1535px]:p-8 min-[1536px]:p-10">
-          <div className="rounded-2xl border border-blue-200/25 bg-gradient-to-br from-slate-200 to-slate-400 p-3">
-            <div className="relative overflow-hidden rounded-xl bg-[#0a142f] p-5">
-              <div className="aspect-video rounded-xl border border-blue-300/20 bg-gradient-to-br from-[#0b1f4f] via-[#0c1530] to-[#060a18]" />
-              <button
-                type="button"
-                className="clara-play-button absolute left-1/2 top-1/2 inline-flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-blue-500/85 text-2xl font-bold text-white shadow-[0_10px_40px_rgba(59,130,246,0.65)] min-[641px]:max-[1024px]:h-20 min-[641px]:max-[1024px]:w-20 min-[641px]:max-[1024px]:text-3xl min-[1025px]:max-[1535px]:h-24 min-[1025px]:max-[1535px]:w-24 min-[1025px]:max-[1535px]:text-4xl min-[1536px]:h-28 min-[1536px]:w-28 min-[1536px]:text-5xl"
-                aria-label="Xem video demo CLARA"
+            <div className="mb-8 flex flex-wrap gap-4">
+              <Link
+                href="/research"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-slate-900 px-8 text-base font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
               >
-                <PlayIcon />
-              </button>
+                Bắt đầu tra cứu
+              </Link>
+              <Link
+                href="/register"
+                className="inline-flex min-h-12 items-center rounded-xl border border-slate-300 bg-white px-8 text-base font-bold text-slate-900 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
+                Đăng ký dùng thử
+              </Link>
             </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-lg font-semibold text-blue-100/85">
-            {PARTNER_STRIP.map((item) => (
-              <span key={item} className="opacity-90">
-                {item}
-              </span>
-            ))}
-          </div>
-        </article>
-      </SectionContainer>
 
-      <section className="clara-section relative z-10 mt-4 bg-transparent text-slate-100">
-        <SectionContainer>
-          <article className="clara-glass-panel mx-auto max-w-4xl rounded-[2rem] border border-blue-200/30 bg-[#061530]/86 px-5 py-9 shadow-[0_24px_60px_-40px_rgba(37,99,235,0.55)] min-[641px]:max-[1024px]:px-8 min-[641px]:max-[1024px]:py-12 min-[1025px]:max-[1535px]:max-w-5xl min-[1025px]:max-[1535px]:px-12 min-[1025px]:max-[1535px]:py-16 min-[1536px]:px-14 min-[1536px]:py-20">
-            <p className="text-sm font-semibold text-blue-200">Thư ngỏ từ đội ngũ CLARA</p>
-            <p className="mt-1 text-sm text-blue-200/80">Việt Nam, 2026</p>
-            <div className="my-4 h-1 w-28 rounded bg-gradient-to-r from-cyan-400 to-blue-500" />
-            <h2 className="text-2xl font-black uppercase leading-[1.02] text-white min-[641px]:max-[1024px]:text-4xl min-[1025px]:max-[1535px]:text-5xl min-[1536px]:text-6xl">
-              Chúng ta không thiếu thông tin y tế. Chúng ta thiếu một hệ thống an toàn để quyết định.
-            </h2>
-
-            <div className="clara-copy-rhythm mt-6 space-y-5 text-slate-200">
-              {OPEN_LETTER_PARAGRAPHS.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
+            <div className="flex flex-wrap gap-3">
+              {["Tóm tắt guideline", "Rà soát tương tác thuốc", "Chuẩn bị trước hội chẩn"].map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                >
+                  {tag}
+                </span>
               ))}
             </div>
-
-            <div className="mt-8 rounded-xl border border-cyan-300/35 bg-[#0a234a]/66 p-4 text-sm leading-7 text-cyan-100">
-              <p className="font-bold uppercase tracking-[0.1em]">Tuyên ngôn vận hành CLARA</p>
-              <ul className="mt-3 space-y-2">
-                <li className="clara-medical-bullet">Không thay thế phán đoán chuyên môn của bác sĩ.</li>
-                <li className="clara-medical-bullet">Không đưa khuyến nghị nguy cơ cao nếu không đủ bằng chứng.</li>
-                <li className="clara-medical-bullet">Không bỏ qua bảo mật dữ liệu sức khỏe cá nhân.</li>
-              </ul>
-            </div>
-
-            <p className="mt-6 text-base font-semibold text-slate-100">Thân mến,</p>
-            <p className="text-base text-slate-300">Nhóm sáng lập CLARA</p>
-          </article>
-        </SectionContainer>
-      </section>
-
-      <SectionContainer className="clara-section relative z-10">
-        <SectionLabel>Chúng tôi cung cấp</SectionLabel>
-        <div className="mt-5 grid gap-5 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-3 min-[1536px]:grid-cols-3">
-          {SERVICE_CARDS.map((card) => (
-            <article key={card.title} className="clara-dark-card clara-card-equal flex h-full flex-col rounded-[1.75rem] p-6 lg:p-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">{card.tag}</p>
-              <h3 className="mt-3 text-4xl font-black uppercase leading-none text-white min-[641px]:max-[1024px]:text-5xl min-[1025px]:max-[1535px]:text-5xl min-[1536px]:text-6xl">{card.title}</h3>
-              <p className="mt-4 text-base leading-8 text-slate-300">{card.description}</p>
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-blue-100/95">
-                {card.bullets.map((bullet) => (
-                  <li key={bullet} className="rounded-lg border border-blue-200/20 bg-blue-500/10 px-3 py-2">
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-auto pt-6">
-                <NeonButton href={card.href}>{card.cta}</NeonButton>
-              </div>
-            </article>
-          ))}
-        </div>
-      </SectionContainer>
-
-      <section className="clara-section-strong relative z-10 bg-[#040916]">
-        <SectionContainer>
-          <SectionLabel>CLARA RUNTIME OPERATING MODEL</SectionLabel>
-          <h2 className="clara-sub-display mx-auto mt-3 max-w-5xl text-center font-black uppercase text-white">
-            Từ trải nghiệm người dùng đến quản trị hệ thống đều có chuẩn vận hành rõ ràng
-          </h2>
-          <p className="clara-copy-rhythm mx-auto mt-6 max-w-4xl text-center text-slate-300">
-            Codebase hiện tại đã tách rõ luồng theo nhiệm vụ: intake, retrieve, verify, council workspace, DDI guard,
-            và control tower để kiểm soát chất lượng khi scale.
-          </p>
-
-          <div className="mt-8 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
-            {MODEL_STEPS.map((step) => (
-              <article key={step.title} className="clara-model-card relative overflow-hidden rounded-[1.5rem] p-5">
-                <p className="text-6xl font-black text-blue-200/25">{step.index}</p>
-                <h3 className="mt-2 text-3xl font-black uppercase text-white">{step.title}</h3>
-                <p className="mt-2 text-sm font-semibold uppercase tracking-[0.12em] text-cyan-300">{step.subtitle}</p>
-                <ul className="mt-4 space-y-2 text-sm leading-7 text-slate-200">
-                  {step.points.map((point) => (
-                    <li key={point} className="clara-medical-bullet">{point}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
           </div>
-        </SectionContainer>
-      </section>
 
-      <section className="clara-section-strong relative z-10">
-        <SectionContainer>
-          <article className="rounded-[2rem] border border-blue-200/20 bg-[#050e24] p-6 text-center sm:p-10">
-            <h2 className="clara-display-title font-black uppercase text-white">
-              Một Nền Tảng
-              <br />
-              Nhiều Workflow Y Tế
-            </h2>
-            <p className="clara-copy-rhythm mx-auto mt-6 max-w-4xl text-slate-300">
-              Từ đội lâm sàng đến đội triển khai AI, tất cả dùng chung một logic vận hành. Điều này giúp tăng tốc go-live,
-              giảm rủi ro rollout và giữ được traceability khi hệ thống mở rộng.
-            </p>
-
-            <div className="mt-8 grid gap-3 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
-              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Research Workspace</p>
-                <p className="mt-2 text-5xl font-black text-white">5 Tabs</p>
-              </div>
-              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Council Workspace</p>
-                <p className="mt-2 text-5xl font-black text-white">5 Tabs</p>
-              </div>
-              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Control Tower</p>
-                <p className="mt-2 text-5xl font-black text-white">6 Panels</p>
-              </div>
-              <div className="clara-stat-card clara-glass-panel rounded-2xl border border-blue-200/20 bg-[#081833] p-4 text-left">
-                <p className="text-sm text-blue-200">Drug Safety</p>
-                <p className="mt-2 text-5xl font-black text-white">DDI</p>
-              </div>
+          <div className="relative z-10 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-950">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                Không gian tra cứu CLARA
+              </span>
+              <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/45 dark:text-emerald-300">
+                Đang hoạt động
+              </span>
             </div>
-          </article>
-        </SectionContainer>
-      </section>
 
-      <section className="clara-section-strong relative z-10 bg-[#02060f]">
-        <SectionContainer>
-          <article className="mx-auto max-w-4xl">
-            <SectionLabel>Lời cam kết của CLARA</SectionLabel>
-            <h2 className="clara-sub-display mt-3 text-center font-black uppercase text-white">
-              Chấm dứt kiểu AI trả lời mơ hồ trong y tế
-            </h2>
-            <div className="clara-copy-rhythm mt-8 rounded-3xl border border-blue-300/20 bg-[#07142e]/85 p-6 text-left text-slate-200">
-              <p>
-                Nếu hệ thống không đủ bằng chứng để đưa ra khuyến nghị an toàn, CLARA phải nói rõ giới hạn, gắn cờ rủi ro
-                và chuyển hướng người dùng đến lựa chọn chăm sóc phù hợp hơn.
-              </p>
-              <ul className="mt-4 space-y-2">
-                <li className="clara-medical-bullet">Hoặc bạn nhận được khuyến nghị có citation, có mức tin cậy.</li>
-                <li className="clara-medical-bullet">Hoặc bạn nhận được cảnh báo rõ vì dữ liệu chưa đủ.</li>
-                <li className="clara-medical-bullet">Không có lựa chọn thứ ba kiểu khẳng định chắc chắn khi thiếu bằng chứng.</li>
-              </ul>
-              <div className="clara-cta-stack mt-6 text-center">
-                <NeonButton href="/register">60 phút tư vấn chiến lược miễn phí</NeonButton>
-                <RatingPill className="text-blue-200/90">4.8 sao từ vòng dùng thử</RatingPill>
-              </div>
-            </div>
-          </article>
-        </SectionContainer>
-      </section>
-
-      <SectionContainer className="clara-section relative z-10">
-        <SectionLabel>Đối tác và người dùng nói gì về CLARA</SectionLabel>
-        <div className="mt-6 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-3 min-[1536px]:grid-cols-3">
-          {TESTIMONIALS.map((testimonial) => (
-            <article key={testimonial.name} className="clara-dark-card clara-card-equal flex h-full flex-col rounded-3xl p-5 md:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-lg font-bold text-white">{testimonial.name}</p>
-                  <p className="text-sm text-blue-200">{testimonial.role}</p>
-                </div>
-                <span className="rounded-full border border-blue-300/30 bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-100">
-                  {testimonial.channel}
-                </span>
-              </div>
-              <p className="mt-4 flex-1 text-sm leading-7 text-slate-300">{testimonial.quote}</p>
-            </article>
-          ))}
-        </div>
-      </SectionContainer>
-
-      <section className="clara-section clara-medical-band relative z-10">
-        <SectionContainer>
-          <article className="clara-medical-panel mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-cyan-200/40 px-6 py-9 sm:px-10 sm:py-12">
-            <div className="grid items-center gap-8 min-[1025px]:grid-cols-[0.95fr_1.05fr]">
-              <div className="clara-medical-visual order-2 mx-auto min-[1025px]:order-1" aria-hidden="true">
-                <span className="clara-med-core" />
-                <span className="clara-med-ring clara-med-ring-a" />
-                <span className="clara-med-ring clara-med-ring-b" />
-                <span className="clara-med-cross" />
-                <span className="clara-med-node clara-med-node-a" />
-                <span className="clara-med-node clara-med-node-b" />
-                <span className="clara-med-node clara-med-node-c" />
-                <span className="clara-med-node clara-med-node-d" />
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <div className="max-w-[90%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                Bệnh nhân tăng huyết áp đang dùng Amlodipine + Simvastatin. Nguy cơ tương tác và hướng xử trí?
               </div>
 
-              <div className="order-1 text-center min-[1025px]:order-2 min-[1025px]:text-left">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">Clinical Safety System</p>
-                <h2 className="clara-sub-display clara-med-heading mt-3 font-black">
-                  Bạn đã quá mệt với những lời hứa suông trong health AI?
-                </h2>
-                <p className="clara-copy-rhythm clara-med-copy mt-6">
-                  CLARA được xây cho bối cảnh thực hành: quản lý thuốc tại gia đình, truy xuất bằng chứng cho học thuật,
-                  hỗ trợ ghi chép lâm sàng và giám sát vận hành theo chuẩn kiểm toán.
+              <div className="ml-auto max-w-[94%] rounded-2xl border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/35">
+                <p className="text-sm leading-relaxed text-slate-800 dark:text-slate-100">
+                  Có nguy cơ tăng nồng độ Simvastatin khi phối hợp với Amlodipine. Nên cân nhắc giới hạn liều
+                  Simvastatin và theo dõi triệu chứng đau cơ.
                 </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-2 min-[1025px]:justify-start">
-                  <span className="clara-med-tag">Drug Safety Graph</span>
-                  <span className="clara-med-tag">Evidence Routing</span>
-                  <span className="clara-med-tag">Policy Guardrails</span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {["Nguồn PubMed", "Nguồn openFDA", "Ghi chú guideline"].map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-md border border-cyan-300/70 bg-white px-2 py-1 text-[11px] font-semibold text-cyan-800 dark:border-cyan-700 dark:bg-slate-900 dark:text-cyan-200"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  Độ tin cậy: Khá cao | Cần đối chiếu phác đồ tại đơn vị
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  Gợi ý nhanh
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "So sánh guideline A vs B",
+                    "Tóm tắt nghiên cứu trong 6 tháng gần đây",
+                    "Những điểm cần chuyển bác sĩ chuyên khoa",
+                  ].map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          </article>
-        </SectionContainer>
-      </section>
-
-      <section className="clara-section clara-medical-band-soft relative z-10">
-        <SectionContainer>
-          <article className="clara-medical-card mx-auto max-w-4xl rounded-[2rem] border border-cyan-200/40 px-6 py-10 shadow-[0_24px_60px_-40px_rgba(37,99,235,0.45)] sm:px-10">
-            <div className="clara-data-orbit mx-auto" aria-hidden="true">
-              <span className="clara-data-orbit-core" />
-              <span className="clara-data-orbit-link clara-data-orbit-link-a" />
-              <span className="clara-data-orbit-link clara-data-orbit-link-b" />
-              <span className="clara-data-orbit-link clara-data-orbit-link-c" />
-            </div>
-            <h2 className="clara-sub-display clara-med-heading mt-5 text-center font-black">
-              Trải nghiệm CLARA pilot,
-              <br />
-              đo hiệu quả, giảm rủi ro
-            </h2>
-            <div className="clara-copy-rhythm clara-med-copy mt-6 space-y-4">
-              <p>
-                CLARA triển khai theo nguyên tắc có kiểm soát: xác định mục tiêu, đo KPI, theo dõi alert và chỉ mở
-                rộng khi chất lượng phản hồi ổn định.
-              </p>
-              <p>
-                Nếu bạn đang quản lý nhóm bệnh mạn tính, chương trình đào tạo y khoa, hoặc phòng khám ngoại trú, CLARA
-                giúp chuẩn hóa workflow bằng chứng ngay từ giai đoạn đầu.
-              </p>
-              <p className="font-semibold">
-                Bạn không cần thay đổi toàn bộ hệ thống trong ngày một ngày hai. Bắt đầu từ một use-case quan trọng
-                nhất, rồi mở rộng theo dữ liệu thực tế.
-              </p>
-            </div>
-            <div className="mt-6 grid gap-2 text-center sm:grid-cols-3">
-              <span className="clara-med-tag">PubMed x ClinicalTrials</span>
-              <span className="clara-med-tag">WHO ICD-11 x Bộ Y tế</span>
-              <span className="clara-med-tag">openFDA x DI & ADR</span>
-            </div>
-            <div className="clara-cta-stack mt-7 text-center">
-              <NeonButton href="/register">60 phút tư vấn chiến lược miễn phí</NeonButton>
-              <RatingPill className="text-cyan-100">4.8 sao từ cộng đồng dùng thử</RatingPill>
-            </div>
-          </article>
-        </SectionContainer>
-      </section>
-      <section className="clara-section relative z-10">
-        <SectionContainer>
-          <article className="clara-dome-panel overflow-hidden rounded-[2rem] border border-blue-200/20 px-6 py-10 sm:px-10">
-            <SectionLabel>Chia sẻ tri thức, nâng chuẩn thực hành</SectionLabel>
-            <h2 className="clara-sub-display mt-3 text-center font-black uppercase text-white">
-              CLARA Product Walkthrough
-            </h2>
-            <p className="clara-copy-rhythm mx-auto mt-5 max-w-4xl text-center text-slate-300">
-              Chuỗi nội dung demo theo module thật trong sản phẩm: Research, Council, SelfMed, CareGuard, Scribe và
-              Admin Control Tower. Tập trung vào workflow và giá trị triển khai thực tế.
-            </p>
-
-            <div className="mx-auto mt-8 max-w-4xl rounded-2xl border border-blue-200/25 bg-[#091431]/85 p-4">
-              <div className="aspect-video rounded-xl border border-blue-300/20 bg-gradient-to-br from-[#102657] via-[#0c1530] to-[#060a18]" />
-            </div>
-          </article>
-        </SectionContainer>
-      </section>
-
-      <section className="clara-section-strong relative z-10 bg-[#061231]">
-        <SectionContainer>
-          <SectionLabel>Giải đáp mọi thắc mắc của bạn</SectionLabel>
-          <h2 className="clara-sub-display mx-auto mt-3 max-w-4xl text-center font-black uppercase text-white">
-            FAQ triển khai CLARA
-          </h2>
-          <div className="mx-auto mt-8 max-w-5xl">
-            <LandingFaqAccordion items={FAQ_ITEMS} />
           </div>
-        </SectionContainer>
+        </div>
       </section>
 
-      <section className="clara-section relative z-10">
-        <SectionContainer>
-          <SectionLabel>Our Offices</SectionLabel>
-          <h2 className="clara-sub-display mx-auto mt-3 max-w-4xl text-center font-black uppercase text-white">
-            Chúng tôi hoạt động đa điểm
-          </h2>
-          <div className="mt-8 grid gap-4 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
-            {OFFICES.map((office) => (
-              <article key={office.city} className="clara-glass-panel flex h-full min-h-[180px] flex-col rounded-3xl border border-blue-300/20 bg-[#081833]/90 p-5 text-center min-[641px]:max-[1024px]:min-h-[210px] min-[1025px]:max-[1535px]:min-h-[240px] min-[1536px]:min-h-[260px]">
-                <p className="text-3xl font-black text-blue-200">{office.city}</p>
-                <p className="mt-3 flex-1 text-sm leading-7 text-slate-300">{office.detail}</p>
+      <section className="border-y border-slate-200 bg-white/70 py-12 dark:border-slate-800 dark:bg-slate-900/70">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <p className="mb-8 text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Đối tác hạ tầng
+          </p>
+          <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
+            {SPONSORS.map((sponsor) => (
+              <a
+                key={sponsor.name}
+                href={sponsor.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-[124px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-4 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-950"
+              >
+                <Image
+                  src={sponsor.logo}
+                  alt={`${sponsor.name} logo`}
+                  width={sponsor.name === "BNIX" ? 300 : 560}
+                  height={sponsor.name === "BNIX" ? 86 : 180}
+                  className={sponsor.name === "BNIX" ? "h-14 w-auto object-contain" : "h-20 w-auto object-contain"}
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 py-24 dark:bg-slate-950" id="flow">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <div className="mb-14 text-center">
+            <h2 className="mb-4 text-3xl font-extrabold tracking-tight min-[900px]:text-4xl">
+              Quy trình 3 bước cho CLARA Research
+            </h2>
+            <p className="mx-auto max-w-2xl text-slate-600 dark:text-slate-300">
+              Mục tiêu là dùng thuận tay hằng ngày: nhập câu hỏi, kiểm tra nguồn, rồi chốt hướng xử lý.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-7 min-[900px]:grid-cols-3">
+            {flowSteps.map((step, idx) => (
+              <article
+                key={step.title}
+                className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200">
+                  {idx + 1}
+                </div>
+                <h3 className="mb-3 text-xl font-bold">{step.title}</h3>
+                <p className="text-slate-600 dark:text-slate-300">{step.detail}</p>
               </article>
             ))}
           </div>
-        </SectionContainer>
+        </div>
       </section>
 
-      <SectionContainer className="relative z-10 pb-14">
-        <article className="clara-final-cta-panel rounded-[2rem] border border-blue-300/25 bg-[#07142e] p-7 sm:p-10">
-          <h2 className="clara-sub-display text-center font-black uppercase text-white">{FINAL_CTA.heading}</h2>
-          <p className="clara-copy-rhythm mx-auto mt-5 max-w-4xl text-center text-slate-300">{FINAL_CTA.subheading}</p>
-
-          <div className="clara-cta-stack mt-7 text-center">
-            <NeonButton href={FINAL_CTA.href}>{FINAL_CTA.button}</NeonButton>
-            <p className="text-sm text-blue-100/80">Email: clara@thiennn.icu · Hotline: 0853374247</p>
+      <section className="bg-white py-24 dark:bg-slate-900" id="modules">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <div className="mb-12 text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">
+              Hệ sinh thái CLARA
+            </p>
+            <h2 className="mb-4 text-3xl font-extrabold tracking-tight min-[900px]:text-4xl">
+              Toàn bộ chức năng chính trong một hệ thống
+            </h2>
+            <p className="mx-auto max-w-3xl text-slate-600 dark:text-slate-300">
+              Bắt đầu từ Research là nhanh nhất. Khi cần mở rộng, bạn đã có sẵn hội chẩn, an toàn thuốc, ghi chép và
+              bảng quản trị vận hành trong cùng một hệ thống.
+            </p>
           </div>
 
-          <footer className="mt-10 grid gap-5 border-t border-blue-300/20 pt-6 text-sm text-slate-300 min-[641px]:max-[1024px]:grid-cols-2 min-[1025px]:max-[1535px]:grid-cols-4 min-[1536px]:grid-cols-4">
-            <div className="min-[1025px]:max-[1535px]:col-span-2 min-[1536px]:col-span-2">
-              <p className="text-2xl font-black text-white">CLARA.CARE</p>
-              <p className="mt-3 leading-7">
-                Hệ sinh thái AI y tế đa mô-đun cho Research, Council, Self-Med, CareGuard, Medical Scribe và Control Tower.
-                Định hướng: hỗ trợ quyết định dựa trên bằng chứng, không thay thế chuyên môn lâm sàng.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold uppercase tracking-[0.12em] text-blue-200">Điều hướng</p>
-              <ul className="mt-3 space-y-2">
-                <li>
-                  <Link href="/research" className="hover:text-white">CLARA Research</Link>
-                </li>
-                <li>
-                  <Link href="/council/new" className="hover:text-white">Hội chẩn AI</Link>
-                </li>
-                <li>
-                  <Link href="/selfmed" className="hover:text-white">CLARA Self-Med</Link>
-                </li>
-                <li>
-                  <Link href="/careguard" className="hover:text-white">CareGuard DDI</Link>
-                </li>
-                <li>
-                  <Link href="/scribe" className="hover:text-white">Medical Scribe</Link>
-                </li>
-                <li>
-                  <Link href="/admin/overview" className="hover:text-white">Control Tower</Link>
-                </li>
-                <li>
-                  <Link href="/huong-dan" className="hover:text-white">Hướng dẫn</Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold uppercase tracking-[0.12em] text-blue-200">Liên hệ nhanh</p>
-              <p className="mt-3 leading-7">Toà P3 Pavilion, Vinhomes Ocean Park 1, Gia Lâm, HN</p>
-              <p className="mt-2 leading-7">Toà S2.18, phân khu Sapphire, Vinhomes Ocean Park 1, quận Gia Lâm, TP Hà Nội</p>
-              <p className="mt-2 leading-7">Toà E5, Khu đô thị Ciputra, Phú Thượng, Hà Nội</p>
-              <p className="mt-2 leading-7">Toà CT3, Chung cư Aranya, đường Dương Khuê, TP Huế</p>
-            </div>
-          </footer>
-        </article>
-      </SectionContainer>
+          <div className="grid grid-cols-1 gap-6 min-[900px]:grid-cols-2 min-[1280px]:grid-cols-3">
+            {moduleOverview.map((module) => (
+              <article
+                key={module.title}
+                className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-950"
+              >
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-300">
+                  {module.tag}
+                </p>
+                <h3 className="mb-2 text-xl font-bold">{module.title}</h3>
+                <p className="mb-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{module.description}</p>
+                <p className="mb-5 text-xs font-semibold text-slate-500 dark:text-slate-400">{module.highlight}</p>
+                <Link
+                  href={module.href}
+                  className="inline-flex min-h-9 items-center rounded-lg border border-slate-300 px-3 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  {module.cta}
+                </Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      <div className="fixed bottom-5 right-5 z-40">
-        <Link
-          href="/register"
-          className="inline-flex items-center rounded-full border border-cyan-300/45 bg-blue-600/92 px-4 py-2 text-sm font-bold text-white shadow-[0_16px_38px_-20px_rgba(37,99,235,0.9)] transition hover:-translate-y-0.5 hover:brightness-110"
-        >
-          Đặt lịch demo CLARA
-        </Link>
-      </div>
+      <section className="bg-white py-24 dark:bg-slate-900" id="workspace">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">
+                Màn hình Research
+              </p>
+              <h2 className="text-3xl font-extrabold tracking-tight min-[900px]:text-4xl">
+                Câu trả lời và nguồn trích hiển thị tách bạch
+              </h2>
+            </div>
+            <Link
+              href="/research"
+              className="inline-flex min-h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Xem màn hình thật
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 min-[1100px]:grid-cols-[1.2fr_0.8fr]">
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
+              <div className="mb-5 flex items-center gap-2">
+                {["Câu trả lời", "Nguồn trích", "Đào sâu"].map((tab, idx) => (
+                  <span
+                    key={tab}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      idx === 0
+                        ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    }`}
+                  >
+                    {tab}
+                  </span>
+                ))}
+              </div>
+              <h3 className="mb-2 text-xl font-bold">Tóm tắt câu trả lời theo luận điểm</h3>
+              <p className="mb-4 text-slate-600 dark:text-slate-300">
+                Mỗi đoạn trả lời đều gắn nguồn tương ứng để bạn kiểm tra nhanh và tự tin hơn khi dùng.
+              </p>
+              <div className="space-y-3">
+                {[
+                  "Luận điểm 1: Cơ chế tương tác thuốc và mức độ ảnh hưởng lâm sàng.",
+                  "Luận điểm 2: Khuyến nghị theo guideline và ngưỡng cần theo dõi.",
+                  "Luận điểm 3: Điều kiện cần chuyển bác sĩ chuyên khoa.",
+                ].map((point) => (
+                  <div
+                    key={point}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    {point}
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
+              <h3 className="mb-4 text-xl font-bold">Bảng nguồn trích</h3>
+              <div className="space-y-3">
+                {[
+                  "PubMed: PMID 30588647",
+                  "openFDA: Drug interaction label",
+                  "Bộ Y tế: Hướng dẫn điều trị",
+                ].map((ref) => (
+                  <div
+                    key={ref}
+                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                  >
+                    {ref}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                Nếu thiếu dữ liệu nền, hệ thống sẽ tự hạ độ tin cậy và nhắc bạn kiểm tra thêm.
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 py-24 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <div className="mb-12 text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">
+              Điểm khác biệt
+            </p>
+            <h2 className="mb-4 text-3xl font-extrabold tracking-tight min-[900px]:text-4xl">
+              Những điểm nổi bật đang có sẵn trong sản phẩm
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 min-[900px]:grid-cols-2 min-[1280px]:grid-cols-3">
+            {differentiators.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+              >
+                <h3 className="mb-3 text-lg font-bold">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.detail}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 py-24 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-extrabold tracking-tight min-[900px]:text-4xl">Các chỉ số bạn có thể theo dõi ngay</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-5 min-[1024px]:grid-cols-4">
+            {metrics.map((metric) => (
+              <article key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-5 text-center dark:border-slate-700 dark:bg-slate-900">
+                <div className="mb-2 text-4xl font-black text-cyan-700 dark:text-cyan-300">{metric.value}</div>
+                <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate-600 dark:text-slate-300">{metric.label}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-24 dark:bg-slate-900">
+        <div className="mx-auto w-full max-w-[1320px] px-4 min-[1024px]:px-8">
+          <h2 className="mb-14 text-center text-3xl font-bold min-[900px]:text-4xl">Người dùng nói gì về CLARA</h2>
+          <div className="grid grid-cols-1 gap-8 min-[1000px]:grid-cols-3">
+            {testimonials.map((item) => (
+              <article key={item.name} className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                <p className="mb-7 text-lg leading-relaxed text-slate-700 dark:text-slate-200">&quot;{item.quote}&quot;</p>
+                <div>
+                  <p className="text-sm font-bold">{item.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{item.role}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-24 dark:bg-slate-900" id="faq">
+        <div className="mx-auto w-full max-w-4xl px-4 min-[1024px]:px-8">
+          <h2 className="mb-12 text-center text-3xl font-bold">Câu hỏi thường gặp</h2>
+          <div className="space-y-4">
+            {faqs.map((faq) => (
+              <details key={faq.q} className="group overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
+                <summary className="flex cursor-pointer list-none items-center justify-between p-6">
+                  <span className="font-bold">{faq.q}</span>
+                  <span className="text-slate-500 transition-transform group-open:rotate-180 dark:text-slate-300">▾</span>
+                </summary>
+                <div className="px-6 pb-6 text-sm text-slate-600 dark:text-slate-300">{faq.a}</div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-24 min-[1024px]:px-8">
+        <div className="mx-auto max-w-5xl rounded-[2rem] border border-slate-200 bg-slate-900 p-10 text-center min-[1024px]:p-16 dark:border-slate-700 dark:bg-slate-950">
+          <h2 className="mb-6 text-4xl font-extrabold text-white min-[1024px]:text-5xl dark:text-slate-100">
+            Từ câu hỏi đến bằng chứng
+            <br />
+            trong một màn hình.
+          </h2>
+          <p className="mx-auto mb-10 max-w-2xl text-lg text-slate-200 dark:text-slate-300">
+            Bắt đầu từ CLARA Research để chuẩn hóa hỏi đáp có nguồn trích. Khi đã quen, bạn có thể mở rộng sang Council
+            hoặc Self-Med mà không phải đổi cách làm việc.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link
+              href="/research"
+              className="inline-flex min-h-12 items-center rounded-xl bg-cyan-400 px-10 text-lg font-bold text-slate-900 transition-colors hover:bg-cyan-300 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
+            >
+              Dùng Research ngay
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex min-h-12 items-center rounded-xl border border-slate-600 px-10 text-lg font-bold text-slate-100 transition-colors hover:bg-slate-800 dark:border-slate-500 dark:hover:bg-slate-900"
+            >
+              Đăng ký dùng thử
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="grid grid-cols-1 gap-8 border-t border-slate-200 bg-slate-100 px-6 py-14 min-[900px]:grid-cols-4 min-[1024px]:px-12 dark:border-slate-800 dark:bg-slate-950">
+        <div>
+          <span className="mb-4 block text-lg font-bold">Project CLARA</span>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            Trợ lý lâm sàng cho truy xuất và phân tích bằng chứng.
+            <br />
+            Tập trung vào câu trả lời có nguồn trích rõ ràng.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="mb-2 text-xs font-bold uppercase tracking-[0.16em]">Luồng cốt lõi</span>
+          <span className="text-sm text-slate-600 dark:text-slate-300">Đặt câu hỏi</span>
+          <span className="text-sm text-slate-600 dark:text-slate-300">Kiểm tra nguồn trích</span>
+          <span className="text-sm text-slate-600 dark:text-slate-300">Nhận tóm tắt để ra quyết định</span>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="mb-2 text-xs font-bold uppercase tracking-[0.16em]">Pháp lý</span>
+          <Link className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="/legal/terms">
+            Điều khoản sử dụng
+          </Link>
+          <Link className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="/legal/privacy">
+            Chính sách quyền riêng tư
+          </Link>
+          <Link className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="/legal/consent">
+            Đồng thuận y tế
+          </Link>
+          <Link className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="/legal/cookies">
+            Chính sách cookie
+          </Link>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="mb-2 text-xs font-bold uppercase tracking-[0.16em]">Liên hệ</span>
+          <a className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="mailto:clara@thiennn.icu">
+            clara@thiennn.icu
+          </a>
+          <a className="text-sm text-slate-600 hover:text-cyan-700 dark:text-slate-300 dark:hover:text-cyan-300" href="tel:0853374247">
+            0853374247
+          </a>
+          <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <span className="text-xs text-slate-500 dark:text-slate-400">© 2026 Project CLARA. Bảo lưu mọi quyền.</span>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

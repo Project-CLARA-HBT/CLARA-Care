@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import dataclass
 from hashlib import sha1
+import json
 import math
 from threading import Lock
 from time import perf_counter
@@ -10,6 +11,7 @@ from typing import Any, Sequence
 import re
 
 from clara_ml.config import settings
+from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.rag.embedder import HttpEmbeddingClient
 
 from .domain import Document
@@ -31,18 +33,40 @@ class NeuralReranker:
         self,
         *,
         enabled: bool | None = None,
+        strategy: str | None = None,
         model_name: str | None = None,
         top_n: int | None = None,
         timeout_ms: int | None = None,
+        llm_enabled: bool | None = None,
+        llm_timeout_ms: int | None = None,
+        llm_top_n: int | None = None,
         cache_enabled: bool | None = None,
         cache_ttl_seconds: int | None = None,
         cache_max_entries: int | None = None,
         embedder: HttpEmbeddingClient | None = None,
+        llm_client: DeepSeekClient | None = None,
     ) -> None:
         self.enabled = bool(settings.rag_reranker_enabled if enabled is None else enabled)
+        self.strategy = str(
+            strategy or settings.rag_reranker_strategy or "embedding"
+        ).strip().lower()
         self.model_name = str(model_name or settings.rag_reranker_model)
         self.top_n = max(1, int(settings.rag_reranker_top_n if top_n is None else top_n))
-        self.timeout_ms = max(1, int(settings.rag_reranker_timeout_ms if timeout_ms is None else timeout_ms))
+        self.timeout_ms = max(
+            1,
+            int(settings.rag_reranker_timeout_ms if timeout_ms is None else timeout_ms),
+        )
+        self.llm_enabled = bool(
+            settings.rag_reranker_llm_enabled if llm_enabled is None else llm_enabled
+        )
+        self.llm_timeout_ms = max(
+            100,
+            int(settings.rag_reranker_llm_timeout_ms if llm_timeout_ms is None else llm_timeout_ms),
+        )
+        self.llm_top_n = max(
+            1,
+            int(settings.rag_reranker_llm_top_n if llm_top_n is None else llm_top_n),
+        )
         self.cache_enabled = bool(
             settings.rag_reranker_cache_enabled
             if cache_enabled is None
@@ -68,6 +92,7 @@ class NeuralReranker:
         self._embedder = embedder or HttpEmbeddingClient(
             timeout_seconds=min(float(settings.embedding_timeout_seconds), timeout_seconds),
         )
+        self._llm_client = llm_client
 
     def rerank(
         self,
@@ -86,6 +111,7 @@ class NeuralReranker:
                 metadata={
                     "rerank_enabled": self.enabled,
                     "rerank_model": self.model_name,
+                    "rerank_strategy": self.strategy,
                     "rerank_latency_ms": latency_ms,
                     "rerank_topn": 0,
                     "rerank_timeout_ms": self.timeout_ms,
@@ -107,6 +133,7 @@ class NeuralReranker:
                 metadata={
                     "rerank_enabled": self.enabled,
                     "rerank_model": self.model_name,
+                    "rerank_strategy": self.strategy,
                     "rerank_latency_ms": latency_ms,
                     "rerank_topn": 0,
                     "rerank_timeout_ms": self.timeout_ms,
@@ -139,6 +166,25 @@ class NeuralReranker:
                 started=started,
                 timeout_seconds=timeout_seconds,
             )
+            llm_info: dict[str, Any] | None = None
+            llm_scores: dict[str, float] = {}
+            if self._should_use_llm():
+                llm_scores, llm_info = self._llm_score_documents(
+                    query=query,
+                    documents=rerank_pool,
+                )
+                if llm_scores:
+                    scored_pool = [
+                        (
+                            self._combine_scores(
+                                base_score=float(score),
+                                llm_score=llm_scores.get(doc.id),
+                            ),
+                            original_index,
+                            doc,
+                        )
+                        for score, original_index, doc in scored_pool
+                    ]
             scored_pool.sort(key=lambda row: (float(row[0]), -int(row[1])), reverse=True)
 
             reranked: list[Document] = []
@@ -147,6 +193,9 @@ class NeuralReranker:
                 metadata["rerank_score"] = float(score)
                 metadata["rerank_rank"] = rank
                 metadata["rerank_applied"] = True
+                metadata["rerank_strategy"] = self.strategy
+                if llm_scores:
+                    metadata["rerank_llm_score"] = float(llm_scores.get(doc.id, 0.0))
                 reranked.append(doc)
 
             for doc in remainder:
@@ -163,6 +212,7 @@ class NeuralReranker:
                 metadata={
                     "rerank_enabled": self.enabled,
                     "rerank_model": self.model_name,
+                    "rerank_strategy": self.strategy,
                     "rerank_latency_ms": latency_ms,
                     "rerank_topn": rerank_topn,
                     "rerank_timeout_ms": self.timeout_ms,
@@ -172,6 +222,12 @@ class NeuralReranker:
                     "rerank_timed_out": False,
                     "rerank_reason": "ok",
                     "rerank_cache_hit": False,
+                    "rerank_llm_used": bool(llm_scores),
+                    "rerank_llm_error": (
+                        llm_info.get("error")
+                        if isinstance(llm_info, dict)
+                        else None
+                    ),
                 },
             )
             if cache_key:
@@ -199,6 +255,7 @@ class NeuralReranker:
             metadata={
                 "rerank_enabled": self.enabled,
                 "rerank_model": self.model_name,
+                "rerank_strategy": self.strategy,
                 "rerank_latency_ms": latency_ms,
                 "rerank_topn": 0,
                 "rerank_timeout_ms": self.timeout_ms,
@@ -209,6 +266,7 @@ class NeuralReranker:
                 "rerank_reason": "timeout_fallback" if timed_out else "error_fallback",
                 "rerank_error": error_name or None,
                 "rerank_cache_hit": False,
+                "rerank_llm_used": False,
             },
         )
 
@@ -224,6 +282,8 @@ class NeuralReranker:
             f"top_k={top_k}",
             f"top_n={self.top_n}",
             f"model={self.model_name}",
+            f"strategy={self.strategy}",
+            f"llm={self.llm_enabled}",
         ]
         for doc in candidates:
             metadata = doc.metadata or {}
@@ -313,6 +373,110 @@ class NeuralReranker:
             )
             scored.append((float(score), original_index, doc))
         return scored
+
+    def _should_use_llm(self) -> bool:
+        if not self.llm_enabled:
+            return False
+        if self.strategy not in {"llm_hybrid", "hybrid_llm"}:
+            return False
+        if self._llm_client is not None:
+            return True
+        return bool(str(settings.deepseek_api_key or "").strip())
+
+    def _get_llm_client(self) -> DeepSeekClient:
+        if self._llm_client is not None:
+            return self._llm_client
+        timeout_seconds = max(float(self.llm_timeout_ms) / 1000.0, 0.15)
+        self._llm_client = DeepSeekClient(
+            api_key=settings.deepseek_api_key,
+            base_url=settings.deepseek_base_url,
+            model=settings.deepseek_model,
+            timeout_seconds=timeout_seconds,
+            retries_per_base=0,
+            retry_backoff_seconds=0.0,
+            max_concurrency=settings.llm_global_max_concurrency,
+            min_interval_seconds=settings.llm_global_min_interval_seconds,
+            request_jitter_seconds=settings.llm_global_jitter_seconds,
+        )
+        return self._llm_client
+
+    def _llm_score_documents(
+        self,
+        *,
+        query: str,
+        documents: Sequence[Document],
+    ) -> tuple[dict[str, float], dict[str, Any]]:
+        selected = list(documents[: max(1, min(self.llm_top_n, len(documents)))])
+        if not selected:
+            return {}, {"status": "skipped"}
+        system_prompt = (
+            "You are a strict biomedical reranker. Return JSON only without markdown."
+        )
+        prompt_docs = [
+            {
+                "doc_id": str(item.id),
+                "text": " ".join(str(item.text or "").split())[:700],
+                "source": str((item.metadata or {}).get("source") or ""),
+            }
+            for item in selected
+        ]
+        prompt = (
+            "Score each candidate by relevance to the query.\n"
+            "Output EXACT JSON schema:\n"
+            "{\n"
+            '  "scores": [\n'
+            '    {"doc_id":"...", "score": 0.0, "rationale":"short"}\n'
+            "  ]\n"
+            "}\n"
+            "Rules:\n"
+            "- score in [0,1]\n"
+            "- prioritize direct medication safety and interaction relevance\n\n"
+            f"query={query}\n"
+            f"candidates={json.dumps(prompt_docs, ensure_ascii=False)}\n"
+        )
+        try:
+            response = self._get_llm_client().generate(prompt=prompt, system_prompt=system_prompt)
+            payload = json.loads(self._strip_markdown_fence(response.content))
+            rows = payload.get("scores", []) if isinstance(payload, dict) else []
+            if not isinstance(rows, list):
+                return {}, {"status": "invalid_payload", "error": "scores_not_list"}
+            scores: dict[str, float] = {}
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                doc_id = str(row.get("doc_id") or "").strip()
+                if not doc_id:
+                    continue
+                scores[doc_id] = self._clamp_unit(row.get("score"), default=0.5)
+            return scores, {"status": "ok", "model": response.model}
+        except Exception as exc:
+            return {}, {"status": "error", "error": f"{exc.__class__.__name__}: {exc}"}
+
+    @staticmethod
+    def _strip_markdown_fence(raw: str) -> str:
+        text = str(raw or "").strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines:
+                lines = lines[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            return "\n".join(lines).strip()
+        return text
+
+    @staticmethod
+    def _clamp_unit(value: Any, *, default: float = 0.0) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            parsed = float(default)
+        return max(0.0, min(1.0, parsed))
+
+    @staticmethod
+    def _combine_scores(*, base_score: float, llm_score: float | None) -> float:
+        if llm_score is None:
+            return float(base_score)
+        return (0.78 * float(base_score)) + (0.22 * float(llm_score))
 
     @staticmethod
     def _ensure_not_timed_out(*, started: float, timeout_seconds: float) -> None:

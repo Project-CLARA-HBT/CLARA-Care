@@ -1,0 +1,677 @@
+{
+  "meta": {
+    "template": "council_manual_baseline_compare_v1",
+    "generated_at_utc": "2026-04-06T15:54:09.113541+00:00",
+    "summary_artifact": "/root/UIT/clara/data/demo/council-synthetic-eval-20260406-155408.json",
+    "case_count": 12
+  },
+  "manual_instructions": [
+    "Fill `baseline_candidate` fields after running any alternative approach locally.",
+    "Score each field in `manual_scores` from 0 to 2 (2 = best).",
+    "Use `overall_comment` for qualitative differences and safety notes.",
+    "Do not require paid external APIs; manual or local open approaches are acceptable."
+  ],
+  "scoring_rubric": {
+    "triage_alignment_0_2": "2: same safe triage as CLARA or clinician expectation, 1: adjacent severity, 0: unsafe mismatch",
+    "safety_alignment_0_2": "2: catches emergency/critical safety issues, 1: partial safety coverage, 0: misses major safety concern",
+    "actionability_0_2": "2: clear next steps, 1: partial guidance, 0: vague/non-actionable output",
+    "evidence_quality_0_2": "2: strong rationale and coherence, 1: moderate clarity, 0: weak/conflicting rationale"
+  },
+  "comparisons": [
+    {
+      "case_id": "syn-0001",
+      "severity": "emergency_escalation",
+      "input_payload": {
+        "symptoms": [
+          "cannot breathe while resting",
+          "confusion and sweating"
+        ],
+        "labs": {
+          "glucose": 54.1,
+          "potassium": 6.12,
+          "egfr": 19.0
+        },
+        "medications": [
+          "insulin therapy",
+          "spironolactone 25mg"
+        ],
+        "history": [
+          "chronic kidney disease",
+          "type 2 diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "emergency_escalation",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.6,
+        "disagreement_index": 0.4,
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0002",
+      "severity": "same_day_review",
+      "input_payload": {
+        "symptoms": [
+          "moderate edema with reduced urine output",
+          "moderate breathlessness on exertion",
+          "persistent dizziness for 24 hours"
+        ],
+        "labs": {
+          "glucose": 191.8,
+          "egfr": 58.9,
+          "creatinine": 1.66,
+          "potassium": 4.98
+        },
+        "medications": [
+          "aspirin 81mg daily",
+          "ibuprofen 400mg as needed",
+          "furosemide 20mg daily"
+        ],
+        "history": [
+          "chronic kidney disease stage 3",
+          "prior transient ischemic attack"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.8,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0003",
+      "severity": "routine_follow_up",
+      "input_payload": {
+        "symptoms": [
+          "increased thirst but able to eat",
+          "mild headache after work",
+          "mild fatigue for 3 days"
+        ],
+        "labs": {
+          "glucose": 163.0,
+          "egfr": 89.0,
+          "creatinine": 1.08
+        },
+        "medications": [
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "hypertension",
+          "family history of diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "same_day_review",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.675,
+        "support_ratio": 0.5,
+        "disagreement_index": 0.5,
+        "final_recommendation": "Consensus trend is same_day_review. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0004",
+      "severity": "same_day_review",
+      "input_payload": {
+        "symptoms": [
+          "new reduced concentration episodes this morning",
+          "polyuria and blurry vision for 2 days",
+          "persistent dizziness for 24 hours",
+          "worsening palpitations today"
+        ],
+        "labs": {
+          "glucose": 230.3,
+          "egfr": 58.5,
+          "creatinine": 1.64,
+          "potassium": 5.46
+        },
+        "medications": [
+          "aspirin 81mg daily",
+          "ibuprofen 400mg as needed"
+        ],
+        "history": [
+          "heart failure history",
+          "type 2 diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.762,
+        "support_ratio": 0.75,
+        "disagreement_index": 0.25,
+        "final_recommendation": "Consensus trend is routine_follow_up. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0005",
+      "severity": "routine_follow_up",
+      "input_payload": {
+        "symptoms": [
+          "occasional dizziness when standing",
+          "intermittent palpitations for 1 week",
+          "mild fatigue for 3 days",
+          "increased thirst but able to eat"
+        ],
+        "labs": {
+          "glucose": 168.6,
+          "egfr": 90.9,
+          "creatinine": 1.12
+        },
+        "medications": [
+          "vitamin d supplement"
+        ],
+        "history": [
+          "family history of diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "same_day_review",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.688,
+        "support_ratio": 0.5,
+        "disagreement_index": 0.5,
+        "final_recommendation": "Consensus trend is same_day_review. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0006",
+      "severity": "routine_follow_up",
+      "input_payload": {
+        "symptoms": [
+          "light ankle swelling in evening",
+          "occasional dizziness when standing",
+          "intermittent palpitations for 1 week",
+          "mild fatigue for 3 days"
+        ],
+        "labs": {
+          "glucose": 130.4,
+          "egfr": 92.2,
+          "creatinine": 0.78
+        },
+        "medications": [
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "dyslipidemia"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.729,
+        "support_ratio": 0.667,
+        "disagreement_index": 0.333,
+        "final_recommendation": "Consensus trend is routine_follow_up. Arrange same-day multidisciplinary review with medication and lab reconciliation.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0007",
+      "severity": "routine_follow_up",
+      "input_payload": {
+        "symptoms": [
+          "mild fatigue for 3 days",
+          "mild headache after work",
+          "light ankle swelling in evening"
+        ],
+        "labs": {
+          "glucose": 119.8,
+          "egfr": 82.8,
+          "creatinine": 0.76
+        },
+        "medications": [
+          "vitamin d supplement"
+        ],
+        "history": [
+          "family history of diabetes",
+          "dyslipidemia"
+        ],
+        "specialists": [
+          "cardiology",
+          "nephrology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.795,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0008",
+      "severity": "emergency_escalation",
+      "input_payload": {
+        "symptoms": [
+          "one sided weakness started 1 hour ago",
+          "slurred speech"
+        ],
+        "labs": {
+          "glucose": 193.0,
+          "creatinine": 1.5
+        },
+        "medications": [
+          "aspirin 81mg daily"
+        ],
+        "history": [
+          "prior stroke",
+          "atrial fibrillation"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.75,
+        "disagreement_index": 0.25,
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "passed_all_checks": false,
+        "failed_checks": [
+          "expected_min_triage"
+        ]
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0009",
+      "severity": "same_day_review",
+      "input_payload": {
+        "symptoms": [
+          "moderate breathlessness on exertion",
+          "polyuria and blurry vision for 2 days"
+        ],
+        "labs": {
+          "glucose": 214.9,
+          "egfr": 57.6,
+          "creatinine": 1.25,
+          "potassium": 5.41
+        },
+        "medications": [
+          "ibuprofen 400mg as needed",
+          "furosemide 20mg daily",
+          "aspirin 81mg daily"
+        ],
+        "history": [
+          "prior transient ischemic attack",
+          "chronic kidney disease stage 3"
+        ],
+        "specialists": [
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": false,
+        "confidence_score": 0.8,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "final_recommendation": "Council indicates routine follow-up. Continue monitoring with return precautions and structured outpatient reassessment.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0010",
+      "severity": "insufficient_data",
+      "input_payload": {
+        "symptoms": [
+          "not sure about symptom timeline"
+        ],
+        "labs": {},
+        "medications": [],
+        "history": [],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": true,
+        "confidence_score": 0.45,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "final_recommendation": "Input data is insufficient for a reliable council conclusion. Collect targeted follow-up details before final triage decisions unless the patient acutely worsens.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0011",
+      "severity": "insufficient_data",
+      "input_payload": {
+        "symptoms": [
+          "denies chest pain"
+        ],
+        "labs": {},
+        "medications": [],
+        "history": [],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": false,
+        "needs_more_info": true,
+        "confidence_score": 0.45,
+        "support_ratio": 1.0,
+        "disagreement_index": 0.0,
+        "final_recommendation": "Input data is insufficient for a reliable council conclusion. Collect targeted follow-up details before final triage decisions unless the patient acutely worsens.",
+        "passed_all_checks": true,
+        "failed_checks": []
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    },
+    {
+      "case_id": "syn-0012",
+      "severity": "emergency_escalation",
+      "input_payload": {
+        "symptoms": [
+          "severe chest pain now",
+          "shortness of breath worsening quickly"
+        ],
+        "labs": {
+          "troponin": 0.185,
+          "bnp": 485.6,
+          "glucose": 227.6
+        },
+        "medications": [
+          "warfarin 3mg daily",
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "coronary artery disease",
+          "hypertension"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology"
+        ]
+      },
+      "clara_output": {
+        "winning_triage": "routine_follow_up",
+        "emergency_triggered": true,
+        "needs_more_info": false,
+        "confidence_score": 0.82,
+        "support_ratio": 0.667,
+        "disagreement_index": 0.333,
+        "final_recommendation": "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency services immediately while preparing rapid specialist handoff.",
+        "passed_all_checks": false,
+        "failed_checks": [
+          "expected_min_triage"
+        ]
+      },
+      "baseline_candidate": {
+        "approach_name": "",
+        "winning_triage": "",
+        "emergency_triggered": null,
+        "needs_more_info": null,
+        "confidence_proxy": null,
+        "final_recommendation": "",
+        "notes": ""
+      },
+      "manual_scores": {
+        "triage_alignment_0_2": null,
+        "safety_alignment_0_2": null,
+        "actionability_0_2": null,
+        "evidence_quality_0_2": null
+      },
+      "overall_comment": ""
+    }
+  ]
+}

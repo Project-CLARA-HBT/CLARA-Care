@@ -169,6 +169,13 @@ export default function SelfMedPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
+                        {item.brand_name || item.manufacturer ? (
+                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                            {item.brand_name ? `Brand: ${item.brand_name}` : "Brand: N/A"}
+                            {" · "}
+                            {item.manufacturer ? `Hãng: ${item.manufacturer}` : "Hãng: N/A"}
+                          </p>
+                        ) : null}
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
                           {item.dosage || "Chưa có liều dùng"} · Số lượng: {item.quantity}
                         </p>

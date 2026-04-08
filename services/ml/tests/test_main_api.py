@@ -246,6 +246,58 @@ def test_routed_chat_infer_propagates_rag_runtime_flags_to_pipeline_and_verifier
     assert body["flow_applied"]["rag_graphrag_enabled"] is False
 
 
+def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+
+    original_run = rag_pipeline.run
+    captured: dict[str, object] = {}
+
+    def _fake_run(*args, **kwargs):  # noqa: ARG001
+        captured["pipeline_kwargs"] = dict(kwargs)
+        return RagResult(
+            query="query",
+            retrieved_ids=["doc-1"],
+            answer="answer",
+            model_used="local-synth-v1",
+            retrieved_context=[],
+            context_debug={},
+            flow_events=[],
+        )
+
+    monkeypatch.setattr(rag_pipeline, "run", _fake_run)
+    try:
+        response = client.post(
+            "/v1/chat/routed",
+            json={
+                "query": "Tôi cần giải thích tương tác thuốc.",
+                "rag_flow": {
+                    "llm_provider": "hitechcloud_gpt53_codex_high",
+                    "llm_base_url": "https://platform.hitechcloud.one/v1",
+                    "llm_model": "gpt-5.3-codex-high",
+                    "llm_api_key": "test-key-hitech",
+                },
+            },
+        )
+    finally:
+        monkeypatch.setattr(rag_pipeline, "run", original_run)
+
+    assert response.status_code == 200
+    body = response.json()
+    pipeline_kwargs = captured.get("pipeline_kwargs")
+    assert isinstance(pipeline_kwargs, dict)
+    llm_runtime = pipeline_kwargs.get("llm_runtime")
+    assert isinstance(llm_runtime, dict)
+    assert llm_runtime.get("provider") == "hitechcloud_gpt53_codex_high"
+    assert llm_runtime.get("base_url") == "https://platform.hitechcloud.one/v1"
+    assert llm_runtime.get("model") == "gpt-5.3-codex-high"
+    assert body["flow_applied"]["llm_provider"] == "hitechcloud_gpt53_codex_high"
+    assert body["flow_applied"]["llm_base_url"] == "https://platform.hitechcloud.one/v1"
+    assert body["flow_applied"]["llm_model"] == "gpt-5.3-codex-high"
+
+
 def test_routed_chat_infer_uses_smalltalk_fastpath_for_greeting():
     response = client.post("/v1/chat/routed", json={"query": "hi"})
     assert response.status_code == 200
@@ -464,7 +516,7 @@ def test_research_tier2_emergency_escalates_fastpath():
     assert body["model_used"] == "research-emergency-guard-v1"
 
 
-def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPatch):
+def test_research_tier2_returns_503_when_upstream_fails(monkeypatch: pytest.MonkeyPatch):
     import clara_ml.main as main_module
 
     original_runner = main_module.run_research_tier2
@@ -481,23 +533,9 @@ def test_research_tier2_recovers_with_safe_fallback(monkeypatch: pytest.MonkeyPa
     finally:
         monkeypatch.setattr(main_module, "run_research_tier2", original_runner)
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     body = response.json()
-    assert body["model_used"] == "ml-safe-fallback-v1"
-    assert body["fallback"] is True
-    assert body["policy_action"] == "warn"
-    assert str(body["fallback_reason"]).startswith("RuntimeError")
-    assert isinstance(body.get("answer_markdown"), str)
-    assert "kết luận nhanh" in body["answer_markdown"].lower()
-    assert isinstance(body.get("sources"), list)
-    assert len(body["sources"]) >= 1
-    assert isinstance(body.get("flow_events"), list)
-    assert any(event.get("stage") == "fallback_response" for event in body["flow_events"])
-    generation_events = [
-        event for event in body["flow_events"] if event.get("stage") == "rag_generation"
-    ]
-    assert generation_events
-    assert "deepseek_generation_failed" not in str(generation_events[0].get("note", "")).lower()
+    assert body["detail"].startswith("research_upstream_failed:")
 
 
 def test_research_tier2_flow_search_index_events_precede_synthesis():
@@ -676,6 +714,22 @@ def test_scribe_soap_returns_structured_soap():
     assert body["objective"]["vitals"]["blood_pressure"] == "120/80"
     assert isinstance(body["assessment"]["problems"], list)
     assert isinstance(body["plan"]["next_steps"], list)
+    assert isinstance(body.get("medical_record_note"), dict)
+    assert set(
+        [
+            "chief_complaint",
+            "hpi",
+            "objective",
+            "assessment",
+            "plan",
+            "medications",
+            "follow_up",
+            "warnings",
+        ]
+    ).issubset(body["medical_record_note"].keys())
+    flow_nodes = body["metadata"].get("flow_nodes", [])
+    assert isinstance(flow_nodes, list)
+    assert any(item.get("stage") == "medical_record_note" for item in flow_nodes)
     assert body["metadata"]["fallback_used"] is True
 
 

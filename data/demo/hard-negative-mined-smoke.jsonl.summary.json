@@ -1,0 +1,12 @@
+{
+  "run_dir": "artifacts/round2/round2-live-postdeploy-20260401",
+  "source_run": "round2-live-postdeploy-20260401",
+  "input_candidates": 13,
+  "output_count": 9,
+  "limit": 30,
+  "output_path": "data/demo/hard-negative-mined-smoke.jsonl",
+  "reason_breakdown": {
+    "source_errors": 9
+  },
+  "conversation_log_inputs": []
+}

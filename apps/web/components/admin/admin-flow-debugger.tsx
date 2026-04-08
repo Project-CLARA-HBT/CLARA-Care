@@ -90,7 +90,11 @@ const DEFAULT_FLOW: ControlTowerRagFlow = {
   low_context_threshold: 0.2,
   scientific_retrieval_enabled: true,
   web_retrieval_enabled: true,
-  file_retrieval_enabled: true
+  file_retrieval_enabled: true,
+  llm_provider: "hitechcloud_gpt53_codex_high",
+  llm_base_url: "https://platform.hitechcloud.one/v1",
+  llm_model: "gpt-5.3-codex-high",
+  llm_api_key: ""
 };
 
 function formatNumber(value: number): string {

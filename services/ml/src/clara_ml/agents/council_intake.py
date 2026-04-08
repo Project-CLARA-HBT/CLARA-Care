@@ -14,6 +14,9 @@ def _build_client() -> DeepSeekClient:
         base_url=settings.deepseek_base_url,
         model=settings.deepseek_model,
         timeout_seconds=settings.deepseek_timeout_seconds,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
 
 

@@ -164,6 +164,40 @@ def test_build_planner_hints_deep_mode_full_stack_still_forces_connectors_and_gr
     assert "stack_mode_full_force_graphrag" in hints["reason_codes"]
 
 
+def test_apply_keyword_filter_to_query_plan_aligns_keywords_by_source_language():
+    base_query_plan = {
+        "original_query": "Tương tác warfarin với ibuprofen",
+        "canonical_query": "warfarin interaction with ibuprofen bleeding risk",
+        "language_hint": "mixed",
+        "source_queries": {
+            "internal": ["Tương tác warfarin với ibuprofen"],
+            "scientific": ["warfarin interaction clinical evidence"],
+            "web": ["warfarin interaction guideline"],
+        },
+    }
+
+    report = tier2._apply_keyword_filter_to_query_plan(
+        topic="Tương tác warfarin với ibuprofen",
+        query_plan=base_query_plan,
+        planner_keywords=["tuong", "tac", "warfarin", "interaction", "guideline"],
+        source_mode="davidrug",
+    )
+
+    keywords_by_source = report.get("keywords_by_source", {})
+    assert "interaction" not in keywords_by_source.get("internal", [])
+    assert "guideline" not in keywords_by_source.get("web", [])
+    assert "tuong" not in keywords_by_source.get("scientific", [])
+    assert "tac" not in keywords_by_source.get("scientific", [])
+
+    query_plan = report.get("query_plan", {})
+    source_queries = query_plan.get("source_queries", {})
+    assert isinstance(source_queries.get("internal"), list)
+    assert isinstance(source_queries.get("scientific"), list)
+    assert isinstance(source_queries.get("web"), list)
+    assert source_queries.get("scientific")
+    assert query_plan.get("keyword_filter", {}).get("target_language_by_source", {}).get("web") == "vi"
+
+
 def test_source_router_prefers_scientific_for_critical_ddi():
     decision = tier2.decide_source_route(
         query="Tương tác warfarin và ibuprofen có nguy cơ xuất huyết nghiêm trọng không?",
@@ -271,6 +305,69 @@ def test_run_research_tier2_emits_retrieval_route_metadata(monkeypatch: pytest.M
     assert "fallback_reason" in result
     assert "fallback_reason" in metadata
     assert "fallback_reason" in telemetry
+
+
+def test_run_research_tier2_emits_keyword_filter_and_evidence_review_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        return RagResult(
+            query=query,
+            retrieved_ids=["doc-1", "doc-2"],
+            answer="Nội dung tạm thời.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "doc-1",
+                    "source": "pubmed",
+                    "title": "Warfarin Interaction",
+                    "text": "Relevant context.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/1/",
+                    "score": 0.87,
+                },
+                {
+                    "id": "doc-2",
+                    "source": "openfda",
+                    "title": "Warfarin label",
+                    "text": "FDA label context.",
+                    "url": "https://open.fda.gov/apis/drug/label/",
+                    "score": 0.82,
+                },
+            ],
+            context_debug={
+                "relevance": 0.72,
+                "low_context_threshold": 0.2,
+                "retrieval_trace": {
+                    "source_attempts": [{"provider": "pubmed", "status": "completed", "documents": 2}],
+                    "source_errors": {},
+                    "index_summary": {"selected_count": 2},
+                    "search_plan": {"query": query},
+                },
+            },
+            flow_events=[],
+            trace={"retrieval": {"source_attempts": [{"provider": "pubmed"}]}},
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    result = tier2.run_research_tier2(
+        {
+            "query": "Tương tác warfarin với ibuprofen",
+            "research_mode": "deep",
+            "strict_deepseek_required": False,
+        }
+    )
+
+    flow_stages = [str(item.get("stage")) for item in result.get("flow_events", []) if isinstance(item, dict)]
+    assert "keyword_filter" in flow_stages
+    assert "evidence_review" in flow_stages
+
+    telemetry = result.get("telemetry", {})
+    assert isinstance(telemetry.get("keyword_filter"), dict)
+    assert isinstance(telemetry.get("evidence_review"), dict)
+
+    reasoning_steps = result.get("reasoning_steps", [])
+    assert any(str(item.get("stage")) == "keyword_filter" for item in reasoning_steps if isinstance(item, dict))
+    assert any(str(item.get("stage")) == "evidence_review" for item in reasoning_steps if isinstance(item, dict))
 
 
 def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
@@ -1551,6 +1648,9 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         and event.get("status") == "completed"
     ) == 4
     assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
+    answer = str(result.get("answer", ""))
+    assert "```mermaid" in answer
+    assert "```chart-spec" in answer
 
 
 def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
@@ -1644,3 +1744,77 @@ def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
         str(event.get("stage", "")).startswith("deep_beta")
         for event in result.get("flow_events", [])
     )
+
+
+def test_strip_html_from_mermaid_blocks_removes_html_tags() -> None:
+    markdown = (
+        "```mermaid\n"
+        "flowchart TD\n"
+        "A[Start]<br/> --> B<p>Done</p>\n"
+        "```\n"
+    )
+    cleaned = tier2._strip_html_from_mermaid_blocks(markdown)
+    assert "<br" not in cleaned.lower()
+    assert "<p>" not in cleaned.lower()
+    assert "```mermaid" in cleaned
+
+
+def test_strip_html_from_mermaid_blocks_normalizes_inline_citations() -> None:
+    markdown = (
+        "```mermaid\n"
+        "flowchart TD\n"
+        "A[Claim] --> B[Khuyến nghị [pubmed-30879339] [1]]\n"
+        "```\n"
+    )
+    cleaned = tier2._strip_html_from_mermaid_blocks(markdown)
+    assert "[pubmed-30879339]" not in cleaned
+    assert "[1]" not in cleaned
+    assert "(pubmed-30879339)" in cleaned
+    assert "(1)" in cleaned
+
+
+def test_dedupe_duplicate_h2_headings_removes_repeated_conclusion() -> None:
+    markdown = (
+        "## Kết luận nhanh\n"
+        "A.\n\n"
+        "## Kết luận nhanh\n"
+        "B.\n\n"
+        "## Tóm tắt điều hành\n"
+        "C.\n"
+    )
+    cleaned = tier2._dedupe_duplicate_h2_headings(markdown)
+    assert cleaned.count("## Kết luận nhanh") == 1
+    assert cleaned.count("## Tóm tắt điều hành") == 1
+    assert "B." not in cleaned
+
+
+def test_dedupe_duplicate_h2_headings_handles_prefixed_required_heading() -> None:
+    markdown = (
+        "## Kết luận nhanh\n"
+        "Nội dung ngắn.\n\n"
+        "## Kết luận nhanh Warfarin có nguy cơ cao\n"
+        "Nội dung dài hơn và đầy đủ hơn.\n\n"
+        "## Tóm tắt điều hành\n"
+        "Tóm tắt.\n"
+    )
+    cleaned = tier2._dedupe_duplicate_h2_headings(markdown)
+    assert cleaned.count("## Kết luận nhanh") == 1
+    assert "## Kết luận nhanh Warfarin có nguy cơ cao" not in cleaned
+    assert "Nội dung dài hơn và đầy đủ hơn." in cleaned
+
+
+def test_ensure_deep_beta_report_artifacts_appends_missing_blocks() -> None:
+    report = "## Kết luận nhanh\nNo table no mermaid no chart."
+    fixed = tier2._ensure_deep_beta_report_artifacts(
+        markdown_text=report,
+        deep_pass_summaries=[{"pass_index": 1, "subquery": "warfarin interaction", "retrieved_count": 3}],
+        evidence_verification={
+            "supported_claims": ["c1"],
+            "unsupported_claims": [],
+            "contradicted_claims": [],
+        },
+        verification_summary={"support_ratio": 0.8},
+    )
+    assert "```mermaid" in fixed
+    assert "```chart-spec" in fixed
+    assert "| Pass | Subquery | Retrieved |" in fixed

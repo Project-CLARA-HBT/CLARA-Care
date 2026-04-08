@@ -6,183 +6,130 @@
 [![Giấy phép](https://img.shields.io/github/license/Project-CLARA-HBT/CLARA-Care)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-clara.thiennn.icu-0A66C2?logo=google-chrome&logoColor=white)](https://clara.thiennn.icu)
 
-Nền tảng trợ lý y khoa đa mô-đun cho mục tiêu **hỗ trợ tham khảo** (không thay thế chẩn đoán hoặc kê đơn), gồm web, dịch vụ API, dịch vụ ML, ứng dụng di động mẫu và bộ hạ tầng Docker/CI/CD.
+Nền tảng trợ lý y khoa đa mô-đun theo định hướng **Safety-first AI** cho bối cảnh gia đình và hội chẩn tham khảo.
 
-## 1) Trạng thái hiện tại (bám codebase)
+CLARA không định vị là “AI bác sĩ”. Hệ thống ưu tiên:
+- cảnh báo rủi ro sớm,
+- trích dẫn nguồn minh bạch,
+- và cơ chế fallback an toàn khi upstream lỗi.
 
-- Mã nguồn theo kiến trúc đơn kho với 4 khối chính: `apps/web`, `apps/mobile`, `services/api`, `services/ml`.
-- Luồng đã chạy được trong hệ thống hiện tại:
-  - Hỏi đáp y khoa (`chat` + `research tier2`).
-  - Self-MED/CareGuard (quản lý tủ thuốc + phân tích tương tác thuốc).
-  - Council (hội chẩn mô phỏng).
-  - Scribe SOAP (mức nền).
-  - Control Tower + bảng giám sát vận hành.
-- Có quy trình kiểm thử tích hợp, phát hành ảnh container và triển khai qua Docker Compose.
+## 1) CLARA khác gì thị trường?
 
-Phạm vi trách nhiệm:
-- Hệ thống là công cụ hỗ trợ tham khảo.
-- Chưa phải phần mềm thiết bị y tế (SaMD), chưa có xác nhận lâm sàng đa trung tâm.
+Thay vì cạnh tranh bằng “trả lời nhanh nhất”, CLARA tập trung vào **độ tin cậy vận hành + biên an toàn y khoa**.
 
-## 2) Kiến trúc tổng quan
+### 1.1 Legal Hard Guard ở tầng backend (không chỉ prompt)
+- Chặn cưỡng chế các yêu cầu vượt ranh giới pháp lý: kê đơn, chẩn đoán, liều dùng cá nhân.
+- Guard chạy ở service ML/API, không phụ thuộc duy nhất vào system prompt.
+- Mục tiêu: giảm rủi ro “hallucination có hại” trong use-case y tế.
 
-### 2.1 Thành phần chạy thời gian thực
+### 1.2 Hybrid Retrieval có degrade-path rõ ràng
+- Kết hợp nguồn nội bộ + nguồn ngoài (scientific/web connectors) + index cục bộ.
+- Khi upstream lỗi, hệ thống chuyển sang chế độ fail-soft có metadata cảnh báo rõ nguyên nhân.
+- Với CareGuard/DDI: có luồng fallback luật cục bộ để tránh “tịt ngòi” khi demo hoặc mất mạng.
 
-- **Web**: Next.js 14 (`apps/web`) cổng `3000` (compose ánh xạ `127.0.0.1:3100`).
-- **API**: FastAPI (`services/api`) cổng `8000` (compose ánh xạ `127.0.0.1:8100`).
-- **ML**: FastAPI (`services/ml`) cổng `8010` (compose ánh xạ `127.0.0.1:8110`).
-- **Cổng tìm kiếm**: SearXNG (compose ánh xạ `127.0.0.1:8888`).
-- **Giám sát**: Signal board grafana-like tích hợp trong Admin (`/admin/observability`) + API metrics endpoint.
-- **Hạ tầng dữ liệu cục bộ**: PostgreSQL, Redis, Milvus (+etcd+minio), Elasticsearch, Neo4j.
+### 1.3 Council AI theo mô hình “human-in-the-loop ready”
+- Hội chẩn đa chuyên khoa với conflict list, consensus, divergence notes.
+- Timeline suy luận và citation quality để reviewer theo dõi logic từng bước.
+- Neural scoring chạy **shadow mode** (decision support), chưa thay thế rule-engine.
 
-### 2.2 Luồng xử lý chính
+### 1.4 Demo Resilience thiết kế từ đầu
+- Có gate deploy + smoke test cho research/careguard/auth.
+- Có env guard để chặn deploy với cấu hình DB/DeepSeek sai.
+- Có cron cleanup/backup để vận hành bền vững trên hạ tầng hạn chế tài nguyên.
 
-1. Ứng dụng khách gọi API tại `/api/v1/*`.
-2. API xử lý xác thực, phân quyền, giới hạn tần suất, đồng thuận và điều phối nghiệp vụ.
-3. API chuyển tiếp các tác vụ suy luận sang ML (`chat`, `research/tier2`, `careguard`, `council`, `scribe`).
-4. ML chạy định tuyến vai trò/ý định, hàng rào pháp lý, pipeline RAG, kết nối nguồn ngoài và chế độ dự phòng an toàn.
+## 2) Product modules (as-built)
 
-## 3) Cấu trúc thư mục
+### 2.1 CLARA Research
+- Chat routed + Research Tier2 (`fast` / `deep` / `deep_beta`).
+- Flow telemetry theo stage (planner/retrieval/llm/verification).
+- Citation + metadata để phục vụ review nội bộ.
+
+### 2.2 CLARA Self-MED / CareGuard
+- Quản lý tủ thuốc cá nhân (cabinet).
+- Quét text/file toa thuốc và đưa vào workflow DDI.
+- DDI pipeline kết hợp local rules + nguồn ngoài.
+
+### 2.3 CLARA Council
+- Intake -> hội chẩn -> workspace phân tích.
+- Các màn chuyên biệt: Analyze / Details / Citations / Research / Deepdive.
+- Result hiển thị consensus quality + escalation + reasoning timeline + neural shadow risk.
+
+### 2.4 CLARA Scribe (nền)
+- SOAP scribe ở mức nền để chuẩn hóa đầu ra ghi chú lâm sàng tham khảo.
+
+## 3) Kiến trúc runtime
+
+```text
+Web (Next.js)  <->  API (FastAPI)  <->  ML (FastAPI)
+                         |               |
+                         |               +-- Routing / Guardrails / RAG / Council
+                         |
+                         +-- Auth / RBAC / Consent / Proxy / Observability
+
+Data plane: PostgreSQL, Redis, Milvus, Elasticsearch, Neo4j
+Retrieval gateway: SearXNG + scientific connectors
+```
+
+Cổng mặc định khi chạy compose app:
+- Web: `127.0.0.1:3100`
+- API: `127.0.0.1:8100`
+- ML: `127.0.0.1:8110`
+- SearXNG: `127.0.0.1:8888`
+
+## 4) Cấu trúc repo
 
 ```text
 .
 ├── apps/
-│   ├── web/                 # giao diện Next.js
-│   └── mobile/              # ứng dụng Flutter mẫu
+│   ├── web/                 # Next.js frontend
+│   └── mobile/              # Flutter skeleton
 ├── services/
-│   ├── api/                 # API FastAPI + nghiệp vụ
-│   └── ml/                  # dịch vụ điều phối ML
+│   ├── api/                 # FastAPI API layer
+│   └── ml/                  # ML orchestration layer
 ├── deploy/
-│   ├── docker/              # docker-compose cho hạ tầng/app/triển khai
-│   └── nginx/               # cấu hình reverse proxy mẫu
+│   ├── docker/              # compose stacks
+│   └── nginx/               # reverse proxy conf
 ├── scripts/
-│   ├── setup/               # kiểm tra môi trường
-│   ├── docs/                # kiểm tra liên kết tài liệu
-│   ├── demo/                # tạo hiện vật benchmark/demo
-│   ├── rag_seed/            # thu thập/seed dữ liệu RAG
-│   └── release|deploy|ops   # tự động hóa phát hành/triển khai/vận hành
-├── docs/hackathon/          # tài liệu dùng trực tiếp trong kiểm thử CI
-└── data/docs/               # tài liệu chi tiết (kiến trúc, đề xuất, devops...)
+│   ├── deploy/              # redeploy script + smoke
+│   ├── demo/                # benchmark/demo artifact scripts
+│   ├── ops/                 # cleanup/cron/env guard/backup
+│   ├── rag_seed/            # seed/crawl tooling
+│   └── release/             # semver/image release helpers
+├── docs/hackathon/          # docs cần cho vòng thi/CI docs-check
+└── data/docs/               # kho tài liệu nội bộ mở rộng
 ```
 
-## 4) Tính năng đã có trong mã nguồn
+## 5) Quick start (Docker)
 
-### 4.1 Xác thực, phân quyền, đồng thuận
-
-- JWT truy cập/làm mới.
-- Đăng ký, đăng nhập, làm mới phiên, đăng xuất, xác minh thư điện tử, quên/đặt lại/đổi mật khẩu.
-- Vai trò hiện có: `normal`, `researcher`, `doctor`, `admin`.
-- Cổng đồng thuận disclaimer y khoa cho các luồng liên quan dữ liệu nhạy cảm.
-
-Nhóm endpoint chính:
-- `/api/v1/auth/register|login|refresh|logout|me`
-- `/api/v1/auth/verify-email|forgot-password|reset-password|change-password`
-- `/api/v1/auth/consent-status|consent`
-
-### 4.2 Nghiên cứu và hỏi đáp
-
-- Hỏi đáp định tuyến: `/api/v1/chat` -> ML `/v1/chat/routed`.
-- Nghiên cứu tầng 2 đồng bộ: `/api/v1/research/tier2`.
-- Nghiên cứu tầng 2 theo cơ chế tác vụ:
-  - `/api/v1/research/tier2/jobs`
-  - `/api/v1/research/tier2/jobs/{job_id}`
-  - `/api/v1/research/tier2/jobs/{job_id}/stream`
-- Quản lý cuộc hội thoại và kho tri thức theo từng người dùng.
-- Source Hub (danh mục/ghi nhận/đồng bộ) và tìm kiếm đa nguồn `/api/v1/search`.
-
-### 4.3 CareGuard và Self-MED
-
-- Quản lý tủ thuốc: `/api/v1/careguard/cabinet*`.
-- Quét nội dung toa thuốc:
-  - `/api/v1/careguard/cabinet/scan-text`
-  - `/api/v1/careguard/cabinet/scan-file`
-- Nhập kết quả nhận diện vào tủ thuốc.
-- Phân tích tương tác thuốc:
-  - `/api/v1/careguard/cabinet/auto-ddi-check`
-  - `/api/v1/careguard/analyze`
-- Cơ chế kết hợp luật cục bộ + nguồn DDI bên ngoài (bật/tắt theo cấu hình runtime).
-
-### 4.4 Council và Scribe
-
-- Hội chẩn:
-  - `/api/v1/council/run`
-  - `/api/v1/council/intake`
-- Scribe SOAP mức nền:
-  - `/api/v1/scribe/soap`
-
-### 4.5 Control Tower và giám sát
-
-- Chỉ số/tình trạng phụ thuộc/hệ sinh thái:
-  - `/api/v1/system/metrics`
-  - `/api/v1/system/dependencies`
-  - `/api/v1/system/ecosystem`
-- Quản trị cấu hình runtime:
-  - `/api/v1/system/control-tower/config`
-  - `/api/v1/system/careguard/runtime`
-- Dòng sự kiện:
-  - `/api/v1/system/flow-events`
-  - `/api/v1/system/flow-events/stream`
-
-## 5) Khởi chạy nhanh bằng Docker
-
-### 5.1 Điều kiện
-
-- Docker Engine + Docker Compose v2
-- GNU Make
-
-### 5.2 Chuẩn bị
-
+### 5.1 Chuẩn bị
 ```bash
 cp .env.example .env
 make check-env
 ```
 
-### 5.3 Chạy hạ tầng cục bộ (cơ sở dữ liệu và tìm kiếm)
-
+### 5.2 Chạy hạ tầng nền
 ```bash
 make docker-up
 make docker-ps
 ```
 
-Dừng hạ tầng:
-
-```bash
-make docker-down
-```
-
-### 5.4 Chạy bộ ứng dụng (web/api/ml/searxng)
-
+### 5.3 Chạy app stack
 ```bash
 make docker-app-up
 make docker-app-ps
 ```
 
-Xem nhật ký:
-
-```bash
-make docker-app-logs
-```
-
-Dừng ứng dụng:
-
-```bash
-make docker-app-down
-```
-
-### 5.5 Kiểm tra trạng thái nhanh
-
+### 5.4 Kiểm tra health
 ```bash
 curl -sS http://127.0.0.1:8100/health
-curl -sS http://127.0.0.1:8100/metrics | head -n 20
-curl -sS http://127.0.0.1:8100/api/v1/health
 curl -sS http://127.0.0.1:8110/health
-curl -sS http://127.0.0.1:8110/metrics | head -n 20
+curl -sS http://127.0.0.1:8110/health/details
 curl -sS http://127.0.0.1:3100/
 ```
 
-## 6) Chạy từng dịch vụ ở môi trường cục bộ
+## 6) Chạy local từng service
 
-### 6.1 Dịch vụ API
-
+### API
 ```bash
 cd services/api
 python -m venv .venv && source .venv/bin/activate
@@ -190,8 +137,7 @@ pip install -e ".[dev]"
 uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 6.2 Dịch vụ ML
-
+### ML
 ```bash
 cd services/ml
 python -m venv .venv && source .venv/bin/activate
@@ -199,107 +145,62 @@ pip install -e ".[dev]"
 uvicorn clara_ml.main:app --app-dir src --host 0.0.0.0 --port 8010 --reload
 ```
 
-### 6.3 Ứng dụng web
-
+### Web
 ```bash
 cd apps/web
 npm ci
 npm run dev
 ```
 
-### 6.4 Ứng dụng di động mẫu
+## 7) CI/CD và quality gates
 
-```bash
-cd apps/mobile
-flutter pub get
-flutter run --dart-define=CLARA_API_BASE_URL=http://localhost:8000
-```
+- `ci.yml`: docs-check, lint/type-check, test API/ML, web build, security audit, docker smoke, container scan.
+- `release.yml`: semver tag + release artifacts/images.
+- `cd.yml`: deploy staging/prod theo workflow chuẩn.
+- `required-ci-gates`: cổng bắt buộc trước merge theo policy branch protection.
 
-## 7) Kiểm thử và cổng chất lượng
+## 8) DevOps vận hành mới (đã bổ sung)
 
-Chạy từ thư mục gốc:
+### 8.1 Env Guard trước deploy
+- Script: `scripts/ops/validate_runtime_env.sh`
+- Tự chặn các lỗi cấu hình phổ biến:
+  - `POSTGRES_HOST=localhost` trong container runtime
+  - `DATABASE_URL` trỏ localhost
+  - thiếu DeepSeek credentials khi bật gate strict
 
-```bash
-make lint
-make type-check
-make test
-make docs-check
-```
+### 8.2 Backup `.env` định kỳ
+- Script: `scripts/ops/backup_env.sh`
+- Cài cron: `scripts/ops/install_env_backup_cron.sh`
+- Backup có checksum và retention policy.
 
-Cài tiền kiểm tra trước khi đẩy mã:
+### 8.3 Disk cleanup định kỳ
+- Script: `scripts/ops/cleanup_disk.sh`
+- Cài cron: `scripts/ops/install_cleanup_cron.sh`
 
-```bash
-pip install pre-commit
-make precommit-install
-```
+## 9) Biến môi trường cần chú ý
 
-Lệnh Make dùng thường xuyên:
+Xem đầy đủ tại `.env.example`.
 
-- `make dev-api`: chạy API cục bộ (`services/api`).
-- `make dev-ml`: chạy ML cục bộ (`services/ml`).
-- `make dev-web`: chạy web cục bộ (`apps/web`).
-- `make docker-up|docker-down|docker-ps|docker-logs`: quản lý stack hạ tầng.
-- `make docker-app-up|docker-app-down|docker-app-ps|docker-app-logs`: quản lý stack ứng dụng.
+Nhóm chính:
+- Runtime: `API_PORT`, `ML_SERVICE_URL`, `NEXT_PUBLIC_API_URL`
+- Auth/Security: `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_*`
+- LLM/Embedding: `DEEPSEEK_*`, `EMBEDDING_*`
+- Retrieval: `RAG_*`, `SEARXNG_*`, `EXTERNAL_DDI_ENABLED`
+- OCR bridge: `TGC_OCR_*`
 
-## 8) Quy trình tự động CI/CD
+## 10) Giới hạn hiện tại
 
-Các workflow chính:
+- Chưa phải phần mềm thiết bị y tế (SaMD).
+- Một số module vẫn ở mức tăng dần độ cứng production theo phase hackathon.
+- Mobile app hiện là skeleton để nối backend flow, chưa full parity với web.
 
-- `.github/workflows/ci.yml`
-  - Phát hiện tệp thay đổi.
-  - Kiểm tra tài liệu + ruff + mypy.
-  - Kiểm thử API, kiểm thử ML.
-  - Kiểm tra và dựng bản web.
-  - Kiểm tra bảo mật phụ thuộc (`pip-audit`, `npm audit`).
-  - Dựng thử bằng Docker Compose.
-  - Quét bảo mật ảnh container bằng Trivy.
-  - Cổng tổng hợp bắt buộc: `required-ci-gates`.
-- `.github/workflows/release.yml`
-  - Tạo thẻ phiên bản (`vX.Y.Z`), dựng/đẩy ảnh GHCR, xuất bản bản phát hành GitHub.
-- `.github/workflows/cd.yml`
-  - Triển khai thủ công lên môi trường thử nghiệm, kiểm tra khói, tùy chọn đẩy tiếp lên sản xuất.
-- `.github/workflows/branch-protection-sync.yml`
-  - Đồng bộ chính sách bảo vệ nhánh.
+## 11) Tài liệu nội bộ quan trọng
 
-## 9) Biến môi trường quan trọng
+- `docs/hackathon/deep-research-2026-benchmark-and-implementation-plan.md`
+- `docs/hackathon/council-ai-competitive-gaps-2026-04-03.md`
+- `docs/hackathon/council-neural-network-implementation-plan-2026-04-03.md`
+- `docs/hackathon/production-env-guard-and-backup-runbook-2026-04-03.md`
 
-Xem đầy đủ trong `.env.example`.
+## 12) License
 
-Nhóm biến cần quan tâm:
-
-- Vận hành: `ENV`, `API_PORT`, `ML_SERVICE_URL`, `NEXT_PUBLIC_API_URL`.
-- Xác thực: `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_*`.
-- Mô hình/LLM: `DEEPSEEK_*`, `EMBEDDING_*`.
-- Kết nối ngoài: `RAG_EXTERNAL_CONNECTORS_ENABLED`, `EXTERNAL_DDI_ENABLED`, `SEARXNG_*`.
-- Cầu nối OCR: `TGC_OCR_BASE_URL`, `TGC_OCR_ENDPOINTS`, `TGC_OCR_API_KEY`.
-
-## 10) Bảo mật và vận hành
-
-- API có lớp trung gian cho ngữ cảnh phân quyền, giới hạn tần suất, đo lường và tiêu đề bảo mật HTTP.
-- Ở môi trường sản xuất có kiểm tra cấu hình bắt buộc (`JWT_SECRET_KEY`, `AUTH_COOKIE_SECURE`).
-- Không lưu bí mật vào kho mã nguồn; dùng `.env` theo từng môi trường.
-- Không đưa thông tin tài khoản thật vào README hoặc tài liệu công khai.
-
-## 11) Giới hạn hiện tại (để tránh tuyên bố quá mức)
-
-- Scribe hiện ở mức nền, chưa phải mô-đun hoàn thiện cho hồ sơ lâm sàng thực tế.
-- Một phần bảng giám sát vẫn dựa trên snapshot runtime và lấy mẫu sự kiện.
-- Truy xuất lõi mức sản xuất chưa chạy toàn phần trên toàn bộ stack vector/graph/search; hiện là kết hợp trong bộ nhớ + nguồn ngoài + cấu hình runtime.
-- Ứng dụng di động hiện là bản mẫu (phiên lưu trong bộ nhớ, chưa tăng cứng đầy đủ cho sản xuất).
-- Chưa phải SaMD, không thay thế quy trình chuyên môn lâm sàng.
-
-## 12) Tài liệu nội bộ liên quan
-
-- Kiến trúc runtime: `data/docs/architecture/clara-runtime-and-routing.md`
-- Hồ sơ đề xuất: `data/docs/proposal/`
-- Tài liệu DevOps: `data/docs/devops/`
-- Hiện vật hackathon: `docs/hackathon/` và `data/docs/hackathon/`
-
-Ghi chú:
-
-- `make docs-check` đang quét `docs/*.md` (đặc biệt nhóm `docs/hackathon`).
-- Bộ tài liệu mở rộng được lưu trong `data/docs/*`.
-
-## 13) Giấy phép
-
-- MIT, xem `LICENSE`.
+MIT — xem `LICENSE`.

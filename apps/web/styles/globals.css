@@ -90,24 +90,17 @@
     Arial,
     sans-serif;
   --font-display:
-    "Orbitron",
-    "Oxanium",
-    "Exo 2",
-    "Rajdhani",
-    "DIN Condensed",
-    "Roboto Condensed",
-    "Arial Narrow",
-    "Helvetica Neue Condensed Bold",
-    "Sora",
-    "Manrope",
     "Be Vietnam Pro",
-    "Avenir Next",
+    "Inter",
+    "Noto Sans",
+    "Manrope",
     "Segoe UI",
+    "Calibri",
+    "Arial",
+    "Avenir Next",
     ui-sans-serif,
     system-ui,
     -apple-system,
-    Helvetica,
-    Arial,
     sans-serif;
 }
 
@@ -342,43 +335,43 @@ html[data-theme="dark"] body {
     linear-gradient(180deg, #030712 0%, #050c18 52%, #020617 100%);
 }
 
-html.dark .bg-white,
-html[data-theme="dark"] .bg-white {
+html.dark .chrome-shell .bg-white,
+html[data-theme="dark"] .chrome-shell .bg-white {
   background-color: rgba(12, 20, 36, 0.9) !important;
 }
 
-html.dark .bg-slate-50,
-html[data-theme="dark"] .bg-slate-50 {
+html.dark .chrome-shell .bg-slate-50,
+html[data-theme="dark"] .chrome-shell .bg-slate-50 {
   background-color: rgba(30, 41, 59, 0.58) !important;
 }
 
-html.dark .border-slate-200,
-html[data-theme="dark"] .border-slate-200 {
+html.dark .chrome-shell .border-slate-200,
+html[data-theme="dark"] .chrome-shell .border-slate-200 {
   border-color: rgba(71, 85, 105, 0.62) !important;
 }
 
-html.dark .text-slate-900,
-html[data-theme="dark"] .text-slate-900 {
+html.dark .chrome-shell .text-slate-900,
+html[data-theme="dark"] .chrome-shell .text-slate-900 {
   color: #e2e8f0 !important;
 }
 
-html.dark .text-slate-800,
-html[data-theme="dark"] .text-slate-800 {
+html.dark .chrome-shell .text-slate-800,
+html[data-theme="dark"] .chrome-shell .text-slate-800 {
   color: #dbe7f6 !important;
 }
 
-html.dark .text-slate-700,
-html[data-theme="dark"] .text-slate-700 {
+html.dark .chrome-shell .text-slate-700,
+html[data-theme="dark"] .chrome-shell .text-slate-700 {
   color: #cdd8ea !important;
 }
 
-html.dark .text-slate-600,
-html[data-theme="dark"] .text-slate-600 {
+html.dark .chrome-shell .text-slate-600,
+html[data-theme="dark"] .chrome-shell .text-slate-600 {
   color: #b2bfd4 !important;
 }
 
-html.dark .text-slate-500,
-html[data-theme="dark"] .text-slate-500 {
+html.dark .chrome-shell .text-slate-500,
+html[data-theme="dark"] .chrome-shell .text-slate-500 {
   color: #8ea0bc !important;
 }
 

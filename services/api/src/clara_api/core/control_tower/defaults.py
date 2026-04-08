@@ -106,6 +106,10 @@ _DEFAULT_CONTROL_TOWER_CONFIG = SystemControlTowerConfig(
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=True,
         file_retrieval_enabled=True,
+        llm_provider="hitechcloud_gpt53_codex_high",
+        llm_base_url="https://platform.hitechcloud.one/v1",
+        llm_model="gpt-5.3-codex-high",
+        llm_api_key="",
     ),
     careguard_runtime=CareguardRuntimeConfig(external_ddi_enabled=False),
 )

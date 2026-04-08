@@ -4,6 +4,8 @@ import { CareguardAnalyzeRawResponse, CareguardAnalyzeResult, normalizeCareguard
 export type CabinetItem = {
   id: number;
   drug_name: string;
+  brand_name?: string | null;
+  manufacturer?: string | null;
   normalized_name: string;
   normalization_source?: "db" | "candidate" | "fallback" | null;
   normalization_confidence?: number | null;
@@ -28,12 +30,22 @@ export type CabinetResponse = {
 export type ScanDetection = {
   drug_name: string;
   normalized_name: string;
+  dosage?: string | null;
+  brand_name?: string | null;
+  manufacturer?: string | null;
   confidence: number;
   evidence: string;
   requires_manual_confirm?: boolean;
   confirmed?: boolean;
   mapping_source?: "db" | "candidate" | "fallback" | null;
   mapping_confidence?: number | null;
+};
+
+export type PrioritizedCabinetField = {
+  drug_name: string;
+  brand_name: string;
+  manufacturer: string;
+  dosage: string;
 };
 
 export const LOW_CONFIDENCE_DETECTION_THRESHOLD = 0.9;
@@ -47,10 +59,13 @@ type ScanResponse = {
   extracted_text?: string | null;
   ocr_provider?: string | null;
   ocr_endpoint?: string | null;
+  prioritized_fields?: PrioritizedCabinetField[];
 };
 
 export type AddCabinetItemPayload = {
   drug_name: string;
+  brand_name?: string;
+  manufacturer?: string;
   dosage?: string;
   dosage_form?: string;
   quantity?: number;
@@ -68,6 +83,28 @@ type AutoDdiRequest = {
   labs?: Record<string, number | string>;
   allergies?: string[];
 };
+
+type ImportDetectionsResponse = {
+  inserted: number;
+  prioritized_fields?: PrioritizedCabinetField[];
+};
+
+function mergePrioritizedFields(response: ScanResponse): ScanDetection[] {
+  const detections = response.detections ?? [];
+  const prioritized = response.prioritized_fields ?? [];
+  return detections.map((detection, index) => {
+    const fallback = prioritized[index];
+    const dosage = detection.dosage ?? (fallback?.dosage?.trim() ? fallback.dosage : null);
+    const brand_name = detection.brand_name ?? (fallback?.brand_name?.trim() ? fallback.brand_name : null);
+    const manufacturer = detection.manufacturer ?? (fallback?.manufacturer?.trim() ? fallback.manufacturer : null);
+    return {
+      ...detection,
+      dosage,
+      brand_name,
+      manufacturer
+    };
+  });
+}
 
 export async function getCabinet(): Promise<CabinetResponse> {
   const response = await api.get<CabinetResponse>("/careguard/cabinet");
@@ -93,7 +130,7 @@ export async function deleteCabinetItem(itemId: number): Promise<void> {
 
 export async function scanReceiptText(text: string): Promise<ScanDetection[]> {
   const response = await api.post<ScanResponse>("/careguard/cabinet/scan-text", { text });
-  return response.data.detections ?? [];
+  return mergePrioritizedFields(response.data);
 }
 
 export async function scanReceiptFile(file: File): Promise<ScanDetection[]> {
@@ -102,11 +139,11 @@ export async function scanReceiptFile(file: File): Promise<ScanDetection[]> {
   const response = await api.post<ScanResponse>("/careguard/cabinet/scan-file", formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
-  return response.data.detections ?? [];
+  return mergePrioritizedFields(response.data);
 }
 
 export async function importDetections(detections: ScanDetection[]): Promise<number> {
-  const response = await api.post<{ inserted: number }>("/careguard/cabinet/import-detections", { detections });
+  const response = await api.post<ImportDetectionsResponse>("/careguard/cabinet/import-detections", { detections });
   return response.data.inserted ?? 0;
 }
 

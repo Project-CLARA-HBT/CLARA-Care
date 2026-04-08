@@ -4,9 +4,16 @@ import { resolvePostLoginPath } from "@/lib/navigation.config";
 
 const ACCESS_COOKIE_NAME = process.env.NEXT_PUBLIC_AUTH_ACCESS_COOKIE ?? "clara_access_token";
 const REFRESH_COOKIE_NAME = process.env.NEXT_PUBLIC_AUTH_REFRESH_COOKIE ?? "clara_refresh_token";
+const CLIENT_SESSION_COOKIE_NAME =
+  process.env.NEXT_PUBLIC_AUTH_CLIENT_SESSION_COOKIE ?? "clara_client_session";
 
 const PUBLIC_PATHS = new Set([
   "/",
+  "/legal",
+  "/legal/privacy",
+  "/legal/terms",
+  "/legal/consent",
+  "/legal/cookies",
   "/login",
   "/register",
   "/forgot-password",
@@ -17,13 +24,16 @@ const PUBLIC_PATHS = new Set([
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
+  if (pathname.startsWith("/share/")) return true;
   return pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.includes(".");
 }
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hasSession = Boolean(
-    request.cookies.get(ACCESS_COOKIE_NAME)?.value || request.cookies.get(REFRESH_COOKIE_NAME)?.value
+    request.cookies.get(ACCESS_COOKIE_NAME)?.value ||
+      request.cookies.get(REFRESH_COOKIE_NAME)?.value ||
+      request.cookies.get(CLIENT_SESSION_COOKIE_NAME)?.value
   );
 
   if (isPublicPath(pathname)) {

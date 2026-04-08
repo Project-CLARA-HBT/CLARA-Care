@@ -248,6 +248,18 @@ def _set_auth_cookies(
         path=path,
         max_age=int(settings.jwt_refresh_minutes * 60),
     )
+    if settings.auth_csrf_enabled:
+        csrf_token = secrets.token_urlsafe(32)
+        response.set_cookie(
+            key=settings.auth_csrf_cookie_name,
+            value=csrf_token,
+            httponly=False,
+            secure=secure,
+            samesite=same_site,
+            domain=domain,
+            path=path,
+            max_age=int(settings.jwt_refresh_minutes * 60),
+        )
 
 
 def _clear_auth_cookies(response: Response) -> None:
@@ -264,6 +276,12 @@ def _clear_auth_cookies(response: Response) -> None:
         domain=domain,
         path=path,
     )
+    if settings.auth_csrf_enabled:
+        response.delete_cookie(
+            key=settings.auth_csrf_cookie_name,
+            domain=domain,
+            path=path,
+        )
 
 
 def _extract_refresh_token_candidates(
@@ -271,20 +289,23 @@ def _extract_refresh_token_candidates(
     request: Request,
     payload: RefreshTokenRequest | None,
 ) -> list[str]:
-    # Prefer HttpOnly cookie first, but keep payload token as fallback to tolerate
-    # stale cookies on mobile/webview clients.
-    cookie_key = get_settings().auth_cookie_refresh_name
-    candidates: list[str] = []
+    settings = get_settings()
+    cookie_key = settings.auth_cookie_refresh_name
     cookie_token = request.cookies.get(cookie_key, "").strip()
     payload_token = payload.refresh_token.strip() if payload and payload.refresh_token else ""
 
+    if payload_token and cookie_token and not secrets.compare_digest(payload_token, cookie_token):
+        if settings.auth_refresh_reject_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token conflict between cookie and payload",
+            )
+        # Graceful mode for mobile/webview cookie skew: prefer HttpOnly cookie, then payload.
+        return [cookie_token, payload_token]
+    if payload_token:
+        return [payload_token]
     if cookie_token:
-        candidates.append(cookie_token)
-    if payload_token and payload_token not in candidates:
-        candidates.append(payload_token)
-
-    if candidates:
-        return candidates
+        return [cookie_token]
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Thiếu refresh token",
@@ -336,6 +357,16 @@ def register(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Đăng ký công khai chỉ hỗ trợ vai trò normal",
+        )
+    if settings.environment.lower() == "production" and not (
+        payload.accepted_terms and payload.accepted_privacy and payload.accepted_medical_consent
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Bạn cần xác nhận đầy đủ Điều khoản sử dụng, Chính sách quyền riêng tư "
+                "và Đồng thuận sử dụng y tế trước khi tạo tài khoản."
+            ),
         )
 
     existing = db.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
@@ -572,11 +603,10 @@ def forgot_password(
         recipient=user.email,
         token=reset_token,
     )
-    reset_token_preview = reset_token if should_expose_action_token_preview(settings) else None
     return ForgotPasswordResponse(
         accepted=True,
         email_delivery_status=email_delivery_status,
-        reset_token_preview=reset_token_preview,
+        reset_token_preview=None,
     )
 
 

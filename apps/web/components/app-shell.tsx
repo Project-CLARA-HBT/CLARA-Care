@@ -46,6 +46,7 @@ const WIDE_WORKSPACE_PREFIXES = [
   "/council",
   "/scribe",
 ];
+const CHROME_HIDDEN_PREFIXES = ["/chat"];
 
 export default function AppShell({ children }: Props) {
   const pathname = usePathname();
@@ -54,6 +55,9 @@ export default function AppShell({ children }: Props) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
+  const hideChrome = CHROME_HIDDEN_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
@@ -139,8 +143,8 @@ export default function AppShell({ children }: Props) {
     applyThemePreference(nextTheme);
   };
 
-  if (hideSidebar) {
-    return <main className="min-h-screen bg-[var(--color-bg)] text-[var(--text-primary)]">{children}</main>;
+  if (hideSidebar || hideChrome) {
+    return <main className="h-[100dvh] min-h-[100dvh] bg-[var(--color-bg)] text-[var(--text-primary)]">{children}</main>;
   }
 
   return (

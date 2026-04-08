@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from clara_api.db.base import Base
@@ -286,3 +297,155 @@ class KnowledgeDocument(Base):
 
     source: Mapped[KnowledgeSource] = relationship("KnowledgeSource")
     owner: Mapped[User] = relationship("User")
+
+
+class WorkspaceFolder(Base):
+    __tablename__ = "workspace_folders"
+    __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_workspace_folders_user_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(120))
+    slug: Mapped[str] = mapped_column(String(140), index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    color: Mapped[str] = mapped_column(String(32), default="cyan")
+    icon: Mapped[str] = mapped_column(String(64), default="folder")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+
+
+class WorkspaceChannel(Base):
+    __tablename__ = "workspace_channels"
+    __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_workspace_channels_user_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(120))
+    slug: Mapped[str] = mapped_column(String(140), index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    visibility: Mapped[str] = mapped_column(String(24), default="private", index=True)
+    color: Mapped[str] = mapped_column(String(32), default="violet")
+    icon: Mapped[str] = mapped_column(String(64), default="hash")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+
+
+class WorkspaceConversationMeta(Base):
+    __tablename__ = "workspace_conversation_meta"
+    __table_args__ = (
+        UniqueConstraint("session_id", name="uq_workspace_conversation_meta_session"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    folder_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspace_folders.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    channel_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspace_channels.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+    session: Mapped[SessionModel] = relationship("SessionModel")
+    folder: Mapped[WorkspaceFolder | None] = relationship("WorkspaceFolder")
+    channel: Mapped[WorkspaceChannel | None] = relationship("WorkspaceChannel")
+
+
+class WorkspaceConversationShare(Base):
+    __tablename__ = "workspace_conversation_shares"
+    __table_args__ = (
+        UniqueConstraint("session_id", name="uq_workspace_conversation_shares_session"),
+        UniqueConstraint("share_token", name="uq_workspace_conversation_shares_token"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    share_token: Mapped[str] = mapped_column(String(160), index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+    session: Mapped[SessionModel] = relationship("SessionModel")
+
+
+class WorkspaceNote(Base):
+    __tablename__ = "workspace_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), index=True)
+    content_markdown: Mapped[str] = mapped_column(Text, default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    tags_json: Mapped[list[str] | dict | None] = mapped_column(JSON, nullable=True)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    conversation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sessions.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+    conversation: Mapped[SessionModel | None] = relationship("SessionModel")

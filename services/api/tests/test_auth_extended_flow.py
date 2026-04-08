@@ -1,7 +1,12 @@
 from uuid import uuid4
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi.testclient import TestClient
 
+from clara_api.api.v1.endpoints.auth import _hash_action_token
+from clara_api.db.models import AuthToken, User
+from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
 client = TestClient(app)
@@ -52,8 +57,20 @@ def test_forgot_reset_and_change_password_flow() -> None:
 
     forgot_response = client.post("/api/v1/auth/forgot-password", json={"email": email})
     assert forgot_response.status_code == 200
-    token = forgot_response.json()["reset_token_preview"]
-    assert token
+    assert forgot_response.json()["reset_token_preview"] is None
+
+    token = "test-reset-token"
+    with SessionLocal() as db:
+        user = db.query(User).where(User.email == email).one()
+        db.add(
+            AuthToken(
+                user_id=user.id,
+                token_type="reset_password",
+                token_hash=_hash_action_token(token),
+                expires_at=datetime.now(tz=UTC) + timedelta(minutes=5),
+            )
+        )
+        db.commit()
 
     reset_response = client.post(
         "/api/v1/auth/reset-password",
@@ -112,7 +129,8 @@ def test_refresh_token_rotation_and_reuse_is_blocked() -> None:
     assert refresh_2 != refresh_1
     assert access_2
 
-    reused_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_1})
+    stateless_client = TestClient(app)
+    reused_response = stateless_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_1})
     assert reused_response.status_code == 401
 
     logout_response = client.post(
@@ -121,5 +139,5 @@ def test_refresh_token_rotation_and_reuse_is_blocked() -> None:
     )
     assert logout_response.status_code == 200
 
-    revoked_response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_2})
+    revoked_response = stateless_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_2})
     assert revoked_response.status_code == 401

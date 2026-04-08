@@ -9,6 +9,7 @@ export default function PageShell({
   children?: React.ReactNode;
   variant?: "card" | "plain";
 }) {
+  const hasHeading = Boolean(title?.trim()) || Boolean(description?.trim());
   const heading = (
     <div className="space-y-2">
       <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-[2.2rem] lg:text-[2.4rem]">{title}</h1>
@@ -19,7 +20,7 @@ export default function PageShell({
   if (variant === "plain") {
     return (
       <section className="space-y-5">
-        {heading}
+        {hasHeading ? heading : null}
         <div>{children}</div>
       </section>
     );
@@ -27,7 +28,7 @@ export default function PageShell({
 
   return (
     <section className="space-y-5">
-      {heading}
+      {hasHeading ? heading : null}
       <div className="chrome-panel rounded-[1.65rem] p-5 sm:p-6 lg:p-7">
         {children}
       </div>

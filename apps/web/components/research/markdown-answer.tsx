@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { toPng } from "html-to-image";
+import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
 
 export type MarkdownAnswerCitation = {
   title: string;
@@ -22,6 +24,13 @@ type CodeFenceProps = {
   code: string;
   language?: string;
   isChartSpec: boolean;
+};
+
+type ChartSpecData = {
+  type: "bar" | "pie";
+  title: string;
+  labels: string[];
+  values: number[];
 };
 
 type SectionTone = "brand" | "evidence" | "safety" | "warning" | "neutral";
@@ -133,19 +142,185 @@ function sanitizeMermaidSvg(svg: string): string {
       if (!current || current === "none" || current === "transparent") {
         node.setAttribute("fill", "#0f172a");
       }
+      if (!node.getAttribute("font-family")) {
+        node.setAttribute("font-family", "Inter, Segoe UI, Arial, sans-serif");
+      }
     });
 
     parsed.querySelectorAll("foreignObject *").forEach((node) => {
       const currentStyle = node.getAttribute("style") ?? "";
-      if (!/color\s*:/i.test(currentStyle)) {
-        node.setAttribute("style", `${currentStyle}${currentStyle ? ";" : ""}color:#0f172a;`);
-      }
+      const nextStyle = `${currentStyle}${currentStyle ? ";" : ""}color:#0f172a !important;`;
+      node.setAttribute("style", nextStyle);
     });
+
+    const svgEl = parsed.documentElement;
+    const styleEl = parsed.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.textContent = `
+      text, tspan, .label, .nodeLabel { fill: #0f172a !important; color: #0f172a !important; }
+      foreignObject *, .label foreignObject * { color: #0f172a !important; fill: #0f172a !important; }
+    `;
+    svgEl.insertBefore(styleEl, svgEl.firstChild);
 
     return parsed.documentElement.outerHTML || "";
   } catch {
     return "";
   }
+}
+
+function parseInlineList(input: string): string[] {
+  const trimmed = input.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return [];
+  return trimmed
+    .slice(1, -1)
+    .split(",")
+    .map((item) => item.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+}
+
+function parseNumberLike(input: string): number | null {
+  const normalized = input.trim().replace(/_/g, "");
+  if (!normalized) return null;
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseChartSpec(code: string): ChartSpecData | null {
+  const raw = code.trim();
+  if (!raw) return null;
+
+  // JSON-like chart spec support
+  if (raw.startsWith("{") && raw.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const type = String(parsed.type || "").toLowerCase();
+      const labels = Array.isArray(parsed.x) ? parsed.x.map(String) : [];
+      const values = Array.isArray(parsed.y) ? parsed.y.map((item) => Number(item)) : [];
+      if ((type === "bar" || type === "pie") && labels.length && labels.length === values.length) {
+        return {
+          type,
+          title: String(parsed.title || "Biểu đồ dữ liệu"),
+          labels,
+          values: values.map((value) => (Number.isFinite(value) ? value : 0)),
+        };
+      }
+    } catch {
+      // Continue fallback parser
+    }
+  }
+
+  // Simple YAML-like parser for current backend contract.
+  const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+  let type: "bar" | "pie" = "bar";
+  let title = "Biểu đồ dữ liệu";
+  let labels: string[] = [];
+  const values: number[] = [];
+  let inYBlock = false;
+
+  for (const line of lines) {
+    if (line.startsWith("type:")) {
+      const value = line.slice("type:".length).trim().toLowerCase();
+      if (value === "pie") type = "pie";
+      if (value === "bar") type = "bar";
+      inYBlock = false;
+      continue;
+    }
+    if (line.startsWith("title:")) {
+      title = line.slice("title:".length).trim().replace(/^["']|["']$/g, "") || title;
+      inYBlock = false;
+      continue;
+    }
+    if (line.startsWith("x:")) {
+      labels = parseInlineList(line.slice("x:".length));
+      inYBlock = false;
+      continue;
+    }
+    if (line.startsWith("y:")) {
+      const inline = line.slice("y:".length).trim();
+      if (inline.startsWith("[")) {
+        parseInlineList(inline).forEach((token) => {
+          const num = parseNumberLike(token);
+          if (num !== null) values.push(num);
+        });
+        inYBlock = false;
+      } else {
+        inYBlock = true;
+      }
+      continue;
+    }
+    if (inYBlock && line.startsWith("- ")) {
+      const num = parseNumberLike(line.slice(2));
+      if (num !== null) values.push(num);
+      continue;
+    }
+    inYBlock = false;
+  }
+
+  if (!labels.length || !values.length || labels.length !== values.length) {
+    return null;
+  }
+  return { type, title, labels, values };
+}
+
+function formatChartValue(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  if (Math.abs(value) >= 1000) return value.toLocaleString("vi-VN");
+  if (Math.abs(value) >= 1) return value.toFixed(2).replace(/\.00$/, "");
+  return value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function ChartSpecPreview({ spec }: { spec: ChartSpecData }) {
+  const max = Math.max(...spec.values, 0.000001);
+  const total = spec.values.reduce((sum, item) => sum + Math.max(item, 0), 0);
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
+        Chart Preview · {spec.type.toUpperCase()}
+      </p>
+      <h4 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{spec.title}</h4>
+      {spec.type === "pie" ? (
+        <div className="mt-3 space-y-2">
+          {spec.labels.map((label, index) => {
+            const value = spec.values[index] ?? 0;
+            const pct = total > 0 ? (Math.max(value, 0) / total) * 100 : 0;
+            return (
+              <div key={`${label}-${index}`} className="space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                  <span>{label}</span>
+                  <span>{formatChartValue(value)} ({pct.toFixed(1)}%)</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-cyan-500"
+                    style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {spec.labels.map((label, index) => {
+            const value = spec.values[index] ?? 0;
+            const ratio = Math.max(0, value) / max;
+            return (
+              <div key={`${label}-${index}`} className="grid grid-cols-[minmax(120px,1fr)_4fr_auto] items-center gap-2 text-xs">
+                <span className="truncate text-slate-600 dark:text-slate-300" title={label}>{label}</span>
+                <div className="h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded bg-indigo-500"
+                    style={{ width: `${Math.min(Math.max(ratio * 100, 0), 100)}%` }}
+                  />
+                </div>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{formatChartValue(value)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function normalizeMermaidCode(code: string): string {
@@ -308,8 +483,208 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   );
 }
 
+const UNICODE_BULLET_PATTERN = /^(\s*)[•●▪◦]\s+(.*)$/;
+const MERMAID_START_PREFIXES = [
+  "flowchart",
+  "graph ",
+  "sequencediagram",
+  "classdiagram",
+  "statediagram",
+  "erdiagram",
+  "journey",
+  "gantt",
+  "pie",
+  "mindmap",
+  "timeline",
+];
+
+function normalizeUnicodeBullets(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let inFence = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+    const match = line.match(UNICODE_BULLET_PATTERN);
+    if (match) {
+      out.push(`${match[1]}- ${match[2]}`);
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+function normalizeTableBlocks(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let inFence = false;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+
+    if (trimmed.startsWith("|")) {
+      out.push(line);
+      continue;
+    }
+
+    if (!trimmed) {
+      const prev = out.length > 0 ? out[out.length - 1].trim() : "";
+      let next = "";
+      let cursor = i + 1;
+      while (cursor < lines.length) {
+        const candidate = lines[cursor].trim();
+        if (candidate) {
+          next = candidate;
+          break;
+        }
+        cursor += 1;
+      }
+      if (prev.startsWith("|") && next.startsWith("|")) {
+        continue;
+      }
+    }
+
+    out.push(line);
+  }
+
+  return out.join("\n");
+}
+
+function collectNonEmptyBlock(lines: string[], start: number): [string[], number] {
+  const block: string[] = [];
+  let cursor = start;
+  while (cursor < lines.length) {
+    const value = lines[cursor];
+    const trimmed = value.trim();
+    if (!trimmed) break;
+    if (trimmed.startsWith("```")) break;
+    if (cursor > start && trimmed.startsWith("#")) break;
+    block.push(value);
+    cursor += 1;
+  }
+  return [block, cursor];
+}
+
+function autoFenceSpecialBlocks(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let inFence = false;
+  let prevNonEmpty = "";
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    const lowered = trimmed.toLowerCase();
+
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      out.push(line);
+      if (trimmed) prevNonEmpty = trimmed;
+      index += 1;
+      continue;
+    }
+
+    if (inFence) {
+      out.push(line);
+      if (trimmed) prevNonEmpty = trimmed;
+      index += 1;
+      continue;
+    }
+
+    if (MERMAID_START_PREFIXES.some((prefix) => lowered.startsWith(prefix))) {
+      const [block, next] = collectNonEmptyBlock(lines, index);
+      out.push("```mermaid");
+      out.push(...block);
+      out.push("```");
+      if (next < lines.length && lines[next].trim() === "") {
+        out.push(lines[next]);
+        index = next + 1;
+      } else {
+        index = next;
+      }
+      prevNonEmpty = "```mermaid";
+      continue;
+    }
+
+    if (lowered.startsWith("type:") && /chart[- ]spec/i.test(prevNonEmpty)) {
+      const [block, next] = collectNonEmptyBlock(lines, index);
+      out.push("```chart-spec");
+      out.push(...block);
+      out.push("```");
+      if (next < lines.length && lines[next].trim() === "") {
+        out.push(lines[next]);
+        index = next + 1;
+      } else {
+        index = next;
+      }
+      prevNonEmpty = "```chart-spec";
+      continue;
+    }
+
+    out.push(line);
+    if (trimmed) prevNonEmpty = trimmed;
+    index += 1;
+  }
+
+  return out.join("\n");
+}
+
 function normalizeAnswer(answer: string): string {
-  return answer.replace(/\r\n/g, "\n").trim();
+  const base = answer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const bulletFixed = normalizeUnicodeBullets(base);
+  const tableFixed = normalizeTableBlocks(bulletFixed);
+  const fenced = autoFenceSpecialBlocks(tableFixed);
+  return fenced.trim();
+}
+
+function sanitizeFileName(value: string): string {
+  return value
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function buildExportBaseName(answer: string): string {
+  const firstHeading = answer
+    .split("\n")
+    .find((line) => line.trim().startsWith("## "))
+    ?.replace(/^##\s+/, "")
+    .trim();
+  const date = new Date().toISOString().replace(/[:.]/g, "-");
+  const title = sanitizeFileName(firstHeading || "clara-research-answer");
+  return `${title}-${date}`;
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function getFenceLanguageLabel(language?: string): string {
@@ -335,6 +710,10 @@ function flattenMarkdownChildren(value: unknown): string {
 function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
   const [notice, setNotice] = useState<"" | "success" | "error">("");
   const label = getFenceLanguageLabel(language);
+  const chartSpec = useMemo(
+    () => (isChartSpec ? parseChartSpec(code) : null),
+    [code, isChartSpec]
+  );
 
   const onCopy = async () => {
     if (!navigator?.clipboard) {
@@ -370,9 +749,14 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
       <pre className="overflow-x-auto p-3 text-[13px] leading-6">
         <code className={language ? `language-${language}` : undefined}>{code}</code>
       </pre>
+      {chartSpec ? (
+        <div className="border-t border-slate-700/80 bg-slate-950/40 p-3">
+          <ChartSpecPreview spec={chartSpec} />
+        </div>
+      ) : null}
       {isChartSpec ? (
         <p className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-300">
-          Block này là spec dữ liệu biểu đồ. Nếu UI có chart-engine, có thể dựng chart trực tiếp từ nội dung này.
+          Block này là spec dữ liệu biểu đồ. CLARA đã render preview trực tiếp nếu parse được.
         </p>
       ) : null}
     </section>
@@ -381,6 +765,9 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
 
 export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProps) {
   const normalized = useMemo(() => normalizeAnswer(answer), [answer]);
+  const [exportNotice, setExportNotice] = useState<string>("");
+  const contentId = useMemo(() => `markdown-answer-${Math.random().toString(36).slice(2, 10)}`, []);
+  const exportBaseName = useMemo(() => buildExportBaseName(normalized), [normalized]);
   const citationMap = useMemo(
     () =>
       citations.reduce<Record<string, MarkdownAnswerCitation>>((acc, item, index) => {
@@ -394,9 +781,73 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
     return null;
   }
 
+  const onExportMarkdown = () => {
+    const blob = new Blob([normalized], { type: "text/markdown;charset=utf-8" });
+    downloadBlob(blob, `${exportBaseName}.md`);
+    setExportNotice("Đã xuất file Markdown.");
+    window.setTimeout(() => setExportNotice(""), 1400);
+  };
+
+  const onExportDocx = async () => {
+    try {
+      const blob = await exportWorkspaceDocxFromMarkdown({
+        markdown: normalized,
+        title: exportBaseName,
+      });
+      downloadBlob(blob, `${exportBaseName}.docx`);
+      setExportNotice("Đã xuất file DOCX.");
+    } catch (cause) {
+      const reason =
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Lỗi không xác định.";
+      setExportNotice(`Xuất DOCX thất bại: ${reason}`);
+    }
+    window.setTimeout(() => setExportNotice(""), 1600);
+  };
+
+  const onCopyMarkdown = async () => {
+    if (!navigator?.clipboard) {
+      setExportNotice("Clipboard không khả dụng.");
+      window.setTimeout(() => setExportNotice(""), 1400);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(normalized);
+      setExportNotice("Đã copy markdown.");
+    } catch {
+      setExportNotice("Không thể copy markdown.");
+    }
+    window.setTimeout(() => setExportNotice(""), 1400);
+  };
+
+  const onExportPng = async () => {
+    const node = document.getElementById(contentId);
+    if (!node) {
+      setExportNotice("Không tìm thấy nội dung để xuất PNG.");
+      window.setTimeout(() => setExportNotice(""), 1400);
+      return;
+    }
+    try {
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
+        backgroundColor: "#ffffff",
+      });
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      downloadBlob(blob, `${exportBaseName}.png`);
+      setExportNotice("Đã xuất PNG.");
+    } catch {
+      setExportNotice("Xuất PNG thất bại.");
+    }
+    window.setTimeout(() => setExportNotice(""), 1600);
+  };
+
   return (
     <div className="medical-markdown prose prose-slate max-w-none dark:prose-invert prose-p:leading-7 prose-li:leading-7 prose-headings:tracking-tight">
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-900 dark:border-cyan-700/70 dark:bg-cyan-950/35 dark:text-cyan-100">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-900 dark:border-cyan-700/70 dark:bg-cyan-950/35 dark:text-cyan-100">
+        <div className="flex flex-wrap items-center gap-2">
         <span>Báo cáo y khoa có cấu trúc</span>
         <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
           markdown + citation
@@ -404,7 +855,42 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
         <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
           mermaid/table ready
         </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onCopyMarkdown}
+            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={onExportMarkdown}
+            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
+          >
+            Xuất .md
+          </button>
+          <button
+            type="button"
+            onClick={() => void onExportDocx()}
+            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
+          >
+            Xuất .docx
+          </button>
+          <button
+            type="button"
+            onClick={() => void onExportPng()}
+            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
+          >
+            Xuất .png
+          </button>
+        </div>
       </div>
+      {exportNotice ? (
+        <p className="mb-2 text-[11px] text-cyan-700 dark:text-cyan-300">{exportNotice}</p>
+      ) : null}
+      <div id={contentId}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
@@ -513,6 +999,7 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
       >
         {normalized}
       </ReactMarkdown>
+      </div>
     </div>
   );
 }

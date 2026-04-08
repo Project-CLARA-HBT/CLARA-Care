@@ -38,7 +38,9 @@ from clara_api.db.models import (
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
+    CabinetImportResponse,
     CabinetImportRequest,
+    CabinetPrioritizedField,
     CabinetScanDetection,
     CabinetScanTextRequest,
     CabinetScanTextResponse,
@@ -191,6 +193,52 @@ OCR_CORRECTION_CUTOFF = 0.86
 _CANDIDATE_DB_LIMIT = 120
 _CANDIDATE_MIN_SCORE = 0.78
 _CANDIDATE_MIN_MARGIN = 0.05
+_ITEM_NOTE_META_PREFIX = "[meta]"
+_OCR_NOISY_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("paracetarnol", "paracetamol"),
+    ("1buprofen", "ibuprofen"),
+    ("arnoxicillin", "amoxicillin"),
+    ("metforrnin", "metformin"),
+    ("warfarrn", "warfarin"),
+)
+_OCR_NOISY_CHAR_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("0", "o"),
+    ("1", "i"),
+    ("5", "s"),
+    ("8", "b"),
+)
+_OCR_FUZZY_STOPWORDS: set[str] = {
+    "toa",
+    "thuoc",
+    "uong",
+    "sang",
+    "trua",
+    "chieu",
+    "toi",
+    "ngay",
+    "lan",
+    "vien",
+    "sau",
+    "an",
+    "truoc",
+    "hop",
+    "sieu",
+    "am",
+}
+_MANUFACTURER_HINTS: tuple[str, ...] = (
+    "stada",
+    "dhg",
+    "hasan",
+    "stella",
+    "mekophar",
+    "pymepharco",
+    "traphaco",
+    "imexpharm",
+    "sanofi",
+    "gsk",
+    "bayer",
+    "pfizer",
+)
 
 _CAREGUARD_SOURCE_CATALOG: dict[str, dict[str, str]] = {
     "local_rules": {
@@ -419,15 +467,83 @@ def _to_title_case(value: str) -> str:
     return " ".join(token.capitalize() for token in value.split(" ") if token)
 
 
+def _sanitize_meta_value(value: str) -> str:
+    return " ".join(str(value or "").replace("|", " ").replace("\n", " ").split()).strip()
+
+
+def _encode_item_note(note: str, *, brand_name: str = "", manufacturer: str = "") -> str:
+    clean_note = (note or "").strip()
+    clean_brand = _sanitize_meta_value(brand_name)
+    clean_manufacturer = _sanitize_meta_value(manufacturer)
+    if not clean_brand and not clean_manufacturer:
+        return clean_note
+    meta = f"{_ITEM_NOTE_META_PREFIX}brand={clean_brand}|manufacturer={clean_manufacturer}".strip()
+    if clean_note:
+        return f"{meta}\n{clean_note}".strip()
+    return meta
+
+
+def _decode_item_note(note: str) -> tuple[str, str | None, str | None]:
+    raw = str(note or "").strip()
+    if not raw:
+        return "", None, None
+    first_line, _, remaining = raw.partition("\n")
+    first = first_line.strip().lower()
+    if not first.startswith(_ITEM_NOTE_META_PREFIX):
+        return raw, None, None
+    payload = first_line[len(_ITEM_NOTE_META_PREFIX) :].strip()
+    if not payload or "=" not in payload:
+        return raw, None, None
+    brand_name: str | None = None
+    manufacturer: str | None = None
+    for part in payload.split("|"):
+        key, _, value = part.partition("=")
+        key_norm = key.strip().lower()
+        val_norm = _sanitize_meta_value(value)
+        if key_norm == "brand" and val_norm:
+            brand_name = val_norm
+        elif key_norm == "manufacturer" and val_norm:
+            manufacturer = val_norm
+    return remaining.strip(), brand_name, manufacturer
+
+
+def _infer_manufacturer_from_text(text: str) -> str:
+    lowered = text.lower()
+    for name in _MANUFACTURER_HINTS:
+        pattern = rf"(^|[^a-z0-9]){re.escape(name)}([^a-z0-9]|$)"
+        if re.search(pattern, lowered):
+            return name.upper()
+    return ""
+
+
+def _infer_brand_name(
+    *,
+    alias: str,
+    canonical: str,
+    display_name: str,
+) -> str:
+    alias_clean = _sanitize_meta_value(alias)
+    canonical_clean = _sanitize_meta_value(canonical)
+    display_clean = _sanitize_meta_value(display_name)
+    if alias_clean and alias_clean.lower() != canonical_clean.lower():
+        return _to_title_case(alias_clean)
+    if display_clean and display_clean.lower() != canonical_clean.lower():
+        return display_clean
+    return ""
+
+
 def _to_item_response(
     item: MedicineItem,
     *,
     normalization_source: str | None = None,
     normalization_confidence: float | None = None,
 ) -> MedicineCabinetItemResponse:
+    clean_note, brand_name, manufacturer = _decode_item_note(item.note)
     return MedicineCabinetItemResponse(
         id=item.id,
         drug_name=item.drug_name,
+        brand_name=brand_name,
+        manufacturer=manufacturer,
         normalized_name=item.normalized_name,
         normalization_source=normalization_source,
         normalization_confidence=normalization_confidence,
@@ -438,7 +554,7 @@ def _to_item_response(
         rx_cui=item.rx_cui,
         ocr_confidence=item.ocr_confidence,
         expires_on=item.expires_on,
-        note=item.note,
+        note=clean_note,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -692,6 +808,66 @@ def _apply_ocr_correction(text: str) -> OcrCorrectionResult:
     )
 
 
+def _normalize_prescription_ocr_text(text: str) -> str:
+    normalized = " ".join(str(text or "").split())
+    lowered = normalized.lower()
+    for raw, replacement in _OCR_NOISY_REPLACEMENTS:
+        lowered = lowered.replace(raw, replacement)
+    lowered = lowered.replace("μg", "mcg")
+    return lowered
+
+
+def _extract_dosage_near_alias(text: str, alias: str) -> str:
+    lowered = str(text or "").lower()
+    alias_norm = str(alias or "").strip().lower()
+    if not lowered or not alias_norm:
+        return ""
+    match = re.search(re.escape(alias_norm), lowered)
+    if not match:
+        return ""
+    start = max(0, match.start() - 28)
+    end = min(len(lowered), match.end() + 42)
+    window = lowered[start:end]
+    dosage_match = re.search(r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|ml|iu|%)\b", window)
+    if dosage_match:
+        return dosage_match.group(0).strip()
+    return ""
+
+
+def _build_prioritized_fields(
+    detections: list[CabinetScanDetection],
+) -> list[CabinetPrioritizedField]:
+    rows: list[CabinetPrioritizedField] = []
+    for detection in detections:
+        rows.append(
+            CabinetPrioritizedField(
+                drug_name=detection.drug_name,
+                brand_name=detection.brand_name or "",
+                manufacturer=detection.manufacturer or "",
+                dosage=detection.dosage or "",
+            )
+        )
+    return rows
+
+
+def _normalize_ocr_token_for_fuzzy_match(token: str) -> str:
+    normalized = _ascii_fold(_normalize_text(token))
+    normalized = normalized.replace("rn", "m").replace("vv", "w")
+    for src, dst in _OCR_NOISY_CHAR_REPLACEMENTS:
+        normalized = normalized.replace(src, dst)
+    return re.sub(r"[^a-z0-9]+", "", normalized)
+
+
+def _compute_ocr_fuzzy_score(token: str, alias: str) -> float:
+    raw_score = SequenceMatcher(None, token, alias.lower()).ratio()
+    normalized_token = _normalize_ocr_token_for_fuzzy_match(token)
+    normalized_alias = _normalize_ocr_token_for_fuzzy_match(alias)
+    if not normalized_token or not normalized_alias:
+        return raw_score
+    normalized_score = SequenceMatcher(None, normalized_token, normalized_alias).ratio()
+    return max(raw_score, normalized_score)
+
+
 def _detect_drugs_from_text(
     text: str,
     db: Session | None = None,
@@ -699,8 +875,10 @@ def _detect_drugs_from_text(
     skip_ocr_correction: bool = False,
 ) -> list[CabinetScanDetection]:
     candidate_text = text if skip_ocr_correction else _apply_ocr_correction(text).corrected_text
-    normalized_text = candidate_text.lower()
+    normalized_text = _normalize_prescription_ocr_text(candidate_text)
     detections: list[CabinetScanDetection] = []
+    detected_normalized_names: set[str] = set()
+    manufacturer_hint = _infer_manufacturer_from_text(normalized_text)
 
     for canonical, aliases in DRUG_ALIAS_MAP.items():
         for alias in aliases:
@@ -712,12 +890,25 @@ def _detect_drugs_from_text(
             display_name, normalized_name, _rx_cui, mapping_source, mapping_confidence = (
                 _resolve_dictionary_mapping_with_source(canonical, db=db)
             )
+            if normalized_name in detected_normalized_names:
+                break
             confidence = 0.94 if alias == canonical else 0.82
+            dosage = _extract_dosage_near_alias(normalized_text, alias)
+            if dosage:
+                confidence = min(0.97, confidence + 0.04)
             requires_manual_confirm = confidence < LOW_CONFIDENCE_OCR_THRESHOLD
             detections.append(
                 CabinetScanDetection(
                     drug_name=display_name,
                     normalized_name=normalized_name,
+                    dosage=dosage or None,
+                    brand_name=_infer_brand_name(
+                        alias=alias,
+                        canonical=canonical,
+                        display_name=display_name,
+                    )
+                    or None,
+                    manufacturer=manufacturer_hint or None,
                     confidence=confidence,
                     evidence=alias,
                     mapping_source=mapping_source,
@@ -726,7 +917,61 @@ def _detect_drugs_from_text(
                     confirmed=not requires_manual_confirm,
                 )
             )
+            detected_normalized_names.add(normalized_name)
             break
+
+    # Handwriting/noisy fallback: attempt fuzzy single-token matching.
+    token_candidates = [
+        token
+        for token in re.split(r"[^a-z0-9+]+", normalized_text)
+        if len(token) >= 4 and token not in _OCR_FUZZY_STOPWORDS and sum(char.isalpha() for char in token) >= 3
+    ]
+    fuzzy_threshold = 0.9 if detections else 0.86
+    fuzzy_limit = 2 if detections else 4
+    fuzzy_added = 0
+    for token in token_candidates[:120]:
+        if fuzzy_added >= fuzzy_limit:
+            break
+        best_canonical = ""
+        best_alias = ""
+        best_score = 0.0
+        for canonical, aliases in DRUG_ALIAS_MAP.items():
+            for alias in aliases:
+                score = _compute_ocr_fuzzy_score(token, alias)
+                if score > best_score:
+                    best_score = score
+                    best_canonical = canonical
+                    best_alias = alias
+        if best_score < fuzzy_threshold or not best_canonical:
+            continue
+        display_name, normalized_name, _rx_cui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(best_canonical, db=db)
+        )
+        if normalized_name in detected_normalized_names:
+            continue
+        detection_confidence = max(0.58, min(0.78, best_score))
+        detections.append(
+            CabinetScanDetection(
+                drug_name=display_name,
+                normalized_name=normalized_name,
+                dosage=_extract_dosage_near_alias(normalized_text, best_alias) or None,
+                brand_name=_infer_brand_name(
+                    alias=best_alias,
+                    canonical=best_canonical,
+                    display_name=display_name,
+                )
+                or None,
+                manufacturer=manufacturer_hint or None,
+                confidence=detection_confidence,
+                evidence=f"fuzzy:{token}->{best_alias}",
+                mapping_source=mapping_source,
+                mapping_confidence=mapping_confidence,
+                requires_manual_confirm=True,
+                confirmed=False,
+            )
+        )
+        detected_normalized_names.add(normalized_name)
+        fuzzy_added += 1
 
     detections.sort(key=lambda item: (-item.confidence, item.drug_name))
     return detections
@@ -1008,7 +1253,11 @@ def add_cabinet_item(
         rx_cui=payload.rx_cui.strip() or mapped_rxcui,
         ocr_confidence=payload.ocr_confidence,
         expires_on=payload.expires_on,
-        note=payload.note.strip(),
+        note=_encode_item_note(
+            payload.note.strip(),
+            brand_name=payload.brand_name,
+            manufacturer=payload.manufacturer,
+        ),
         updated_at=datetime.now(tz=UTC),
     )
     db.add(item)
@@ -1049,6 +1298,7 @@ def update_cabinet_item(
 
     response_mapping_source: str | None = None
     response_mapping_confidence: float | None = None
+    note_value, brand_value, manufacturer_value = _decode_item_note(item.note)
 
     if "drug_name" in provided:
         if payload.drug_name is None or not payload.drug_name.strip():
@@ -1111,7 +1361,16 @@ def update_cabinet_item(
     if "expires_on" in provided:
         item.expires_on = payload.expires_on
     if "note" in provided:
-        item.note = (payload.note or "").strip()
+        note_value = (payload.note or "").strip()
+    if "brand_name" in provided:
+        brand_value = _sanitize_meta_value(payload.brand_name or "") or None
+    if "manufacturer" in provided:
+        manufacturer_value = _sanitize_meta_value(payload.manufacturer or "") or None
+    item.note = _encode_item_note(
+        note_value,
+        brand_name=brand_value or "",
+        manufacturer=manufacturer_value or "",
+    )
 
     item.updated_at = datetime.now(tz=UTC)
     db.add(item)
@@ -1171,6 +1430,7 @@ def scan_cabinet_text(
         extracted_text=correction.corrected_text[:4000],
         ocr_provider="ocr-postprocess",
         ocr_endpoint="local-ocr-correction",
+        prioritized_fields=_build_prioritized_fields(detections),
     )
 
 
@@ -1210,15 +1470,16 @@ async def scan_cabinet_file(
         extracted_text=correction.corrected_text[:4000],
         ocr_provider=ocr_provider,
         ocr_endpoint=used_endpoint,
+        prioritized_fields=_build_prioritized_fields(detections),
     )
 
 
-@router.post("/cabinet/import-detections")
+@router.post("/cabinet/import-detections", response_model=CabinetImportResponse)
 def import_detections(
     payload: CabinetImportRequest,
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
-) -> dict[str, int]:
+) -> CabinetImportResponse:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
@@ -1263,6 +1524,7 @@ def import_detections(
         )
 
     inserted = 0
+    prioritized_fields: list[CabinetPrioritizedField] = []
     for detection in payload.detections:
         _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
             detection.normalized_name or detection.drug_name,
@@ -1274,21 +1536,38 @@ def import_detections(
             cabinet_id=cabinet.id,
             drug_name=detection.drug_name.strip(),
             normalized_name=normalized,
+            dosage=(detection.dosage or "").strip(),
             source="ocr",
             rx_cui=mapped_rxcui,
             ocr_confidence=detection.confidence,
-            note=(
-                f"Phát hiện OCR: {detection.evidence}"
-                + (" (manual confirmed)" if detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD else "")
+            note=_encode_item_note(
+                (
+                    f"Phát hiện OCR: {detection.evidence}"
+                    + (
+                        " (manual confirmed)"
+                        if detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+                        else ""
+                    )
+                ),
+                brand_name=detection.brand_name or "",
+                manufacturer=detection.manufacturer or "",
             ),
             updated_at=datetime.now(tz=UTC),
         )
         db.add(item)
         existing_names.add(normalized)
         inserted += 1
+        prioritized_fields.append(
+            CabinetPrioritizedField(
+                drug_name=detection.drug_name.strip(),
+                brand_name=(detection.brand_name or "").strip(),
+                manufacturer=(detection.manufacturer or "").strip(),
+                dosage=(detection.dosage or "").strip(),
+            )
+        )
 
     db.commit()
-    return {"inserted": inserted}
+    return CabinetImportResponse(inserted=inserted, prioritized_fields=prioritized_fields)
 
 
 @router.post("/cabinet/auto-ddi-check")

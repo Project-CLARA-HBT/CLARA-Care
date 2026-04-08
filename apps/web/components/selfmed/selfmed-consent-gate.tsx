@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import Link from "next/link";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 
 type SelfMedConsentGateProps = {
@@ -94,6 +95,17 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
         <p className="mt-3 max-w-4xl text-base leading-7 text-[var(--text-secondary)]">
           CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. Không sử dụng ứng dụng để tự chẩn đoán,
           tự kê đơn hoặc tự điều chỉnh liều dùng.
+        </p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          Xem đầy đủ tại{" "}
+          <Link href="/legal/consent" className="font-semibold text-cyan-300 hover:underline">
+            Đồng thuận sử dụng y tế
+          </Link>
+          {" "}và{" "}
+          <Link href="/legal/privacy" className="font-semibold text-cyan-300 hover:underline">
+            Chính sách quyền riêng tư
+          </Link>
+          .
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Phiên bản điều khoản hiện tại: <span className="font-semibold">{requiredVersion || "-"}</span>

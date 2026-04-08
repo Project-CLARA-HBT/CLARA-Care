@@ -78,7 +78,12 @@ def test_reranker_embedding_cosine_scoring_reorders_candidates() -> None:
         Document(id="doc-1", text="alpha", metadata={"score": 0.0, "source": "internal"}),
         Document(id="doc-2", text="beta", metadata={"score": 0.0, "source": "internal"}),
     ]
-    reranker = NeuralReranker(enabled=True, top_n=2, timeout_ms=200, embedder=_DeterministicEmbedder())
+    reranker = NeuralReranker(
+        enabled=True,
+        top_n=2,
+        timeout_ms=200,
+        embedder=_DeterministicEmbedder(),
+    )
 
     result = reranker.rerank("query", docs)
 
@@ -195,3 +200,81 @@ def test_reranker_uses_cached_result_for_identical_inputs(monkeypatch) -> None:
     assert second.metadata["rerank_reason"] == "cache_hit"
     assert isinstance(second.metadata["rerank_cache_age_ms"], float)
     assert second.metadata["rerank_cache_age_ms"] >= 0.0
+
+
+def test_reranker_llm_hybrid_uses_llm_scores_to_reorder() -> None:
+    class _DeterministicEmbedder:
+        def embed_batch(self, texts):
+            assert len(texts) == 3
+            return [
+                [1.0, 0.0],  # query
+                [0.9, 0.1],  # doc-1
+                [0.9, 0.1],  # doc-2
+            ]
+
+    class _FakeLlmClient:
+        def generate(self, prompt: str, system_prompt: str | None = None):  # noqa: ARG002
+            class _Response:
+                content = (
+                    '{"scores":[{"doc_id":"doc-1","score":0.10},'
+                    '{"doc_id":"doc-2","score":0.98}]}'
+                )
+                model = "fake-llm"
+
+            return _Response()
+
+    docs = [
+        Document(id="doc-1", text="first", metadata={"source": "internal", "score": 0.1}),
+        Document(id="doc-2", text="second", metadata={"source": "internal", "score": 0.1}),
+    ]
+    reranker = NeuralReranker(
+        enabled=True,
+        strategy="llm_hybrid",
+        llm_enabled=True,
+        llm_client=_FakeLlmClient(),
+        top_n=2,
+        timeout_ms=200,
+        embedder=_DeterministicEmbedder(),
+    )
+
+    result = reranker.rerank("query", docs)
+    assert [doc.id for doc in result.documents[:2]] == ["doc-2", "doc-1"]
+    assert result.metadata["rerank_llm_used"] is True
+    assert (
+        result.documents[0].metadata["rerank_llm_score"]
+        > result.documents[1].metadata["rerank_llm_score"]
+    )
+
+
+def test_reranker_llm_hybrid_falls_back_when_llm_fails() -> None:
+    class _DeterministicEmbedder:
+        def embed_batch(self, texts):
+            assert len(texts) == 3
+            return [
+                [1.0, 0.0],  # query
+                [1.0, 0.0],  # doc-1
+                [0.0, 1.0],  # doc-2
+            ]
+
+    class _BrokenLlmClient:
+        def generate(self, prompt: str, system_prompt: str | None = None):  # noqa: ARG002
+            raise RuntimeError("llm_down")
+
+    docs = [
+        Document(id="doc-1", text="alpha", metadata={"source": "internal", "score": 0.0}),
+        Document(id="doc-2", text="beta", metadata={"source": "internal", "score": 0.0}),
+    ]
+    reranker = NeuralReranker(
+        enabled=True,
+        strategy="llm_hybrid",
+        llm_enabled=True,
+        llm_client=_BrokenLlmClient(),
+        top_n=2,
+        timeout_ms=200,
+        embedder=_DeterministicEmbedder(),
+    )
+
+    result = reranker.rerank("query", docs)
+    assert [doc.id for doc in result.documents[:2]] == ["doc-1", "doc-2"]
+    assert result.metadata["rerank_llm_used"] is False
+    assert isinstance(result.metadata.get("rerank_llm_error"), str)

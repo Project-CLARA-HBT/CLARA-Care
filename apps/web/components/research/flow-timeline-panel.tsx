@@ -92,6 +92,16 @@ function formatEventTime(value?: string): string {
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+function formatDuration(durationMs?: number): string | null {
+  if (durationMs === undefined || !Number.isFinite(durationMs) || durationMs < 0) return null;
+  if (durationMs < 1000) return `${Math.round(durationMs)}ms`;
+  const seconds = durationMs / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainSeconds}s`;
+}
+
 function formatPayloadPreview(payload?: Record<string, unknown>): string {
   if (!payload) return "";
 
@@ -230,6 +240,8 @@ export default function FlowTimelinePanel({
 }: FlowTimelinePanelProps) {
   const summary = summarizeStages(stages);
   const progressPercent = getProgressPercent(summary);
+  const totalDurationMs = stages.reduce((acc, stage) => acc + (stage.durationMs ?? 0), 0);
+  const durationText = totalDurationMs > 0 ? formatDuration(totalDurationMs) : null;
 
   return (
     <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
@@ -244,6 +256,11 @@ export default function FlowTimelinePanel({
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {resolveModeLabel(mode)}
         </span>
+        {durationText ? (
+          <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-700 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+            tổng thời lượng: {durationText}
+          </span>
+        ) : null}
         {isProcessing ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
@@ -308,6 +325,40 @@ export default function FlowTimelinePanel({
                     </div>
                     {stage.detail ? (
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{stage.detail}</p>
+                    ) : null}
+                    {stage.start || stage.end || stage.durationMs !== undefined || stage.eventCount !== undefined ? (
+                      <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+                        {stage.start ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            bắt đầu: {formatEventTime(stage.start)}
+                          </span>
+                        ) : null}
+                        {stage.end ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            kết thúc: {formatEventTime(stage.end)}
+                          </span>
+                        ) : null}
+                        {formatDuration(stage.durationMs) ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            duration: {formatDuration(stage.durationMs)}
+                          </span>
+                        ) : null}
+                        {stage.eventCount !== undefined ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            events: {stage.eventCount}
+                          </span>
+                        ) : null}
+                        {stage.sourceCount !== undefined ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            sources: {stage.sourceCount}
+                          </span>
+                        ) : null}
+                        {stage.componentCount !== undefined ? (
+                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            components: {stage.componentCount}
+                          </span>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </div>

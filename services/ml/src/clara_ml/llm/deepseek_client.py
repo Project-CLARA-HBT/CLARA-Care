@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from time import sleep
+from threading import BoundedSemaphore, Lock
+from time import monotonic, sleep
+import random
+from contextlib import contextmanager
 
 import httpx
 
@@ -14,6 +17,10 @@ class DeepSeekResponse:
 
 class DeepSeekClient:
     _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+    _GLOBAL_RATE_LOCK = Lock()
+    _GLOBAL_LAST_REQUEST_TS = 0.0
+    _SEMAPHORE_LOCK = Lock()
+    _SEMAPHORE_BY_KEY: dict[int, BoundedSemaphore] = {}
 
     def __init__(
         self,
@@ -23,6 +30,9 @@ class DeepSeekClient:
         timeout_seconds: float = 30.0,
         retries_per_base: int = 0,
         retry_backoff_seconds: float = 0.25,
+        max_concurrency: int = 2,
+        min_interval_seconds: float = 0.4,
+        request_jitter_seconds: float = 0.15,
     ) -> None:
         self._api_key = api_key
         self._base_urls = self._parse_base_urls(base_url)
@@ -30,6 +40,9 @@ class DeepSeekClient:
         self._timeout_seconds = timeout_seconds
         self._retries_per_base = max(0, int(retries_per_base))
         self._retry_backoff_seconds = max(0.0, float(retry_backoff_seconds))
+        self._max_concurrency = max(1, int(max_concurrency))
+        self._min_interval_seconds = max(0.0, float(min_interval_seconds))
+        self._request_jitter_seconds = max(0.0, float(request_jitter_seconds))
 
     @property
     def model(self) -> str:
@@ -58,6 +71,38 @@ class DeepSeekClient:
             return f"{base}/audio/transcriptions"
         return f"{base}/v1/audio/transcriptions"
 
+    def _resolve_semaphore(self) -> BoundedSemaphore:
+        key = self._max_concurrency
+        with self._SEMAPHORE_LOCK:
+            semaphore = self._SEMAPHORE_BY_KEY.get(key)
+            if semaphore is None:
+                semaphore = BoundedSemaphore(value=key)
+                self._SEMAPHORE_BY_KEY[key] = semaphore
+            return semaphore
+
+    def _apply_global_throttle(self) -> None:
+        if self._min_interval_seconds <= 0:
+            return
+        with self._GLOBAL_RATE_LOCK:
+            now = monotonic()
+            elapsed = now - self._GLOBAL_LAST_REQUEST_TS
+            wait_seconds = self._min_interval_seconds - elapsed
+            if wait_seconds > 0:
+                wait_seconds += random.uniform(0.0, self._request_jitter_seconds)
+                sleep(wait_seconds)
+                now = monotonic()
+            self._GLOBAL_LAST_REQUEST_TS = now
+
+    @contextmanager
+    def _request_slot(self):
+        semaphore = self._resolve_semaphore()
+        semaphore.acquire()
+        try:
+            self._apply_global_throttle()
+            yield
+        finally:
+            semaphore.release()
+
     def _post_json_with_failover(self, payload: dict[str, object]) -> dict[str, object]:
         errors: list[str] = []
         attempts = self._retries_per_base + 1
@@ -65,16 +110,17 @@ class DeepSeekClient:
             url = self._chat_completions_url(base)
             for attempt in range(attempts):
                 try:
-                    with httpx.Client(timeout=self._timeout_seconds) as client:
-                        response = client.post(
-                            url,
-                            headers={
-                                "Authorization": f"Bearer {self._api_key}",
-                                "Content-Type": "application/json",
-                            },
-                            json=payload,
-                        )
-                        response.raise_for_status()
+                    with self._request_slot():
+                        with httpx.Client(timeout=self._timeout_seconds) as client:
+                            response = client.post(
+                                url,
+                                headers={
+                                    "Authorization": f"Bearer {self._api_key}",
+                                    "Content-Type": "application/json",
+                                },
+                                json=payload,
+                            )
+                            response.raise_for_status()
                     data = response.json()
                     if not isinstance(data, dict):
                         raise RuntimeError("DeepSeek response has invalid format")
@@ -92,7 +138,13 @@ class DeepSeekClient:
                     sleep(self._retry_backoff_seconds * (attempt + 1))
         raise RuntimeError("deepseek_request_failed|" + "|".join(errors[:8]))
 
-    def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse:
+    def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        *,
+        max_tokens: int | None = None,
+    ) -> DeepSeekResponse:
         if not self._api_key:
             raise ValueError("Missing DEEPSEEK_API_KEY")
 
@@ -107,6 +159,8 @@ class DeepSeekClient:
             "temperature": 0.2,
             "messages": messages,
         }
+        if isinstance(max_tokens, int) and max_tokens > 0:
+            payload["max_tokens"] = int(max_tokens)
 
         data = self._post_json_with_failover(payload)
         choices = data.get("choices", [])
@@ -148,20 +202,21 @@ class DeepSeekClient:
             url = self._audio_transcriptions_url(base)
             for attempt in range(attempts):
                 try:
-                    with httpx.Client(timeout=self._timeout_seconds) as client:
-                        response = client.post(
-                            url,
-                            headers={"Authorization": f"Bearer {self._api_key}"},
-                            data=data,
-                            files={
-                                "file": (
-                                    filename,
-                                    audio_bytes,
-                                    content_type or "application/octet-stream",
-                                )
-                            },
-                        )
-                        response.raise_for_status()
+                    with self._request_slot():
+                        with httpx.Client(timeout=self._timeout_seconds) as client:
+                            response = client.post(
+                                url,
+                                headers={"Authorization": f"Bearer {self._api_key}"},
+                                data=data,
+                                files={
+                                    "file": (
+                                        filename,
+                                        audio_bytes,
+                                        content_type or "application/octet-stream",
+                                    )
+                                },
+                            )
+                            response.raise_for_status()
                     raw_payload = response.json()
                     if isinstance(raw_payload, dict):
                         payload = raw_payload

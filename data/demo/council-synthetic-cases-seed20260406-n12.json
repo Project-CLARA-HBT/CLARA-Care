@@ -1,0 +1,461 @@
+{
+  "meta": {
+    "generator": "council_synthetic_case_generator_v1",
+    "seed": 20260406,
+    "total_cases": 12,
+    "created_at_utc": "2026-04-06T15:54:08.784724+00:00",
+    "severity_counts": {
+      "emergency_escalation": 3,
+      "same_day_review": 3,
+      "routine_follow_up": 4,
+      "insufficient_data": 2
+    },
+    "notes": "Synthetic cases for local council endpoint evaluation only."
+  },
+  "cases": [
+    {
+      "case_id": "syn-0001",
+      "severity": "emergency_escalation",
+      "payload": {
+        "symptoms": [
+          "cannot breathe while resting",
+          "confusion and sweating"
+        ],
+        "labs": {
+          "glucose": 54.1,
+          "potassium": 6.12,
+          "egfr": 19.0
+        },
+        "medications": [
+          "insulin therapy",
+          "spironolactone 25mg"
+        ],
+        "history": [
+          "chronic kidney disease",
+          "type 2 diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "emergency_escalation",
+        "expect_emergency": true,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 1
+      }
+    },
+    {
+      "case_id": "syn-0002",
+      "severity": "same_day_review",
+      "payload": {
+        "symptoms": [
+          "moderate edema with reduced urine output",
+          "moderate breathlessness on exertion",
+          "persistent dizziness for 24 hours"
+        ],
+        "labs": {
+          "glucose": 191.8,
+          "egfr": 58.9,
+          "creatinine": 1.66,
+          "potassium": 4.98
+        },
+        "medications": [
+          "aspirin 81mg daily",
+          "ibuprofen 400mg as needed",
+          "furosemide 20mg daily"
+        ],
+        "history": [
+          "chronic kidney disease stage 3",
+          "prior transient ischemic attack"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 2
+      }
+    },
+    {
+      "case_id": "syn-0003",
+      "severity": "routine_follow_up",
+      "payload": {
+        "symptoms": [
+          "increased thirst but able to eat",
+          "mild headache after work",
+          "mild fatigue for 3 days"
+        ],
+        "labs": {
+          "glucose": 163.0,
+          "egfr": 89.0,
+          "creatinine": 1.08
+        },
+        "medications": [
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "hypertension",
+          "family history of diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.35
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 3
+      }
+    },
+    {
+      "case_id": "syn-0004",
+      "severity": "same_day_review",
+      "payload": {
+        "symptoms": [
+          "new reduced concentration episodes this morning",
+          "polyuria and blurry vision for 2 days",
+          "persistent dizziness for 24 hours",
+          "worsening palpitations today"
+        ],
+        "labs": {
+          "glucose": 230.3,
+          "egfr": 58.5,
+          "creatinine": 1.64,
+          "potassium": 5.46
+        },
+        "medications": [
+          "aspirin 81mg daily",
+          "ibuprofen 400mg as needed"
+        ],
+        "history": [
+          "heart failure history",
+          "type 2 diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 4
+      }
+    },
+    {
+      "case_id": "syn-0005",
+      "severity": "routine_follow_up",
+      "payload": {
+        "symptoms": [
+          "occasional dizziness when standing",
+          "intermittent palpitations for 1 week",
+          "mild fatigue for 3 days",
+          "increased thirst but able to eat"
+        ],
+        "labs": {
+          "glucose": 168.6,
+          "egfr": 90.9,
+          "creatinine": 1.12
+        },
+        "medications": [
+          "vitamin d supplement"
+        ],
+        "history": [
+          "family history of diabetes"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.35
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 5
+      }
+    },
+    {
+      "case_id": "syn-0006",
+      "severity": "routine_follow_up",
+      "payload": {
+        "symptoms": [
+          "light ankle swelling in evening",
+          "occasional dizziness when standing",
+          "intermittent palpitations for 1 week",
+          "mild fatigue for 3 days"
+        ],
+        "labs": {
+          "glucose": 130.4,
+          "egfr": 92.2,
+          "creatinine": 0.78
+        },
+        "medications": [
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "dyslipidemia"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.35
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 6
+      }
+    },
+    {
+      "case_id": "syn-0007",
+      "severity": "routine_follow_up",
+      "payload": {
+        "symptoms": [
+          "mild fatigue for 3 days",
+          "mild headache after work",
+          "light ankle swelling in evening"
+        ],
+        "labs": {
+          "glucose": 119.8,
+          "egfr": 82.8,
+          "creatinine": 0.76
+        },
+        "medications": [
+          "vitamin d supplement"
+        ],
+        "history": [
+          "family history of diabetes",
+          "dyslipidemia"
+        ],
+        "specialists": [
+          "cardiology",
+          "nephrology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.35
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 7
+      }
+    },
+    {
+      "case_id": "syn-0008",
+      "severity": "emergency_escalation",
+      "payload": {
+        "symptoms": [
+          "one sided weakness started 1 hour ago",
+          "slurred speech"
+        ],
+        "labs": {
+          "glucose": 193.0,
+          "creatinine": 1.5
+        },
+        "medications": [
+          "aspirin 81mg daily"
+        ],
+        "history": [
+          "prior stroke",
+          "atrial fibrillation"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "emergency_escalation",
+        "expect_emergency": true,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 8
+      }
+    },
+    {
+      "case_id": "syn-0009",
+      "severity": "same_day_review",
+      "payload": {
+        "symptoms": [
+          "moderate breathlessness on exertion",
+          "polyuria and blurry vision for 2 days"
+        ],
+        "labs": {
+          "glucose": 214.9,
+          "egfr": 57.6,
+          "creatinine": 1.25,
+          "potassium": 5.41
+        },
+        "medications": [
+          "ibuprofen 400mg as needed",
+          "furosemide 20mg daily",
+          "aspirin 81mg daily"
+        ],
+        "history": [
+          "prior transient ischemic attack",
+          "chronic kidney disease stage 3"
+        ],
+        "specialists": [
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 9
+      }
+    },
+    {
+      "case_id": "syn-0010",
+      "severity": "insufficient_data",
+      "payload": {
+        "symptoms": [
+          "not sure about symptom timeline"
+        ],
+        "labs": {},
+        "medications": [],
+        "history": [],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": true,
+        "expected_confidence_max": 0.55
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 10
+      }
+    },
+    {
+      "case_id": "syn-0011",
+      "severity": "insufficient_data",
+      "payload": {
+        "symptoms": [
+          "denies chest pain"
+        ],
+        "labs": {},
+        "medications": [],
+        "history": [],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "nephrology",
+          "neurology",
+          "pharmacology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "routine_follow_up",
+        "expect_emergency": false,
+        "expect_needs_more_info": true,
+        "expected_confidence_max": 0.55
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 11
+      }
+    },
+    {
+      "case_id": "syn-0012",
+      "severity": "emergency_escalation",
+      "payload": {
+        "symptoms": [
+          "severe chest pain now",
+          "shortness of breath worsening quickly"
+        ],
+        "labs": {
+          "troponin": 0.185,
+          "bnp": 485.6,
+          "glucose": 227.6
+        },
+        "medications": [
+          "warfarin 3mg daily",
+          "metformin 500mg daily"
+        ],
+        "history": [
+          "coronary artery disease",
+          "hypertension"
+        ],
+        "specialists": [
+          "cardiology",
+          "endocrinology",
+          "neurology"
+        ]
+      },
+      "expectations": {
+        "expected_min_triage": "emergency_escalation",
+        "expect_emergency": true,
+        "expect_needs_more_info": false,
+        "expected_confidence_min": 0.3
+      },
+      "generator_meta": {
+        "seed": 20260406,
+        "index": 12
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { getAccessToken } from "@/lib/auth-store";
+import { getCsrfToken } from "@/lib/auth-store";
 
 export type ResearchTier = "tier1" | "tier2";
 export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
@@ -37,6 +37,12 @@ export type ResearchFlowStage = {
   detail?: string;
   status: ResearchFlowStageStatus;
   source: "metadata" | "flow_events" | "local";
+  start?: string;
+  end?: string;
+  durationMs?: number;
+  eventCount?: number;
+  sourceCount?: number;
+  componentCount?: number;
 };
 
 export type ResearchFlowEvent = {
@@ -442,6 +448,21 @@ function asText(value: unknown): string | undefined {
   return next ? next : undefined;
 }
 
+function asSafeHttpUrl(value: unknown): string | undefined {
+  const urlText = asText(value);
+  if (!urlText) return undefined;
+
+  try {
+    const parsed = new URL(urlText);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 function asNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return undefined;
@@ -506,13 +527,22 @@ function normalizeResearchRetrievalStackMode(
 }
 
 function resolveApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window === "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
   }
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/api/v1`;
+  const fallback = `${window.location.origin}/api/v1`;
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!configured) return fallback;
+  const allowCrossOrigin = process.env.NEXT_PUBLIC_API_ALLOW_CROSS_ORIGIN === "true";
+  try {
+    const resolved = new URL(configured, window.location.origin);
+    if (!allowCrossOrigin && resolved.origin !== window.location.origin) {
+      return fallback;
+    }
+    return resolved.toString();
+  } catch {
+    return fallback;
   }
-  return "http://localhost:8100/api/v1";
 }
 
 function parseSseBlocks(chunkBuffer: string): { blocks: string[]; tail: string } {
@@ -607,7 +637,7 @@ function parseCitation(value: unknown): Tier2Citation | null {
   return {
     title,
     source: asText(item.source) ?? asText(item.publisher) ?? asText(item.source_id),
-    url: asText(item.url),
+    url: asSafeHttpUrl(item.url),
     snippet: asText(item.snippet) ?? asText(item.summary) ?? asText(item.relevance),
     year: asText(item.year)
   };
@@ -707,18 +737,39 @@ const FLOW_STAGE_ALIAS_MAP: Record<string, { stageId: string; label: string }> =
   deep_beta_router: { stageId: "deep_beta_router", label: "Deep Beta Router" },
   deep_beta_gate: { stageId: "deep_beta_router", label: "Deep Beta Router" },
   deep_beta_planner: { stageId: "deep_beta_router", label: "Deep Beta Router" },
+  deep_beta_scope: { stageId: "deep_beta_router", label: "Deep Beta Scope Lock" },
   deep_beta_loop: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
   beta_hypothesis_graph: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
   hypothesis_graph: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
   deep_beta_hypothesis: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Graph" },
+  deep_beta_hypothesis_map: { stageId: "deep_beta_hypothesis", label: "Deep Beta Hypothesis Map" },
   deep_beta_debate: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
   cross_source_debate: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
   debate_refiner: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
   uncertainty_probe: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
   deep_beta_critic: { stageId: "deep_beta_critic", label: "Deep Beta Critic Loop" },
+  deep_beta_retrieval_budget: { stageId: "deep_beta_critic", label: "Deep Beta Retrieval Budget" },
   deep_beta_consensus: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
   consensus_builder: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
   evidence_consensus: { stageId: "deep_beta_consensus", label: "Deep Beta Consensus" },
+  deep_beta_multi_pass_retrieval: {
+    stageId: "deep_beta_consensus",
+    label: "Deep Beta Multi-pass Retrieval"
+  },
+  deep_beta_retrieval_pass: { stageId: "deep_beta_consensus", label: "Deep Beta Retrieval Pass" },
+  deep_beta_parallel_reasoning: { stageId: "deep_beta_reasoning", label: "Deep Beta Parallel Reasoning" },
+  deep_beta_evidence_audit: { stageId: "deep_beta_reasoning", label: "Deep Beta Evidence Audit" },
+  deep_beta_claim_graph: { stageId: "deep_beta_reasoning", label: "Deep Beta Claim Graph" },
+  deep_beta_gap_fill: { stageId: "deep_beta_reasoning", label: "Deep Beta Gap Fill" },
+  deep_beta_llm_gap_analyzer: { stageId: "deep_beta_reasoning", label: "Deep Beta Evidence Audit" },
+  deep_beta_llm_contradiction_hunter: { stageId: "deep_beta_reasoning", label: "Deep Beta Claim Graph" },
+  deep_beta_llm_risk_calibrator: { stageId: "deep_beta_reasoning", label: "Deep Beta Gap Fill" },
+  deep_beta_chain_synthesis: { stageId: "synthesis", label: "Deep Beta Chain Synthesis" },
+  deep_beta_report_synthesis: { stageId: "synthesis", label: "Deep Beta Report Synthesis" },
+  deep_report_synthesis: { stageId: "synthesis", label: "Deep Report Synthesis" },
+  deep_beta_quality_gate: { stageId: "verification", label: "Deep Beta Quality Gate" },
+  deep_beta_chain_verification: { stageId: "verification", label: "Deep Beta Chain Verification" },
+  llm_query_planner: { stageId: "planner", label: "LLM Query Planner" },
   retrieval_internal: { stageId: "retrieval_internal", label: "Internal Corpus" },
   internal_retrieval: { stageId: "retrieval_internal", label: "Internal Corpus" },
   retrieval_scientific: { stageId: "retrieval_scientific", label: "Scientific Retrieval" },
@@ -727,11 +778,15 @@ const FLOW_STAGE_ALIAS_MAP: Record<string, { stageId: string; label: string }> =
   retrieval_file: { stageId: "retrieval_file", label: "File Retrieval" },
   evidence_search: { stageId: "retrieval_orchestrator", label: "Retrieval Orchestrator" },
   evidence_index: { stageId: "evidence_index", label: "Evidence Index + Rerank" },
+  graphrag_sidecar: { stageId: "evidence_index", label: "GraphRAG Sidecar" },
   contradiction_miner: { stageId: "contradiction_miner", label: "Contradiction Miner" },
   synthesis: { stageId: "synthesis", label: "Answer Synthesis" },
   answer_synthesis: { stageId: "synthesis", label: "Answer Synthesis" },
+  llm_generation: { stageId: "synthesis", label: "LLM Generation" },
+  llm_generation_retry: { stageId: "synthesis", label: "LLM Generation Retry" },
   rag_generation: { stageId: "synthesis", label: "Answer Synthesis" },
   verification: { stageId: "verification", label: "FIDES Verification" },
+  safety_override: { stageId: "verification_matrix", label: "Safety Override" },
   verifier_v1: { stageId: "verification", label: "FIDES Verification" },
   verification_matrix: { stageId: "verification_matrix", label: "Claim Matrix" },
   citation_selection: { stageId: "citation_selection", label: "Citation Selection" },
@@ -793,13 +848,55 @@ function parseFlowStage(value: unknown, index: number): ResearchFlowStage | null
     asText(item.message) ??
     asText(item.objective) ??
     asText(item.output);
+  const startRaw =
+    item.start ??
+    item.started_at ??
+    item.startedAt ??
+    item.start_time ??
+    item.startTime ??
+    item.start_timestamp ??
+    item.startTimestamp;
+  const endRaw =
+    item.end ??
+    item.ended_at ??
+    item.endedAt ??
+    item.end_time ??
+    item.endTime ??
+    item.end_timestamp ??
+    item.endTimestamp ??
+    item.completed_at ??
+    item.completedAt ??
+    item.finish ??
+    item.finished_at;
+  const startMs = asTimestampMs(startRaw);
+  const endMs = asTimestampMs(endRaw);
+  const durationMs =
+    asNumber(item.duration_ms) ??
+    asNumber(item.durationMs) ??
+    asNumber(item.elapsed_ms) ??
+    asNumber(item.elapsedMs) ??
+    asNumber(item.latency_ms) ??
+    asNumber(item.latencyMs) ??
+    (startMs !== undefined && endMs !== undefined && endMs >= startMs ? endMs - startMs : undefined);
 
   return {
     id: stageId,
     label,
     detail,
     status: normalizeFlowStatus(item.status ?? item.state ?? item.result),
-    source: "metadata"
+    source: "metadata",
+    start: toIsoTimestamp(startRaw),
+    end: toIsoTimestamp(endRaw),
+    durationMs,
+    eventCount:
+      parseCountMetric(item.event_count ?? item.events_count ?? item.eventCount) ??
+      parseCountMetric(item.events ?? item.event_list ?? item.eventList),
+    sourceCount:
+      parseCountMetric(item.source_count ?? item.sources_count ?? item.sourceCount) ??
+      parseCountMetric(item.sources ?? item.source_list ?? item.sourceList),
+    componentCount:
+      parseCountMetric(item.component_count ?? item.components_count ?? item.componentCount) ??
+      parseCountMetric(item.components ?? item.component_list ?? item.componentList)
   };
 }
 
@@ -868,7 +965,10 @@ function deriveStagesFromFlowEvents(events: ResearchFlowEvent[]): ResearchFlowSt
         label: event.label,
         detail: event.detail,
         status: event.status,
-        source: "flow_events"
+        source: "flow_events",
+        start: event.timestamp,
+        end: event.timestamp,
+        eventCount: 1
       });
       return;
     }
@@ -877,13 +977,60 @@ function deriveStagesFromFlowEvents(events: ResearchFlowEvent[]): ResearchFlowSt
       ...existing,
       label: event.label || existing.label,
       detail: event.detail ?? existing.detail,
-      status: event.status
+      status: event.status,
+      end: event.timestamp ?? existing.end,
+      eventCount: (existing.eventCount ?? 1) + 1
     });
   });
 
   return stageOrder
     .map((stageId) => stageMap.get(stageId))
     .filter((item): item is ResearchFlowStage => Boolean(item));
+}
+
+function mergeFlowStagesWithStageSpans(
+  baseStages: ResearchFlowStage[],
+  stageSpans: ResearchTier2StageSpan[]
+): ResearchFlowStage[] {
+  if (!stageSpans.length) return baseStages;
+
+  const stageMap = new Map<string, ResearchFlowStage>();
+  const stageOrder: string[] = [];
+
+  baseStages.forEach((stage) => {
+    stageMap.set(stage.id, stage);
+    stageOrder.push(stage.id);
+  });
+
+  stageSpans.forEach((span) => {
+    const stageIdentity = resolveFlowStageIdentity(span.stage, span.stage);
+    const stageId = stageIdentity.stageId;
+    const current = stageMap.get(stageId);
+    const next: ResearchFlowStage = {
+      id: stageId,
+      label: current?.label ?? stageIdentity.label ?? toFlowLabel(span.stage),
+      detail: current?.detail,
+      status: current?.status ?? normalizeFlowStatus(span.status),
+      source: current?.source ?? "metadata",
+      start: span.start ?? current?.start,
+      end: span.end ?? current?.end,
+      durationMs: span.durationMs ?? current?.durationMs,
+      eventCount: span.eventCount ?? current?.eventCount,
+      sourceCount: span.sourceCount ?? current?.sourceCount,
+      componentCount: span.componentCount ?? current?.componentCount
+    };
+    if (span.status) {
+      next.status = normalizeFlowStatus(span.status);
+    }
+    stageMap.set(stageId, next);
+    if (!stageOrder.includes(stageId)) {
+      stageOrder.push(stageId);
+    }
+  });
+
+  return stageOrder
+    .map((stageId) => stageMap.get(stageId))
+    .filter((stage): stage is ResearchFlowStage => Boolean(stage));
 }
 
 function parseRoutingHint(value: unknown): ResearchTier2RoutingHint | undefined {
@@ -2227,7 +2374,7 @@ export async function uploadResearchFile(file: File): Promise<ResearchUploadResu
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await api.post<ResearchUploadRawResponse>("/research/upload-file", formData, {
+  const response = await api.post<ResearchUploadRawResponse>("/api/v1/research/upload-file", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: RESEARCH_UPLOAD_TIMEOUT_MS
   });
@@ -2292,7 +2439,7 @@ export async function runResearchTier2(
     payload.source_ids = sourceIds;
   }
 
-  const response = await api.post<ResearchTier2RawResponse>("/research/tier2", payload, {
+  const response = await api.post<ResearchTier2RawResponse>("/api/v1/research/tier2", payload, {
     timeout: RESEARCH_TIER2_TIMEOUT_MS
   });
   return response.data;
@@ -2335,14 +2482,14 @@ export async function createResearchTier2Job(
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
 
-  const response = await api.post<ResearchTier2JobResponse>("/research/tier2/jobs", payload, {
+  const response = await api.post<ResearchTier2JobResponse>("/api/v1/research/tier2/jobs", payload, {
     timeout: 30000
   });
   return response.data;
 }
 
 export async function getResearchTier2Job(jobId: string): Promise<ResearchTier2JobResponse> {
-  const response = await api.get<ResearchTier2JobResponse>(`/research/tier2/jobs/${jobId}`, {
+  const response = await api.get<ResearchTier2JobResponse>(`/api/v1/research/tier2/jobs/${jobId}`, {
     timeout: 30000
   });
   return response.data;
@@ -2356,21 +2503,21 @@ export async function streamResearchTier2Job(
     maxWaitMs?: number;
   }
 ): Promise<void> {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
-    throw new Error("Thiếu access token để mở streaming research.");
-  }
-
   const maxWaitMs = Math.max(30000, handlers.maxWaitMs ?? RESEARCH_TIER2_STREAM_MAX_WAIT_MS);
   const streamUrl = `${resolveApiBaseUrl().replace(/\/$/, "")}/research/tier2/jobs/${encodeURIComponent(jobId)}/stream?heartbeat_seconds=10&poll_interval_seconds=0.7`;
+  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = {
+    Accept: "text/event-stream",
+    "Cache-Control": "no-cache",
+  };
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
   const startedAt = Date.now();
   const response = await fetch(streamUrl, {
     method: "GET",
-    headers: {
-      Accept: "text/event-stream",
-      Authorization: `Bearer ${accessToken}`,
-      "Cache-Control": "no-cache",
-    },
+    headers,
+    credentials: "include",
     signal: handlers.signal,
   });
 
@@ -2421,7 +2568,11 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
   const record = asRecord(value) ?? {};
   const flowEvents = parseFlowEvents(record.flow_events ?? record.events);
   const metadataStages = parseFlowStages(record.flow_stages ?? record.stages);
-  const flowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
+  const stageSpans = dedupeStageSpans(
+    parseStageSpans(record.stage_spans ?? record.stageSpans ?? record.stage_span)
+  );
+  const baseFlowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
+  const flowStages = mergeFlowStagesWithStageSpans(baseFlowStages, stageSpans);
   const reasoningSteps = parseList(
     pickFromRecords(
       [record],
@@ -2704,7 +2855,8 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       metadata.stages ??
       data.stages
   );
-  const flowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
+  const baseFlowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
+  const flowStages = mergeFlowStagesWithStageSpans(baseFlowStages, stageSpans);
   const parsedSteps = parseList(data.steps ?? data.workflow_steps ?? data.plan_steps, parseStep);
   const steps = parsedSteps.length
     ? parsedSteps
@@ -2967,13 +3119,13 @@ function parsePersistedMessage(item: unknown): PersistedResearchMessage | null {
 }
 
 export async function listKnowledgeSources(): Promise<KnowledgeSource[]> {
-  const response = await api.get<{ items?: unknown }>("/research/knowledge-sources");
+  const response = await api.get<{ items?: unknown }>("/api/v1/research/knowledge-sources");
   const items = asRecord(response.data)?.items;
   return parseList(items, parseKnowledgeSource);
 }
 
 export async function createKnowledgeSource(name: string, description = ""): Promise<KnowledgeSource> {
-  const response = await api.post<unknown>("/research/knowledge-sources", { name, description });
+  const response = await api.post<unknown>("/api/v1/research/knowledge-sources", { name, description });
   const parsed = parseKnowledgeSource(response.data);
   if (!parsed) throw new Error("Không thể tạo knowledge source.");
   return parsed;
@@ -2983,14 +3135,14 @@ export async function updateKnowledgeSource(
   sourceId: number,
   payload: { is_active?: boolean; name?: string; description?: string }
 ): Promise<KnowledgeSource> {
-  const response = await api.patch<unknown>(`/research/knowledge-sources/${sourceId}`, payload);
+  const response = await api.patch<unknown>(`/api/v1/research/knowledge-sources/${sourceId}`, payload);
   const parsed = parseKnowledgeSource(response.data);
   if (!parsed) throw new Error("Không thể cập nhật knowledge source.");
   return parsed;
 }
 
 export async function listKnowledgeSourceDocuments(sourceId: number): Promise<KnowledgeSourceDocument[]> {
-  const response = await api.get<{ items?: unknown }>(`/research/knowledge-sources/${sourceId}/documents`);
+  const response = await api.get<{ items?: unknown }>(`/api/v1/research/knowledge-sources/${sourceId}/documents`);
   const items = asRecord(response.data)?.items;
   return parseList(items, parseKnowledgeSourceDocument);
 }
@@ -2998,7 +3150,7 @@ export async function listKnowledgeSourceDocuments(sourceId: number): Promise<Kn
 export async function uploadFileToKnowledgeSource(sourceId: number, file: File): Promise<KnowledgeSourceDocument> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await api.post<unknown>(`/research/knowledge-sources/${sourceId}/upload-file`, formData, {
+  const response = await api.post<unknown>(`/api/v1/research/knowledge-sources/${sourceId}/upload-file`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: RESEARCH_UPLOAD_TIMEOUT_MS
   });
@@ -3009,14 +3161,14 @@ export async function uploadFileToKnowledgeSource(sourceId: number, file: File):
 }
 
 export async function setKnowledgeDocumentStatus(documentId: number, isActive: boolean): Promise<KnowledgeSourceDocument> {
-  const response = await api.patch<unknown>(`/research/documents/${documentId}`, { is_active: isActive });
+  const response = await api.patch<unknown>(`/api/v1/research/documents/${documentId}`, { is_active: isActive });
   const parsed = parseKnowledgeSourceDocument(response.data);
   if (!parsed) throw new Error("Không thể cập nhật trạng thái document.");
   return parsed;
 }
 
 export async function listSourceHubCatalog(): Promise<SourceHubCatalogEntry[]> {
-  const response = await api.get<{ sources?: unknown }>("/research/source-hub/catalog");
+  const response = await api.get<{ sources?: unknown }>("/api/v1/research/source-hub/catalog");
   return parseList(asRecord(response.data)?.sources, parseSourceHubCatalogEntry);
 }
 
@@ -3025,7 +3177,7 @@ export async function listSourceHubRecords(params?: {
   query?: string;
   limit?: number;
 }): Promise<SourceHubRecord[]> {
-  const response = await api.get<{ records?: unknown }>("/research/source-hub/records", {
+  const response = await api.get<{ records?: unknown }>("/api/v1/research/source-hub/records", {
     params: {
       source: params?.source,
       query: params?.query,
@@ -3040,7 +3192,7 @@ export async function syncSourceHub(payload: {
   query: string;
   limit?: number;
 }): Promise<SourceHubSyncResult> {
-  const response = await api.post<unknown>("/research/source-hub/sync", payload);
+  const response = await api.post<unknown>("/api/v1/research/source-hub/sync", payload);
   const data = asRecord(response.data);
   const source = parseSourceHubKey(data?.source);
   const query = asText(data?.query) ?? payload.query;
@@ -3060,7 +3212,7 @@ export async function syncSourceHub(payload: {
 }
 
 export async function listResearchConversations(limit = 50): Promise<PersistedResearchConversation[]> {
-  const response = await api.get<{ items?: unknown }>("/research/conversations", {
+  const response = await api.get<{ items?: unknown }>("/api/v1/research/conversations", {
     params: { limit }
   });
   const root = asRecord(response.data);
@@ -3072,7 +3224,7 @@ export async function createResearchConversation(
   query: string,
   result: Record<string, unknown>
 ): Promise<PersistedResearchConversation> {
-  const response = await api.post<unknown>("/research/conversations", { query, result });
+  const response = await api.post<unknown>("/api/v1/research/conversations", { query, result });
   const parsed = parsePersistedConversation(response.data);
   if (!parsed) throw new Error("Không thể lưu conversation vào database.");
   return parsed;
@@ -3089,7 +3241,7 @@ export async function appendResearchConversationMessage(
     throw new Error("conversationId không hợp lệ.");
   }
   const response = await api.post<unknown>(
-    `/research/conversations/${normalizedId}/messages`,
+    `/api/v1/research/conversations/${normalizedId}/messages`,
     { query, result }
   );
   const parsed = parsePersistedConversation(response.data);
@@ -3105,7 +3257,7 @@ export async function listResearchConversationMessages(
     typeof conversationId === "number" ? conversationId : Math.trunc(Number(conversationId));
   if (!Number.isFinite(normalizedId) || normalizedId <= 0) return [];
   const response = await api.get<{ items?: unknown }>(
-    `/research/conversations/${normalizedId}/messages`,
+    `/api/v1/research/conversations/${normalizedId}/messages`,
     { params: { limit } }
   );
   const root = asRecord(response.data);
@@ -3120,7 +3272,7 @@ export async function deleteResearchConversation(
     typeof conversationId === "number" ? conversationId : Math.trunc(Number(conversationId));
   if (!Number.isFinite(normalizedId) || normalizedId <= 0) return false;
   const response = await api.delete<{ deleted?: unknown }>(
-    `/research/conversations/${normalizedId}`
+    `/api/v1/research/conversations/${normalizedId}`
   );
   return Boolean(asRecord(response.data)?.deleted);
 }

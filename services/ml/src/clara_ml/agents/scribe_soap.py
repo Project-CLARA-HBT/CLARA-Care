@@ -108,6 +108,64 @@ def _plan_block(assessment: dict) -> dict:
     }
 
 
+def _extract_medications(text: str) -> list[str]:
+    lowered = text.lower()
+    # Keep this lightweight and deterministic; this node is a structured fallback.
+    known_meds = (
+        "paracetamol",
+        "acetaminophen",
+        "ibuprofen",
+        "aspirin",
+        "warfarin",
+        "metformin",
+        "amoxicillin",
+        "clopidogrel",
+        "losartan",
+        "amlodipine",
+        "omeprazole",
+    )
+    found: list[str] = []
+    for med in known_meds:
+        if med in lowered and med not in found:
+            found.append(med)
+    return found
+
+
+def _extract_warnings(text: str) -> list[str]:
+    lowered = text.lower()
+    warnings: list[str] = []
+    if "chest pain" in lowered:
+        warnings.append("Chest pain present: consider urgent escalation protocol.")
+    if "shortness of breath" in lowered or "dyspnea" in lowered:
+        warnings.append("Respiratory distress cue detected; monitor closely.")
+    if "faint" in lowered or "syncope" in lowered:
+        warnings.append("Syncope-like symptom detected; evaluate hemodynamic risk.")
+    if "bleeding" in lowered:
+        warnings.append("Bleeding-related signal detected; assess severity immediately.")
+    return warnings
+
+
+def _medical_record_note_node(
+    *, transcript: str, subjective: dict, objective: dict, assessment: dict, plan: dict
+) -> dict:
+    findings = objective.get("findings") if isinstance(objective, dict) else []
+    if not isinstance(findings, list):
+        findings = []
+    return {
+        "chief_complaint": str(subjective.get("chief_complaint", "")).strip(),
+        "hpi": str(subjective.get("history_of_present_illness", "")).strip(),
+        "objective": {
+            "vitals": objective.get("vitals", {}) if isinstance(objective, dict) else {},
+            "findings": findings,
+        },
+        "assessment": assessment.get("problems", []) if isinstance(assessment, dict) else [],
+        "plan": plan.get("next_steps", []) if isinstance(plan, dict) else [],
+        "medications": _extract_medications(transcript),
+        "follow_up": str(plan.get("follow_up", "")).strip() if isinstance(plan, dict) else "",
+        "warnings": _extract_warnings(transcript),
+    }
+
+
 def run_scribe_soap(transcript: str) -> dict:
     normalized = _normalize_transcript(transcript)
     sentences = _split_sentences(normalized)
@@ -115,14 +173,27 @@ def run_scribe_soap(transcript: str) -> dict:
     objective = _objective_block(normalized, sentences)
     assessment = _assessment_block(normalized)
     plan = _plan_block(assessment)
+    medical_record_note = _medical_record_note_node(
+        transcript=normalized,
+        subjective=subjective,
+        objective=objective,
+        assessment=assessment,
+        plan=plan,
+    )
 
     return {
         "subjective": subjective,
         "objective": objective,
         "assessment": assessment,
         "plan": plan,
+        "medical_record_note": medical_record_note,
         "metadata": {
-            "pipeline": "p2-scribe-soap-v1",
+            "pipeline": "p2-scribe-soap-v2",
             "fallback_used": True,
+            "flow_nodes": [
+                {"stage": "transcript_normalization", "status": "completed"},
+                {"stage": "soap_extraction", "status": "completed"},
+                {"stage": "medical_record_note", "status": "completed"},
+            ],
         },
     }
