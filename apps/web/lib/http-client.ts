@@ -12,6 +12,15 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
 const DEFAULT_TIMEOUT_MS = 90000;
 const REFRESH_TIMEOUT_MS = 30000;
+const AUTH_REFRESH_BYPASS_PATHS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/auth/verify-email",
+  "/auth/resend-verification",
+  "/auth/logout"
+];
 
 function resolveApiBaseUrl(): string {
   if (typeof window === "undefined") {
@@ -234,8 +243,15 @@ api.interceptors.response.use(
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const requestUrl = String(originalRequest?.url ?? "");
     const isAuthRefreshCall = requestUrl.includes("/auth/refresh");
+    const isAuthBypassCall = AUTH_REFRESH_BYPASS_PATHS.some((path) => requestUrl.includes(path));
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRefreshCall) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthRefreshCall &&
+      !isAuthBypassCall
+    ) {
       originalRequest._retry = true;
 
       try {
