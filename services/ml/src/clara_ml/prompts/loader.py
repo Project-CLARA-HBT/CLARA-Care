@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Any, Dict
 
 import yaml
@@ -8,10 +9,16 @@ import yaml
 
 class PromptLoader:
     def __init__(self, base_dir: Path) -> None:
-        self.base_dir = base_dir
+        self.base_dir = base_dir.resolve()
 
     def load(self, role: str, intent: str) -> Dict[str, Any]:
-        path = self.base_dir / f"{role}.yaml"
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", role):
+            raise KeyError(f"Role '{role}' not found")
+
+        path = (self.base_dir / f"{role}.yaml").resolve()
+        if self.base_dir not in path.parents:
+            raise KeyError(f"Role '{role}' not found")
+
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         intents = data.get("intents", {})
         if intent not in intents:
