@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import urllib.error
@@ -90,15 +91,18 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
     unsupported_claims = event_obj.get("unsupported_claims")
     verification_matrix = event_obj.get("verification_matrix")
     query = str(event_obj.get("query") or "").strip()
+    user_id = str(item.get("user_id") or "").strip()
+    query_hash = hashlib.sha256(query.encode("utf-8")).hexdigest() if query else None
+    user_ref = hashlib.sha256(user_id.encode("utf-8")).hexdigest() if user_id else None
     return {
         "sequence": item.get("sequence"),
         "timestamp": item.get("timestamp"),
         "source": item.get("source"),
-        "user_id": item.get("user_id"),
+        "user_ref": user_ref,
         "role": item.get("role"),
         "intent": item.get("intent"),
         "model_used": item.get("model_used"),
-        "query": query,
+        "query_hash": query_hash,
         "source_errors": source_errors,
         "fallback_used": fallback_used,
         "fallback_reason": fallback_reason,
@@ -110,9 +114,10 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
                 "fallback_reason": fallback_reason,
                 "fallback_used": fallback_used,
                 "unsupported_claims": unsupported_claims,
+                "query_redacted": bool(query),
+                "user_id_redacted": bool(user_id),
             }
         },
-        "event": event_obj,
     }
 
 
