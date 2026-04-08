@@ -403,6 +403,9 @@ export default function TelemetryDetailsPanel({
         telemetry.indexSummary.beforeDedupe !== undefined ||
         telemetry.indexSummary.afterDedupe !== undefined ||
         telemetry.indexSummary.selectedCount !== undefined ||
+        telemetry.indexSummary.rerankCacheHit !== undefined ||
+        telemetry.indexSummary.rerankCacheAgeMs !== undefined ||
+        Boolean(telemetry.indexSummary.rerankReason) ||
         (telemetry.indexSummary.sourceCounts &&
           Object.keys(telemetry.indexSummary.sourceCounts).length > 0) ||
         telemetry.crawlSummary.attempted !== undefined ||
@@ -434,6 +437,15 @@ export default function TelemetryDetailsPanel({
             ) : null}
             {telemetry.indexSummary.rerankModel ? (
               <p>rerank_model: {telemetry.indexSummary.rerankModel}</p>
+            ) : null}
+            {telemetry.indexSummary.rerankReason ? (
+              <p>rerank_reason: {telemetry.indexSummary.rerankReason}</p>
+            ) : null}
+            {telemetry.indexSummary.rerankCacheHit !== undefined ? (
+              <p>rerank_cache_hit: {String(telemetry.indexSummary.rerankCacheHit)}</p>
+            ) : null}
+            {telemetry.indexSummary.rerankCacheAgeMs !== undefined ? (
+              <p>rerank_cache_age_ms: {formatScore(telemetry.indexSummary.rerankCacheAgeMs)}</p>
             ) : null}
             {telemetry.indexSummary.sourceCounts &&
             Object.keys(telemetry.indexSummary.sourceCounts).length ? (

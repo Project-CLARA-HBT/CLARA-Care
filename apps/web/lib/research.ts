@@ -183,6 +183,9 @@ export type ResearchTier2IndexSummary = {
   rerankLatencyMs?: number;
   rerankTopN?: number;
   rerankModel?: string;
+  rerankReason?: string;
+  rerankCacheHit?: boolean;
+  rerankCacheAgeMs?: number;
 };
 
 export type ResearchTier2CrawlSummary = {
@@ -2211,6 +2214,7 @@ function pickStageSpansPayload(
 
 function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
   const item = asRecord(value) ?? {};
+  const rerank = asRecord(item.rerank);
   const sourceCountsRecord = asRecord(item.source_counts) ?? asRecord(item.sourceCounts);
   const sourceCounts = sourceCountsRecord
     ? Object.fromEntries(
@@ -2239,12 +2243,30 @@ function parseIndexSummary(value: unknown): ResearchTier2IndexSummary {
     durationMs: asNumber(item.duration_ms) ?? asNumber(item.durationMs),
     rerankLatencyMs:
       asNumber(item.rerank_latency_ms) ??
+      asNumber(rerank?.rerank_latency_ms) ??
       asNumber(item.rerankLatencyMs),
     rerankTopN:
       asNumber(item.rerank_topn) ??
       asNumber(item.rerank_top_n) ??
+      asNumber(rerank?.rerank_topn) ??
+      asNumber(rerank?.rerank_top_n) ??
       asNumber(item.rerankTopN),
-    rerankModel: asText(item.rerank_model) ?? asText(item.rerankModel)
+    rerankModel:
+      asText(item.rerank_model) ??
+      asText(rerank?.rerank_model) ??
+      asText(item.rerankModel),
+    rerankReason:
+      asText(item.rerank_reason) ??
+      asText(rerank?.rerank_reason) ??
+      asText(item.rerankReason),
+    rerankCacheHit:
+      asBoolean(item.rerank_cache_hit) ??
+      asBoolean(rerank?.rerank_cache_hit) ??
+      asBoolean(item.rerankCacheHit),
+    rerankCacheAgeMs:
+      asNumber(item.rerank_cache_age_ms) ??
+      asNumber(rerank?.rerank_cache_age_ms) ??
+      asNumber(item.rerankCacheAgeMs)
   };
 }
 
