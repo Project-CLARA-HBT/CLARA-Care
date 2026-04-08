@@ -2298,10 +2298,8 @@ def _build_planner_hints(
     if stack_mode == "full":
         scientific_enabled = True
         web_enabled = True
-        graphrag_enabled_override = True
         reason_codes.append("stack_mode_full_force_scientific")
         reason_codes.append("stack_mode_full_force_web")
-        reason_codes.append("stack_mode_full_force_graphrag")
 
     pass_cap = _DEEP_BETA_PASS_CAP if deep_beta_mode else _DEFAULT_DEEP_PASS_CAP
     retrieval_budget = {
