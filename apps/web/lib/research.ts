@@ -448,6 +448,21 @@ function asText(value: unknown): string | undefined {
   return next ? next : undefined;
 }
 
+function asSafeHttpUrl(value: unknown): string | undefined {
+  const urlText = asText(value);
+  if (!urlText) return undefined;
+
+  try {
+    const parsed = new URL(urlText);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 function asNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return undefined;
@@ -622,7 +637,7 @@ function parseCitation(value: unknown): Tier2Citation | null {
   return {
     title,
     source: asText(item.source) ?? asText(item.publisher) ?? asText(item.source_id),
-    url: asText(item.url),
+    url: asSafeHttpUrl(item.url),
     snippet: asText(item.snippet) ?? asText(item.summary) ?? asText(item.relevance),
     year: asText(item.year)
   };
