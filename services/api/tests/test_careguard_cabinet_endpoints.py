@@ -288,6 +288,16 @@ def test_scan_text_keeps_manual_confirm_for_low_confidence_after_correction() ->
     assert detail["error"] == "manual_confirmation_required"
 
 
+def test_scan_text_rejects_oversized_payload() -> None:
+    token = _login("scan-oversized-user@example.com")
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-text",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"text": "a" * 12001},
+    )
+    assert response.status_code == 422
+
+
 def test_import_detection_rejects_low_confidence_without_confirmation() -> None:
     token = _login("scan-reject-user@example.com")
     import_response = client.post(
