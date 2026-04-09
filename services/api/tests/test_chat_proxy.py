@@ -76,9 +76,9 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert rag_flow["intent_router_enabled"] is True
     assert rag_flow["rule_verification_enabled"] is True
     assert rag_flow["nli_model_enabled"] is True
-    assert rag_flow["rag_reranker_enabled"] is False
+    assert rag_flow["rag_reranker_enabled"] is True
     assert rag_flow["rag_nli_enabled"] is True
-    assert rag_flow["rag_graphrag_enabled"] is False
+    assert rag_flow["rag_graphrag_enabled"] is True
     assert rag_flow["deepseek_fallback_enabled"] is True
     assert rag_flow["low_context_threshold"] == 0.2
     assert rag_flow["scientific_retrieval_enabled"] is True

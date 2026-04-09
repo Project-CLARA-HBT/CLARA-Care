@@ -156,9 +156,9 @@ def test_new_proxy_endpoints_success(
         rag_flow = forwarded_payload["rag_flow"]
         assert rag_flow["rule_verification_enabled"] is True
         assert rag_flow["nli_model_enabled"] is True
-        assert rag_flow["rag_reranker_enabled"] is False
+        assert rag_flow["rag_reranker_enabled"] is True
         assert rag_flow["rag_nli_enabled"] is True
-        assert rag_flow["rag_graphrag_enabled"] is False
+        assert rag_flow["rag_graphrag_enabled"] is True
         assert isinstance(forwarded_payload.get("rag_sources"), list)
         assert len(forwarded_payload["rag_sources"]) >= 1
     timeout = captured["timeout"]

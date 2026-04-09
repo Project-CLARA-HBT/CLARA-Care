@@ -84,7 +84,7 @@ const DEFAULT_FLOW: ControlTowerRagFlow = {
   nli_model_enabled: true,
   rag_reranker_enabled: true,
   rag_nli_enabled: true,
-  rag_graphrag_enabled: false,
+  rag_graphrag_enabled: true,
   verification_enabled: true,
   deepseek_fallback_enabled: true,
   low_context_threshold: 0.2,

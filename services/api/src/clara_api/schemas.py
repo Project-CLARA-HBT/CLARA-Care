@@ -414,9 +414,9 @@ class RagFlowConfig(BaseModel):
         validation_alias=AliasChoices("rule_verification_enabled", "verification_enabled"),
     )
     nli_model_enabled: bool = True
-    rag_reranker_enabled: bool = False
+    rag_reranker_enabled: bool = True
     rag_nli_enabled: bool = True
-    rag_graphrag_enabled: bool = False
+    rag_graphrag_enabled: bool = True
     deepseek_fallback_enabled: bool = True
     low_context_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
     precision_at_k: int = Field(default=10, ge=1, le=50)
