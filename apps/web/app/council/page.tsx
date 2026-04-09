@@ -88,25 +88,37 @@ export default function CouncilPage() {
 
   const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
+  const isAnalyzedCase = useMemo(() => {
+    if (!caseItem) return false;
+    return caseItem.status === "analyzed" && Boolean(caseItem.result && Object.keys(caseItem.result).length > 0);
+  }, [caseItem]);
   const severity = useMemo(() => getSeverity(view), [view]);
 
   const elapsed = useMemo(() => formatElapsed(snapshot?.createdAt), [snapshot?.createdAt]);
 
-  const cardiologyNode = view?.details.specialistLogs[0]?.specialist || "Cardiology Specialist AI";
-  const pharmNode = view?.details.specialistLogs[1]?.specialist || "Pharmacology Advisor";
+  const cardiologyNode = view?.details.specialistLogs[0]?.specialist || "Specialist Node A";
+  const pharmNode = view?.details.specialistLogs[1]?.specialist || "Specialist Node B";
   const consensusText = view?.summary.consensus || "Chưa có kết luận đồng thuận.";
-  const escalationText = view?.summary.escalationReason || "Không có leo thang bắt buộc.";
+  const escalationText = view?.summary.escalationReason || "Chưa có ghi chú leo thang.";
 
-  const supportRatioPct = Math.round(((view?.quality.supportRatio ?? 0.42) * 100 + Number.EPSILON) * 10) / 10;
-  const disagreementPct = Math.round(((view?.quality.disagreementIndex ?? 0.18) * 100 + Number.EPSILON) * 10) / 10;
-  const confidencePct = Math.max(1, Math.min(100, Math.round((view?.quality.neuralProbability ?? view?.quality.supportRatio ?? 0.42) * 100)));
+  const supportRatioPct = view?.quality.supportRatio != null
+    ? Math.round((view.quality.supportRatio * 100 + Number.EPSILON) * 10) / 10
+    : null;
+  const disagreementPct = view?.quality.disagreementIndex != null
+    ? Math.round((view.quality.disagreementIndex * 100 + Number.EPSILON) * 10) / 10
+    : null;
+  const confidencePct = view?.quality.neuralProbability != null
+    ? Math.max(1, Math.min(100, Math.round(view.quality.neuralProbability * 100)))
+    : view?.quality.supportRatio != null
+      ? Math.max(1, Math.min(100, Math.round(view.quality.supportRatio * 100)))
+      : null;
 
   const mapLab = useMemo(() => {
     const found = view?.requestSummary.labs.find((lab) => {
       const key = lab.name.toLowerCase();
       return key.includes("map") || key.includes("mean arterial") || key.includes("huyet ap");
     });
-    return parseNumericLab(found?.value ?? "") ?? 58;
+    return parseNumericLab(found?.value ?? "");
   }, [view]);
 
   const creatinineLab = useMemo(() => {
@@ -114,46 +126,21 @@ export default function CouncilPage() {
       const key = lab.name.toLowerCase();
       return key.includes("creatin") || key.includes("cre");
     });
-    return parseNumericLab(found?.value ?? "") ?? 2.4;
+    return parseNumericLab(found?.value ?? "");
   }, [view]);
 
   const timeline = useMemo(() => {
     const base = view?.timeline.steps ?? [];
-    if (base.length > 0) {
-      return base.slice(0, 3).map((step) => ({
-        id: `${step.sequence}-${step.step}`,
-        time: `STEP ${step.sequence}`,
-        title: step.step,
-        detail: step.detail,
-        critical: step.sequence === base[base.length - 1]?.sequence,
-      }));
-    }
-    return [
-      {
-        id: "fallback-1",
-        time: "TRIGGER",
-        title: "Vitals breach baseline",
-        detail: "MAP dropped below threshold. Council lock initiated for manual verification.",
-        critical: false,
-      },
-      {
-        id: "fallback-2",
-        time: "ANALYSIS",
-        title: "Contraindication flagged",
-        detail: "Potential nephrotoxicity conflict detected by pharmacology node.",
-        critical: false,
-      },
-      {
-        id: "fallback-3",
-        time: "ESCALATION",
-        title: "Protocol lock",
-        detail: "Human-in-the-loop confirmation required before intervention.",
-        critical: true,
-      },
-    ];
+    return base.slice(0, 6).map((step) => ({
+      id: `${step.sequence}-${step.step}`,
+      time: `STEP ${step.sequence}`,
+      title: step.step,
+      detail: step.detail,
+      critical: step.sequence === base[base.length - 1]?.sequence,
+    }));
   }, [view]);
 
-  if (!view) {
+  if (!view || !isAnalyzedCase) {
     return (
       <PageShell
         title="CLARA AI Council"
@@ -164,8 +151,19 @@ export default function CouncilPage() {
           <CouncilWorkspaceNav />
           <CouncilEmptyState
             title="Chưa có dữ liệu phân tích"
-            description={loadError || "Hãy tạo New Case trước khi mở phần synthesis và telemetry."}
+            description={
+              loadError ||
+              "Case hiện tại chưa chạy phân tích. Hãy vào New Case, hoàn tất Intake -> Specialists -> Run."
+            }
           />
+          <div className="flex">
+            <Link
+              href="/council/new"
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white"
+            >
+              Mở New Case Wizard
+            </Link>
+          </div>
         </div>
       </PageShell>
     );
@@ -264,8 +262,10 @@ export default function CouncilPage() {
                   <span className="material-symbols-outlined text-sm text-cyan-300">show_chart</span>
                 </div>
                 <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">{mapLab}</span>
-                  <span className="mb-1 text-xs font-bold text-red-200">▼ 12%</span>
+                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">
+                    {mapLab != null ? String(mapLab) : "--"}
+                  </span>
+                  <span className="mb-1 text-xs font-bold text-[var(--text-muted)]">{mapLab != null ? "LIVE" : "N/A"}</span>
                 </div>
                 <div className="relative mt-4 h-10 overflow-hidden rounded-sm bg-[var(--surface-muted)]">
                   <svg className="h-full w-full"><path d="M0 20 Q 20 10 40 25 T 80 15 T 120 30 T 160 10 T 200 20" fill="none" stroke="#28d9f3" strokeWidth="1" /></svg>
@@ -278,8 +278,10 @@ export default function CouncilPage() {
                   <span className="material-symbols-outlined text-sm text-red-200">science</span>
                 </div>
                 <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">{creatinineLab.toFixed(1)}</span>
-                  <span className="mb-1 text-xs font-bold text-red-200">▲ 0.8</span>
+                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">
+                    {creatinineLab != null ? creatinineLab.toFixed(1) : "--"}
+                  </span>
+                  <span className="mb-1 text-xs font-bold text-[var(--text-muted)]">{creatinineLab != null ? "LIVE" : "N/A"}</span>
                 </div>
                 <div className="relative mt-4 h-10 overflow-hidden rounded-sm bg-[var(--surface-muted)]">
                   <svg className="h-full w-full"><path d="M0 30 L 50 25 L 100 20 L 150 15 L 200 10" fill="none" stroke="#ffb4ab" strokeWidth="1" /></svg>
@@ -292,11 +294,13 @@ export default function CouncilPage() {
                   <span className="material-symbols-outlined text-sm text-cyan-300">bolt</span>
                 </div>
                 <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">{confidencePct}%</span>
+                  <span className="text-3xl font-bold tracking-tighter text-[var(--text-primary)]">
+                    {confidencePct != null ? `${confidencePct}%` : "--"}
+                  </span>
                   <span className="mb-1 text-xs font-bold text-[var(--text-muted)]">{severity === "critical" ? "UNSTABLE" : "STABLE"}</span>
                 </div>
                 <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                  <div className="h-full bg-cyan-400" style={{ width: `${confidencePct}%` }} />
+                  <div className="h-full bg-cyan-400" style={{ width: `${confidencePct ?? 0}%` }} />
                 </div>
               </article>
             </div>
@@ -309,26 +313,30 @@ export default function CouncilPage() {
                 Escalation Log
               </h3>
 
-              <div className="relative space-y-6">
-                <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)]" />
-                {timeline.map((step) => (
-                  <div className="relative pl-8" key={step.id}>
-                    <div
-                      className={[
-                        "absolute left-0 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2",
-                        step.critical
-                          ? "border-red-300 bg-red-500/20"
-                          : "border-cyan-300 bg-cyan-500/10",
-                      ].join(" ")}
-                    >
-                      <div className={`h-1.5 w-1.5 rounded-full ${step.critical ? "bg-red-300" : "bg-cyan-300"}`} />
+              {timeline.length ? (
+                <div className="relative space-y-6">
+                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)]" />
+                  {timeline.map((step) => (
+                    <div className="relative pl-8" key={step.id}>
+                      <div
+                        className={[
+                          "absolute left-0 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                          step.critical
+                            ? "border-red-300 bg-red-500/20"
+                            : "border-cyan-300 bg-cyan-500/10",
+                        ].join(" ")}
+                      >
+                        <div className={`h-1.5 w-1.5 rounded-full ${step.critical ? "bg-red-300" : "bg-cyan-300"}`} />
+                      </div>
+                      <p className={`mb-1 text-[10px] font-mono uppercase ${step.critical ? "text-red-200" : "text-[var(--text-muted)]"}`}>{step.time}</p>
+                      <p className={`text-xs font-bold uppercase tracking-tight ${step.critical ? "text-red-100" : "text-[var(--text-primary)]"}`}>{step.title}</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-secondary)]">{step.detail}</p>
                     </div>
-                    <p className={`mb-1 text-[10px] font-mono uppercase ${step.critical ? "text-red-200" : "text-[var(--text-muted)]"}`}>{step.time}</p>
-                    <p className={`text-xs font-bold uppercase tracking-tight ${step.critical ? "text-red-100" : "text-[var(--text-primary)]"}`}>{step.title}</p>
-                    <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-secondary)]">{step.detail}</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-secondary)]">Chưa có reasoning timeline từ lần chạy Council gần nhất.</p>
+              )}
             </article>
 
             <article className="space-y-3">
@@ -361,11 +369,11 @@ export default function CouncilPage() {
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">{escalationText}</p>
                 <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                   <span>Support ratio</span>
-                  <span>{supportRatioPct}%</span>
+                  <span>{supportRatioPct != null ? `${supportRatioPct}%` : "--"}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                   <span>Disagreement</span>
-                  <span>{disagreementPct}%</span>
+                  <span>{disagreementPct != null ? `${disagreementPct}%` : "--"}</span>
                 </div>
               </div>
             </article>
