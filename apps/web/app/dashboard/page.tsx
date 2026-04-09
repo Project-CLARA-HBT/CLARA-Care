@@ -241,10 +241,10 @@ export default function DashboardPage() {
         ? todayTasks.slice(0, 4)
         : [
             ...todayTasks,
-            { id: "fallback-1", title: "Review Meds", detail: "", tone: "normal", href: "/selfmed" },
-            { id: "fallback-2", title: "Check DDI", detail: "", tone: "warn", href: "/careguard" },
-            { id: "fallback-3", title: "Conduct Council", detail: "", tone: "normal", href: "/council" },
-            { id: "fallback-4", title: "Record Findings", detail: "", tone: "normal", href: "/scribe" },
+            { id: "fallback-1", title: "Review Meds", detail: "", tone: "normal" as TodayTask["tone"], href: "/selfmed" },
+            { id: "fallback-2", title: "Check DDI", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
+            { id: "fallback-3", title: "Conduct Council", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
+            { id: "fallback-4", title: "Record Findings", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
           ]).slice(0, 4),
     [todayTasks]
   );
