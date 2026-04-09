@@ -206,7 +206,7 @@ export default function AdminOverviewPanel() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">RAG Sources</p>
+          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Retrieval Connectors</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalSources}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Nguồn dữ liệu đang khai báo</p>
         </article>
@@ -234,13 +234,13 @@ export default function AdminOverviewPanel() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Knowledge Sources</p>
+          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Knowledge Hubs</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalKnowledgeSources}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Active {activeKnowledgeSources}</p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Source Hub Catalog</p>
+          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Federated Connectors</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalSourceHubCatalog}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Live sync {liveSourceHubCatalog}</p>
         </article>
@@ -248,7 +248,7 @@ export default function AdminOverviewPanel() {
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Unified Sources</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalUnifiedSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">RAG + Knowledge + SourceHub</p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Connectors + Knowledge + Federation</p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">

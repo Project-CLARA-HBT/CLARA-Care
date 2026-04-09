@@ -32,7 +32,7 @@ const ADMIN_TABS: Array<{
     key: "knowledge-sources",
     href: "/admin/knowledge-sources",
     label: "Knowledge Hub",
-    hint: "RAG + SourceHub + Knowledge assets",
+    hint: "Unified retrieval + knowledge assets",
     code: "A02"
   },
   {

@@ -117,7 +117,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/overview",
     label: "Admin Control Tower",
-    desc: "Nguồn RAG và answer flow",
+    desc: "Điều phối cấu hình và vận hành",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
     page: {
@@ -126,36 +126,14 @@ const NAV_ITEMS: NavigationItem[] = [
     }
   },
   {
-    href: "/admin/rag-sources",
-    label: "Nguồn tri thức",
-    desc: "Quản lý nguồn dữ liệu",
-    group: "admin",
-    roles: ["researcher", "doctor", "admin"],
-    page: {
-      title: "Nguồn tri thức",
-      subtitle: "Quản lý nguồn dữ liệu và mức ưu tiên truy xuất."
-    }
-  },
-  {
     href: "/admin/knowledge-sources",
-    label: "Knowledge Sources",
-    desc: "Dataset upload theo từng kho",
+    label: "Nguồn tri thức",
+    desc: "Knowledge Hub hợp nhất",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
     page: {
-      title: "Knowledge Sources",
-      subtitle: "Tạo kho tri thức riêng, upload tài liệu và bật/tắt document cho RAG."
-    }
-  },
-  {
-    href: "/admin/source-hub",
-    label: "Source Hub",
-    desc: "Cào dữ liệu chuẩn y khoa",
-    group: "admin",
-    roles: ["researcher", "doctor", "admin"],
-    page: {
-      title: "Source Hub y khoa",
-      subtitle: "Đồng bộ PubMed, RxNorm, openFDA và DAVIDrug vào kho tri thức quản trị."
+      title: "Knowledge Hub",
+      subtitle: "Trung tâm hợp nhất retrieval connectors, tài liệu và đồng bộ nguồn y khoa."
     }
   },
   {

@@ -189,7 +189,7 @@ export default function AdminKnowledgeSourcesPage() {
         setActiveHubSource((current) => (items.some((item) => item.key === current) ? current : items[0].key));
       }
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải Source Hub catalog.");
+      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải federated catalog.");
     }
   }, []);
 
@@ -204,7 +204,7 @@ export default function AdminKnowledgeSourcesPage() {
       });
       setSourceHubRecords(items);
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải Source Hub records.");
+      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải federated records.");
     } finally {
       setIsLoadingSourceHubRecords(false);
     }
@@ -222,7 +222,7 @@ export default function AdminKnowledgeSourcesPage() {
     event.preventDefault();
     const query = sourceHubSyncQuery.trim();
     if (!query) {
-      setSourceHubError("Vui lòng nhập query đồng bộ Source Hub.");
+      setSourceHubError("Vui lòng nhập query đồng bộ federation.");
       return;
     }
 
@@ -246,7 +246,7 @@ export default function AdminKnowledgeSourcesPage() {
         setSourceHubMessage((prev) => `${prev} Cảnh báo: ${result.warnings.join(" | ")}`);
       }
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể đồng bộ Source Hub.");
+      setSourceHubError(cause instanceof Error ? cause.message : "Không thể đồng bộ federation.");
     } finally {
       setIsSyncingSourceHub(false);
     }
@@ -274,6 +274,31 @@ export default function AdminKnowledgeSourcesPage() {
     return (config?.rag_sources ?? []).slice(0, 10);
   }, [config?.rag_sources]);
 
+  const activeRagConnectors = useMemo(
+    () => (config?.rag_sources ?? []).filter((source) => source.enabled).length,
+    [config?.rag_sources]
+  );
+
+  const activeDocumentCount = useMemo(
+    () => documents.filter((document) => document.is_active).length,
+    [documents]
+  );
+
+  const sourceRecordDistribution = useMemo(() => {
+    const counter = new Map<SourceHubSourceKey, number>();
+    for (const record of sourceHubRecords) {
+      counter.set(record.source, (counter.get(record.source) ?? 0) + 1);
+    }
+    return Array.from(counter.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+  }, [sourceHubRecords]);
+
+  const maxSourceRecordCount = useMemo(
+    () => Math.max(1, ...sourceRecordDistribution.map(([, count]) => count)),
+    [sourceRecordDistribution]
+  );
+
   return (
     <AdminShell
       activeTab="knowledge-sources"
@@ -281,6 +306,83 @@ export default function AdminKnowledgeSourcesPage() {
       description="Knowledge assets và source priority."
     >
       <div className="space-y-6">
+        <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+          <article className="rounded-2xl border border-slate-200 bg-[#001c38] p-4 shadow-lg dark:border-slate-700">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">Knowledge Connectivity Visualization</h3>
+              <span className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
+                Live
+              </span>
+            </div>
+            <div className="mt-3 grid gap-4 md:grid-cols-[1fr_0.9fr]">
+              <div className="relative overflow-hidden rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
+                <svg className="h-44 w-full" viewBox="0 0 560 210" aria-hidden="true">
+                  <path d="M90 36 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M468 36 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M90 178 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M468 178 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <circle cx="280" cy="106" r="34" fill="rgba(0,75,135,0.85)" stroke="rgba(147,239,238,0.85)" />
+                  <text x="280" y="112" textAnchor="middle" fill="#93efee" fontSize="11" fontWeight="700">
+                    HUB CORE
+                  </text>
+                  <circle cx="90" cy="36" r="14" fill="rgba(147,239,238,0.24)" />
+                  <circle cx="468" cy="36" r="14" fill="rgba(147,239,238,0.24)" />
+                  <circle cx="90" cy="178" r="14" fill="rgba(147,239,238,0.24)" />
+                  <circle cx="468" cy="178" r="14" fill="rgba(147,239,238,0.24)" />
+                  <text x="90" y="39" textAnchor="middle" fill="#d3e4ff" fontSize="9">RAG</text>
+                  <text x="468" y="39" textAnchor="middle" fill="#d3e4ff" fontSize="9">Docs</text>
+                  <text x="90" y="181" textAnchor="middle" fill="#d3e4ff" fontSize="9">Med DB</text>
+                  <text x="468" y="181" textAnchor="middle" fill="#d3e4ff" fontSize="9">Trials</text>
+                </svg>
+              </div>
+              <div className="space-y-2.5 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">Records by Source</p>
+                {sourceRecordDistribution.length ? (
+                  sourceRecordDistribution.map(([source, count]) => (
+                    <div key={source}>
+                      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-cyan-100">
+                        <span className="truncate">{SOURCE_LABELS[source]}</span>
+                        <span className="font-mono">{count}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"
+                          style={{ width: `${Math.max(6, Math.round((count / maxSourceRecordCount) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-300">Chưa có record sync từ backend.</p>
+                )}
+              </div>
+            </div>
+          </article>
+
+          <article className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Connectors</p>
+              <p className="mt-1 text-2xl font-black text-[#003461] dark:text-cyan-300">{activeRagConnectors}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Retrieval connectors bật</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Knowledge Sources</p>
+              <p className="mt-1 text-2xl font-black text-[#003461] dark:text-cyan-300">{sources.length}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Kho tri thức đã tạo</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Federated Records</p>
+              <p className="mt-1 text-2xl font-black text-[#003461] dark:text-cyan-300">{sourceHubRecords.length}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Records từ nguồn y khoa</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Docs</p>
+              <p className="mt-1 text-2xl font-black text-[#003461] dark:text-cyan-300">{activeDocumentCount}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Trong source đang chọn</p>
+            </div>
+          </article>
+        </section>
+
         {error ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
             {error}
@@ -295,7 +397,7 @@ export default function AdminKnowledgeSourcesPage() {
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 space-y-4 lg:col-span-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Source Priority Hub</h3>
+              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Knowledge Control</h3>
               <button
                 type="button"
                 onClick={() => void loadSources()}
@@ -326,7 +428,7 @@ export default function AdminKnowledgeSourcesPage() {
 
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">RAG Source Priority</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Retrieval Connectors Priority</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -358,7 +460,7 @@ export default function AdminKnowledgeSourcesPage() {
               ) : null}
 
               {isLoadingRag ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải RAG sources...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải connectors...</p>
               ) : ragPriorityRows.length ? (
                 ragPriorityRows.map((source) => (
                   <div key={source.id} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition dark:border-slate-700 dark:bg-slate-900">
@@ -410,7 +512,7 @@ export default function AdminKnowledgeSourcesPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có RAG source.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có connector nào.</p>
               )}
 
               <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
@@ -572,7 +674,7 @@ export default function AdminKnowledgeSourcesPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Source Hub Federation</h3>
+              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Federated Clinical Sources</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Đồng bộ dữ liệu từ PubMed, RxNorm, openFDA, DAVIDrug và các nguồn chuẩn khác.
               </p>
@@ -630,7 +732,7 @@ export default function AdminKnowledgeSourcesPage() {
                 disabled={isSyncingSourceHub}
                 className="min-h-[42px] rounded-xl bg-[#003461] px-4 text-sm font-semibold text-white transition hover:bg-[#004b87] disabled:opacity-60"
               >
-                {isSyncingSourceHub ? "Đang sync..." : "Sync Source Hub"}
+                {isSyncingSourceHub ? "Đang sync..." : "Sync Federation"}
               </button>
             </div>
           </form>
@@ -661,7 +763,7 @@ export default function AdminKnowledgeSourcesPage() {
                 {isLoadingSourceHubRecords ? (
                   <tr>
                     <td className="px-3 py-3 text-slate-500 dark:text-slate-400" colSpan={5}>
-                      Đang tải Source Hub records...
+                      Đang tải records...
                     </td>
                   </tr>
                 ) : sourceHubRecords.length ? (

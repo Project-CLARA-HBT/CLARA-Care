@@ -33,7 +33,7 @@ function getNavIcon(href: string): string {
   if (href.startsWith("/scribe")) return "clinical_notes";
   if (href.startsWith("/selfmed")) return "pill";
   if (href.startsWith("/careguard")) return "security";
-  if (href.startsWith("/admin/knowledge-sources") || href.startsWith("/admin/rag-sources") || href.startsWith("/admin/source-hub")) {
+  if (href.startsWith("/admin/knowledge-sources")) {
     return "database";
   }
   if (href.startsWith("/admin")) return "settings_input_component";
