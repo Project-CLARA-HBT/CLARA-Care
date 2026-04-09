@@ -61,7 +61,16 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
                 <span className="material-symbols-outlined text-sm text-cyan-700 dark:text-cyan-300">subject</span>
                 Phân tích chi tiết
               </h3>
-              <MarkdownAnswer answer={answer} citations={citations} />
+              <MarkdownAnswer
+                answer={answer}
+                citations={citations}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={true}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </section>
           ) : (
             <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-4 sm:px-5">
@@ -74,7 +83,16 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)]">{formatHistoryTime(turn.createdAt)}</span>
               </div>
-              <MarkdownAnswer answer={answer} citations={[]} />
+              <MarkdownAnswer
+                answer={answer}
+                citations={[]}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </div>
           )}
         </article>

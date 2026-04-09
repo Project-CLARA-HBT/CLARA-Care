@@ -826,7 +826,16 @@ export default function ResearchPage() {
                               </button>
                             </div>
 
-                            <MarkdownAnswer answer={answerText} citations={answerCitations} />
+                            <MarkdownAnswer
+                              answer={answerText}
+                              citations={answerCitations}
+                              showInlineCitations={false}
+                              enableMermaid={false}
+                              stripReferenceSection={true}
+                              stripSafetyMatrixSection={false}
+                              stripMermaidBlocks={true}
+                              stripChartSpecBlocks={true}
+                            />
 
                             {result.tier === "tier2" && runtimeMeta?.hasData ? (
                               <section className="mt-3 rounded-xl border border-cyan-200/70 bg-cyan-50/60 px-3 py-2.5 text-xs text-cyan-900 dark:border-cyan-900/60 dark:bg-cyan-950/25 dark:text-cyan-200">

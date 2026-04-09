@@ -98,7 +98,8 @@ _SOURCE_HUB_SNIPPET_CHAR_LIMIT = 300
 _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
     "markdown": True,
     "tables": True,
-    "mermaid": True,
+    "mermaid": False,
+    "inline_references": False,
     "chart_spec_fences": [
         "chart-spec",
         "vega-lite",

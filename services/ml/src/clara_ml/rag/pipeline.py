@@ -141,7 +141,7 @@ class RagPipelineP1:
         references = "\n".join(refs)
         return (
             "## Kết luận nhanh\n"
-            "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.\n\n"
+            "Hệ thống chuyển sang chế độ tổng hợp an toàn để duy trì phản hồi ổn định.\n\n"
             "## Phân tích chi tiết\n"
             f"- Query: `{query}`\n"
             "- Dưới đây là ngữ cảnh đã truy xuất và rút gọn ở chế độ cục bộ:\n\n"
@@ -1096,10 +1096,8 @@ class RagPipelineP1:
                 "Requirements:\n"
                 "- Length should be detailed and structured (target >= 700 words).\n"
                 "- Include at least one markdown table in 'Bảng tổng hợp bằng chứng'.\n"
-                "- Include one fenced mermaid flowchart for decision flow.\n"
-                "- Include one fenced chart-spec block for key numeric signals.\n"
-                "- In Mermaid labels, do not include markdown links or square-bracket citations.\n"
-                "- Keep citations outside Mermaid and use inline [source-id].\n"
+                "- Keep narrative natural and avoid repetitive sentence templates.\n"
+                "- If diagrams are not necessary, prioritize plain-language clinical reasoning.\n"
                 f"User query: {query}\n"
                 f"Retrieved context:\n{context}"
             )
@@ -1116,9 +1114,7 @@ class RagPipelineP1:
             "3) ## Khuyến nghị an toàn\n"
             "4) ## Nguồn tham chiếu\n"
             "If comparing >=2 options, include a Markdown table with columns: Tiêu chí | Phương án A | Phương án B | Ghi chú.\n"
-            "If explaining process/flow/decision path, include a fenced mermaid flowchart block.\n"
-            "For Mermaid blocks, do not use markdown links or square-bracket citations inside node labels. "
-            "Keep citations outside the Mermaid block in normal markdown text.\n"
+            "If explaining process/flow/decision path, a simple bullet workflow is preferred over large diagrams.\n"
             "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
             "Cite evidence inline with source ids like [source-id].\n"
             f"User query: {query}\n"
@@ -1142,6 +1138,7 @@ class RagPipelineP1:
             "3) ## Khuyến nghị an toàn\n"
             "4) ## Nguồn tham chiếu\n"
             "Use inline source IDs like [source-id].\n"
+            "Keep wording natural, concise, and avoid robotic repetition.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
         )
@@ -1193,8 +1190,7 @@ class RagPipelineP1:
             "Do not refuse solely due to missing context.\n"
             "Be explicit about uncertainty and avoid diagnostic/prescription overreach.\n"
             "If comparative question, provide balanced criteria and a Markdown table.\n"
-            "If process/workflow explanation is needed, include fenced mermaid flowchart.\n"
-            "In Mermaid labels, avoid markdown links and avoid square-bracket citations; place references outside the diagram.\n"
+            "If process/workflow explanation is needed, prefer concise bullet workflow over complex diagrams.\n"
             "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
             "Output MUST be valid GitHub-Flavored Markdown (GFM), no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
@@ -2358,15 +2354,14 @@ class RagPipelineP1:
                 system_prompt_text = (
                     "You are CLARA clinical assistant. "
                     "Be concise, safe, and citation-grounded. "
-                    "Return GFM markdown with these sections: "
-                    "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
-                    "Use markdown table for comparisons. "
-                    "Use fenced mermaid flowchart only when process explanation is needed. "
-                    "In Mermaid node labels, do not include square-bracket citations or markdown links; keep citations outside diagrams. "
-                    "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
-                    "Do not output HTML. "
-                    "Do not prescribe dosage or diagnose."
-                )
+                "Return GFM markdown with these sections: "
+                "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
+                "Use markdown table for comparisons. "
+                "Prefer concise plain-language workflow over large diagrams. "
+                "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
+                "Do not output HTML. "
+                "Do not prescribe dosage or diagnose."
+            )
                 if orchestrator_mode == "deep":
                     system_prompt_text = (
                         "You are CLARA deep research clinical assistant. "

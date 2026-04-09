@@ -1345,6 +1345,7 @@ def test_run_research_tier2_includes_chart_specs_visual_assets_and_reasoning_dig
     assert isinstance(result["reasoning_digest"].get("highlights"), list)
     assert result["render_hints"]["markdown"] is True
     assert result["render_hints"]["tables"] is True
+    assert result["render_hints"]["mermaid"] is False
     assert "## Tóm tắt điều hành" in result["answer_markdown"]
     assert "## Bảng tổng hợp bằng chứng" in result["answer_markdown"]
 
@@ -1762,8 +1763,9 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
     ) == 4
     assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
     answer = str(result.get("answer", ""))
-    assert "```mermaid" in answer
-    assert "```chart-spec" in answer
+    assert "```mermaid" not in answer
+    assert "```chart-spec" not in answer
+    assert "## Nguồn tham chiếu" not in answer
 
 
 def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
@@ -1928,6 +1930,18 @@ def test_ensure_deep_beta_report_artifacts_appends_missing_blocks() -> None:
         },
         verification_summary={"support_ratio": 0.8},
     )
-    assert "```mermaid" in fixed
-    assert "```chart-spec" in fixed
     assert "| Pass | Subquery | Retrieved |" in fixed
+
+
+def test_sanitize_user_facing_answer_markdown_removes_redundant_sections() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.\n\n"
+        "```mermaid\nflowchart TD\nA-->B\n```\n\n"
+        "## Nguồn tham chiếu\n"
+        "- [1] demo\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw)
+    assert "fallback local" not in cleaned.lower()
+    assert "```mermaid" not in cleaned
+    assert "## Nguồn tham chiếu" not in cleaned

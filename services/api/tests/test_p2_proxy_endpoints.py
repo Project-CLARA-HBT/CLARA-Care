@@ -136,7 +136,8 @@ def test_new_proxy_endpoints_success(
         expected_payload["render_hints"] = {
             "markdown": True,
             "tables": True,
-            "mermaid": True,
+            "mermaid": False,
+            "inline_references": False,
             "chart_spec_fences": [
                 "chart-spec",
                 "vega-lite",

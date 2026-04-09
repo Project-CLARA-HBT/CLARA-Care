@@ -277,7 +277,16 @@ export function ResearchMainCard({
           <article className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
             <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Trả lời nhanh</p>
             <div className="mt-2">
-              <MarkdownAnswer answer={result.answer} citations={[]} />
+              <MarkdownAnswer
+                answer={result.answer}
+                citations={[]}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </div>
           </article>
         ) : null}
@@ -306,7 +315,16 @@ export function ResearchMainCard({
             </div>
 
             <div className="mt-2">
-              <MarkdownAnswer answer={result.answer || "Chưa có nội dung."} citations={result.citations} />
+              <MarkdownAnswer
+                answer={result.answer || "Chưa có nội dung."}
+                citations={result.citations}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </div>
 
             {result.citations.length ? (

@@ -158,7 +158,16 @@ export default function ResearchDeepdivePage() {
           </p>
           <div className="mt-2">
             {result ? (
-              <MarkdownAnswer answer={result.answer || "Chưa có nội dung trả lời."} citations={result.citations} />
+              <MarkdownAnswer
+                answer={result.answer || "Chưa có nội dung trả lời."}
+                citations={result.citations}
+                showInlineCitations={true}
+                enableMermaid={true}
+                stripReferenceSection={false}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={false}
+                stripChartSpecBlocks={false}
+              />
             ) : (
               <ResearchEmptyState
                 className="border-0 bg-transparent p-0"

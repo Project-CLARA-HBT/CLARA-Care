@@ -2450,7 +2450,8 @@ export async function runResearchTier2(
   payload.render_hints = {
     markdown: true,
     tables: true,
-    mermaid: true,
+    mermaid: false,
+    inline_references: false,
     chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
   };
 
@@ -2495,7 +2496,8 @@ export async function createResearchTier2Job(
     render_hints: {
       markdown: true,
       tables: true,
-      mermaid: true,
+      mermaid: false,
+      inline_references: false,
       chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
     }
   };

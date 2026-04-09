@@ -14,6 +14,12 @@ export type MarkdownAnswerCitation = {
 export type MarkdownAnswerProps = {
   answer: string;
   citations: MarkdownAnswerCitation[];
+  showInlineCitations?: boolean;
+  enableMermaid?: boolean;
+  stripReferenceSection?: boolean;
+  stripSafetyMatrixSection?: boolean;
+  stripMermaidBlocks?: boolean;
+  stripChartSpecBlocks?: boolean;
 };
 
 type MermaidBlockProps = {
@@ -642,12 +648,79 @@ function autoFenceSpecialBlocks(text: string): string {
   return out.join("\n");
 }
 
-function normalizeAnswer(answer: string): string {
+function removeH2Sections(
+  text: string,
+  shouldRemoveHeading: (headingKey: string) => boolean
+): string {
+  const lines = text.split("\n");
+  const output: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("## ")) {
+      const headingKey = normalizeHeadingKey(trimmed.slice(3));
+      skipping = shouldRemoveHeading(headingKey);
+      if (skipping) continue;
+    }
+    if (!skipping) output.push(line);
+  }
+
+  return output.join("\n");
+}
+
+function stripFencedBlocks(text: string, languages: Set<string>): string {
+  const pattern = /```([a-zA-Z0-9_-]+)?\s*\n[\s\S]*?```/g;
+  return text.replace(pattern, (match, languageRaw?: string) => {
+    const language = String(languageRaw || "").trim().toLowerCase();
+    if (languages.has(language)) return "";
+    return match;
+  });
+}
+
+function normalizeAnswer(
+  answer: string,
+  {
+    stripReferenceSection,
+    stripSafetyMatrixSection,
+    stripMermaidBlocks,
+    stripChartSpecBlocks,
+  }: {
+    stripReferenceSection: boolean;
+    stripSafetyMatrixSection: boolean;
+    stripMermaidBlocks: boolean;
+    stripChartSpecBlocks: boolean;
+  }
+): string {
   const base = answer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const bulletFixed = normalizeUnicodeBullets(base);
   const tableFixed = normalizeTableBlocks(bulletFixed);
   const fenced = autoFenceSpecialBlocks(tableFixed);
-  return fenced.trim();
+
+  let cleaned = fenced;
+  if (stripReferenceSection) {
+    cleaned = removeH2Sections(cleaned, (headingKey) =>
+      headingKey.includes("nguon tham chieu") ||
+      headingKey.includes("tai lieu tham khao") ||
+      headingKey.includes("references")
+    );
+  }
+  if (stripSafetyMatrixSection) {
+    cleaned = removeH2Sections(cleaned, (headingKey) =>
+      headingKey.includes("ma tran quyet dinh an toan")
+    );
+  }
+  if (stripMermaidBlocks) {
+    cleaned = stripFencedBlocks(cleaned, new Set(["mermaid"]));
+  }
+  if (stripChartSpecBlocks) {
+    cleaned = stripFencedBlocks(
+      cleaned,
+      new Set(["chart", "chart-spec", "vega-lite", "echarts-option", "json", "yaml", "yml"])
+    );
+  }
+
+  return cleaned.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function sanitizeFileName(value: string): string {
@@ -756,18 +829,38 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
   );
 }
 
-export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProps) {
-  const normalized = useMemo(() => normalizeAnswer(answer), [answer]);
+export default function MarkdownAnswer({
+  answer,
+  citations,
+  showInlineCitations = false,
+  enableMermaid = false,
+  stripReferenceSection = true,
+  stripSafetyMatrixSection = false,
+  stripMermaidBlocks = true,
+  stripChartSpecBlocks = true,
+}: MarkdownAnswerProps) {
+  const normalized = useMemo(
+    () =>
+      normalizeAnswer(answer, {
+        stripReferenceSection,
+        stripSafetyMatrixSection,
+        stripMermaidBlocks,
+        stripChartSpecBlocks,
+      }),
+    [answer, stripReferenceSection, stripSafetyMatrixSection, stripMermaidBlocks, stripChartSpecBlocks]
+  );
   const [exportNotice, setExportNotice] = useState<string>("");
   const contentId = useMemo(() => `markdown-answer-${Math.random().toString(36).slice(2, 10)}`, []);
   const exportBaseName = useMemo(() => buildExportBaseName(normalized), [normalized]);
   const citationMap = useMemo(
     () =>
-      citations.reduce<Record<string, MarkdownAnswerCitation>>((acc, item, index) => {
-        acc[String(index + 1)] = item;
-        return acc;
-      }, {}),
-    [citations]
+      showInlineCitations
+        ? citations.reduce<Record<string, MarkdownAnswerCitation>>((acc, item, index) => {
+            acc[String(index + 1)] = item;
+            return acc;
+          }, {})
+        : {},
+    [citations, showInlineCitations]
   );
 
   if (!normalized) {
@@ -841,13 +934,20 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
     <div className="medical-markdown prose prose-slate max-w-none dark:prose-invert prose-p:leading-7 prose-li:leading-7 prose-headings:tracking-tight">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-900 dark:border-cyan-700/70 dark:bg-cyan-950/35 dark:text-cyan-100">
         <div className="flex flex-wrap items-center gap-2">
-        <span>Báo cáo y khoa có cấu trúc</span>
+        <span>Báo cáo phân tích lâm sàng</span>
         <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
-          markdown + citation
+          markdown
         </span>
-        <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
-          mermaid/table ready
-        </span>
+        {showInlineCitations ? (
+          <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
+            citations inline
+          </span>
+        ) : null}
+        {enableMermaid ? (
+          <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
+            mermaid bật
+          </span>
+        ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -935,6 +1035,13 @@ export default function MarkdownAnswer({ answer, citations }: MarkdownAnswerProp
             const isInline = !className && !spansMultipleLines && !rawCode.includes("\n");
 
             if (!isInline && language === "mermaid") {
+              if (!enableMermaid) {
+                return (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                    Mermaid đã được rút gọn để tập trung vào phần phân tích chính.
+                  </div>
+                );
+              }
               return <MermaidBlock code={code} />;
             }
 

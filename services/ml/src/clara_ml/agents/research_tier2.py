@@ -1672,37 +1672,6 @@ def _ensure_deep_beta_report_artifacts(
             )
         appendix_sections.append("### Bảng bổ sung Deep Beta\n" + "\n".join(rows))
 
-    if "```mermaid" not in output:
-        appendix_sections.append(
-            "### Decision Flow (Deep Beta)\n"
-            "```mermaid\n"
-            "flowchart TD\n"
-            "    A[Scope Lock] --> B[Multi-pass Retrieval]\n"
-            "    B --> C[Parallel Reasoning Nodes]\n"
-            "    C --> D[Evidence Verification]\n"
-            "    D --> E{High-risk / Contradiction?}\n"
-            "    E -- Yes --> F[Warn + Escalate clinician]\n"
-            "    E -- No --> G[Long-form synthesis + quality gate]\n"
-            "```\n"
-        )
-
-    if "```chart-spec" not in output:
-        evidence = evidence_verification if isinstance(evidence_verification, dict) else {}
-        matrix = verification_summary if isinstance(verification_summary, dict) else {}
-        appendix_sections.append(
-            "### Chart Spec (Deep Beta Signals)\n"
-            "```chart-spec\n"
-            "type: bar\n"
-            "title: Deep Beta Evidence Signals\n"
-            "x: [supported_claims, unsupported_claims, contradicted_claims, support_ratio]\n"
-            "y:\n"
-            f"  - {len(evidence.get('supported_claims', [])) if isinstance(evidence.get('supported_claims'), list) else 0}\n"
-            f"  - {len(evidence.get('unsupported_claims', [])) if isinstance(evidence.get('unsupported_claims'), list) else 0}\n"
-            f"  - {len(evidence.get('contradicted_claims', [])) if isinstance(evidence.get('contradicted_claims'), list) else 0}\n"
-            f"  - {round(_safe_float(matrix.get('support_ratio'), 0.0), 3)}\n"
-            "```\n"
-        )
-
     if appendix_sections:
         output = f"{output.rstrip()}\n\n" + "\n\n".join(appendix_sections).rstrip() + "\n"
     return output
@@ -1778,20 +1747,17 @@ def _synthesize_deep_beta_long_report(
         "## Ma trận quyết định an toàn\n"
         "## Kế hoạch theo dõi sau tư vấn\n"
         "## Giới hạn, sai số và rủi ro pháp lý\n"
-        "## Nguồn tham chiếu\n"
         "Requirements:\n"
         "- length >= "
         f"{target_words} words\n"
-        "- write as a long-form clinical report with high depth (target: ~5-10 pages)\n"
-        "- each major section must contain concrete bullet points and paragraph analysis (not placeholder text)\n"
-        "- explicitly discuss uncertainty, contradictory evidence, and subgroup caveats\n"
+        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: ~5-10 pages)\n"
+        "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
+        "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
+        "- explicitly discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions\n"
         "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)\n"
-        "- include an 'if-then' decision flow in mermaid format\n"
         "- include at least one markdown table in 'Hồ sơ bằng chứng & chất lượng nguồn'\n"
-        "- include one mermaid flowchart for decision pathway\n"
-        "- mermaid block must not contain HTML tags like <br>, <p>, <div>, <span>\n"
-        "- include one fenced code block with language 'chart-spec' summarizing numeric signals\n"
-        "- citations must use source_id style [source-id]\n"
+        "- do not add a dedicated references/citations section in the answer body\n"
+        "- keep citations concise and only when needed to support critical claims\n"
         "- do not prescribe dosage, do not diagnose\n\n"
         f"topic={topic}\n"
         f"baseline_answer={answer_markdown}\n"
@@ -1928,19 +1894,6 @@ def _synthesize_deep_beta_long_report(
                 f"| Unsupported | {len(unsupported_claims)} | Không chuyển thành khuyến nghị lâm sàng |",
             ]
 
-            citation_bullets: list[str] = []
-            for index, citation in enumerate(compact_citations[:18], start=1):
-                source_id = str(citation.get("source_id") or "source-unknown")
-                source_title = _compact_snippet(str(citation.get("title") or "-"), max_len=180)
-                source_url = str(citation.get("url") or "").strip()
-                source_hint = f"[{source_id}]"
-                if source_url:
-                    source_hint = f"[{source_id}]({source_url})"
-                citation_bullets.append(
-                    f"{index}. **{source_hint}**: {source_title}. "
-                    "Được dùng để hiệu chỉnh mức độ chắc chắn của nhận định trong báo cáo."
-                )
-
             uncertainty_blocks = [
                 "- Khi bằng chứng mâu thuẫn giữa các nguồn, ưu tiên guideline/consensus cập nhật hơn nghiên cứu đơn lẻ.",
                 "- Mọi kết luận chỉ mang tính hỗ trợ quyết định, không thay thế chỉ định khám, kê đơn hay chẩn đoán.",
@@ -1958,8 +1911,6 @@ def _synthesize_deep_beta_long_report(
                 + "\n".join(citation_rows)
                 + "\n\n### Ma trận trạng thái claim-level\n"
                 + "\n".join(claim_rows)
-                + "\n\n### Danh mục nguồn dùng để hiệu chỉnh nhận định\n"
-                + "\n".join(citation_bullets)
                 + "\n\n### Uncertainty & Safety Escalation Notes\n"
                 + "\n".join(uncertainty_blocks)
                 + "\n\n### Ghi chú phương pháp\n"
@@ -3359,7 +3310,7 @@ def _deep_beta_research_methodology(
             },
             {
                 "name": "beta_longform_report",
-                "goal": "Tổng hợp báo cáo dài dạng markdown với bảng, mermaid, chart-spec.",
+                "goal": "Tổng hợp báo cáo dài dạng markdown, ưu tiên phân tích rõ ràng và bảng bằng chứng.",
             },
         ],
     }
@@ -4017,6 +3968,77 @@ def _ensure_markdown_structure(
         "## Nguồn tham chiếu\n"
         f"{citations_block}"
     )
+
+
+def _remove_h2_sections(markdown_text: str, *, section_heading_keys: set[str]) -> str:
+    text = str(markdown_text or "")
+    if not text.strip() or not section_heading_keys:
+        return text
+
+    lines = text.splitlines()
+    output_lines: list[str] = []
+    skipping = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            heading_key = _canonical_h2_key(stripped[3:])
+            skipping = heading_key in section_heading_keys
+            if skipping:
+                continue
+        if not skipping:
+            output_lines.append(line)
+
+    normalized = "\n".join(output_lines)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()
+
+
+def _remove_fenced_blocks(markdown_text: str, *, languages: set[str]) -> str:
+    if not languages:
+        return str(markdown_text or "")
+    pattern = re.compile(r"```([a-zA-Z0-9_-]+)?\s*\n.*?```", flags=re.DOTALL)
+
+    def _replace(match: re.Match[str]) -> str:
+        language = str(match.group(1) or "").strip().lower()
+        if language in languages:
+            return ""
+        return match.group(0)
+
+    stripped = pattern.sub(_replace, str(markdown_text or ""))
+    stripped = re.sub(r"\n{3,}", "\n\n", stripped)
+    return stripped.strip()
+
+
+def _sanitize_user_facing_answer_markdown(answer_markdown: str) -> str:
+    sanitized = str(answer_markdown or "")
+    if not sanitized.strip():
+        return sanitized
+
+    # Strip noisy fallback sentence from body; fallback state remains in metadata/telemetry.
+    sanitized = re.sub(
+        r"hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời\.?",
+        "",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+
+    # Citations are rendered in evidence sidebar; keep answer body focused on analysis.
+    sanitized = _remove_h2_sections(
+        sanitized,
+        section_heading_keys={
+            _canonical_h2_key("Nguồn tham chiếu"),
+            _canonical_h2_key("Danh mục nguồn dùng để hiệu chỉnh nhận định"),
+            _canonical_h2_key("Nguồn tham chiếu bổ sung"),
+        },
+    )
+
+    # Mermaid/chart spec is moved out of main answer area to reduce visual clutter.
+    sanitized = _remove_fenced_blocks(
+        sanitized,
+        languages={"mermaid", "chart-spec", "vega-lite", "echarts-option"},
+    )
+    sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
+    return sanitized
 
 
 def _build_deep_beta_reasoning_client(
@@ -5702,6 +5724,17 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             evidence_verification=deep_beta_evidence_verification,
             verification_summary={},
         )
+    answer_markdown = _sanitize_user_facing_answer_markdown(answer_markdown)
+    if not answer_markdown.strip():
+        answer_markdown = (
+            "## Kết luận nhanh\n"
+            "Đã hoàn tất truy xuất và tổng hợp, nhưng nội dung cần hiển thị đã được rút gọn tự động.\n\n"
+            "## Phân tích chi tiết\n"
+            "Vui lòng xem bảng Evidence/Citation ở panel bên phải để kiểm tra nguồn và đối chiếu thêm.\n\n"
+            "## Khuyến nghị an toàn\n"
+            "- Không tự ý thay đổi điều trị nếu chưa có tư vấn chuyên môn.\n"
+            "- Khi có dấu hiệu nặng, ưu tiên liên hệ cơ sở y tế ngay."
+        )
     answer_status = "warning" if fallback_used else "completed"
     flow_events.append(
         _event(
@@ -6670,7 +6703,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "render_hints": {
                 "markdown": True,
                 "tables": True,
-                "mermaid": True,
+                "mermaid": False,
+                "inline_references": False,
                 "chart_spec_fences": [
                     "chart-spec",
                     "vega-lite",
@@ -6736,7 +6770,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "render_hints": {
             "markdown": True,
             "tables": True,
-            "mermaid": True,
+            "mermaid": False,
+            "inline_references": False,
             "chart_spec_fences": [
                 "chart-spec",
                 "vega-lite",
