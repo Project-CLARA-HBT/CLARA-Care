@@ -18,6 +18,7 @@ from clara_ml.agents.research_tier2 import run_research_tier2
 from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
+from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.prompts.loader import PromptLoader
@@ -95,6 +96,20 @@ _ALLOWED_AUDIO_TYPES = {
     "audio/x-m4a",
     "application/octet-stream",
 }
+
+
+def _build_deepseek_client() -> DeepSeekClient:
+    return DeepSeekClient(
+        api_key=settings.deepseek_api_key,
+        base_url=settings.deepseek_base_url,
+        model=settings.deepseek_model,
+        timeout_seconds=settings.deepseek_timeout_seconds,
+        retries_per_base=settings.deepseek_retries_per_base,
+        retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
+    )
 
 
 def _now_iso() -> str:
@@ -891,6 +906,61 @@ def careguard_analyze(payload: dict) -> dict:
 def scribe_soap(payload: dict) -> dict:
     transcript = str(payload.get("transcript", "")).strip()
     return run_scribe_soap(transcript)
+
+
+@app.post("/v1/scribe/transcribe")
+async def scribe_transcribe(
+    audio_file: UploadFile = File(...),
+    language: str | None = Form(default=None),
+    prompt: str | None = Form(default=None),
+    chunk_index: int | None = Form(default=None),
+    session_id: int | None = Form(default=None),
+) -> dict:
+    if not audio_file.filename:
+        raise HTTPException(status_code=400, detail="Missing audio file name.")
+
+    audio_bytes = await audio_file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Audio payload is empty.")
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 15MB.")
+
+    audio_content_type = audio_file.content_type or "application/octet-stream"
+    if audio_content_type not in _ALLOWED_AUDIO_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported audio content type: {audio_content_type}",
+        )
+
+    resolved_language = (language or settings.deepseek_audio_language).strip() or None
+    resolved_prompt = (
+        (prompt or "").strip()
+        or "Medical consultation audio in Vietnamese. Return complete transcript text only."
+    )
+
+    try:
+        started_at = perf_counter()
+        transcript_text = _build_deepseek_client().transcribe_audio(
+            audio_bytes=audio_bytes,
+            filename=audio_file.filename or "scribe-audio.webm",
+            content_type=audio_content_type,
+            model=settings.deepseek_audio_model,
+            language=resolved_language,
+            prompt=resolved_prompt,
+        )
+        processing_ms = max((perf_counter() - started_at) * 1000.0, 0.0)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail=f"Scribe transcription failed: {exc}") from exc
+
+    return {
+        "text": transcript_text,
+        "language": resolved_language or "",
+        "model_used": settings.deepseek_audio_model,
+        "chunk_index": chunk_index,
+        "session_id": session_id,
+        "processing_ms": round(processing_ms, 3),
+        "received_bytes": len(audio_bytes),
+    }
 
 
 @app.post("/v1/council/run")

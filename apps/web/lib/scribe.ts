@@ -79,6 +79,28 @@ export type ScribeAnalyticsSummary = {
   avg_transcript_chars: number;
 };
 
+export type ScribeTranscribePayload = {
+  audioFile: Blob;
+  filename?: string;
+  language?: string;
+  prompt?: string;
+  chunkIndex?: number;
+  sessionId?: number;
+  appendToSession?: boolean;
+};
+
+export type ScribeTranscribeResponse = {
+  text: string;
+  language?: string;
+  model_used?: string;
+  chunk_index?: number | null;
+  session_id?: number | null;
+  processing_ms?: number;
+  received_bytes?: number;
+  session_transcript_chars?: number;
+  session_updated_at?: string | null;
+};
+
 function asText(value: unknown): string {
   if (typeof value !== "string") return "";
   return value.trim();
@@ -164,5 +186,21 @@ export async function regenerateScribeSession(
 
 export async function getScribeAnalyticsSummary(): Promise<ScribeAnalyticsSummary> {
   const response = await api.get<ScribeAnalyticsSummary>("/scribe/analytics/summary");
+  return response.data;
+}
+
+export async function transcribeScribeAudio(
+  payload: ScribeTranscribePayload
+): Promise<ScribeTranscribeResponse> {
+  const formData = new FormData();
+  formData.append("audio_file", payload.audioFile, payload.filename ?? "scribe-live.webm");
+  if (payload.language) formData.append("language", payload.language);
+  if (payload.prompt) formData.append("prompt", payload.prompt);
+  if (typeof payload.chunkIndex === "number") formData.append("chunk_index", String(payload.chunkIndex));
+  if (typeof payload.sessionId === "number") formData.append("session_id", String(payload.sessionId));
+  if (typeof payload.appendToSession === "boolean") {
+    formData.append("append_to_session", payload.appendToSession ? "true" : "false");
+  }
+  const response = await api.post<ScribeTranscribeResponse>("/scribe/transcribe", formData);
   return response.data;
 }

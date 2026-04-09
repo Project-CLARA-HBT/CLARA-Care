@@ -1,18 +1,32 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import httpx
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import ScribeSession, User
 from clara_api.db.session import get_db
 
 router = APIRouter()
+
+_MAX_AUDIO_BYTES = 15 * 1024 * 1024
+_ALLOWED_AUDIO_TYPES = {
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/webm",
+    "audio/mp4",
+    "audio/x-m4a",
+    "application/octet-stream",
+}
 
 DOCTOR_ROLE_DEP = Depends(require_roles("doctor"))
 
@@ -130,12 +144,139 @@ def _generate_soap(transcript: str) -> dict[str, Any]:
     return _normalize_soap_payload(payload)
 
 
+async def _call_scribe_transcribe_ml(
+    *,
+    audio_file: UploadFile,
+    language: str | None,
+    prompt: str | None,
+    chunk_index: int | None,
+    session_id: int | None,
+) -> dict[str, Any]:
+    if not audio_file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing audio file name.",
+        )
+
+    uploaded_bytes = await audio_file.read()
+    if not uploaded_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Audio payload is empty.",
+        )
+    if len(uploaded_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Audio file too large. Maximum size is 15MB.",
+        )
+
+    audio_content_type = audio_file.content_type or "application/octet-stream"
+    if audio_content_type not in _ALLOWED_AUDIO_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported audio content type: {audio_content_type}",
+        )
+
+    settings = get_settings()
+    url = f"{settings.ml_service_url.rstrip('/')}/v1/scribe/transcribe"
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
+
+    data: dict[str, str] = {}
+    if language and language.strip():
+        data["language"] = language.strip()
+    if prompt and prompt.strip():
+        data["prompt"] = prompt.strip()
+    if chunk_index is not None:
+        data["chunk_index"] = str(chunk_index)
+    if session_id is not None:
+        data["session_id"] = str(session_id)
+
+    files = {
+        "audio_file": (
+            audio_file.filename or "scribe-audio.webm",
+            uploaded_bytes,
+            audio_content_type,
+        )
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.ml_service_timeout_seconds) as client:
+            request_kwargs: dict[str, Any] = {"data": data, "files": files}
+            if headers:
+                request_kwargs["headers"] = headers
+            response = await client.post(url, **request_kwargs)
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"ML service unavailable: {exc.__class__.__name__}",
+        ) from exc
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"ML service upstream error: status={response.status_code}",
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="ML service returned invalid JSON",
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="ML service returned unexpected payload format",
+        )
+    return payload
+
+
 @router.post("/soap")
 def scribe_soap(
     payload: dict[str, Any],
     _token: TokenPayload = DOCTOR_ROLE_DEP,
 ) -> dict[str, Any]:
     return proxy_ml_post("/v1/scribe/soap", payload)
+
+
+@router.post("/transcribe")
+async def scribe_transcribe(
+    audio_file: UploadFile = File(...),
+    language: str | None = Form(default=None),
+    prompt: str | None = Form(default=None),
+    chunk_index: int | None = Form(default=None),
+    session_id: int | None = Form(default=None),
+    append_to_session: bool = Form(default=False),
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    user = _get_user_by_token(db, token)
+    payload = await _call_scribe_transcribe_ml(
+        audio_file=audio_file,
+        language=language,
+        prompt=prompt,
+        chunk_index=chunk_index,
+        session_id=session_id,
+    )
+
+    text = str(payload.get("text", "")).strip()
+    if append_to_session and session_id is not None and text:
+        session_item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+        existing = session_item.transcript or ""
+        separator = "\n" if existing.strip() else ""
+        session_item.transcript = f"{existing.rstrip()}{separator}{text}".strip()
+        session_item.updated_at = datetime.now(tz=UTC)
+        db.add(session_item)
+        db.commit()
+        db.refresh(session_item)
+        payload["session_transcript_chars"] = len(session_item.transcript or "")
+        payload["session_updated_at"] = session_item.updated_at.isoformat() if session_item.updated_at else None
+
+    return payload
 
 
 @router.get("/sessions", response_model=ScribeSessionListResponse)
