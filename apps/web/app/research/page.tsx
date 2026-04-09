@@ -639,8 +639,8 @@ export default function ResearchPage() {
 
   return (
     <PageShell
-      title="CLARA Research"
-      description="Clinical Intelligence workspace cho truy vấn nhanh, research sâu và telemetry runtime theo thời gian thực."
+      title="Clinical Lens AI Research"
+      description="Không gian nghiên cứu lâm sàng với truy vấn nhanh, phân tích sâu và telemetry runtime thời gian thực."
     >
       <div className="research-workspace grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="chrome-panel research-panel-modern hidden rounded-[1.35rem] p-4 lg:block">
@@ -657,7 +657,7 @@ export default function ResearchPage() {
 
           <div className="mt-4 border-t border-[color:var(--shell-border)] pt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Chuyên sâu
+              Modules
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {ADVANCED_LINKS.map((link) => (
@@ -678,10 +678,10 @@ export default function ResearchPage() {
             <div className="flex flex-wrap items-center justify-between gap-2.5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  Clinical Intelligence Workspace
+                  Clinical Lens Workspace
                 </p>
                 <h2 className="research-hero-heading mt-1.5 text-xl font-semibold sm:text-2xl">
-                  Hôm nay bạn muốn hỏi gì?
+                  Bắt đầu một truy vấn lâm sàng
                 </h2>
               </div>
 
@@ -1087,7 +1087,7 @@ export default function ResearchPage() {
           <section className="chrome-panel research-panel-modern rounded-[1.35rem] p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                Chuyên sâu
+                    Advanced
               </p>
               <button
                 type="button"

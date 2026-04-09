@@ -47,8 +47,8 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
       </div>
 
       <div className="flex justify-start gap-3">
-        <div className="clara-glow-cyan flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
-          <span className="material-symbols-outlined text-cyan-300" style={{ fontVariationSettings: "'FILL' 1" }}>
+        <div className="clara-glow-cyan flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-cyan-300/60 bg-cyan-500/10 dark:border-cyan-400/30">
+          <span className="material-symbols-outlined text-cyan-700 dark:text-cyan-300" style={{ fontVariationSettings: "'FILL' 1" }}>
             smart_toy
           </span>
         </div>
@@ -57,17 +57,17 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
           {result.tier === "tier2" ? (
             <div className="grid grid-cols-12 gap-4">
               <section className="clara-glass-panel clara-glow-cyan col-span-12 rounded-xl border border-[color:var(--shell-border)] border-l-4 border-l-cyan-400 p-5">
-                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-300">Kết luận nhanh</h3>
+                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">Kết luận nhanh</h3>
                 <p className="text-base font-semibold leading-snug text-[var(--text-primary)]">{quickSummary}</p>
               </section>
 
               <section className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 md:col-span-7">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
-                    <span className="material-symbols-outlined text-sm text-cyan-300">security</span>
+                    <span className="material-symbols-outlined text-sm text-cyan-700 dark:text-cyan-300">security</span>
                     Ma trận quyết định an toàn
                   </h3>
-                  <span className="rounded bg-cyan-400/20 px-2 py-0.5 text-[10px] text-cyan-300">AI Verified</span>
+                  <span className="rounded bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-700 dark:text-cyan-300">AI Verified</span>
                 </div>
 
                 {matrixRows.length ? (
@@ -83,7 +83,7 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
                         className="grid grid-cols-3 items-center gap-2 border-t border-[color:var(--shell-border)] py-2"
                       >
                         <div className="line-clamp-2 text-xs text-[var(--text-primary)]">{row.claim}</div>
-                        <div className="text-xs text-cyan-300">{row.verdict || row.supportStatus || "N/A"}</div>
+                        <div className="text-xs text-cyan-700 dark:text-cyan-300">{row.verdict || row.supportStatus || "N/A"}</div>
                         <div className="text-xs text-[var(--text-secondary)]">
                           {typeof row.confidence === "number" ? `${confidenceToPercent(row.confidence).toFixed(0)}%` : "--"}
                         </div>
@@ -123,7 +123,7 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
 
               <section className="clara-glass-panel col-span-12 rounded-xl border border-[color:var(--shell-border)] p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
-                  <span className="material-symbols-outlined text-sm text-cyan-300">subject</span>
+                  <span className="material-symbols-outlined text-sm text-cyan-700 dark:text-cyan-300">subject</span>
                   Phân tích chi tiết
                 </h3>
                 <MarkdownAnswer answer={answer} citations={citations} />

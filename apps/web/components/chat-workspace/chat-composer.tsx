@@ -48,13 +48,13 @@ export default function ChatComposer(props: ChatComposerProps) {
   } = props;
 
   return (
-    <footer className="sticky bottom-0 z-20 bg-gradient-to-t from-[var(--bg-canvas)] to-transparent pt-4">
-      <div className="mx-auto max-w-4xl">
-        <div className="clara-glass-panel rounded-2xl border border-[color:var(--shell-border)] p-2 shadow-2xl">
+    <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/90 p-4 backdrop-blur-md">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 shadow-sm">
           <form onSubmit={onSubmit} className="flex items-end gap-2">
             <button
               type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:text-cyan-300"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
               aria-label="Đính kèm"
             >
               <span className="material-symbols-outlined">attach_file</span>
@@ -73,7 +73,7 @@ export default function ChatComposer(props: ChatComposerProps) {
               />
 
               <div className="flex flex-wrap items-center gap-2 pb-1">
-                <fieldset className="inline-flex rounded-full border border-cyan-300/50 bg-cyan-500/10 p-1">
+                <fieldset className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-white/70 p-1 dark:bg-slate-900/60">
                   <legend className="sr-only">Research mode</legend>
                   {RESEARCH_MODE_OPTIONS.map((mode) => (
                     <button
@@ -84,8 +84,8 @@ export default function ChatComposer(props: ChatComposerProps) {
                       className={[
                         "rounded-full px-3 py-1 text-[11px] font-semibold",
                         selectedResearchMode === mode.id
-                          ? "bg-cyan-500 text-slate-900"
-                          : "text-cyan-200"
+                          ? "bg-cyan-500 text-white"
+                          : "text-[var(--text-secondary)]"
                       ].join(" ")}
                     >
                       {mode.label}
@@ -93,7 +93,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                   ))}
                 </fieldset>
 
-                <fieldset className="inline-flex rounded-full border border-blue-300/40 bg-blue-500/10 p-1">
+                <fieldset className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-white/70 p-1 dark:bg-slate-900/60">
                   <legend className="sr-only">Retrieval stack mode</legend>
                   {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
                     const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
@@ -106,8 +106,8 @@ export default function ChatComposer(props: ChatComposerProps) {
                         className={[
                           "rounded-full px-3 py-1 text-[11px] font-semibold disabled:opacity-50",
                           selectedRetrievalStackMode === mode.id
-                            ? "bg-blue-400 text-slate-900"
-                            : "text-blue-200"
+                            ? "bg-[var(--text-primary)] text-[var(--bg-canvas)]"
+                            : "text-[var(--text-secondary)]"
                         ].join(" ")}
                       >
                         {mode.label}
@@ -121,7 +121,7 @@ export default function ChatComposer(props: ChatComposerProps) {
             <div className="flex items-center gap-2 pr-1">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:text-cyan-300"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
                 aria-label="Mic"
               >
                 <span className="material-symbols-outlined">mic</span>
@@ -129,10 +129,10 @@ export default function ChatComposer(props: ChatComposerProps) {
               <button
                 type="submit"
                 disabled={isSubmitting || !query.trim()}
-                className="clara-glow-cyan inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400 text-slate-900 transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--text-primary)] text-[var(--bg-canvas)] transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Gửi"
               >
-                <span className="material-symbols-outlined">send</span>
+                <span className="material-symbols-outlined">arrow_upward</span>
               </button>
             </div>
           </form>
@@ -144,7 +144,7 @@ export default function ChatComposer(props: ChatComposerProps) {
               key={prompt}
               type="button"
               onClick={() => onChangeQuery(prompt)}
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 transition hover:text-cyan-300"
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
             >
               <span className="material-symbols-outlined text-sm">history</span>
               {prompt}
@@ -154,13 +154,13 @@ export default function ChatComposer(props: ChatComposerProps) {
 
         <div className="mt-1 min-h-[1.2rem] text-center text-xs">
           {liveJobId || liveStatusNote ? (
-            <p className="text-cyan-300">
+            <p className="text-cyan-700 dark:text-cyan-300">
               {liveStatusNote || "Đang xử lý tier2 job..."}
               {liveJobId ? ` (job_id: ${liveJobId})` : ""}
             </p>
           ) : null}
-          {error ? <p className="text-rose-400">{error}</p> : null}
-          {!error && notice ? <p className="text-emerald-300">{notice}</p> : null}
+          {error ? <p className="text-rose-500">{error}</p> : null}
+          {!error && notice ? <p className="text-emerald-600 dark:text-emerald-300">{notice}</p> : null}
         </div>
       </div>
     </footer>

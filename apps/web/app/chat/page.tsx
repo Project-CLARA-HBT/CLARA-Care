@@ -207,6 +207,43 @@ function isEditableElement(target: EventTarget | null): boolean {
   return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
 }
 
+type SourceIntelStatus = "active" | "connecting" | "error";
+
+function normalizeSourceStatus(status?: string, hasError?: boolean): SourceIntelStatus {
+  if (hasError) return "error";
+  const text = (status ?? "").trim().toLowerCase();
+  if (!text) return "active";
+  if (
+    text.includes("fail") ||
+    text.includes("error") ||
+    text.includes("timeout") ||
+    text.includes("denied") ||
+    text.includes("rejected")
+  ) {
+    return "error";
+  }
+  if (
+    text.includes("pending") ||
+    text.includes("queue") ||
+    text.includes("running") ||
+    text.includes("connect") ||
+    text.includes("in_progress")
+  ) {
+    return "connecting";
+  }
+  return "active";
+}
+
+function isVietnamMedicalSource(name: string): boolean {
+  const normalized = name.toLowerCase();
+  return (
+    normalized.includes("dav") ||
+    normalized.includes("kcb") ||
+    normalized.includes(".vn") ||
+    normalized.includes("vietnam")
+  );
+}
+
 const fetchTier2JobWithRetry = async (jobId: string) => {
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= JOB_FETCH_RETRY_ATTEMPTS; attempt += 1) {
@@ -1909,6 +1946,71 @@ export default function ChatWorkspacePage() {
       ]
     : [30, 45, 60, 85, 70, 50, 35];
 
+  const sourceIntel = useMemo(() => {
+    const merged = new Map<
+      string,
+      { name: string; status: SourceIntelStatus; query?: string; attempts: number }
+    >();
+
+    for (const attempt of latestTier2Result?.telemetry.sourceAttempts ?? []) {
+      const sourceName = (attempt.source || "unknown").trim() || "unknown";
+      const key = sourceName.toLowerCase();
+      const nextStatus = normalizeSourceStatus(attempt.status, Boolean(attempt.error));
+      const current = merged.get(key);
+      const status =
+        current?.status === "error" || nextStatus === "error"
+          ? "error"
+          : current?.status === "connecting" || nextStatus === "connecting"
+            ? "connecting"
+            : "active";
+      merged.set(key, {
+        name: current?.name ?? sourceName,
+        status,
+        query: current?.query ?? attempt.query ?? attempt.subquery,
+        attempts: (current?.attempts ?? 0) + 1,
+      });
+    }
+
+    for (const citation of latestTier2Result?.citations ?? []) {
+      const sourceName = (citation.source || citation.title || "").trim();
+      if (!sourceName) continue;
+      const key = sourceName.toLowerCase();
+      if (!merged.has(key)) {
+        merged.set(key, {
+          name: sourceName,
+          status: "active",
+          query: undefined,
+          attempts: 0,
+        });
+      }
+    }
+
+    const items = Array.from(merged.values()).sort((left, right) => {
+      const severity = (value: SourceIntelStatus) =>
+        value === "error" ? 0 : value === "connecting" ? 1 : 2;
+      const diff = severity(right.status) - severity(left.status);
+      if (diff !== 0) return diff;
+      return right.attempts - left.attempts;
+    });
+
+    const globalSources = items.filter((item) => !isVietnamMedicalSource(item.name));
+    const vietnamSources = items.filter((item) => isVietnamMedicalSource(item.name));
+    const activeCount = items.filter((item) => item.status === "active").length;
+
+    return {
+      activeCount,
+      all: items,
+      global: globalSources,
+      vietnam: vietnamSources,
+    };
+  }, [latestTier2Result]);
+
+  const neuralLoadPercent = Math.round(
+    telemetryBars.reduce((sum, value) => sum + value, 0) / Math.max(1, telemetryBars.length)
+  );
+  const sourceIntelGlobal = sourceIntel.global.slice(0, 10);
+  const sourceIntelVietnam = sourceIntel.vietnam.slice(0, 6);
+
   return (
     <PageShell
       variant="plain"
@@ -1924,19 +2026,19 @@ export default function ChatWorkspacePage() {
           />
         ) : null}
 
-        <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)_22rem]">
+        <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[18rem_minmax(0,1fr)_20rem]">
         <aside
           className={[
-            "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#eceef0] p-4 shadow-[inset_-1px_0_0_rgba(0,0,0,0.05)] transition-transform duration-200 dark:bg-slate-900 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0 lg:rounded-xl lg:border lg:shadow-none",
+            "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f1f4f7] p-4 transition-transform duration-200 dark:bg-[#001c39] lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0",
             isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0",
           ].join(" ")}
         >
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
-                Clara Chat
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500/80 dark:text-slate-400">
+                Clinical Authority
               </p>
-              <h2 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Workspace</h2>
+              <h2 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Precision Curator</h2>
             </div>
             <button
               type="button"
@@ -1950,10 +2052,10 @@ export default function ChatWorkspacePage() {
           <button
             type="button"
             onClick={createNewConversation}
-            className="mt-3 inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
+            className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center gap-1 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
           >
             <span className="material-symbols-outlined text-sm">add</span>
-            New chat
+            New consultation
           </button>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -2001,7 +2103,7 @@ export default function ChatWorkspacePage() {
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Tìm conversation, note..."
+                placeholder="Tìm nguồn, hội thoại, note..."
                 className="min-h-[38px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               {searchText.trim() ? (
@@ -2498,8 +2600,8 @@ export default function ChatWorkspacePage() {
           </div>
         </aside>
 
-        <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-4 sm:p-5">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)] bg-[var(--surface-header)]/85 pb-3 backdrop-blur-lg">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden border-x border-[color:var(--shell-border)] bg-[var(--bg-canvas)]">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)] bg-white/90 px-4 py-3 backdrop-blur-lg dark:bg-[#001f3d]/90 sm:px-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-start gap-2">
                 <button
@@ -2512,13 +2614,14 @@ export default function ChatWorkspacePage() {
                 </button>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                    Chat-first workspace
+                    Clinical Lens AI
                   </p>
-                  <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                    {activeConversationMeta
-                      ? `#${activeConversationMeta.conversation_id} · ${buildConversationPreview(activeConversationMeta)}`
-                      : "New conversation"}
-                  </h2>
+                  <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Không gian làm việc trí tuệ lâm sàng</h2>
+                  <div className="mt-1 hidden items-center gap-4 md:flex">
+                    <span className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">Dashboard</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">Patient Records</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">Analytics</span>
+                  </div>
                 </div>
               </div>
 
@@ -2677,106 +2780,190 @@ export default function ChatWorkspacePage() {
           />
         </section>
 
-        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/35 p-5 xl:flex">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-primary)]">Chuyên sâu</h2>
-            <span className="material-symbols-outlined text-[var(--text-muted)]">more_vert</span>
-          </div>
+        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[var(--surface-muted)]/55 xl:flex">
+          <div className="border-b border-[color:var(--shell-border)] bg-white px-5 py-5 dark:bg-[#001f3d]/90">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              System Telemetry
+            </h3>
 
-          <section className="mb-7">
-            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Flow Timeline</h3>
-            <div className="space-y-5 border-l border-[color:var(--shell-border)] pl-5">
-              {flowTimeline.length ? (
-                flowTimeline.map((stage, index) => {
-                  const isWarn = stage.status === "warning" || stage.status === "failed";
-                  const isInProgress = stage.status === "in_progress";
-                  return (
-                    <div key={`timeline-${stage.id}-${index}`} className="relative">
-                      <span
-                        className={[
-                          "absolute -left-[26px] top-0 h-3 w-3 rounded-full border-4 border-[var(--bg-canvas)]",
-                          isWarn
-                            ? "bg-amber-400"
-                            : isInProgress
-                              ? "animate-pulse bg-[var(--text-muted)]"
-                              : "clara-glow-cyan bg-cyan-400"
-                        ].join(" ")}
-                      />
-                      <p className="text-xs font-bold text-[var(--text-primary)]">{stage.label}</p>
-                      <p className={isWarn ? "text-[10px] text-amber-300/90" : "text-[10px] text-[var(--text-muted)]"}>
-                        {stage.detail || stage.status}
-                      </p>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-[var(--text-muted)]">Chưa có flow timeline cho conversation hiện tại.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="mb-7">
-            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Runtime Metadata</h3>
-            <div className="space-y-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-elev-1)] p-4 font-mono text-[10px]">
-              <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">query_plan:</span>
-                <span className="text-cyan-300">{selectedResearchMode.toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">retrieval:</span>
-                <span className="text-[var(--text-primary)]">{selectedRetrievalStackMode.toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">conversation_id:</span>
-                <span className="text-[var(--text-primary)]">{activeConversationId ?? "N/A"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">confidence:</span>
-                <span className="text-[var(--text-primary)]">{confidencePercent.toFixed(0)}%</span>
-              </div>
-              <div className="mt-3 border-t border-[color:var(--shell-border)] pt-3">
-                <p className="mb-1 text-[var(--text-muted)]">active_sources:</p>
-                <div className="flex flex-wrap gap-1">
-                  {(latestTier2Result?.citations.slice(0, 3) ?? []).map((citation, index) => (
-                    <span
-                      key={`source-chip-${index}`}
-                      className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300"
-                    >
-                      {(citation.source || citation.title || `SRC_${index + 1}`).slice(0, 14)}
-                    </span>
-                  ))}
-                  {!latestTier2Result?.citations.length ? (
-                    <span className="rounded bg-[var(--surface-panel)] px-1.5 py-0.5 text-[var(--text-muted)]">N/A</span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="flex min-h-[220px] flex-1 flex-col">
-            <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Live Analysis Engine</h3>
-            <div className="relative flex-1 overflow-hidden rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-elev-1)] p-4">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(40,217,243,0.15),_transparent_60%)]" />
-              <div className="relative flex h-full items-end gap-1">
-                {telemetryBars.map((value, index) => (
-                  <div
-                    key={`telemetry-bar-${index}`}
-                    className={[
-                      "flex-1 rounded-t-sm bg-cyan-400/30",
-                      index === 3 ? "clara-glow-cyan bg-cyan-400" : ""
-                    ].join(" ")}
-                    style={{ height: `${value}%` }}
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
+              <div className="relative h-11 w-11 shrink-0">
+                <svg className="h-full w-full" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="currentColor"
+                    className="text-[var(--surface-muted)]"
+                    strokeWidth="3"
                   />
-                ))}
-              </div>
-              <div className="absolute right-4 top-4">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300" />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="currentColor"
+                    className="text-cyan-500"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeDasharray={`${Math.max(0, Math.min(100, confidencePercent))}, 100`}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[var(--text-primary)]">
+                  {(confidencePercent / 100).toFixed(2)}
                 </span>
               </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  Confidence
+                </p>
+                <p className="text-sm font-extrabold text-[var(--text-primary)]">
+                  {confidencePercent >= 70 ? "High Reliability" : "Needs Review"}
+                </p>
+              </div>
             </div>
-          </section>
+
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                <span>Neural Load</span>
+                <span>{neuralLoadPercent}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                <div className="h-full rounded-full bg-cyan-500" style={{ width: `${neuralLoadPercent}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Logic Flow
+              </p>
+              <div className="space-y-2.5 border-l border-[color:var(--shell-border)] pl-4">
+                {(flowTimeline.length ? flowTimeline : []).slice(0, 3).map((stage, index) => (
+                  <div key={`telemetry-flow-${stage.id}-${index}`} className="relative">
+                    <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
+                    <p className="text-xs font-bold text-[var(--text-primary)]">{stage.label}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{stage.detail || stage.status}</p>
+                  </div>
+                ))}
+                {!flowTimeline.length ? (
+                  <>
+                    <div className="relative">
+                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
+                      <p className="text-xs font-bold text-[var(--text-primary)]">Semantic Parsing</p>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
+                      <p className="text-xs font-bold text-[var(--text-primary)]">Evidence Retrieval</p>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--text-muted)] ring-4 ring-slate-400/20" />
+                      <p className="text-xs font-bold text-[var(--text-muted)]">Synthesis Engine</p>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-base font-extrabold text-[var(--text-primary)]">
+                <span className="material-symbols-outlined text-cyan-500">source</span>
+                Source Intel
+              </h3>
+              <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-black uppercase text-cyan-700 dark:text-cyan-300">
+                {sourceIntel.activeCount} Active
+              </span>
+            </div>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+                search
+              </span>
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Tìm kiếm nguồn..."
+                className="min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] pl-8 pr-3 text-sm text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
+              />
+            </div>
+          </div>
+
+          <div className="clara-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            <p className="px-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              Global Medical Databases
+            </p>
+            {sourceIntelGlobal.length ? (
+              sourceIntelGlobal.map((item, index) => (
+                <div
+                  key={`source-intel-global-${item.name}-${index}`}
+                  className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="line-clamp-1 text-sm font-bold text-[var(--text-primary)]">{item.name}</p>
+                    <span
+                      className={[
+                        "h-2 w-2 rounded-full",
+                        item.status === "active"
+                          ? "bg-emerald-500"
+                          : item.status === "connecting"
+                            ? "animate-pulse bg-amber-400"
+                            : "bg-rose-500",
+                      ].join(" ")}
+                    />
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-[10px] text-[var(--text-muted)]">
+                    {item.query ? `Query: ${item.query}` : "Telemetry source from latest retrieval."}
+                  </p>
+                  <p className="mt-1 text-[9px] font-mono text-[var(--text-muted)]">
+                    Status: {item.status.toUpperCase()} · attempts: {item.attempts}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
+                Chưa có telemetry source từ phiên chat hiện tại.
+              </p>
+            )}
+
+            <p className="px-1 pt-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              MOH Vietnam Sources
+            </p>
+            {sourceIntelVietnam.length ? (
+              sourceIntelVietnam.map((item, index) => (
+                <div
+                  key={`source-intel-vn-${item.name}-${index}`}
+                  className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="line-clamp-1 text-sm font-bold text-[var(--text-primary)]">{item.name}</p>
+                    <span
+                      className={[
+                        "h-2 w-2 rounded-full",
+                        item.status === "active"
+                          ? "bg-emerald-500"
+                          : item.status === "connecting"
+                            ? "animate-pulse bg-amber-400"
+                            : "bg-rose-500",
+                      ].join(" ")}
+                    />
+                  </div>
+                  <p className="mt-1 text-[9px] font-mono text-[var(--text-muted)]">
+                    Status: {item.status.toUpperCase()} · attempts: {item.attempts}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
+                Chưa ghi nhận source nội địa trong telemetry hiện tại.
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-[color:var(--shell-border)] bg-white/80 p-4 dark:bg-[#001f3d]/80">
+            <div className="flex items-center gap-3 rounded-lg bg-[var(--surface-brand-soft)] px-3 py-2">
+              <span className="material-symbols-outlined text-cyan-500">shield_lock</span>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)]">
+                Verified Protocol Engine v4.2
+              </p>
+            </div>
+          </div>
         </aside>
       </div>
         {isScopeManagerOpen ? (
