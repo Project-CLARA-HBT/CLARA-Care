@@ -228,6 +228,22 @@ def test_apply_keyword_filter_to_query_plan_aligns_keywords_by_source_language()
     assert query_plan.get("keyword_filter", {}).get("target_language_by_source", {}).get("web") == "vi"
 
 
+def test_filter_keywords_by_language_marks_fallback_only_when_bucket_becomes_empty():
+    filtered_keywords, fallback_used = tier2._filter_keywords_by_language(
+        ["warfarin", "ibuprofen"],
+        target_language="vi",
+    )
+    assert filtered_keywords == ["warfarin", "ibuprofen"]
+    assert fallback_used is False
+
+    filtered_all_generic, fallback_all_generic = tier2._filter_keywords_by_language(
+        ["interaction", "guideline"],
+        target_language="vi",
+    )
+    assert filtered_all_generic == ["interaction", "guideline"]
+    assert fallback_all_generic is True
+
+
 def test_source_router_prefers_scientific_for_critical_ddi():
     decision = tier2.decide_source_route(
         query="Tương tác warfarin và ibuprofen có nguy cơ xuất huyết nghiêm trọng không?",

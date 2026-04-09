@@ -323,12 +323,12 @@ def _filter_keywords_by_language(
     keywords: list[str],
     *,
     target_language: str,
-) -> list[str]:
+) -> tuple[list[str], bool]:
     normalized = _dedupe_query_list([str(item) for item in keywords], limit=12)
     if not normalized:
-        return []
+        return [], False
     if target_language not in {"vi", "en"}:
-        return normalized
+        return normalized, False
 
     filtered: list[str] = []
     for token in normalized:
@@ -340,7 +340,9 @@ def _filter_keywords_by_language(
         if target_language == "en" and folded in _VI_GENERIC_KEYWORD_HINTS:
             continue
         filtered.append(token)
-    return filtered or normalized
+    if filtered:
+        return filtered, False
+    return normalized, True
 
 
 def _apply_keyword_filter_to_query_plan(
@@ -384,11 +386,11 @@ def _apply_keyword_filter_to_query_plan(
             language_hint=language_hint,
         )
         target_language_by_source[bucket] = target_language
-        filtered_keywords = _filter_keywords_by_language(
+        filtered_keywords, fallback_used = _filter_keywords_by_language(
             fallback_seed,
             target_language=target_language,
         )
-        if filtered_keywords == fallback_seed:
+        if fallback_used:
             fallback_buckets.append(bucket)
         keywords_by_source[bucket] = filtered_keywords
 
