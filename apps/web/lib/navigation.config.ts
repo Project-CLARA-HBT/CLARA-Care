@@ -32,15 +32,15 @@ export const PUBLIC_ROUTES = new Set([
   "/verify-email"
 ]);
 
-export const DEFAULT_POST_LOGIN_PATH = "/research";
+export const DEFAULT_POST_LOGIN_PATH = "/chat";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/research",
-  researcher: "/research",
-  doctor: "/research",
-  admin: "/research",
+  normal: "/chat",
+  researcher: "/chat",
+  doctor: "/chat",
+  admin: "/chat",
 };
 
 const NAV_ITEMS: NavigationItem[] = [
@@ -50,21 +50,10 @@ const NAV_ITEMS: NavigationItem[] = [
     desc: "Trải nghiệm chat thuần",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
     page: {
       title: "CLARA Chat",
       subtitle: "Không gian chat tập trung với 3 mode Clara Research: Fast, Deep, Deep Beta."
-    }
-  },
-  {
-    href: "/research",
-    label: "Hỏi đáp y tế",
-    desc: "Hỏi nhanh hoặc chuyên sâu",
-    group: "core",
-    roles: ["normal", "researcher", "doctor", "admin"],
-    mobilePrimary: true,
-    page: {
-      title: "Hỏi đáp chuyên môn",
-      subtitle: "Tra cứu câu trả lời có dẫn nguồn để hỗ trợ quyết định lâm sàng."
     }
   },
   {
@@ -266,6 +255,13 @@ export function getMobilePrimaryNav(role: UserRole): NavigationItem[] {
 export function getPageMeta(pathname: string): PageMeta {
   const exact = NAV_ITEMS.find((item) => item.href === pathname);
   if (exact) return exact.page;
+
+  if (pathname === "/research" || pathname.startsWith("/research/")) {
+    return {
+      title: "Hỏi đáp chuyên môn",
+      subtitle: "Tra cứu câu trả lời có dẫn nguồn để hỗ trợ quyết định lâm sàng."
+    };
+  }
 
   const prefixSorted = [...NAV_ITEMS].sort((a, b) => b.href.length - a.href.length);
   const prefixMatch = prefixSorted.find((item) => pathname.startsWith(`${item.href}/`));
