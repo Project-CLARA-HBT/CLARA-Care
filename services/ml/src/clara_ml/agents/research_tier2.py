@@ -4505,17 +4505,18 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
 
     pipeline = RagPipelineP1()
-    # Production policy: when at least one runtime LLM endpoint is configured,
-    # Tier2 research must not degrade to local synthesis fallback.
-    # For unconfigured local/test environments, keep local fallback to avoid
-    # hard-failing every research contract test.
+    # Production policy: when DeepSeek is required at service level, Tier2 must
+    # never degrade to local synthesis fallback, even if request-level runtime
+    # credentials are omitted.
+    # Additionally, if request provides explicit runtime upstream, enforce strict
+    # mode as well.
     has_runtime_upstream = bool(
         str(llm_runtime.get("api_key") or "").strip()
         and str(llm_runtime.get("base_url") or "").strip()
         and str(llm_runtime.get("model") or "").strip()
     )
-    strict_deepseek_required = has_runtime_upstream
-    deepseek_fallback_enabled = not has_runtime_upstream
+    strict_deepseek_required = bool(settings.deepseek_required or has_runtime_upstream)
+    deepseek_fallback_enabled = not strict_deepseek_required
     deep_beta_cap = max(6, min(int(settings.deep_beta_pass_cap), 64))
     pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else _DEFAULT_DEEP_PASS_CAP
     deep_pass_count = _resolve_deep_pass_count(
