@@ -108,13 +108,20 @@ export default function AdminAnswerFlowPanel() {
     <div className="space-y-4">
       <section className="relative overflow-hidden rounded-[30px] border border-cyan-200/60 bg-[radial-gradient(circle_at_10%_8%,rgba(34,211,238,0.2),transparent_34%),radial-gradient(circle_at_90%_92%,rgba(59,130,246,0.14),transparent_38%),linear-gradient(162deg,rgba(255,255,255,0.95),rgba(236,254,255,0.9))] p-4 shadow-[0_24px_72px_rgba(14,116,144,0.18)] dark:border-cyan-600/35 dark:bg-[radial-gradient(circle_at_10%_8%,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_92%,rgba(59,130,246,0.12),transparent_38%),linear-gradient(162deg,rgba(2,6,23,0.94),rgba(15,23,42,0.9))] dark:shadow-[0_30px_84px_rgba(2,6,23,0.82)]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(14,165,233,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(14,165,233,0.08)_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,rgba(14,165,233,0.16)_1px,transparent_1px),linear-gradient(to_bottom,rgba(14,165,233,0.16)_1px,transparent_1px)]" />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Answer Flow Block</p>
-            <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">CLARA Research Flow Visualizer</h3>
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-              Bản đồ runtime cho pipeline research thật: session guard, legal hard guard, planner, deep/deep_beta, retrieval, verification và responder.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+              Flow {enabledFlowCount}/{flowToggleKeys.length}
+            </span>
+            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+              Health {flowHealthLabel}
+            </span>
+            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+              Low Context {config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}
+            </span>
+            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+              Fallback {config?.rag_flow.deepseek_fallback_enabled ? "enabled" : "disabled"}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button

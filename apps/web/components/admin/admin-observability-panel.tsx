@@ -474,102 +474,39 @@ export default function AdminObservabilityPanel() {
     { label: "File Retrieval", enabled: state.flow.fileRetrieval, detail: "Truy xuất dữ liệu tài liệu đã upload." }
   ];
 
-  const friendlySummary = useMemo(() => {
-    if (state.error) {
-      return {
-        tone: "critical",
-        title: "Không tải được dữ liệu giám sát",
-        detail: "Vui lòng làm mới lại hoặc kiểm tra kết nối tới backend."
-      } as const;
-    }
-
-    if (alerts.some((alert) => alert.level === "critical")) {
-      return {
-        tone: "critical",
-        title: "Cần xử lý ngay",
-        detail: "Có cảnh báo mức nghiêm trọng. Nên ưu tiên xử lý trước khi tiếp tục vận hành."
-      } as const;
-    }
-
-    if (alerts.some((alert) => alert.level === "warn")) {
-      return {
-        tone: "warn",
-        title: "Có tín hiệu cần theo dõi",
-        detail: "Hệ thống vẫn chạy nhưng một số chỉ số đang lệch mục tiêu."
-      } as const;
-    }
-
-    return {
-      tone: "ok",
-      title: "Hệ thống đang ổn định",
-      detail: "Các chỉ số chính đang trong vùng an toàn."
-    } as const;
-  }, [alerts, state.error]);
-
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-cyan-500/20 bg-slate-950/60 p-5 shadow-[0_24px_64px_-42px_rgba(0,0,0,0.85)] backdrop-blur-xl">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/80">System Observability</p>
-            <h3 className="mt-1 text-2xl font-black tracking-tight text-slate-100">Admin Control Plane</h3>
-            <p className="mt-1 max-w-3xl text-xs text-slate-400">
-              Telemetry đa lớp, flow integrity, risk matrix và alert triage theo dữ liệu runtime thật.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 accent-cyan-400"
-                checked={autoRefresh}
-                onChange={(event) => setAutoRefresh(event.target.checked)}
-              />
-              Auto refresh 15s
-            </label>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
-            >
-              Refresh
-            </button>
-          </div>
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-cyan-400"
+              checked={autoRefresh}
+              onChange={(event) => setAutoRefresh(event.target.checked)}
+            />
+            Auto refresh 15s
+          </label>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
+          >
+            Refresh
+          </button>
         </div>
-
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Runtime ID</p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-200">CLARA-X9-00124</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Telemetry Sync</p>
-            <p className="mt-0.5 text-sm font-semibold text-emerald-300">{state.loading ? "SYNCING..." : "SUCCESSFUL"}</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Last Update</p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-200">{lastUpdate} GMT+7</p>
-          </div>
-        </div>
-
-        {state.error ? (
-          <p className="mt-3 rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-200">{state.error}</p>
-        ) : null}
-
-        <div
-          className={[
-            "mt-3 rounded-lg border px-3 py-2 text-xs",
-            friendlySummary.tone === "critical"
-              ? "border-rose-700/50 bg-rose-950/30 text-rose-200"
-              : friendlySummary.tone === "warn"
-                ? "border-amber-600/50 bg-amber-950/25 text-amber-200"
-                : "border-cyan-700/40 bg-cyan-950/20 text-cyan-100"
-          ].join(" ")}
-        >
-          <p className="font-semibold">{friendlySummary.title}</p>
-          <p className="mt-1 opacity-90">{friendlySummary.detail}</p>
+        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <span>RUNTIME ID: CLARA-X9-00124</span>
+          <span className="text-slate-600">|</span>
+          <span>SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
+          <span className="text-slate-600">|</span>
+          <span>UPDATED: {lastUpdate} GMT+7</span>
         </div>
       </section>
+
+      {state.error ? (
+        <p className="rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-200">{state.error}</p>
+      ) : null}
 
       <div className="grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3">

@@ -27,11 +27,6 @@ function formatSize(size: number): string {
   return `${(kb / 1024).toFixed(1)} MB`;
 }
 
-function formatCompactNumber(value: number): string {
-  if (!Number.isFinite(value)) return "--";
-  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 2 }).format(value);
-}
-
 const SOURCE_LABELS: Record<SourceHubSourceKey, string> = {
   pubmed: "PubMed",
   rxnorm: "RxNorm",
@@ -267,22 +262,6 @@ export default function AdminKnowledgeSourcesPage() {
     [sources]
   );
 
-  const activeSyncStreams = useMemo(
-    () => sources.filter((source) => source.is_active).length,
-    [sources]
-  );
-
-  const activeSourceTokenTotal = useMemo(
-    () => documents.reduce((sum, document) => sum + Math.max(0, document.token_count), 0),
-    [documents]
-  );
-
-  const activeSourceCoverage = useMemo(() => {
-    if (documents.length === 0) return 0;
-    const activeDocuments = documents.filter((document) => document.is_active).length;
-    return Math.round((activeDocuments / documents.length) * 1000) / 10;
-  }, [documents]);
-
   const knowledgePriorityRows = useMemo(() => {
     const maxDocumentCount = Math.max(1, ...sources.map((source) => source.documents_count));
     return sources.slice(0, 6).map((source) => ({
@@ -298,73 +277,10 @@ export default function AdminKnowledgeSourcesPage() {
   return (
     <AdminShell
       activeTab="knowledge-sources"
-      title="Knowledge Intelligence Hub"
-      description="Global clinical connectivity và kiểm soát knowledge assets theo thời gian thực."
+      title="Knowledge Hub"
+      description="Knowledge assets và source priority."
     >
       <div className="space-y-6">
-        <section className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight text-[#003461] dark:text-cyan-300">Knowledge Intelligence Hub</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Global Clinical Connectivity &amp; Knowledge Priority Control
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Total Knowledge Tokens</p>
-              <p className="mt-1 text-xl font-black text-[#003461] dark:text-cyan-300">{formatCompactNumber(activeSourceTokenTotal)}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Sync Streams</p>
-              <p className="mt-1 text-xl font-black text-[#003461] dark:text-cyan-300">{activeSyncStreams}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Query Coverage</p>
-              <p className="mt-1 text-xl font-black text-[#003461] dark:text-cyan-300">{activeSourceCoverage}%</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-[#001c38] shadow-2xl dark:border-slate-700">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-400/15 via-transparent to-cyan-500/25" />
-
-          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 520" aria-hidden="true">
-            <path d="M220 130 L500 260" fill="none" stroke="rgba(147,239,238,0.8)" strokeWidth="1" strokeDasharray="8 16" />
-            <path d="M780 130 L500 260" fill="none" stroke="rgba(147,239,238,0.8)" strokeWidth="1" strokeDasharray="8 16" />
-            <path d="M220 390 L500 260" fill="none" stroke="rgba(147,239,238,0.8)" strokeWidth="1" strokeDasharray="8 16" />
-            <path d="M780 390 L500 260" fill="none" stroke="rgba(147,239,238,0.8)" strokeWidth="1" strokeDasharray="8 16" />
-            <circle cx="500" cy="260" r="58" fill="none" stroke="rgba(147,239,238,0.7)" />
-            <circle cx="500" cy="260" r="38" fill="rgba(0,52,97,0.75)" stroke="rgba(147,239,238,0.9)" />
-            <text x="500" y="265" fill="#93efee" textAnchor="middle" fontSize="11" fontWeight="700">
-              RAG CORE
-            </text>
-          </svg>
-
-          <div className="absolute left-[22%] top-[24%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/40 bg-slate-900/60 px-4 py-3 text-center text-xs font-semibold text-cyan-100 backdrop-blur-sm">
-            PubMed
-          </div>
-          <div className="absolute right-[22%] top-[24%] translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/40 bg-slate-900/60 px-4 py-3 text-center text-xs font-semibold text-cyan-100 backdrop-blur-sm">
-            WHO
-          </div>
-          <div className="absolute bottom-[24%] left-[22%] -translate-x-1/2 translate-y-1/2 rounded-full border border-cyan-300/40 bg-slate-900/60 px-4 py-3 text-center text-xs font-semibold text-cyan-100 backdrop-blur-sm">
-            ClinicalTrials
-          </div>
-          <div className="absolute bottom-[24%] right-[22%] translate-x-1/2 translate-y-1/2 rounded-full border border-cyan-300/40 bg-slate-900/60 px-4 py-3 text-center text-xs font-semibold text-cyan-100 backdrop-blur-sm">
-            openFDA
-          </div>
-
-          <div className="absolute left-4 top-4 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">
-            Neural Connectivity Map // Live
-          </div>
-          <button
-            type="button"
-            className="absolute bottom-4 right-4 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white/20"
-          >
-            Adjust Simulation Depth
-          </button>
-        </section>
-
         {error ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
             {error}

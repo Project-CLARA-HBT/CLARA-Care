@@ -5,8 +5,8 @@ export default function AdminObservabilityPage() {
   return (
     <AdminShell
       activeTab="observability"
-      title="Admin Control Plane - Observability"
-      description="Futuristic command center cho runtime CLARA: telemetry đa lớp, flow integrity, risk matrix và alert triage."
+      title="Observability"
+      description="Runtime metrics, health và signal board."
     >
       <AdminObservabilityPanel />
     </AdminShell>
