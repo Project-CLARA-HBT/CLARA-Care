@@ -3,9 +3,7 @@ import { ReactNode } from "react";
 
 export type AdminTabKey =
   | "overview"
-  | "rag-sources"
   | "knowledge-sources"
-  | "source-hub"
   | "answer-flow"
   | "observability";
 
@@ -31,82 +29,35 @@ const ADMIN_TABS: Array<{
     code: "A01"
   },
   {
-    key: "rag-sources",
-    href: "/admin/rag-sources",
-    label: "RAG Sources",
-    hint: "Nguồn truy xuất và độ ưu tiên",
-    code: "A02"
-  },
-  {
     key: "knowledge-sources",
     href: "/admin/knowledge-sources",
-    label: "Knowledge",
-    hint: "Kho tài liệu upload theo source",
-    code: "A03"
-  },
-  {
-    key: "source-hub",
-    href: "/admin/source-hub",
-    label: "Source Hub",
-    hint: "Đồng bộ nguồn chuẩn y khoa",
-    code: "A04"
+    label: "Knowledge Hub",
+    hint: "RAG + SourceHub + Knowledge assets",
+    code: "A02"
   },
   {
     key: "answer-flow",
     href: "/admin/answer-flow",
     label: "Answer Flow",
     hint: "Flow flags và runtime debug",
-    code: "A05"
+    code: "A03"
   },
   {
     key: "observability",
     href: "/admin/observability",
     label: "Observability",
     hint: "Health, metrics và signal board",
-    code: "A06"
+    code: "A04"
   }
 ];
 
 export default function AdminShell({ activeTab, title, description, children }: AdminShellProps) {
   return (
     <div className="space-y-5">
-      <section
-        className="relative overflow-hidden rounded-[2rem] border border-[color:var(--shell-border)] bg-[linear-gradient(145deg,rgba(255,255,255,0.92),rgba(248,250,252,0.86))] p-5 shadow-[0_28px_68px_-44px_rgba(15,23,42,0.48)] dark:bg-[linear-gradient(145deg,rgba(6,12,24,0.94),rgba(10,18,34,0.9))]"
-        aria-labelledby="admin-shell-title"
-        aria-describedby="admin-shell-description"
-      >
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-400/10" />
-        <div className="pointer-events-none absolute -left-12 bottom-0 h-44 w-52 rounded-full bg-blue-300/15 blur-3xl dark:bg-blue-400/10" />
-
-        <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <div>
-            <p className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.17em] text-[var(--text-brand)]">
-              Admin Control Plane
-            </p>
-            <h2 id="admin-shell-title" className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-[2.15rem]">
-              {title}
-            </h2>
-            <p id="admin-shell-description" className="mt-2 max-w-3xl text-base leading-7 text-[var(--text-secondary)]">
-              {description}
-            </p>
-          </div>
-
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Control Endpoint</p>
-              <p className="mt-1 text-sm font-mono text-[var(--text-primary)]">/system/control-tower/config</p>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Operating Surface</p>
-              <p className="mt-1 text-sm font-mono text-[var(--text-primary)]">RAG · Flow · Runtime Signals</p>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Signal Board</p>
-              <p className="mt-1 text-sm font-semibold text-[var(--text-brand)]">Grafana-like monitoring in app</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="sr-only">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
 
       <nav
         className="rounded-[1.4rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-soft"
