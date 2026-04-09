@@ -38,7 +38,7 @@ const ROLE_GREETINGS: Record<UserRole, string> = {
 };
 
 const QUICK_ACCESS: QuickAccess[] = [
-  { href: "/research", title: "Start Evidence Search", detail: "Research Engine", icon: "search_spark" },
+  { href: "/chat", title: "Start Evidence Search", detail: "Medical Chat", icon: "search_spark" },
   { href: "/council", title: "Open AI Council", detail: "Case Analysis", icon: "forum" },
   { href: "/selfmed", title: "Self-Med Review", detail: "DDI Verification", icon: "medication" },
   { href: "/careguard", title: "CareGuard Logs", detail: "Safety Monitoring", icon: "security" },
@@ -445,21 +445,6 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="relative h-48 overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-[var(--shadow-soft)]">
-              <img
-                alt="Satellite view of medical campus"
-                className="h-full w-full rounded-xl object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSBfwBAqadqCeCV4P5y7S-2vw9yp3wB5GPCEhjcldn-fyEbVNNmyVZpthQMgYM0j9YZc0HkwNgxIYivAAMuOJ57ZKeVu7pyRCGPuY74brRKguyzY_rDb6yhVcxx6OGIsW9550rYQ6TpWXUFV99RremT13pZf14RhEXP25DstWhusXjQQRpmw5_bUl8NmmxinMTYQcEsoZzFYJZByqhVG88UdSNgwZ7QKsyKB90MvxPZXNTx2Rtdl3Ylp5DnMd7KjSB8fqByhoPWdA"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--text-brand)]/45 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
-                <div>
-                  <p className="text-[10px] font-bold uppercase">Campus Monitor</p>
-                  <p className="text-xs font-medium">CLARA Care Central</p>
-                </div>
-                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
-              </div>
-            </article>
           </div>
         </section>
       </div>
