@@ -13,6 +13,7 @@ type TodayTask = {
   tone: "normal" | "warn" | "critical";
   href: string;
 };
+type WorkflowState = "done" | "current" | "pending";
 
 type ActivityItem = {
   id: string;
@@ -148,11 +149,6 @@ export default function DashboardPage() {
     return Math.max(0, Math.min(8, risk));
   }, [alerts.length, expiredCount]);
 
-  const workflowProgress = useMemo(
-    () => Math.max(10, Math.min(100, Math.round((flowEnabledCount / 11) * 100))),
-    [flowEnabledCount]
-  );
-
   const councilTotal = 12;
   const councilDone = useMemo(() => Math.max(0, Math.min(councilTotal, recentQueries.length)), [recentQueries.length]);
 
@@ -239,6 +235,40 @@ export default function DashboardPage() {
     ];
   }, [serverTasks]);
 
+  const workflowTasks = useMemo<TodayTask[]>(
+    () =>
+      (todayTasks.length >= 4
+        ? todayTasks.slice(0, 4)
+        : [
+            ...todayTasks,
+            { id: "fallback-1", title: "Review Meds", detail: "", tone: "normal", href: "/selfmed" },
+            { id: "fallback-2", title: "Check DDI", detail: "", tone: "warn", href: "/careguard" },
+            { id: "fallback-3", title: "Conduct Council", detail: "", tone: "normal", href: "/council" },
+            { id: "fallback-4", title: "Record Findings", detail: "", tone: "normal", href: "/scribe" },
+          ]).slice(0, 4),
+    [todayTasks]
+  );
+
+  const workflowStates = useMemo<WorkflowState[]>(() => {
+    const medsDone = (cabinetCount ?? 0) > 0;
+    const ddiDone = (requestCount ?? 0) > 0;
+    const councilDoneStep = councilDone >= councilTotal;
+    const councilRunning = !councilDoneStep && councilDone > 0;
+    const recordDone = recentQueries.length >= 3;
+
+    return [
+      medsDone ? "done" : "current",
+      ddiDone ? "done" : medsDone ? "current" : "pending",
+      councilDoneStep ? "done" : councilRunning ? "current" : "pending",
+      recordDone ? "done" : councilRunning || councilDoneStep ? "current" : "pending",
+    ];
+  }, [cabinetCount, councilDone, recentQueries.length, requestCount]);
+
+  const workflowProgress = useMemo(() => {
+    const completed = workflowStates.filter((state) => state === "done").length;
+    return Math.round((completed / 4) * 100);
+  }, [workflowStates]);
+
   return (
     <PageShell title="" description="" variant="plain">
       <div className="space-y-10">
@@ -269,9 +299,10 @@ export default function DashboardPage() {
               style={{ width: `${Math.max(20, Math.min(92, workflowProgress - 8))}%` }}
             />
 
-            {todayTasks.map((task, index) => {
-              const isDone = index < 2;
-              const isCurrent = index === 2;
+            {workflowTasks.map((task, index) => {
+              const state = workflowStates[index] ?? "pending";
+              const isDone = state === "done";
+              const isCurrent = state === "current";
               return (
                 <Link key={task.id} href={task.href} className="relative z-10 rounded-xl p-3 text-center hover:bg-[var(--surface-muted)]">
                   <div
