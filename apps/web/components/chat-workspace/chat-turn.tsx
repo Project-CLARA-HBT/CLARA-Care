@@ -6,9 +6,37 @@ type ChatTurnProps = {
   turn: ConversationItem;
 };
 
+function sanitizeChatboxAnswer(raw: string): string {
+  if (!raw.trim()) return raw;
+
+  let sanitized = raw;
+
+  // Remove safety matrix section that is now represented in right-side telemetry panel.
+  sanitized = sanitized.replace(
+    /(?:^|\n)\s*security\s*\n+\s*ma trận quyết định an toàn[\s\S]*?(?=\n##\s|\n#\s|$)/gi,
+    "\n"
+  );
+
+  // Remove executive summary section from center chatbox.
+  sanitized = sanitized.replace(
+    /(?:^|\n)\s*##\s*tóm tắt điều hành[\s\S]*?(?=\n##\s|$)/gi,
+    "\n"
+  );
+
+  // Remove fallback-local sentence if model includes it in answer body.
+  sanitized = sanitized.replace(
+    /hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời\.?/gi,
+    ""
+  );
+
+  // Trim duplicated empty lines after sanitization.
+  sanitized = sanitized.replace(/\n{3,}/g, "\n\n").trim();
+  return sanitized || raw;
+}
+
 export default function ChatTurn({ turn }: ChatTurnProps) {
   const result = turn.result;
-  const answer = result.answer || "";
+  const answer = sanitizeChatboxAnswer(result.answer || "");
   const citations = result.tier === "tier2" ? result.citations : [];
 
   return (
