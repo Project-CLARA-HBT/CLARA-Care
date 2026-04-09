@@ -351,6 +351,45 @@ class KnowledgeDocument(Base):
     owner: Mapped[User] = relationship("User")
 
 
+class FederatedSourceRecord(Base):
+    __tablename__ = "federated_source_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_user_id",
+            "record_id",
+            name="uq_federated_source_records_owner_record",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    record_id: Mapped[str] = mapped_column(String(128), index=True)
+    source: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text, default="")
+    snippet: Mapped[str] = mapped_column(Text, default="")
+    external_id: Mapped[str] = mapped_column(String(255), default="")
+    query: Mapped[str] = mapped_column(Text, default="")
+    published_at: Mapped[str] = mapped_column(String(64), default="")
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        index=True,
+        server_default=func.now(),
+    )
+    metadata_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    owner: Mapped[User] = relationship("User")
+
+
 class WorkspaceFolder(Base):
     __tablename__ = "workspace_folders"
     __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_workspace_folders_user_slug"),)

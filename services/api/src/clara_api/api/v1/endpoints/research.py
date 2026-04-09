@@ -37,6 +37,7 @@ from clara_api.core.flow_event_store import get_flow_event_store
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    FederatedSourceRecord,
     KnowledgeDocument,
     KnowledgeSource,
     ResearchJob,
@@ -2319,7 +2320,42 @@ def _normalize_source_hub_record(record: dict[str, Any]) -> SourceHubRecord | No
     )
 
 
-def _load_source_hub_records(db: Session, owner_user_id: int) -> list[SourceHubRecord]:
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _serialize_source_hub_db_row(row: FederatedSourceRecord) -> SourceHubRecord | None:
+    payload = {
+        "id": row.record_id,
+        "source": row.source,
+        "title": row.title,
+        "url": row.url or None,
+        "snippet": row.snippet or None,
+        "external_id": row.external_id or None,
+        "query": row.query or None,
+        "published_at": row.published_at or None,
+        "synced_at": row.synced_at.isoformat() if row.synced_at else None,
+        "metadata": row.metadata_json if isinstance(row.metadata_json, dict) else {},
+    }
+    return _normalize_source_hub_record(payload)
+
+
+def _load_source_hub_records_from_legacy_settings(
+    db: Session, owner_user_id: int
+) -> list[SourceHubRecord]:
     setting = db.execute(
         select(SystemSetting).where(SystemSetting.key == _source_hub_setting_key(owner_user_id))
     ).scalar_one_or_none()
@@ -2340,20 +2376,56 @@ def _load_source_hub_records(db: Session, owner_user_id: int) -> list[SourceHubR
     return parsed
 
 
-def _save_source_hub_records(
-    db: Session, owner_user_id: int, records: list[SourceHubRecord]
-) -> None:
-    key = _source_hub_setting_key(owner_user_id)
-    setting = db.execute(select(SystemSetting).where(SystemSetting.key == key)).scalar_one_or_none()
-    payload = {
-        "records": [record.model_dump() for record in records[:_SOURCE_HUB_MAX_RECORDS]],
-        "updated_at": datetime.now(tz=UTC).isoformat(),
-    }
-    if setting is None:
-        setting = SystemSetting(key=key, value_json=payload, value_text="")
-    else:
-        setting.value_json = payload
-    db.add(setting)
+def _load_source_hub_records(db: Session, owner_user_id: int) -> list[SourceHubRecord]:
+    rows = (
+        db.execute(
+            select(FederatedSourceRecord)
+            .where(FederatedSourceRecord.owner_user_id == owner_user_id)
+            .order_by(FederatedSourceRecord.synced_at.desc(), FederatedSourceRecord.id.desc())
+            .limit(_SOURCE_HUB_MAX_RECORDS)
+        )
+        .scalars()
+        .all()
+    )
+    if rows:
+        parsed = []
+        for row in rows:
+            normalized = _serialize_source_hub_db_row(row)
+            if normalized is not None:
+                parsed.append(normalized)
+        return parsed
+
+    # Legacy fallback: migrate old JSON-in-settings payload into dedicated table.
+    legacy_records = _load_source_hub_records_from_legacy_settings(db, owner_user_id)
+    if legacy_records:
+        _save_source_hub_records(db, owner_user_id, legacy_records)
+    return legacy_records
+
+
+def _save_source_hub_records(db: Session, owner_user_id: int, records: list[SourceHubRecord]) -> None:
+    pruned = records[:_SOURCE_HUB_MAX_RECORDS]
+    db.query(FederatedSourceRecord).filter(
+        FederatedSourceRecord.owner_user_id == owner_user_id
+    ).delete(synchronize_session=False)
+
+    now = datetime.now(tz=UTC)
+    for record in pruned:
+        parsed_synced_at = _parse_iso_datetime(record.synced_at) or now
+        db.add(
+            FederatedSourceRecord(
+                owner_user_id=owner_user_id,
+                record_id=record.id,
+                source=record.source,
+                title=record.title,
+                url=record.url or "",
+                snippet=record.snippet or "",
+                external_id=record.external_id or "",
+                query=record.query or "",
+                published_at=record.published_at or "",
+                synced_at=parsed_synced_at,
+                metadata_json=record.metadata if isinstance(record.metadata, dict) else {},
+            )
+        )
     db.commit()
 
 
