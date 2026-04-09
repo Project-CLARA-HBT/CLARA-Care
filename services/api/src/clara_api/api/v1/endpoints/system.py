@@ -3,6 +3,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.config import get_settings
@@ -11,6 +12,17 @@ from clara_api.core.flow import FLOW_EVENTS_DEFAULT_LIMIT, get_flow_event_stream
 from clara_api.core.metrics import get_api_metrics_store
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.db.models import (
+    CouncilCase,
+    MedicineCabinet,
+    MedicineItem,
+    ScribeSession,
+    SessionModel,
+    User,
+)
+from clara_api.db.models import (
+    Query as QueryModel,
+)
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     CareguardRuntimeConfig,
@@ -86,17 +98,28 @@ def _minutes_since(now_utc: datetime, when_utc: datetime | None) -> float | None
     return max(delta.total_seconds() / 60.0, 0.0)
 
 
-@router.get("/metrics")
-def get_metrics(
-    _token: TokenPayload = Depends(require_roles("doctor")),
-) -> dict[str, object]:
-    return get_api_metrics_store().snapshot()
+def _datetime_to_iso(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()
 
 
-@router.get("/dependencies")
-def get_dependencies(
-    _token: TokenPayload = Depends(require_roles("doctor")),
-) -> dict[str, object]:
+def _status_code_counters(by_status: dict[str, object]) -> tuple[int, int]:
+    error_total = 0
+    status_5xx = 0
+    for key, value in by_status.items():
+        status_code = _to_int(key, -1)
+        count = max(_to_int(value, 0), 0)
+        if status_code >= 400:
+            error_total += count
+        if status_code >= 500:
+            status_5xx += count
+    return error_total, status_5xx
+
+
+def _probe_dependencies() -> dict[str, object]:
     settings = get_settings()
     health_url = f"{settings.ml_service_url.rstrip('/')}/health"
     ml_status: dict[str, object] = {"url": health_url}
@@ -125,6 +148,380 @@ def get_dependencies(
     return {"status": overall_status, "dependencies": {"ml": ml_status}}
 
 
+def _get_user_by_token(db: Session, token: TokenPayload) -> User:
+    user = db.execute(select(User).where(User.email == token.sub)).scalar_one_or_none()
+    if user is None:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Người dùng không tồn tại",
+        )
+    return user
+
+
+@router.get("/metrics")
+def get_metrics(
+    _token: TokenPayload = Depends(require_roles("doctor")),
+) -> dict[str, object]:
+    return get_api_metrics_store().snapshot()
+
+
+@router.get("/dependencies")
+def get_dependencies(
+    _token: TokenPayload = Depends(require_roles("doctor")),
+) -> dict[str, object]:
+    return _probe_dependencies()
+
+
+@router.get("/dashboard")
+def get_dashboard_snapshot(
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    now_utc = datetime.now(tz=UTC)
+    now_iso = now_utc.isoformat()
+    user = _get_user_by_token(db, token)
+
+    metrics_snapshot = get_api_metrics_store().snapshot()
+    requests_total = max(_to_int(metrics_snapshot.get("requests_total"), 0), 0)
+    avg_latency_ms = max(_to_float(metrics_snapshot.get("avg_latency_ms"), 0.0), 0.0)
+    by_status_raw = metrics_snapshot.get("by_status")
+    by_status = by_status_raw if isinstance(by_status_raw, dict) else {}
+    status_total = sum(max(_to_int(value, 0), 0) for value in by_status.values())
+    effective_total = max(status_total, requests_total, 1)
+    error_total, status_5xx = _status_code_counters(by_status)
+    error_rate_pct = round((error_total / effective_total) * 100.0, 3)
+    server_error_rate_pct = round((status_5xx / effective_total) * 100.0, 3)
+
+    dependency_snapshot = _probe_dependencies()
+    deps_obj = dependency_snapshot.get("dependencies")
+    deps = deps_obj if isinstance(deps_obj, dict) else {}
+    ml_obj = deps.get("ml")
+    ml = ml_obj if isinstance(ml_obj, dict) else {}
+    ml_reachable = bool(ml.get("reachable", False))
+    ml_status = str(ml.get("status") or "unknown").lower()
+
+    control_tower_config = get_control_tower_config_service().load(db)
+    rag_sources = list(control_tower_config.rag_sources)
+    total_sources = len(rag_sources)
+    enabled_sources = sum(1 for source in rag_sources if source.enabled)
+    source_coverage_pct = (
+        round((enabled_sources / total_sources) * 100.0, 3) if total_sources > 0 else 0.0
+    )
+    rag_flow = control_tower_config.rag_flow
+    flow_flags: dict[str, bool] = {
+        "role_router_enabled": bool(rag_flow.role_router_enabled),
+        "intent_router_enabled": bool(rag_flow.intent_router_enabled),
+        "rule_verification_enabled": bool(
+            rag_flow.rule_verification_enabled or rag_flow.verification_enabled
+        ),
+        "nli_model_enabled": bool(rag_flow.nli_model_enabled),
+        "rag_nli_enabled": bool(rag_flow.rag_nli_enabled),
+        "rag_reranker_enabled": bool(rag_flow.rag_reranker_enabled),
+        "rag_graphrag_enabled": bool(rag_flow.rag_graphrag_enabled),
+        "deepseek_fallback_enabled": bool(rag_flow.deepseek_fallback_enabled),
+        "scientific_retrieval_enabled": bool(rag_flow.scientific_retrieval_enabled),
+        "web_retrieval_enabled": bool(rag_flow.web_retrieval_enabled),
+        "file_retrieval_enabled": bool(rag_flow.file_retrieval_enabled),
+    }
+    flow_enabled_count = sum(1 for enabled in flow_flags.values() if enabled)
+    flow_total = len(flow_flags)
+
+    cabinet = db.execute(
+        select(MedicineCabinet).where(MedicineCabinet.user_id == user.id)
+    ).scalar_one_or_none()
+    cabinet_items: list[MedicineItem] = []
+    if cabinet is not None:
+        cabinet_items = (
+            db.execute(
+                select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
+            )
+            .scalars()
+            .all()
+        )
+
+    soon_boundary = now_utc + timedelta(days=30)
+    cabinet_total = len(cabinet_items)
+    cabinet_expired = 0
+    cabinet_expiring_soon = 0
+    cabinet_missing_dosage = 0
+    ocr_values: list[float] = []
+    cabinet_last_updated_at: datetime | None = None
+
+    for item in cabinet_items:
+        dosage_text = (item.dosage or "").strip()
+        if not dosage_text:
+            cabinet_missing_dosage += 1
+
+        if item.expires_on is not None:
+            expiry = item.expires_on
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=UTC)
+            expiry = expiry.astimezone(UTC)
+            if expiry < now_utc:
+                cabinet_expired += 1
+            elif expiry <= soon_boundary:
+                cabinet_expiring_soon += 1
+
+        if item.ocr_confidence is not None:
+            ocr_values.append(float(item.ocr_confidence))
+
+        updated_at = item.updated_at
+        if updated_at is not None and updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=UTC)
+        if updated_at is not None and (
+            cabinet_last_updated_at is None or updated_at > cabinet_last_updated_at
+        ):
+            cabinet_last_updated_at = updated_at
+
+    ocr_item_total = len(ocr_values)
+    ocr_avg_confidence = round(sum(ocr_values) / ocr_item_total, 6) if ocr_item_total > 0 else None
+
+    query_total = (
+        db.execute(
+            select(func.count(QueryModel.id))
+            .join(SessionModel, SessionModel.id == QueryModel.session_id)
+            .where(SessionModel.user_id == user.id)
+        ).scalar_one()
+        or 0
+    )
+    conversation_total = (
+        db.execute(
+            select(func.count(func.distinct(SessionModel.id)))
+            .join(QueryModel, QueryModel.session_id == SessionModel.id)
+            .where(SessionModel.user_id == user.id)
+        ).scalar_one()
+        or 0
+    )
+    last_query_at = db.execute(
+        select(func.max(QueryModel.created_at))
+        .join(SessionModel, SessionModel.id == QueryModel.session_id)
+        .where(SessionModel.user_id == user.id)
+    ).scalar_one_or_none()
+
+    recent_query_rows = (
+        db.execute(
+            select(QueryModel)
+            .join(SessionModel, SessionModel.id == QueryModel.session_id)
+            .where(SessionModel.user_id == user.id)
+            .order_by(QueryModel.created_at.desc(), QueryModel.id.desc())
+            .limit(6)
+        )
+        .scalars()
+        .all()
+    )
+    recent_queries: list[dict[str, object]] = []
+    for query_row in recent_query_rows:
+        question = (query_row.user_input or "").strip()
+        if not question:
+            continue
+        created_at = query_row.created_at
+        if created_at is None:
+            continue
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+        recent_queries.append(
+            {
+                "id": str(query_row.id),
+                "query": question,
+                "created_at": created_at.astimezone(UTC).isoformat(),
+            }
+        )
+
+    council_status_rows = db.execute(
+        select(CouncilCase.status, func.count(CouncilCase.id))
+        .where(CouncilCase.user_id == user.id)
+        .group_by(CouncilCase.status)
+    ).all()
+    council_by_status: dict[str, int] = {}
+    for status_value, count_value in council_status_rows:
+        status_key = str(status_value or "unknown").strip().lower() or "unknown"
+        council_by_status[status_key] = council_by_status.get(status_key, 0) + max(
+            _to_int(count_value, 0), 0
+        )
+    council_total = sum(council_by_status.values())
+    council_last_run_at = db.execute(
+        select(func.max(CouncilCase.last_run_at)).where(CouncilCase.user_id == user.id)
+    ).scalar_one_or_none()
+
+    scribe_status_rows = db.execute(
+        select(ScribeSession.status, func.count(ScribeSession.id))
+        .where(ScribeSession.user_id == user.id)
+        .group_by(ScribeSession.status)
+    ).all()
+    scribe_by_status: dict[str, int] = {}
+    for status_value, count_value in scribe_status_rows:
+        status_key = str(status_value or "unknown").strip().lower() or "unknown"
+        scribe_by_status[status_key] = scribe_by_status.get(status_key, 0) + max(
+            _to_int(count_value, 0), 0
+        )
+    scribe_total = sum(scribe_by_status.values())
+    scribe_last_processed_at = db.execute(
+        select(func.max(ScribeSession.last_processed_at)).where(ScribeSession.user_id == user.id)
+    ).scalar_one_or_none()
+
+    alerts: list[dict[str, object]] = []
+    if ml_status not in {"ok"}:
+        alerts.append(
+            {
+                "id": "ml-service",
+                "severity": "critical" if not ml_reachable else "warning",
+                "message": "ML service không sẵn sàng hoặc đang degraded.",
+                "href": "/dashboard",
+            }
+        )
+    if cabinet_expired > 0:
+        alerts.append(
+            {
+                "id": "cabinet-expired",
+                "severity": "critical",
+                "message": f"Có {cabinet_expired} thuốc đã hết hạn trong tủ thuốc.",
+                "href": "/selfmed",
+            }
+        )
+    if cabinet_missing_dosage > 0:
+        alerts.append(
+            {
+                "id": "cabinet-missing-dosage",
+                "severity": "warning",
+                "message": f"Có {cabinet_missing_dosage} thuốc chưa có thông tin liều dùng.",
+                "href": "/selfmed",
+            }
+        )
+    if server_error_rate_pct >= 5.0:
+        alerts.append(
+            {
+                "id": "api-5xx",
+                "severity": "warning",
+                "message": f"Tỉ lệ lỗi 5xx hiện tại là {server_error_rate_pct:.2f}%.",
+                "href": "/dashboard/ecosystem",
+            }
+        )
+    if council_total > 0 and council_by_status.get("analyzed", 0) == 0:
+        alerts.append(
+            {
+                "id": "council-no-analysis",
+                "severity": "warning",
+                "message": "Council đã có case nhưng chưa có phiên phân tích hoàn tất.",
+                "href": "/council",
+            }
+        )
+
+    tasks: list[dict[str, object]] = []
+    if cabinet_expired > 0:
+        tasks.append(
+            {
+                "id": "clean-expired",
+                "title": "Dọn thuốc hết hạn",
+                "detail": f"Loại bỏ {cabinet_expired} thuốc đã quá hạn.",
+                "tone": "critical",
+                "href": "/selfmed",
+                "count": cabinet_expired,
+            }
+        )
+    if cabinet_expiring_soon > 0:
+        tasks.append(
+            {
+                "id": "review-expiring",
+                "title": "Rà soát thuốc sắp hết hạn",
+                "detail": f"Có {cabinet_expiring_soon} thuốc sẽ hết hạn trong 30 ngày.",
+                "tone": "warn",
+                "href": "/selfmed",
+                "count": cabinet_expiring_soon,
+            }
+        )
+    if cabinet_total >= 2:
+        tasks.append(
+            {
+                "id": "run-ddi",
+                "title": "Chạy DDI check",
+                "detail": f"Tủ thuốc hiện có {cabinet_total} thuốc để kiểm tra tương tác.",
+                "tone": "normal",
+                "href": "/careguard",
+                "count": cabinet_total,
+            }
+        )
+    if council_total > 0 and council_by_status.get("analyzed", 0) < council_total:
+        pending_council = council_total - council_by_status.get("analyzed", 0)
+        tasks.append(
+            {
+                "id": "council-pending",
+                "title": "Hoàn tất phân tích Council",
+                "detail": f"Còn {pending_council} case chưa được phân tích xong.",
+                "tone": "warn",
+                "href": "/council",
+                "count": pending_council,
+            }
+        )
+
+    return {
+        "generated_at": now_iso,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "full_name": user.full_name,
+            "last_login_at": _datetime_to_iso(user.last_login_at),
+        },
+        "runtime": {
+            "api": {
+                "status": _status_from_ratio(server_error_rate_pct, warn=2.0, critical=8.0),
+                "requests_total": requests_total,
+                "error_total": error_total,
+                "error_rate_pct": error_rate_pct,
+                "server_error_total": status_5xx,
+                "server_error_rate_pct": server_error_rate_pct,
+                "avg_latency_ms": round(avg_latency_ms, 3),
+                "by_status": by_status,
+            },
+            "ml": {
+                "status": ml_status,
+                "reachable": ml_reachable,
+                "upstream_status_code": ml.get("upstream_status_code"),
+                "detail": ml.get("detail"),
+            },
+        },
+        "sources": {
+            "total": total_sources,
+            "enabled": enabled_sources,
+            "coverage_pct": source_coverage_pct,
+            "low_context_threshold": rag_flow.low_context_threshold,
+            "flow_flags_enabled": flow_enabled_count,
+            "flow_flags_total": flow_total,
+            "flow_flags": flow_flags,
+        },
+        "cabinet": {
+            "exists": cabinet is not None,
+            "item_total": cabinet_total,
+            "expired_total": cabinet_expired,
+            "expiring_soon_total": cabinet_expiring_soon,
+            "missing_dosage_total": cabinet_missing_dosage,
+            "ocr_item_total": ocr_item_total,
+            "ocr_avg_confidence": ocr_avg_confidence,
+            "last_updated_at": _datetime_to_iso(cabinet_last_updated_at),
+        },
+        "research": {
+            "conversation_total": int(conversation_total),
+            "query_total": int(query_total),
+            "last_query_at": _datetime_to_iso(last_query_at),
+            "recent_queries": recent_queries,
+        },
+        "council": {
+            "total_cases": int(council_total),
+            "by_status": council_by_status,
+            "last_run_at": _datetime_to_iso(council_last_run_at),
+        },
+        "scribe": {
+            "total_sessions": int(scribe_total),
+            "by_status": scribe_by_status,
+            "last_processed_at": _datetime_to_iso(scribe_last_processed_at),
+        },
+        "alerts": alerts,
+        "tasks": tasks,
+    }
+
+
 @router.get("/ecosystem")
 def get_ecosystem(
     _token: TokenPayload = Depends(require_roles("doctor")),
@@ -149,7 +546,7 @@ def get_ecosystem(
     api_status = _status_from_ratio(error_rate_pct, warn=2.0, critical=8.0)
 
     probe_started = datetime.now(tz=UTC)
-    dependency_snapshot = get_dependencies(_token=_token)
+    dependency_snapshot = _probe_dependencies()
     probe_finished = datetime.now(tz=UTC)
     probe_latency_ms = max((probe_finished - probe_started).total_seconds() * 1000.0, 0.0)
     deps_obj = dependency_snapshot.get("dependencies")

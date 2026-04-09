@@ -4,24 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import { UserRole, getRole } from "@/lib/auth-store";
-import api from "@/lib/http-client";
-import { listResearchConversations } from "@/lib/research";
-import { getCabinet } from "@/lib/selfmed";
 import {
-  getApiHealth,
-  getControlTowerConfig,
-  getSystemDependencies,
-  getSystemMetrics,
-  normalizeApiHealth,
-  normalizeSystemDependencies,
-  normalizeSystemMetrics,
+  getSystemDashboard,
+  normalizeSystemDashboard,
 } from "@/lib/system";
-
-type AuthMePayload = {
-  subject?: string;
-  role?: UserRole;
-  full_name?: string;
-};
 
 type StatusTone = "ok" | "warn" | "error" | "neutral";
 
@@ -115,6 +101,10 @@ function taskToneClass(tone: TodayTask["tone"]): string {
   return "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]";
 }
 
+function asRole(value: string): UserRole | null {
+  return value === "normal" || value === "researcher" || value === "doctor" || value === "admin" ? value : null;
+}
+
 export default function DashboardPage() {
   const [role, setRole] = useState<UserRole>("normal");
   const [userSubject, setUserSubject] = useState("");
@@ -153,6 +143,7 @@ export default function DashboardPage() {
 
   const [recentQueries, setRecentQueries] = useState<Array<{ id: string; query: string; createdAt: number }>>([]);
   const [alerts, setAlerts] = useState<string[]>([]);
+  const [serverTasks, setServerTasks] = useState<TodayTask[]>([]);
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -175,6 +166,8 @@ export default function DashboardPage() {
   }, [cabinetCount, expiringSoonCount, expiredCount, missingDosageCount]);
 
   const todayTasks = useMemo<TodayTask[]>(() => {
+    if (serverTasks.length > 0) return serverTasks.slice(0, 4);
+
     const tasks: TodayTask[] = [];
     if ((expiredCount ?? 0) > 0) {
       tasks.push({
@@ -222,132 +215,60 @@ export default function DashboardPage() {
       });
     }
     return tasks.slice(0, 4);
-  }, [cabinetCount, expiredCount, expiringSoonCount, missingDosageCount]);
+  }, [cabinetCount, expiredCount, expiringSoonCount, missingDosageCount, serverTasks]);
 
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
-    const nextAlerts: string[] = [];
-
     try {
-      const [healthResult, metricsResult, dependenciesResult, cabinetResult, meResult, conversationsResult, controlTowerResult] = await Promise.allSettled([
-        getApiHealth(),
-        getSystemMetrics(),
-        getSystemDependencies(),
-        getCabinet(),
-        api.get<AuthMePayload>("/auth/me"),
-        listResearchConversations(6),
-        getControlTowerConfig(),
-      ]);
+      const rawDashboard = await getSystemDashboard();
+      const dashboard = normalizeSystemDashboard(rawDashboard);
 
-      if (healthResult.status === "fulfilled") {
-        const health = normalizeApiHealth(healthResult.value);
-        setHealthStatus(health.status);
-        setHealthMessage(health.message);
-      } else {
-        nextAlerts.push("Không thể lấy trạng thái sức khỏe API.");
-      }
+      const nextRole = asRole(dashboard.user.role);
+      if (nextRole) setRole(nextRole);
+      setUserSubject(dashboard.user.subject);
 
-      if (metricsResult.status === "fulfilled") {
-        const metrics = normalizeSystemMetrics(metricsResult.value);
-        setRequestCount(metrics.requestCount);
-        setErrorCount(metrics.errorCount);
-        setAvgLatencyMs(metrics.avgLatencyMs);
-      } else {
-        nextAlerts.push("Không thể lấy số liệu hệ thống.");
-      }
+      setHealthStatus(dashboard.runtime.apiStatus);
+      setHealthMessage(
+        dashboard.generatedAt
+          ? `Đồng bộ lúc ${new Date(dashboard.generatedAt).toLocaleString("vi-VN")} · ML ${dashboard.runtime.mlStatus.toUpperCase()}`
+          : `Runtime API ${dashboard.runtime.apiStatus.toUpperCase()} · ML ${dashboard.runtime.mlStatus.toUpperCase()}`
+      );
+      setMlStatus(dashboard.runtime.mlStatus);
+      setMlReachable(dashboard.runtime.mlReachable);
 
-      if (dependenciesResult.status === "fulfilled") {
-        const dependencies = normalizeSystemDependencies(dependenciesResult.value);
-        setMlStatus(dependencies.mlStatus);
-        setMlReachable(dependencies.mlReachable);
-      } else {
-        nextAlerts.push("Không thể lấy trạng thái phụ thuộc hệ thống.");
-      }
+      setRequestCount(dashboard.runtime.requestCount);
+      setErrorCount(dashboard.runtime.errorCount);
+      setAvgLatencyMs(dashboard.runtime.avgLatencyMs);
 
-      if (cabinetResult.status === "fulfilled") {
-        const items = cabinetResult.value.items ?? [];
-        const now = Date.now();
-        const dayMs = 24 * 60 * 60 * 1000;
-        const soonBoundary = now + 30 * dayMs;
+      setCabinetCount(dashboard.cabinet.itemTotal);
+      setExpiringSoonCount(dashboard.cabinet.expiringSoonTotal);
+      setExpiredCount(dashboard.cabinet.expiredTotal);
+      setMissingDosageCount(dashboard.cabinet.missingDosageTotal);
 
-        let soon = 0;
-        let expired = 0;
-        let missingDosage = 0;
+      setEnabledSources(dashboard.sources.enabled);
+      setTotalSources(dashboard.sources.total);
+      setLowContextThreshold(dashboard.sources.lowContextThreshold);
+      setFlowFlags(dashboard.sources.flowFlags);
+      setFlowEnabledCount(dashboard.sources.flowEnabledCount);
 
-        items.forEach((item) => {
-          if (!String(item.dosage ?? "").trim()) {
-            missingDosage += 1;
-          }
-          if (!item.expires_on) return;
-          const expireMs = Date.parse(item.expires_on);
-          if (!Number.isFinite(expireMs)) return;
-          if (expireMs < now) {
-            expired += 1;
-          } else if (expireMs <= soonBoundary) {
-            soon += 1;
-          }
-        });
-
-        setCabinetCount(items.length);
-        setExpiringSoonCount(soon);
-        setExpiredCount(expired);
-        setMissingDosageCount(missingDosage);
-      } else {
-        nextAlerts.push("Không thể tải dữ liệu tủ thuốc.");
-      }
-
-      if (controlTowerResult.status === "fulfilled") {
-        const config = controlTowerResult.value;
-        const sources = Array.isArray(config.rag_sources) ? config.rag_sources : [];
-        const enabled = sources.filter((source) => source.enabled).length;
-        setEnabledSources(enabled);
-        setTotalSources(sources.length);
-
-        const ragFlow = config.rag_flow ?? {};
-        const flow = {
-          roleRouter: Boolean(ragFlow.role_router_enabled),
-          intentRouter: Boolean(ragFlow.intent_router_enabled),
-          ruleVerification: Boolean(ragFlow.rule_verification_enabled ?? ragFlow.verification_enabled),
-          nliModel: Boolean(ragFlow.nli_model_enabled),
-          ragNli: Boolean(ragFlow.rag_nli_enabled),
-          ragReranker: Boolean(ragFlow.rag_reranker_enabled),
-          ragGraphRag: Boolean(ragFlow.rag_graphrag_enabled),
-          deepseekFallback: Boolean(ragFlow.deepseek_fallback_enabled),
-          scientificRetrieval: Boolean(ragFlow.scientific_retrieval_enabled),
-          webRetrieval: Boolean(ragFlow.web_retrieval_enabled),
-          fileRetrieval: Boolean(ragFlow.file_retrieval_enabled),
-        };
-
-        setFlowFlags(flow);
-        setFlowEnabledCount(Object.values(flow).filter(Boolean).length);
-        setLowContextThreshold(Number(ragFlow.low_context_threshold ?? 0));
-      } else {
-        nextAlerts.push("Không thể tải control tower config.");
-      }
-
-      if (meResult.status === "fulfilled") {
-        const me = meResult.value.data ?? {};
-        if (me.role) {
-          setRole(me.role);
-        }
-        const subject = String(me.subject ?? "");
-        setUserSubject(subject);
-      }
-
-      if (conversationsResult.status === "fulfilled") {
-        const mapped = conversationsResult.value
-          .map((item) => ({
-            id: String(item.id),
-            query: String(item.query ?? "").trim(),
-            createdAt: Number(item.createdAt ?? Date.now()),
-          }))
-          .filter((item) => item.query);
-        setRecentQueries(mapped);
-      } else {
-        nextAlerts.push("Không thể tải lịch sử research gần đây.");
-      }
-
-      setAlerts(nextAlerts);
+      setRecentQueries(dashboard.research.recentQueries);
+      setAlerts(dashboard.alerts);
+      setServerTasks(
+        dashboard.tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          detail: task.detail,
+          tone: task.tone,
+          href: task.href,
+        }))
+      );
+      setCheckedAt(
+        dashboard.generatedAt
+          ? new Date(dashboard.generatedAt).toLocaleString("vi-VN")
+          : new Date().toLocaleString("vi-VN")
+      );
+    } catch {
+      setAlerts(["Không thể tải dữ liệu dashboard tổng hợp."]);
       setCheckedAt(new Date().toLocaleString("vi-VN"));
     } finally {
       setIsRefreshing(false);

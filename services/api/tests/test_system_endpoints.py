@@ -1,6 +1,6 @@
 import time
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import httpx
@@ -11,6 +11,17 @@ from fastapi.testclient import TestClient
 from clara_api.core.config import get_settings
 from clara_api.core.rate_limit import RateLimiterMiddleware
 from clara_api.db import session as db_session
+from clara_api.db.models import (
+    CouncilCase,
+    MedicineCabinet,
+    MedicineItem,
+    ScribeSession,
+    SessionModel,
+    User,
+)
+from clara_api.db.models import (
+    Query as QueryModel,
+)
 from clara_api.main import app
 
 client = TestClient(app)
@@ -98,6 +109,194 @@ def test_system_dependencies_handles_ml_unavailable(monkeypatch) -> None:
     assert payload["dependencies"]["ml"]["status"] == "unreachable"
     assert payload["dependencies"]["ml"]["reachable"] is False
     assert "ConnectError" in payload["dependencies"]["ml"]["detail"]
+
+
+def test_system_dashboard_success_returns_real_metrics(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+    now = datetime.now(tz=UTC)
+
+    class _MockResponse:
+        status_code = 200
+
+    def _fake_get(url: str, *, timeout: float, **kwargs) -> _MockResponse:
+        assert url.endswith("/health")
+        assert timeout > 0
+        headers = kwargs.get("headers")
+        assert headers is None or isinstance(headers, dict)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.system.httpx.get", _fake_get)
+
+    with db_session.SessionLocal() as db:
+        user = db.query(User).filter(User.email == "alice@research.clara").first()
+        assert user is not None
+
+        cabinet = MedicineCabinet(user_id=user.id, label="Dashboard test cabinet")
+        db.add(cabinet)
+        db.flush()
+
+        db.add_all(
+            [
+                MedicineItem(
+                    cabinet_id=cabinet.id,
+                    drug_name="Warfarin",
+                    normalized_name="warfarin",
+                    dosage="5mg",
+                    dosage_form="tablet",
+                    quantity=10.0,
+                    source="ocr",
+                    rx_cui="",
+                    ocr_confidence=0.92,
+                    expires_on=now - timedelta(days=1),
+                    note="",
+                ),
+                MedicineItem(
+                    cabinet_id=cabinet.id,
+                    drug_name="Atorvastatin",
+                    normalized_name="atorvastatin",
+                    dosage="",
+                    dosage_form="tablet",
+                    quantity=20.0,
+                    source="ocr",
+                    rx_cui="",
+                    ocr_confidence=0.80,
+                    expires_on=now + timedelta(days=12),
+                    note="",
+                ),
+                MedicineItem(
+                    cabinet_id=cabinet.id,
+                    drug_name="Vitamin B12",
+                    normalized_name="vitamin b12",
+                    dosage="supplement",
+                    dosage_form="capsule",
+                    quantity=30.0,
+                    source="manual",
+                    rx_cui="",
+                    ocr_confidence=None,
+                    expires_on=now + timedelta(days=120),
+                    note="",
+                ),
+            ]
+        )
+
+        session_row = SessionModel(user_id=user.id, title="Research Session")
+        db.add(session_row)
+        db.flush()
+        db.add_all(
+            [
+                QueryModel(
+                    session_id=session_row.id,
+                    role="researcher",
+                    user_input="first research query",
+                    response_text="{}",
+                ),
+                QueryModel(
+                    session_id=session_row.id,
+                    role="researcher",
+                    user_input="second research query",
+                    response_text="{}",
+                ),
+            ]
+        )
+
+        db.add_all(
+            [
+                CouncilCase(
+                    user_id=user.id,
+                    title="Case Draft",
+                    status="draft",
+                    transcript="",
+                ),
+                CouncilCase(
+                    user_id=user.id,
+                    title="Case Analyzed",
+                    status="analyzed",
+                    transcript="has data",
+                    last_run_at=now - timedelta(minutes=5),
+                ),
+            ]
+        )
+
+        db.add_all(
+            [
+                ScribeSession(
+                    user_id=user.id,
+                    title="Scribe Draft",
+                    status="draft",
+                    transcript="draft transcript",
+                ),
+                ScribeSession(
+                    user_id=user.id,
+                    title="Scribe Ready",
+                    status="ready",
+                    transcript="ready transcript",
+                    soap_json={"subjective": "ok"},
+                    last_processed_at=now - timedelta(minutes=2),
+                ),
+            ]
+        )
+        db.commit()
+
+    warmup_response = client.get("/api/v1/health")
+    assert warmup_response.status_code == 200
+
+    response = client.get(
+        "/api/v1/system/dashboard",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    payload = response.json()
+    datetime.fromisoformat(payload["generated_at"])
+
+    assert payload["user"]["role"] == "researcher"
+    assert payload["cabinet"]["exists"] is True
+    assert payload["cabinet"]["item_total"] == 3
+    assert payload["cabinet"]["expired_total"] == 1
+    assert payload["cabinet"]["expiring_soon_total"] == 1
+    assert payload["cabinet"]["missing_dosage_total"] == 1
+    assert payload["cabinet"]["ocr_item_total"] == 2
+    assert payload["cabinet"]["ocr_avg_confidence"] == pytest.approx(0.86, abs=1e-6)
+    assert payload["cabinet"]["last_updated_at"] is not None
+    datetime.fromisoformat(payload["cabinet"]["last_updated_at"])
+
+    assert payload["research"]["conversation_total"] == 1
+    assert payload["research"]["query_total"] == 2
+    recent_queries = payload["research"]["recent_queries"]
+    assert isinstance(recent_queries, list)
+    assert len(recent_queries) == 2
+    assert recent_queries[0]["query"] == "second research query"
+    datetime.fromisoformat(recent_queries[0]["created_at"])
+
+    assert payload["council"]["total_cases"] == 2
+    assert payload["council"]["by_status"]["draft"] == 1
+    assert payload["council"]["by_status"]["analyzed"] == 1
+    assert payload["council"]["last_run_at"] is not None
+    datetime.fromisoformat(payload["council"]["last_run_at"])
+
+    assert payload["scribe"]["total_sessions"] == 2
+    assert payload["scribe"]["by_status"]["draft"] == 1
+    assert payload["scribe"]["by_status"]["ready"] == 1
+    assert payload["scribe"]["last_processed_at"] is not None
+    datetime.fromisoformat(payload["scribe"]["last_processed_at"])
+
+    assert payload["runtime"]["ml"]["status"] == "ok"
+    assert payload["runtime"]["ml"]["reachable"] is True
+    assert payload["runtime"]["api"]["requests_total"] >= 1
+    assert isinstance(payload["runtime"]["api"]["avg_latency_ms"], float)
+    assert payload["runtime"]["api"]["status"] in {"ok", "degraded", "down"}
+
+    assert payload["sources"]["flow_flags_total"] == 11
+    assert payload["sources"]["flow_flags_enabled"] <= payload["sources"]["flow_flags_total"]
+    assert isinstance(payload["alerts"], list)
+    assert isinstance(payload["tasks"], list)
+    assert any(task["id"] == "run-ddi" for task in payload["tasks"])
+
+
+def test_system_dashboard_unauthorized_without_token() -> None:
+    client.cookies.clear()
+    response = client.get("/api/v1/system/dashboard")
+    assert response.status_code == 401
 
 
 def test_system_ecosystem_success_for_doctor() -> None:
