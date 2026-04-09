@@ -2016,7 +2016,7 @@ export default function ChatWorkspacePage() {
       variant="plain"
       title=""
     >
-      <div className="relative h-[100dvh] min-h-[100dvh] overflow-hidden">
+      <div className="relative h-[calc(100dvh-11.5rem)] min-h-[640px] overflow-hidden rounded-[1.2rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-[var(--shadow-soft)] sm:h-[calc(100dvh-10.5rem)] lg:h-[calc(100dvh-8.75rem)]">
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -2029,7 +2029,7 @@ export default function ChatWorkspacePage() {
         <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[18rem_minmax(0,1fr)_20rem]">
         <aside
           className={[
-            "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f1f4f7] p-4 transition-transform duration-200 dark:bg-[#001c39] lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f1f4f7]/95 p-4 transition-transform duration-200 dark:bg-[#001c39]/95 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0",
             isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0",
           ].join(" ")}
         >
@@ -2600,8 +2600,8 @@ export default function ChatWorkspacePage() {
           </div>
         </aside>
 
-        <section className="flex h-full min-h-0 flex-col overflow-hidden border-x border-[color:var(--shell-border)] bg-[var(--bg-canvas)]">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)] bg-white/90 px-4 py-3 backdrop-blur-lg dark:bg-[#001f3d]/90 sm:px-5">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden border-x border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_top_right,rgba(0,227,253,0.08),transparent_55%),var(--bg-canvas)]">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)] bg-white/92 px-4 py-3 backdrop-blur-lg dark:bg-[#001f3d]/92 sm:px-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-start gap-2">
                 <button
@@ -2780,7 +2780,7 @@ export default function ChatWorkspacePage() {
           />
         </section>
 
-        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[var(--surface-muted)]/55 xl:flex">
+        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(241,244,247,0.7))] dark:bg-[linear-gradient(180deg,rgba(0,28,57,0.72),rgba(11,19,38,0.72))] xl:flex">
           <div className="border-b border-[color:var(--shell-border)] bg-white px-5 py-5 dark:bg-[#001f3d]/90">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
               System Telemetry

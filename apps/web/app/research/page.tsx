@@ -642,7 +642,7 @@ export default function ResearchPage() {
       title="Clinical Lens AI Research"
       description="Không gian nghiên cứu lâm sàng với truy vấn nhanh, phân tích sâu và telemetry runtime thời gian thực."
     >
-      <div className="research-workspace grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="research-workspace grid min-h-[calc(100dvh-12rem)] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="chrome-panel research-panel-modern hidden rounded-[1.35rem] p-4 lg:block">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -763,7 +763,7 @@ export default function ResearchPage() {
             </div>
           </details>
 
-          <section className="chrome-panel research-panel-modern flex min-h-[66vh] max-h-[80vh] flex-col overflow-hidden rounded-[1.35rem] p-4 sm:p-5 lg:p-6">
+          <section className="chrome-panel research-panel-modern flex min-h-[58vh] max-h-[calc(100dvh-18rem)] flex-col overflow-hidden rounded-[1.35rem] p-4 sm:p-5 lg:p-6">
             <div ref={conversationScrollRef} className="flex-1 space-y-4 overflow-y-auto pr-1 pb-4">
               {isLoadingConversation && !conversationTurns.length ? (
                 <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-4 text-sm text-[var(--text-secondary)]">
