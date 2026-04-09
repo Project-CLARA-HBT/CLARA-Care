@@ -144,6 +144,13 @@ def _generate_soap(transcript: str) -> dict[str, Any]:
     return _normalize_soap_payload(payload)
 
 
+def _normalize_audio_content_type(value: str | None) -> str:
+    raw = (value or "").strip().lower()
+    if not raw:
+        return "application/octet-stream"
+    return raw.split(";", 1)[0].strip() or "application/octet-stream"
+
+
 async def _call_scribe_transcribe_ml(
     *,
     audio_file: UploadFile,
@@ -170,11 +177,12 @@ async def _call_scribe_transcribe_ml(
             detail="Audio file too large. Maximum size is 15MB.",
         )
 
-    audio_content_type = audio_file.content_type or "application/octet-stream"
+    raw_audio_content_type = audio_file.content_type or "application/octet-stream"
+    audio_content_type = _normalize_audio_content_type(raw_audio_content_type)
     if audio_content_type not in _ALLOWED_AUDIO_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported audio content type: {audio_content_type}",
+            detail=f"Unsupported audio content type: {raw_audio_content_type}",
         )
 
     settings = get_settings()
