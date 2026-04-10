@@ -12,7 +12,7 @@ export default function LegalPageShell({ title, summary, updatedAt, children }: 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-10 text-[var(--text-primary)]">
       <section className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Project CLARA - Legal</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">The Clara Care - Legal</p>
         <h1 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{title}</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{summary}</p>
         <p className="mt-2 text-xs text-[var(--text-muted)]">

@@ -3,9 +3,9 @@ import { LEGAL_CONTACT_EMAIL, LEGAL_POLICY_VERSION, LEGAL_UPDATED_AT } from "@/l
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Đồng thuận sử dụng y tế | Project CLARA",
+  title: "Đồng thuận sử dụng y tế | The Clara Care",
   description:
-    "Điều khoản đồng thuận bắt buộc khi dùng các tính năng có rủi ro lâm sàng trong Project CLARA.",
+    "Điều khoản đồng thuận bắt buộc khi dùng các tính năng có rủi ro lâm sàng trong The Clara Care.",
 };
 
 export default function MedicalConsentPage() {
@@ -18,7 +18,7 @@ export default function MedicalConsentPage() {
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">1. Bản chất của hệ thống</h2>
         <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-          Project CLARA là công cụ hỗ trợ tham khảo. Nội dung do hệ thống tạo ra không thay thế tư vấn trực tiếp của bác
+          The Clara Care là công cụ hỗ trợ tham khảo. Nội dung do hệ thống tạo ra không thay thế tư vấn trực tiếp của bác
           sĩ và không được xem là chỉ định điều trị cuối cùng.
         </p>
       </article>

@@ -3,8 +3,8 @@ import { LEGAL_UPDATED_AT } from "@/lib/legal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Chính sách cookie | Project CLARA",
-  description: "Mô tả cách Project CLARA sử dụng cookie để vận hành và bảo mật phiên người dùng.",
+  title: "Chính sách cookie | The Clara Care",
+  description: "Mô tả cách The Clara Care sử dụng cookie để vận hành và bảo mật phiên người dùng.",
 };
 
 export default function CookiePolicyPage() {

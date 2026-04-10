@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigation.config";
+import { getGroupMeta, getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigation.config";
 
 type SidebarNavProps = {
   role: UserRole;
@@ -16,29 +16,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   doctor: "Bác sĩ",
   admin: "Quản trị",
 };
-
-const GROUP_LABEL_OVERRIDES: Record<string, string> = {
-  core: "Quản trị",
-  clinical: "Lâm sàng",
-  medication: "Thuốc và an toàn",
-  admin: "Hệ thống",
-  support: "Hỗ trợ",
-};
-
-function getNavIcon(href: string): string {
-  if (href.startsWith("/dashboard")) return "dashboard";
-  if (href.startsWith("/chat")) return "chat_paste_go";
-  if (href.startsWith("/research")) return "analytics";
-  if (href.startsWith("/council")) return "groups";
-  if (href.startsWith("/scribe")) return "clinical_notes";
-  if (href.startsWith("/selfmed")) return "pill";
-  if (href.startsWith("/careguard")) return "security";
-  if (href.startsWith("/admin/knowledge-sources")) {
-    return "database";
-  }
-  if (href.startsWith("/admin")) return "settings_input_component";
-  return "widgets";
-}
 
 export default function SidebarNav({ role, collapsed = false, onToggleCollapse }: SidebarNavProps) {
   const pathname = usePathname();
@@ -59,7 +36,7 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
         </div>
         {!collapsed ? (
           <div>
-            <h1 className="text-xl font-bold tracking-tighter text-[#003461] dark:text-blue-400">CLARA Care</h1>
+            <h1 className="text-xl font-bold tracking-tighter text-[#003461] dark:text-blue-400">The Clara Care</h1>
             <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">Digital Surgeon AI</p>
           </div>
         ) : null}
@@ -81,8 +58,9 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
         {groups.map((group) => (
           <section key={group.key}>
             {!collapsed ? (
-              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
-                {GROUP_LABEL_OVERRIDES[group.key] ?? group.label}
+              <p className="mb-2 flex items-center gap-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
+                <span className="material-symbols-outlined text-[14px]">{getGroupMeta(group.key).icon}</span>
+                {group.label}
               </p>
             ) : null}
             <nav className="space-y-1">
@@ -102,7 +80,7 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
                         : "text-[#424750] hover:bg-[#e0e3e5] hover:text-[#003461] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-200",
                     ].join(" ")}
                   >
-                    <span className="material-symbols-outlined text-lg">{getNavIcon(item.href)}</span>
+                    <span className="material-symbols-outlined text-lg">{item.icon}</span>
                     {!collapsed ? <span className="truncate">{item.label}</span> : null}
                   </Link>
                 );

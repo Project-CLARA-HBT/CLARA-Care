@@ -3,15 +3,15 @@ import { LEGAL_CONTACT_EMAIL, LEGAL_UPDATED_AT } from "@/lib/legal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Điều khoản sử dụng | Project CLARA",
-  description: "Điều khoản sử dụng Project CLARA: quyền, trách nhiệm và giới hạn khi dùng dịch vụ.",
+  title: "Điều khoản sử dụng | The Clara Care",
+  description: "Điều khoản sử dụng The Clara Care: quyền, trách nhiệm và giới hạn khi dùng dịch vụ.",
 };
 
 export default function TermsOfServicePage() {
   return (
     <LegalPageShell
       title="Điều khoản sử dụng (ToS)"
-      summary="Khi truy cập hoặc sử dụng Project CLARA, bạn đồng ý tuân thủ các điều khoản dưới đây."
+      summary="Khi truy cập hoặc sử dụng The Clara Care, bạn đồng ý tuân thủ các điều khoản dưới đây."
       updatedAt={LEGAL_UPDATED_AT}
     >
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
@@ -34,7 +34,7 @@ export default function TermsOfServicePage() {
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">3. Phạm vi sử dụng được phép</h2>
         <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-          Project CLARA được cung cấp để hỗ trợ tra cứu, tổng hợp thông tin và vận hành luồng công việc y tế. Bạn không
+          The Clara Care được cung cấp để hỗ trợ tra cứu, tổng hợp thông tin và vận hành luồng công việc y tế. Bạn không
           được sử dụng dịch vụ để phát tán nội dung trái pháp luật, gây hại hệ thống hoặc xâm phạm quyền của bên khác.
         </p>
       </article>
@@ -50,7 +50,7 @@ export default function TermsOfServicePage() {
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">5. Giới hạn trách nhiệm</h2>
         <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-          Trong phạm vi pháp luật cho phép, Project CLARA không chịu trách nhiệm cho thiệt hại gián tiếp phát sinh từ
+          Trong phạm vi pháp luật cho phép, The Clara Care không chịu trách nhiệm cho thiệt hại gián tiếp phát sinh từ
           việc sử dụng thông tin tham khảo nếu người dùng bỏ qua bước kiểm chứng chuyên môn cần thiết.
         </p>
       </article>
@@ -58,7 +58,7 @@ export default function TermsOfServicePage() {
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">6. Quyền sở hữu trí tuệ</h2>
         <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-          Mọi thành phần phần mềm, giao diện và tài liệu thuộc quyền sở hữu hợp pháp của Project CLARA hoặc đối tác cấp
+          Mọi thành phần phần mềm, giao diện và tài liệu thuộc quyền sở hữu hợp pháp của The Clara Care hoặc đối tác cấp
           phép. Bạn không được sao chép, phân phối hoặc khai thác thương mại khi chưa có chấp thuận.
         </p>
       </article>

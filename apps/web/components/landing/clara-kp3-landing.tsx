@@ -169,7 +169,7 @@ export default function ClaraKp3Landing() {
               C
             </div>
             <div className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              Project <span className="text-cyan-600 dark:text-cyan-300">CLARA</span>
+              The <span className="text-cyan-600 dark:text-cyan-300">Clara Care</span>
             </div>
           </div>
 
@@ -197,7 +197,7 @@ export default function ClaraKp3Landing() {
             className="rounded-md border border-slate-900/20 bg-slate-900 px-5 py-2 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
           >
             <span className="material-symbols-outlined mr-1 align-[-3px] text-base">rocket_launch</span>
-            Vào Workspace CLARA
+            Vào Workspace The Clara Care
           </Link>
         </nav>
 
@@ -209,14 +209,14 @@ export default function ClaraKp3Landing() {
             <div className="data-stream left-3/4" style={{ animationDelay: "2.2s" }} />
           </div>
 
-          <div className="relative z-10 flex flex-col items-center gap-12 min-[1120px]:flex-row min-[1120px]:items-start min-[1120px]:gap-16">
-            <div className="w-full space-y-8 min-[1120px]:w-5/12">
+          <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-stretch min-[1120px]:gap-12">
+            <div className="w-full space-y-6 min-[1120px]:w-[46%] min-[1280px]:w-[44%]">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-100/65 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
                 Next-Gen Medical AI
               </div>
 
-              <h1 className="text-[2.8rem] font-black leading-[0.92] tracking-tight text-slate-900 min-[640px]:text-[4.2rem] min-[1280px]:text-[5.3rem] dark:text-slate-100">
+              <h1 className="max-w-[16ch] text-[2.6rem] font-black leading-[0.95] tracking-tight text-slate-900 min-[640px]:text-[3.6rem] min-[1280px]:text-[4.5rem] dark:text-slate-100">
                 Hỏi nhanh.
                 <br />
                 <span className="text-cyan-600 dark:text-cyan-300">Có nguồn rõ.</span>
@@ -224,9 +224,9 @@ export default function ClaraKp3Landing() {
                 Quyết định chắc.
               </h1>
 
-              <p className="text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                Bắt đầu từ chatbot Research để truy xuất bằng chứng nhanh, sau đó mở rộng mượt sang Council, Self-Med,
-                CareGuard, Scribe và Control Tower.
+              <p className="max-w-[56ch] text-base font-medium leading-relaxed text-slate-600 min-[1280px]:text-lg dark:text-slate-300">
+                Bắt đầu với Research để lấy bằng chứng nhanh và rõ. Sau đó chuyển mượt sang Council, Self-Med, CareGuard,
+                Scribe và Control Tower trong cùng một luồng làm việc.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -264,7 +264,7 @@ export default function ClaraKp3Landing() {
               </div>
             </div>
 
-            <div className="relative w-full min-[1120px]:w-7/12">
+            <div className="relative w-full self-start min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
               <div className="absolute -inset-10 rounded-full bg-cyan-300/15 blur-[100px] dark:bg-cyan-700/20" />
 
               <div className="glass-panel relative overflow-hidden rounded-2xl border border-white/40 p-5 shadow-[0_32px_64px_-12px_rgba(0,31,61,0.2)] dark:border-slate-700/60">
@@ -374,7 +374,7 @@ export default function ClaraKp3Landing() {
               Các đối tác và nhà tài trợ
             </div>
             <div className="mb-8 text-center text-sm font-medium text-slate-600 dark:text-slate-300">
-              Hạ tầng và hệ sinh thái đồng hành cùng Project CLARA.
+              Hạ tầng và hệ sinh thái đồng hành cùng The Clara Care.
             </div>
             <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
               {SPONSORS.map((sponsor) => (
@@ -655,10 +655,10 @@ export default function ClaraKp3Landing() {
           <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 text-slate-300 min-[900px]:grid-cols-4 min-[1024px]:px-8">
             <div className="space-y-4">
               <p className="text-2xl font-black text-white">
-                Project <span className="text-cyan-300">CLARA</span>
+                The <span className="text-cyan-300">Clara Care</span>
               </p>
               <p className="text-sm font-medium leading-relaxed">Precision AI Systems for modern clinical intelligence.</p>
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 Project CLARA</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 The Clara Care</p>
             </div>
 
             <div className="space-y-3">

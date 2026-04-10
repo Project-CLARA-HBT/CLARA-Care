@@ -9,11 +9,18 @@ export type PageMeta = {
 export type NavigationItem = {
   href: string;
   label: string;
+  icon: string;
   desc: string;
   group: NavGroupKey;
   roles: UserRole[];
   mobilePrimary?: boolean;
   page: PageMeta;
+};
+
+export type NavGroupMeta = {
+  label: string;
+  shortLabel: string;
+  icon: string;
 };
 
 export const PUBLIC_ROUTES = new Set([
@@ -47,6 +54,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/chat",
     label: "Chat",
+    icon: "chat_paste_go",
     desc: "Trải nghiệm chat thuần",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -59,6 +67,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/dashboard",
     label: "Tổng quan",
+    icon: "dashboard",
     desc: "Bức tranh nhanh hôm nay",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -71,6 +80,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/selfmed",
     label: "Tủ thuốc",
+    icon: "pill",
     desc: "Quản lý thuốc cá nhân",
     group: "medication",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -83,6 +93,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/careguard",
     label: "Kiểm tra tương tác",
+    icon: "security",
     desc: "DDI và cảnh báo an toàn",
     group: "medication",
     roles: ["normal", "doctor", "admin"],
@@ -95,6 +106,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/council",
     label: "Hội chẩn AI",
+    icon: "groups",
     desc: "Nhiều góc nhìn chuyên khoa",
     group: "clinical",
     roles: ["doctor", "admin"],
@@ -106,6 +118,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/scribe",
     label: "Medical Scribe",
+    icon: "clinical_notes",
     desc: "Ghi chép khám bệnh",
     group: "clinical",
     roles: ["doctor", "admin"],
@@ -117,6 +130,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/overview",
     label: "Admin Control Tower",
+    icon: "settings_input_component",
     desc: "Điều phối cấu hình và vận hành",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
@@ -128,6 +142,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/knowledge-sources",
     label: "Nguồn tri thức",
+    icon: "database",
     desc: "Knowledge Hub hợp nhất",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
@@ -139,6 +154,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/answer-flow",
     label: "Luồng trả lời",
+    icon: "alt_route",
     desc: "Điều phối phân tích và phản hồi",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
@@ -150,6 +166,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/observability",
     label: "Giám sát vận hành",
+    icon: "monitoring",
     desc: "Theo dõi cảnh báo runtime",
     group: "admin",
     roles: ["researcher", "doctor", "admin"],
@@ -161,6 +178,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/huong-dan",
     label: "Hướng dẫn",
+    icon: "widgets",
     desc: "Bắt đầu trong 5 phút",
     group: "support",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -174,11 +192,19 @@ const NAV_ITEMS: NavigationItem[] = [
 const GROUP_ORDER: NavGroupKey[] = ["core", "clinical", "medication", "admin", "support"];
 
 export const GROUP_LABELS: Record<NavGroupKey, string> = {
-  core: "Điều hướng chính",
+  core: "Workspace",
   clinical: "Lâm sàng",
   medication: "Thuốc và an toàn",
-  admin: "Quản trị",
+  admin: "Quản trị hệ thống",
   support: "Hỗ trợ"
+};
+
+const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
+  core: { label: "Workspace", shortLabel: "Workspace", icon: "workspaces" },
+  clinical: { label: "Lâm sàng", shortLabel: "Lâm sàng", icon: "stethoscope" },
+  medication: { label: "Thuốc và an toàn", shortLabel: "An toàn", icon: "shield" },
+  admin: { label: "Quản trị hệ thống", shortLabel: "Quản trị", icon: "settings_input_component" },
+  support: { label: "Hỗ trợ", shortLabel: "Hỗ trợ", icon: "help" }
 };
 
 const DEFAULT_PAGE_META: PageMeta = {
@@ -220,7 +246,7 @@ export function getGroupedNavItems(role: UserRole): Array<{ key: NavGroupKey; la
     const groupItems = items.filter((item) => item.group === groupKey);
     return {
       key: groupKey,
-      label: GROUP_LABELS[groupKey],
+      label: GROUP_META[groupKey].label,
       items: groupItems
     };
   }).filter((group) => group.items.length > 0);
@@ -228,6 +254,27 @@ export function getGroupedNavItems(role: UserRole): Array<{ key: NavGroupKey; la
 
 export function getMobilePrimaryNav(role: UserRole): NavigationItem[] {
   return getNavItemsByRole(role).filter((item) => item.mobilePrimary).slice(0, 4);
+}
+
+export function getGroupMeta(group: NavGroupKey): NavGroupMeta {
+  return GROUP_META[group];
+}
+
+export function getTopNavLinks(role: UserRole): Array<{ href: string; label: string; icon: string }> {
+  const grouped = getGroupedNavItems(role);
+  const desiredOrder: NavGroupKey[] = ["clinical", "medication", "admin"];
+  return desiredOrder
+    .map((groupKey) => {
+      const group = grouped.find((entry) => entry.key === groupKey);
+      if (!group || group.items.length === 0) return null;
+      const meta = GROUP_META[groupKey];
+      return {
+        href: group.items[0].href,
+        label: meta.shortLabel,
+        icon: meta.icon
+      };
+    })
+    .filter((item): item is { href: string; label: string; icon: string } => Boolean(item));
 }
 
 export function getPageMeta(pathname: string): PageMeta {

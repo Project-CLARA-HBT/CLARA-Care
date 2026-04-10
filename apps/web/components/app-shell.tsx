@@ -7,8 +7,10 @@ import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import { getRole } from "@/lib/auth-store";
 import {
+  getGroupMeta,
   getGroupedNavItems,
   getPageMeta,
+  getTopNavLinks,
   isActiveRoute,
   isPublicRoute,
   type UserRole
@@ -36,12 +38,6 @@ const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
   { value: "dark", label: "Tối" },
   { value: "system", label: "Hệ thống" },
 ];
-
-const TOP_NAV_ICON_BY_LABEL: Record<string, string> = {
-  "Lâm sàng": "fa-stethoscope",
-  "Thuốc và an toàn": "fa-shield",
-  "Quản trị hệ thống": "fa-cogs",
-};
 
 const NAVBAR_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string }> = [
   { id: "notifications", iconClass: "fa-bell-o", ariaLabel: "Thông báo" },
@@ -157,16 +153,7 @@ export default function AppShell({ children }: Props) {
   const currentPage = useMemo(() => getPageMeta(pathname), [pathname]);
   const mobileNavGroups = useMemo(() => getGroupedNavItems(role), [role]);
 
-  const topNavLinks = useMemo(() => {
-    const clinical = mobileNavGroups.find((group) => group.key === "clinical")?.items[0];
-    const medication = mobileNavGroups.find((group) => group.key === "medication")?.items[0];
-    const system = mobileNavGroups.find((group) => group.key === "admin")?.items[0];
-    return [
-      clinical ? { href: clinical.href, label: "Lâm sàng" } : null,
-      medication ? { href: medication.href, label: "Thuốc và an toàn" } : null,
-      system ? { href: system.href, label: "Quản trị hệ thống" } : null,
-    ].filter((item): item is { href: string; label: string } => Boolean(item));
-  }, [mobileNavGroups]);
+  const topNavLinks = useMemo(() => getTopNavLinks(role), [role]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);
@@ -221,7 +208,6 @@ export default function AppShell({ children }: Props) {
               <nav className="hidden items-center gap-6 lg:flex">
                 {topNavLinks.map((item) => {
                   const active = isActiveRoute(pathname, item.href);
-                  const iconClass = TOP_NAV_ICON_BY_LABEL[item.label] ?? "fa-circle-o";
                   return (
                     <Link
                       key={item.href}
@@ -233,7 +219,9 @@ export default function AppShell({ children }: Props) {
                           : "text-[#424750] hover:text-[#004b87] dark:text-slate-400 dark:hover:text-blue-200"
                       ].join(" ")}
                     >
-                      <i className={`fa ${iconClass} text-[12px]`} aria-hidden="true" />
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        {item.icon}
+                      </span>
                       {item.label}
                     </Link>
                   );
@@ -318,7 +306,7 @@ export default function AppShell({ children }: Props) {
           <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.19em] text-[var(--text-brand)]">
-                CLARA Care
+                The Clara Care
               </p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Điều hướng nhanh</p>
             </div>
@@ -335,7 +323,8 @@ export default function AppShell({ children }: Props) {
           <div className="mt-4 h-[calc(100%-126px)] space-y-4 overflow-y-auto pr-1 clara-scrollbar">
             {mobileNavGroups.map((group) => (
               <section key={group.key}>
-                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  <span className="material-symbols-outlined text-[15px]">{getGroupMeta(group.key).icon}</span>
                   {group.label}
                 </p>
                 <nav className="space-y-2">
@@ -355,8 +344,13 @@ export default function AppShell({ children }: Props) {
                         ].join(" ")}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className={active ? "text-sm font-semibold text-cyan-300" : "text-sm font-semibold text-[var(--text-primary)]"}>
-                            {item.label}
+                          <span className="flex items-center gap-2">
+                            <span className={active ? "material-symbols-outlined text-[18px] text-cyan-300" : "material-symbols-outlined text-[18px] text-[var(--text-muted)]"}>
+                              {item.icon}
+                            </span>
+                            <span className={active ? "text-sm font-semibold text-cyan-300" : "text-sm font-semibold text-[var(--text-primary)]"}>
+                              {item.label}
+                            </span>
                           </span>
                           <span className={`h-2 w-2 rounded-full ${active ? "bg-cyan-300" : "bg-[var(--text-muted)]/55"}`} />
                         </div>

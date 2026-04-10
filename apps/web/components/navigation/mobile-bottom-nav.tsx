@@ -35,6 +35,9 @@ export default function MobileBottomNav({ role }: MobileBottomNavProps) {
                       : "border-transparent text-[var(--text-secondary)] hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)]"
                   }`}
                 >
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                    {item.icon}
+                  </span>
                   <span className="text-xs font-semibold leading-tight">{item.label}</span>
                   <span
                     className={`mt-1 h-1.5 w-1.5 rounded-full transition ${

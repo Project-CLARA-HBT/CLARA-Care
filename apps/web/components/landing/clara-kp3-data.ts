@@ -476,7 +476,7 @@ export const FAQ_ITEMS = [
   {
     question: "CLARA có thay thế bác sĩ trong chẩn đoán hoặc kê đơn không?",
     answer:
-      "Không. Project CLARA là hệ thống hỗ trợ tham khảo và vận hành theo bằng chứng. Quyết định lâm sàng cuối cùng vẫn thuộc về bác sĩ và cơ sở y tế.",
+      "Không. The Clara Care là hệ thống hỗ trợ tham khảo và vận hành theo bằng chứng. Quyết định lâm sàng cuối cùng vẫn thuộc về bác sĩ và cơ sở y tế.",
   },
   {
     question: "Có thể bắt đầu từ module nào để dễ triển khai nhất?",

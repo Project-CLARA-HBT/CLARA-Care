@@ -8,15 +8,15 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://clara.thiennn.icu
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Project CLARA",
-    template: "%s | Project CLARA",
+    default: "The Clara Care",
+    template: "%s | The Clara Care",
   },
-  description: "Project CLARA - trợ lý AI y tế cho research, hội chẩn tham khảo và an toàn thuốc.",
+  description: "The Clara Care - trợ lý AI y tế cho research, hội chẩn tham khảo và an toàn thuốc.",
   openGraph: {
-    title: "Project CLARA",
+    title: "The Clara Care",
     description: "Clinical Agent for Retrieval & Analysis",
     url: SITE_URL,
-    siteName: "Project CLARA",
+    siteName: "The Clara Care",
     locale: "vi_VN",
     type: "website",
   },

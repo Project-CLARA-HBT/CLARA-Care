@@ -22,7 +22,7 @@ export default function AuthFormShell({ title, subtitle, children }: Props) {
         <div className="pointer-events-none absolute -bottom-20 -left-6 h-40 w-48 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-500/20" />
 
         <p className="inline-flex items-center rounded-full border border-sky-200/80 bg-white/75 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:border-sky-700/50 dark:bg-slate-900/70 dark:text-sky-200">
-          CLARA Care
+          The Clara Care
         </p>
         <h1 id="auth-form-title" className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-[2.4rem] dark:text-slate-100">
           {title}

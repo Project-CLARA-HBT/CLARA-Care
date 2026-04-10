@@ -3,21 +3,21 @@ import { LEGAL_CONTACT_EMAIL, LEGAL_UPDATED_AT } from "@/lib/legal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Chính sách quyền riêng tư | Project CLARA",
-  description: "Mô tả cách Project CLARA thu thập, sử dụng, lưu trữ và bảo vệ dữ liệu người dùng.",
+  title: "Chính sách quyền riêng tư | The Clara Care",
+  description: "Mô tả cách The Clara Care thu thập, sử dụng, lưu trữ và bảo vệ dữ liệu người dùng.",
 };
 
 export default function PrivacyPolicyPage() {
   return (
     <LegalPageShell
       title="Chính sách quyền riêng tư"
-      summary="Tài liệu này mô tả cách Project CLARA thu thập, sử dụng, lưu trữ và bảo vệ dữ liệu khi bạn dùng hệ thống."
+      summary="Tài liệu này mô tả cách The Clara Care thu thập, sử dụng, lưu trữ và bảo vệ dữ liệu khi bạn dùng hệ thống."
       updatedAt={LEGAL_UPDATED_AT}
     >
       <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">1. Phạm vi áp dụng</h2>
         <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-          Chính sách áp dụng cho toàn bộ dịch vụ web của Project CLARA, bao gồm các phân hệ Research, Council, Self-Med,
+          Chính sách áp dụng cho toàn bộ dịch vụ web của The Clara Care, bao gồm các phân hệ Research, Council, Self-Med,
           CareGuard, Scribe và khu vực quản trị.
         </p>
       </article>

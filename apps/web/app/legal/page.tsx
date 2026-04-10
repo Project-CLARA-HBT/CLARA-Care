@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Trung tâm pháp lý | Project CLARA",
+  title: "Trung tâm pháp lý | The Clara Care",
   description:
-    "Tổng hợp tài liệu pháp lý của Project CLARA: Privacy Policy, Terms of Service, Consent và Cookie Policy.",
+    "Tổng hợp tài liệu pháp lý của The Clara Care: Privacy Policy, Terms of Service, Consent và Cookie Policy.",
 };
 
 const LEGAL_ITEMS = [
@@ -16,7 +16,7 @@ const LEGAL_ITEMS = [
   {
     href: "/legal/terms",
     title: "Điều khoản sử dụng (ToS)",
-    detail: "Quy định quyền và trách nhiệm khi dùng Project CLARA, giới hạn sử dụng và phạm vi trách nhiệm.",
+    detail: "Quy định quyền và trách nhiệm khi dùng The Clara Care, giới hạn sử dụng và phạm vi trách nhiệm.",
   },
   {
     href: "/legal/consent",
@@ -34,7 +34,7 @@ export default function LegalHubPage() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-10 text-[var(--text-primary)]">
       <section className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Project CLARA - Legal</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">The Clara Care - Legal</p>
         <h1 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">Trung tâm pháp lý</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
           Các tài liệu bên dưới giúp bạn nắm rõ cách CLARA xử lý dữ liệu, quyền và nghĩa vụ khi sử dụng sản phẩm.
