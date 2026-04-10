@@ -1968,3 +1968,43 @@ def test_sanitize_user_facing_answer_markdown_removes_redundant_sections() -> No
     assert "fallback local" not in cleaned.lower()
     assert "```mermaid" not in cleaned
     assert "## Nguồn tham chiếu" not in cleaned
+
+
+def test_sanitize_user_facing_answer_markdown_fast_enforces_compact_layout() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "DASH và Địa Trung Hải đều hữu ích.\n\n"
+        "## Câu hỏi nghiên cứu (PICO)\n"
+        "- Population ...\n\n"
+        "security\n"
+        "Ma trận quyết định an toàn\n"
+        "AI Verified\n"
+        "Claim\n"
+        "Verdict\n"
+        "Confidence\n"
+        "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.\n\n"
+        "## Phân tích chi tiết\n"
+        "So sánh ưu nhược điểm theo mục tiêu điều trị.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="fast")
+    assert "## Kết luận nhanh" in cleaned
+    assert "## Phân tích chi tiết" in cleaned
+    assert "## Khuyến nghị an toàn" in cleaned
+    assert "## Theo dõi & cảnh báo đỏ" in cleaned
+    assert "## Câu hỏi nghiên cứu (PICO)" not in cleaned
+    assert "Ma trận quyết định an toàn" not in cleaned
+    assert "AI Verified" not in cleaned
+    assert "fallback local" not in cleaned.lower()
+
+
+def test_sanitize_user_facing_answer_markdown_deep_keeps_deep_sections() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Nội dung tóm tắt.\n\n"
+        "## Ma trận quyết định an toàn\n"
+        "| Mục đánh giá | Mức hiện tại | Hành động khuyến nghị |\n"
+        "| --- | --- | --- |\n"
+        "| Mức rủi ro tổng quát | Trung bình | Theo dõi sát |\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
+    assert "## Ma trận quyết định an toàn" in cleaned

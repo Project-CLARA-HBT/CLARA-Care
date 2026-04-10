@@ -4231,6 +4231,125 @@ def _remove_fenced_blocks(markdown_text: str, *, languages: set[str]) -> str:
     return stripped.strip()
 
 
+_FAST_ALLOWED_H2_KEYS = {
+    _canonical_h2_key("Kết luận nhanh"),
+    _canonical_h2_key("Phân tích chi tiết"),
+    _canonical_h2_key("Khuyến nghị an toàn"),
+    _canonical_h2_key("Theo dõi & cảnh báo đỏ"),
+}
+
+_FAST_DROP_H2_KEYWORDS = (
+    "tom tat dieu hanh",
+    "ke hoach nghien cuu",
+    "cau hoi nghien cuu pico",
+    "phuong phap truy xuat",
+    "ho so bang chung",
+    "tong hop phat hien",
+    "phan bien bang chung",
+    "ung dung lam sang",
+    "ma tran quyet dinh an toan",
+    "ke hoach theo doi sau tu van",
+    "gioi han sai so va rui ro phap ly",
+    "bang tong hop bang chung",
+    "nguon tham chieu",
+)
+
+
+def _remove_unapproved_fast_h2_sections(markdown_text: str) -> str:
+    text = str(markdown_text or "")
+    if not text.strip():
+        return text
+    lines = text.splitlines()
+    output_lines: list[str] = []
+    keep_current = True
+    saw_first_h2 = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            saw_first_h2 = True
+            key = _canonical_h2_key(stripped[3:])
+            is_drop_keyword = any(keyword in key for keyword in _FAST_DROP_H2_KEYWORDS)
+            keep_current = (key in _FAST_ALLOWED_H2_KEYS) and not is_drop_keyword
+            if keep_current:
+                output_lines.append(line)
+            continue
+        if not saw_first_h2:
+            # Drop preamble noise in fast mode to keep body concise.
+            continue
+        if keep_current:
+            output_lines.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output_lines)).strip()
+
+
+def _extract_h2_body(markdown_text: str, heading_key: str) -> str:
+    lines = str(markdown_text or "").splitlines()
+    target_body: list[str] = []
+    collecting = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            key = _canonical_h2_key(stripped[3:])
+            if collecting:
+                break
+            collecting = key == heading_key
+            continue
+        if collecting:
+            target_body.append(line)
+    body = "\n".join(target_body).strip()
+    return body
+
+
+def _to_plain_text(markdown_text: str) -> str:
+    text = str(markdown_text or "")
+    text = re.sub(r"```[\s\S]*?```", " ", text)
+    text = re.sub(r"^#+\s+.*$", " ", text, flags=re.MULTILINE)
+    text = re.sub(r"^\|.*$", " ", text, flags=re.MULTILINE)
+    text = re.sub(r"\[[^\]]+\]\((https?:\/\/[^\)]+)\)", " ", text)
+    text = re.sub(r"[*_`>#-]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _stabilize_fast_answer_layout(markdown_text: str) -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        text = "Nội dung phân tích tạm thời rút gọn để giữ an toàn hiển thị."
+
+    conclusion = _extract_h2_body(text, _canonical_h2_key("Kết luận nhanh"))
+    analysis = _extract_h2_body(text, _canonical_h2_key("Phân tích chi tiết"))
+    safety = _extract_h2_body(text, _canonical_h2_key("Khuyến nghị an toàn"))
+    followup = _extract_h2_body(text, _canonical_h2_key("Theo dõi & cảnh báo đỏ"))
+
+    plain = _to_plain_text(text)
+    if not conclusion:
+        conclusion = _compact_snippet(plain, max_len=420)
+    if not analysis:
+        analysis = _compact_snippet(plain, max_len=1400)
+    if not safety:
+        safety = (
+            "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
+            "- Ưu tiên xác minh với bác sĩ/dược sĩ khi có bệnh nền hoặc đang đa trị liệu."
+        )
+    if not followup:
+        followup = (
+            "- Theo dõi triệu chứng trong 24-48 giờ và ghi nhận dấu hiệu bất thường.\n"
+            "- Cần đi khám/cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
+        )
+
+    stabilized = (
+        "## Kết luận nhanh\n"
+        f"{conclusion}\n\n"
+        "## Phân tích chi tiết\n"
+        f"{analysis}\n\n"
+        "## Khuyến nghị an toàn\n"
+        f"{safety}\n\n"
+        "## Theo dõi & cảnh báo đỏ\n"
+        f"{followup}"
+    )
+    return re.sub(r"\n{3,}", "\n\n", stabilized).strip()
+
+
 def _sanitize_user_facing_answer_markdown(
     answer_markdown: str,
     *,
@@ -4283,8 +4402,21 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Bảng tổng hợp bằng chứng"),
             },
         )
+        sanitized = _remove_unapproved_fast_h2_sections(sanitized)
         sanitized = re.sub(
             r"(?:^|\n)\s*security\s*\n+\s*ma trận quyết định an toàn[\s\S]*?(?=\n##\s|\n#\s|$)",
+            "\n",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?:^|\n)\s*ai\s*verified[\s\S]*?(?=\n##\s|\n#\s|$)",
+            "\n",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?:^|\n)\s*\|?\s*claim\s*\|?\s*verdict\s*\|?\s*confidence[^\n]*\n(?:\s*\|?.*?\n){1,30}",
             "\n",
             sanitized,
             flags=re.IGNORECASE,
@@ -4295,6 +4427,8 @@ def _sanitize_user_facing_answer_markdown(
         sanitized,
         languages={"mermaid", "chart-spec", "vega-lite", "echarts-option"},
     )
+    if str(research_mode).strip().lower() == "fast":
+        sanitized = _stabilize_fast_answer_layout(sanitized)
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
 

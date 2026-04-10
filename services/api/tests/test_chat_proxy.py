@@ -95,6 +95,88 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert timeout > 0
 
 
+def test_chat_sanitizes_matrix_noise_from_reply(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "answer": (
+                    "## Kết luận nhanh\n"
+                    "DASH và Địa Trung Hải đều hữu ích.\n\n"
+                    "security\n"
+                    "Ma trận quyết định an toàn\n"
+                    "AI Verified\n"
+                    "Claim\n"
+                    "Verdict\n"
+                    "Confidence\n"
+                    "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.\n"
+                ),
+                "role": "researcher",
+                "intent": "evidence_review",
+                "confidence": 0.88,
+                "emergency": False,
+                "model_used": "deepseek-v3.2",
+                "retrieved_ids": ["doc-1"],
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.chat.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/chat/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "So sánh DASH và Địa Trung Hải"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Ma trận quyết định an toàn" not in body["reply"]
+    assert "AI Verified" not in body["reply"]
+    assert "fallback local" not in body["reply"].lower()
+
+
+def test_chat_uses_safe_fallback_when_reply_blank_after_sanitize(monkeypatch) -> None:
+    token = _login("dr@doctor.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "answer": "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.",
+                "role": "doctor",
+                "intent": "general_guidance",
+                "confidence": 0.7,
+                "emergency": False,
+                "model_used": "deepseek-v3.2",
+                "retrieved_ids": [],
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.chat.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/chat/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "help"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "không kết nối được nguồn RAG" in body["reply"]
+
+
 def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
 

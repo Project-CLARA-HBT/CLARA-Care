@@ -178,6 +178,40 @@ def _decorate_safe_mode_answer(answer: str) -> str:
     return f"{_SAFE_MODE_NOTICE}\n\n{cleaned}"
 
 
+def _sanitize_chat_reply(answer: str) -> str:
+    cleaned = str(answer or "").strip()
+    if not cleaned:
+        return ""
+
+    cleaned = re.sub(
+        r"hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời\.?",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"(?:^|\n)\s*security\s*\n+\s*ma trận quyết định an toàn[\s\S]*?(?=\n##\s|\n#\s|$)",
+        "\n",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"(?:^|\n)\s*ai\s*verified[\s\S]*?(?=\n##\s|\n#\s|$)",
+        "\n",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"(?:^|\n)\s*\|?\s*claim\s*\|?\s*verdict\s*\|?\s*confidence[^\n]*\n(?:\s*\|?.*?\n){1,30}",
+        "\n",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"```mermaid[\s\S]*?```", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
+
+
 def _post_to_ml(url: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
     settings = get_settings()
     headers: dict[str, str] = {}
@@ -396,6 +430,14 @@ def chat_completion(
                 token.role,
                 reason="ml_unexpected_payload:blank_answer",
             )["answer"]
+        reply = _sanitize_chat_reply(reply)
+        if not reply:
+            reply = _safe_chat_fallback(
+                payload.message,
+                token.role,
+                reason="ml_unexpected_payload:blank_after_sanitize",
+            )["answer"]
+        ml_response["answer"] = reply
 
         resolved_role = ml_response.get("role")
         if not isinstance(resolved_role, str) or not resolved_role:
