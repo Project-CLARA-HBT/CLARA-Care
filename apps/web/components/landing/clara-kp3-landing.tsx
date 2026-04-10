@@ -217,16 +217,16 @@ export default function ClaraKp3Landing() {
               </div>
 
               <h1 className="max-w-[16ch] text-[2.6rem] font-black leading-[0.95] tracking-tight text-slate-900 min-[640px]:text-[3.6rem] min-[1280px]:text-[4.5rem] dark:text-slate-100">
-                Hỏi nhanh.
+                Hỏi đúng trọng tâm.
                 <br />
-                <span className="text-cyan-600 dark:text-cyan-300">Có nguồn rõ.</span>
+                <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>
                 <br />
-                Quyết định chắc.
+                Quyết định tự tin.
               </h1>
 
               <p className="max-w-[56ch] text-base font-medium leading-relaxed text-slate-600 min-[1280px]:text-lg dark:text-slate-300">
-                Bắt đầu với Research để lấy bằng chứng nhanh và rõ. Sau đó chuyển mượt sang Council, Self-Med, CareGuard,
-                Scribe và Control Tower trong cùng một luồng làm việc.
+                Bắt đầu với Research để lấy bằng chứng có trích dẫn rõ ràng, rồi chuyển mượt sang Council, Self-Med, CareGuard,
+                Scribe và Control Tower trong cùng một luồng lâm sàng.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -650,68 +650,71 @@ export default function ClaraKp3Landing() {
           </div>
         </section>
 
-        <footer className="relative overflow-hidden bg-slate-900 py-16 dark:bg-slate-950">
+        <footer className="relative overflow-hidden bg-slate-900 py-14 dark:bg-slate-950">
           <div className="cyber-grid absolute inset-0 opacity-5" />
-          <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 text-slate-300 min-[900px]:grid-cols-4 min-[1024px]:px-8">
-            <div className="space-y-4">
-              <p className="text-2xl font-black text-white">
-                The <span className="text-cyan-300">Clara Care</span>
-              </p>
-              <p className="text-sm font-medium leading-relaxed">Precision AI Systems for modern clinical intelligence.</p>
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 The Clara Care</p>
+          <div className="relative z-10 mx-auto max-w-7xl px-4 text-slate-300 min-[1024px]:px-8">
+            <div className="grid grid-cols-1 gap-10 border-b border-slate-800/80 pb-10 md:grid-cols-12 md:gap-8">
+              <div className="space-y-4 md:col-span-5">
+                <p className="text-2xl font-black text-white">
+                  The <span className="text-cyan-300">Clara Care</span>
+                </p>
+                <p className="max-w-md text-sm font-medium leading-relaxed">
+                  Precision AI Systems for modern clinical intelligence.
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 The Clara Care</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 md:col-span-7">
+                <div className="space-y-3">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
+                    <span className="material-symbols-outlined text-sm">category</span>
+                    Sản phẩm
+                  </p>
+                  <a className="block text-sm font-bold hover:text-cyan-300" href="#engine">
+                    AI Engine
+                  </a>
+                  <a className="block text-sm font-bold hover:text-cyan-300" href="#modules">
+                    Modules
+                  </a>
+                  <a className="block text-sm font-bold hover:text-cyan-300" href="#workflow">
+                    Workflow
+                  </a>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
+                    <span className="material-symbols-outlined text-sm">gavel</span>
+                    Pháp lý
+                  </p>
+                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/privacy">
+                    Privacy Policy
+                  </Link>
+                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/terms">
+                    Terms of Service
+                  </Link>
+                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/consent">
+                    Medical Consent
+                  </Link>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
+                    <span className="material-symbols-outlined text-sm">contact_support</span>
+                    Liên hệ
+                  </p>
+                  <a className="block text-sm font-bold hover:text-cyan-300" href="mailto:clara@thiennn.icu">
+                    clara@thiennn.icu
+                  </a>
+                  <a className="block text-sm font-bold hover:text-cyan-300" href="tel:0853374247">
+                    0853374247
+                  </a>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                <span className="material-symbols-outlined text-sm">category</span>
-                Sản phẩm
-              </p>
-              <a className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="#engine">
-                <span className="material-symbols-outlined text-base">memory</span>
-                AI Engine
-              </a>
-              <a className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="#modules">
-                <span className="material-symbols-outlined text-base">widgets</span>
-                Modules
-              </a>
-              <a className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="#workflow">
-                <span className="material-symbols-outlined text-base">account_tree</span>
-                Workflow
-              </a>
-            </div>
-
-            <div className="space-y-3">
-              <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                <span className="material-symbols-outlined text-sm">gavel</span>
-                Pháp lý
-              </p>
-              <Link className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="/legal/privacy">
-                <span className="material-symbols-outlined text-base">privacy_tip</span>
-                Privacy Policy
-              </Link>
-              <Link className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="/legal/terms">
-                <span className="material-symbols-outlined text-base">description</span>
-                Terms of Service
-              </Link>
-              <Link className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="/legal/consent">
-                <span className="material-symbols-outlined text-base">verified_user</span>
-                Medical Consent
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                <span className="material-symbols-outlined text-sm">contact_support</span>
-                Liên hệ
-              </p>
-              <a className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="mailto:clara@thiennn.icu">
-                <span className="material-symbols-outlined text-base">mail</span>
-                clara@thiennn.icu
-              </a>
-              <a className="inline-flex items-center gap-2 text-sm font-bold hover:text-cyan-300" href="tel:0853374247">
-                <span className="material-symbols-outlined text-base">call</span>
-                0853374247
-              </a>
+            <div className="flex flex-col items-start justify-between gap-2 pt-4 text-[11px] text-slate-400 sm:flex-row sm:items-center">
+              <p>Built for Vietnam-first clinical workflows.</p>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Research • Council • Safety • Scribe • Control Tower</p>
             </div>
           </div>
         </footer>

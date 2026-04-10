@@ -91,6 +91,7 @@ _TEXT_FILE_EXTENSIONS = {
 }
 _IMAGE_FILE_EXTENSIONS = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 _SOURCE_HUB_SETTING_KEY = "source_hub_records_v1"
+_SOURCE_HUB_CATALOG_SETTING_KEY = "source_hub_catalog_v1"
 _SOURCE_HUB_MAX_RECORDS = 500
 _SOURCE_HUB_TIMEOUT_SECONDS = 12.0
 _TRUE_VALUES = {"1", "true", "yes", "on"}
@@ -2265,6 +2266,10 @@ _SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
         supports_live_sync=True,
     ),
 )
+_SOURCE_HUB_CATALOG_BY_KEY: dict[str, SourceHubCatalogEntry] = {
+    entry.key: entry for entry in _SOURCE_HUB_CATALOG
+}
+_SUPPORTED_SOURCE_HUB_SOURCE_KEYS: set[str] = set(_SOURCE_HUB_CATALOG_BY_KEY.keys())
 
 
 def _source_hub_setting_key(owner_user_id: int) -> str:
@@ -2279,23 +2284,90 @@ def _to_text(value: Any) -> str:
     return ""
 
 
+def _to_bool(value: Any, *, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in _TRUE_VALUES
+    return default
+
+
+def _serialize_source_hub_catalog(entries: list[SourceHubCatalogEntry]) -> dict[str, Any]:
+    return {
+        "entries": [entry.model_dump() for entry in entries],
+        "updated_at": datetime.now(tz=UTC).isoformat(),
+    }
+
+
+def _normalize_source_hub_catalog_entries(raw_entries: Any) -> list[SourceHubCatalogEntry]:
+    if not isinstance(raw_entries, list):
+        return []
+    normalized: list[SourceHubCatalogEntry] = []
+    seen_keys: set[str] = set()
+    for row in raw_entries:
+        if not isinstance(row, dict):
+            continue
+        key = _to_text(row.get("key")).lower()
+        if key not in _SUPPORTED_SOURCE_HUB_SOURCE_KEYS or key in seen_keys:
+            continue
+        fallback = _SOURCE_HUB_CATALOG_BY_KEY.get(key)
+        try:
+            item = SourceHubCatalogEntry(
+                key=key,  # type: ignore[arg-type]
+                label=_to_text(row.get("label")) or (fallback.label if fallback else key.upper()),
+                description=_to_text(row.get("description")) or (fallback.description if fallback else ""),
+                docs_url=_to_text(row.get("docs_url")) or (fallback.docs_url if fallback else None),
+                default_query=_to_text(row.get("default_query")) or (fallback.default_query if fallback else None),
+                supports_live_sync=_to_bool(
+                    row.get("supports_live_sync"),
+                    default=(fallback.supports_live_sync if fallback else True),
+                ),
+            )
+        except Exception:
+            continue
+        normalized.append(item)
+        seen_keys.add(key)
+    return normalized
+
+
+def _save_source_hub_catalog(db: Session, entries: list[SourceHubCatalogEntry]) -> list[SourceHubCatalogEntry]:
+    dedup: dict[str, SourceHubCatalogEntry] = {}
+    for entry in entries:
+        dedup[entry.key] = entry
+    ordered_entries = list(dedup.values())
+
+    setting = db.execute(
+        select(SystemSetting).where(SystemSetting.key == _SOURCE_HUB_CATALOG_SETTING_KEY)
+    ).scalar_one_or_none()
+    if setting is None:
+        setting = SystemSetting(
+            key=_SOURCE_HUB_CATALOG_SETTING_KEY,
+            value_json=_serialize_source_hub_catalog(ordered_entries),
+        )
+        db.add(setting)
+    else:
+        setting.value_json = _serialize_source_hub_catalog(ordered_entries)
+        db.add(setting)
+    db.commit()
+    return ordered_entries
+
+
+def _load_source_hub_catalog(db: Session) -> list[SourceHubCatalogEntry]:
+    setting = db.execute(
+        select(SystemSetting).where(SystemSetting.key == _SOURCE_HUB_CATALOG_SETTING_KEY)
+    ).scalar_one_or_none()
+    if setting and isinstance(setting.value_json, dict):
+        normalized = _normalize_source_hub_catalog_entries(setting.value_json.get("entries"))
+        if normalized:
+            return normalized
+    return _save_source_hub_catalog(db, list(_SOURCE_HUB_CATALOG))
+
+
 def _normalize_source_hub_record(record: dict[str, Any]) -> SourceHubRecord | None:
     source = _to_text(record.get("source")).lower()
-    if source not in {
-        "pubmed",
-        "rxnorm",
-        "openfda",
-        "dailymed",
-        "europepmc",
-        "semantic_scholar",
-        "clinicaltrials",
-        "vn_moh",
-        "vn_kcb",
-        "vn_canhgiacduoc",
-        "vn_vbpl_byt",
-        "vn_dav",
-        "davidrug",
-    }:
+    if source not in _SUPPORTED_SOURCE_HUB_SOURCE_KEYS:
         return None
     title = _to_text(record.get("title"))
     if not title:
@@ -3883,9 +3955,10 @@ async def stream_research_tier2_job(
 @router.get("/source-hub/catalog")
 def source_hub_catalog(
     token: TokenPayload = Depends(require_roles("researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
 ) -> dict[str, list[SourceHubCatalogEntry]]:
     _ = token
-    return {"sources": list(_SOURCE_HUB_CATALOG)}
+    return {"sources": _load_source_hub_catalog(db)}
 
 
 @router.get("/source-hub/records")
@@ -3928,6 +4001,20 @@ def source_hub_sync(
     if not query:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Query không được rỗng."
+        )
+    catalog_by_key = {
+        entry.key: entry for entry in _load_source_hub_catalog(db)
+    }
+    selected_source = catalog_by_key.get(payload.source)
+    if selected_source is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Source '{payload.source}' chưa được cấu hình trong catalog.",
+        )
+    if not selected_source.supports_live_sync:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Source '{payload.source}' đang tắt live sync.",
         )
 
     safe_limit = max(3, min(500, int(payload.limit)))

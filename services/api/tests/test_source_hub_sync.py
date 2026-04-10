@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from clara_api.db.models import SystemSetting
+from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
 client = TestClient(app)
@@ -72,6 +74,45 @@ def test_source_hub_sync_davidrug_uses_structured_api(monkeypatch) -> None:
     rows = list_response.json()["records"]
     assert len(rows) >= 1
     assert rows[0]["source"] == "davidrug"
+
+
+def test_source_hub_catalog_bootstraps_and_persists() -> None:
+    token = _login("alice@research.clara")
+
+    response = client.get(
+        "/api/v1/research/source-hub/catalog",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload.get("sources"), list)
+    assert len(payload["sources"]) >= 5
+
+    with SessionLocal() as db:
+        setting = db.query(SystemSetting).filter(
+            SystemSetting.key == "source_hub_catalog_v1"
+        ).one_or_none()
+        assert setting is not None
+        assert isinstance(setting.value_json, dict)
+        assert isinstance(setting.value_json.get("entries"), list)
+        assert len(setting.value_json.get("entries")) >= 5
+
+
+def test_source_hub_sync_rejects_source_not_in_catalog(monkeypatch) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._load_source_hub_catalog",
+        lambda _db: [],
+    )
+
+    response = client.post(
+        "/api/v1/research/source-hub/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "davidrug", "query": "panadol", "limit": 5},
+    )
+    assert response.status_code == 400
+    assert "chưa được cấu hình" in response.json()["detail"]
 
 
 def test_source_hub_sync_davidrug_returns_warning_when_empty(monkeypatch) -> None:
