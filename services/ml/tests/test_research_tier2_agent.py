@@ -2008,3 +2008,25 @@ def test_sanitize_user_facing_answer_markdown_deep_keeps_deep_sections() -> None
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
     assert "## Ma trận quyết định an toàn" in cleaned
+
+
+def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:
+    structured = tier2._ensure_markdown_structure(
+        topic="So sánh DASH và Địa Trung Hải",
+        answer="Hai chế độ ăn đều có lợi nhưng khác mục tiêu chính.",
+        citations=[],
+        research_mode="deep",
+        plan_steps=[],
+    )
+    assert "## Kế hoạch nghiên cứu" in structured
+    assert "## Bối cảnh lâm sàng áp dụng" in structured
+    assert "## Khuyến nghị ứng dụng thực hành" in structured
+    assert "## Câu hỏi nghiên cứu (PICO)" not in structured
+
+
+def test_resolve_report_word_budget_by_mode() -> None:
+    deep_min, deep_target, deep_max = tier2._resolve_report_word_budget("deep")
+    beta_min, beta_target, beta_max = tier2._resolve_report_word_budget("deep_beta")
+    assert deep_min < beta_min
+    assert deep_target < beta_target
+    assert deep_max < beta_max

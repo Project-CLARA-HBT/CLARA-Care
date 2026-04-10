@@ -1732,6 +1732,64 @@ def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
     return min_words, target_words, max_words
 
 
+def _resolve_deep_word_budget() -> tuple[int, int, int]:
+    # Deep mode: long-form but practical, lower than deep-beta dossier scale.
+    min_words = 3500
+    target_words = 6500
+    max_words = 12000
+    return min_words, target_words, max_words
+
+
+def _resolve_report_word_budget(research_mode: str) -> tuple[int, int, int]:
+    mode = str(research_mode or "fast").strip().lower()
+    if mode == "deep_beta":
+        return _resolve_deep_beta_word_budget()
+    return _resolve_deep_word_budget()
+
+
+def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], list[str]]:
+    mode = str(research_mode or "fast").strip().lower()
+    if mode == "deep_beta":
+        sections = [
+            "## Kết luận nhanh",
+            "## Kế hoạch nghiên cứu",
+            "## Tóm tắt điều hành",
+            "## Câu hỏi nghiên cứu (PICO)",
+            "## Phương pháp truy xuất & tiêu chí chọn lọc",
+            "## Hồ sơ bằng chứng & chất lượng nguồn",
+            "## Tổng hợp phát hiện chính",
+            "## Phản biện bằng chứng đối nghịch",
+            "## Ứng dụng lâm sàng theo nhóm bệnh nhân",
+            "## Ma trận quyết định an toàn",
+            "## Kế hoạch theo dõi sau tư vấn",
+            "## Giới hạn, sai số và rủi ro pháp lý",
+        ]
+        requirements = [
+            "- include direct head-to-head comparison axes when relevant (adherence, efficacy, risk, feasibility, cost)",
+            "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)",
+            "- include at least 3 markdown tables distributed across evidence, comparison, and implementation sections",
+            "- discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions explicitly",
+        ]
+        return sections, requirements
+
+    sections = [
+        "## Kết luận nhanh",
+        "## Kế hoạch nghiên cứu",
+        "## Tóm tắt điều hành",
+        "## Bối cảnh lâm sàng áp dụng",
+        "## Phân tích chi tiết",
+        "## Bảng tổng hợp bằng chứng",
+        "## Khuyến nghị ứng dụng thực hành",
+        "## Giới hạn, sai số và rủi ro pháp lý",
+    ]
+    requirements = [
+        "- include at least 2 markdown tables (evidence + comparison/implementation)",
+        "- keep narrative clinician-friendly and implementation-oriented",
+        "- preserve practical trade-off analysis and uncertainty notes",
+    ]
+    return sections, requirements
+
+
 def _safe_generate_with_token_budget(
     client: Any,
     *,
@@ -1755,7 +1813,9 @@ def _ensure_deep_beta_report_artifacts(
     deep_pass_summaries: list[dict[str, Any]],
     evidence_verification: dict[str, Any] | None,
     verification_summary: dict[str, Any] | None,
+    research_mode: str = "deep_beta",
 ) -> str:
+    mode = str(research_mode or "deep_beta").strip().lower()
     output = _sanitize_deep_beta_markdown_output(markdown_text)
     appendix_sections: list[str] = []
     if not _has_markdown_heading(output, "## Bảng tổng hợp bằng chứng"):
@@ -1795,7 +1855,10 @@ def _ensure_deep_beta_report_artifacts(
                 f"{_safe_int(item.get('retrieved_count'), 0)} | "
                 f"{round(_safe_float(item.get('duration_ms'), 0.0), 2)} |"
             )
-        appendix_sections.append("### Bảng bổ sung Deep Beta\n" + "\n".join(rows))
+        if mode == "deep_beta":
+            appendix_sections.append("### Bảng bổ sung Deep Beta\n" + "\n".join(rows))
+        else:
+            appendix_sections.append("### Bảng triển khai truy xuất\n" + "\n".join(rows[:8]))
 
     if appendix_sections:
         output = f"{output.rstrip()}\n\n" + "\n\n".join(appendix_sections).rstrip() + "\n"
@@ -1812,6 +1875,7 @@ def _synthesize_deep_beta_long_report(
     deep_pass_summaries: list[dict[str, Any]],
     evidence_verification: dict[str, Any] | None = None,
     llm_runtime: dict[str, Any] | None = None,
+    research_mode: str = "deep_beta",
 ) -> str:
     if not settings.deep_beta_report_llm_enabled:
         return answer_markdown
@@ -1850,39 +1914,33 @@ def _synthesize_deep_beta_long_report(
         if isinstance(item, dict)
     ]
 
-    min_words, target_words, max_words = _resolve_deep_beta_word_budget()
+    mode = str(research_mode or "deep_beta").strip().lower()
+    min_words, target_words, max_words = _resolve_report_word_budget(mode)
+    section_contract, section_requirements = _resolve_report_section_contract(mode)
+    section_contract_text = "\n".join(section_contract)
+    section_requirements_text = "\n".join(section_requirements)
     report_timeout_seconds = max(
         float(settings.deep_beta_report_timeout_seconds),
         float(settings.deep_beta_reasoning_llm_timeout_seconds),
         30.0,
     )
-    report_max_tokens = max(int(settings.deep_beta_report_max_tokens), 1024)
+    report_max_tokens = (
+        max(int(settings.deep_beta_report_max_tokens), 1024)
+        if mode == "deep_beta"
+        else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
+    )
     prompt = (
         "Rewrite the baseline answer into a long-form clinical research report in Vietnamese.\n"
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
         "Must include these sections in this exact order:\n"
-        "## Kết luận nhanh\n"
-        "## Kế hoạch nghiên cứu\n"
-        "## Tóm tắt điều hành\n"
-        "## Câu hỏi nghiên cứu (PICO)\n"
-        "## Phương pháp truy xuất & tiêu chí chọn lọc\n"
-        "## Hồ sơ bằng chứng & chất lượng nguồn\n"
-        "## Tổng hợp phát hiện chính\n"
-        "## Phản biện bằng chứng đối nghịch\n"
-        "## Ứng dụng lâm sàng theo nhóm bệnh nhân\n"
-        "## Ma trận quyết định an toàn\n"
-        "## Kế hoạch theo dõi sau tư vấn\n"
-        "## Giới hạn, sai số và rủi ro pháp lý\n"
+        f"{section_contract_text}\n"
         "Requirements:\n"
         f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
         "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
         "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
-        "- explicitly discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions\n"
         "- '## Kế hoạch nghiên cứu' must appear before analytic sections and contain numbered steps, including direct comparison axes when relevant\n"
-        "- include a direct head-to-head comparison framework (adherence, efficacy, risk, feasibility, cost)\n"
-        "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)\n"
-        "- include at least 3 markdown tables distributed across evidence, comparison, and implementation sections\n"
+        f"{section_requirements_text}\n"
         "- do not add a dedicated references/citations section in the answer body\n"
         "- keep citations concise and only when needed to support critical claims\n"
         "- do not prescribe dosage, do not diagnose\n\n"
@@ -1896,9 +1954,9 @@ def _synthesize_deep_beta_long_report(
         f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
     )
     system_prompt = (
-        "You are CLARA Deep Beta medical report synthesizer. "
-        "Be evidence-grounded, safety-first, and specific. "
-        "Use a formal medical research style suitable for clinical briefing."
+        "You are CLARA medical report synthesizer for deep clinical research. "
+        "Be evidence-grounded, safety-first, specific, and natural in Vietnamese. "
+        "Prioritize coherent clinical reasoning over template-heavy filler."
     )
     try:
         client = _build_reasoning_client(
@@ -1916,8 +1974,12 @@ def _synthesize_deep_beta_long_report(
         if not content:
             return answer_markdown
 
-        expansion_rounds = max(int(settings.deep_beta_report_expansion_rounds), 0)
-        if target_words >= 20000:
+        expansion_rounds = (
+            max(int(settings.deep_beta_report_expansion_rounds), 0)
+            if mode == "deep_beta"
+            else max(min(int(settings.deep_beta_report_expansion_rounds), 2), 1)
+        )
+        if target_words >= 20000 and mode == "deep_beta":
             expansion_rounds = max(expansion_rounds, 6)
         for round_idx in range(expansion_rounds):
             current_words = _markdown_word_count(content)
@@ -2030,24 +2092,36 @@ def _synthesize_deep_beta_long_report(
                 "- Nếu xuất hiện dấu hiệu nặng (xuất huyết, khó thở, đau ngực, lú lẫn), ưu tiên cấp cứu thay vì tự điều chỉnh điều trị.",
             ]
 
-            fallback_appendix = (
-                "\n\n## Phụ lục kỹ thuật Deep Beta (mở rộng)\n"
-                "### Nhật ký multi-pass retrieval\n"
-                + "\n".join(pass_rows)
-                + "\n\n### Ma trận reasoning nodes\n"
-                + "\n".join(node_rows)
-                + "\n\n### Hồ sơ nguồn mở rộng\n"
-                + "\n".join(citation_rows)
-                + "\n\n### Ma trận trạng thái claim-level\n"
-                + "\n".join(claim_rows)
-                + "\n\n### Uncertainty & Safety Escalation Notes\n"
-                + "\n".join(uncertainty_blocks)
-                + "\n\n### Ghi chú phương pháp\n"
-                "- Báo cáo này được mở rộng tự động để đạt độ bao phủ bằng chứng và diễn giải lâm sàng sâu hơn.\n"
-                "- Các nội dung chưa đủ bằng chứng được giữ trạng thái cảnh báo và không chuyển thành khuyến nghị điều trị.\n"
-                "- Với các câu hỏi có độ mơ hồ cao, hệ thống ưu tiên minh bạch hóa giả định trước khi đưa kết luận tổng hợp.\n"
-                "- Trường hợp cần quyết định điều trị, đầu ra này phải được xác nhận bởi chuyên gia y tế có thẩm quyền.\n"
+            appendix_title = (
+                "## Phụ lục mở rộng Deep Beta (chuyên sâu)" if mode == "deep_beta" else "## Phụ lục mở rộng Deep"
             )
+            appendix_blocks = [
+                f"\n\n{appendix_title}\n",
+                "### Nhật ký multi-pass retrieval\n",
+                "\n".join(pass_rows),
+                "\n\n### Ma trận reasoning nodes\n",
+                "\n".join(node_rows[:12 if mode == "deep" else len(node_rows)]),
+                "\n\n### Hồ sơ nguồn mở rộng\n",
+                "\n".join(citation_rows[:14 if mode == "deep" else len(citation_rows)]),
+                "\n\n### Uncertainty & Safety Escalation Notes\n",
+                "\n".join(uncertainty_blocks),
+            ]
+            if mode == "deep_beta":
+                appendix_blocks.extend(
+                    [
+                        "\n\n### Ma trận trạng thái claim-level\n",
+                        "\n".join(claim_rows),
+                    ]
+                )
+            appendix_blocks.extend(
+                [
+                    "\n\n### Ghi chú phương pháp\n",
+                    "- Báo cáo này được mở rộng tự động để tăng độ bao phủ bằng chứng và chiều sâu diễn giải lâm sàng.\n"
+                    "- Các nội dung chưa đủ bằng chứng được giữ trạng thái cảnh báo và không chuyển thành khuyến nghị điều trị.\n"
+                    "- Trường hợp cần quyết định điều trị, đầu ra này phải được xác nhận bởi chuyên gia y tế có thẩm quyền.\n",
+                ]
+            )
+            fallback_appendix = "".join(appendix_blocks)
             content = f"{content.rstrip()}{fallback_appendix}"
 
         return _ensure_deep_beta_report_artifacts(
@@ -2055,6 +2129,7 @@ def _synthesize_deep_beta_long_report(
             deep_pass_summaries=deep_pass_summaries,
             evidence_verification=evidence_verification,
             verification_summary=verification_summary,
+            research_mode=mode,
         )
     except Exception:
         return _ensure_deep_beta_report_artifacts(
@@ -2062,6 +2137,7 @@ def _synthesize_deep_beta_long_report(
             deep_pass_summaries=deep_pass_summaries,
             evidence_verification=evidence_verification,
             verification_summary=verification_summary,
+            research_mode=mode,
         )
 
 
@@ -4120,6 +4196,36 @@ def _ensure_markdown_structure(
             risk_level=risk_level,
             risk_signal=risk_signal,
         )
+        if research_mode == "deep":
+            return _cleanup_markdown_noise(
+                (
+                "## Kết luận nhanh\n"
+                f"{_compact_snippet(cleaned, max_len=360)}\n\n"
+                "## Kế hoạch nghiên cứu\n"
+                f"{plan_markdown}\n\n"
+                "## Tóm tắt điều hành\n"
+                f"- Câu hỏi chính: {topic_snippet}\n"
+                f"- Mức độ bằng chứng hiện có: {len(citations)} nguồn tham chiếu.\n"
+                f"- Tín hiệu rủi ro lâm sàng: {risk_level} ({risk_signal}). {risk_note}\n"
+                f"- Điểm chính: {executive_summary}\n\n"
+                "## Bối cảnh lâm sàng áp dụng\n"
+                "- Xác định nhóm bệnh nhân đích, mục tiêu điều trị và các yếu tố nền ảnh hưởng quyết định.\n"
+                "- Tách riêng bối cảnh phòng ngừa, kiểm soát triệu chứng và tối ưu hóa kết cục dài hạn.\n"
+                "- Ghi rõ điều kiện biên: bệnh nền nặng, đa trị liệu, thai kỳ, suy gan/thận hoặc nguy cơ xuất huyết.\n\n"
+                "## Phân tích chi tiết\n"
+                f"{analysis_block}\n\n"
+                "## Bảng tổng hợp bằng chứng\n"
+                f"{evidence_table}\n\n"
+                "## Khuyến nghị ứng dụng thực hành\n"
+                "- Chuyển hóa kết luận theo mục tiêu điều trị cụ thể và mức độ ưu tiên nguy cơ của từng nhóm bệnh nhân.\n"
+                "- Áp dụng theo nguyên tắc tăng dần, theo dõi đáp ứng sớm và hiệu chỉnh theo dữ liệu thực tế.\n"
+                "- Khi có mâu thuẫn bằng chứng, ưu tiên guideline cập nhật và thảo luận đa chuyên khoa.\n\n"
+                "## Giới hạn, sai số và rủi ro pháp lý\n"
+                "- Hệ thống chỉ cung cấp thông tin tham khảo dựa trên dữ liệu truy xuất được tại thời điểm chạy.\n"
+                "- Kết luận có thể bị ảnh hưởng bởi chất lượng nguồn, sai lệch chọn mẫu và khác biệt bối cảnh thực hành.\n"
+                "- Quyết định điều trị cuối cùng cần được xác nhận bởi bác sĩ/dược sĩ có thẩm quyền."
+                )
+            )
         return _cleanup_markdown_noise(
             (
             "## Kết luận nhanh\n"
@@ -6062,6 +6168,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             deep_pass_summaries=deep_pass_summaries,
             evidence_verification=deep_beta_evidence_verification,
             llm_runtime=llm_runtime,
+            research_mode=research_mode,
         )
         report_changed = bool(
             str(rewritten_report or "").strip()
@@ -6118,6 +6225,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             deep_pass_summaries=deep_pass_summaries,
             evidence_verification=deep_beta_evidence_verification,
             verification_summary={},
+            research_mode=research_mode,
         )
     answer_markdown = _sanitize_user_facing_answer_markdown(
         answer_markdown,
