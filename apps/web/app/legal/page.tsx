@@ -1,6 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { LEGAL_POLICY_VERSION, LEGAL_UPDATED_AT } from "@/lib/legal";
+import {
+  LEGAL_CONTACT_PHONE,
+  LEGAL_OPERATOR_NAME,
+  LEGAL_POLICY_VERSION,
+  LEGAL_PRIMARY_DOMAIN,
+  LEGAL_UPDATED_AT,
+} from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Trung tâm pháp lý | The Clara Care",
@@ -105,6 +111,21 @@ export default function LegalHubPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5 sm:p-6">
+          <h2 className="text-lg font-extrabold tracking-tight text-[var(--text-primary)] sm:text-xl">Thông tin chủ thể vận hành</h2>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-7 text-[var(--text-secondary)]">
+            <li>
+              <span className="font-bold">Tên chủ thể:</span> {LEGAL_OPERATOR_NAME}
+            </li>
+            <li>
+              <span className="font-bold">Domain chính thức:</span> https://{LEGAL_PRIMARY_DOMAIN}
+            </li>
+            <li>
+              <span className="font-bold">Số điện thoại liên lạc:</span> {LEGAL_CONTACT_PHONE}
+            </li>
+          </ul>
         </section>
       </div>
     </main>

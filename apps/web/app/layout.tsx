@@ -3,7 +3,7 @@ import AppShell from "@/components/app-shell";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://clara.thiennn.icu").replace(/\/+$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theclaracare.com").replace(/\/+$/, "");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
