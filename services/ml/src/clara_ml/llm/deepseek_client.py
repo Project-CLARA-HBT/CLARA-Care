@@ -17,6 +17,7 @@ class DeepSeekResponse:
 
 class DeepSeekClient:
     _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+    _AUTH_STATUS_CODES = {401, 403}
     _GLOBAL_RATE_LOCK = Lock()
     _GLOBAL_LAST_REQUEST_TS = 0.0
     _SEMAPHORE_LOCK = Lock()
@@ -130,6 +131,10 @@ class DeepSeekClient:
                 except httpx.HTTPStatusError as exc:
                     status_code = exc.response.status_code
                     errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
+                    if status_code in self._AUTH_STATUS_CODES:
+                        # Credentials or gateway policy may differ by base URL.
+                        # Skip retries on this base and move to next configured base.
+                        break
                     if status_code not in self._RETRYABLE_STATUS_CODES:
                         raise
                 except httpx.HTTPError as exc:
@@ -227,6 +232,8 @@ class DeepSeekClient:
                 except httpx.HTTPStatusError as exc:
                     status_code = exc.response.status_code
                     errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
+                    if status_code in self._AUTH_STATUS_CODES:
+                        break
                     if status_code not in self._RETRYABLE_STATUS_CODES:
                         raise
                 except httpx.HTTPError as exc:

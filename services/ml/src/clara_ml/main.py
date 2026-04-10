@@ -179,9 +179,11 @@ def _as_text(value: object, default: str = "") -> str:
 
 def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str, str]:
     if settings.llm_deepseek_only:
-        api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.deepseek_api_key
-        base_url = _as_text(rag_flow.get("llm_base_url"), "") or settings.deepseek_base_url
-        model = _as_text(rag_flow.get("llm_model"), "") or settings.deepseek_model
+        # In deepseek-only mode, always prioritize DEEPSEEK_* environment config.
+        # Runtime rag_flow overrides are fallback-only when env values are absent.
+        api_key = settings.deepseek_api_key or _as_text(rag_flow.get("llm_api_key"), "")
+        base_url = settings.deepseek_base_url or _as_text(rag_flow.get("llm_base_url"), "")
+        model = settings.deepseek_model or _as_text(rag_flow.get("llm_model"), "")
         return {
             "provider": "deepseek",
             "api_key": api_key.strip(),

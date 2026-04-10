@@ -972,9 +972,9 @@ def _resolve_runtime_llm_config(
 ) -> tuple[str, str, str, str]:
     runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
     if settings.llm_deepseek_only:
-        api_key = str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
-        base_url = str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
-        model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
+        api_key = str(settings.deepseek_api_key or "").strip() or str(runtime.get("api_key") or "").strip()
+        base_url = str(settings.deepseek_base_url or "").strip() or str(runtime.get("base_url") or "").strip()
+        model = str(settings.deepseek_model or "").strip() or str(runtime.get("model") or "").strip()
         return "deepseek", api_key, base_url, model
     raw_provider = str(runtime.get("provider") or "").strip().lower()
     if raw_provider:

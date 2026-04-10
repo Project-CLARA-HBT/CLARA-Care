@@ -42,6 +42,29 @@ def test_filter_context_for_ddi_keeps_authoritative_label_rows():
     assert all(item.get("id") != "pubmed-unrelated" for item in filtered)
 
 
+def test_resolve_runtime_llm_config_prefers_env_in_deepseek_only(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(tier2.settings, "llm_deepseek_only", True)
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "env-deepseek-key")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://api.yescale.vip/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "deepseek-v3.2")
+
+    provider, api_key, base_url, model = tier2._resolve_runtime_llm_config(
+        {
+            "provider": "hitechcloud_gpt53_codex_high",
+            "api_key": "runtime-hitech-key",
+            "base_url": "https://platform.hitechcloud.one/v1",
+            "model": "gpt-5.3-codex-high",
+        }
+    )
+
+    assert provider == "deepseek"
+    assert api_key == "env-deepseek-key"
+    assert base_url == "https://api.yescale.vip/v1"
+    assert model == "deepseek-v3.2"
+
+
 def test_run_research_tier2_falls_back_to_merged_context_when_ddi_filter_empty(
     monkeypatch,
 ):

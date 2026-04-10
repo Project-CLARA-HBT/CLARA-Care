@@ -319,6 +319,62 @@ def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
     assert body["flow_applied"]["llm_model"] == "gpt-5.3-codex-high"
 
 
+def test_routed_chat_infer_deepseek_only_ignores_hitechcloud_runtime_override(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from clara_ml.main import rag_pipeline, settings
+    from clara_ml.rag.pipeline import RagResult
+
+    original_run = rag_pipeline.run
+    captured: dict[str, object] = {}
+
+    def _fake_run(*args, **kwargs):  # noqa: ARG001
+        captured["pipeline_kwargs"] = dict(kwargs)
+        return RagResult(
+            query="query",
+            retrieved_ids=["doc-1"],
+            answer="answer",
+            model_used="deepseek-v3.2",
+            retrieved_context=[],
+            context_debug={},
+            flow_events=[],
+        )
+
+    monkeypatch.setattr(settings, "llm_deepseek_only", True)
+    monkeypatch.setattr(settings, "deepseek_api_key", "deepseek-only-key")
+    monkeypatch.setattr(settings, "deepseek_base_url", "https://api.yescale.vip/v1")
+    monkeypatch.setattr(settings, "deepseek_model", "deepseek-v3.2")
+    monkeypatch.setattr(rag_pipeline, "run", _fake_run)
+    try:
+        response = client.post(
+            "/v1/chat/routed",
+            json={
+                "query": "Tôi cần giải thích tương tác thuốc.",
+                "rag_flow": {
+                    "llm_provider": "hitechcloud_gpt53_codex_high",
+                    "llm_base_url": "https://platform.hitechcloud.one/v1",
+                    "llm_model": "gpt-5.3-codex-high",
+                    "llm_api_key": "test-key-hitech",
+                },
+            },
+        )
+    finally:
+        monkeypatch.setattr(rag_pipeline, "run", original_run)
+
+    assert response.status_code == 200
+    body = response.json()
+    pipeline_kwargs = captured.get("pipeline_kwargs")
+    assert isinstance(pipeline_kwargs, dict)
+    llm_runtime = pipeline_kwargs.get("llm_runtime")
+    assert isinstance(llm_runtime, dict)
+    assert llm_runtime.get("provider") == "deepseek"
+    assert llm_runtime.get("base_url") == "https://api.yescale.vip/v1"
+    assert llm_runtime.get("model") == "deepseek-v3.2"
+    assert body["flow_applied"]["llm_provider"] == "deepseek"
+    assert body["flow_applied"]["llm_base_url"] == "https://api.yescale.vip/v1"
+    assert body["flow_applied"]["llm_model"] == "deepseek-v3.2"
+
+
 def test_routed_chat_infer_uses_smalltalk_fastpath_for_greeting():
     response = client.post("/v1/chat/routed", json={"query": "hi"})
     assert response.status_code == 200
