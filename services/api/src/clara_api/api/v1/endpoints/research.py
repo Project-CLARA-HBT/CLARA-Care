@@ -935,9 +935,7 @@ def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
         "## Khuyến nghị an toàn\n"
         "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-        "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng.\n\n"
-        "## Nguồn tham chiếu\n"
-        "- [1] Hệ thống không truy xuất được nguồn RAG trong phiên hiện tại."
+        "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng."
     )
     return {
         "answer": fallback_answer_markdown,

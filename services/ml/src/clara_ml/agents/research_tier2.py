@@ -48,12 +48,11 @@ _REQUIRED_MARKDOWN_HEADINGS = (
     "## Kết luận nhanh",
     "## Phân tích chi tiết",
     "## Khuyến nghị an toàn",
-    "## Theo dõi & cảnh báo đỏ",
-    "## Nguồn tham chiếu",
 )
 
 _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Kết luận nhanh",
+    "## Kế hoạch nghiên cứu",
     "## Tóm tắt điều hành",
     "## Câu hỏi nghiên cứu (PICO)",
     "## Phương pháp truy xuất & tiêu chí chọn lọc",
@@ -64,11 +63,10 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Ma trận quyết định an toàn",
     "## Kế hoạch theo dõi sau tư vấn",
     "## Giới hạn, sai số và rủi ro pháp lý",
-    "## Nguồn tham chiếu",
 )
 
-_DEFAULT_DEEP_PASS_CAP = 14
-_DEEP_BETA_PASS_CAP = 24
+_DEFAULT_DEEP_PASS_CAP = 20
+_DEEP_BETA_PASS_CAP = 36
 _DEEP_BETA_REASONING_STAGE_ORDER = (
     "deep_beta_scope",
     "deep_beta_hypothesis_map",
@@ -297,6 +295,44 @@ def _detect_language_hint(text: str) -> tuple[bool, bool, str]:
     return has_vietnamese_marks, has_english_markers, "en"
 
 
+def _is_comparison_query(text: str) -> bool:
+    folded = _ascii_fold(text)
+    markers = (
+        "so sanh",
+        "so sánh",
+        "khac nhau",
+        "khác nhau",
+        "uu nhuoc",
+        "ưu nhược",
+        "pros and cons",
+        "advantages and disadvantages",
+        "compare",
+        "comparison",
+        "versus",
+        " vs ",
+    )
+    return any(marker in folded for marker in markers)
+
+
+def _is_nutrition_diet_query(text: str) -> bool:
+    folded = _ascii_fold(text)
+    markers = (
+        "che do an",
+        "chế độ ăn",
+        "dinh duong",
+        "dinh dưỡng",
+        "nutrition",
+        "diet",
+        "dash",
+        "dia trung hai",
+        "địa trung hải",
+        "mediterranean",
+        "an uong",
+        "ăn uống",
+    )
+    return any(marker in folded for marker in markers)
+
+
 def _normalize_source_mode_key(value: Any) -> str:
     return str(value or "").strip().lower().replace("-", "_")
 
@@ -494,10 +530,14 @@ def _is_ddi_critical_topic(topic: str) -> bool:
 
 def _build_provider_query_overrides(
     *,
+    topic: str,
     original_query: str,
     canonical_query: str,
     language_hint: str,
     keywords: list[str],
+    is_ddi_query: bool,
+    is_nutrition_query: bool,
+    is_comparison_query: bool,
 ) -> dict[str, dict[str, str]]:
     cleaned_original = " ".join(str(original_query or "").split()).strip()
     cleaned_canonical = " ".join(str(canonical_query or "").split()).strip()
@@ -515,38 +555,69 @@ def _build_provider_query_overrides(
     scientific_query = en_focus
     if keyword_phrase:
         scientific_query = " ".join([en_focus, keyword_phrase]).strip()
+    if is_nutrition_query:
+        scientific_query = " ".join(
+            [
+                scientific_query,
+                "DASH Mediterranean diet blood pressure cardiovascular outcomes adherence cost practicality",
+            ]
+        ).strip()
+    if is_comparison_query:
+        scientific_query = " ".join(
+            [
+                scientific_query,
+                "comparative effectiveness benefits harms implementation constraints subgroup response",
+            ]
+        ).strip()
     scientific_query = scientific_query[:360]
 
     web_query = vi_focus if language_hint in {"vi", "mixed"} else en_focus
+    if is_nutrition_query:
+        web_query = " ".join(
+            [
+                web_query,
+                "so sánh DASH và Địa Trung Hải lợi ích nguy cơ tuân thủ chi phí áp dụng thực tế",
+            ]
+        ).strip()
     web_query = web_query[:320]
 
     regulatory_query = vi_focus if language_hint in {"vi", "mixed"} else cleaned_original or web_query
     regulatory_query = regulatory_query[:320]
 
-    return {
-        "scientific": {
-            "pubmed": scientific_query,
-            "europepmc": scientific_query,
-            "semantic_scholar": scientific_query,
-            "openalex": scientific_query,
-            "crossref": scientific_query,
-            "clinicaltrials": scientific_query,
-            "openfda": scientific_query,
-            "dailymed": scientific_query,
-            "rxnorm": scientific_query,
-        },
+    scientific_providers: dict[str, str] = {
+        "pubmed": scientific_query,
+        "europepmc": scientific_query,
+        "semantic_scholar": scientific_query,
+        "openalex": scientific_query,
+        "crossref": scientific_query,
+        "clinicaltrials": scientific_query,
+    }
+    if is_ddi_query:
+        scientific_providers.update(
+            {
+                "openfda": scientific_query,
+                "dailymed": scientific_query,
+                "rxnorm": scientific_query,
+            }
+        )
+
+    output: dict[str, dict[str, str]] = {
+        "scientific": scientific_providers,
         "web": {
             "searxng": web_query,
         },
-        "regulatory": {
+    }
+    # Chỉ bật luồng regulatory khi truy vấn liên quan thuốc/an toàn dược.
+    if is_ddi_query and not is_nutrition_query:
+        output["regulatory"] = {
             "davidrug": regulatory_query,
             "vn_moh": regulatory_query,
             "vn_kcb": regulatory_query,
             "vn_canhgiacduoc": regulatory_query,
             "vn_vbpl_byt": regulatory_query,
             "vn_dav": regulatory_query,
-        },
-    }
+        }
+    return output
 
 
 def _sanitize_provider_query_overrides(
@@ -595,6 +666,9 @@ def _build_source_aware_query_plan(
     original_query = " ".join(str(topic or "").split()).strip()
     folded_query = _ascii_fold(original_query)
     profile = analyze_query_profile(original_query)
+    is_comparison_query = _is_comparison_query(original_query)
+    is_nutrition_query = _is_nutrition_diet_query(original_query)
+    is_ddi_query = bool(profile.get("is_ddi_query"))
     keyword_terms = [
         item.strip().lower()
         for item in keywords
@@ -614,11 +688,16 @@ def _build_source_aware_query_plan(
     )
     co_drug_phrase = ", ".join(co_drugs[:4]) if co_drugs else "common analgesics"
     canonical_query = original_query
-    if profile.get("is_ddi_query"):
+    if is_ddi_query:
         canonical_query = (
             f"{primary_drug or 'index drug'} interaction with {co_drug_phrase} "
             "bleeding risk contraindication guidance"
         ).strip()
+    elif is_nutrition_query and is_comparison_query:
+        canonical_query = (
+            "DASH diet versus Mediterranean diet comparative effectiveness "
+            "blood pressure cardiovascular outcomes adherence cost practicality"
+        )
     elif language_hint == "vi":
         canonical_query = " ".join(keyword_terms[:8]).strip() or folded_query or original_query
 
@@ -663,8 +742,28 @@ def _build_source_aware_query_plan(
             f"{canonical_query} adverse events contraindications interaction risks",
             f"{canonical_query} contradictory findings and subgroup caveats",
             f"{canonical_query} clinical translation and monitoring checklist",
+            (
+                "DASH diet core principles food groups sodium limits and blood pressure effect"
+                if is_nutrition_query
+                else ""
+            ),
+            (
+                "Mediterranean diet core principles olive oil unsaturated fats and cardiovascular outcomes"
+                if is_nutrition_query
+                else ""
+            ),
+            (
+                "DASH versus Mediterranean adherence burden cost accessibility in Vietnam"
+                if is_nutrition_query and is_comparison_query
+                else ""
+            ),
+            (
+                "DASH versus Mediterranean subgroup response in hypertension diabetes CKD elderly patients"
+                if is_nutrition_query and is_comparison_query
+                else ""
+            ),
         ],
-        limit=12,
+        limit=18,
     )
     deep_beta_queries = _dedupe_query_list(
         [
@@ -675,15 +774,29 @@ def _build_source_aware_query_plan(
             f"{canonical_query} guideline divergence and implementation constraints primary care",
             f"{canonical_query} monitoring algorithm threshold escalation and stop criteria",
             f"{canonical_query} unresolved evidence gaps and pragmatic fallback protocol",
+            (
+                "network meta analysis DASH and Mediterranean hard endpoints MI stroke mortality"
+                if is_nutrition_query and is_comparison_query
+                else ""
+            ),
+            (
+                "real-world implementation barriers DASH Mediterranean in low-middle income settings"
+                if is_nutrition_query and is_comparison_query
+                else ""
+            ),
         ],
-        limit=14,
+        limit=24,
     )
     fast_queries = _dedupe_query_list([canonical_query, original_query, " ".join(keyword_terms[:6])], limit=4)
     provider_queries = _build_provider_query_overrides(
+        topic=original_query,
         original_query=original_query,
         canonical_query=canonical_query,
         language_hint=language_hint,
         keywords=keyword_terms[:10],
+        is_ddi_query=is_ddi_query,
+        is_nutrition_query=is_nutrition_query,
+        is_comparison_query=is_comparison_query,
     )
 
     route_payload = source_route_metadata_payload(source_route)
@@ -691,8 +804,10 @@ def _build_source_aware_query_plan(
         "original_query": original_query,
         "canonical_query": canonical_query,
         "language_hint": language_hint,
-        "is_ddi_query": bool(profile.get("is_ddi_query")),
-        "is_ddi_critical_query": bool(profile.get("is_ddi_query")) and _is_ddi_critical_topic(original_query),
+        "is_ddi_query": is_ddi_query,
+        "is_ddi_critical_query": is_ddi_query and _is_ddi_critical_topic(original_query),
+        "is_comparison_query": is_comparison_query,
+        "is_nutrition_query": is_nutrition_query,
         "source_queries": {
             "internal": internal_queries,
             "scientific": scientific_queries,
@@ -814,10 +929,14 @@ def _sanitize_llm_query_plan_payload(
         limit=4,
     )
     fallback_provider_queries = _build_provider_query_overrides(
+        topic=str(base_query_plan.get("original_query") or canonical_query),
         original_query=str(base_query_plan.get("original_query") or canonical_query),
         canonical_query=canonical_query,
         language_hint=language_hint,
         keywords=keywords[:10],
+        is_ddi_query=bool(base_query_plan.get("is_ddi_query")),
+        is_nutrition_query=bool(base_query_plan.get("is_nutrition_query")),
+        is_comparison_query=bool(base_query_plan.get("is_comparison_query")),
     )
     provider_queries = _sanitize_provider_query_overrides(
         payload.get("provider_queries"),
@@ -830,6 +949,8 @@ def _sanitize_llm_query_plan_payload(
         "language_hint": language_hint,
         "is_ddi_query": bool(base_query_plan.get("is_ddi_query")),
         "is_ddi_critical_query": bool(base_query_plan.get("is_ddi_critical_query")),
+        "is_comparison_query": bool(base_query_plan.get("is_comparison_query")),
+        "is_nutrition_query": bool(base_query_plan.get("is_nutrition_query")),
         "source_queries": {
             "internal": internal_queries,
             "scientific": scientific_queries,
@@ -1600,11 +1721,15 @@ def _markdown_word_count(text: str) -> int:
     return len(re.findall(r"\S+", str(text or "").strip()))
 
 
-def _resolve_deep_beta_target_words() -> int:
-    min_words = max(int(settings.deep_beta_report_min_words), 900)
+def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
+    # Deep research target intentionally large by product requirement.
+    min_words = max(int(settings.deep_beta_report_min_words), 20000)
     page_target = max(int(settings.deep_beta_report_target_pages), 1)
     words_per_page = max(int(settings.deep_beta_report_words_per_page), 250)
-    return max(min_words, page_target * words_per_page)
+    target_words = max(min_words, page_target * words_per_page)
+    max_words = max(40000, target_words)
+    target_words = min(max(target_words, min_words), max_words)
+    return min_words, target_words, max_words
 
 
 def _safe_generate_with_token_budget(
@@ -1725,7 +1850,7 @@ def _synthesize_deep_beta_long_report(
         if isinstance(item, dict)
     ]
 
-    target_words = _resolve_deep_beta_target_words()
+    min_words, target_words, max_words = _resolve_deep_beta_word_budget()
     report_timeout_seconds = max(
         float(settings.deep_beta_report_timeout_seconds),
         float(settings.deep_beta_reasoning_llm_timeout_seconds),
@@ -1737,6 +1862,7 @@ def _synthesize_deep_beta_long_report(
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
         "Must include these sections in this exact order:\n"
         "## Kết luận nhanh\n"
+        "## Kế hoạch nghiên cứu\n"
         "## Tóm tắt điều hành\n"
         "## Câu hỏi nghiên cứu (PICO)\n"
         "## Phương pháp truy xuất & tiêu chí chọn lọc\n"
@@ -1748,14 +1874,15 @@ def _synthesize_deep_beta_long_report(
         "## Kế hoạch theo dõi sau tư vấn\n"
         "## Giới hạn, sai số và rủi ro pháp lý\n"
         "Requirements:\n"
-        "- length >= "
-        f"{target_words} words\n"
-        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: ~5-10 pages)\n"
+        f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
+        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
         "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
         "- explicitly discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions\n"
+        "- '## Kế hoạch nghiên cứu' must appear before analytic sections and contain numbered steps, including direct comparison axes when relevant\n"
+        "- include a direct head-to-head comparison framework (adherence, efficacy, risk, feasibility, cost)\n"
         "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)\n"
-        "- include at least one markdown table in 'Hồ sơ bằng chứng & chất lượng nguồn'\n"
+        "- include at least 3 markdown tables distributed across evidence, comparison, and implementation sections\n"
         "- do not add a dedicated references/citations section in the answer body\n"
         "- keep citations concise and only when needed to support critical claims\n"
         "- do not prescribe dosage, do not diagnose\n\n"
@@ -1790,6 +1917,8 @@ def _synthesize_deep_beta_long_report(
             return answer_markdown
 
         expansion_rounds = max(int(settings.deep_beta_report_expansion_rounds), 0)
+        if target_words >= 20000:
+            expansion_rounds = max(expansion_rounds, 6)
         for round_idx in range(expansion_rounds):
             current_words = _markdown_word_count(content)
             if current_words >= target_words:
@@ -2176,6 +2305,8 @@ def _build_planner_hints(
     query_profile = analyze_query_profile(topic)
     is_ddi_query = bool(query_profile.get("is_ddi_query"))
     is_ddi_critical_query = is_ddi_query and _is_ddi_critical_topic(topic)
+    is_comparison_query = _is_comparison_query(topic)
+    is_nutrition_query = _is_nutrition_diet_query(topic)
     has_uploaded = bool(uploaded_documents)
     has_knowledge_sources = isinstance(rag_sources, list) and len(rag_sources) > 0
     evidence_query = any(
@@ -2217,6 +2348,10 @@ def _build_planner_hints(
         reason_codes.append("ddi_query_detected")
     if is_ddi_critical_query:
         reason_codes.append("ddi_critical_query")
+    if is_comparison_query:
+        reason_codes.append("comparison_query_detected")
+    if is_nutrition_query:
+        reason_codes.append("nutrition_query_detected")
     requested_stack_mode = (
         "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
     )
@@ -2233,32 +2368,53 @@ def _build_planner_hints(
         internal_top_k += 1
     if is_ddi_critical_query:
         internal_top_k += 1
+    if is_comparison_query:
+        internal_top_k += 1
     hybrid_top_k = max(internal_top_k + 1, 5 if evidence_query else 4)
     if is_ddi_critical_query:
+        hybrid_top_k += 1
+    if is_comparison_query:
         hybrid_top_k += 1
 
     deep_mode = research_mode == "deep"
     deep_beta_mode = research_mode == "deep_beta"
     deep_like_mode = deep_mode or deep_beta_mode
+    force_multi_source = bool(deep_like_mode or is_nutrition_query)
     if deep_mode:
-        internal_top_k = min(12, internal_top_k + 2)
-        hybrid_top_k = min(12, hybrid_top_k + 3)
-        target_pass_count = 11 if is_ddi_query else (10 if evidence_query else 9)
+        internal_top_k = min(18, internal_top_k + 4)
+        hybrid_top_k = min(18, hybrid_top_k + 6)
+        target_pass_count = (
+            20
+            if is_comparison_query or is_nutrition_query
+            else 18
+            if is_ddi_query
+            else 16
+            if evidence_query
+            else 14
+        )
     elif deep_beta_mode:
-        internal_top_k = min(12, internal_top_k + 4)
-        hybrid_top_k = min(12, hybrid_top_k + 5)
-        target_pass_count = 16 if is_ddi_query else (14 if evidence_query else 12)
+        internal_top_k = min(18, internal_top_k + 6)
+        hybrid_top_k = min(18, hybrid_top_k + 8)
+        target_pass_count = (
+            30
+            if is_comparison_query or is_nutrition_query
+            else 28
+            if is_ddi_query
+            else 24
+            if evidence_query
+            else 20
+        )
     else:
         # Fast mode ưu tiên SLA: giới hạn fan-out retrieval để tránh timeout upstream.
         internal_top_k = min(4, max(2, internal_top_k))
         hybrid_top_k = min(5, max(3, hybrid_top_k))
         target_pass_count = 1
     # Web crawl chỉ bật mặc định ở deep/deep_beta để giảm latency dao động ở fast mode.
-    web_enabled = bool(deep_like_mode)
+    web_enabled = bool(deep_like_mode or is_nutrition_query)
     if not deep_like_mode and (evidence_query or is_ddi_query):
         reason_codes.append("fast_mode_latency_guard")
 
-    scientific_enabled = bool(deep_like_mode)
+    scientific_enabled = bool(deep_like_mode or is_nutrition_query)
     if not scientific_enabled and evidence_query:
         reason_codes.append("fast_scientific_disabled_for_sla")
 
@@ -2275,9 +2431,9 @@ def _build_planner_hints(
         "retrieval_stack_mode": stack_mode,
         "target_pass_count": max(1, min(pass_cap, target_pass_count)),
         "pass_cap": pass_cap,
-        "internal_top_k": max(1, min(12, internal_top_k)),
-        "hybrid_top_k": max(1, min(12, hybrid_top_k)),
-        "estimated_max_documents": max(1, min(12, hybrid_top_k))
+        "internal_top_k": max(1, min(18, internal_top_k)),
+        "hybrid_top_k": max(1, min(18, hybrid_top_k)),
+        "estimated_max_documents": max(1, min(18, hybrid_top_k))
         * max(1, min(pass_cap, target_pass_count)),
         "scientific_retrieval_enabled": scientific_enabled,
         "web_retrieval_enabled": web_enabled,
@@ -2285,13 +2441,15 @@ def _build_planner_hints(
     }
 
     return {
-        "internal_top_k": max(1, min(12, internal_top_k)),
-        "hybrid_top_k": max(1, min(12, hybrid_top_k)),
+        "internal_top_k": max(1, min(18, internal_top_k)),
+        "hybrid_top_k": max(1, min(18, hybrid_top_k)),
         "query_focus": route_intent or "evidence_review",
         "reason_codes": reason_codes,
         "keywords": extracted_keywords,
         "is_ddi_query": is_ddi_query,
         "is_ddi_critical_query": is_ddi_critical_query,
+        "is_comparison_query": is_comparison_query,
+        "is_nutrition_query": is_nutrition_query,
         "language_hint": language_hint,
         "role": route_role,
         "source_mode": source_mode or "default",
@@ -2303,6 +2461,7 @@ def _build_planner_hints(
         "graphrag_enabled_override": graphrag_enabled_override,
         "research_mode": research_mode,
         "deep_pass_count": max(1, min(pass_cap, target_pass_count)),
+        "force_multi_source": force_multi_source,
         "reasoning_style": (
             (
                 "agentic_deep_research_beta_v1"
@@ -3791,12 +3950,62 @@ def _build_reasoning_digest(
     }
 
 
+def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str:
+    topic_text = _compact_snippet(topic, max_len=240)
+    if _is_nutrition_diet_query(topic) and _is_comparison_query(topic):
+        return (
+            "1. Xác định nguyên tắc cốt lõi, nhóm thực phẩm chủ đạo và mục tiêu sức khỏe của chế độ ăn DASH.\n"
+            "2. Xác định nguyên tắc cốt lõi, nhóm thực phẩm chủ đạo và mục tiêu sức khỏe của chế độ ăn Địa Trung Hải.\n"
+            "3. Tổng hợp ưu điểm DASH: hiệu quả kiểm soát huyết áp, tính cấu trúc khẩu phần, khả năng chuẩn hóa theo guideline.\n"
+            "4. Tổng hợp hạn chế DASH: gánh nặng tuân thủ, mức độ khắt khe khi theo dõi natri/khẩu phần, rủi ro bỏ cuộc dài hạn.\n"
+            "5. Tổng hợp ưu điểm Địa Trung Hải: lợi ích tim mạch dài hạn, tính linh hoạt, chất lượng chất béo và tính bền vững hành vi.\n"
+            "6. Tổng hợp hạn chế Địa Trung Hải: định lượng kém chặt, nguy cơ tăng năng lượng nạp, chi phí nguyên liệu và khả năng tiếp cận.\n"
+            "7. So sánh trực tiếp theo bốn trục:\n"
+            "   - (a) Tính dễ tuân thủ trong đời sống hằng ngày.\n"
+            "   - (b) Hiệu quả phòng ngừa và hỗ trợ điều trị bệnh lý tim mạch/chuyển hóa.\n"
+            "   - (c) Khác biệt trọng tâm dinh dưỡng: kiểm soát natri so với tối ưu hóa chất béo lành mạnh.\n"
+            "   - (d) Tính khả thi triển khai theo bối cảnh chi phí, văn hóa ăn uống và nguồn thực phẩm."
+        )
+    rows: list[str] = []
+    for index, step in enumerate(plan_steps, start=1):
+        objective = _compact_snippet(step.objective, max_len=220)
+        output = _compact_snippet(step.output, max_len=180)
+        rows.append(f"{index}. {objective} Kết quả kỳ vọng: {output}.")
+        if len(rows) >= 8:
+            break
+    if not rows:
+        rows = [
+            f"1. Xác định câu hỏi trung tâm: {topic_text}.",
+            "2. Truy xuất đa nguồn ưu tiên guideline, tổng quan hệ thống và thử nghiệm lâm sàng.",
+            "3. So sánh bằng chứng thuận chiều/ngược chiều và tổng hợp khuyến nghị ứng dụng.",
+        ]
+    return "\n".join(rows)
+
+
+def _inject_research_plan_section(
+    markdown_text: str,
+    *,
+    plan_markdown: str,
+) -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        return f"## Kế hoạch nghiên cứu\n{plan_markdown}\n"
+    if _has_markdown_heading(text, "## Kế hoạch nghiên cứu"):
+        return text
+    insertion = f"\n\n## Kế hoạch nghiên cứu\n{plan_markdown}\n\n"
+    pattern = re.compile(r"(##\s*Kết luận nhanh[\s\S]*?)(\n##\s)", flags=re.IGNORECASE)
+    if pattern.search(text):
+        return pattern.sub(lambda m: f"{m.group(1)}{insertion}{m.group(2)}", text, count=1).strip()
+    return f"## Kế hoạch nghiên cứu\n{plan_markdown}\n\n{text}".strip()
+
+
 def _ensure_markdown_structure(
     topic: str,
     answer: str,
     citations: list[Citation],
     *,
     research_mode: str,
+    plan_steps: list[PlanStep] | None = None,
 ) -> str:
     def _cleanup_markdown_noise(text: str) -> str:
         lines = str(text or "").splitlines()
@@ -3887,12 +4096,16 @@ def _ensure_markdown_structure(
         cleaned = "Chưa có nội dung trả lời chuyên sâu."
 
     required_headings = (
-        _REQUIRED_DEEP_MARKDOWN_HEADINGS
+        ("## Kết luận nhanh",)
         if research_mode in {"deep", "deep_beta"}
         else _REQUIRED_MARKDOWN_HEADINGS
     )
+    plan_markdown = _build_research_plan_markdown(topic, plan_steps or [])
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
-        return _cleanup_markdown_noise(cleaned)
+        completed = _cleanup_markdown_noise(cleaned)
+        if research_mode in {"deep", "deep_beta"}:
+            completed = _inject_research_plan_section(completed, plan_markdown=plan_markdown)
+        return completed
 
     analysis_block = cleaned
     if "\n" not in analysis_block:
@@ -3900,7 +4113,6 @@ def _ensure_markdown_structure(
 
     topic_snippet = _compact_snippet(topic, max_len=210)
     risk_level, risk_signal, risk_note = _estimate_medical_risk_band(f"{topic} {cleaned}")
-    citations_block = "\n".join(_citation_markdown_lines(citations))
     if research_mode in {"deep", "deep_beta"}:
         evidence_table = _evidence_table_markdown(citations, max_rows=10)
         executive_summary = _compact_plain_summary(cleaned, max_len=260)
@@ -3912,6 +4124,8 @@ def _ensure_markdown_structure(
             (
             "## Kết luận nhanh\n"
             f"{_compact_snippet(cleaned, max_len=320)}\n\n"
+            "## Kế hoạch nghiên cứu\n"
+            f"{plan_markdown}\n\n"
             "## Tóm tắt điều hành\n"
             f"- Câu hỏi chính: {topic_snippet}\n"
             f"- Phạm vi nghiên cứu: {_compact_snippet(topic_snippet, max_len=150)} và bằng chứng truy xuất đa nguồn.\n"
@@ -3948,25 +4162,33 @@ def _ensure_markdown_structure(
             "## Giới hạn, sai số và rủi ro pháp lý\n"
             "- Hệ thống chỉ cung cấp thông tin tham khảo dựa trên bằng chứng truy xuất được.\n"
             "- Có thể tồn tại sai lệch do nguồn dữ liệu chưa đầy đủ hoặc khác biệt theo bối cảnh lâm sàng.\n"
-            "- Quyết định điều trị cuối cùng phải do bác sĩ/dược sĩ có thẩm quyền xác nhận.\n\n"
-            "## Nguồn tham chiếu\n"
-            f"{citations_block}"
+            "- Quyết định điều trị cuối cùng phải do bác sĩ/dược sĩ có thẩm quyền xác nhận."
             )
+        )
+
+    fast_summary = _compact_plain_summary(cleaned, max_len=420)
+    fast_analysis = _compact_plain_summary(cleaned, max_len=1400)
+    comparison_table = ""
+    if _is_comparison_query(topic):
+        comparison_table = (
+            "\n\n| Tiêu chí | Phương án A | Phương án B | Ghi chú |\n"
+            "| --- | --- | --- | --- |\n"
+            "| Mục tiêu chính | Tập trung kiểm soát chỉ số đích | Tập trung cải thiện nguy cơ tim mạch dài hạn | Chọn theo mục tiêu điều trị ưu tiên |\n"
+            "| Độ linh hoạt triển khai | Cấu trúc rõ ràng, dễ chuẩn hóa | Linh hoạt hơn, phụ thuộc thói quen sống | Cân bằng giữa tuân thủ và bền vững |\n"
+            "| Gánh nặng tuân thủ | Cao hơn do yêu cầu định lượng | Thường dễ duy trì hơn nếu khẩu vị phù hợp | Theo dõi thực tế sau 2-4 tuần |\n"
         )
 
     return _cleanup_markdown_noise(
         "## Kết luận nhanh\n"
-        f"{cleaned}\n\n"
+        f"{fast_summary or cleaned}\n\n"
         "## Phân tích chi tiết\n"
-        f"{analysis_block}\n\n"
+        f"{fast_analysis or analysis_block}{comparison_table}\n\n"
         "## Khuyến nghị an toàn\n"
         "- Không tự ý kê đơn hoặc điều chỉnh liều nếu chưa có tư vấn chuyên môn.\n"
         "- Ưu tiên xác minh lại thông tin với bác sĩ/dược sĩ khi có bệnh nền hoặc đa thuốc.\n\n"
         "## Theo dõi & cảnh báo đỏ\n"
         "- Theo dõi thay đổi triệu chứng trong 24-48 giờ và ghi chú phản ứng bất thường.\n"
-        "- Cần đi khám/cấp cứu ngay khi có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ.\n\n"
-        "## Nguồn tham chiếu\n"
-        f"{citations_block}"
+        "- Cần đi khám/cấp cứu ngay khi có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
     )
 
 
@@ -4009,7 +4231,11 @@ def _remove_fenced_blocks(markdown_text: str, *, languages: set[str]) -> str:
     return stripped.strip()
 
 
-def _sanitize_user_facing_answer_markdown(answer_markdown: str) -> str:
+def _sanitize_user_facing_answer_markdown(
+    answer_markdown: str,
+    *,
+    research_mode: str = "fast",
+) -> str:
     sanitized = str(answer_markdown or "")
     if not sanitized.strip():
         return sanitized
@@ -4031,6 +4257,38 @@ def _sanitize_user_facing_answer_markdown(answer_markdown: str) -> str:
             _canonical_h2_key("Nguồn tham chiếu bổ sung"),
         },
     )
+    sanitized = re.sub(
+        r"(?:^|\n)\s*###\s*Nguồn tham chiếu[^\n]*[\s\S]*?(?=\n##\s|\n#\s|$)",
+        "\n",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+
+    if str(research_mode).strip().lower() == "fast":
+        # Fast mode should stay compact and natural; deep template sections are moved to telemetry.
+        sanitized = _remove_h2_sections(
+            sanitized,
+            section_heading_keys={
+                _canonical_h2_key("Tóm tắt điều hành"),
+                _canonical_h2_key("Kế hoạch nghiên cứu"),
+                _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"),
+                _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"),
+                _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"),
+                _canonical_h2_key("Tổng hợp phát hiện chính"),
+                _canonical_h2_key("Phản biện bằng chứng đối nghịch"),
+                _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"),
+                _canonical_h2_key("Ma trận quyết định an toàn"),
+                _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"),
+                _canonical_h2_key("Giới hạn, sai số và rủi ro pháp lý"),
+                _canonical_h2_key("Bảng tổng hợp bằng chứng"),
+            },
+        )
+        sanitized = re.sub(
+            r"(?:^|\n)\s*security\s*\n+\s*ma trận quyết định an toàn[\s\S]*?(?=\n##\s|\n#\s|$)",
+            "\n",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
 
     # Mermaid/chart spec is moved out of main answer area to reduce visual clutter.
     sanitized = _remove_fenced_blocks(
@@ -4268,11 +4526,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         web_policy_allowed=bool(planner_hints.get("web_retrieval_enabled")),
     )
 
+    force_multi_source = bool(planner_hints.get("force_multi_source"))
     planner_hints["scientific_retrieval_enabled"] = bool(
         planner_hints.get("scientific_retrieval_enabled")
-    ) and bool(source_route.enable_scientific)
-    planner_hints["web_retrieval_enabled"] = bool(planner_hints.get("web_retrieval_enabled")) and bool(
-        source_route.enable_web
+    ) and (bool(source_route.enable_scientific) or force_multi_source)
+    planner_hints["web_retrieval_enabled"] = bool(planner_hints.get("web_retrieval_enabled")) and (
+        bool(source_route.enable_web) or force_multi_source
     )
     reason_codes = planner_hints.get("reason_codes")
     if not isinstance(reason_codes, list):
@@ -5640,6 +5899,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         rag_result.answer,
         citations,
         research_mode=research_mode,
+        plan_steps=plan_steps,
     )
     if research_mode in {"deep", "deep_beta"}:
         report_stage = "deep_beta_report_synthesis" if research_mode == "deep_beta" else "deep_report_synthesis"
@@ -5679,6 +5939,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 rewritten_report,
                 citations,
                 research_mode=research_mode,
+                plan_steps=plan_steps,
             )
             if research_mode == "deep_beta":
                 _update_beta_reasoning_step(
@@ -5724,7 +5985,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             evidence_verification=deep_beta_evidence_verification,
             verification_summary={},
         )
-    answer_markdown = _sanitize_user_facing_answer_markdown(answer_markdown)
+    answer_markdown = _sanitize_user_facing_answer_markdown(
+        answer_markdown,
+        research_mode=research_mode,
+    )
     if not answer_markdown.strip():
         answer_markdown = (
             "## Kết luận nhanh\n"

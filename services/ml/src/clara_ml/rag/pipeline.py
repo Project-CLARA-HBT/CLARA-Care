@@ -104,32 +104,25 @@ class RagPipelineP1:
         if not docs:
             return (
                 "## Kết luận nhanh\n"
-                "Hệ thống đang ở chế độ an toàn cục bộ và chưa có bằng chứng truy xuất đủ mạnh cho câu hỏi này.\n\n"
+                "Hiện chưa đủ bằng chứng truy xuất đáng tin cậy cho câu hỏi này, nên hệ thống trả lời theo chế độ an toàn.\n\n"
                 "## Phân tích chi tiết\n"
                 "- Chưa tìm thấy ngữ cảnh đủ liên quan trong phiên hiện tại.\n"
-                "- Đây là phản hồi fallback để tránh trả về lỗi hệ thống.\n\n"
+                "- Nội dung dưới đây là định hướng thận trọng để tránh trả về thông tin thiếu an toàn.\n\n"
                 "## Khuyến nghị an toàn\n"
                 "- Ưu tiên đối chiếu nguồn chính thống (nhãn thuốc, guideline, bác sĩ/dược sĩ).\n"
                 "- Không tự ý kê đơn hoặc chỉnh liều khi chưa có tư vấn chuyên môn.\n\n"
-                "## Nguồn tham chiếu\n"
-                "- [LOCAL_FALLBACK_V1] No retrieved evidence."
+                "<!-- LOCAL_FALLBACK_V1 -->"
             )
 
         rows: list[str] = []
-        refs: list[str] = []
         for idx, doc in enumerate(docs[:6], start=1):
             metadata = doc.metadata or {}
             source = str(metadata.get("source") or "unknown")
-            url = str(metadata.get("url") or "")
             summary = _compact(doc.text)
             summary_safe = summary.replace("|", "\\|")
             rows.append(
                 f"| {idx} | `{doc.id}` | {source} | {summary_safe} |"
             )
-            if url.startswith("http://") or url.startswith("https://"):
-                refs.append(f"- [{doc.id}] {url}")
-            else:
-                refs.append(f"- [{doc.id}] source={source}")
 
         table = "\n".join(
             [
@@ -138,7 +131,6 @@ class RagPipelineP1:
                 *rows,
             ]
         )
-        references = "\n".join(refs)
         return (
             "## Kết luận nhanh\n"
             "Hệ thống chuyển sang chế độ tổng hợp an toàn để duy trì phản hồi ổn định.\n\n"
@@ -149,8 +141,6 @@ class RagPipelineP1:
             "## Khuyến nghị an toàn\n"
             "- Ưu tiên kiểm chứng chéo bằng nguồn chính thống trước khi áp dụng vào quyết định y khoa.\n"
             "- Nếu có bệnh nền/đa thuốc/dấu hiệu nặng, cần trao đổi bác sĩ ngay.\n\n"
-            "## Nguồn tham chiếu\n"
-            f"{references}\n\n"
             "<!-- LOCAL_FALLBACK_V1 -->"
         )
 
@@ -1085,18 +1075,19 @@ class RagPipelineP1:
                 "Do not wrap the full response in a single code fence.\n"
                 "Generate a long-form report with these sections in exact order:\n"
                 "1) ## Kết luận nhanh\n"
-                "2) ## Tóm tắt điều hành\n"
-                "3) ## Bối cảnh lâm sàng áp dụng\n"
-                "4) ## Phân tích chi tiết\n"
-                "5) ## Bảng tổng hợp bằng chứng\n"
-                "6) ## Ma trận quyết định an toàn\n"
-                "7) ## Kế hoạch theo dõi sau tư vấn\n"
-                "8) ## Cảnh báo pháp lý & giới hạn hệ thống\n"
-                "9) ## Nguồn tham chiếu\n"
+                "2) ## Kế hoạch nghiên cứu\n"
+                "3) ## Tóm tắt điều hành\n"
+                "4) ## Bối cảnh lâm sàng áp dụng\n"
+                "5) ## Phân tích chi tiết\n"
+                "6) ## Bảng tổng hợp bằng chứng\n"
+                "7) ## Ma trận quyết định an toàn\n"
+                "8) ## Kế hoạch theo dõi sau tư vấn\n"
+                "9) ## Cảnh báo pháp lý & giới hạn hệ thống\n"
                 "Requirements:\n"
-                "- Length should be detailed and structured (target >= 700 words).\n"
+                "- Length should be detailed and structured (target >= 2500 words for baseline deep draft).\n"
                 "- Include at least one markdown table in 'Bảng tổng hợp bằng chứng'.\n"
                 "- Keep narrative natural and avoid repetitive sentence templates.\n"
+                "- Do not add dedicated references section in answer body.\n"
                 "- If diagrams are not necessary, prioritize plain-language clinical reasoning.\n"
                 f"User query: {query}\n"
                 f"Retrieved context:\n{context}"
@@ -1112,11 +1103,10 @@ class RagPipelineP1:
             "1) ## Kết luận nhanh\n"
             "2) ## Phân tích chi tiết\n"
             "3) ## Khuyến nghị an toàn\n"
-            "4) ## Nguồn tham chiếu\n"
             "If comparing >=2 options, include a Markdown table with columns: Tiêu chí | Phương án A | Phương án B | Ghi chú.\n"
-            "If explaining process/flow/decision path, a simple bullet workflow is preferred over large diagrams.\n"
-            "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
-            "Cite evidence inline with source ids like [source-id].\n"
+            "Write naturally like a senior clinician explaining trade-offs, avoid robotic templates.\n"
+            "Do not include PICO/methodology/legal disclaimers unless explicitly requested.\n"
+            "Do not add a dedicated citations section in the main answer body.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
         )
@@ -1136,8 +1126,6 @@ class RagPipelineP1:
             "1) ## Kết luận nhanh\n"
             "2) ## Phân tích chi tiết\n"
             "3) ## Khuyến nghị an toàn\n"
-            "4) ## Nguồn tham chiếu\n"
-            "Use inline source IDs like [source-id].\n"
             "Keep wording natural, concise, and avoid robotic repetition.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
@@ -1190,11 +1178,10 @@ class RagPipelineP1:
             "Do not refuse solely due to missing context.\n"
             "Be explicit about uncertainty and avoid diagnostic/prescription overreach.\n"
             "If comparative question, provide balanced criteria and a Markdown table.\n"
-            "If process/workflow explanation is needed, prefer concise bullet workflow over complex diagrams.\n"
-            "If including chart configuration/spec, place it in fenced code block with one language tag: chart-spec, vega-lite, echarts-option, json, or yaml.\n"
+            "Write naturally, avoid template-heavy legal boilerplate.\n"
             "Output MUST be valid GitHub-Flavored Markdown (GFM), no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
-            "Response must include headings in this order: ## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu.\n"
+            "Response must include headings in this order: ## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn.\n"
             f"User query: {query}"
         )
 
@@ -2354,21 +2341,21 @@ class RagPipelineP1:
                 system_prompt_text = (
                     "You are CLARA clinical assistant. "
                     "Be concise, safe, and citation-grounded. "
-                "Return GFM markdown with these sections: "
-                "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn, ## Nguồn tham chiếu. "
-                "Use markdown table for comparisons. "
-                "Prefer concise plain-language workflow over large diagrams. "
-                "Use fenced chart spec blocks when needed with language tags chart-spec, vega-lite, echarts-option, json, or yaml. "
-                "Do not output HTML. "
-                "Do not prescribe dosage or diagnose."
-            )
+                    "Return GFM markdown with these sections: "
+                    "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn. "
+                    "Use markdown table for comparisons. "
+                    "Do not output HTML. "
+                    "Do not prescribe dosage or diagnose. "
+                    "Avoid robotic or repetitive sentence templates."
+                )
                 if orchestrator_mode == "deep":
                     system_prompt_text = (
                         "You are CLARA deep research clinical assistant. "
                         "Produce a long-form, evidence-grounded Vietnamese report. "
                         "Use GFM markdown only, no HTML. "
                         "Prefer precise source-linked claims and explicitly note uncertainty. "
-                        "Include table + mermaid + chart-spec when they improve clarity. "
+                        "Start with '## Kế hoạch nghiên cứu' before deep analysis sections. "
+                        "Use tables where helpful but avoid unnecessary diagrams. "
                         "Do not prescribe dosage or diagnose."
                     )
                 response = runtime_llm_client.generate(
