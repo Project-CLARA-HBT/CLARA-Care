@@ -85,6 +85,32 @@ _DEEP_BETA_REASONING_STAGE_ORDER = (
     "deep_beta_quality_gate",
     "deep_beta_chain_verification",
 )
+_DEEP_BETA_PARALLEL_REASONING_NODES: tuple[tuple[str, str], ...] = (
+    (
+        "deep_beta_evidence_audit",
+        "Audit evidence coverage quality, identify weak sources and unresolved questions.",
+    ),
+    (
+        "deep_beta_claim_graph",
+        "Build claim/conflict graph across passes and flag contradiction hypotheses.",
+    ),
+    (
+        "deep_beta_counter_evidence_scan",
+        "Find strongest counter-evidence, adverse subgroup exceptions, and unresolved caveats.",
+    ),
+    (
+        "deep_beta_guideline_alignment",
+        "Check alignment/misalignment between retrieved evidence and guideline-level recommendations.",
+    ),
+    (
+        "deep_beta_risk_stratification",
+        "Stratify risk signals by age/comorbidity/polypharmacy and highlight red-flag trajectories.",
+    ),
+    (
+        "deep_beta_gap_fill",
+        "Propose high-yield gap-fill retrieval actions to improve coverage.",
+    ),
+)
 _ALLOWED_RETRIEVAL_ROUTES = {
     "internal-heavy",
     "scientific-heavy",
@@ -1275,32 +1301,7 @@ def _run_deep_beta_parallel_reasoning_nodes(
     evidence_rows: list[dict[str, Any]],
     llm_runtime: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    nodes = [
-        (
-            "deep_beta_evidence_audit",
-            "Audit evidence coverage quality, identify weak sources and unresolved questions.",
-        ),
-        (
-            "deep_beta_claim_graph",
-            "Build claim/conflict graph across passes and flag contradiction hypotheses.",
-        ),
-        (
-            "deep_beta_counter_evidence_scan",
-            "Find strongest counter-evidence, adverse subgroup exceptions, and unresolved caveats.",
-        ),
-        (
-            "deep_beta_guideline_alignment",
-            "Check alignment/misalignment between retrieved evidence and guideline-level recommendations.",
-        ),
-        (
-            "deep_beta_risk_stratification",
-            "Stratify risk signals by age/comorbidity/polypharmacy and highlight red-flag trajectories.",
-        ),
-        (
-            "deep_beta_gap_fill",
-            "Propose high-yield gap-fill retrieval actions to improve coverage.",
-        ),
-    ]
+    nodes = list(_DEEP_BETA_PARALLEL_REASONING_NODES)
     max_nodes = max(1, min(int(settings.deep_beta_reasoning_llm_nodes), len(nodes)))
     selected_nodes = nodes[:max_nodes]
     if not selected_nodes:
@@ -5933,6 +5934,26 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 },
             )
         )
+        selected_parallel_nodes = list(
+            _DEEP_BETA_PARALLEL_REASONING_NODES[
+                : max(1, min(int(settings.deep_beta_reasoning_llm_nodes), len(_DEEP_BETA_PARALLEL_REASONING_NODES)))
+            ]
+        )
+        for node_name, node_objective in selected_parallel_nodes:
+            flow_events.append(
+                _event(
+                    stage=node_name,
+                    status="started",
+                    source_count=len(deep_pass_summaries),
+                    note="Reasoning node started.",
+                    component="verifier",
+                    payload={
+                        "node": node_name,
+                        "objective": node_objective,
+                        "reasoning_rounds": int(settings.deep_beta_reasoning_rounds),
+                    },
+                )
+            )
         deep_beta_parallel_reasoning_nodes = _run_deep_beta_parallel_reasoning_nodes(
             topic=topic,
             query_plan=query_plan if isinstance(query_plan, dict) else {},

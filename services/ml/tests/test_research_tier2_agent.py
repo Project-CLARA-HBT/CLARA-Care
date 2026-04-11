@@ -1775,6 +1775,8 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         "deep_beta_retrieval_budget",
         "deep_beta_multi_pass_retrieval",
         "deep_beta_retrieval_pass",
+        "deep_beta_evidence_audit",
+        "deep_beta_claim_graph",
         "deep_beta_chain_synthesis",
         "deep_beta_chain_verification",
     }.issubset(stages)
@@ -1785,6 +1787,14 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         and event.get("status") == "completed"
     ) == 4
     assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
+    evidence_audit_span = next(
+        item
+        for item in stage_spans
+        if str(item.get("stage")) == "deep_beta_evidence_audit"
+    )
+    assert isinstance(evidence_audit_span.get("start_at"), str)
+    assert isinstance(evidence_audit_span.get("end_at"), str)
+    assert evidence_audit_span.get("event_count", 0) >= 2
     answer = str(result.get("answer", ""))
     assert "```mermaid" not in answer
     assert "```chart-spec" not in answer
