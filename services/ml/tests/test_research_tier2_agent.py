@@ -1956,6 +1956,83 @@ def test_ensure_deep_beta_report_artifacts_appends_missing_blocks() -> None:
     assert "| Pass | Subquery | Retrieved |" in fixed
 
 
+def test_ensure_deep_beta_report_artifacts_injects_reasoning_chain_section() -> None:
+    fixed = tier2._ensure_deep_beta_report_artifacts(
+        markdown_text="## Kết luận nhanh\nTóm tắt ngắn.",
+        deep_pass_summaries=[],
+        reasoning_nodes=[
+            {
+                "node": "deep_beta_evidence_audit",
+                "confidence": 0.82,
+                "reasoning_chain": [
+                    {
+                        "claim": "Nguy cơ xuất huyết tăng khi phối hợp warfarin và NSAID.",
+                        "evidence": "Nguồn openfda + tổng quan hệ thống cho thấy tăng bleeding events.",
+                        "inference": "Rủi ro cao hơn ở người cao tuổi hoặc có bệnh nền.",
+                        "clinical_action": "Ưu tiên tránh phối hợp hoặc theo dõi sát dấu hiệu xuất huyết.",
+                        "confidence": 0.81,
+                    }
+                ],
+            }
+        ],
+        evidence_verification={},
+        verification_summary={},
+    )
+    assert "## Chuỗi lập luận bằng chứng" in fixed
+    assert "| Node | Claim | Evidence | Inference | Clinical action | Confidence |" in fixed
+
+
+def test_run_deep_beta_llm_reasoning_node_extracts_reasoning_chain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeReasoningClient:
+        def generate(self, prompt: str, system_prompt: str | None = None) -> SimpleNamespace:
+            return SimpleNamespace(
+                content=(
+                    "{"
+                    '"confidence": 0.84,'
+                    '"insights": ["Ưu tiên cảnh giác xuất huyết nhóm nguy cơ cao"],'
+                    '"actions": ["Bổ sung truy xuất guideline cập nhật 2025"],'
+                    '"watchouts": ["Khác biệt baseline nguy cơ giữa nhóm bệnh nền"],'
+                    '"reasoning_chain": ['
+                    "{"
+                    '"claim":"Nguy cơ xuất huyết tăng khi phối hợp warfarin và ibuprofen",'
+                    '"evidence":"Nhãn thuốc + systematic review cho thấy tăng bleeding signal",'
+                    '"inference":"Tác động cộng gộp trên đông máu làm tăng biến cố bất lợi",'
+                    '"clinical_action":"Hạn chế phối hợp, theo dõi dấu hiệu xuất huyết sớm",'
+                    '"confidence":0.8'
+                    "}"
+                    "],"
+                    '"follow_up_queries": ["warfarin ibuprofen bleeding subgroup elderly"],'
+                    '"evidence_checks": ["cross-check guideline recommendation consistency"]'
+                    "}"
+                ),
+                model="deepseek-v3.2",
+            )
+
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "test-key")
+    monkeypatch.setattr(
+        tier2,
+        "_build_reasoning_client",
+        lambda **kwargs: _FakeReasoningClient(),
+    )
+
+    result = tier2._run_deep_beta_llm_reasoning_node(
+        node_name="deep_beta_evidence_audit",
+        objective="Audit evidence quality and unresolved gaps.",
+        topic="Tương tác warfarin với ibuprofen",
+        query_plan={},
+        retrieval_budget={},
+        deep_pass_summaries=[],
+        evidence_rows=[],
+    )
+
+    assert result["status"] == "completed"
+    assert isinstance(result.get("reasoning_chain"), list)
+    assert len(result["reasoning_chain"]) == 1
+    assert "warfarin" in str(result["reasoning_chain"][0]["claim"]).lower()
+
+
 def test_sanitize_user_facing_answer_markdown_removes_redundant_sections() -> None:
     raw = (
         "## Kết luận nhanh\n"
@@ -2030,3 +2107,16 @@ def test_resolve_report_word_budget_by_mode() -> None:
     assert deep_min < beta_min
     assert deep_target < beta_target
     assert deep_max < beta_max
+
+
+def test_resolve_adaptive_report_word_budget_reduces_deep_beta_for_sparse_evidence() -> None:
+    base_min, base_target, _base_max = tier2._resolve_report_word_budget("deep_beta")
+    adaptive_min, adaptive_target, adaptive_max = tier2._resolve_adaptive_report_word_budget(
+        research_mode="deep_beta",
+        citation_count=2,
+        deep_pass_count=2,
+        reasoning_node_count=1,
+    )
+    assert adaptive_min < base_min
+    assert adaptive_target < base_target
+    assert adaptive_max > adaptive_target

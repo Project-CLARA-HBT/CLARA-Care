@@ -58,6 +58,7 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Phương pháp truy xuất & tiêu chí chọn lọc",
     "## Hồ sơ bằng chứng & chất lượng nguồn",
     "## Tổng hợp phát hiện chính",
+    "## Chuỗi lập luận bằng chứng",
     "## Phản biện bằng chứng đối nghịch",
     "## Ứng dụng lâm sàng theo nhóm bệnh nhân",
     "## Ma trận quyết định an toàn",
@@ -1106,6 +1107,7 @@ def _run_deep_beta_llm_reasoning_node(
             "insights": [],
             "actions": [],
             "watchouts": [],
+            "reasoning_chain": [],
         }
     _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
     if not api_key:
@@ -1117,6 +1119,7 @@ def _run_deep_beta_llm_reasoning_node(
             "insights": [],
             "actions": [],
             "watchouts": [],
+            "reasoning_chain": [],
         }
 
     compact_passes = [
@@ -1154,12 +1157,23 @@ def _run_deep_beta_llm_reasoning_node(
         '  "insights": ["short insight"],\n'
         '  "actions": ["next action"],\n'
         '  "watchouts": ["risk/caveat"],\n'
+        '  "reasoning_chain": [\n'
+        "    {\n"
+        '      "claim": "short claim",\n'
+        '      "evidence": "which evidence supports/weakens the claim",\n'
+        '      "inference": "clinical interpretation from evidence",\n'
+        '      "clinical_action": "practical action/escalation",\n'
+        '      "confidence": 0.0\n'
+        "    }\n"
+        "  ],\n"
         '  "follow_up_queries": ["targeted retrieval query"],\n'
         '  "evidence_checks": ["specific evidence check"]\n'
         "}\n"
         "Constraints:\n"
         "- confidence must be between 0 and 1\n"
         "- each array size <= 6\n"
+        "- reasoning_chain item count <= 4, each field must be concise and concrete\n"
+        "- every reasoning_chain item must mention a concrete evidence signal (source title/id/snippet)\n"
         "- focus on evidence quality, contradiction risk, and retrieval gaps\n\n"
         f"node_name={node_name}\n"
         f"objective={objective}\n"
@@ -1181,6 +1195,7 @@ def _run_deep_beta_llm_reasoning_node(
                 "insights": [],
                 "actions": [],
                 "watchouts": [],
+                "reasoning_chain": [],
                 "follow_up_queries": [],
                 "evidence_checks": [],
             }
@@ -1199,6 +1214,30 @@ def _run_deep_beta_llm_reasoning_node(
                     cleaned.append(text)
             return cleaned
 
+        def _clean_reasoning_chain(value: Any) -> list[dict[str, Any]]:
+            if not isinstance(value, list):
+                return []
+            cleaned: list[dict[str, Any]] = []
+            for item in value[:4]:
+                if not isinstance(item, dict):
+                    continue
+                claim = " ".join(str(item.get("claim") or "").split()).strip()
+                evidence = " ".join(str(item.get("evidence") or "").split()).strip()
+                inference = " ".join(str(item.get("inference") or "").split()).strip()
+                clinical_action = " ".join(str(item.get("clinical_action") or "").split()).strip()
+                if not any((claim, evidence, inference, clinical_action)):
+                    continue
+                cleaned.append(
+                    {
+                        "claim": _compact_snippet(claim, max_len=220),
+                        "evidence": _compact_snippet(evidence, max_len=260),
+                        "inference": _compact_snippet(inference, max_len=240),
+                        "clinical_action": _compact_snippet(clinical_action, max_len=180),
+                        "confidence": _normalize_router_confidence(item.get("confidence")),
+                    }
+                )
+            return cleaned
+
         return {
             "node": node_name,
             "status": "completed",
@@ -1208,6 +1247,7 @@ def _run_deep_beta_llm_reasoning_node(
             "insights": _clean_list("insights"),
             "actions": _clean_list("actions"),
             "watchouts": _clean_list("watchouts"),
+            "reasoning_chain": _clean_reasoning_chain(parsed.get("reasoning_chain")),
             "follow_up_queries": _clean_list("follow_up_queries"),
             "evidence_checks": _clean_list("evidence_checks"),
         }
@@ -1220,6 +1260,7 @@ def _run_deep_beta_llm_reasoning_node(
             "insights": [],
             "actions": [],
             "watchouts": [],
+            "reasoning_chain": [],
             "follow_up_queries": [],
             "evidence_checks": [],
         }
@@ -1302,6 +1343,7 @@ def _run_deep_beta_parallel_reasoning_nodes(
                         "insights": [],
                         "actions": [],
                         "watchouts": [],
+                        "reasoning_chain": [],
                         "follow_up_queries": [],
                         "evidence_checks": [],
                     }
@@ -1339,6 +1381,15 @@ def _collect_reasoning_follow_up_queries(
                 if not text:
                     continue
                 collected.append(text)
+        chain_rows = node.get("reasoning_chain")
+        if isinstance(chain_rows, list):
+            for item in chain_rows:
+                if not isinstance(item, dict):
+                    continue
+                for key in ("claim", "evidence", "inference", "clinical_action"):
+                    text = " ".join(str(item.get(key) or "").split()).strip()
+                    if text:
+                        collected.append(text)
     return _dedupe_query_list(collected, limit=limit)
 
 
@@ -1402,6 +1453,11 @@ def _run_deep_beta_evidence_verification_node(
             "confidence": item.get("confidence"),
             "insights": item.get("insights", [])[:3] if isinstance(item.get("insights"), list) else [],
             "watchouts": item.get("watchouts", [])[:3] if isinstance(item.get("watchouts"), list) else [],
+            "reasoning_chain": (
+                item.get("reasoning_chain", [])[:2]
+                if isinstance(item.get("reasoning_chain"), list)
+                else []
+            ),
         }
         for item in reasoning_nodes[:20]
         if isinstance(item, dict)
@@ -1721,6 +1777,79 @@ def _markdown_word_count(text: str) -> int:
     return len(re.findall(r"\S+", str(text or "").strip()))
 
 
+def _build_reasoning_chain_cards(
+    reasoning_nodes: list[dict[str, Any]],
+    *,
+    limit: int = 18,
+) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    for node in reasoning_nodes:
+        if not isinstance(node, dict):
+            continue
+        node_name = _first_nonempty_text(node.get("node"), "deep_beta_node")
+        node_confidence = _normalize_router_confidence(node.get("confidence"))
+        chain_rows = node.get("reasoning_chain")
+        if isinstance(chain_rows, list):
+            for row in chain_rows:
+                if not isinstance(row, dict):
+                    continue
+                claim = _compact_snippet(_first_nonempty_text(row.get("claim")), max_len=220)
+                evidence = _compact_snippet(_first_nonempty_text(row.get("evidence")), max_len=260)
+                inference = _compact_snippet(_first_nonempty_text(row.get("inference")), max_len=240)
+                action = _compact_snippet(
+                    _first_nonempty_text(row.get("clinical_action"), row.get("action")),
+                    max_len=180,
+                )
+                if not any((claim, evidence, inference, action)):
+                    continue
+                cards.append(
+                    {
+                        "node": node_name,
+                        "confidence": _normalize_router_confidence(
+                            row.get("confidence", node_confidence)
+                        ),
+                        "claim": claim,
+                        "evidence": evidence,
+                        "inference": inference,
+                        "clinical_action": action,
+                    }
+                )
+                if len(cards) >= limit:
+                    return cards
+        if len(cards) >= limit:
+            return cards
+
+    if cards:
+        return cards
+
+    # Fallback synthesis when the node returns only flat insight/action lists.
+    for node in reasoning_nodes:
+        if not isinstance(node, dict):
+            continue
+        node_name = _first_nonempty_text(node.get("node"), "deep_beta_node")
+        insights = node.get("insights") if isinstance(node.get("insights"), list) else []
+        actions = node.get("actions") if isinstance(node.get("actions"), list) else []
+        watchouts = node.get("watchouts") if isinstance(node.get("watchouts"), list) else []
+        top_claim = _compact_snippet(insights[0], max_len=220) if insights else ""
+        top_action = _compact_snippet(actions[0], max_len=180) if actions else ""
+        top_watchout = _compact_snippet(watchouts[0], max_len=240) if watchouts else ""
+        if not any((top_claim, top_action, top_watchout)):
+            continue
+        cards.append(
+            {
+                "node": node_name,
+                "confidence": _normalize_router_confidence(node.get("confidence")),
+                "claim": top_claim,
+                "evidence": top_watchout,
+                "inference": top_claim,
+                "clinical_action": top_action,
+            }
+        )
+        if len(cards) >= limit:
+            break
+    return cards
+
+
 def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
     # Deep research target intentionally large by product requirement.
     min_words = max(int(settings.deep_beta_report_min_words), 20000)
@@ -1747,6 +1876,39 @@ def _resolve_report_word_budget(research_mode: str) -> tuple[int, int, int]:
     return _resolve_deep_word_budget()
 
 
+def _resolve_adaptive_report_word_budget(
+    *,
+    research_mode: str,
+    citation_count: int,
+    deep_pass_count: int,
+    reasoning_node_count: int,
+) -> tuple[int, int, int]:
+    mode = str(research_mode or "fast").strip().lower()
+    min_words, target_words, max_words = _resolve_report_word_budget(mode)
+    if mode != "deep_beta":
+        return min_words, target_words, max_words
+
+    evidence_density = max(0, int(citation_count)) + max(0, int(deep_pass_count)) + max(
+        0, int(reasoning_node_count)
+    )
+    if evidence_density >= 30:
+        return min_words, target_words, max_words
+
+    if evidence_density >= 20:
+        adaptive_min = max(10000, int(min_words * 0.55))
+        adaptive_target = max(14000, int(target_words * 0.6))
+    elif evidence_density >= 12:
+        adaptive_min = max(8000, int(min_words * 0.45))
+        adaptive_target = max(11000, int(target_words * 0.5))
+    else:
+        adaptive_min = max(6000, int(min_words * 0.3))
+        adaptive_target = max(8500, int(target_words * 0.38))
+
+    adaptive_target = max(adaptive_target, adaptive_min + 1200)
+    adaptive_max = max(adaptive_target + 5000, int(max_words * 0.65))
+    return adaptive_min, adaptive_target, adaptive_max
+
+
 def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], list[str]]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
@@ -1758,6 +1920,7 @@ def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], lis
             "## Phương pháp truy xuất & tiêu chí chọn lọc",
             "## Hồ sơ bằng chứng & chất lượng nguồn",
             "## Tổng hợp phát hiện chính",
+            "## Chuỗi lập luận bằng chứng",
             "## Phản biện bằng chứng đối nghịch",
             "## Ứng dụng lâm sàng theo nhóm bệnh nhân",
             "## Ma trận quyết định an toàn",
@@ -1768,6 +1931,7 @@ def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], lis
             "- include direct head-to-head comparison axes when relevant (adherence, efficacy, risk, feasibility, cost)",
             "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)",
             "- include at least 3 markdown tables distributed across evidence, comparison, and implementation sections",
+            "- include a concise claim→evidence→inference→clinical-action chain for major conclusions",
             "- discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions explicitly",
         ]
         return sections, requirements
@@ -1778,12 +1942,14 @@ def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], lis
         "## Tóm tắt điều hành",
         "## Bối cảnh lâm sàng áp dụng",
         "## Phân tích chi tiết",
+        "## Chuỗi lập luận bằng chứng",
         "## Bảng tổng hợp bằng chứng",
         "## Khuyến nghị ứng dụng thực hành",
         "## Giới hạn, sai số và rủi ro pháp lý",
     ]
     requirements = [
         "- include at least 2 markdown tables (evidence + comparison/implementation)",
+        "- include brief claim→evidence→inference bullets in reasoning section",
         "- keep narrative clinician-friendly and implementation-oriented",
         "- preserve practical trade-off analysis and uncertainty notes",
     ]
@@ -1811,13 +1977,42 @@ def _ensure_deep_beta_report_artifacts(
     *,
     markdown_text: str,
     deep_pass_summaries: list[dict[str, Any]],
-    evidence_verification: dict[str, Any] | None,
-    verification_summary: dict[str, Any] | None,
+    reasoning_nodes: list[dict[str, Any]] | None = None,
+    evidence_verification: dict[str, Any] | None = None,
+    verification_summary: dict[str, Any] | None = None,
     research_mode: str = "deep_beta",
 ) -> str:
     mode = str(research_mode or "deep_beta").strip().lower()
     output = _sanitize_deep_beta_markdown_output(markdown_text)
     appendix_sections: list[str] = []
+    reasoning_cards = _build_reasoning_chain_cards(
+        reasoning_nodes if isinstance(reasoning_nodes, list) else [],
+        limit=16,
+    )
+
+    if not _has_markdown_heading(output, "## Chuỗi lập luận bằng chứng"):
+        if reasoning_cards:
+            rows = [
+                "| Node | Claim | Evidence | Inference | Clinical action | Confidence |",
+                "| --- | --- | --- | --- | --- | ---: |",
+            ]
+            for card in reasoning_cards[:10]:
+                rows.append(
+                    f"| {_escape_markdown_cell(card.get('node') or '-')} | "
+                    f"{_escape_markdown_cell(card.get('claim') or '-')} | "
+                    f"{_escape_markdown_cell(card.get('evidence') or '-')} | "
+                    f"{_escape_markdown_cell(card.get('inference') or '-')} | "
+                    f"{_escape_markdown_cell(card.get('clinical_action') or '-')} | "
+                    f"{_normalize_router_confidence(card.get('confidence')):.2f} |"
+                )
+            appendix_sections.append("## Chuỗi lập luận bằng chứng\n" + "\n".join(rows))
+        else:
+            appendix_sections.append(
+                "## Chuỗi lập luận bằng chứng\n"
+                "- Bằng chứng hiện tại chưa đủ để dựng chain chi tiết cho mọi claim.\n"
+                "- Ưu tiên bổ sung truy xuất mục tiêu vào các điểm còn thiếu hỗ trợ trước khi ra quyết định.\n"
+            )
+
     if not _has_markdown_heading(output, "## Bảng tổng hợp bằng chứng"):
         verification = evidence_verification if isinstance(evidence_verification, dict) else {}
         summary = verification_summary if isinstance(verification_summary, dict) else {}
@@ -1913,9 +2108,15 @@ def _synthesize_deep_beta_long_report(
         for item in deep_pass_summaries[:14]
         if isinstance(item, dict)
     ]
+    reasoning_chain_cards = _build_reasoning_chain_cards(reasoning_nodes, limit=18)
 
     mode = str(research_mode or "deep_beta").strip().lower()
-    min_words, target_words, max_words = _resolve_report_word_budget(mode)
+    min_words, target_words, max_words = _resolve_adaptive_report_word_budget(
+        research_mode=mode,
+        citation_count=len(compact_citations),
+        deep_pass_count=len(compact_passes),
+        reasoning_node_count=len(reasoning_chain_cards),
+    )
     section_contract, section_requirements = _resolve_report_section_contract(mode)
     section_contract_text = "\n".join(section_contract)
     section_requirements_text = "\n".join(section_requirements)
@@ -1938,7 +2139,9 @@ def _synthesize_deep_beta_long_report(
         f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
         "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
+        "- use natural transitions between sections; avoid checklist-like prose\n"
         "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
+        "- in '## Chuỗi lập luận bằng chứng', present short chains in this order: claim -> evidence -> inference -> clinical action\n"
         "- '## Kế hoạch nghiên cứu' must appear before analytic sections and contain numbered steps, including direct comparison axes when relevant\n"
         f"{section_requirements_text}\n"
         "- do not add a dedicated references/citations section in the answer body\n"
@@ -1951,6 +2154,7 @@ def _synthesize_deep_beta_long_report(
         f"contradiction_summary={json.dumps(contradiction_summary, ensure_ascii=False)}\n"
         f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
         f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
+        f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
         f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
     )
     system_prompt = (
@@ -1998,6 +2202,7 @@ def _synthesize_deep_beta_long_report(
                 f"topic={topic}\n"
                 f"existing_report={content}\n"
                 f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
+                f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
                 f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
                 f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
                 f"verification_summary={json.dumps(verification_summary, ensure_ascii=False)}\n"
@@ -2052,6 +2257,20 @@ def _synthesize_deep_beta_long_report(
                     f"{_escape_markdown_cell(top_action)} |"
                 )
 
+            chain_rows = [
+                "| Node | Claim | Evidence | Inference | Clinical action | Confidence |",
+                "| --- | --- | --- | --- | --- | ---: |",
+            ]
+            for item in reasoning_chain_cards[:16]:
+                chain_rows.append(
+                    f"| {_escape_markdown_cell(item.get('node') or '-')} | "
+                    f"{_escape_markdown_cell(item.get('claim') or '-')} | "
+                    f"{_escape_markdown_cell(item.get('evidence') or '-')} | "
+                    f"{_escape_markdown_cell(item.get('inference') or '-')} | "
+                    f"{_escape_markdown_cell(item.get('clinical_action') or '-')} | "
+                    f"{_normalize_router_confidence(item.get('confidence')):.2f} |"
+                )
+
             citation_rows = [
                 "| Source ID | Nguồn | Relevance | Ghi chú áp dụng |",
                 "| --- | --- | ---: | --- |",
@@ -2101,6 +2320,8 @@ def _synthesize_deep_beta_long_report(
                 "\n".join(pass_rows),
                 "\n\n### Ma trận reasoning nodes\n",
                 "\n".join(node_rows[:12 if mode == "deep" else len(node_rows)]),
+                "\n\n### Chuỗi lập luận claim-level\n",
+                "\n".join(chain_rows[:10 if mode == "deep" else len(chain_rows)]),
                 "\n\n### Hồ sơ nguồn mở rộng\n",
                 "\n".join(citation_rows[:14 if mode == "deep" else len(citation_rows)]),
                 "\n\n### Uncertainty & Safety Escalation Notes\n",
@@ -2127,6 +2348,7 @@ def _synthesize_deep_beta_long_report(
         return _ensure_deep_beta_report_artifacts(
             markdown_text=content,
             deep_pass_summaries=deep_pass_summaries,
+            reasoning_nodes=reasoning_nodes,
             evidence_verification=evidence_verification,
             verification_summary=verification_summary,
             research_mode=mode,
@@ -2135,6 +2357,7 @@ def _synthesize_deep_beta_long_report(
         return _ensure_deep_beta_report_artifacts(
             markdown_text=answer_markdown,
             deep_pass_summaries=deep_pass_summaries,
+            reasoning_nodes=reasoning_nodes,
             evidence_verification=evidence_verification,
             verification_summary=verification_summary,
             research_mode=mode,
@@ -3986,6 +4209,11 @@ def _build_reasoning_digest(
         llm_status = "fallback"
 
     node_rows = parallel_reasoning_nodes if isinstance(parallel_reasoning_nodes, list) else []
+    reasoning_chain_count = sum(
+        len(item.get("reasoning_chain", []))
+        for item in node_rows
+        if isinstance(item, dict) and isinstance(item.get("reasoning_chain"), list)
+    )
     completed_nodes = sum(
         1
         for item in node_rows
@@ -4006,6 +4234,7 @@ def _build_reasoning_digest(
             "deep_pass_count": max(1, int(deep_pass_count)),
             "parallel_reasoning_nodes": len(node_rows),
             "parallel_reasoning_nodes_completed": completed_nodes,
+            "reasoning_chain_items": reasoning_chain_count,
             "evidence_verification_confidence": _safe_float(
                 evidence_verification_payload.get("verification_confidence"),
                 0.0,
@@ -4351,6 +4580,7 @@ _FAST_DROP_H2_KEYWORDS = (
     "phuong phap truy xuat",
     "ho so bang chung",
     "tong hop phat hien",
+    "chuoi lap luan bang chung",
     "phan bien bang chung",
     "ung dung lam sang",
     "ma tran quyet dinh an toan",
@@ -4500,6 +4730,7 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"),
                 _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"),
                 _canonical_h2_key("Tổng hợp phát hiện chính"),
+                _canonical_h2_key("Chuỗi lập luận bằng chứng"),
                 _canonical_h2_key("Phản biện bằng chứng đối nghịch"),
                 _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"),
                 _canonical_h2_key("Ma trận quyết định an toàn"),
@@ -6223,6 +6454,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         answer_markdown = _ensure_deep_beta_report_artifacts(
             markdown_text=answer_markdown,
             deep_pass_summaries=deep_pass_summaries,
+            reasoning_nodes=deep_beta_parallel_reasoning_nodes,
             evidence_verification=deep_beta_evidence_verification,
             verification_summary={},
             research_mode=research_mode,
