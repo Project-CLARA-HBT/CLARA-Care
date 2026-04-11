@@ -108,6 +108,12 @@ _DEFAULT_MARKDOWN_RENDER_HINTS: dict[str, Any] = {
         "json",
         "yaml",
     ],
+    # Clara Research renders source intel and reasoning in dedicated side panes.
+    # Keep the answer pane focused on conclusions and actionable guidance.
+    "right_pane_source_intel": True,
+    "right_pane_reasoning": True,
+    "suppress_redundant_evidence_sections": True,
+    "enforce_full_plan_execution": True,
 }
 _VN_HTML_SOURCE_DEFINITIONS: dict[str, dict[str, Any]] = {
     "vn_moh": {
@@ -1945,6 +1951,21 @@ def _estimate_reasoning_phase(elapsed_seconds: float) -> tuple[str, str, int]:
     return ("final_response", "Đang hoàn thiện câu trả lời và chuẩn hóa citation.", 95)
 
 
+def _resolve_research_job_ml_timeout_seconds(
+    *,
+    ml_payload: dict[str, Any],
+    settings: Any,
+) -> float:
+    base_timeout_seconds = max(float(getattr(settings, "ml_service_timeout_seconds", 0.0)), 1.0)
+    baseline_timeout = max(base_timeout_seconds * 3.0, 480.0)
+    research_mode = _coerce_research_mode(ml_payload)
+    if research_mode == "deep_beta":
+        return max(base_timeout_seconds * 12.0, 1800.0)
+    if research_mode == "deep":
+        return max(base_timeout_seconds * 6.0, 900.0)
+    return baseline_timeout
+
+
 def _invoke_ml_tier2_with_progress(
     *,
     ml_payload: dict[str, Any],
@@ -1956,7 +1977,10 @@ def _invoke_ml_tier2_with_progress(
     headers: dict[str, str] = {}
     if settings.ml_internal_api_key.strip():
         headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
-    timeout_seconds = max(settings.ml_service_timeout_seconds * 3.0, 480.0)
+    timeout_seconds = _resolve_research_job_ml_timeout_seconds(
+        ml_payload=ml_payload,
+        settings=settings,
+    )
     started = datetime.now(tz=UTC)
     request_kwargs: dict[str, Any] = {"json": ml_payload, "timeout": timeout_seconds}
     if headers:

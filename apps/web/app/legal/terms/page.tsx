@@ -10,226 +10,127 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Thoả thuận pháp lý và Điều khoản chính sách | The Clara Care",
-  description:
-    "Thoả thuận pháp lý và điều khoản chính sách khi truy cập website và sử dụng dịch vụ The Clara Care.",
+  title: "Điều khoản sử dụng | The Clara Care",
+  description: "Điều khoản sử dụng áp dụng cho toàn bộ hệ thống The Clara Care và các module CLARA.",
 };
 
 const SECTIONS = [
-  { id: "intro", label: "Lời mở đầu" },
-  { id: "definitions", label: "Điều 1: Giải thích từ ngữ" },
-  { id: "prohibited", label: "Điều 2: Hành vi bị cấm" },
-  { id: "customer-rights", label: "Điều 3: Quyền & nghĩa vụ khách hàng" },
-  { id: "provider-rights", label: "Điều 4: Quyền & trách nhiệm nhà cung cấp" },
-  { id: "payment", label: "Điều 5: Thanh toán" },
-  { id: "renewal", label: "Điều 6: Gia hạn dịch vụ" },
-  { id: "suspension", label: "Điều 7: Tạm ngưng/chấm dứt" },
-  { id: "update-info", label: "Điều 8: Điều chỉnh thông tin" },
-  { id: "support", label: "Điều 9: Hỗ trợ khách hàng" },
-  { id: "liability", label: "Điều 10: Giới hạn trách nhiệm" },
-  { id: "privacy-link", label: "Điều 11: Bảo mật thông tin" },
-  { id: "free-services", label: "Điều 12: Dịch vụ miễn phí" },
-  { id: "refund", label: "Điều 13: Hoàn tiền" },
-  { id: "reservation", label: "Điều 14: Bảo lưu dịch vụ" },
-  { id: "final-terms", label: "Điều khoản cuối" },
-  { id: "entity-info", label: "Thông tin chủ thể" },
+  { id: "acceptance", label: "Chấp thuận điều khoản" },
+  { id: "accounts", label: "Tài khoản và điều kiện truy cập" },
+  { id: "scope", label: "Phạm vi sử dụng dịch vụ" },
+  { id: "prohibited", label: "Hành vi bị cấm" },
+  { id: "ai-limits", label: "Giới hạn của AI" },
+  { id: "data-obligations", label: "Trách nhiệm dữ liệu người dùng" },
+  { id: "service-operation", label: "Vận hành và tính sẵn sàng" },
+  { id: "enforcement", label: "Tạm ngưng và chấm dứt" },
+  { id: "liability", label: "Giới hạn trách nhiệm" },
+  { id: "changes", label: "Cập nhật điều khoản và luật áp dụng" },
+  { id: "entity-info", label: "Thông tin chủ thể vận hành" },
 ] as const;
 
 export default function TermsOfServicePage() {
   return (
     <LegalPageShell
       policyKey="terms"
-      title="Thoả thuận pháp lý và Điều khoản chính sách"
-      summary="Văn bản này được biên soạn dựa trên cấu trúc điều khoản bạn cung cấp, chuẩn hoá cho hệ sinh thái The Clara Care và áp dụng cho toàn bộ truy cập website, API, workspace và dịch vụ liên quan."
+      title="Điều khoản sử dụng The Clara Care"
+      summary="Điều khoản này điều chỉnh việc truy cập và sử dụng toàn bộ nền tảng CLARA, bao gồm Research, Council, Self-Med, CareGuard, Scribe và Control Tower."
       updatedAt={LEGAL_UPDATED_AT}
       sections={SECTIONS.map((item) => ({ id: item.id, label: item.label }))}
       highlights={[
         `Domain chính thức: ${LEGAL_PRIMARY_DOMAIN}`,
         `Chủ thể vận hành: ${LEGAL_OPERATOR_NAME}`,
         `Phiên bản điều khoản: ${LEGAL_POLICY_VERSION}`,
-        "Điều khoản có thể được cập nhật theo thời gian và có hiệu lực ngay khi công bố.",
-        "Mọi hoạt động dùng dịch vụ đồng nghĩa bạn đã đọc và chấp thuận chính sách hiện hành.",
+        "Tài khoản production cần xác nhận đầy đủ Terms, Privacy và Medical Consent khi đăng ký.",
       ]}
     >
-      <LegalSection id="intro" title="Lời mở đầu">
+      <LegalSection id="acceptance" title="1. Chấp thuận điều khoản">
         <p>
-          Chào mừng bạn đến với The Clara Care. Vui lòng đọc kỹ thoả thuận này trước khi đăng ký hoặc sử dụng dịch vụ vì nội dung
-          liên quan trực tiếp đến quyền, nghĩa vụ và giới hạn trách nhiệm của các bên trong suốt vòng đời sử dụng dịch vụ.
-        </p>
-        <p>
-          Việc bạn tiếp tục truy cập website, ứng dụng hoặc API của The Clara Care được hiểu là bạn đã đồng ý với toàn bộ điều
-          khoản trong văn bản này.
+          Khi truy cập hoặc tiếp tục sử dụng dịch vụ The Clara Care, bạn xác nhận đã đọc, hiểu và đồng ý tuân thủ Điều khoản sử
+          dụng cùng các chính sách liên quan tại Policy Hub.
         </p>
       </LegalSection>
 
-      <LegalSection id="definitions" title="Điều 1: Giải thích từ ngữ">
+      <LegalSection id="accounts" title="2. Tài khoản và điều kiện truy cập">
         <ul className="list-disc space-y-2 pl-5">
+          <li>Bạn chịu trách nhiệm về tính chính xác của thông tin đăng ký và bảo mật thông tin đăng nhập.</li>
+          <li>Không được chia sẻ tài khoản hoặc cho phép truy cập trái phép dưới danh nghĩa của bạn.</li>
           <li>
-            <span className="font-bold">The Clara Care / Chúng tôi:</span> Hệ sinh thái sản phẩm số do chủ thể vận hành hợp pháp
-            triển khai và quản trị.
-          </li>
-          <li>
-            <span className="font-bold">Bạn / Khách hàng:</span> Cá nhân hoặc tổ chức truy cập website và/hoặc sử dụng dịch vụ do
-            The Clara Care cung cấp.
-          </li>
-          <li>
-            <span className="font-bold">Dịch vụ:</span> Tất cả sản phẩm, tính năng, API và công cụ hiển thị công khai trên website
-            và hệ quản trị của The Clara Care.
-          </li>
-          <li>
-            <span className="font-bold">Control Panel:</span> Khu vực quản trị dịch vụ cho phép bạn quản lý tài nguyên, cấu hình,
-            trạng thái vận hành và thông tin tài khoản.
-          </li>
-          <li>
-            <span className="font-bold">Admin:</span> Quyền quản trị cao nhất của một hệ thống hoặc phân hệ kỹ thuật.
+            Ở môi trường production, đăng ký tài khoản yêu cầu xác nhận đầy đủ Điều khoản sử dụng, Chính sách quyền riêng tư và
+            Đồng thuận y tế theo cấu hình hệ thống.
           </li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="prohibited" title="Điều 2: Các hành vi bị cấm">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Sử dụng dịch vụ cho mục đích vi phạm pháp luật Việt Nam, điều ước quốc tế hoặc chuẩn mực đạo đức xã hội.</li>
-          <li>
-            Lưu trữ/phát tán nội dung bất hợp pháp, xuyên tạc, kích động bạo lực, nội dung bị cấm, nội dung xâm phạm quyền hợp
-            pháp của tổ chức/cá nhân khác.
-          </li>
-          <li>Tải lên mã độc, virus, script phá hoại hoặc công cụ gây gián đoạn dịch vụ, hạ tầng, mạng và dữ liệu.</li>
-          <li>Giả mạo tổ chức, cá nhân hoặc nhân sự của The Clara Care để lừa đảo, trục lợi hoặc phát tán thông tin sai sự thật.</li>
-          <li>Khai thác tài nguyên vượt ngưỡng cho phép hoặc cố ý gây suy giảm chất lượng cho người dùng khác.</li>
-          <li>Thực hiện hành vi spam, lạm dụng email/tin nhắn/cuộc gọi trái quy định pháp luật hiện hành.</li>
-          <li>Vi phạm quyền sở hữu trí tuệ, bản quyền phần mềm, nhãn hiệu hoặc bí mật kinh doanh.</li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="customer-rights" title="Điều 3: Quyền và nghĩa vụ của khách hàng">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Bạn phải có năng lực pháp lý phù hợp và chịu trách nhiệm về tính trung thực của thông tin đăng ký.</li>
-          <li>Bạn phải chủ động cập nhật thông tin khi thay đổi; quá hạn cập nhật có thể bị tạm ngưng dịch vụ.</li>
-          <li>Bạn tự quản lý mật khẩu, token, mã xác thực và chịu trách nhiệm mọi hoạt động trên tài khoản của mình.</li>
-          <li>
-            Bạn phải tự sao lưu dữ liệu quan trọng định kỳ; bản sao lưu hệ thống chủ yếu phục vụ mục tiêu khôi phục sự cố hạ tầng.
-          </li>
-          <li>Bạn chịu trách nhiệm nội dung lưu trữ, xử lý và truyền tải thông qua tài nguyên đã đăng ký.</li>
-          <li>
-            Bạn đồng ý nhận các thông báo cần thiết về vận hành như bảo trì, cảnh báo bảo mật, gia hạn, thay đổi điều khoản và
-            thông báo khẩn.
-          </li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="provider-rights" title="Điều 4: Quyền và trách nhiệm của nhà cung cấp">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Hỗ trợ kỹ thuật trong phạm vi dịch vụ và quyền hạn vận hành hợp pháp của The Clara Care.</li>
-          <li>Tiếp nhận và xử lý khiếu nại theo quy trình nội bộ khi khách hàng cung cấp đủ thông tin xác thực.</li>
-          <li>Có quyền yêu cầu khách hàng phối hợp xác minh thông tin khi phát hiện dấu hiệu bất thường hoặc giả mạo.</li>
-          <li>
-            Có quyền tạm ngưng/chấm dứt dịch vụ và/hoặc chuyển hồ sơ đến cơ quan có thẩm quyền nếu phát hiện vi phạm nghiêm trọng.
-          </li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="payment" title="Điều 5: Quy định thanh toán">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Phí dịch vụ được công bố theo từng gói, từng chu kỳ và có thể bao gồm thuế/phí theo quy định.</li>
-          <li>Hoá đơn điện tử được phát hành sau khi thanh toán hợp lệ và dịch vụ kích hoạt thành công.</li>
-          <li>Thông tin hoá đơn phải thống nhất với chủ thể sở hữu dịch vụ theo hồ sơ đã xác minh.</li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="renewal" title="Điều 6: Gia hạn dịch vụ">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Bạn cần chủ động theo dõi hạn dùng và gia hạn trước ngày hết hạn để tránh gián đoạn dịch vụ.</li>
-          <li>Gia hạn chỉ có hiệu lực khi hệ thống ghi nhận thanh toán thành công.</li>
-          <li>Tính năng auto-renew là công cụ hỗ trợ, không thay thế trách nhiệm chủ động quản trị dịch vụ của khách hàng.</li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="suspension" title="Điều 7: Tạm ngưng và chấm dứt sử dụng dịch vụ">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>Dịch vụ có thể tạm ngưng/chấm dứt khi hết hạn, vi phạm điều khoản hoặc theo yêu cầu cơ quan có thẩm quyền.</li>
-          <li>Khách hàng phải tự di chuyển dữ liệu trước khi chấm dứt; dữ liệu có thể bị xoá sau thời hạn lưu giữ hệ thống.</li>
-          <li>Với dịch vụ trial/free, tài nguyên có thể bị thu hồi ngay khi kết thúc thời gian dùng thử.</li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection id="update-info" title="Điều 8: Bổ sung, điều chỉnh thông tin khách hàng">
+      <LegalSection id="scope" title="3. Phạm vi sử dụng dịch vụ">
         <p>
-          Khách hàng có quyền yêu cầu cập nhật thông tin chủ thể, thông số dịch vụ hoặc dữ liệu hồ sơ sai lệch. Các yêu cầu hợp lệ
-          được xử lý theo SLA vận hành. Một số nghiệp vụ có thể phát sinh chi phí xử lý theo chính sách tại thời điểm yêu cầu.
+          The Clara Care cung cấp nền tảng AI hỗ trợ thông tin y khoa tham khảo, quản trị tri thức và hỗ trợ quy trình lâm sàng.
+          Dịch vụ bao gồm giao diện web, API và các module công bố chính thức trên domain của hệ thống.
         </p>
       </LegalSection>
 
-      <LegalSection id="support" title="Điều 9: Hỗ trợ khách hàng">
+      <LegalSection id="prohibited" title="4. Hành vi bị cấm">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Hỗ trợ tập trung cho chủ thể sở hữu dịch vụ hoặc người được uỷ quyền hợp lệ.</li>
-          <li>Khách hàng cần sao lưu dữ liệu trước khi yêu cầu thao tác kỹ thuật chuyên sâu.</li>
-          <li>
-            Trong trường hợp cần hỗ trợ từ xa qua công cụ điều khiển, khách hàng tự chịu trách nhiệm bảo mật dữ liệu ngoài phạm vi
-            thao tác dịch vụ đã yêu cầu.
-          </li>
+          <li>Sử dụng hệ thống cho hoạt động vi phạm pháp luật hoặc vượt ranh giới đạo đức nghề nghiệp.</li>
+          <li>Cố ý nhập dữ liệu sai lệch nhằm tạo khuyến nghị nguy hiểm hoặc gây hiểu nhầm lâm sàng.</li>
+          <li>Can thiệp trái phép vào hạ tầng, token phiên, cơ chế xác thực, hoặc luồng kiểm soát bảo mật.</li>
+          <li>Tải lên mã độc, dữ liệu bất hợp pháp hoặc nội dung xâm phạm quyền hợp pháp của bên thứ ba.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="liability" title="Điều 10: Giới hạn trách nhiệm và từ chối bảo đảm">
+      <LegalSection id="ai-limits" title="5. Giới hạn của AI và trách nhiệm chuyên môn">
+        <p>
+          Kết quả do CLARA sinh ra chỉ mang tính hỗ trợ tham khảo. Hệ thống không thay thế bác sĩ, dược sĩ hoặc chuyên gia có thẩm
+          quyền trong chẩn đoán, kê đơn và quyết định điều trị.
+        </p>
+        <p>
+          Mọi hành động có ảnh hưởng lâm sàng phải được xác nhận độc lập bởi nhân sự chuyên môn phù hợp trước khi áp dụng.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="data-obligations" title="6. Trách nhiệm dữ liệu của người dùng">
         <ul className="list-disc space-y-2 pl-5">
-          <li>The Clara Care không chịu trách nhiệm cho thiết bị đầu cuối và môi trường truy cập của khách hàng.</li>
-          <li>Không bảo đảm dịch vụ không có lỗi tuyệt đối trong mọi thời điểm hoặc mọi điều kiện mạng.</li>
-          <li>
-            Không chịu trách nhiệm cho thiệt hại phát sinh do hành vi truy cập trái phép, mã độc, lạm dụng tài khoản hoặc lỗi do bên
-            thứ ba nằm ngoài khả năng kiểm soát hợp lý.
-          </li>
-          <li>
-            Dịch vụ AI chỉ mang tính hỗ trợ tham khảo; mọi quyết định nghiệp vụ và lâm sàng thuộc trách nhiệm của người dùng có thẩm
-            quyền.
-          </li>
+          <li>Bạn chịu trách nhiệm đối với dữ liệu nhập vào, dữ liệu tải lên và các quyết định dựa trên dữ liệu đó.</li>
+          <li>Bạn cần đảm bảo có quyền hợp pháp khi đưa dữ liệu của bên thứ ba vào hệ thống.</li>
+          <li>Dữ liệu nhạy cảm cần được quản trị theo quy trình nội bộ của tổ chức sử dụng dịch vụ.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="privacy-link" title="Điều 11: Bảo mật thông tin khách hàng">
+      <LegalSection id="service-operation" title="7. Vận hành dịch vụ và tính sẵn sàng">
         <p>
-          The Clara Care quản trị dữ liệu theo nguyên tắc tối thiểu, mục đích rõ ràng và kiểm soát truy cập theo vai trò. Chi tiết
-          cách thu thập, xử lý và lưu giữ dữ liệu được công bố riêng tại Chính sách quyền riêng tư.
+          The Clara Care vận hành theo nguyên tắc an toàn và có thể thay đổi cấu hình kỹ thuật, bảo trì hoặc giới hạn truy cập tạm
+          thời để bảo vệ hệ thống.
+        </p>
+        <p>
+          Chúng tôi không cam kết dịch vụ không gián đoạn tuyệt đối trong mọi thời điểm hoặc mọi điều kiện mạng.
         </p>
       </LegalSection>
 
-      <LegalSection id="free-services" title="Điều 12: Dịch vụ miễn phí">
+      <LegalSection id="enforcement" title="8. Tạm ngưng, chấm dứt và thực thi chính sách">
         <p>
-          The Clara Care có thể cung cấp một số gói miễn phí hoặc ưu đãi dùng thử theo từng thời điểm. Phạm vi tính năng, hạn mức
-          tài nguyên và thời hạn sử dụng có thể thay đổi theo chính sách vận hành mà không cần báo trước riêng lẻ cho từng người
-          dùng.
+          The Clara Care có quyền tạm ngưng hoặc chấm dứt quyền truy cập khi phát hiện vi phạm điều khoản, nguy cơ bảo mật, hoặc
+          theo yêu cầu từ cơ quan có thẩm quyền.
         </p>
       </LegalSection>
 
-      <LegalSection id="refund" title="Điều 13: Chính sách hoàn tiền">
+      <LegalSection id="liability" title="9. Giới hạn trách nhiệm">
         <p>
-          Chính sách hoàn tiền áp dụng theo từng loại dịch vụ, từng chu kỳ và tình trạng kích hoạt thực tế. Giá trị hoàn có thể bị
-          khấu trừ phần thời gian đã sử dụng, chi phí phát sinh, thuế/phí và phí chuyển khoản ngân hàng (nếu có).
-        </p>
-        <p>
-          Các trường hợp vượt thời hạn hoàn tiền cam kết sẽ xử lý theo điều khoản chất lượng dịch vụ tương ứng tại thời điểm yêu
-          cầu.
+          Trong phạm vi pháp luật cho phép, The Clara Care không chịu trách nhiệm cho thiệt hại gián tiếp, tổn thất phát sinh từ
+          việc sử dụng sai mục đích, cấu hình sai, hoặc không tuân thủ yêu cầu xác nhận chuyên môn.
         </p>
       </LegalSection>
 
-      <LegalSection id="reservation" title="Điều 14: Chính sách bảo lưu thời gian dịch vụ">
+      <LegalSection id="changes" title="10. Cập nhật điều khoản và luật áp dụng">
         <p>
-          Trong một số gói dịch vụ đủ điều kiện, khách hàng có thể yêu cầu bảo lưu thời gian chưa sử dụng để tránh lãng phí tài
-          nguyên. Chính sách bảo lưu chỉ áp dụng một số dịch vụ chính và có điều kiện cụ thể theo quy định vận hành hiện hành.
+          Điều khoản có thể được cập nhật để phù hợp với thay đổi sản phẩm, kiến trúc hệ thống hoặc yêu cầu pháp lý. Phiên bản mới
+          có hiệu lực từ thời điểm công bố tại Policy Hub.
+        </p>
+        <p>
+          Tranh chấp phát sinh sẽ ưu tiên giải quyết bằng thương lượng; nếu không đạt kết quả, tranh chấp được xử lý theo pháp luật
+          Việt Nam.
         </p>
       </LegalSection>
 
-      <LegalSection id="final-terms" title="Điều khoản cuối">
-        <p>
-          Chúng tôi có quyền điều chỉnh, cập nhật, bổ sung hoặc loại bỏ một phần/toàn bộ điều khoản để phù hợp thực tiễn vận hành và
-          yêu cầu pháp luật. Bản cập nhật được công bố công khai trên website và có hiệu lực từ thời điểm công bố.
-        </p>
-        <p>
-          Nếu một điều khoản bị tuyên vô hiệu bởi cơ quan có thẩm quyền, các điều khoản còn lại vẫn giữ nguyên hiệu lực. Mọi tranh
-          chấp phát sinh được ưu tiên giải quyết bằng thương lượng; nếu không thành, sẽ xử lý theo pháp luật Việt Nam.
-        </p>
-      </LegalSection>
-
-      <LegalSection id="entity-info" title="Thông tin chủ thể vận hành">
+      <LegalSection id="entity-info" title="11. Thông tin chủ thể vận hành">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <span className="font-bold">Tên chủ thể:</span> {LEGAL_OPERATOR_NAME}

@@ -2460,7 +2460,11 @@ export async function runResearchTier2(
     tables: true,
     mermaid: false,
     inline_references: false,
-    chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
+    chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"],
+    right_pane_source_intel: true,
+    right_pane_reasoning: true,
+    suppress_redundant_evidence_sections: true,
+    enforce_full_plan_execution: true
   };
 
   if (uploadedFileIds.length) {
@@ -2500,7 +2504,11 @@ export async function createResearchTier2Job(
       tables: true,
       mermaid: false,
       inline_references: false,
-      chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
+      chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"],
+      right_pane_source_intel: true,
+      right_pane_reasoning: true,
+      suppress_redundant_evidence_sections: true,
+      enforce_full_plan_execution: true
     }
   };
 

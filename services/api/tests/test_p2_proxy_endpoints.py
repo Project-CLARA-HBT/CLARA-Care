@@ -66,6 +66,48 @@ def _login(email: str) -> str:
     return token
 
 
+def test_resolve_research_job_ml_timeout_seconds_extends_deep_modes() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    class _Settings:
+        ml_service_timeout_seconds = 30.0
+
+    settings = _Settings()
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "fast"},
+        settings=settings,
+    ) == 480.0
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "deep"},
+        settings=settings,
+    ) == 900.0
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "deep_beta"},
+        settings=settings,
+    ) == 1800.0
+
+
+def test_resolve_research_job_ml_timeout_seconds_scales_with_large_base_timeout() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    class _Settings:
+        ml_service_timeout_seconds = 400.0
+
+    settings = _Settings()
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "fast"},
+        settings=settings,
+    ) == 1200.0
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "deep"},
+        settings=settings,
+    ) == 2400.0
+    assert research_endpoint._resolve_research_job_ml_timeout_seconds(
+        ml_payload={"research_mode": "deep_beta"},
+        settings=settings,
+    ) == 4800.0
+
+
 @pytest.mark.parametrize(
     ("email", "api_path", "ml_path"),
     [
@@ -145,6 +187,10 @@ def test_new_proxy_endpoints_success(
                 "json",
                 "yaml",
             ],
+            "right_pane_source_intel": True,
+            "right_pane_reasoning": True,
+            "suppress_redundant_evidence_sections": True,
+            "enforce_full_plan_execution": True,
         }
     if api_path == "/api/v1/careguard/analyze":
         expected_payload["external_ddi_enabled"] = False
@@ -513,6 +559,16 @@ def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> N
     fetched = get_response.json()
     assert fetched["job_id"] == job_id
     assert fetched["query"] == payload["query"]
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).first()
+        assert row is not None
+        assert isinstance(row.request_payload, dict)
+        render_hints = row.request_payload.get("render_hints")
+        assert isinstance(render_hints, dict)
+        assert render_hints.get("right_pane_source_intel") is True
+        assert render_hints.get("right_pane_reasoning") is True
+        assert render_hints.get("suppress_redundant_evidence_sections") is True
+        assert render_hints.get("enforce_full_plan_execution") is True
 
 
 def test_research_tier2_job_create_accepts_deep_beta_mode(

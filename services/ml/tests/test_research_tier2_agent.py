@@ -1801,6 +1801,110 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
     assert "## Nguồn tham chiếu" not in answer
 
 
+def test_run_research_tier2_deep_beta_applies_length_enrichment_without_utc_nameerror(
+    monkeypatch,
+):
+    def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
+        return RagResult(
+            query=query,
+            retrieved_ids=["doc-beta-1"],
+            answer="Tom tat ngan.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[
+                {
+                    "id": "doc-beta-1",
+                    "source": "pubmed",
+                    "title": "Deep beta evidence",
+                    "text": "Clinical evidence summary.",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
+                    "score": 0.88,
+                }
+            ],
+            context_debug={
+                "relevance": 0.88,
+                "low_context_threshold": kwargs.get("low_context_threshold", 0.12),
+                "source_counts": {"pubmed": 1},
+                "retrieval_trace": {
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 1}
+                    ],
+                    "index_summary": {"selected_count": 1, "retrieved_count": 1},
+                    "crawl_summary": {"domains": []},
+                    "search_plan": {"query": query},
+                },
+            },
+            flow_events=[],
+            trace={"retrieval": {"source_attempts": []}},
+        )
+
+    def _fake_factcheck(answer: str, retrieved_context: list[dict]) -> SimpleNamespace:
+        return SimpleNamespace(
+            stage="fides_lite",
+            verdict="pass",
+            severity="low",
+            confidence=0.9,
+            supported_claims=1,
+            total_claims=1,
+            unsupported_claims=[],
+            evidence_count=max(len(retrieved_context), 1),
+            note="OK",
+            verification_matrix=[],
+            contradiction_summary={
+                "version": "claim-v1",
+                "has_contradiction": False,
+                "contradiction_count": 0,
+                "claims": [],
+                "details": [],
+                "note": "No contradiction detected.",
+            },
+        )
+
+    monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
+    monkeypatch.setattr(tier2, "run_fides_lite", _fake_factcheck)
+    monkeypatch.setattr(
+        tier2,
+        "_build_plan_steps",
+        lambda topic, source_mode, *, research_mode: [
+            tier2.PlanStep(step="scope_question", objective="scope", output="scope output"),
+            tier2.PlanStep(step="collect_evidence", objective="collect", output="collect output"),
+            tier2.PlanStep(step="synthesize_findings", objective="synthesize", output="synthesize output"),
+            tier2.PlanStep(step="clinical_translation", objective="translate", output="translate output"),
+        ],
+    )
+    monkeypatch.setattr(
+        tier2,
+        "_synthesize_deep_beta_long_report",
+        lambda *args, **kwargs: "## Kết luận nhanh\nBản nháp ngắn.",
+    )
+
+    result = tier2.run_research_tier2(
+        {
+            "query": "Deep-beta enrichment regression check.",
+            "research_mode": "deep_beta",
+            "deep_pass_count": 2,
+            "strict_deepseek_required": False,
+            "render_hints": {
+                "right_pane_source_intel": True,
+                "right_pane_reasoning": True,
+                "suppress_redundant_evidence_sections": True,
+                "enforce_full_plan_execution": True,
+            },
+        }
+    )
+
+    assert result["research_mode"] == "deep_beta"
+    assert isinstance(result.get("flow_events"), list)
+    enrichment_events = [
+        event
+        for event in result["flow_events"]
+        if str(event.get("stage")) == "deep_beta_length_enrichment"
+    ]
+    assert enrichment_events
+    assert enrichment_events[-1].get("status") == "completed"
+    assert tier2._markdown_word_count(str(result.get("answer_markdown", ""))) >= 1500
+    assert "## Chuỗi lập luận bằng chứng" not in str(result.get("answer_markdown", ""))
+
+
 def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
     def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
         generation_enabled = bool(kwargs.get("generation_enabled", True))
@@ -2095,6 +2199,102 @@ def test_sanitize_user_facing_answer_markdown_deep_keeps_deep_sections() -> None
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
     assert "## Ma trận quyết định an toàn" in cleaned
+
+
+def test_sanitize_user_facing_answer_markdown_hides_redundant_intel_sections() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Tóm tắt ngắn.\n\n"
+        "## Chuỗi lập luận bằng chứng\n"
+        "| Node | Claim |\n"
+        "| --- | --- |\n"
+        "| n1 | c1 |\n\n"
+        "## Bảng tổng hợp bằng chứng\n"
+        "| Chỉ số | Giá trị |\n"
+        "| --- | --- |\n"
+        "| Supported | 3 |\n\n"
+        "## Ma trận quyết định an toàn\n"
+        "| Mục đánh giá | Mức hiện tại | Hành động khuyến nghị |\n"
+        "| --- | --- | --- |\n"
+        "| Mức rủi ro tổng quát | Trung bình | Theo dõi sát |\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(
+        raw,
+        research_mode="deep_beta",
+        hide_redundant_intel_sections=True,
+    )
+    assert "## Chuỗi lập luận bằng chứng" not in cleaned
+    assert "## Bảng tổng hợp bằng chứng" not in cleaned
+    assert "## Ma trận quyết định an toàn" in cleaned
+
+
+def test_build_research_plan_markdown_keeps_all_plan_steps() -> None:
+    plan_steps = [
+        tier2.PlanStep(step=f"step_{index}", objective=f"Objective {index}", output=f"Output {index}")
+        for index in range(1, 11)
+    ]
+    markdown = tier2._build_research_plan_markdown("Deep topic", plan_steps)
+    assert "1. [step_1]" in markdown
+    assert "10. [step_10]" in markdown
+
+
+def test_build_non_redundant_plan_expansion_markdown_expands_without_intel_sections() -> None:
+    plan_steps = [
+        tier2.PlanStep(
+            step=f"step_{index}",
+            objective=f"Objective {index}",
+            output=f"Output {index}",
+        )
+        for index in range(1, 4)
+    ]
+    citations = [
+        tier2.Citation(
+            source_id="pubmed-1",
+            source="pubmed",
+            title="Hypertension and diabetes evidence",
+            url="",
+            relevance="high",
+        )
+    ]
+    expanded = tier2._build_non_redundant_plan_expansion_markdown(
+        topic="Hypertension with T2DM",
+        answer_markdown="## Kết luận nhanh\nNội dung baseline ngắn.",
+        plan_steps=plan_steps,
+        citations=citations,
+        deep_pass_summaries=[{"pass_index": 1}],
+        reasoning_nodes=[{"status": "completed"}],
+        research_mode="deep_beta",
+    )
+    assert "## Triển khai đầy đủ kế hoạch" in expanded
+    assert "### Bước 1: step_1" in expanded
+    assert "### Bước 3: step_3" in expanded
+    assert "## Chuỗi lập luận bằng chứng" not in expanded
+    assert "## Bảng tổng hợp bằng chứng" not in expanded
+    assert tier2._markdown_word_count(expanded) >= 900
+
+
+def test_build_non_redundant_plan_expansion_markdown_avoids_duplicate_full_plan_sections() -> None:
+    plan_steps = [
+        tier2.PlanStep(step="scope_question", objective="scope", output="scope output"),
+        tier2.PlanStep(step="collect_evidence", objective="collect", output="collect output"),
+    ]
+    base_answer = (
+        "## Kết luận nhanh\nNội dung baseline.\n\n"
+        "## Kế hoạch nghiên cứu\n1. [scope_question] Scope.\n\n"
+        "## Triển khai đầy đủ kế hoạch\n"
+        "### Bước 1: scope_question\nNội dung đã có sẵn.\n"
+    )
+    expanded = tier2._build_non_redundant_plan_expansion_markdown(
+        topic="Regression guard",
+        answer_markdown=base_answer,
+        plan_steps=plan_steps,
+        citations=[],
+        deep_pass_summaries=[],
+        reasoning_nodes=[],
+        research_mode="deep_beta",
+    )
+    assert expanded.count("## Triển khai đầy đủ kế hoạch") == 1
+    assert "### Phân tích chuyên sâu bổ sung 1" in expanded
 
 
 def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:

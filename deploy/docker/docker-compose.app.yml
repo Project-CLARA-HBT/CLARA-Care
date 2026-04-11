@@ -17,7 +17,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://clara:clara_dev_password@postgres:5432/clara}
       DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-false}
       DATABASE_FALLBACK_URL: ${DATABASE_FALLBACK_URL:-sqlite+pysqlite:////data/clara.db}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://clara.thiennn.icu}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://theclaracare.com}
       CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
       CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-CSRF-Token}
       CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}

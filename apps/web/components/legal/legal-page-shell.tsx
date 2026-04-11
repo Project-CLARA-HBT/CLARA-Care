@@ -30,28 +30,30 @@ const POLICY_NAV_ITEMS: LegalNavItem[] = [
   {
     key: "privacy",
     href: "/legal/privacy",
-    shortLabel: "Privacy",
+    shortLabel: "Riêng tư",
     title: "Chính sách quyền riêng tư",
   },
   {
     key: "terms",
     href: "/legal/terms",
-    shortLabel: "Terms",
+    shortLabel: "Điều khoản",
     title: "Điều khoản sử dụng",
   },
   {
     key: "consent",
     href: "/legal/consent",
-    shortLabel: "Consent",
+    shortLabel: "Đồng thuận",
     title: "Đồng thuận y tế",
   },
   {
     key: "cookies",
     href: "/legal/cookies",
-    shortLabel: "Cookies",
+    shortLabel: "Cookie",
     title: "Chính sách cookie",
   },
 ];
+
+const GOVERNED_MODULES = ["Research", "Council", "Self-Med", "CareGuard", "Scribe", "Control Tower"] as const;
 
 export function LegalSection({ id, title, children }: LegalSectionProps) {
   return (
@@ -77,8 +79,10 @@ export default function LegalPageShell({
         <section className="chrome-panel rounded-[1.9rem] border border-[color:var(--shell-border)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Center</p>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">Bộ chính sách vận hành và bảo vệ dữ liệu cho toàn bộ hệ thống.</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Hub</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                Bộ chính sách vận hành, an toàn lâm sàng và quản trị dữ liệu cho toàn hệ thống CLARA.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
@@ -103,13 +107,13 @@ export default function LegalPageShell({
 
           <div className="mt-5 flex flex-wrap gap-2">
             <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300">
-              Branding: The Clara Care
+              Safety-First AI
             </span>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Cập nhật: {updatedAt}
             </span>
             <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
-              Hiệu lực toàn hệ thống
+              Áp dụng: Web · API · ML
             </span>
           </div>
 
@@ -126,6 +130,17 @@ export default function LegalPageShell({
             </div>
           ) : null}
 
+          <div className="mt-5 flex flex-wrap gap-2">
+            {GOVERNED_MODULES.map((module) => (
+              <span
+                key={module}
+                className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--text-secondary)]"
+              >
+                {module}
+              </span>
+            ))}
+          </div>
+
           <nav className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {POLICY_NAV_ITEMS.map((item) => {
               const active = policyKey === item.key;
@@ -134,7 +149,7 @@ export default function LegalPageShell({
                   key={item.key}
                   href={item.href}
                   className={[
-                    "rounded-xl border px-3 py-3 transition",
+                    "chrome-nav-link rounded-xl border px-3 py-3",
                     active
                       ? "border-cyan-400/45 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
@@ -175,9 +190,9 @@ export default function LegalPageShell({
             <div className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">Ghi chú tuân thủ</p>
               <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--text-secondary)]">
-                <li>Policy này áp dụng cho tất cả module thuộc The Clara Care.</li>
-                <li>Trong xung đột văn bản, ưu tiên phiên bản cập nhật mới nhất tại Policy Center.</li>
-                <li>Dữ liệu lâm sàng luôn cần xác nhận bởi chuyên môn y tế trước khi hành động.</li>
+                <li>Chính sách áp dụng cho toàn bộ module thuộc hệ sinh thái The Clara Care.</li>
+                <li>Trong xung đột văn bản, ưu tiên phiên bản cập nhật mới nhất tại Policy Hub.</li>
+                <li>Kết quả AI chỉ có giá trị hỗ trợ; quyết định lâm sàng cần xác nhận chuyên môn trước khi hành động.</li>
               </ul>
             </div>
           </aside>

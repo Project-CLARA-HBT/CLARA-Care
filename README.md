@@ -4,7 +4,7 @@
 [![Phát hành](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/release.yml/badge.svg)](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/release.yml)
 [![Triển khai](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/cd.yml/badge.svg)](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/cd.yml)
 [![Giấy phép](https://img.shields.io/github/license/Project-CLARA-HBT/CLARA-Care)](LICENSE)
-[![Website](https://img.shields.io/badge/Website-clara.thiennn.icu-0A66C2?logo=google-chrome&logoColor=white)](https://clara.thiennn.icu)
+[![Website](https://img.shields.io/badge/Website-theclaracare.com-0A66C2?logo=google-chrome&logoColor=white)](https://theclaracare.com)
 
 Nền tảng trợ lý y khoa đa mô-đun theo định hướng **Safety-first AI** cho bối cảnh gia đình và hội chẩn tham khảo.
 

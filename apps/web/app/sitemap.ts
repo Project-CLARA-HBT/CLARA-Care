@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://clara.thiennn.icu").replace(/\/+$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theclaracare.com").replace(/\/+$/, "");
 
 const ROUTES = [
   "",
@@ -28,4 +28,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === "" ? 1 : path.startsWith("/legal") ? 0.7 : 0.8,
   }));
 }
-

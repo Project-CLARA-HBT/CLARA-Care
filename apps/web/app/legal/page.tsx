@@ -17,39 +17,66 @@ export const metadata: Metadata = {
 const LEGAL_ITEMS = [
   {
     href: "/legal/privacy",
-    shortLabel: "Privacy",
+    shortLabel: "Riêng tư",
     title: "Chính sách quyền riêng tư",
     detail:
-      "Giải thích dữ liệu nào được thu thập, mục đích sử dụng, thời gian lưu trữ, quyền chủ thể dữ liệu và cơ chế phản hồi yêu cầu.",
+      "Nêu rõ dữ liệu tài khoản, dữ liệu vận hành và dữ liệu lâm sàng tham khảo được thu thập như thế nào, dùng vào mục đích gì và được bảo vệ ra sao.",
   },
   {
     href: "/legal/terms",
-    shortLabel: "Terms",
+    shortLabel: "Điều khoản",
     title: "Điều khoản sử dụng",
     detail:
-      "Quy định quyền và nghĩa vụ khi dùng The Clara Care, phạm vi sử dụng hợp lệ, giới hạn trách nhiệm và điều kiện tạm ngưng tài khoản.",
+      "Xác định phạm vi sử dụng hợp lệ cho các module CLARA, trách nhiệm người dùng, giới hạn của AI và cơ chế tạm ngưng/chấm dứt truy cập.",
   },
   {
     href: "/legal/consent",
-    shortLabel: "Consent",
+    shortLabel: "Đồng thuận",
     title: "Đồng thuận y tế",
     detail:
-      "Điều khoản bắt buộc cho tính năng có tác động lâm sàng. Nêu rõ vai trò hỗ trợ của AI và yêu cầu xác nhận chuyên môn trước quyết định điều trị.",
+      "Điều kiện bắt buộc trước khi dùng các luồng có rủi ro lâm sàng, đặc biệt Self-Med và CareGuard, với cơ chế version hóa để truy vết.",
   },
   {
     href: "/legal/cookies",
-    shortLabel: "Cookies",
+    shortLabel: "Cookie",
     title: "Chính sách cookie",
     detail:
-      "Mô tả cookie cần thiết, cookie chức năng, cách quản lý tại trình duyệt và ảnh hưởng khi tắt cookie quan trọng.",
+      "Mô tả cookie phiên đăng nhập, cookie bảo vệ CSRF và cookie chức năng; giải thích cách quản lý tại trình duyệt và tác động khi vô hiệu hóa.",
   },
 ] as const;
 
 const OPERATING_PRINCIPLES = [
-  "Mọi module cùng dùng một chuẩn chính sách The Clara Care.",
-  "Tài liệu pháp lý được version hóa để audit nội bộ.",
-  "Chính sách ưu tiên tính an toàn lâm sàng trước tốc độ phản hồi.",
-  "Mọi thay đổi điều khoản đều được công bố tập trung tại Policy Center.",
+  "Một bộ chính sách chung cho toàn bộ module: Research, Council, Self-Med, CareGuard, Scribe, Control Tower.",
+  "Điều khoản và consent được version hóa để phục vụ audit, truy vết và kiểm soát thay đổi.",
+  "Ưu tiên biên an toàn lâm sàng và minh bạch nguồn dẫn trước tốc độ phản hồi.",
+  "Mọi cập nhật chính sách được công bố tập trung tại Policy Hub của The Clara Care.",
+] as const;
+
+const LEGAL_MODULE_MAP = [
+  {
+    name: "Research",
+    rule: "Bắt buộc trích dẫn nguồn và ghi nhận telemetry cho truy vết.",
+  },
+  {
+    name: "Council",
+    rule: "Hỗ trợ hội chẩn tham khảo, không thay thế quyết định chuyên môn cuối.",
+  },
+  {
+    name: "Self-Med",
+    rule: "Yêu cầu đồng thuận y tế trước khi mở luồng dữ liệu thuốc cá nhân.",
+  },
+  {
+    name: "CareGuard",
+    rule: "Ràng buộc đồng thuận y tế và cảnh báo rủi ro theo nguyên tắc safety-first.",
+  },
+  {
+    name: "Scribe",
+    rule: "Chuẩn hóa ghi chú tham khảo, cần rà soát lại trước khi dùng chính thức.",
+  },
+  {
+    name: "Control Tower",
+    rule: "Quản trị cấu hình vận hành và policy guard ở cấp hệ thống.",
+  },
 ] as const;
 
 export default function LegalHubPage() {
@@ -59,11 +86,11 @@ export default function LegalHubPage() {
         <section className="chrome-panel rounded-[1.9rem] border border-[color:var(--shell-border)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Center</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Hub</p>
               <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-[2rem]">Trung tâm pháp lý</h1>
               <p className="mt-3 max-w-[84ch] text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                Không gian tập trung toàn bộ chính sách pháp lý của The Clara Care. Đây là nguồn tham chiếu chính thức cho người dùng,
-                quản trị viên và đội vận hành khi cần xác định quyền, nghĩa vụ và phạm vi sử dụng hệ thống.
+                Nguồn tham chiếu pháp lý chính thức của The Clara Care cho toàn bộ luồng sản phẩm. Người dùng, đội vận hành và quản
+                trị viên cần dựa vào trang này để xác định phạm vi sử dụng, quyền và nghĩa vụ khi làm việc với hệ thống.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -78,12 +105,15 @@ export default function LegalHubPage() {
 
           <div className="mt-5 flex flex-wrap gap-2">
             <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300">
-              Branding: The Clara Care
+              Safety-First AI
             </span>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Policy version: {LEGAL_POLICY_VERSION}
             </span>
             <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+              Áp dụng: Web · API · ML
+            </span>
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Cập nhật: {LEGAL_UPDATED_AT}
             </span>
           </div>
@@ -100,6 +130,18 @@ export default function LegalHubPage() {
               </Link>
             </article>
           ))}
+        </section>
+
+        <section className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5 sm:p-6">
+          <h2 className="text-lg font-extrabold tracking-tight text-[var(--text-primary)] sm:text-xl">Bản đồ legal theo module</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {LEGAL_MODULE_MAP.map((item) => (
+              <article key={item.name} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-3">
+                <p className="text-sm font-black tracking-tight text-[var(--text-primary)]">{item.name}</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{item.rule}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5 sm:p-6">

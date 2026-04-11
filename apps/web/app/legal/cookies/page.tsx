@@ -4,16 +4,17 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Chính sách cookie | The Clara Care",
-  description: "Mô tả cách The Clara Care sử dụng cookie để vận hành, bảo mật và ghi nhớ tuỳ chọn người dùng.",
+  description: "Mô tả cách The Clara Care dùng cookie cho xác thực phiên, bảo mật và trải nghiệm người dùng.",
 };
 
 const COOKIE_SECTIONS = [
   { id: "definition", label: "Cookie là gì" },
-  { id: "categories", label: "Nhóm cookie sử dụng" },
+  { id: "essential", label: "Cookie bắt buộc" },
+  { id: "functional", label: "Cookie chức năng" },
   { id: "purposes", label: "Mục đích sử dụng" },
-  { id: "storage-duration", label: "Thời hạn lưu" },
+  { id: "duration", label: "Thời hạn lưu trữ" },
   { id: "management", label: "Quản lý cookie" },
-  { id: "impact", label: "Ảnh hưởng khi tắt" },
+  { id: "impact", label: "Ảnh hưởng khi tắt cookie" },
   { id: "updates", label: "Cập nhật chính sách" },
 ] as const;
 
@@ -22,63 +23,75 @@ export default function CookiePolicyPage() {
     <LegalPageShell
       policyKey="cookies"
       title="Chính sách cookie"
-      summary="Cookie giúp The Clara Care duy trì phiên đăng nhập an toàn, ghi nhớ cấu hình hiển thị và tối ưu trải nghiệm sử dụng theo ngữ cảnh làm việc của người dùng."
+      summary="The Clara Care sử dụng cookie chủ yếu cho xác thực phiên, bảo mật truy cập và duy trì trải nghiệm sử dụng ổn định giữa các lần truy cập."
       updatedAt={LEGAL_UPDATED_AT}
       sections={COOKIE_SECTIONS.map((item) => ({ id: item.id, label: item.label }))}
       highlights={[
+        "Cookie xác thực và CSRF là lớp bảo mật cốt lõi của hệ thống.",
         "Không dùng cookie để bán dữ liệu cá nhân.",
-        "Ưu tiên cookie cần thiết cho bảo mật và vận hành.",
         "Người dùng có thể quản lý cookie tại trình duyệt.",
       ]}
     >
       <LegalSection id="definition" title="1. Cookie là gì">
         <p>
-          Cookie là tệp dữ liệu nhỏ được trình duyệt lưu lại để nhận diện phiên truy cập, ghi nhớ trạng thái đăng nhập và duy trì
-          một số cài đặt của người dùng giữa các lần sử dụng dịch vụ.
+          Cookie là dữ liệu nhỏ được trình duyệt lưu lại để nhận diện phiên truy cập, ghi nhớ trạng thái và hỗ trợ hoạt động bảo
+          mật giữa các request.
         </p>
       </LegalSection>
 
-      <LegalSection id="categories" title="2. Các nhóm cookie được sử dụng">
+      <LegalSection id="essential" title="2. Nhóm cookie bắt buộc cho hệ thống">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Cookie cần thiết: xác thực phiên, chống truy cập trái phép, đảm bảo chức năng bảo mật cốt lõi.</li>
-          <li>Cookie chức năng: ghi nhớ tùy chọn giao diện như light/dark mode hoặc ngôn ngữ hiển thị.</li>
-          <li>Cookie hiệu năng: phục vụ đo lường kỹ thuật cơ bản nhằm cải thiện độ ổn định hệ thống (khi được bật).</li>
+          <li>
+            Cookie phiên truy cập: ví dụ <span className="font-mono">clara_access_token</span>,{" "}
+            <span className="font-mono">clara_refresh_token</span> để xác thực và duy trì phiên đăng nhập.
+          </li>
+          <li>
+            Cookie CSRF: ví dụ <span className="font-mono">clara_csrf_token</span> khi tính năng CSRF được bật để giảm rủi ro giả
+            mạo request.
+          </li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="purposes" title="3. Mục đích sử dụng cookie">
+      <LegalSection id="functional" title="3. Cookie chức năng">
+        <p>
+          Hệ thống có thể sử dụng cookie chức năng để ghi nhớ một số tùy chọn trải nghiệm cơ bản trong quá trình sử dụng, tùy theo
+          cấu hình triển khai từng môi trường.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="purposes" title="4. Mục đích sử dụng cookie">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Duy trì trạng thái đăng nhập để hạn chế thao tác lặp lại trong phiên làm việc.</li>
-          <li>Tăng cường khả năng phát hiện bất thường và giảm nguy cơ chiếm quyền phiên.</li>
-          <li>Cá nhân hóa trải nghiệm trình bày giao diện theo tùy chọn người dùng.</li>
+          <li>Xác thực người dùng và duy trì phiên làm việc an toàn.</li>
+          <li>Hỗ trợ cơ chế chống truy cập trái phép và chống giả mạo phiên.</li>
+          <li>Giảm thao tác lặp lại và tăng tính liên tục khi điều hướng giữa các module.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="storage-duration" title="4. Thời hạn lưu trữ cookie">
+      <LegalSection id="duration" title="5. Thời hạn lưu trữ cookie">
         <p>
-          Một số cookie chỉ tồn tại trong phiên hiện tại (session cookie), số khác có thể tồn tại lâu hơn để ghi nhớ cài đặt. Thời
-          hạn cụ thể phụ thuộc loại cookie và mục tiêu vận hành tương ứng.
+          Một số cookie tồn tại trong phiên hiện tại, một số cookie có thể tồn tại dài hơn theo thời gian sống phiên xác thực đã
+          cấu hình. Khi cookie hết hạn, người dùng có thể cần đăng nhập lại.
         </p>
       </LegalSection>
 
-      <LegalSection id="management" title="5. Cách quản lý cookie">
+      <LegalSection id="management" title="6. Quản lý cookie">
         <p>
-          Người dùng có thể xóa, chặn hoặc giới hạn cookie trong phần cài đặt trình duyệt. Mỗi trình duyệt có cơ chế khác nhau,
-          nên bạn cần tham khảo tài liệu hướng dẫn của trình duyệt đang sử dụng.
+          Bạn có thể xem, xóa hoặc chặn cookie trong phần cài đặt trình duyệt. Mỗi trình duyệt có cách quản lý khác nhau, vui lòng
+          tham khảo tài liệu chính thức của trình duyệt bạn đang dùng.
         </p>
       </LegalSection>
 
-      <LegalSection id="impact" title="6. Ảnh hưởng khi tắt cookie">
+      <LegalSection id="impact" title="7. Ảnh hưởng khi vô hiệu hóa cookie">
         <p>
-          Nếu vô hiệu hóa cookie cần thiết, một số chức năng như đăng nhập, duy trì phiên hoặc lưu cài đặt giao diện có thể không
-          hoạt động đúng như thiết kế. Điều này có thể làm gián đoạn trải nghiệm sử dụng The Clara Care.
+          Nếu tắt cookie bắt buộc, các chức năng đăng nhập, làm mới phiên hoặc bảo vệ CSRF có thể hoạt động không đúng thiết kế,
+          làm gián đoạn trải nghiệm và có thể khiến một số module không thể truy cập.
         </p>
       </LegalSection>
 
-      <LegalSection id="updates" title="7. Cập nhật chính sách cookie">
+      <LegalSection id="updates" title="8. Cập nhật chính sách cookie">
         <p>
-          Chính sách cookie có thể được điều chỉnh theo thay đổi kỹ thuật và quy định tuân thủ. Bản cập nhật mới nhất luôn được
-          công bố tại Policy Center thuộc The Clara Care.
+          Chính sách cookie có thể được cập nhật khi thay đổi cơ chế xác thực, bảo mật hoặc yêu cầu tuân thủ. Bản mới nhất luôn
+          được công bố tại Policy Hub của The Clara Care.
         </p>
       </LegalSection>
     </LegalPageShell>

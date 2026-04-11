@@ -1,5 +1,6 @@
 import logging
 import secrets
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -69,6 +70,20 @@ app.add_middleware(RateLimiterMiddleware)
 app.add_middleware(APIMetricsMiddleware)
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, set):
+        return [_json_safe(item) for item in sorted(value, key=lambda item: repr(item))]
+    return value
+
+
 @app.on_event("startup")
 def init_db_schema() -> None:
     if settings.environment.lower() == "production":
@@ -108,7 +123,7 @@ async def clara_error_handler(_request: Request, exc: ClaraAPIError):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_request: Request, exc: RequestValidationError):
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": _json_safe(exc.errors())})
 
 
 @app.exception_handler(Exception)

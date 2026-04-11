@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--api-base",
         required=True,
-        help="API base URL, e.g. https://clara.thiennn.icu",
+        help="API base URL, e.g. https://theclaracare.com",
     )
     parser.add_argument(
         "--output",
