@@ -335,6 +335,14 @@ export type ResearchTier2JobStreamEvent = {
   payload: ResearchTier2JobResponse | { message?: string };
 };
 
+export type ResearchTier2JobCreateOptions = {
+  uploadedFileIds?: string[];
+  sourceIds?: number[];
+  sourceHubSources?: SourceHubSourceKey[];
+  researchMode?: ResearchExecutionMode;
+  retrievalStackMode?: ResearchRetrievalStackMode;
+};
+
 export type UploadedResearchFile = {
   id: string;
   name: string;
@@ -2470,13 +2478,7 @@ export async function runResearchTier2(
 
 export async function createResearchTier2Job(
   query: string,
-  options?: {
-    uploadedFileIds?: string[];
-    sourceIds?: number[];
-    sourceHubSources?: SourceHubSourceKey[];
-    researchMode?: ResearchExecutionMode;
-    retrievalStackMode?: ResearchRetrievalStackMode;
-  }
+  options?: ResearchTier2JobCreateOptions
 ): Promise<ResearchTier2JobResponse> {
   const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
   const sourceIds = Array.from(

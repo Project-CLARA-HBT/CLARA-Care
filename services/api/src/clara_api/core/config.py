@@ -143,7 +143,7 @@ class Settings(BaseSettings):
         validation_alias="AUTH_EXPOSE_ACTION_TOKEN_PREVIEW",
     )
     auth_public_web_base_url: str = Field(
-        default="https://clara.thiennn.icu",
+        default="https://theclaracare.com",
         validation_alias="AUTH_PUBLIC_WEB_BASE_URL",
     )
     auth_verify_email_path: str = Field(
@@ -187,6 +187,18 @@ class Settings(BaseSettings):
         validation_alias="RESEARCH_JOB_MAX_WORKERS",
         ge=1,
         le=32,
+    )
+    research_job_max_pending: int = Field(
+        default=200,
+        validation_alias="RESEARCH_JOB_MAX_PENDING",
+        ge=1,
+        le=2000,
+    )
+    research_job_max_active_per_user: int = Field(
+        default=5,
+        validation_alias="RESEARCH_JOB_MAX_ACTIVE_PER_USER",
+        ge=1,
+        le=100,
     )
     metrics_access_token: str = Field(default="", validation_alias="METRICS_ACCESS_TOKEN")
     deepseek_strict_mode: bool = Field(

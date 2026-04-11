@@ -421,6 +421,8 @@ def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPa
 
     forwarded_payload = captured["json"]
     assert isinstance(forwarded_payload, dict)
+    assert forwarded_payload["query"] == "drug interactions"
+    assert forwarded_payload["message"] == "drug interactions"
     assert forwarded_payload["source_mode"] == "uploaded_files"
     assert isinstance(forwarded_payload.get("uploaded_documents"), list)
     assert len(forwarded_payload["uploaded_documents"]) == 1
@@ -428,6 +430,54 @@ def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPa
     assert uploaded_document["file_id"] == file_id
     assert uploaded_document["filename"] == "clinical-note.txt"
     assert "metformin" in uploaded_document["text"]
+
+
+def test_research_tier2_does_not_forward_other_user_uploaded_documents(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    alice_token = _login("alice@research.clara")
+    bob_token = _login("bob@doctor.clara")
+
+    upload_response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {alice_token}"},
+        files={"file": ("alice-note.txt", b"alice-only text", "text/plain")},
+    )
+    assert upload_response.status_code == 200
+    alice_file_id = upload_response.json()["file_id"]
+
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"ok": True}
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {bob_token}"},
+        json={
+            "query": "check cross-user upload",
+            "source_mode": "uploaded_files",
+            "uploaded_file_ids": [alice_file_id],
+        },
+    )
+
+    assert response.status_code == 200
+    forwarded_payload = captured["json"]
+    assert isinstance(forwarded_payload, dict)
+    assert isinstance(forwarded_payload.get("uploaded_documents"), list)
+    assert forwarded_payload["uploaded_documents"] == []
 
 
 def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> None:

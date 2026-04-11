@@ -14,19 +14,16 @@ import PageShell from "@/components/ui/page-shell";
 import { clearTokens, getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import {
-  RESEARCH_TIER2_JOB_POLL_MS,
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
   appendResearchConversationMessage,
   createResearchConversation,
-  createResearchTier2Job,
-  getResearchTier2Job,
   listResearchConversations,
   listResearchConversationMessages,
   normalizeResearchTier2,
   normalizeResearchTier2JobProgress,
-  streamResearchTier2Job,
 } from "@/lib/research";
+import { executeResearchTier2Job } from "@/lib/research-tier2-job-runner";
 import {
   WorkspaceConversationShare,
   WorkspaceConversationShareListItem,
@@ -67,10 +64,6 @@ const QUICK_PROMPTS: string[] = [
   "Gợi ý câu hỏi cần hỏi bác sĩ cho bệnh nhân tăng huyết áp",
 ];
 
-const JOB_FETCH_RETRY_ATTEMPTS = 3;
-const JOB_FETCH_RETRY_BACKOFF_MS = 600;
-const JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS = 5;
-const JOB_COMPLETED_RESULT_REFETCH_MS = 900;
 const LOCAL_WORKSPACE_MAX_ITEMS = 80;
 
 type WorkspaceLeftView = "all" | "chat" | "notes" | "discover" | "shares";
@@ -243,23 +236,6 @@ function isVietnamMedicalSource(name: string): boolean {
     normalized.includes("vietnam")
   );
 }
-
-const fetchTier2JobWithRetry = async (jobId: string) => {
-  let lastError: unknown = null;
-  for (let attempt = 1; attempt <= JOB_FETCH_RETRY_ATTEMPTS; attempt += 1) {
-    try {
-      return await getResearchTier2Job(jobId);
-    } catch (error) {
-      lastError = error;
-      if (attempt < JOB_FETCH_RETRY_ATTEMPTS) {
-        await new Promise((resolve) => {
-          window.setTimeout(resolve, JOB_FETCH_RETRY_BACKOFF_MS * attempt);
-        });
-      }
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error("Không thể tải trạng thái research job.");
-};
 
 export default function ChatWorkspacePage() {
   const [query, setQuery] = useState("");
@@ -1208,110 +1184,20 @@ export default function ChatWorkspacePage() {
     setError("");
 
     try {
-      const job = await createResearchTier2Job(message, {
+      const { finalPayload } = await executeResearchTier2Job(message, {
         researchMode: selectedResearchMode,
         retrievalStackMode: selectedRetrievalStackMode,
+        onJobCreated: (job) => {
+          setLiveJobId(job.job_id);
+        },
+        onSnapshot: (snapshot) => {
+          const progress = normalizeResearchTier2JobProgress(snapshot.progress);
+          setLiveStatusNote(progress.statusNote ?? "");
+        },
+        onStreamingFallback: (streamMessage) => {
+          setLiveStatusNote(`${streamMessage} Đang fallback sang polling.`);
+        },
       });
-      setLiveJobId(job.job_id);
-
-      let currentJob = job;
-      let finalPayload: Record<string, unknown> | null = null;
-
-      const applyLiveSnapshot = (snapshot: typeof currentJob) => {
-        const progress = normalizeResearchTier2JobProgress(snapshot.progress);
-        setLiveStatusNote(progress.statusNote ?? "");
-      };
-
-      applyLiveSnapshot(currentJob);
-      let streamError: string | null = null;
-
-      try {
-        await streamResearchTier2Job(job.job_id, {
-          onEvent: (eventPayload) => {
-            const payload = eventPayload.payload;
-            if (payload && typeof payload === "object" && "status" in payload) {
-              currentJob = payload as typeof currentJob;
-              applyLiveSnapshot(currentJob);
-            }
-            if (
-              eventPayload.event === "error" &&
-              payload &&
-              typeof payload === "object" &&
-              "message" in payload
-            ) {
-              const messageText =
-                typeof (payload as { message?: unknown }).message === "string"
-                  ? (payload as { message: string }).message
-                  : "";
-              streamError = messageText || "Streaming research gặp lỗi.";
-            }
-          },
-        });
-      } catch (streamCause) {
-        streamError =
-          streamCause instanceof Error
-            ? streamCause.message
-            : "Streaming research tạm gián đoạn.";
-      }
-
-      if (
-        streamError &&
-        currentJob.status !== "completed" &&
-        currentJob.status !== "failed"
-      ) {
-        setLiveStatusNote(`${streamError} Đang fallback sang polling.`);
-      }
-
-      let pollingRounds = 0;
-      while (
-        currentJob.status !== "completed" &&
-        currentJob.status !== "failed" &&
-        pollingRounds < 1200
-      ) {
-        pollingRounds += 1;
-        await new Promise((resolve) => {
-          window.setTimeout(resolve, RESEARCH_TIER2_JOB_POLL_MS);
-        });
-        currentJob = await fetchTier2JobWithRetry(job.job_id);
-        applyLiveSnapshot(currentJob);
-      }
-
-      if (currentJob.status === "completed") {
-        finalPayload =
-          currentJob.result && typeof currentJob.result === "object"
-            ? (currentJob.result as Record<string, unknown>)
-            : null;
-      } else if (currentJob.status === "failed") {
-        throw new Error(currentJob.error ?? "Research job thất bại ở backend.");
-      } else {
-        throw new Error("Research job quá thời gian chờ. Vui lòng thử lại.");
-      }
-
-      const hasFinalResultObject = (value: unknown): value is Record<string, unknown> =>
-        Boolean(value) && typeof value === "object";
-
-      if (!hasFinalResultObject(finalPayload)) {
-        let completionRefetchRound = 0;
-        while (
-          completionRefetchRound < JOB_COMPLETED_RESULT_REFETCH_ATTEMPTS &&
-          !hasFinalResultObject(finalPayload)
-        ) {
-          completionRefetchRound += 1;
-          await new Promise((resolve) => {
-            window.setTimeout(resolve, JOB_COMPLETED_RESULT_REFETCH_MS);
-          });
-          currentJob = await fetchTier2JobWithRetry(job.job_id);
-          applyLiveSnapshot(currentJob);
-          if (hasFinalResultObject(currentJob.result)) {
-            finalPayload = currentJob.result;
-            break;
-          }
-        }
-      }
-
-      if (!finalPayload) {
-        throw new Error("Không nhận được kết quả cuối từ research job.");
-      }
 
       const normalized = normalizeResearchTier2(finalPayload);
       if (!normalized.answer && !normalized.citations.length) {

@@ -159,17 +159,18 @@ _VN_HTML_SOURCE_DEFINITIONS: dict[str, dict[str, Any]] = {
 
 _uploaded_research_files: dict[str, dict[str, Any]] = {}
 _uploaded_research_lock = Lock()
+_research_settings = get_settings()
 _RESEARCH_JOB_MAX_WORKERS = max(
     1,
-    min(32, int(os.getenv("RESEARCH_JOB_MAX_WORKERS", "8"))),
+    min(32, int(_research_settings.research_job_max_workers)),
 )
 _RESEARCH_JOB_MAX_PENDING = max(
     1,
-    min(2_000, int(os.getenv("RESEARCH_JOB_MAX_PENDING", "200"))),
+    min(2_000, int(_research_settings.research_job_max_pending)),
 )
 _RESEARCH_JOB_MAX_ACTIVE_PER_USER = max(
     1,
-    min(100, int(os.getenv("RESEARCH_JOB_MAX_ACTIVE_PER_USER", "5"))),
+    min(100, int(_research_settings.research_job_max_active_per_user)),
 )
 _research_job_executor = ThreadPoolExecutor(
     max_workers=_RESEARCH_JOB_MAX_WORKERS,
@@ -429,7 +430,11 @@ def _store_uploaded_file(entry: dict[str, Any]) -> None:
         _uploaded_research_files.pop(oldest_file_id, None)
 
 
-def _build_uploaded_documents(uploaded_file_ids: Any) -> list[dict[str, Any]]:
+def _build_uploaded_documents(
+    uploaded_file_ids: Any,
+    *,
+    owner_user_id: int,
+) -> list[dict[str, Any]]:
     if not isinstance(uploaded_file_ids, list):
         return []
 
@@ -440,6 +445,8 @@ def _build_uploaded_documents(uploaded_file_ids: Any) -> list[dict[str, Any]]:
                 continue
             cached = _uploaded_research_files.get(raw_file_id)
             if not cached:
+                continue
+            if int(cached.get("owner_user_id") or 0) != int(owner_user_id):
                 continue
 
             documents.append(
@@ -917,6 +924,16 @@ def _resolve_tier2_execution_modes(payload: dict[str, Any]) -> tuple[str, str]:
     if research_mode == "fast" and retrieval_stack_mode == "full":
         retrieval_stack_mode = "auto"
     return research_mode, retrieval_stack_mode
+
+
+def _extract_tier2_query_text(payload: dict[str, Any]) -> str:
+    for key in ("query", "message", "question"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                return text
+    return ""
 
 
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1626,7 +1643,10 @@ def _build_tier2_upstream_payload(
     else:
         merged_render_hints = dict(_DEFAULT_MARKDOWN_RENDER_HINTS)
     upstream_payload["render_hints"] = merged_render_hints
-    transient_documents = _build_uploaded_documents(payload.get("uploaded_file_ids"))
+    transient_documents = _build_uploaded_documents(
+        payload.get("uploaded_file_ids"),
+        owner_user_id=user.id,
+    )
     source_ids = _extract_source_ids(payload)
     source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)
     source_hub_filters = _extract_source_hub_sources(payload)
@@ -3673,6 +3693,7 @@ async def upload_research_file(
             "content_type": content_type,
             "size": len(file_bytes),
             "created_at": created_at,
+            "owner_user_id": user.id,
             "text": extracted_text if file_kind == "text" else "",
             "preview": preview,
             "token_count": token_count,
@@ -3715,7 +3736,12 @@ def research_tier2(
 ) -> dict[str, Any]:
     settings = get_settings()
     user = _get_user_by_token(db, token)
-    upstream_payload = _build_tier2_upstream_payload(payload, db=db, user=user, token=token)
+    query_text = _extract_tier2_query_text(payload)
+    normalized_input = dict(payload)
+    if query_text:
+        normalized_input["query"] = query_text
+        normalized_input["message"] = query_text
+    upstream_payload = _build_tier2_upstream_payload(normalized_input, db=db, user=user, token=token)
 
     response = proxy_ml_post(
         "/v1/research/tier2",
@@ -3742,7 +3768,8 @@ def create_research_tier2_job(
     db: Session = Depends(get_db),
 ) -> ResearchTier2JobResponse:
     user = _get_user_by_token(db, token)
-    query_text = str(payload.query or payload.message or "").strip()
+    input_payload = payload.model_dump()
+    query_text = _extract_tier2_query_text(input_payload)
     if not query_text:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -3770,7 +3797,6 @@ def create_research_tier2_job(
             detail="Hệ thống đang bận xử lý research jobs. Vui lòng thử lại sau ít phút.",
         )
 
-    input_payload = payload.model_dump()
     input_payload["query"] = query_text
     input_payload["message"] = query_text
     upstream_payload = _build_tier2_upstream_payload(input_payload, db=db, user=user, token=token)
