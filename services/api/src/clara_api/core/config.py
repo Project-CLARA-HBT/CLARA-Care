@@ -125,7 +125,7 @@ class Settings(BaseSettings):
         gt=0,
     )
     auth_login_otp_enabled: bool = Field(
-        default=True,
+        default=False,
         validation_alias="AUTH_LOGIN_OTP_ENABLED",
     )
     auth_login_otp_roles: str = Field(
