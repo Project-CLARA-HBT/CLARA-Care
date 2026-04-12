@@ -23,6 +23,11 @@ import {
   saveThemePreference,
   type ThemePreference
 } from "@/lib/theme";
+import {
+  hydrateUILanguagePreference,
+  saveUILanguage,
+  type UILanguage,
+} from "@/lib/ui-language";
 
 type Props = {
   children: ReactNode;
@@ -39,6 +44,11 @@ const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
   { value: "light", label: "Sáng" },
   { value: "dark", label: "Tối" },
   { value: "system", label: "Hệ thống" },
+];
+
+const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
+  { value: "vi", label: "VI" },
+  { value: "en", label: "EN" },
 ];
 
 const NAVBAR_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string }> = [
@@ -64,6 +74,7 @@ export default function AppShell({ children }: Props) {
   const router = useRouter();
   const [role, setRole] = useState<UserRole>("normal");
   const [themePreference, setThemePreference] = useState<ThemePreference>("dark");
+  const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -128,6 +139,11 @@ export default function AppShell({ children }: Props) {
   }, []);
 
   useEffect(() => {
+    const stored = hydrateUILanguagePreference();
+    setUiLanguage(stored);
+  }, []);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY);
       setIsSidebarCollapsed(raw === "1");
@@ -170,6 +186,11 @@ export default function AppShell({ children }: Props) {
     setThemePreference(nextTheme);
     saveThemePreference(nextTheme);
     applyThemePreference(nextTheme);
+  };
+
+  const handleLanguageChange = (nextLanguage: UILanguage) => {
+    setUiLanguage(nextLanguage);
+    saveUILanguage(nextLanguage);
   };
 
   const toggleSidebarCollapse = () => {
@@ -278,6 +299,20 @@ export default function AppShell({ children }: Props) {
                 aria-label="Đổi giao diện"
               >
                 {THEME_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={uiLanguage}
+                onChange={(event) => handleLanguageChange(event.target.value as UILanguage)}
+                className="h-9 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs font-semibold text-[var(--text-secondary)] outline-none"
+                aria-label="Đổi ngôn ngữ"
+                title="Language"
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

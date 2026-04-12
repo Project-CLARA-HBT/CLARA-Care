@@ -588,3 +588,46 @@ Cập nhật: 2026-04-11 (Asia/Saigon)
 
 Public URL đang dùng tại thời điểm test:
 - `https://instructors-holmes-modeling-enemies.trycloudflare.com`
+
+## 2026-04-12 Update (Telemetry language toggle + mixed-language bug fix)
+
+Cập nhật: 2026-04-12 (Asia/Saigon)
+
+### Mục tiêu
+- Sửa lỗi panel telemetry bị trộn tiếng Anh/tiếng Việt.
+- Bổ sung tính năng chuyển ngôn ngữ `VI/EN` theo yêu cầu.
+- Giảm tình trạng logic-flow hiển thị `pending` sai khi stage id backend khác biến thể.
+
+### Thay đổi đã làm
+1) Thêm module ngôn ngữ UI mới:
+- File: `apps/web/lib/ui-language.ts`
+- Chức năng: đọc/lưu ngôn ngữ từ `localStorage` (`clara_ui_language`), phát event đồng bộ realtime (`clara:ui-language-change`), cập nhật `document.documentElement.lang`.
+
+2) Thêm dropdown `VI/EN` ở app shell:
+- File: `apps/web/components/app-shell.tsx`
+- Khi đổi ngôn ngữ, lưu vào localStorage + broadcast event để trang chat cập nhật ngay không cần reload.
+
+3) Chuẩn hóa telemetry theo ngôn ngữ đang chọn:
+- File: `apps/web/app/chat/page.tsx`
+- Localize toàn bộ label trong panel telemetry:
+  - Confidence / Signal Pending / Needs Review / High Reliability
+  - Neural Load, Logic Flow
+  - Source Intel, Global Medical Databases, MOH Vietnam Sources
+  - Query/Status/attempts + empty-state message
+- Localize logic-flow node label + trạng thái (`pending`, `in_progress`, `completed`, `warning`, `failed`, `skipped`).
+- Thêm hàm normalize detail note để map EN<->VI cho các câu backend hay gặp:
+  - `LLM query planner skipped due to missing API key.`
+  - `Selected X citation(s) for final answer.`
+  - `Phát hiện claim mâu thuẫn với evidence retrieval.`
+  - `Keyword filter node started (source-language alignment).`
+  - `keyword filter: X terms`
+  - `X docs · Y source attempts`
+  - `Answer generated`
+  - một số câu planner/deep retrieval thường gặp.
+
+4) Mở rộng mapping stage id để giảm false-pending:
+- Bổ sung các stage id deep/hybrid như `hybrid_retrieval`, `deep_beta_multi_pass_retrieval`, `deep_beta_gap_fill`, `deep_beta_chain_verification`, `verification_skipped_v1`, ... vào blueprint node tương ứng.
+
+### Kiểm tra
+- `npm run lint` (apps/web): PASS (chỉ còn warning cũ đã tồn tại từ trước).
+- `npm run build` (apps/web): PASS.

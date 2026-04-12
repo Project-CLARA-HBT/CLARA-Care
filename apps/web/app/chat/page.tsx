@@ -14,6 +14,11 @@ import PageShell from "@/components/ui/page-shell";
 import { clearTokens, getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import {
+  getStoredUILanguage,
+  onUILanguageChange,
+  type UILanguage,
+} from "@/lib/ui-language";
+import {
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
   type ResearchTier2Result,
@@ -274,12 +279,20 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
       "llm_query_planner",
       "keyword_filter",
       "query_plan",
+      "deep_beta_scope",
+      "deep_beta_hypothesis_map",
+      "deep_beta_claim_graph",
+      "deep_beta_counter_evidence_scan",
+      "deep_beta_guideline_alignment",
+      "deep_beta_risk_stratification",
+      "deep_beta_parallel_reasoning",
     ],
   },
   {
     id: "evidence_retrieval",
     label: "Evidence Retrieval",
     stageIds: [
+      "hybrid_retrieval",
       "retrieval_orchestrator",
       "retrieval_internal",
       "retrieval_scientific",
@@ -290,9 +303,18 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
       "collect_evidence",
       "source_attempts",
       "evidence_review",
+      "deep_retrieval_pass",
       "deep_research",
       "deep_beta_consensus",
       "deep_beta_reasoning",
+      "beta_budgeted_retrieval",
+      "deep_beta_retrieval_budget",
+      "deep_beta_multi_pass_retrieval",
+      "deep_beta_retrieval_pass",
+      "deep_beta_gap_fill",
+      "deep_beta_gap_fill_pass",
+      "deep_beta_evidence_audit",
+      "deep_beta_evidence_verification",
     ],
   },
   {
@@ -305,8 +327,11 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
       "llm_generation_retry",
       "deep_report_synthesis",
       "deep_beta_chain_synthesis",
+      "deep_beta_chain_verification",
       "deep_beta_report_synthesis",
+      "deep_beta_quality_gate",
       "verification",
+      "verification_skipped_v1",
       "verification_matrix",
       "citation_selection",
       "responder",
@@ -314,6 +339,248 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
     ],
   },
 ];
+
+type TelemetryCopy = {
+  systemTelemetry: string;
+  confidence: string;
+  confidenceSignalPending: string;
+  confidenceHighReliability: string;
+  confidenceNeedsReview: string;
+  neuralLoad: string;
+  logicFlow: string;
+  sourceIntel: string;
+  globalMedicalDatabases: string;
+  mohVietnamSources: string;
+  sourceSearchPlaceholder: string;
+  sourceNoGlobal: string;
+  sourceNoVietnam: string;
+  sourceFallbackQuery: string;
+  sourceQueryPrefix: string;
+  sourceStatusPrefix: string;
+  sourceAttemptsLabel: string;
+};
+
+const TELEMETRY_COPY_BY_LANGUAGE: Record<UILanguage, TelemetryCopy> = {
+  vi: {
+    systemTelemetry: "Giám sát hệ thống",
+    confidence: "Độ tin cậy",
+    confidenceSignalPending: "Chờ tín hiệu",
+    confidenceHighReliability: "Tin cậy cao",
+    confidenceNeedsReview: "Cần rà soát",
+    neuralLoad: "Tải suy luận",
+    logicFlow: "Luồng xử lý",
+    sourceIntel: "Nguồn dữ liệu",
+    globalMedicalDatabases: "Nguồn y khoa toàn cầu",
+    mohVietnamSources: "Nguồn Bộ Y tế Việt Nam",
+    sourceSearchPlaceholder: "Tìm kiếm nguồn...",
+    sourceNoGlobal: "Chưa có nguồn telemetry từ phiên chat hiện tại.",
+    sourceNoVietnam: "Chưa ghi nhận nguồn nội địa trong telemetry hiện tại.",
+    sourceFallbackQuery: "Nguồn telemetry từ lượt truy xuất gần nhất.",
+    sourceQueryPrefix: "Truy vấn",
+    sourceStatusPrefix: "Trạng thái",
+    sourceAttemptsLabel: "lượt thử",
+  },
+  en: {
+    systemTelemetry: "System Telemetry",
+    confidence: "Confidence",
+    confidenceSignalPending: "Signal Pending",
+    confidenceHighReliability: "High Reliability",
+    confidenceNeedsReview: "Needs Review",
+    neuralLoad: "Neural Load",
+    logicFlow: "Logic Flow",
+    sourceIntel: "Source Intel",
+    globalMedicalDatabases: "Global Medical Databases",
+    mohVietnamSources: "MOH Vietnam Sources",
+    sourceSearchPlaceholder: "Search sources...",
+    sourceNoGlobal: "No telemetry source from the current conversation.",
+    sourceNoVietnam: "No Vietnam local source detected in current telemetry.",
+    sourceFallbackQuery: "Telemetry source from latest retrieval.",
+    sourceQueryPrefix: "Query",
+    sourceStatusPrefix: "Status",
+    sourceAttemptsLabel: "attempts",
+  },
+};
+
+const LOGIC_FLOW_LABELS: Record<LogicFlowNode["id"], Record<UILanguage, string>> = {
+  semantic_parsing: {
+    vi: "Phân tích ngữ nghĩa",
+    en: "Semantic Parsing",
+  },
+  evidence_retrieval: {
+    vi: "Truy xuất bằng chứng",
+    en: "Evidence Retrieval",
+  },
+  synthesis_engine: {
+    vi: "Bộ tổng hợp",
+    en: "Synthesis Engine",
+  },
+};
+
+const LOGIC_FLOW_STATUS_LABELS: Record<LogicFlowNodeStatus, Record<UILanguage, string>> = {
+  pending: {
+    vi: "đang chờ",
+    en: "pending",
+  },
+  in_progress: {
+    vi: "đang xử lý",
+    en: "in progress",
+  },
+  completed: {
+    vi: "hoàn tất",
+    en: "completed",
+  },
+  warning: {
+    vi: "cảnh báo",
+    en: "warning",
+  },
+  failed: {
+    vi: "thất bại",
+    en: "failed",
+  },
+  skipped: {
+    vi: "bỏ qua",
+    en: "skipped",
+  },
+};
+
+const SOURCE_STATUS_LABELS: Record<SourceIntelStatus, Record<UILanguage, string>> = {
+  active: {
+    vi: "HOẠT ĐỘNG",
+    en: "ACTIVE",
+  },
+  connecting: {
+    vi: "ĐANG KẾT NỐI",
+    en: "CONNECTING",
+  },
+  error: {
+    vi: "LỖI",
+    en: "ERROR",
+  },
+};
+
+function normalizeTelemetryText(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim();
+}
+
+function localizeLogicFlowLabel(nodeId: LogicFlowNode["id"], language: UILanguage): string {
+  return LOGIC_FLOW_LABELS[nodeId]?.[language] ?? LOGIC_FLOW_LABELS[nodeId]?.en ?? nodeId;
+}
+
+function localizeLogicFlowStatus(status: LogicFlowNodeStatus, language: UILanguage): string {
+  return LOGIC_FLOW_STATUS_LABELS[status][language];
+}
+
+function localizeSourceStatus(status: SourceIntelStatus, language: UILanguage): string {
+  return SOURCE_STATUS_LABELS[status][language];
+}
+
+function localizeTelemetryDetail(detail: string | undefined, language: UILanguage): string | undefined {
+  if (!detail) return undefined;
+  const text = normalizeTelemetryText(detail);
+  if (!text) return undefined;
+
+  const citationEn = text.match(/^selected\s+(\d+)\s+citation\(s\)\s+for\s+final\s+answer\.?$/i);
+  if (citationEn) {
+    return language === "vi"
+      ? `Đã chọn ${citationEn[1]} trích dẫn cho câu trả lời cuối.`
+      : `Selected ${citationEn[1]} citation(s) for final answer.`;
+  }
+
+  const citationVi = text.match(/^đã\s+chọn\s+(\d+)\s+trích\s+dẫn\s+cho\s+câu\s+trả\s+lời\s+cuối\.?$/i);
+  if (citationVi) {
+    return language === "vi"
+      ? `Đã chọn ${citationVi[1]} trích dẫn cho câu trả lời cuối.`
+      : `Selected ${citationVi[1]} citation(s) for final answer.`;
+  }
+
+  if (
+    /^llm query planner skipped due to missing api key\.?$/i.test(text) ||
+    /^bỏ qua llm query planner do thiếu api key\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Bỏ qua LLM query planner do thiếu API key."
+      : "LLM query planner skipped due to missing API key.";
+  }
+
+  if (
+    /^phát hiện claim mâu thuẫn với evidence retrieval\.?$/i.test(text) ||
+    /^detected claims?\s+conflicting with retrieved evidence\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Phát hiện claim mâu thuẫn với evidence retrieval."
+      : "Detected claims conflicting with retrieved evidence.";
+  }
+
+  if (
+    /^keyword filter node started \(source-language alignment\)\.?$/i.test(text) ||
+    /^node lọc từ khóa đã khởi chạy \(căn chỉnh ngôn ngữ nguồn\)\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Node lọc từ khóa đã khởi chạy (căn chỉnh ngôn ngữ nguồn)."
+      : "Keyword filter node started (source-language alignment).";
+  }
+
+  if (
+    /^planner started tier-2 orchestration\.?$/i.test(text) ||
+    /^bộ lập kế hoạch đã khởi chạy điều phối tier-2\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Bộ lập kế hoạch đã khởi chạy điều phối Tier-2."
+      : "Planner started Tier-2 orchestration.";
+  }
+
+  if (
+    /^planner produced retrieval and verification strategy\.?$/i.test(text) ||
+    /^bộ lập kế hoạch đã tạo chiến lược truy xuất và xác minh\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Bộ lập kế hoạch đã tạo chiến lược truy xuất và xác minh."
+      : "Planner produced retrieval and verification strategy.";
+  }
+
+  if (
+    /^deep retrieval passes completed; moving to final synthesis\.?$/i.test(text) ||
+    /^các lượt truy xuất sâu đã hoàn tất; chuyển sang tổng hợp cuối\.?$/i.test(text)
+  ) {
+    return language === "vi"
+      ? "Các lượt truy xuất sâu đã hoàn tất; chuyển sang tổng hợp cuối."
+      : "Deep retrieval passes completed; moving to final synthesis.";
+  }
+
+  const keywordFilterEn = text.match(/^keyword\s+filter:\s*(\d+)\s*terms\.?$/i);
+  if (keywordFilterEn) {
+    return language === "vi"
+      ? `Lọc từ khóa: ${keywordFilterEn[1]} thuật ngữ`
+      : `Keyword filter: ${keywordFilterEn[1]} terms`;
+  }
+
+  const keywordFilterVi = text.match(/^lọc\s+từ\s+khóa:\s*(\d+)\s*thuật\s+ngữ\.?$/i);
+  if (keywordFilterVi) {
+    return language === "vi"
+      ? `Lọc từ khóa: ${keywordFilterVi[1]} thuật ngữ`
+      : `Keyword filter: ${keywordFilterVi[1]} terms`;
+  }
+
+  const docsAttemptsEn = text.match(/^(\d+)\s+docs\s*[·|]\s*(\d+)\s+source\s+attempts$/i);
+  if (docsAttemptsEn) {
+    return language === "vi"
+      ? `${docsAttemptsEn[1]} tài liệu · ${docsAttemptsEn[2]} lượt thử nguồn`
+      : `${docsAttemptsEn[1]} docs · ${docsAttemptsEn[2]} source attempts`;
+  }
+
+  const docsAttemptsVi = text.match(/^(\d+)\s+tài\s+liệu\s*[·|]\s*(\d+)\s+lượt\s+thử\s+nguồn$/i);
+  if (docsAttemptsVi) {
+    return language === "vi"
+      ? `${docsAttemptsVi[1]} tài liệu · ${docsAttemptsVi[2]} lượt thử nguồn`
+      : `${docsAttemptsVi[1]} docs · ${docsAttemptsVi[2]} source attempts`;
+  }
+
+  if (/^answer generated\.?$/i.test(text) || /^đã tạo câu trả lời\.?$/i.test(text)) {
+    return language === "vi" ? "Đã tạo câu trả lời." : "Answer generated.";
+  }
+
+  return text;
+}
 
 function normalizeLogicFlowStatus(status?: string): LogicFlowNodeStatus {
   const text = (status ?? "").trim().toLowerCase();
@@ -576,6 +843,7 @@ function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
 export default function ChatWorkspacePage() {
   const [query, setQuery] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
@@ -696,6 +964,12 @@ export default function ChatWorkspacePage() {
       return;
     }
     (element as HTMLElement).focus();
+  }, []);
+
+  useEffect(() => {
+    const initial = getStoredUILanguage();
+    setUiLanguage(initial);
+    return onUILanguageChange((language) => setUiLanguage(language));
   }, []);
 
   useEffect(() => {
@@ -2165,6 +2439,7 @@ export default function ChatWorkspacePage() {
   );
 
   const latestTier2Result = latestTier2Turn?.result.tier === "tier2" ? latestTier2Turn.result : null;
+  const telemetryCopy = TELEMETRY_COPY_BY_LANGUAGE[uiLanguage];
   const logicFlowNodes = useMemo(
     () => buildLogicFlowNodes(latestTier2Result),
     [latestTier2Result]
@@ -2178,10 +2453,10 @@ export default function ChatWorkspacePage() {
   const confidenceDisplay = confidenceRatio === undefined ? "--" : confidenceRatio.toFixed(2);
   const confidenceLabel =
     confidenceRatio === undefined
-      ? "Signal Pending"
+      ? telemetryCopy.confidenceSignalPending
       : confidencePercent >= 70
-        ? "High Reliability"
-        : "Needs Review";
+        ? telemetryCopy.confidenceHighReliability
+        : telemetryCopy.confidenceNeedsReview;
   const telemetryBars = latestTier2Result
     ? [
         Math.min(96, Math.max(18, latestTier2Result.debug.flowEventCount * 4)),
@@ -3033,7 +3308,7 @@ export default function ChatWorkspacePage() {
         <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(241,244,247,0.7))] dark:bg-[linear-gradient(180deg,rgba(0,28,57,0.72),rgba(11,19,38,0.72))] 2xl:flex">
           <div className="border-b border-[color:var(--shell-border)] bg-white px-5 py-5 dark:bg-[#001f3d]/90">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-              System Telemetry
+              {telemetryCopy.systemTelemetry}
             </h3>
 
             <div className="mt-4 flex items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
@@ -3062,7 +3337,7 @@ export default function ChatWorkspacePage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  Confidence
+                  {telemetryCopy.confidence}
                 </p>
                 <p className="text-sm font-extrabold text-[var(--text-primary)]">
                   {confidenceLabel}
@@ -3072,7 +3347,7 @@ export default function ChatWorkspacePage() {
 
             <div className="mt-4">
               <div className="mb-1.5 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                <span>Neural Load</span>
+                <span>{telemetryCopy.neuralLoad}</span>
                 <span>{neuralLoadPercent}%</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
@@ -3082,17 +3357,20 @@ export default function ChatWorkspacePage() {
 
             <div className="mt-4 space-y-2">
               <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                Logic Flow
+                {telemetryCopy.logicFlow}
               </p>
               <div className="space-y-2.5 border-l border-[color:var(--shell-border)] pl-4">
                 {logicFlowNodes.map((node, index) => {
                   const meta = logicFlowStatusMeta(node.status);
+                  const localizedDetail = localizeTelemetryDetail(node.detail, uiLanguage);
                   return (
                     <div key={`telemetry-flow-${node.id}-${index}`} className="relative">
                       <span className={["absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full", meta.dotClass].join(" ")} />
-                      <p className={["text-xs font-bold", meta.labelClass].join(" ")}>{node.label}</p>
+                      <p className={["text-xs font-bold", meta.labelClass].join(" ")}>
+                        {localizeLogicFlowLabel(node.id as LogicFlowNode["id"], uiLanguage)}
+                      </p>
                       <p className={["text-[10px]", meta.detailClass].join(" ")}>
-                        {node.detail || node.status.replaceAll("_", " ")}
+                        {localizedDetail || localizeLogicFlowStatus(node.status, uiLanguage)}
                       </p>
                     </div>
                   );
@@ -3105,10 +3383,10 @@ export default function ChatWorkspacePage() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-base font-extrabold text-[var(--text-primary)]">
                 <span className="material-symbols-outlined text-cyan-500">source</span>
-                Source Intel
+                {telemetryCopy.sourceIntel}
               </h3>
               <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-black uppercase text-cyan-700 dark:text-cyan-300">
-                {sourceIntel.activeCount} Active
+                {sourceIntel.activeCount} {localizeSourceStatus("active", uiLanguage)}
               </span>
             </div>
             <div className="relative">
@@ -3118,7 +3396,7 @@ export default function ChatWorkspacePage() {
               <input
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Tìm kiếm nguồn..."
+                placeholder={telemetryCopy.sourceSearchPlaceholder}
                 className="min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] pl-8 pr-3 text-sm text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
             </div>
@@ -3126,7 +3404,7 @@ export default function ChatWorkspacePage() {
 
           <div className="clara-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
             <p className="px-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Global Medical Databases
+              {telemetryCopy.globalMedicalDatabases}
             </p>
             {sourceIntelGlobal.length ? (
               sourceIntelGlobal.map((item, index) => (
@@ -3148,21 +3426,23 @@ export default function ChatWorkspacePage() {
                     />
                   </div>
                   <p className="mt-1 line-clamp-1 text-[10px] text-[var(--text-muted)]">
-                    {item.query ? `Query: ${item.query}` : "Telemetry source from latest retrieval."}
+                    {item.query
+                      ? `${telemetryCopy.sourceQueryPrefix}: ${item.query}`
+                      : telemetryCopy.sourceFallbackQuery}
                   </p>
                   <p className="mt-1 text-[9px] font-mono text-[var(--text-muted)]">
-                    Status: {item.status.toUpperCase()} · attempts: {item.attempts}
+                    {telemetryCopy.sourceStatusPrefix}: {localizeSourceStatus(item.status, uiLanguage)} · {telemetryCopy.sourceAttemptsLabel}: {item.attempts}
                   </p>
                 </div>
               ))
             ) : (
               <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
-                Chưa có telemetry source từ phiên chat hiện tại.
+                {telemetryCopy.sourceNoGlobal}
               </p>
             )}
 
             <p className="px-1 pt-2 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              MOH Vietnam Sources
+              {telemetryCopy.mohVietnamSources}
             </p>
             {sourceIntelVietnam.length ? (
               sourceIntelVietnam.map((item, index) => (
@@ -3184,13 +3464,13 @@ export default function ChatWorkspacePage() {
                     />
                   </div>
                   <p className="mt-1 text-[9px] font-mono text-[var(--text-muted)]">
-                    Status: {item.status.toUpperCase()} · attempts: {item.attempts}
+                    {telemetryCopy.sourceStatusPrefix}: {localizeSourceStatus(item.status, uiLanguage)} · {telemetryCopy.sourceAttemptsLabel}: {item.attempts}
                   </p>
                 </div>
               ))
             ) : (
               <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
-                Chưa ghi nhận source nội địa trong telemetry hiện tại.
+                {telemetryCopy.sourceNoVietnam}
               </p>
             )}
           </div>
