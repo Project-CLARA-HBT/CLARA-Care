@@ -367,22 +367,72 @@ function pickLogicFlowStatus(statuses: LogicFlowNodeStatus[]): LogicFlowNodeStat
   return "pending";
 }
 
-function buildLogicFlowNodes(flowStages: ResearchTier2Result["flowStages"]): LogicFlowNode[] {
+function buildLogicFlowNodes(result: ResearchTier2Result | null): LogicFlowNode[] {
+  const flowStages = result?.flowStages ?? [];
   const normalizedStages = flowStages.map((stage) => ({
     ...stage,
     normalizedId: stage.id.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"),
     normalizedStatus: normalizeLogicFlowStatus(stage.status),
   }));
 
+  const answerText = (result?.answer ?? "").trim();
+  const hasAnswer = answerText.length > 0;
+  const keywordCount = result?.telemetry.keywords.length ?? 0;
+  const sourceAttemptCount = result?.telemetry.sourceAttempts.length ?? 0;
+  const docCount = result?.telemetry.docs.length ?? 0;
+  const citationCount = result?.citations.length ?? 0;
+  const telemetryErrorCount = result?.telemetry.errors.length ?? 0;
+
+  const fallbackStatusForNode = (nodeId: LogicFlowNode["id"]): LogicFlowNodeStatus => {
+    if (!result) return "pending";
+
+    if (nodeId === "semantic_parsing") {
+      if (keywordCount > 0 || result.steps.length > 0 || hasAnswer) return "completed";
+      return "pending";
+    }
+
+    if (nodeId === "evidence_retrieval") {
+      if (docCount > 0 || citationCount > 0) return telemetryErrorCount > 0 ? "warning" : "completed";
+      if (sourceAttemptCount > 0) return "in_progress";
+      if (telemetryErrorCount > 0) return "failed";
+      return hasAnswer ? "completed" : "pending";
+    }
+
+    if (nodeId === "synthesis_engine") {
+      if (hasAnswer) return "completed";
+      if (docCount > 0 || citationCount > 0) return "in_progress";
+      return "pending";
+    }
+
+    return "pending";
+  };
+
+  const fallbackDetailForNode = (nodeId: LogicFlowNode["id"]): string | undefined => {
+    if (!result) return undefined;
+    if (nodeId === "semantic_parsing" && keywordCount > 0) {
+      return `keyword filter: ${keywordCount} terms`;
+    }
+    if (nodeId === "evidence_retrieval" && (docCount > 0 || sourceAttemptCount > 0)) {
+      return `${docCount} docs · ${sourceAttemptCount} source attempts`;
+    }
+    if (nodeId === "synthesis_engine" && hasAnswer) {
+      return "Answer generated";
+    }
+    return undefined;
+  };
+
   return LOGIC_FLOW_BLUEPRINT.map((node) => {
     const stageIdSet = new Set(node.stageIds);
     const matchedStages = normalizedStages.filter((stage) => stageIdSet.has(stage.normalizedId));
-    const status = pickLogicFlowStatus(matchedStages.map((stage) => stage.normalizedStatus));
+    const matchedStatuses = matchedStages.map((stage) => stage.normalizedStatus);
+    const status = matchedStatuses.length
+      ? pickLogicFlowStatus(matchedStatuses)
+      : fallbackStatusForNode(node.id);
     const detail =
       matchedStages
         .slice()
         .reverse()
-        .find((stage) => stage.detail)?.detail ?? undefined;
+        .find((stage) => stage.detail)?.detail ?? fallbackDetailForNode(node.id);
     return {
       id: node.id,
       label: node.label,
@@ -433,17 +483,47 @@ function resolveTelemetryConfidence(result: ResearchTier2Result | null): number 
   ]);
   if (scoreConfidence !== undefined) return scoreConfidence;
 
-  const relevanceConfidence = extractConfidenceFromScores(result.telemetry.scores, [
+  const relevanceConfidenceRaw = extractConfidenceFromScores(result.telemetry.scores, [
     "relevance",
     "retrieval score",
     "score",
   ]);
-  if (relevanceConfidence !== undefined) return relevanceConfidence;
+  if (relevanceConfidenceRaw !== undefined && relevanceConfidenceRaw > 0) return relevanceConfidenceRaw;
 
   const routing = normalizeConfidenceRatio(result.debug.routing?.confidence);
   if (routing !== undefined) return routing;
 
-  return undefined;
+  const hasAnswer = Boolean(result.answer?.trim());
+  const citationCount = result.citations.length;
+  const docCount = result.telemetry.docs.length;
+  const sourceAttemptCount = result.telemetry.sourceAttempts.length;
+  const flowStageCount = result.flowStages.length;
+  const verificationCount = result.telemetry.verificationMatrix.length;
+  const errorCount = result.telemetry.errors.length;
+
+  const hasSignal =
+    hasAnswer ||
+    citationCount > 0 ||
+    docCount > 0 ||
+    sourceAttemptCount > 0 ||
+    flowStageCount > 0 ||
+    verificationCount > 0;
+
+  if (!hasSignal) return undefined;
+
+  let heuristic = 0.5;
+  heuristic += Math.min(6, citationCount) * 0.03;
+  heuristic += Math.min(10, docCount) * 0.015;
+  heuristic += Math.min(6, sourceAttemptCount) * 0.01;
+  heuristic += Math.min(4, flowStageCount) * 0.02;
+  heuristic += Math.min(3, verificationCount) * 0.025;
+  if (hasAnswer) heuristic += 0.08;
+  if (errorCount > 0) heuristic -= Math.min(0.18, errorCount * 0.06);
+  if (relevanceConfidenceRaw === 0 && (citationCount > 0 || docCount > 0)) {
+    heuristic = Math.max(heuristic, 0.58);
+  }
+
+  return Math.max(0.18, Math.min(0.92, heuristic));
 }
 
 function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
@@ -2068,8 +2148,8 @@ export default function ChatWorkspacePage() {
 
   const latestTier2Result = latestTier2Turn?.result.tier === "tier2" ? latestTier2Turn.result : null;
   const logicFlowNodes = useMemo(
-    () => buildLogicFlowNodes(latestTier2Result?.flowStages ?? []),
-    [latestTier2Result?.flowStages]
+    () => buildLogicFlowNodes(latestTier2Result),
+    [latestTier2Result]
   );
   const confidenceRatio = resolveTelemetryConfidence(latestTier2Result);
   const confidenceRingPercent = Math.max(0, Math.min(100, Math.round((confidenceRatio ?? 0.24) * 100)));
