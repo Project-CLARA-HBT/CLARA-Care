@@ -24,28 +24,28 @@ const ADMIN_TABS: Array<{
   {
     key: "overview",
     href: "/admin/overview",
-    label: "Overview",
+    label: "Tổng quan",
     hint: "Toàn cảnh cấu hình và trạng thái",
     code: "A01"
   },
   {
     key: "knowledge-sources",
     href: "/admin/knowledge-sources",
-    label: "Knowledge Hub",
-    hint: "Unified retrieval + knowledge assets",
+    label: "Nguồn tri thức",
+    hint: "Kho tri thức và connector truy xuất",
     code: "A02"
   },
   {
     key: "answer-flow",
     href: "/admin/answer-flow",
-    label: "Answer Flow",
+    label: "Luồng trả lời",
     hint: "Flow flags và runtime debug",
     code: "A03"
   },
   {
     key: "observability",
     href: "/admin/observability",
-    label: "Observability",
+    label: "Giám sát",
     hint: "Health, metrics và signal board",
     code: "A04"
   }

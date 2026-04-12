@@ -15,6 +15,7 @@ const REFRESH_TIMEOUT_MS = 30000;
 const AUTH_REFRESH_BYPASS_PATHS = [
   "/auth/login",
   "/auth/register",
+  "/auth/login-otp/verify",
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/verify-email",

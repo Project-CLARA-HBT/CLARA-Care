@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 
 const PRIVACY_SECTIONS = [
   { id: "scope", label: "Phạm vi áp dụng" },
+  { id: "user-admin-scope", label: "Phạm vi dữ liệu: người dùng và admin" },
   { id: "data-categories", label: "Danh mục dữ liệu" },
   { id: "processing-purpose", label: "Mục đích xử lý" },
   { id: "legal-basis", label: "Căn cứ xử lý" },
@@ -25,7 +26,7 @@ export default function PrivacyPolicyPage() {
     <LegalPageShell
       policyKey="privacy"
       title="Chính sách quyền riêng tư"
-      summary="Chính sách này mô tả cách The Clara Care quản trị dữ liệu cá nhân và dữ liệu liên quan vận hành lâm sàng để đảm bảo tính minh bạch, khả kiểm và an toàn khi sử dụng hệ thống."
+      summary="Chính sách này mô tả cách The Clara Care quản trị dữ liệu cá nhân và dữ liệu vận hành, bao gồm phạm vi dữ liệu của người dùng cuối và tài khoản quản trị hệ thống."
       updatedAt={LEGAL_UPDATED_AT}
       sections={PRIVACY_SECTIONS.map((item) => ({ id: item.id, label: item.label }))}
       highlights={[
@@ -38,7 +39,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="scope" title="1. Phạm vi áp dụng">
         <p>
           Chính sách áp dụng cho toàn bộ dịch vụ The Clara Care, gồm giao diện web, API và các module như Research, Council,
-          Self-Med, CareGuard, Scribe, Control Tower và các thành phần tích hợp liên quan.
+          Self-Med, CareGuard, Scribe, bảng quản trị hệ thống và các thành phần tích hợp liên quan.
         </p>
         <p>
           Chính sách này được áp dụng cho cả tài khoản cá nhân, tài khoản tổ chức và tài khoản quản trị khi truy cập các tài
@@ -46,7 +47,24 @@ export default function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="data-categories" title="2. Danh mục dữ liệu được thu thập">
+      <LegalSection id="user-admin-scope" title="2. Phạm vi dữ liệu: người dùng và admin">
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            <span className="font-bold">Người dùng cuối:</span> dữ liệu tài khoản, truy vấn, tài liệu tải lên, dữ liệu thuốc, bản ghi
+            hội thoại và dữ liệu đồng thuận.
+          </li>
+          <li>
+            <span className="font-bold">Quản trị viên (admin):</span> dữ liệu cấu hình hệ thống, nhật ký thao tác quản trị, bản ghi
+            audit và dữ liệu giám sát vận hành.
+          </li>
+          <li>
+            <span className="font-bold">Nguyên tắc tách biệt:</span> dữ liệu người dùng và dữ liệu vận hành quản trị được tách quyền truy cập
+            theo vai trò, chỉ mở khi có nhu cầu hợp lệ phục vụ vận hành, hỗ trợ hoặc tuân thủ pháp luật.
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection id="data-categories" title="3. Danh mục dữ liệu được thu thập">
         <ul className="list-disc space-y-2 pl-5">
           <li>Dữ liệu tài khoản: họ tên, email, vai trò, trạng thái xác thực, thông tin phiên đăng nhập.</li>
           <li>Dữ liệu vận hành: log request/response, tín hiệu lỗi, timestamp, chỉ số chất lượng và hiệu năng.</li>
@@ -55,7 +73,7 @@ export default function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="processing-purpose" title="3. Mục đích xử lý dữ liệu">
+      <LegalSection id="processing-purpose" title="4. Mục đích xử lý dữ liệu">
         <ul className="list-disc space-y-2 pl-5">
           <li>Cung cấp chức năng cốt lõi của sản phẩm và duy trì trải nghiệm sử dụng ổn định.</li>
           <li>Nâng cao chất lượng suy luận, truy xuất bằng chứng và khả năng kiểm chứng câu trả lời.</li>
@@ -64,14 +82,18 @@ export default function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="legal-basis" title="4. Căn cứ xử lý dữ liệu">
+      <LegalSection id="legal-basis" title="5. Căn cứ xử lý dữ liệu">
         <p>
           The Clara Care xử lý dữ liệu dựa trên: (i) sự đồng ý của người dùng đối với các tính năng nhạy cảm; (ii) nhu cầu thực
           hiện hợp đồng/dịch vụ; (iii) nghĩa vụ pháp lý hợp lệ; và (iv) lợi ích chính đáng về an toàn vận hành hệ thống.
         </p>
+        <p>
+          Các căn cứ này được diễn giải theo quy định pháp luật Việt Nam hiện hành, bao gồm Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu
+          cá nhân, Luật An toàn thông tin mạng 2015 và Luật An ninh mạng 2018.
+        </p>
       </LegalSection>
 
-      <LegalSection id="retention" title="5. Chính sách lưu trữ và xóa dữ liệu">
+      <LegalSection id="retention" title="6. Chính sách lưu trữ và xóa dữ liệu">
         <p>
           Dữ liệu được lưu trong thời gian cần thiết để phục vụ mục đích nêu trên, hoặc theo yêu cầu pháp lý hiện hành. Sau khi
           hết thời gian lưu trữ, dữ liệu sẽ được xóa hoặc ẩn danh hóa theo quy trình kỹ thuật.
@@ -81,7 +103,7 @@ export default function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="sharing" title="6. Chia sẻ dữ liệu với bên thứ ba">
+      <LegalSection id="sharing" title="7. Chia sẻ dữ liệu với bên thứ ba">
         <p>
           Hệ thống chỉ chia sẻ dữ liệu trong phạm vi cần thiết cho vận hành, ví dụ đối tác hạ tầng, dịch vụ xử lý hỗ trợ hoặc khi
           có yêu cầu pháp lý hợp lệ từ cơ quan có thẩm quyền.
@@ -89,7 +111,7 @@ export default function PrivacyPolicyPage() {
         <p>The Clara Care không bán dữ liệu cá nhân cho bên thứ ba.</p>
       </LegalSection>
 
-      <LegalSection id="security" title="7. Biện pháp an toàn thông tin">
+      <LegalSection id="security" title="8. Biện pháp an toàn thông tin">
         <ul className="list-disc space-y-2 pl-5">
           <li>Kiểm soát truy cập theo vai trò, nguyên tắc tối thiểu quyền hạn và phân tách môi trường vận hành.</li>
           <li>Giám sát bảo mật liên tục, cảnh báo bất thường và quy trình phản ứng sự cố theo mức độ ưu tiên.</li>
@@ -97,21 +119,21 @@ export default function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="user-rights" title="8. Quyền của chủ thể dữ liệu">
+      <LegalSection id="user-rights" title="9. Quyền của chủ thể dữ liệu">
         <p>
           Người dùng có thể yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu cá nhân trong phạm vi pháp luật cho phép. The Clara Care
           có thể cần xác minh danh tính trước khi xử lý các yêu cầu này nhằm đảm bảo an toàn thông tin.
         </p>
       </LegalSection>
 
-      <LegalSection id="cross-border" title="9. Chuyển dữ liệu xuyên biên giới">
+      <LegalSection id="cross-border" title="10. Chuyển dữ liệu xuyên biên giới">
         <p>
           Trong trường hợp có xử lý hạ tầng đa vùng, The Clara Care áp dụng biện pháp kỹ thuật và điều khoản ràng buộc phù hợp để
           duy trì mức độ bảo vệ dữ liệu tương đương với tiêu chuẩn nội bộ.
         </p>
       </LegalSection>
 
-      <LegalSection id="contact" title="10. Liên hệ và cập nhật chính sách">
+      <LegalSection id="contact" title="11. Liên hệ và cập nhật chính sách">
         <p>
           Mọi yêu cầu liên quan quyền riêng tư hoặc dữ liệu cá nhân vui lòng gửi về{" "}
           <a className="font-bold text-[var(--text-brand)] hover:underline" href={`mailto:${LEGAL_CONTACT_EMAIL}`}>
@@ -121,7 +143,7 @@ export default function PrivacyPolicyPage() {
         </p>
         <p>
           Chính sách có thể được cập nhật theo thay đổi pháp lý hoặc thay đổi kiến trúc hệ thống. Phiên bản mới nhất luôn được
-          công bố tại Policy Center của The Clara Care.
+          công bố tại mục Thỏa thuận người dùng của The Clara Care.
         </p>
       </LegalSection>
     </LegalPageShell>

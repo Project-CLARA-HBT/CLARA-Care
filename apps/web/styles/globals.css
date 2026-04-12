@@ -145,19 +145,19 @@ html.dark .medical-markdown table tbody tr:nth-child(odd) {
 html.dark,
 html[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #0b1326;
-  --bg-canvas: #0b1326;
-  --bg-elev-1: rgba(19, 27, 46, 0.72);
-  --bg-elev-2: rgba(23, 31, 51, 0.9);
-  --bg-elev-3: #171f33;
+  --color-bg: #111a2d;
+  --bg-canvas: #111a2d;
+  --bg-elev-1: rgba(29, 40, 63, 0.72);
+  --bg-elev-2: rgba(33, 46, 71, 0.9);
+  --bg-elev-3: #1d2840;
   --text-primary: #dae2fd;
   --text-secondary: #c3c6d0;
   --text-muted: #8d919a;
   --text-brand: #28d9f3;
-  --surface-sidebar: rgba(6, 14, 32, 0.95);
-  --surface-header: rgba(11, 19, 38, 0.8);
-  --surface-panel: rgba(19, 27, 46, 0.84);
-  --surface-muted: rgba(34, 42, 61, 0.78);
+  --surface-sidebar: rgba(16, 26, 44, 0.94);
+  --surface-header: rgba(22, 32, 50, 0.82);
+  --surface-panel: rgba(32, 44, 68, 0.86);
+  --surface-muted: rgba(52, 64, 89, 0.76);
   --surface-brand-soft: rgba(40, 217, 243, 0.14);
   --shell-border: rgba(67, 71, 79, 0.64);
   --shell-border-strong: rgba(40, 217, 243, 0.48);
@@ -233,13 +233,14 @@ a {
 }
 
 .clara-glass-panel {
-  background: rgba(19, 27, 46, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--surface-panel);
+  border: 1px solid var(--shell-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .clara-glow-cyan {
-  box-shadow: 0 0 15px rgba(40, 217, 243, 0.2);
+  box-shadow: 0 0 8px rgba(40, 217, 243, 0.14);
 }
 
 .clinical-gradient {
@@ -495,7 +496,7 @@ html[data-theme="dark"] body {
   background-image:
     radial-gradient(56rem 34rem at 100% 0%, rgb(40 217 243 / 14%), transparent 62%),
     radial-gradient(44rem 26rem at 0% 100%, rgb(183 200 225 / 10%), transparent 68%),
-    linear-gradient(180deg, #060e20 0%, #0b1326 54%, #0b1326 100%);
+    linear-gradient(180deg, #0d1528 0%, #111a2d 54%, #111a2d 100%);
 }
 
 html.dark .chrome-shell .bg-white,

@@ -9,36 +9,36 @@ import {
 } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Trung tâm pháp lý | The Clara Care",
+  title: "Thỏa thuận người dùng | The Clara Care",
   description:
-    "Tổng hợp tài liệu pháp lý The Clara Care: Privacy Policy, Terms of Service, Medical Consent và Cookie Policy.",
+    "Tổng hợp văn bản pháp lý The Clara Care: Thỏa thuận người dùng, Chính sách quyền riêng tư, Đồng thuận y tế và Chính sách cookie.",
 };
 
 const LEGAL_ITEMS = [
   {
     href: "/legal/privacy",
-    shortLabel: "Privacy",
+    shortLabel: "Riêng tư",
     title: "Chính sách quyền riêng tư",
     detail:
       "Giải thích dữ liệu nào được thu thập, mục đích sử dụng, thời gian lưu trữ, quyền chủ thể dữ liệu và cơ chế phản hồi yêu cầu.",
   },
   {
     href: "/legal/terms",
-    shortLabel: "Terms",
+    shortLabel: "Điều khoản",
     title: "Điều khoản sử dụng",
     detail:
       "Quy định quyền và nghĩa vụ khi dùng The Clara Care, phạm vi sử dụng hợp lệ, giới hạn trách nhiệm và điều kiện tạm ngưng tài khoản.",
   },
   {
     href: "/legal/consent",
-    shortLabel: "Consent",
+    shortLabel: "Đồng thuận",
     title: "Đồng thuận y tế",
     detail:
       "Điều khoản bắt buộc cho tính năng có tác động lâm sàng. Nêu rõ vai trò hỗ trợ của AI và yêu cầu xác nhận chuyên môn trước quyết định điều trị.",
   },
   {
     href: "/legal/cookies",
-    shortLabel: "Cookies",
+    shortLabel: "Cookie",
     title: "Chính sách cookie",
     detail:
       "Mô tả cookie cần thiết, cookie chức năng, cách quản lý tại trình duyệt và ảnh hưởng khi tắt cookie quan trọng.",
@@ -49,7 +49,7 @@ const OPERATING_PRINCIPLES = [
   "Mọi module cùng dùng một chuẩn chính sách The Clara Care.",
   "Tài liệu pháp lý được version hóa để audit nội bộ.",
   "Chính sách ưu tiên tính an toàn lâm sàng trước tốc độ phản hồi.",
-  "Mọi thay đổi điều khoản đều được công bố tập trung tại Policy Center.",
+  "Mọi thay đổi điều khoản đều được công bố tập trung tại Thỏa thuận người dùng.",
 ] as const;
 
 export default function LegalHubPage() {
@@ -59,8 +59,8 @@ export default function LegalHubPage() {
         <section className="chrome-panel rounded-[1.9rem] border border-[color:var(--shell-border)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Center</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-[2rem]">Trung tâm pháp lý</h1>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · User Agreement</p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-[2rem]">Thỏa thuận người dùng</h1>
               <p className="mt-3 max-w-[84ch] text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
                 Không gian tập trung toàn bộ chính sách pháp lý của The Clara Care. Đây là nguồn tham chiếu chính thức cho người dùng,
                 quản trị viên và đội vận hành khi cần xác định quyền, nghĩa vụ và phạm vi sử dụng hệ thống.

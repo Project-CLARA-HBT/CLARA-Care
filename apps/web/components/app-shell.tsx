@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import { getRole } from "@/lib/auth-store";
 import {
+  getNavItemsByRole,
   getGroupMeta,
   getGroupedNavItems,
+  getRoleHomePath,
   getPageMeta,
   getTopNavLinks,
   isActiveRoute,
@@ -59,6 +61,7 @@ const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
 
 export default function AppShell({ children }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState<UserRole>("normal");
   const [themePreference, setThemePreference] = useState<ThemePreference>("dark");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -154,6 +157,14 @@ export default function AppShell({ children }: Props) {
   const mobileNavGroups = useMemo(() => getGroupedNavItems(role), [role]);
 
   const topNavLinks = useMemo(() => getTopNavLinks(role), [role]);
+  const roleNavItems = useMemo(() => getNavItemsByRole(role), [role]);
+
+  useEffect(() => {
+    if (isPublicRoute(pathname)) return;
+    const allowed = roleNavItems.some((item) => isActiveRoute(pathname, item.href));
+    if (allowed) return;
+    router.replace(getRoleHomePath(role));
+  }, [pathname, role, roleNavItems, router]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);
@@ -200,7 +211,7 @@ export default function AppShell({ children }: Props) {
                 <span className="material-symbols-outlined text-lg">menu</span>
               </button>
               <div className="min-w-0">
-                <p className="truncate text-lg font-black text-[#003461] dark:text-blue-400">Workspace</p>
+                <p className="truncate text-lg font-black text-[#003461] dark:text-blue-400">Không gian làm việc</p>
                 <p className="hidden truncate text-xs text-[var(--text-muted)] md:block">
                   {currentPage.title}
                 </p>

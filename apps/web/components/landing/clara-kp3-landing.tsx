@@ -49,7 +49,7 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      "Scribe và Research kết hợp rất mượt, tôi vừa ghi chú vừa tra cứu mà không đứt luồng công việc.",
+      "Scribe và CLARA Chat kết hợp rất mượt, tôi vừa ghi chú vừa tra cứu mà không đứt luồng công việc.",
     name: "Lê Hoàng Nam",
     role: "Trợ lý nghiên cứu",
   },
@@ -193,7 +193,7 @@ export default function ClaraKp3Landing() {
           </div>
 
           <Link
-            href="/research"
+            href="/chat"
             className="rounded-md border border-slate-900/20 bg-slate-900 px-5 py-2 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
           >
             <span className="material-symbols-outlined mr-1 align-[-3px] text-base">rocket_launch</span>
@@ -210,13 +210,13 @@ export default function ClaraKp3Landing() {
           </div>
 
           <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-stretch min-[1120px]:gap-12">
-            <div className="w-full space-y-6 min-[1120px]:w-[46%] min-[1280px]:w-[44%]">
+            <div className="w-full space-y-6 min-[1120px]:w-[52%] min-[1280px]:w-[50%]">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-100/65 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
                 Next-Gen Medical AI
               </div>
 
-              <h1 className="max-w-[16ch] text-[2.6rem] font-black leading-[0.95] tracking-tight text-slate-900 min-[640px]:text-[3.6rem] min-[1280px]:text-[4.5rem] dark:text-slate-100">
+              <h1 className="max-w-[18ch] text-[2.6rem] font-black leading-[0.95] tracking-tight text-slate-900 min-[640px]:text-[3.6rem] min-[1280px]:text-[4.5rem] dark:text-slate-100">
                 Hỏi đúng trọng tâm.
                 <br />
                 <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>
@@ -225,16 +225,16 @@ export default function ClaraKp3Landing() {
               </h1>
 
               <p className="max-w-[56ch] text-base font-medium leading-relaxed text-slate-600 min-[1280px]:text-lg dark:text-slate-300">
-                Bắt đầu với Research để lấy bằng chứng có trích dẫn rõ ràng, rồi chuyển mượt sang Council, Self-Med, CareGuard,
-                Scribe và Control Tower trong cùng một luồng lâm sàng.
+                Bắt đầu với CLARA Chat để lấy bằng chứng có trích dẫn rõ ràng, rồi chuyển mượt sang Council, Self-Med, CareGuard,
+                Scribe và bảng quản trị trong cùng một luồng lâm sàng.
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/research"
+                  href="/chat"
                   className="group inline-flex items-center gap-2 rounded-xl bg-slate-900 px-8 py-4 text-base font-black text-white transition-all hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
                 >
-                  Bắt đầu với Research
+                  Bắt đầu với CLARA Chat
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
                 </Link>
                 <Link
@@ -264,7 +264,7 @@ export default function ClaraKp3Landing() {
               </div>
             </div>
 
-            <div className="relative w-full self-start min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
+            <div className="relative w-full self-start min-[1120px]:w-[48%] min-[1280px]:w-[50%]">
               <div className="absolute -inset-10 rounded-full bg-cyan-300/15 blur-[100px] dark:bg-cyan-700/20" />
 
               <div className="glass-panel relative overflow-hidden rounded-2xl border border-white/40 p-5 shadow-[0_32px_64px_-12px_rgba(0,31,61,0.2)] dark:border-slate-700/60">
@@ -289,7 +289,7 @@ export default function ClaraKp3Landing() {
                 <div className="space-y-5">
                   <div className="flex justify-between">
                     <div>
-                      <div className="text-sm font-black text-slate-900 dark:text-slate-100">CLARA Research Engine</div>
+                      <div className="text-sm font-black text-slate-900 dark:text-slate-100">CLARA Chat Engine</div>
                       <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
                         Clinical Context Active
@@ -471,7 +471,7 @@ export default function ClaraKp3Landing() {
                 System Modules
               </div>
               <h2 className="text-4xl font-black leading-tight tracking-tight text-slate-900 min-[1024px]:text-5xl dark:text-slate-100">
-                CLARA Research
+                CLARA Chat
                 <br />
                 <span className="text-cyan-600 dark:text-cyan-300">Core Engine</span>
               </h2>
@@ -493,10 +493,10 @@ export default function ClaraKp3Landing() {
                 </div>
               </div>
               <Link
-                href="/research"
+                href="/chat"
                 className="inline-flex rounded-xl bg-slate-900 px-8 py-4 text-base font-black text-white transition-colors hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
               >
-                Bắt đầu dùng Research
+                Bắt đầu dùng Chat
               </Link>
             </div>
 
@@ -714,7 +714,7 @@ export default function ClaraKp3Landing() {
 
             <div className="flex flex-col items-start justify-between gap-2 pt-4 text-[11px] text-slate-400 sm:flex-row sm:items-center">
               <p>Built for Vietnam-first clinical workflows.</p>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Research • Council • Safety • Scribe • Control Tower</p>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Chat • Council • Safety • Scribe • Quản trị</p>
             </div>
           </div>
         </footer>

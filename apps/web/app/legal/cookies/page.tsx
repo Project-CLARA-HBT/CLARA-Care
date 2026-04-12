@@ -78,7 +78,7 @@ export default function CookiePolicyPage() {
       <LegalSection id="updates" title="7. Cập nhật chính sách cookie">
         <p>
           Chính sách cookie có thể được điều chỉnh theo thay đổi kỹ thuật và quy định tuân thủ. Bản cập nhật mới nhất luôn được
-          công bố tại Policy Center thuộc The Clara Care.
+          công bố tại mục Thỏa thuận người dùng của The Clara Care.
         </p>
       </LegalSection>
     </LegalPageShell>

@@ -30,6 +30,12 @@ function isPublicPath(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  if (pathname === "/research" || pathname.startsWith("/research/")) {
+    const chatUrl = new URL("/chat", request.url);
+    chatUrl.search = search;
+    return NextResponse.redirect(chatUrl);
+  }
+
   const hasSession = Boolean(
     request.cookies.get(ACCESS_COOKIE_NAME)?.value ||
       request.cookies.get(REFRESH_COOKIE_NAME)?.value ||

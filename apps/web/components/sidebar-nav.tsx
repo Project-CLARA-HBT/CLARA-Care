@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { clearTokens } from "@/lib/auth-store";
+import api from "@/lib/http-client";
 import { getGroupMeta, getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigation.config";
 
 type SidebarNavProps = {
@@ -19,7 +22,24 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 export default function SidebarNav({ role, collapsed = false, onToggleCollapse }: SidebarNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const groups = getGroupedNavItems(role);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await api.post("/auth/logout", {});
+    } catch {
+      // ignore network/logout errors, local clear still proceeds
+    } finally {
+      clearTokens();
+      router.replace("/login");
+      router.refresh();
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <aside
@@ -101,6 +121,22 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">{ROLE_LABELS[role]}</p>
             </div>
           ) : null}
+        </div>
+        <div className={["mt-3", collapsed ? "flex justify-center" : ""].join(" ")}>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={isLoggingOut}
+            className={[
+              "inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]",
+              collapsed ? "w-10 px-0" : "w-full gap-2 px-3"
+            ].join(" ")}
+            title="Đăng xuất"
+            aria-label="Đăng xuất"
+          >
+            <span className="material-symbols-outlined text-[17px]">logout</span>
+            {!collapsed ? <span>{isLoggingOut ? "Đang thoát..." : "Đăng xuất"}</span> : null}
+          </button>
         </div>
       </div>
     </aside>

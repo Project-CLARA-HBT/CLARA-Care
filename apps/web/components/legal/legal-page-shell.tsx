@@ -30,25 +30,25 @@ const POLICY_NAV_ITEMS: LegalNavItem[] = [
   {
     key: "privacy",
     href: "/legal/privacy",
-    shortLabel: "Privacy",
+    shortLabel: "Riêng tư",
     title: "Chính sách quyền riêng tư",
   },
   {
     key: "terms",
     href: "/legal/terms",
-    shortLabel: "Terms",
+    shortLabel: "Điều khoản",
     title: "Điều khoản sử dụng",
   },
   {
     key: "consent",
     href: "/legal/consent",
-    shortLabel: "Consent",
+    shortLabel: "Đồng thuận",
     title: "Đồng thuận y tế",
   },
   {
     key: "cookies",
     href: "/legal/cookies",
-    shortLabel: "Cookies",
+    shortLabel: "Cookie",
     title: "Chính sách cookie",
   },
 ];
@@ -77,7 +77,7 @@ export default function LegalPageShell({
         <section className="chrome-panel rounded-[1.9rem] border border-[color:var(--shell-border)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · Policy Center</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · User Agreement</p>
               <p className="mt-2 text-sm text-[var(--text-muted)]">Bộ chính sách vận hành và bảo vệ dữ liệu cho toàn bộ hệ thống.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +91,7 @@ export default function LegalPageShell({
                 href="/legal"
                 className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
               >
-                Trung tâm pháp lý
+                Thỏa thuận người dùng
               </Link>
             </div>
           </div>
@@ -175,8 +175,8 @@ export default function LegalPageShell({
             <div className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">Ghi chú tuân thủ</p>
               <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--text-secondary)]">
-                <li>Policy này áp dụng cho tất cả module thuộc The Clara Care.</li>
-                <li>Trong xung đột văn bản, ưu tiên phiên bản cập nhật mới nhất tại Policy Center.</li>
+                <li>Chính sách này áp dụng cho tất cả module thuộc The Clara Care.</li>
+                <li>Trong xung đột văn bản, ưu tiên phiên bản cập nhật mới nhất tại mục Thỏa thuận người dùng.</li>
                 <li>Dữ liệu lâm sàng luôn cần xác nhận bởi chuyên môn y tế trước khi hành động.</li>
               </ul>
             </div>

@@ -11,18 +11,6 @@ function sanitizeChatboxAnswer(raw: string): string {
 
   let sanitized = raw;
 
-  // Remove safety matrix section that is now represented in right-side telemetry panel.
-  sanitized = sanitized.replace(
-    /(?:^|\n)\s*security\s*\n+\s*ma trận quyết định an toàn[\s\S]*?(?=\n##\s|\n#\s|$)/gi,
-    "\n"
-  );
-
-  // Remove executive summary section from center chatbox.
-  sanitized = sanitized.replace(
-    /(?:^|\n)\s*##\s*tóm tắt điều hành[\s\S]*?(?=\n##\s|$)/gi,
-    "\n"
-  );
-
   // Remove fallback-local sentence if model includes it in answer body.
   sanitized = sanitized.replace(
     /hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời\.?/gi,
@@ -66,8 +54,8 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
                 citations={citations}
                 showInlineCitations={false}
                 enableMermaid={false}
-                stripReferenceSection={true}
-                stripSafetyMatrixSection={true}
+                stripReferenceSection={false}
+                stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}
               />
@@ -88,7 +76,7 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
                 citations={[]}
                 showInlineCitations={false}
                 enableMermaid={false}
-                stripReferenceSection={true}
+                stripReferenceSection={false}
                 stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}

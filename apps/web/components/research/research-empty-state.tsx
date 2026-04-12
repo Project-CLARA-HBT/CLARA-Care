@@ -23,7 +23,7 @@ export default function ResearchEmptyState({
         <p className="text-base font-semibold text-[var(--text-primary)]">{title}</p>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
         <Link
-          href="/research"
+          href="/chat"
           className="mt-4 inline-flex min-h-[46px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white"
         >
           {actionLabel}

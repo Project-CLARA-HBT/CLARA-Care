@@ -302,14 +302,14 @@ export default function AdminKnowledgeSourcesPage() {
   return (
     <AdminShell
       activeTab="knowledge-sources"
-      title="Knowledge Hub"
-      description="Knowledge assets và source priority."
+      title="Nguồn tri thức"
+      description="Kho tri thức hợp nhất và ưu tiên nguồn truy xuất."
     >
       <div className="space-y-6">
         <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
           <article className="rounded-2xl border border-slate-200 bg-[#001c38] p-4 shadow-lg dark:border-slate-700">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">Knowledge Connectivity Visualization</h3>
+              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">Sơ đồ kết nối nguồn tri thức</h3>
               <span className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
                 Live
               </span>
@@ -336,7 +336,7 @@ export default function AdminKnowledgeSourcesPage() {
                 </svg>
               </div>
               <div className="space-y-2.5 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">Records by Source</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">Số bản ghi theo nguồn</p>
                 {sourceRecordDistribution.length ? (
                   sourceRecordDistribution.map(([source, count]) => (
                     <div key={source}>
@@ -397,18 +397,18 @@ export default function AdminKnowledgeSourcesPage() {
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 space-y-4 lg:col-span-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Knowledge Control</h3>
+              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Điều phối nguồn tri thức</h3>
               <button
                 type="button"
                 onClick={() => void loadSources()}
                 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#003461] hover:underline dark:text-cyan-300"
               >
-                Refresh
+                Làm mới
               </button>
             </div>
 
             <form onSubmit={onCreateSource} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Create source</label>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tạo nguồn tri thức</label>
               <div className="mt-2 flex gap-2">
                 <input
                   value={newSourceName}
@@ -428,14 +428,14 @@ export default function AdminKnowledgeSourcesPage() {
 
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Retrieval Connectors Priority</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Ưu tiên connector truy xuất</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => void reloadRag()}
                     className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Reload
+                    Tải lại
                   </button>
                   <button
                     type="button"
@@ -443,7 +443,7 @@ export default function AdminKnowledgeSourcesPage() {
                     onClick={() => void saveRag()}
                     className="rounded-md bg-[#003461] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[#004b87] disabled:opacity-60"
                   >
-                    {isSavingRag ? "Saving..." : "Save"}
+                    {isSavingRag ? "Đang lưu..." : "Lưu"}
                   </button>
                 </div>
               </div>
@@ -479,12 +479,12 @@ export default function AdminKnowledgeSourcesPage() {
                             : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         ].join(" ")}
                       >
-                        {source.enabled ? "Enabled" : "Disabled"}
+                        {source.enabled ? "Bật" : "Tắt"}
                       </button>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Priority</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ưu tiên</span>
                         <input
                           type="range"
                           min={1}
@@ -496,7 +496,7 @@ export default function AdminKnowledgeSourcesPage() {
                         <span className="w-8 text-right text-xs font-mono font-bold text-[#003461] dark:text-cyan-300">{source.priority}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Weight</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Trọng số</span>
                         <input
                           type="range"
                           min={0}
@@ -516,7 +516,7 @@ export default function AdminKnowledgeSourcesPage() {
               )}
 
               <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Knowledge Source Focus</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Phân bổ nguồn tri thức</p>
                 {isLoadingSources ? (
                   <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải nguồn tri thức...</p>
                 ) : knowledgePriorityRows.length ? (
@@ -674,7 +674,7 @@ export default function AdminKnowledgeSourcesPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Federated Clinical Sources</h3>
+              <h3 className="text-lg font-bold text-[#003461] dark:text-cyan-300">Nguồn lâm sàng liên thông</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Đồng bộ dữ liệu từ PubMed, RxNorm, openFDA, DAVIDrug và các nguồn chuẩn khác.
               </p>
@@ -732,7 +732,7 @@ export default function AdminKnowledgeSourcesPage() {
                 disabled={isSyncingSourceHub}
                 className="min-h-[42px] rounded-xl bg-[#003461] px-4 text-sm font-semibold text-white transition hover:bg-[#004b87] disabled:opacity-60"
               >
-                {isSyncingSourceHub ? "Đang sync..." : "Sync Federation"}
+                {isSyncingSourceHub ? "Đang đồng bộ..." : "Đồng bộ nguồn"}
               </button>
             </div>
           </form>

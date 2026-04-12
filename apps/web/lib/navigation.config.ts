@@ -55,13 +55,13 @@ const NAV_ITEMS: NavigationItem[] = [
     href: "/chat",
     label: "Chat",
     icon: "chat_paste_go",
-    desc: "Trải nghiệm chat thuần",
+    desc: "Hỏi đáp y tế hợp nhất",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "CLARA Chat",
-      subtitle: "Không gian chat tập trung với 3 mode Clara Research: Fast, Deep, Deep Beta."
+      subtitle: "Không gian chat tập trung với 3 chế độ phản hồi: Nhanh, Sâu, Sâu mở rộng."
     }
   },
   {
@@ -129,11 +129,11 @@ const NAV_ITEMS: NavigationItem[] = [
   },
   {
     href: "/admin/overview",
-    label: "Admin Control Tower",
+    label: "Quản trị hệ thống",
     icon: "settings_input_component",
     desc: "Điều phối cấu hình và vận hành",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Quản trị hệ thống",
       subtitle: "Bảng điều phối trung tâm cho cấu hình, chất lượng phản hồi và vận hành."
@@ -143,12 +143,12 @@ const NAV_ITEMS: NavigationItem[] = [
     href: "/admin/knowledge-sources",
     label: "Nguồn tri thức",
     icon: "database",
-    desc: "Knowledge Hub hợp nhất",
+    desc: "Nguồn dữ liệu hợp nhất",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
-      title: "Knowledge Hub",
-      subtitle: "Trung tâm hợp nhất retrieval connectors, tài liệu và đồng bộ nguồn y khoa."
+      title: "Nguồn tri thức",
+      subtitle: "Trung tâm hợp nhất connector truy xuất, tài liệu và đồng bộ nguồn y khoa."
     }
   },
   {
@@ -157,7 +157,7 @@ const NAV_ITEMS: NavigationItem[] = [
     icon: "alt_route",
     desc: "Điều phối phân tích và phản hồi",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Luồng trả lời",
       subtitle: "Điều phối các bước phân tích, xác minh và phản hồi cuối."
@@ -169,7 +169,7 @@ const NAV_ITEMS: NavigationItem[] = [
     icon: "monitoring",
     desc: "Theo dõi cảnh báo runtime",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Giám sát vận hành",
       subtitle: "Theo dõi tình trạng hệ thống, cảnh báo và tín hiệu runtime."
@@ -192,7 +192,7 @@ const NAV_ITEMS: NavigationItem[] = [
 const GROUP_ORDER: NavGroupKey[] = ["core", "clinical", "medication", "admin", "support"];
 
 export const GROUP_LABELS: Record<NavGroupKey, string> = {
-  core: "Workspace",
+  core: "Không gian làm việc",
   clinical: "Lâm sàng",
   medication: "Thuốc và an toàn",
   admin: "Quản trị hệ thống",
@@ -200,7 +200,7 @@ export const GROUP_LABELS: Record<NavGroupKey, string> = {
 };
 
 const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
-  core: { label: "Workspace", shortLabel: "Workspace", icon: "workspaces" },
+  core: { label: "Không gian làm việc", shortLabel: "Không gian", icon: "workspaces" },
   clinical: { label: "Lâm sàng", shortLabel: "Lâm sàng", icon: "stethoscope" },
   medication: { label: "Thuốc và an toàn", shortLabel: "An toàn", icon: "shield" },
   admin: { label: "Quản trị hệ thống", shortLabel: "Quản trị", icon: "settings_input_component" },
@@ -283,8 +283,8 @@ export function getPageMeta(pathname: string): PageMeta {
 
   if (pathname === "/research" || pathname.startsWith("/research/")) {
     return {
-      title: "Hỏi đáp chuyên môn",
-      subtitle: "Tra cứu câu trả lời có dẫn nguồn để hỗ trợ quyết định lâm sàng."
+      title: "Hỏi đáp y tế",
+      subtitle: "Luồng hỏi đáp đã hợp nhất về CLARA Chat."
     };
   }
 

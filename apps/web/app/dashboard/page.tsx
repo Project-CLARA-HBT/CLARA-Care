@@ -39,11 +39,11 @@ const ROLE_GREETINGS: Record<UserRole, string> = {
 };
 
 const QUICK_ACCESS: QuickAccess[] = [
-  { href: "/chat", title: "Start Evidence Search", detail: "Medical Chat", icon: "search_spark" },
-  { href: "/council", title: "Open AI Council", detail: "Case Analysis", icon: "forum" },
-  { href: "/selfmed", title: "Self-Med Review", detail: "DDI Verification", icon: "medication" },
-  { href: "/careguard", title: "CareGuard Logs", detail: "Safety Monitoring", icon: "security" },
-  { href: "/scribe", title: "Launch Scribe", detail: "Voice-to-Clinical", icon: "mic" },
+  { href: "/chat", title: "Mở CLARA Chat", detail: "Hỏi đáp có dẫn nguồn", icon: "search_spark" },
+  { href: "/council", title: "Mở hội chẩn AI", detail: "Phân tích ca bệnh", icon: "forum" },
+  { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Đối chiếu đơn thuốc", icon: "medication" },
+  { href: "/careguard", title: "Kiểm tra CareGuard", detail: "Theo dõi cảnh báo an toàn", icon: "security" },
+  { href: "/scribe", title: "Mở Medical Scribe", detail: "Ghi âm và ghi chép bệnh án", icon: "mic" },
 ];
 
 function formatCount(value: number | null): string {
@@ -65,8 +65,11 @@ function statusPillClass(status: string): string {
   if (["critical", "high", "error", "fail"].some((token) => normalized.includes(token))) {
     return "bg-red-500/15 text-red-700 dark:text-red-300";
   }
-  if (["draft", "pending", "warning", "warn"].some((token) => normalized.includes(token))) {
+  if (["draft", "pending", "warning", "warn", "nháp", "chờ"].some((token) => normalized.includes(token))) {
     return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  }
+  if (["hoàn tất", "da ra soat", "đã rà soát", "xong"].some((token) => normalized.includes(token))) {
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
   }
   return "bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
@@ -157,9 +160,9 @@ export default function DashboardPage() {
       return recentQueries.slice(0, 3).map((item, index) => ({
         id: item.id,
         title: item.query,
-        detail: `Query ID #${item.id.slice(0, 8)} • Applied Research`,
+        detail: `Mã truy vấn #${item.id.slice(0, 8)} • Hỏi đáp lâm sàng`,
         timestamp: formatRelative(item.createdAt),
-        status: index === 0 ? "Completed" : index === 1 ? "Reviewed" : "Draft ready",
+        status: index === 0 ? "Hoàn tất" : index === 1 ? "Đã rà soát" : "Bản nháp",
         tone: index === 0 ? "secondary" : index === 1 ? "muted" : "primary",
       }));
     }
@@ -168,25 +171,25 @@ export default function DashboardPage() {
       {
         id: "default-1",
         title: "So sánh DASH vs Địa Trung Hải",
-        detail: "Patient ID: #8821 • Applied Research",
+        detail: "Mã bệnh nhân: #8821 • Hỏi đáp lâm sàng",
         timestamp: "2 giờ trước",
-        status: "Completed",
+        status: "Hoàn tất",
         tone: "secondary",
       },
       {
         id: "default-2",
         title: "Phân tích tương tác Metformin",
-        detail: "Patient ID: #9042 • Self-Med Sync",
+        detail: "Mã bệnh nhân: #9042 • Đồng bộ tủ thuốc",
         timestamp: "5 giờ trước",
-        status: "Reviewed",
+        status: "Đã rà soát",
         tone: "muted",
       },
       {
         id: "default-3",
         title: "Ghi âm thăm khám: Nguyễn Văn A",
-        detail: "Patient ID: #7731 • Scribe Transcript",
+        detail: "Mã bệnh nhân: #7731 • Biên bản Scribe",
         timestamp: "Hôm qua",
-        status: "Draft ready",
+        status: "Bản nháp",
         tone: "primary",
       },
     ];
@@ -206,28 +209,28 @@ export default function DashboardPage() {
     return [
       {
         id: "review-meds",
-        title: "Review Meds",
+        title: "Rà soát thuốc",
         detail: "Kiểm tra danh mục thuốc hiện tại",
         tone: "normal",
         href: "/selfmed",
       },
       {
         id: "check-ddi",
-        title: "Check DDI",
+        title: "Kiểm tra DDI",
         detail: "Đối chiếu tương tác đa thuốc",
         tone: "warn",
         href: "/careguard",
       },
       {
         id: "conduct-council",
-        title: "Conduct Council",
+        title: "Chạy hội chẩn",
         detail: "Hội chẩn các ca cần quyết định",
         tone: "normal",
         href: "/council",
       },
       {
         id: "record-findings",
-        title: "Record Findings",
+        title: "Ghi nhận kết quả",
         detail: "Ghi nhận kết luận và theo dõi",
         tone: "normal",
         href: "/scribe",
@@ -241,10 +244,10 @@ export default function DashboardPage() {
         ? todayTasks.slice(0, 4)
         : [
             ...todayTasks,
-            { id: "fallback-1", title: "Review Meds", detail: "", tone: "normal" as TodayTask["tone"], href: "/selfmed" },
-            { id: "fallback-2", title: "Check DDI", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
-            { id: "fallback-3", title: "Conduct Council", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
-            { id: "fallback-4", title: "Record Findings", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
+            { id: "fallback-1", title: "Rà soát thuốc", detail: "", tone: "normal" as TodayTask["tone"], href: "/selfmed" },
+            { id: "fallback-2", title: "Kiểm tra DDI", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
+            { id: "fallback-3", title: "Chạy hội chẩn", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
+            { id: "fallback-4", title: "Ghi nhận kết quả", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
           ]).slice(0, 4),
     [todayTasks]
   );
@@ -272,7 +275,7 @@ export default function DashboardPage() {
   return (
     <PageShell title="" description="" variant="plain">
       <div className="space-y-10">
-        <section className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
+        <section className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
           <div>
             <h2 className="mb-2 text-3xl font-extrabold tracking-tight text-[var(--text-brand)] sm:text-4xl">{greeting}</h2>
             <p className="text-sm text-[var(--text-secondary)] sm:text-lg">
@@ -281,12 +284,12 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="rounded-xl border-l-4 border-[var(--brand-600)] bg-cyan-500/10 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-600)]">AI Status</p>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Precision Core Active</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-600)]">Trạng thái AI</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Pipeline ổn định</p>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
+        <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Luồng công việc hàng ngày</h3>
             <span className="text-xs text-[var(--text-secondary)]">Tiến độ: {workflowProgress}% hoàn thành</span>
@@ -320,7 +323,7 @@ export default function DashboardPage() {
                         check
                       </span>
                     ) : isCurrent ? (
-                      <span className="text-xs font-bold">03</span>
+                      <span className="text-xs font-bold">{String(index + 1).padStart(2, "0")}</span>
                     ) : (
                       <span className="material-symbols-outlined text-[18px]">edit_note</span>
                     )}
@@ -333,15 +336,15 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid grid-cols-12 gap-6">
-          <article className="col-span-12 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
+          <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[var(--text-brand)]">
                 <span className="material-symbols-outlined">groups</span>
               </div>
-              <span className="rounded bg-blue-500/10 px-2 py-1 text-[10px] font-bold">Council Progress</span>
+              <span className="rounded bg-blue-500/10 px-2 py-1 text-[10px] font-bold">Tiến độ hội chẩn</span>
             </div>
             <h4 className="text-2xl font-bold text-[var(--text-brand)]">
-              {councilDone} / {councilTotal} Cases
+              {councilDone} / {councilTotal} ca
             </h4>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">Đã hoàn thành hội chẩn AI</p>
             <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
@@ -349,16 +352,16 @@ export default function DashboardPage() {
             </div>
           </article>
 
-          <article className="col-span-12 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
+          <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-700 dark:text-cyan-300">
                 <span className="material-symbols-outlined">pill</span>
               </div>
-              <span className="rounded bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-300">Critical Alert</span>
+              <span className="rounded bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-300">Cảnh báo</span>
             </div>
-            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)} Active Meds</h4>
+            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)} thuốc đang theo dõi</h4>
             <p className="mt-1 text-xs font-bold text-red-700 dark:text-red-300">
-              {alerts[0] ?? "Potential DDI detected for high-risk cohort"}
+              {alerts[0] ?? "Hệ thống phát hiện tín hiệu tương tác thuốc cần ưu tiên kiểm tra."}
             </p>
             <div className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
               <span className="h-2 w-2 rounded-full bg-red-500" />
@@ -366,14 +369,14 @@ export default function DashboardPage() {
             </div>
           </article>
 
-          <article className="col-span-12 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
+          <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
                 <span className="material-symbols-outlined">menu_book</span>
               </div>
-              <span className="rounded bg-cyan-500/15 px-2 py-1 text-[10px] font-bold text-cyan-700 dark:text-cyan-300">Insights</span>
+              <span className="rounded bg-cyan-500/15 px-2 py-1 text-[10px] font-bold text-cyan-700 dark:text-cyan-300">Tín hiệu</span>
             </div>
-            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(enabledSources)} Active Sources</h4>
+            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(enabledSources)} nguồn đang bật</h4>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
               Tổng nguồn: {formatCount(totalSources)} • API: {healthStatus.toUpperCase()} • ML: {mlStatus.toUpperCase()}
             </p>
@@ -396,7 +399,7 @@ export default function DashboardPage() {
               disabled={isRefreshing}
               className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
             >
-              {isRefreshing ? "Đang đồng bộ..." : "Refresh"}
+              {isRefreshing ? "Đang đồng bộ..." : "Làm mới"}
             </button>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
@@ -404,7 +407,7 @@ export default function DashboardPage() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 text-left shadow-[var(--shadow-soft)] transition hover:-translate-y-1 hover:shadow-[var(--shadow-float)]"
+                className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 text-left shadow-[var(--shadow-soft)] transition hover:-translate-y-1 hover:shadow-[var(--shadow-float)]"
               >
                 <span className="material-symbols-outlined mb-3 block text-[var(--brand-600)]">{item.icon}</span>
                 <p className="text-sm font-bold text-[var(--text-brand)]">{item.title}</p>
@@ -421,7 +424,7 @@ export default function DashboardPage() {
               {activityItems.map((item) => (
                 <article
                   key={item.id}
-                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--shell-border)] border-l-4 bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] ${activityToneClass(item.tone)}`}
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--shell-border)] border-l-4 bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] ${activityToneClass(item.tone)}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-muted)]">
@@ -445,14 +448,13 @@ export default function DashboardPage() {
 
           <div className="col-span-12 space-y-6 lg:col-span-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Trợ lý CLARA</h3>
-            <article className="relative overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-float)]">
-              <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl" />
+            <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
               <div className="relative z-10">
                 <div className="mb-5 flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--text-brand)] text-white">
                     <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
                   </div>
-                  <span className="text-sm font-bold text-[var(--text-brand)]">Diagnostic Insight</span>
+                  <span className="text-sm font-bold text-[var(--text-brand)]">Nhận định hỗ trợ</span>
                 </div>
 
                 <div className="mb-6 border-l-4 border-cyan-400 pl-4">
@@ -461,14 +463,14 @@ export default function DashboardPage() {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg bg-white/70 p-3 dark:bg-slate-900/50">
-                    <span className="text-xs font-medium text-[var(--text-secondary)]">Confidence Level</span>
+                    <span className="text-xs font-medium text-[var(--text-secondary)]">Độ tự tin ước tính</span>
                     <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                      High ({Math.max(0.5, Math.min(0.98, 1 - (errorCount ?? 0) * 0.02)).toFixed(2)})
+                      Cao ({Math.max(0.5, Math.min(0.98, 1 - (errorCount ?? 0) * 0.02)).toFixed(2)})
                     </span>
                   </div>
                   <button
                     type="button"
-                    className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-sky-400 py-2.5 text-xs font-bold text-white shadow-md transition hover:opacity-95"
+                    className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] py-2.5 text-xs font-bold text-[var(--text-primary)] transition hover:bg-white/90 dark:hover:bg-slate-800"
                   >
                     Xem chi tiết phân tích
                   </button>

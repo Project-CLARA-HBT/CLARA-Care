@@ -124,6 +124,20 @@ class Settings(BaseSettings):
         validation_alias="AUTH_ACTION_TOKEN_TTL_MINUTES",
         gt=0,
     )
+    auth_login_otp_enabled: bool = Field(
+        default=True,
+        validation_alias="AUTH_LOGIN_OTP_ENABLED",
+    )
+    auth_login_otp_roles: str = Field(
+        default="doctor,admin",
+        validation_alias="AUTH_LOGIN_OTP_ROLES",
+    )
+    auth_login_otp_ttl_minutes: int = Field(
+        default=5,
+        validation_alias="AUTH_LOGIN_OTP_TTL_MINUTES",
+        gt=0,
+        le=30,
+    )
     auth_action_rate_limit_attempts: int = Field(
         default=30,
         validation_alias="AUTH_ACTION_RATE_LIMIT_ATTEMPTS",

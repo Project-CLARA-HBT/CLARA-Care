@@ -30,7 +30,15 @@ client = TestClient(app)
 def _login(email: str) -> str:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": "secret"})
     assert response.status_code == 200
-    return response.json()["access_token"]
+    payload = response.json()
+    if payload.get("otp_required"):
+        verify_response = client.post(
+            "/api/v1/auth/login-otp/verify",
+            json={"email": email, "otp_code": payload.get("otp_code_preview")},
+        )
+        assert verify_response.status_code == 200
+        return verify_response.json()["access_token"]
+    return payload["access_token"]
 
 
 def test_system_metrics_success_for_doctor() -> None:

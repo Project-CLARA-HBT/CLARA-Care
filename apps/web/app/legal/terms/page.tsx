@@ -10,13 +10,14 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Thoả thuận pháp lý và Điều khoản chính sách | The Clara Care",
+  title: "Thỏa thuận người dùng | The Clara Care",
   description:
-    "Thoả thuận pháp lý và điều khoản chính sách khi truy cập website và sử dụng dịch vụ The Clara Care.",
+    "Thỏa thuận người dùng áp dụng khi truy cập website, ứng dụng và dịch vụ The Clara Care.",
 };
 
 const SECTIONS = [
   { id: "intro", label: "Lời mở đầu" },
+  { id: "legal-basis", label: "Căn cứ pháp lý áp dụng" },
   { id: "definitions", label: "Điều 1: Giải thích từ ngữ" },
   { id: "prohibited", label: "Điều 2: Hành vi bị cấm" },
   { id: "customer-rights", label: "Điều 3: Quyền & nghĩa vụ khách hàng" },
@@ -39,16 +40,16 @@ export default function TermsOfServicePage() {
   return (
     <LegalPageShell
       policyKey="terms"
-      title="Thoả thuận pháp lý và Điều khoản chính sách"
-      summary="Văn bản này được biên soạn dựa trên cấu trúc điều khoản bạn cung cấp, chuẩn hoá cho hệ sinh thái The Clara Care và áp dụng cho toàn bộ truy cập website, API, workspace và dịch vụ liên quan."
+      title="Thỏa thuận người dùng"
+      summary="Văn bản này quy định quyền, nghĩa vụ và phạm vi sử dụng dịch vụ The Clara Care cho người dùng cá nhân, tổ chức và quản trị viên khi truy cập website, API và các module chuyên môn."
       updatedAt={LEGAL_UPDATED_AT}
       sections={SECTIONS.map((item) => ({ id: item.id, label: item.label }))}
       highlights={[
         `Domain chính thức: ${LEGAL_PRIMARY_DOMAIN}`,
         `Chủ thể vận hành: ${LEGAL_OPERATOR_NAME}`,
         `Phiên bản điều khoản: ${LEGAL_POLICY_VERSION}`,
-        "Điều khoản có thể được cập nhật theo thời gian và có hiệu lực ngay khi công bố.",
-        "Mọi hoạt động dùng dịch vụ đồng nghĩa bạn đã đọc và chấp thuận chính sách hiện hành.",
+        "Văn bản được rà soát theo quy định pháp luật Việt Nam đang có hiệu lực tại thời điểm ban hành.",
+        "Mọi hoạt động dùng dịch vụ đồng nghĩa bạn đã đọc và chấp thuận điều khoản hiện hành.",
       ]}
     >
       <LegalSection id="intro" title="Lời mở đầu">
@@ -59,6 +60,18 @@ export default function TermsOfServicePage() {
         <p>
           Việc bạn tiếp tục truy cập website, ứng dụng hoặc API của The Clara Care được hiểu là bạn đã đồng ý với toàn bộ điều
           khoản trong văn bản này.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="legal-basis" title="Căn cứ pháp lý áp dụng">
+        <p>
+          Thỏa thuận này được xây dựng theo các nguyên tắc tuân thủ pháp luật Việt Nam, bao gồm nhưng không giới hạn ở:
+          Bộ luật Dân sự năm 2015, Luật Giao dịch điện tử năm 2023, Luật An toàn thông tin mạng năm 2015,
+          Luật An ninh mạng năm 2018 và Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.
+        </p>
+        <p>
+          Trong trường hợp quy định pháp luật thay đổi, The Clara Care có quyền cập nhật nội dung để bảo đảm tính phù hợp
+          và công bố phiên bản mới tại mục Thỏa thuận người dùng.
         </p>
       </LegalSection>
 
@@ -77,8 +90,8 @@ export default function TermsOfServicePage() {
             và hệ quản trị của The Clara Care.
           </li>
           <li>
-            <span className="font-bold">Control Panel:</span> Khu vực quản trị dịch vụ cho phép bạn quản lý tài nguyên, cấu hình,
-            trạng thái vận hành và thông tin tài khoản.
+            <span className="font-bold">Không gian quản trị:</span> Khu vực quản trị dịch vụ cho phép bạn quản lý tài nguyên, cấu hình,
+            trạng thái vận hành và thông tin tài khoản theo quyền được cấp.
           </li>
           <li>
             <span className="font-bold">Admin:</span> Quyền quản trị cao nhất của một hệ thống hoặc phân hệ kỹ thuật.

@@ -87,7 +87,7 @@ export default function MedicalConsentPage() {
       <LegalSection id="versioning" title="8. Version và hiệu lực áp dụng">
         <p>
           Đồng thuận y tế được version hóa để bảo đảm khả năng truy vết. Phiên bản hiện hành: <span className="font-bold">{LEGAL_POLICY_VERSION}</span>.
-          Phiên bản mới sẽ có hiệu lực kể từ thời điểm công bố tại Policy Center.
+          Phiên bản mới sẽ có hiệu lực kể từ thời điểm công bố tại mục Thỏa thuận người dùng.
         </p>
       </LegalSection>
 

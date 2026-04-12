@@ -184,7 +184,7 @@ export const WORKFLOW_STEPS = [
     title: "Chốt use-case và baseline",
     subtitle: "BẮT ĐẦU TỪ VẤN ĐỀ CÓ THỂ ĐO",
     points: [
-      "Chọn 1 luồng ưu tiên: Research, Council, SelfMed hoặc CareGuard.",
+      "Chọn 1 luồng ưu tiên: Chat, Council, SelfMed hoặc CareGuard.",
       "Đo baseline: thời gian xử lý, tỷ lệ hoàn tất, tỷ lệ ca cần escalation.",
       "Chỉ định owner rõ theo vai trò chuyên môn và vận hành.",
     ],
@@ -206,7 +206,7 @@ export const WORKFLOW_STEPS = [
     title: "Vận hành workflow đa module",
     subtitle: "THỰC THI TRÊN CASE THẬT",
     points: [
-      "Research cho truy xuất bằng chứng, Council cho hội chẩn, SelfMed/CareGuard cho an toàn thuốc.",
+      "Chat cho truy xuất bằng chứng, Council cho hội chẩn, SelfMed/CareGuard cho an toàn thuốc.",
       "Scribe chuẩn hóa ghi chú để giảm tải hành chính sau ca.",
       "Control Tower theo dõi trạng thái flow và cấu hình tri thức tập trung.",
     ],
@@ -235,8 +235,8 @@ export const MODULE_CARDS = [
       "Reranking theo bối cảnh truy vấn.",
       "Phù hợp bác sĩ trẻ, sinh viên y, nhóm nghiên cứu.",
     ],
-    cta: "Mở CLARA Research",
-    href: "/research",
+    cta: "Mở CLARA Chat",
+    href: "/chat",
   },
   {
     tag: "CLARA COUNCIL",
@@ -420,9 +420,9 @@ export const TESTIMONIALS = [
   },
   {
     name: "Dương Quốc Bảo",
-    role: "Research Assistant",
+    role: "Trợ lý nghiên cứu",
     channel: "Cần Thơ",
-    quote: "Luồng Research phù hợp cho tổng hợp y văn nhanh khi cần đối chiếu nhiều guideline.",
+    quote: "Luồng Chat phù hợp cho tổng hợp y văn nhanh khi cần đối chiếu nhiều guideline.",
   },
   {
     name: "Ngô Hạnh Sương",
@@ -481,7 +481,7 @@ export const FAQ_ITEMS = [
   {
     question: "Có thể bắt đầu từ module nào để dễ triển khai nhất?",
     answer:
-      "Nên bắt đầu từ một use-case dễ đo trong 2-8 tuần, thường là Research hoặc Council. Khi KPI ổn định mới mở rộng sang SelfMed, CareGuard và Scribe.",
+      "Nên bắt đầu từ một use-case dễ đo trong 2-8 tuần, thường là Chat hoặc Council. Khi KPI ổn định mới mở rộng sang SelfMed, CareGuard và Scribe.",
   },
   {
     question: "Các chỉ số ROI trên landing có phải cam kết tuyệt đối không?",
@@ -511,8 +511,8 @@ export const FINAL_CTA = {
     "Bắt đầu từ một use-case trọng điểm, chạy pilot ngắn hạn, review theo tuần và mở rộng module dựa trên dữ liệu thật.",
   button: "ĐĂNG KÝ PILOT CÙNG CLARA",
   href: "/register",
-  secondaryButton: "MỞ BẢN DEMO RESEARCH",
-  secondaryHref: "/research",
+  secondaryButton: "MỞ BẢN DEMO CHAT",
+  secondaryHref: "/chat",
 } as const satisfies FinalCta;
 
 export const CLARA_KP3_CONVERSION_DATA = {

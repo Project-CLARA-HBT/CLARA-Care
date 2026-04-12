@@ -37,6 +37,7 @@ from clara_api.schemas import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
+    LoginOtpVerifyRequest,
     LoginResponse,
     RefreshTokenRequest,
     RegisterRequest,
@@ -96,6 +97,7 @@ def _issue_action_token(
     user_id: int,
     token_type: str,
     ttl_minutes: int,
+    raw_token: str | None = None,
 ) -> str:
     now = datetime.now(tz=UTC)
     existing_tokens = (
@@ -114,30 +116,39 @@ def _issue_action_token(
         token.used_at = now
         db.add(token)
 
-    raw_token = secrets.token_urlsafe(32)
+    token_value = (raw_token or "").strip() or secrets.token_urlsafe(32)
     expires_at = now + timedelta(minutes=ttl_minutes)
     db.add(
         AuthToken(
             user_id=user_id,
             token_type=token_type,
-            token_hash=_hash_action_token(raw_token),
+            token_hash=_hash_action_token(token_value),
             expires_at=expires_at,
         )
     )
     db.commit()
-    return raw_token
+    return token_value
 
 
-def _consume_action_token(db: Session, *, raw_token: str, token_type: str) -> AuthToken | None:
+def _consume_action_token(
+    db: Session,
+    *,
+    raw_token: str,
+    token_type: str,
+    user_id: int | None = None,
+) -> AuthToken | None:
     now = datetime.now(tz=UTC)
     token_hash = _hash_action_token(raw_token)
+    conditions = [
+        AuthToken.token_hash == token_hash,
+        AuthToken.token_type == token_type,
+        AuthToken.used_at.is_(None),
+        AuthToken.expires_at >= now,
+    ]
+    if user_id is not None:
+        conditions.append(AuthToken.user_id == user_id)
     record = db.execute(
-        select(AuthToken).where(
-            AuthToken.token_hash == token_hash,
-            AuthToken.token_type == token_type,
-            AuthToken.used_at.is_(None),
-            AuthToken.expires_at >= now,
-        )
+        select(AuthToken).where(*conditions)
     ).scalar_one_or_none()
     if not record:
         return None
@@ -169,6 +180,31 @@ def _resolve_auto_provision_role(email: str) -> str:
     if inferred == "admin":
         return "normal"
     return inferred
+
+
+def _parse_login_otp_roles(raw_value: str) -> set[str]:
+    parsed = {item.strip().lower() for item in raw_value.split(",") if item.strip()}
+    if not parsed:
+        return {"doctor", "admin"}
+    return parsed
+
+
+def _role_requires_login_otp(*, role: str, settings) -> bool:
+    if not settings.auth_login_otp_enabled:
+        return False
+    allowed_roles = _parse_login_otp_roles(settings.auth_login_otp_roles)
+    return role.strip().lower() in allowed_roles
+
+
+def _issue_login_otp_code(db: Session, *, user_id: int, ttl_minutes: int) -> str:
+    otp_code = f"{secrets.randbelow(1_000_000):06d}"
+    return _issue_action_token(
+        db,
+        user_id=user_id,
+        token_type="login_otp",
+        ttl_minutes=ttl_minutes,
+        raw_token=otp_code,
+    )
 
 
 def _consume_refresh_session_token(db: Session, *, raw_token: str) -> AuthToken | None:
@@ -499,17 +535,94 @@ def login(
         )
 
     login_guard.register_success(login_key)
-    user.last_login_at = datetime.now(tz=UTC)
-    db.add(user)
-    db.commit()
+
+    if _role_requires_login_otp(role=user.role, settings=settings):
+        otp_code = _issue_login_otp_code(
+            db,
+            user_id=user.id,
+            ttl_minutes=settings.auth_login_otp_ttl_minutes,
+        )
+        otp_delivery_status = dispatch_action_email(
+            settings,
+            action="login_otp",
+            recipient=user.email,
+            token=otp_code,
+        )
+        otp_preview = otp_code if should_expose_action_token_preview(settings) else None
+        return LoginResponse(
+            role=user.role,  # type: ignore[arg-type]
+            otp_required=True,
+            otp_delivery_status=otp_delivery_status,
+            otp_code_preview=otp_preview,
+            otp_expires_in_seconds=settings.auth_login_otp_ttl_minutes * 60,
+        )
 
     token = create_access_token(subject=user.email, role=user.role)
     refresh_token = _issue_refresh_session_token(db, user=user)
+    user.last_login_at = datetime.now(tz=UTC)
+    db.add(user)
+    db.commit()
     _set_auth_cookies(response, access_token=token, refresh_token=refresh_token)
     return LoginResponse(
         access_token=token,
         refresh_token=refresh_token,
         role=user.role,  # type: ignore[arg-type]
+    )
+
+
+@router.post("/login-otp/verify", response_model=LoginResponse)
+def verify_login_otp(
+    payload: LoginOtpVerifyRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
+    _cleanup_auth_tokens(db)
+    normalized_email = _normalize_email(payload.email)
+    _ensure_action_rate_limit(
+        "login_otp_verify",
+        f"{normalized_email}|{_extract_client_ip(request)}",
+    )
+
+    user = db.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mã OTP không hợp lệ hoặc đã hết hạn",
+        )
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đang bị khóa hoặc chưa sẵn sàng",
+        )
+
+    otp_code = payload.otp_code.strip()
+    if not otp_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Thiếu mã OTP")
+
+    token_record = _consume_action_token(
+        db,
+        raw_token=otp_code,
+        token_type="login_otp",
+        user_id=user.id,
+    )
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mã OTP không hợp lệ hoặc đã hết hạn",
+        )
+
+    role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
+    access_token = create_access_token(subject=user.email, role=role)
+    refresh_token = _issue_refresh_session_token(db, user=user)
+    user.last_login_at = datetime.now(tz=UTC)
+    db.add(user)
+    db.commit()
+    _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        role=role,
     )
 
 

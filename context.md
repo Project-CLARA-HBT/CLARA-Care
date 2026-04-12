@@ -425,3 +425,166 @@ Nếu onboard nhanh theo thứ tự:
 ## 14) Kết luận ngắn
 
 CLARA-Care đang ở trạng thái monorepo production-oriented với pipeline research/careguard/council tương đối đầy đủ, có guardrails và degrade-path rõ ràng. Điểm cần ưu tiên tiếp theo là giảm drift tài liệu và chuẩn hóa config/env để vận hành ổn định giữa môi trường local-staging-production.
+
+## 2026-04-11 Update (Repo refresh + VPS redeploy + feature patch)
+
+Cập nhật: 2026-04-11 (Asia/Saigon)
+Local repo HEAD: `468a8392ed3b6154b3b9a627b8e4bccc11ab4589`
+VPS target: `root@152.42.233.178` (dir `/root/CLARA-Care`)
+
+### A) Đồng bộ và deploy
+
+- Local đã reset sạch theo `origin/main`.
+- VPS không có `.git` trong thư mục deploy nên đồng bộ source bằng `rsync` từ local sang `/root/CLARA-Care`.
+- Redeploy bằng:
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.app.yml up -d --build`
+- Health check đạt:
+  - API: `http://127.0.0.1:8100/health` -> 200
+  - ML: `http://127.0.0.1:8110/health` -> 200
+  - Web: `http://127.0.0.1:3100` -> 200
+- Public tunnel (temporary): `https://motor-swap-lace-porcelain.trycloudflare.com`
+
+### B) Các thay đổi đã áp dụng trong code
+
+1. Auth + bảo mật
+- Thêm OTP login 2 bước cho role y tế nhạy cảm (mặc định: `doctor`, `admin`):
+  - API mới: `POST /api/v1/auth/login-otp/verify`
+  - Login có thể trả về `otp_required=true` và `otp_code_preview` (non-prod).
+- Bổ sung config OTP trong API settings:
+  - `AUTH_LOGIN_OTP_ENABLED`
+  - `AUTH_LOGIN_OTP_ROLES`
+  - `AUTH_LOGIN_OTP_TTL_MINUTES`
+- Cập nhật `.env.example` cho OTP.
+- Thêm CSRF-exempt path cho endpoint OTP verify.
+
+2. Frontend auth UX
+- `apps/web/app/login/page.tsx`:
+  - Hỗ trợ flow đăng nhập 2 bước: password -> OTP verify.
+  - Hiển thị trạng thái gửi OTP và OTP preview (dev).
+- `apps/web/components/sidebar-nav.tsx`:
+  - Thêm nút `Đăng xuất` global ở sidebar.
+
+3. Phân quyền y tế (frontend guard)
+- `apps/web/lib/navigation.config.ts`:
+  - Khu admin chuyển thành `admin-only`.
+- `apps/web/components/app-shell.tsx`:
+  - Thêm guard theo role dựa trên nav routes; route không hợp lệ theo role sẽ tự điều hướng về home path theo role.
+
+4. Gộp hỏi đáp y tế với chat
+- Chuyển hướng toàn bộ `research` routes về `/chat`:
+  - `/research`
+  - `/research/deepdive`
+  - `/research/analyze`
+  - `/research/citations`
+  - `/research/details`
+- Chỉnh text định hướng trong navigation/landing từ "Research" sang "Chat".
+
+5. Dashboard + giao diện
+- `apps/web/app/dashboard/page.tsx`:
+  - Chuẩn hóa tiếng Việt cho quick access, trạng thái activity, CTA.
+  - Bỏ gradient CTA ở card trợ lý, giảm bo tròn mạnh (ưu tiên `rounded-xl`/`rounded-lg`).
+  - Điều chỉnh wording KPI/summary dễ đọc hơn.
+- `apps/web/styles/globals.css`:
+  - Làm sáng nhẹ dark surfaces để chat không quá tối.
+  - Giảm glow viền cyan (`.clara-glow-cyan`) để hạn chế lag.
+  - `.clara-glass-panel` dùng surface token + border + blur thấp hơn.
+
+6. Legal / pháp lý
+- Thuật ngữ "Trung tâm pháp lý / Policy Center" đổi sang "Thỏa thuận người dùng" tại legal hub/shell và các trang liên quan.
+- Cập nhật `terms` theo hướng "Thỏa thuận người dùng" + thêm mục căn cứ pháp lý Việt Nam.
+- Cập nhật `privacy` làm rõ phạm vi dữ liệu `người dùng` vs `admin` + bổ sung căn cứ pháp lý.
+
+### C) Những phần đã có sẵn từ upstream (không cần làm lại)
+
+- Backend RBAC theo role đã triển khai rộng (`require_roles(...)`).
+- Medical Scribe đã có luồng ghi âm realtime + transcribe + regenerate SOAP.
+- `RAG sources` và `Source Hub` đã gộp, các route cũ redirect về `/admin/knowledge-sources`.
+
+### D) Kết quả kiểm tra nhanh
+
+- Python compile check: pass (`services/api`, `services/ml`).
+- Web lint: pass (có warnings cũ không chặn build).
+- Web build local: fail môi trường với `SIGBUS` (không chỉ ra lỗi TS/ESLint blocking).
+
+
+## 2026-04-11 Update (Round 2: verify latest full repo + redeploy + multi-agent smoke)
+
+Cập nhật: 2026-04-11 (Asia/Saigon)
+
+### 1) Xác nhận repo hiện tại
+
+- `git fetch origin` + đối chiếu SHA:
+  - `LOCAL_HEAD=468a8392ed3b6154b3b9a627b8e4bccc11ab4589`
+  - `ORIGIN_MAIN=468a8392ed3b6154b3b9a627b8e4bccc11ab4589`
+- Kết luận: local đã ở đúng full bản mới nhất của `origin/main` tại thời điểm kiểm tra.
+
+### 2) Redeploy lại lên VPS 152.42.233.178
+
+- Sync source local -> VPS bằng `rsync` vào `/root/CLARA-Care`.
+- Redeploy bằng:
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.app.yml up -d --build`
+- Health sau deploy:
+  - API `http://127.0.0.1:8100/health` = 200
+  - ML `http://127.0.0.1:8110/health` = 200
+  - Web `http://127.0.0.1:3100` = 200
+- Redirect check:
+  - `http://127.0.0.1:3100/research` -> `307` -> `/chat`
+
+### 3) Public access để review
+
+- Vì cổng `3100` không mở public trực tiếp, dùng SSH port-forward + Cloudflare quick tunnel.
+- URL public hiện tại:
+  - `https://instructors-holmes-modeling-enemies.trycloudflare.com`
+- Check nhanh public:
+  - `/`, `/login`, `/legal`, `/legal/terms` = 200
+  - `/research`, `/research/deepdive` = 307 -> `/chat`
+  - `/chat` redirect đúng về login khi chưa auth
+
+### 4) Multi-agent full pipeline smoke (đã chạy)
+
+- Worker A (backend/API smoke):
+  - PASS: API/ML health
+  - PASS: endpoint `/api/v1/auth/login` tồn tại (422 khi body thiếu)
+  - PASS: endpoint `/api/v1/auth/login-otp/verify` tồn tại (422 khi body thiếu)
+  - PASS: endpoint `/api/v1/auth/logout` phản hồi hợp lệ
+  - PASS: protected endpoint `/api/v1/system/flow-events` trả 401 khi không token
+- Worker B (frontend/public smoke):
+  - PASS: local + public routes cơ bản
+  - PASS: redirect research -> chat
+  - PASS: legal chứa cụm “Thỏa thuận người dùng”
+  - PASS: không thấy lỗi 5xx trong checklist smoke
+
+### 5) Build/Test local vòng này
+
+- Frontend `apps/web`:
+  - `npm run build` PASS (Next.js build thành công, chỉ còn warnings lint cũ).
+- Backend pytest local:
+  - Không chạy full được do thiếu package `email-validator` trong môi trường local hiện tại.
+  - Lưu ý: image Docker API đã cài package này và service trên VPS chạy bình thường.
+
+## 2026-04-11 Update (Round 3: multi-agent full pipeline retest)
+
+Cập nhật: 2026-04-11 (Asia/Saigon)
+
+Đã chạy lại full pipeline bằng 3 worker agents song song:
+
+1) Worker Auth/RBAC:
+- PASS: register/login normal, `/auth/me`, `/auth/logout`, `/chat`, `/research/conversations`.
+- PASS: role gate doctor-only (`/scribe/sessions`) trả 403 với normal token.
+- NOTE: admin bootstrap login chưa test OTP được do biến `AUTH_BOOTSTRAP_ADMIN_EMAIL/PASSWORD` trên VPS đang trống.
+
+2) Worker Clinical/Research:
+- PASS: register doctor + OTP verify (`/auth/login-otp/verify`) thành công.
+- PASS: consent y tế (`/auth/consent`) thành công.
+- PASS: doctor endpoints `/council/cases`, `/scribe/sessions`, `/system/flow-events` trả 200.
+- PASS: tạo + poll `research tier2 job` đến trạng thái `completed`.
+- PASS: kiểm chứng role gate với normal token (doctor endpoints trả 403, research thường trả 200).
+
+3) Worker Frontend/Public:
+- PASS local + public cho `/`, `/login`, `/legal`, `/legal/terms`, `/legal/privacy`.
+- PASS redirect `/research*` -> `/chat`.
+- PASS guard chưa auth tại `/chat`, `/dashboard`, `/dashboard/control-tower` (redirect login, không 5xx).
+- PASS legal text chứa “Thỏa thuận người dùng” và “Chính sách quyền riêng tư”.
+
+Public URL đang dùng tại thời điểm test:
+- `https://instructors-holmes-modeling-enemies.trycloudflare.com`

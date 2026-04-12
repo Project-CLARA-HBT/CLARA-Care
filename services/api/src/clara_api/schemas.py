@@ -51,10 +51,19 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: str | None = None
+    refresh_token: str | None = None
     token_type: str = "bearer"
     role: Role
+    otp_required: bool = False
+    otp_delivery_status: str | None = None
+    otp_code_preview: str | None = None
+    otp_expires_in_seconds: int | None = None
+
+
+class LoginOtpVerifyRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(min_length=4, max_length=16)
 
 
 class RefreshTokenRequest(BaseModel):
