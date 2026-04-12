@@ -2084,17 +2084,21 @@ def test_sanitize_user_facing_answer_markdown_fast_enforces_compact_layout() -> 
     assert "fallback local" not in cleaned.lower()
 
 
-def test_sanitize_user_facing_answer_markdown_deep_keeps_deep_sections() -> None:
+def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() -> None:
     raw = (
         "## Kết luận nhanh\n"
         "Nội dung tóm tắt.\n\n"
+        "## Câu hỏi nghiên cứu (PICO)\n"
+        "- Population ...\n\n"
         "## Ma trận quyết định an toàn\n"
         "| Mục đánh giá | Mức hiện tại | Hành động khuyến nghị |\n"
         "| --- | --- | --- |\n"
         "| Mức rủi ro tổng quát | Trung bình | Theo dõi sát |\n"
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
-    assert "## Ma trận quyết định an toàn" in cleaned
+    assert "## Kết luận nhanh" in cleaned
+    assert "## Câu hỏi nghiên cứu (PICO)" not in cleaned
+    assert "## Ma trận quyết định an toàn" not in cleaned
 
 
 def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:

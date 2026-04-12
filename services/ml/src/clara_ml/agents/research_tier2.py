@@ -54,6 +54,17 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Kết luận nhanh",
     "## Kế hoạch nghiên cứu",
     "## Tóm tắt điều hành",
+    "## Bối cảnh lâm sàng áp dụng",
+    "## Phân tích chi tiết",
+    "## Bảng tổng hợp bằng chứng",
+    "## Khuyến nghị ứng dụng thực hành",
+    "## Giới hạn, sai số và rủi ro pháp lý",
+)
+
+_REQUIRED_DEEP_BETA_MARKDOWN_HEADINGS = (
+    "## Kết luận nhanh",
+    "## Kế hoạch nghiên cứu",
+    "## Tóm tắt điều hành",
     "## Câu hỏi nghiên cứu (PICO)",
     "## Phương pháp truy xuất & tiêu chí chọn lọc",
     "## Hồ sơ bằng chứng & chất lượng nguồn",
@@ -64,6 +75,9 @@ _REQUIRED_DEEP_MARKDOWN_HEADINGS = (
     "## Ma trận quyết định an toàn",
     "## Kế hoạch theo dõi sau tư vấn",
     "## Giới hạn, sai số và rủi ro pháp lý",
+)
+_REQUIRED_DEEP_DEDUP_HEADINGS: tuple[str, ...] = tuple(
+    dict.fromkeys((*_REQUIRED_DEEP_MARKDOWN_HEADINGS, *_REQUIRED_DEEP_BETA_MARKDOWN_HEADINGS))
 )
 
 _DEFAULT_DEEP_PASS_CAP = 20
@@ -1688,7 +1702,7 @@ def _resolve_required_deep_heading_key(heading: str) -> str:
     key = _canonical_h2_key(heading)
     if not key:
         return ""
-    for required in _REQUIRED_DEEP_MARKDOWN_HEADINGS:
+    for required in _REQUIRED_DEEP_DEDUP_HEADINGS:
         required_key = _canonical_h2_key(required)
         if key == required_key or key.startswith(f"{required_key} "):
             return required_key
@@ -1721,7 +1735,7 @@ def _dedupe_duplicate_h2_headings(markdown_text: str) -> str:
         sections.append((current_heading, current_lines))
 
     required_heading_by_key = {
-        _canonical_h2_key(item): item for item in _REQUIRED_DEEP_MARKDOWN_HEADINGS
+        _canonical_h2_key(item): item for item in _REQUIRED_DEEP_DEDUP_HEADINGS
     }
     singleton_keys = set(required_heading_by_key.keys())
     output: list[str] = [line for line in prelude if line.strip()]
@@ -1943,14 +1957,12 @@ def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], lis
         "## Tóm tắt điều hành",
         "## Bối cảnh lâm sàng áp dụng",
         "## Phân tích chi tiết",
-        "## Chuỗi lập luận bằng chứng",
         "## Bảng tổng hợp bằng chứng",
         "## Khuyến nghị ứng dụng thực hành",
         "## Giới hạn, sai số và rủi ro pháp lý",
     ]
     requirements = [
         "- include at least 2 markdown tables (evidence + comparison/implementation)",
-        "- include brief claim→evidence→inference bullets in reasoning section",
         "- keep narrative clinician-friendly and implementation-oriented",
         "- preserve practical trade-off analysis and uncertainty notes",
     ]
@@ -2026,7 +2038,8 @@ def _ensure_deep_beta_report_artifacts(
         limit=16,
     )
 
-    if not _has_markdown_heading(output, "## Chuỗi lập luận bằng chứng"):
+    require_reasoning_chain = mode == "deep_beta"
+    if require_reasoning_chain and not _has_markdown_heading(output, "## Chuỗi lập luận bằng chứng"):
         if reasoning_cards:
             rows = [
                 "| Node | Claim | Evidence | Inference | Clinical action | Confidence |",
@@ -2167,6 +2180,16 @@ def _synthesize_deep_beta_long_report(
         if mode == "deep_beta"
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
+    style_target_line = (
+        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)"
+        if mode == "deep_beta"
+        else "- write as a natural, fluent, clinician-facing deep briefing with strong practical interpretation"
+    )
+    chain_requirement_line = (
+        "- in '## Chuỗi lập luận bằng chứng', present short chains in this order: claim -> evidence -> inference -> clinical action"
+        if mode == "deep_beta"
+        else "- keep claim-to-evidence linkage explicit in paragraphs without overusing rigid chain templates"
+    )
     prompt = (
         "Rewrite the baseline answer into a long-form clinical research report in Vietnamese.\n"
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
@@ -2174,11 +2197,11 @@ def _synthesize_deep_beta_long_report(
         f"{section_contract_text}\n"
         "Requirements:\n"
         f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
-        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)\n"
+        f"{style_target_line}\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
         "- use natural transitions between sections; avoid checklist-like prose\n"
         "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
-        "- in '## Chuỗi lập luận bằng chứng', present short chains in this order: claim -> evidence -> inference -> clinical action\n"
+        f"{chain_requirement_line}\n"
         "- '## Kế hoạch nghiên cứu' must appear before analytic sections and contain numbered steps, including direct comparison axes when relevant\n"
         f"{section_requirements_text}\n"
         "- do not add a dedicated references/citations section in the answer body\n"
@@ -3699,6 +3722,8 @@ def _build_deep_subqueries(
     cleaned_keywords = [item.strip() for item in keywords if isinstance(item, str) and item.strip()]
     keyword_hint = " ".join(cleaned_keywords[:4]).strip()
     query_profile = analyze_query_profile(topic)
+    comparison_query = _is_comparison_query(topic)
+    nutrition_query = _is_nutrition_diet_query(topic)
     base = [
         *(seed_queries or []),
         topic,
@@ -3722,6 +3747,23 @@ def _build_deep_subqueries(
                 f"{primary} interaction with {co_block} bleeding risk INR safety",
                 f"{primary} contraindication mechanism management with {co_block}",
                 f"{primary} painkiller interaction systematic review meta-analysis",
+            ]
+        )
+    if comparison_query:
+        base.extend(
+            [
+                f"{topic} adherence burden and long-term sustainability comparison",
+                f"{topic} comparative effectiveness across key clinical endpoints",
+                f"{topic} implementation feasibility cost and accessibility analysis",
+                f"{topic} decision trade-offs and subgroup-sensitive recommendations",
+            ]
+        )
+    if nutrition_query and comparison_query:
+        base.extend(
+            [
+                f"{topic} sodium control versus healthy fat optimization clinical implications",
+                f"{topic} blood pressure lipid glycemic endpoint comparison",
+                f"{topic} Vietnam dietary habit adaptation feasibility DASH Mediterranean",
             ]
         )
     if keyword_hint:
@@ -4755,6 +4797,7 @@ def _sanitize_user_facing_answer_markdown(
     *,
     research_mode: str = "fast",
 ) -> str:
+    mode = str(research_mode).strip().lower()
     sanitized = str(answer_markdown or "")
     if not sanitized.strip():
         return sanitized
@@ -4783,7 +4826,7 @@ def _sanitize_user_facing_answer_markdown(
         flags=re.IGNORECASE,
     )
 
-    if str(research_mode).strip().lower() == "fast":
+    if mode == "fast":
         # Fast mode should stay compact and natural; deep template sections are moved to telemetry.
         sanitized = _remove_h2_sections(
             sanitized,
@@ -4823,12 +4866,29 @@ def _sanitize_user_facing_answer_markdown(
             flags=re.IGNORECASE,
         )
 
+    if mode == "deep":
+        # Deep mode keeps a practical long-form contract; strip deep-beta-only scaffolding.
+        sanitized = _remove_h2_sections(
+            sanitized,
+            section_heading_keys={
+                _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"),
+                _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"),
+                _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"),
+                _canonical_h2_key("Tổng hợp phát hiện chính"),
+                _canonical_h2_key("Chuỗi lập luận bằng chứng"),
+                _canonical_h2_key("Phản biện bằng chứng đối nghịch"),
+                _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"),
+                _canonical_h2_key("Ma trận quyết định an toàn"),
+                _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"),
+            },
+        )
+
     # Mermaid/chart spec is moved out of main answer area to reduce visual clutter.
     sanitized = _remove_fenced_blocks(
         sanitized,
         languages={"mermaid", "chart-spec", "vega-lite", "echarts-option"},
     )
-    if str(research_mode).strip().lower() == "fast":
+    if mode == "fast":
         sanitized = _stabilize_fast_answer_layout(sanitized)
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
