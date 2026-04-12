@@ -4724,6 +4724,30 @@ def _remove_unapproved_fast_h2_sections(markdown_text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(output_lines)).strip()
 
 
+def _remove_h3_sections_by_heading_keys(markdown_text: str, *, heading_keys: set[str]) -> str:
+    text = str(markdown_text or "")
+    if not text.strip() or not heading_keys:
+        return text
+
+    lines = text.splitlines()
+    output_lines: list[str] = []
+    skipping = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            heading_key = _canonical_h2_key(stripped[4:])
+            skipping = heading_key in heading_keys
+            if skipping:
+                continue
+        elif stripped.startswith("## ") or stripped.startswith("# "):
+            skipping = False
+
+        if not skipping:
+            output_lines.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output_lines)).strip()
+
+
 def _extract_h2_body(markdown_text: str, heading_key: str) -> str:
     lines = str(markdown_text or "").splitlines()
     target_body: list[str] = []
@@ -4880,6 +4904,22 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"),
                 _canonical_h2_key("Ma trận quyết định an toàn"),
                 _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"),
+            },
+        )
+
+    if mode in {"deep", "deep_beta"}:
+        # Keep long-form reasoning in main body, but remove telemetry/citation-heavy appendices
+        # because these signals are already exposed in the right-side evidence/metrics panel.
+        sanitized = _remove_h3_sections_by_heading_keys(
+            sanitized,
+            heading_keys={
+                _canonical_h2_key("Nhật ký multi-pass retrieval"),
+                _canonical_h2_key("Ma trận reasoning nodes"),
+                _canonical_h2_key("Ma trận trạng thái claim-level"),
+                _canonical_h2_key("Hồ sơ nguồn mở rộng"),
+                _canonical_h2_key("Nguồn tham chiếu bổ sung"),
+                _canonical_h2_key("Bảng bổ sung Deep Beta"),
+                _canonical_h2_key("Bảng triển khai truy xuất"),
             },
         )
 

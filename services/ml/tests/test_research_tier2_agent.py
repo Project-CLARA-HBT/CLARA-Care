@@ -2101,6 +2101,28 @@ def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() 
     assert "## Ma trận quyết định an toàn" not in cleaned
 
 
+def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blocks() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Nội dung chính.\n\n"
+        "### Ma trận reasoning nodes\n"
+        "| Node | Status |\n"
+        "| --- | --- |\n"
+        "| audit | completed |\n\n"
+        "### Hồ sơ nguồn mở rộng\n"
+        "| Source ID | Nguồn |\n"
+        "| --- | --- |\n"
+        "| pmid-1 | pubmed |\n\n"
+        "## Phân tích chi tiết\n"
+        "Nội dung phân tích giữ lại.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep_beta")
+    assert "### Ma trận reasoning nodes" not in cleaned
+    assert "### Hồ sơ nguồn mở rộng" not in cleaned
+    assert "## Kết luận nhanh" in cleaned
+    assert "## Phân tích chi tiết" in cleaned
+
+
 def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:
     structured = tier2._ensure_markdown_structure(
         topic="So sánh DASH và Địa Trung Hải",
