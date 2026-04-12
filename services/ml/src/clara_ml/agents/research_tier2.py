@@ -1957,6 +1957,41 @@ def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], lis
     return sections, requirements
 
 
+def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
+    mode = str(research_mode or "fast").strip().lower()
+    if mode == "deep_beta":
+        return {
+            "tone": "scholarly_clinical_dossier",
+            "narrative_density": "very_high",
+            "target_reader": "clinical research lead and multidisciplinary board",
+            "must_do": [
+                "Maintain strict evidence contract and explicitly tag uncertainty boundaries.",
+                "Keep each section analytically dense with clear claim-evidence linkage.",
+                "Include counter-arguments and explain decision boundary for each major claim.",
+            ],
+            "avoid": [
+                "Do not use motivational or marketing language.",
+                "Do not repeat identical sentence openings across adjacent paragraphs.",
+                "Do not overuse long bullet lists when a paragraph synthesis is clearer.",
+            ],
+        }
+    return {
+        "tone": "clinical_briefing_natural",
+        "narrative_density": "high",
+        "target_reader": "attending physician and care coordination team",
+        "must_do": [
+            "Prioritize practical interpretation and what changes in decision-making.",
+            "Keep prose natural, concise, and non-robotic while preserving rigor.",
+            "Translate evidence into actionable follow-up checkpoints.",
+        ],
+        "avoid": [
+            "Do not over-expose internal pipeline/debug mechanics in main body.",
+            "Do not stack legal boilerplate repeatedly in every section.",
+            "Do not duplicate the same conclusion in multiple headings.",
+        ],
+    }
+
+
 def _safe_generate_with_token_budget(
     client: Any,
     *,
@@ -2119,6 +2154,7 @@ def _synthesize_deep_beta_long_report(
         reasoning_node_count=len(reasoning_chain_cards),
     )
     section_contract, section_requirements = _resolve_report_section_contract(mode)
+    style_profile = _resolve_report_style_profile(mode)
     section_contract_text = "\n".join(section_contract)
     section_requirements_text = "\n".join(section_requirements)
     report_timeout_seconds = max(
@@ -2148,6 +2184,7 @@ def _synthesize_deep_beta_long_report(
         "- do not add a dedicated references/citations section in the answer body\n"
         "- keep citations concise and only when needed to support critical claims\n"
         "- do not prescribe dosage, do not diagnose\n\n"
+        f"style_profile={json.dumps(style_profile, ensure_ascii=False)}\n"
         f"topic={topic}\n"
         f"baseline_answer={answer_markdown}\n"
         f"citations={json.dumps(compact_citations, ensure_ascii=False)}\n"
@@ -2315,26 +2352,52 @@ def _synthesize_deep_beta_long_report(
             appendix_title = (
                 "## Phụ lục mở rộng Deep Beta (chuyên sâu)" if mode == "deep_beta" else "## Phụ lục mở rộng Deep"
             )
-            appendix_blocks = [
-                f"\n\n{appendix_title}\n",
-                "### Nhật ký multi-pass retrieval\n",
-                "\n".join(pass_rows),
-                "\n\n### Ma trận reasoning nodes\n",
-                "\n".join(node_rows[:12 if mode == "deep" else len(node_rows)]),
-                "\n\n### Chuỗi lập luận claim-level\n",
-                "\n".join(chain_rows[:10 if mode == "deep" else len(chain_rows)]),
-                "\n\n### Hồ sơ nguồn mở rộng\n",
-                "\n".join(citation_rows[:14 if mode == "deep" else len(citation_rows)]),
-                "\n\n### Uncertainty & Safety Escalation Notes\n",
-                "\n".join(uncertainty_blocks),
-            ]
+            appendix_blocks = [f"\n\n{appendix_title}\n"]
             if mode == "deep_beta":
+                appendix_blocks.extend(
+                    [
+                        "### Nhật ký multi-pass retrieval\n",
+                        "\n".join(pass_rows),
+                        "\n\n### Ma trận reasoning nodes\n",
+                        "\n".join(node_rows),
+                        "\n\n### Chuỗi lập luận claim-level\n",
+                        "\n".join(chain_rows),
+                        "\n\n### Hồ sơ nguồn mở rộng\n",
+                        "\n".join(citation_rows),
+                    ]
+                )
                 appendix_blocks.extend(
                     [
                         "\n\n### Ma trận trạng thái claim-level\n",
                         "\n".join(claim_rows),
                     ]
                 )
+            else:
+                # Deep mode appendix should stay implementation-facing, not telemetry-heavy.
+                implementation_rows = [
+                    "| Nhóm bệnh nhân | Điểm cần chú ý | Hành động theo dõi |",
+                    "| --- | --- | --- |",
+                    "| Tăng huyết áp đơn thuần | Ưu tiên mục tiêu huyết áp và khả năng tuân thủ | Đo HA tại nhà 1-2 tuần, hiệu chỉnh chế độ ăn theo đáp ứng |",
+                    "| Đái tháo đường / rối loạn lipid | Cân bằng kiểm soát đường huyết và nguy cơ tim mạch dài hạn | Theo dõi HbA1c/lipid định kỳ, đánh giá tuân thủ thực đơn thực tế |",
+                    "| Người cao tuổi / đa bệnh nền | Nguy cơ thiếu dinh dưỡng, tương tác đa trị liệu, giảm tuân thủ | Theo dõi cân nặng, chức năng thận, cảnh báo dấu hiệu suy giảm chức năng |",
+                ]
+                appendix_blocks.extend(
+                    [
+                        "### Bảng triển khai theo phân tầng lâm sàng\n",
+                        "\n".join(implementation_rows),
+                        "\n\n### Checklist theo dõi 2-4 tuần đầu\n"
+                        "- Xác định mục tiêu ưu tiên (HA, lipid, cân nặng, đường huyết).\n"
+                        "- Ghi nhật ký khẩu phần và mức độ tuân thủ thực tế.\n"
+                        "- Đánh giá sớm tác động bất lợi hoặc dấu hiệu báo động.\n"
+                        "- Điều chỉnh can thiệp dựa trên dữ liệu theo dõi, không theo cảm tính.\n",
+                    ]
+                )
+            appendix_blocks.extend(
+                [
+                    "\n\n### Uncertainty & Safety Escalation Notes\n",
+                    "\n".join(uncertainty_blocks),
+                ]
+            )
             appendix_blocks.extend(
                 [
                     "\n\n### Ghi chú phương pháp\n",

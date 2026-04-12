@@ -2130,3 +2130,22 @@ def test_resolve_adaptive_report_word_budget_reduces_deep_beta_for_sparse_eviden
     assert adaptive_min < base_min
     assert adaptive_target < base_target
     assert adaptive_max > adaptive_target
+
+
+def test_resolve_report_section_contract_by_mode() -> None:
+    deep_sections, _ = tier2._resolve_report_section_contract("deep")
+    beta_sections, _ = tier2._resolve_report_section_contract("deep_beta")
+    assert "## Bối cảnh lâm sàng áp dụng" in deep_sections
+    assert "## Khuyến nghị ứng dụng thực hành" in deep_sections
+    assert "## Câu hỏi nghiên cứu (PICO)" not in deep_sections
+    assert "## Câu hỏi nghiên cứu (PICO)" in beta_sections
+    assert "## Ma trận quyết định an toàn" in beta_sections
+
+
+def test_resolve_report_style_profile_by_mode() -> None:
+    deep_profile = tier2._resolve_report_style_profile("deep")
+    beta_profile = tier2._resolve_report_style_profile("deep_beta")
+    assert deep_profile["tone"] == "clinical_briefing_natural"
+    assert beta_profile["tone"] == "scholarly_clinical_dossier"
+    assert isinstance(deep_profile["must_do"], list) and deep_profile["must_do"]
+    assert isinstance(beta_profile["avoid"], list) and beta_profile["avoid"]
