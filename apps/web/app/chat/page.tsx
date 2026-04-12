@@ -639,6 +639,7 @@ export default function ChatWorkspacePage() {
   const isFastResearchMode = selectedResearchMode === "fast";
   const conversationScrollRef = useRef<HTMLDivElement | null>(null);
   const conversationListViewportRef = useRef<HTMLDivElement | null>(null);
+  const didAutoSelectInitialConversationRef = useRef(false);
 
   const latestTurn = useMemo(
     () => (conversationTurns.length ? conversationTurns[conversationTurns.length - 1] : null),
@@ -1382,6 +1383,23 @@ export default function ChatWorkspacePage() {
     },
     [loadConversationTurns, localTurnsByConversationId, workspaceApiUnavailable]
   );
+
+  useEffect(() => {
+    if (didAutoSelectInitialConversationRef.current) return;
+    if (activeConversationId !== null) return;
+    if (isLoadingWorkspace || isLoadingConversations) return;
+    if (!displayedConversations.length) return;
+    const firstConversation = displayedConversations[0];
+    if (!firstConversation) return;
+    didAutoSelectInitialConversationRef.current = true;
+    void onSelectConversation(firstConversation);
+  }, [
+    activeConversationId,
+    displayedConversations,
+    isLoadingConversations,
+    isLoadingWorkspace,
+    onSelectConversation,
+  ]);
 
   const onDragConversationStart = (conversationId: number) => {
     setDraggingConversationId(conversationId);
