@@ -49,7 +49,7 @@ export default function ChatComposer(props: ChatComposerProps) {
 
   return (
     <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/90 p-4 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-[72rem] px-1 sm:px-2 lg:px-3">
         <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 shadow-sm">
           <form onSubmit={onSubmit} className="flex items-end gap-2">
             <button

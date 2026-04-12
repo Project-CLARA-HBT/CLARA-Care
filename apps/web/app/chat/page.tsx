@@ -1912,7 +1912,7 @@ export default function ChatWorkspacePage() {
           />
         ) : null}
 
-        <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+        <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[16rem_minmax(0,1fr)_18rem]">
         <aside
           className={[
             "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f1f4f7]/95 p-4 transition-transform duration-200 dark:bg-[#001c39]/95 lg:static lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none lg:translate-x-0",
@@ -2627,20 +2627,22 @@ export default function ChatWorkspacePage() {
             ) : null}
           </header>
 
-          <div ref={conversationScrollRef} className="clara-scrollbar flex-1 min-h-0 space-y-4 overflow-y-auto py-4 pr-1">
-            {isLoadingTurns && !conversationTurns.length ? (
-              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                Đang tải nội dung conversation...
-              </article>
-            ) : null}
+          <div ref={conversationScrollRef} className="clara-scrollbar flex-1 min-h-0 overflow-y-auto py-4">
+            <div className="mx-auto w-full max-w-[72rem] space-y-4 px-4 sm:px-6 lg:px-8">
+              {isLoadingTurns && !conversationTurns.length ? (
+                <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  Đang tải nội dung conversation...
+                </article>
+              ) : null}
 
-            {!conversationTurns.length && !isLoadingTurns ? (
-              <article className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-5 text-sm leading-7 text-[var(--text-secondary)]">
-                Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới.
-              </article>
-            ) : (
-              conversationTurns.map((turn) => <ChatTurn key={turn.id} turn={turn} />)
-            )}
+              {!conversationTurns.length && !isLoadingTurns ? (
+                <article className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-5 text-sm leading-7 text-[var(--text-secondary)]">
+                  Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới.
+                </article>
+              ) : (
+                conversationTurns.map((turn) => <ChatTurn key={turn.id} turn={turn} />)
+              )}
+            </div>
           </div>
 
           <ChatComposer
@@ -2666,7 +2668,7 @@ export default function ChatWorkspacePage() {
           />
         </section>
 
-        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(241,244,247,0.7))] dark:bg-[linear-gradient(180deg,rgba(0,28,57,0.72),rgba(11,19,38,0.72))] xl:flex">
+        <aside className="clara-scrollbar hidden h-full flex-col overflow-y-auto border-l border-[color:var(--shell-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(241,244,247,0.7))] dark:bg-[linear-gradient(180deg,rgba(0,28,57,0.72),rgba(11,19,38,0.72))] 2xl:flex">
           <div className="border-b border-[color:var(--shell-border)] bg-white px-5 py-5 dark:bg-[#001f3d]/90">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
               System Telemetry

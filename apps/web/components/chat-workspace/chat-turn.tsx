@@ -30,7 +30,7 @@ export default function ChatTurn({ turn }: ChatTurnProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <article className="max-w-[82%] rounded-2xl rounded-tr-none bg-[var(--surface-muted)] px-5 py-3 text-sm text-[var(--text-primary)] shadow-sm">
+        <article className="max-w-[90%] rounded-2xl rounded-tr-none bg-[var(--surface-muted)] px-5 py-3 text-sm text-[var(--text-primary)] shadow-sm">
           <p className="whitespace-pre-wrap">{turn.query}</p>
         </article>
       </div>
