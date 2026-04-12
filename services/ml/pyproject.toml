@@ -18,7 +18,7 @@ dependencies = [
   "pydantic-settings>=2.6.0",
   "PyYAML>=6.0.2",
   "langchain>=0.3.0",
-  "langgraph>=0.2.0",
+  "langgraph>=1.1.6",
   "numpy>=2.1.0"
 ]
 
