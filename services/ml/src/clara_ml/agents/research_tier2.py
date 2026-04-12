@@ -1082,14 +1082,14 @@ def _build_query_planner_client(
     _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
     if not api_key or not base_url or not model:
         return None
-    timeout_seconds = max(1.0, min(float(settings.deepseek_timeout_seconds), 8.0))
+    timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), 20.0))
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
         model=model,
         timeout_seconds=timeout_seconds,
-        retries_per_base=0,
-        retry_backoff_seconds=0.0,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
+        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,
@@ -1111,8 +1111,8 @@ def _build_reasoning_client(
         base_url=base_url,
         model=model,
         timeout_seconds=resolved_timeout,
-        retries_per_base=0,
-        retry_backoff_seconds=0.0,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
+        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,
@@ -4948,8 +4948,8 @@ def _build_deep_beta_reasoning_client(
         base_url=base_url,
         model=model,
         timeout_seconds=timeout_seconds,
-        retries_per_base=0,
-        retry_backoff_seconds=0.0,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
+        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,

@@ -221,7 +221,7 @@ class Settings(BaseSettings):
         le=120.0,
     )
     deepseek_retries_per_base: int = Field(
-        default=1,
+        default=2,
         validation_alias="DEEPSEEK_RETRIES_PER_BASE",
         ge=0,
         le=5,
