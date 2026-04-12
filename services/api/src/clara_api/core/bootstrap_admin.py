@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from clara_api.core.config import Settings
@@ -48,8 +49,17 @@ def ensure_bootstrap_admin(db: Session, settings: Settings) -> None:
                 status="active",
             )
         )
-        db.commit()
-        return
+        try:
+            db.commit()
+            return
+        except IntegrityError:
+            # Multi-worker startup can race on bootstrap user creation.
+            # If another worker inserted first, reload and continue with
+            # reconciliation instead of crashing application startup.
+            db.rollback()
+            user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+            if user is None:
+                raise
 
     changed = False
     if user.role != "admin":

@@ -12,10 +12,12 @@ services:
       context: ../..
       dockerfile: services/api/Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../.env
     environment:
       ENV: ${ENV:-production}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://clara:clara_dev_password@postgres:5432/clara}
-      DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-false}
+      DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-true}
       DATABASE_FALLBACK_URL: ${DATABASE_FALLBACK_URL:-sqlite+pysqlite:////data/clara.db}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://clara.thiennn.icu}
       CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
@@ -45,7 +47,7 @@ services:
       AUTH_LOGIN_DISTRIBUTED_ENABLED: ${AUTH_LOGIN_DISTRIBUTED_ENABLED:-false}
       PUBMED_RATE_LIMIT_PER_SEC: ${PUBMED_RATE_LIMIT_PER_SEC:-10}
       ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8010}
-      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-clara_internal_key_default_2026}
       ML_SERVICE_TIMEOUT_SECONDS: ${ML_SERVICE_TIMEOUT_SECONDS:-20}
       ML_RESEARCH_TIMEOUT_SECONDS: ${ML_RESEARCH_TIMEOUT_SECONDS:-300}
       RESEARCH_JOB_MAX_WORKERS: ${RESEARCH_JOB_MAX_WORKERS:-8}
@@ -72,10 +74,12 @@ services:
       context: ../..
       dockerfile: services/ml/Dockerfile
     restart: unless-stopped
+    env_file:
+      - ../../.env
     environment:
       ENV: ${ENV:-production}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-clara_internal_key_default_2026}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.vip/v1}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v3.2}
       DEEPSEEK_TIMEOUT_SECONDS: ${DEEPSEEK_TIMEOUT_SECONDS:-30}
@@ -108,6 +112,7 @@ services:
       RAG_NLI_MIN_CONFIDENCE: ${RAG_NLI_MIN_CONFIDENCE:-0.35}
       RAG_GRAPHRAG_ENABLED: ${RAG_GRAPHRAG_ENABLED:-false}
       RAG_BIOMEDICAL_RERANK_ENABLED: ${RAG_BIOMEDICAL_RERANK_ENABLED:-false}
+      DEEP_BETA_REPORT_MIN_WORDS: ${DEEP_BETA_REPORT_MIN_WORDS:-2000}
       SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://searxng:8080}
       SEARXNG_TIMEOUT_SECONDS: ${SEARXNG_TIMEOUT_SECONDS:-3}
       SEARXNG_CRAWL_ALLOWED_DOMAINS: ${SEARXNG_CRAWL_ALLOWED_DOMAINS:-who.int,nih.gov,ncbi.nlm.nih.gov,pubmed.ncbi.nlm.nih.gov,open.fda.gov,fda.gov,dailymed.nlm.nih.gov,clinicaltrials.gov,ema.europa.eu,bmj.com,thelancet.com}
@@ -138,6 +143,8 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+    env_file:
+      - ../../.env
     environment:
       NEXT_SERVER_API_PROXY: ${NEXT_SERVER_API_PROXY:-http://api:8000/api/v1}
     restart: unless-stopped
