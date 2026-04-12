@@ -16,6 +16,7 @@ import api from "@/lib/http-client";
 import {
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
+  type ResearchTier2Result,
   appendResearchConversationMessage,
   createResearchConversation,
   listResearchConversations,
@@ -235,6 +236,261 @@ function isVietnamMedicalSource(name: string): boolean {
     normalized.includes(".vn") ||
     normalized.includes("vietnam")
   );
+}
+
+type LogicFlowNodeStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "warning"
+  | "failed"
+  | "skipped";
+
+type LogicFlowNode = {
+  id: string;
+  label: string;
+  status: LogicFlowNodeStatus;
+  detail?: string;
+};
+
+const LOGIC_FLOW_BLUEPRINT: Array<{
+  id: LogicFlowNode["id"];
+  label: LogicFlowNode["label"];
+  stageIds: string[];
+}> = [
+  {
+    id: "semantic_parsing",
+    label: "Semantic Parsing",
+    stageIds: [
+      "input_gateway",
+      "session_guard",
+      "safety_ingress",
+      "legal_guard",
+      "role_router",
+      "intent_router",
+      "query_canonicalizer",
+      "query_decomposition",
+      "planner",
+      "llm_query_planner",
+      "keyword_filter",
+      "query_plan",
+    ],
+  },
+  {
+    id: "evidence_retrieval",
+    label: "Evidence Retrieval",
+    stageIds: [
+      "retrieval_orchestrator",
+      "retrieval_internal",
+      "retrieval_scientific",
+      "retrieval_web",
+      "retrieval_file",
+      "evidence_index",
+      "contradiction_miner",
+      "collect_evidence",
+      "source_attempts",
+      "evidence_review",
+      "deep_research",
+      "deep_beta_consensus",
+      "deep_beta_reasoning",
+    ],
+  },
+  {
+    id: "synthesis_engine",
+    label: "Synthesis Engine",
+    stageIds: [
+      "synthesis",
+      "answer_synthesis",
+      "llm_generation",
+      "llm_generation_retry",
+      "deep_report_synthesis",
+      "deep_beta_chain_synthesis",
+      "deep_beta_report_synthesis",
+      "verification",
+      "verification_matrix",
+      "citation_selection",
+      "responder",
+      "final_response",
+    ],
+  },
+];
+
+function normalizeLogicFlowStatus(status?: string): LogicFlowNodeStatus {
+  const text = (status ?? "").trim().toLowerCase();
+  if (!text) return "pending";
+  if (
+    text.includes("failed") ||
+    text.includes("error") ||
+    text.includes("deny") ||
+    text.includes("reject") ||
+    text.includes("timeout")
+  ) {
+    return "failed";
+  }
+  if (text.includes("warning") || text.includes("warn") || text.includes("degraded")) {
+    return "warning";
+  }
+  if (
+    text.includes("running") ||
+    text.includes("in_progress") ||
+    text.includes("active") ||
+    text.includes("processing") ||
+    text.includes("started") ||
+    text.includes("streaming")
+  ) {
+    return "in_progress";
+  }
+  if (
+    text.includes("completed") ||
+    text.includes("complete") ||
+    text.includes("done") ||
+    text.includes("success") ||
+    text.includes("verified") ||
+    text.includes("pass") ||
+    text.includes("allow")
+  ) {
+    return "completed";
+  }
+  if (text.includes("skip") || text.includes("skipped") || text.includes("cancel")) {
+    return "skipped";
+  }
+  return "pending";
+}
+
+function pickLogicFlowStatus(statuses: LogicFlowNodeStatus[]): LogicFlowNodeStatus {
+  if (!statuses.length) return "pending";
+  if (statuses.includes("failed")) return "failed";
+  if (statuses.includes("in_progress")) return "in_progress";
+  if (statuses.includes("warning")) return "warning";
+  if (statuses.includes("completed")) return "completed";
+  if (statuses.includes("skipped")) return "skipped";
+  return "pending";
+}
+
+function buildLogicFlowNodes(flowStages: ResearchTier2Result["flowStages"]): LogicFlowNode[] {
+  const normalizedStages = flowStages.map((stage) => ({
+    ...stage,
+    normalizedId: stage.id.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+    normalizedStatus: normalizeLogicFlowStatus(stage.status),
+  }));
+
+  return LOGIC_FLOW_BLUEPRINT.map((node) => {
+    const stageIdSet = new Set(node.stageIds);
+    const matchedStages = normalizedStages.filter((stage) => stageIdSet.has(stage.normalizedId));
+    const status = pickLogicFlowStatus(matchedStages.map((stage) => stage.normalizedStatus));
+    const detail =
+      matchedStages
+        .slice()
+        .reverse()
+        .find((stage) => stage.detail)?.detail ?? undefined;
+    return {
+      id: node.id,
+      label: node.label,
+      status,
+      detail,
+    };
+  });
+}
+
+function normalizeConfidenceRatio(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  if (value <= 1) return value;
+  if (value <= 100) return value / 100;
+  return undefined;
+}
+
+function extractConfidenceFromScores(
+  scores: ResearchTier2Result["telemetry"]["scores"],
+  preferredKeywords: string[]
+): number | undefined {
+  for (const score of scores) {
+    if (typeof score.value !== "number") continue;
+    const label = score.label.trim().toLowerCase();
+    if (!preferredKeywords.some((keyword) => label.includes(keyword))) continue;
+    const normalized = normalizeConfidenceRatio(score.value);
+    if (normalized !== undefined) return normalized;
+  }
+  return undefined;
+}
+
+function resolveTelemetryConfidence(result: ResearchTier2Result | null): number | undefined {
+  if (!result) return undefined;
+
+  const explicit = normalizeConfidenceRatio(result.verificationStatus?.confidence);
+  if (explicit !== undefined) return explicit;
+
+  const matrixConfidences = result.telemetry.verificationMatrix
+    .map((item) => normalizeConfidenceRatio(item.confidence))
+    .filter((value): value is number => value !== undefined);
+  if (matrixConfidences.length) {
+    const avg = matrixConfidences.reduce((sum, value) => sum + value, 0) / matrixConfidences.length;
+    return Math.max(0, Math.min(1, avg));
+  }
+
+  const scoreConfidence = extractConfidenceFromScores(result.telemetry.scores, [
+    "verification confidence",
+    "confidence",
+  ]);
+  if (scoreConfidence !== undefined) return scoreConfidence;
+
+  const relevanceConfidence = extractConfidenceFromScores(result.telemetry.scores, [
+    "relevance",
+    "retrieval score",
+    "score",
+  ]);
+  if (relevanceConfidence !== undefined) return relevanceConfidence;
+
+  const routing = normalizeConfidenceRatio(result.debug.routing?.confidence);
+  if (routing !== undefined) return routing;
+
+  return undefined;
+}
+
+function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
+  dotClass: string;
+  labelClass: string;
+  detailClass: string;
+} {
+  if (status === "completed") {
+    return {
+      dotClass: "bg-emerald-500 ring-4 ring-emerald-500/25",
+      labelClass: "text-[var(--text-primary)]",
+      detailClass: "text-emerald-700 dark:text-emerald-300",
+    };
+  }
+  if (status === "in_progress") {
+    return {
+      dotClass: "bg-cyan-500 ring-4 ring-cyan-500/25",
+      labelClass: "text-[var(--text-primary)]",
+      detailClass: "text-cyan-700 dark:text-cyan-300",
+    };
+  }
+  if (status === "warning") {
+    return {
+      dotClass: "bg-amber-500 ring-4 ring-amber-500/25",
+      labelClass: "text-[var(--text-primary)]",
+      detailClass: "text-amber-700 dark:text-amber-300",
+    };
+  }
+  if (status === "failed") {
+    return {
+      dotClass: "bg-rose-500 ring-4 ring-rose-500/25",
+      labelClass: "text-[var(--text-primary)]",
+      detailClass: "text-rose-700 dark:text-rose-300",
+    };
+  }
+  if (status === "skipped") {
+    return {
+      dotClass: "bg-slate-400 ring-4 ring-slate-400/20",
+      labelClass: "text-[var(--text-secondary)]",
+      detailClass: "text-[var(--text-muted)]",
+    };
+  }
+  return {
+    dotClass: "bg-slate-300 ring-4 ring-slate-300/20 dark:bg-slate-600 dark:ring-slate-600/20",
+    labelClass: "text-[var(--text-muted)]",
+    detailClass: "text-[var(--text-muted)]",
+  };
 }
 
 export default function ChatWorkspacePage() {
@@ -1811,15 +2067,23 @@ export default function ChatWorkspacePage() {
   );
 
   const latestTier2Result = latestTier2Turn?.result.tier === "tier2" ? latestTier2Turn.result : null;
-  const flowTimeline = latestTier2Result?.flowStages.slice(0, 4) ?? [];
-  const verificationConfidence =
-    typeof latestTier2Result?.verificationStatus?.confidence === "number"
-      ? latestTier2Result.verificationStatus.confidence
-      : latestTier2Result?.debug.routing?.confidence;
+  const logicFlowNodes = useMemo(
+    () => buildLogicFlowNodes(latestTier2Result?.flowStages ?? []),
+    [latestTier2Result?.flowStages]
+  );
+  const confidenceRatio = resolveTelemetryConfidence(latestTier2Result);
+  const confidenceRingPercent = Math.max(0, Math.min(100, Math.round((confidenceRatio ?? 0.24) * 100)));
   const confidencePercent = Math.max(
     0,
-    Math.min(100, (verificationConfidence ?? 0) > 1 ? verificationConfidence ?? 0 : (verificationConfidence ?? 0) * 100)
+    Math.min(100, Math.round((confidenceRatio ?? 0) * 100))
   );
+  const confidenceDisplay = confidenceRatio === undefined ? "--" : confidenceRatio.toFixed(2);
+  const confidenceLabel =
+    confidenceRatio === undefined
+      ? "Signal Pending"
+      : confidencePercent >= 70
+        ? "High Reliability"
+        : "Needs Review";
   const telemetryBars = latestTier2Result
     ? [
         Math.min(96, Math.max(18, latestTier2Result.debug.flowEventCount * 4)),
@@ -2691,11 +2955,11 @@ export default function ChatWorkspacePage() {
                     className="text-cyan-500"
                     strokeWidth="3"
                     strokeLinecap="round"
-                    strokeDasharray={`${Math.max(0, Math.min(100, confidencePercent))}, 100`}
+                    strokeDasharray={`${confidenceRingPercent}, 100`}
                   />
                 </svg>
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[var(--text-primary)]">
-                  {(confidencePercent / 100).toFixed(2)}
+                  {confidenceDisplay}
                 </span>
               </div>
               <div>
@@ -2703,7 +2967,7 @@ export default function ChatWorkspacePage() {
                   Confidence
                 </p>
                 <p className="text-sm font-extrabold text-[var(--text-primary)]">
-                  {confidencePercent >= 70 ? "High Reliability" : "Needs Review"}
+                  {confidenceLabel}
                 </p>
               </div>
             </div>
@@ -2723,29 +2987,18 @@ export default function ChatWorkspacePage() {
                 Logic Flow
               </p>
               <div className="space-y-2.5 border-l border-[color:var(--shell-border)] pl-4">
-                {(flowTimeline.length ? flowTimeline : []).slice(0, 3).map((stage, index) => (
-                  <div key={`telemetry-flow-${stage.id}-${index}`} className="relative">
-                    <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
-                    <p className="text-xs font-bold text-[var(--text-primary)]">{stage.label}</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">{stage.detail || stage.status}</p>
-                  </div>
-                ))}
-                {!flowTimeline.length ? (
-                  <>
-                    <div className="relative">
-                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
-                      <p className="text-xs font-bold text-[var(--text-primary)]">Semantic Parsing</p>
+                {logicFlowNodes.map((node, index) => {
+                  const meta = logicFlowStatusMeta(node.status);
+                  return (
+                    <div key={`telemetry-flow-${node.id}-${index}`} className="relative">
+                      <span className={["absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full", meta.dotClass].join(" ")} />
+                      <p className={["text-xs font-bold", meta.labelClass].join(" ")}>{node.label}</p>
+                      <p className={["text-[10px]", meta.detailClass].join(" ")}>
+                        {node.detail || node.status.replaceAll("_", " ")}
+                      </p>
                     </div>
-                    <div className="relative">
-                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-500/20" />
-                      <p className="text-xs font-bold text-[var(--text-primary)]">Evidence Retrieval</p>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--text-muted)] ring-4 ring-slate-400/20" />
-                      <p className="text-xs font-bold text-[var(--text-muted)]">Synthesis Engine</p>
-                    </div>
-                  </>
-                ) : null}
+                  );
+                })}
               </div>
             </div>
           </div>
