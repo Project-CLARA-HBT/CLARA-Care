@@ -1166,6 +1166,42 @@ def test_research_tier2_fail_soft_keeps_deep_mode_flags(
     assert call_count["count"] == 2
 
 
+def test_research_tier2_sync_path_enforces_extended_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+    captured: dict[str, object] = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "answer": "Extended timeout path",
+                "citations": [],
+                "metadata": {"research_mode": "deep_beta"},
+            }
+
+    def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "deep beta sync timeout contract", "research_mode": "deep_beta"},
+    )
+
+    assert response.status_code == 200
+    assert str(captured["url"]).endswith("/v1/research/tier2")
+    assert float(captured["timeout"]) >= 600.0
+
+
 def test_research_tier2_fail_soft_reflects_fast_full_downgrade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

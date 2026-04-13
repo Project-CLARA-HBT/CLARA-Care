@@ -6,7 +6,7 @@ export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 export type ResearchRetrievalStackMode = "auto" | "full";
 
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
-export const RESEARCH_TIER2_TIMEOUT_MS = 120000;
+export const RESEARCH_TIER2_TIMEOUT_MS = 10 * 60 * 1000;
 export const RESEARCH_TIER2_JOB_POLL_MS = 1800;
 export const RESEARCH_TIER2_STREAM_MAX_WAIT_MS = 30 * 60 * 1000;
 

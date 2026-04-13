@@ -181,6 +181,7 @@ _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
 _ANSWER_LANGUAGE_ALLOWED = {"vi", "en"}
+_SYNC_RESEARCH_TIMEOUT_FLOOR_SECONDS = 600.0
 
 
 async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -3801,7 +3802,10 @@ def research_tier2(
             if settings.deepseek_strict_mode
             else _research_tier2_fallback_payload(upstream_payload)
         ),
-        timeout_seconds=settings.ml_research_timeout_seconds,
+        timeout_seconds=max(
+            float(settings.ml_research_timeout_seconds),
+            _SYNC_RESEARCH_TIMEOUT_FLOOR_SECONDS,
+        ),
     )
     normalized = _normalize_tier2_response(response)
     normalized = _enforce_request_execution_contract(

@@ -1029,3 +1029,70 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
   - code fix spacing đã xác nhận ở runtime gateway thật
   - UI mới đã deploy lên live
   - nhưng deep/deep_beta live job-route hiện còn chậm ở pha tổng hợp cuối nên cần theo dõi thêm nếu muốn chốt full E2E bằng chính job endpoint.
+
+## 12) Update 2026-04-14 00:25 +07
+
+### Fix public sync timeout cho `deep` / `deep_beta`
+- Root cause cuối cùng không nằm ở research job worker, mà ở sync path public:
+  - `POST /api/v1/research/tier2` đi qua Nginx public chỉ có `proxy_read_timeout 120s`
+  - sync endpoint API lại dùng `ML_RESEARCH_TIMEOUT_SECONDS=300`
+  - vì vậy các request deep/deep_beta chạy lâu qua public domain dễ bị cắt sớm dù backend vẫn có thể xử lý xong.
+
+### Patch đã áp dụng trong repo
+- `services/api/src/clara_api/api/v1/endpoints/research.py`
+  - thêm `_SYNC_RESEARCH_TIMEOUT_FLOOR_SECONDS = 600.0`
+  - sync endpoint `/tier2` giờ gọi upstream với `timeout_seconds=max(settings.ml_research_timeout_seconds, 600.0)`
+- `apps/web/lib/research.ts`
+  - nâng `RESEARCH_TIER2_TIMEOUT_MS` từ `120000` lên `10 * 60 * 1000` để sync helper phía web không tự timeout sớm hơn backend
+- `deploy/nginx/clara.thiennn.icu.conf`
+  - thêm location riêng `^~ /api/v1/research/tier2`
+  - tăng `proxy_send_timeout` / `proxy_read_timeout` lên `660s`
+- `services/api/tests/test_p2_proxy_endpoints.py`
+  - thêm regression test xác nhận sync path research dùng timeout mở rộng (>= `600s`)
+
+### Kiểm tra local trước khi deploy
+- `pytest services/api/tests/test_p2_proxy_endpoints.py -q`: PASS (`45 passed`)
+- `python -m py_compile services/api/src/clara_api/api/v1/endpoints/research.py`: PASS
+- `apps/web/node_modules/.bin/tsc -p apps/web/tsconfig.json --noEmit`: PASS
+
+### Deploy live vòng này
+- Sync đúng file sửa lên VPS `36.50.26.18`:
+  - `services/api/src/clara_api/api/v1/endpoints/research.py`
+  - `apps/web/lib/research.ts`
+- Vá trực tiếp `/etc/nginx/sites-available/theclaracare.com.conf` trên VPS:
+  - thêm location riêng cho `/api/v1/research/tier2`
+  - `nginx -t`: PASS
+  - `systemctl reload nginx`: PASS
+- Rebuild/recreate:
+  - `clara-app-api-1`
+  - `clara-app-web-1`
+- Health check sau deploy:
+  - `http://127.0.0.1:8100/health`: PASS
+  - `http://127.0.0.1:3100/login`: PASS
+
+### Public E2E xác nhận fix
+- Test trực tiếp qua `https://theclaracare.com` với account `admin@example.com`
+- Sync `deep_beta`:
+  - endpoint: `POST /api/v1/research/tier2`
+  - `HTTP 200`
+  - `TOTAL 140.912329s`
+  - `research_mode=deep_beta`
+  - `fallback_used=False`
+  - `fallback_reason=None`
+  - `flow_events=347`
+  - `flow_stages=25`
+- Sync `deep`:
+  - endpoint: `POST /api/v1/research/tier2`
+  - `HTTP 200`
+  - `TOTAL 78.764040s`
+  - `research_mode=deep`
+  - `fallback_used=False`
+  - `fallback_reason=None`
+  - `flow_events=226`
+  - `flow_stages=10`
+
+### Kết luận vòng này
+- Đã xác nhận fix đúng lỗi public timeout:
+  - `deep_beta` sync đi qua public domain chạy quá ngưỡng `120s` cũ nhưng vẫn trả `200`
+  - không còn `504 Gateway Time-out`
+  - telemetry không còn rỗng/pending giả do bị cắt connection giữa chừng
