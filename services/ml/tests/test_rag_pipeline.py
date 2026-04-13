@@ -131,6 +131,29 @@ def test_rag_pipeline_fallback_when_deepseek_fails():
     assert "## Kết luận nhanh" in result.answer
 
 
+def test_local_synthesis_avoids_source_dump_in_main_body() -> None:
+    answer = RagPipelineP0._local_synthesis(
+        "canh bao warfarin va nsaid",
+        [
+            Document(
+                id="pmid-1",
+                text="Warfarin and NSAID co-use increases bleeding risk and needs closer monitoring.",
+                metadata={"source": "pubmed", "title": "Warfarin bleeding risk"},
+            )
+        ],
+        answer_language="vi",
+    )
+    assert "LOCAL_FALLBACK_V1" in answer
+    assert "Nguồn nổi bật" not in answer
+    assert "pubmed" not in answer
+
+
+def test_build_no_rag_prompt_uses_reader_facing_section_contract() -> None:
+    prompt = RagPipelineP0._build_no_rag_prompt("compare DASH and Mediterranean", answer_language="en")
+    assert "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats" in prompt
+    assert "## Detailed analysis" not in prompt
+
+
 def test_rag_pipeline_recovers_from_transient_llm_failure_with_compact_retry():
     client = _TransientThenSuccessClient()
     pipe = RagPipelineP0(

@@ -1,5 +1,6 @@
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { ResearchExecutionMode, ResearchRetrievalStackMode } from "@/lib/research";
+import type { UILanguage } from "@/lib/ui-language";
 
 type ChatComposerProps = {
   query: string;
@@ -16,6 +17,7 @@ type ChatComposerProps = {
   liveStatusNote: string;
   error: string;
   notice: string;
+  uiLanguage: UILanguage;
 };
 
 const RESEARCH_MODE_OPTIONS: Array<{ id: ResearchExecutionMode; label: string }> = [
@@ -28,6 +30,35 @@ const RESEARCH_RETRIEVAL_STACK_OPTIONS: Array<{ id: ResearchRetrievalStackMode; 
   { id: "auto", label: "Auto" },
   { id: "full", label: "Full" },
 ];
+
+const COMPOSER_COPY: Record<UILanguage, {
+  mode: string;
+  stack: string;
+  promptTray: string;
+  placeholder: string;
+  mic: string;
+  submit: string;
+  liveStatusFallback: string;
+}> = {
+  vi: {
+    mode: "Chế độ",
+    stack: "Nguồn",
+    promptTray: "Gợi ý",
+    placeholder: "Nhập câu hỏi, ca bệnh hoặc yêu cầu nghiên cứu...",
+    mic: "Ghi âm",
+    submit: "Gửi",
+    liveStatusFallback: "Đang xử lý research job...",
+  },
+  en: {
+    mode: "Mode",
+    stack: "Stack",
+    promptTray: "Prompts",
+    placeholder: "Ask a question, describe a case, or start a research task...",
+    mic: "Record",
+    submit: "Send",
+    liveStatusFallback: "Research job in progress...",
+  },
+};
 
 export default function ChatComposer(props: ChatComposerProps) {
   const {
@@ -45,123 +76,181 @@ export default function ChatComposer(props: ChatComposerProps) {
     liveStatusNote,
     error,
     notice,
+    uiLanguage,
   } = props;
+  const [isPromptTrayOpen, setIsPromptTrayOpen] = useState(false);
+  const [isControlsOpen, setIsControlsOpen] = useState(false);
+  const copy = COMPOSER_COPY[uiLanguage];
+  const activeModeLabel =
+    RESEARCH_MODE_OPTIONS.find((mode) => mode.id === selectedResearchMode)?.label ?? "Fast";
+  const activeStackLabel =
+    RESEARCH_RETRIEVAL_STACK_OPTIONS.find((mode) => mode.id === selectedRetrievalStackMode)?.label ?? "Auto";
+  const controlsSummary = `${activeModeLabel} · ${activeStackLabel}`;
+  const toneButtonClass = (active: boolean, disabled = false) =>
+    [
+      "inline-flex min-h-[24px] items-center justify-center rounded-full px-2 text-[9px] font-semibold transition",
+      disabled
+        ? "cursor-not-allowed border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] opacity-55"
+        : active
+          ? "border border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+          : "border border-transparent text-[var(--text-secondary)] hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
+    ].join(" ");
 
   return (
-    <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)]/90 p-4 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-[72rem] px-1 sm:px-2 lg:px-3">
-        <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 shadow-sm">
-          <form onSubmit={onSubmit} className="flex items-end gap-2">
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
-              aria-label="Đính kèm"
-            >
-              <span className="material-symbols-outlined">attach_file</span>
-            </button>
+    <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)]/60 bg-[var(--bg-canvas)]/92 px-0.5 pb-0.75 pt-0.5 backdrop-blur-xl sm:px-1">
+      <div className="mx-auto w-full max-w-none">
+        <div className="rounded-[0.65rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/98 px-1.5 py-1 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.35)]">
+          <form onSubmit={onSubmit} className="space-y-0.5">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex min-w-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsControlsOpen((current) => !current)}
+                  className={[
+                    "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold transition",
+                    isControlsOpen
+                      ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                  ].join(" ")}
+                >
+                  <span className="material-symbols-outlined text-[13px]">tune</span>
+                  <span className="truncate">{controlsSummary}</span>
+                </button>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <textarea
-                id="chat-composer-input"
-                value={query}
-                onChange={(event) => onChangeQuery(event.target.value)}
-                disabled={isSubmitting}
-                aria-label="Chat composer input"
-                placeholder="Nhập câu hỏi chuyên sâu hoặc yêu cầu phân tích mới..."
-                rows={1}
-                className="min-h-[52px] max-h-36 w-full resize-y rounded-xl border border-transparent bg-transparent px-2 py-3 text-sm text-[var(--text-primary)] outline-none"
-              />
+                <button
+                  type="button"
+                  onClick={() => setIsPromptTrayOpen((current) => !current)}
+                  className={[
+                    "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold transition",
+                    isPromptTrayOpen
+                      ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                  ].join(" ")}
+                >
+                  <span className="material-symbols-outlined text-[12px]">history</span>
+                  {copy.promptTray}
+                </button>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-2 pb-1">
-                <fieldset className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-white/70 p-1 dark:bg-slate-900/60">
-                  <legend className="sr-only">Research mode</legend>
-                  {RESEARCH_MODE_OPTIONS.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => onChangeResearchMode(mode.id)}
-                      disabled={isSubmitting}
-                      className={[
-                        "rounded-full px-3 py-1 text-[11px] font-semibold",
-                        selectedResearchMode === mode.id
-                          ? "bg-cyan-500 text-white"
-                          : "text-[var(--text-secondary)]"
-                      ].join(" ")}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </fieldset>
+              {liveJobId || liveStatusNote ? (
+                <span className="inline-flex min-h-[24px] max-w-[12rem] shrink-0 items-center rounded-full border border-cyan-300/55 bg-cyan-500/10 px-2 text-[8px] font-medium text-cyan-700 dark:text-cyan-300">
+                  <span className="truncate">{liveStatusNote || copy.liveStatusFallback}</span>
+                </span>
+              ) : null}
+            </div>
 
-                <fieldset className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-white/70 p-1 dark:bg-slate-900/60">
-                  <legend className="sr-only">Retrieval stack mode</legend>
-                  {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
-                    const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
-                    return (
+            {isControlsOpen ? (
+              <div className="space-y-1 rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/86 px-1.5 py-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    {copy.mode}
+                  </span>
+                  <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
+                    {RESEARCH_MODE_OPTIONS.map((mode) => (
                       <button
                         key={mode.id}
                         type="button"
-                        onClick={() => onChangeRetrievalStackMode(mode.id)}
-                        disabled={disabled}
-                        className={[
-                          "rounded-full px-3 py-1 text-[11px] font-semibold disabled:opacity-50",
-                          selectedRetrievalStackMode === mode.id
-                            ? "bg-[var(--text-primary)] text-[var(--bg-canvas)]"
-                            : "text-[var(--text-secondary)]"
-                        ].join(" ")}
+                        onClick={() => onChangeResearchMode(mode.id)}
+                        disabled={isSubmitting}
+                        className={toneButtonClass(selectedResearchMode === mode.id, isSubmitting)}
+                        aria-pressed={selectedResearchMode === mode.id}
                       >
                         {mode.label}
                       </button>
-                    );
-                  })}
-                </fieldset>
-              </div>
-            </div>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-2 pr-1">
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
-                aria-label="Mic"
-              >
-                <span className="material-symbols-outlined">mic</span>
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !query.trim()}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--text-primary)] text-[var(--bg-canvas)] transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                aria-label="Gửi"
-              >
-                <span className="material-symbols-outlined">arrow_upward</span>
-              </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    {copy.stack}
+                  </span>
+                  <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
+                    {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
+                      const disabled = isSubmitting || (isFastResearchMode && mode.id === "full");
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => onChangeRetrievalStackMode(mode.id)}
+                          disabled={disabled}
+                          className={toneButtonClass(selectedRetrievalStackMode === mode.id, disabled)}
+                          aria-pressed={selectedRetrievalStackMode === mode.id}
+                        >
+                          {mode.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex items-end gap-1">
+              <div className="flex min-w-0 flex-1 flex-col rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5">
+                <textarea
+                  id="chat-composer-input"
+                  value={query}
+                  onChange={(event) => onChangeQuery(event.target.value)}
+                  disabled={isSubmitting}
+                  aria-label="Chat composer input"
+                  placeholder={copy.placeholder}
+                  rows={1}
+                  className="min-h-[34px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-1 text-[13px] leading-5 text-[var(--text-primary)] outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+                  aria-label={copy.mic}
+                  title={copy.mic}
+                >
+                  <span className="material-symbols-outlined text-[16px]">mic</span>
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !query.trim()}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--text-primary)] text-[var(--bg-canvas)] transition hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label={copy.submit}
+                  title={copy.submit}
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
 
-        <div className="mt-3 flex flex-wrap justify-center gap-3 text-[11px] text-[var(--text-muted)]">
-          {quickPrompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => onChangeQuery(prompt)}
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 transition hover:bg-white/70 hover:text-cyan-700 dark:hover:bg-slate-800/60 dark:hover:text-cyan-300"
-            >
-              <span className="material-symbols-outlined text-sm">history</span>
-              {prompt}
-            </button>
-          ))}
-        </div>
+        {isPromptTrayOpen ? (
+          <div className="mt-1 overflow-x-auto pb-0.5 text-[8px] text-[var(--text-muted)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-1">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => {
+                    onChangeQuery(prompt);
+                    setIsPromptTrayOpen(false);
+                  }}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[7.5px] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+                  title={prompt}
+                >
+                  <span className="max-w-[10rem] truncate">{prompt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
-        <div className="mt-1 min-h-[1.2rem] text-center text-xs">
-          {liveJobId || liveStatusNote ? (
-            <p className="text-cyan-700 dark:text-cyan-300">
-              {liveStatusNote || "Đang xử lý tier2 job..."}
-              {liveJobId ? ` (job_id: ${liveJobId})` : ""}
-            </p>
-          ) : null}
-          {error ? <p className="text-rose-500">{error}</p> : null}
-          {!error && notice ? <p className="text-emerald-600 dark:text-emerald-300">{notice}</p> : null}
-        </div>
+        {liveJobId || error || notice ? (
+          <div className="mt-1 text-center text-[9px]">
+            {liveJobId && !liveStatusNote ? <p className="text-cyan-700 dark:text-cyan-300">job_id: {liveJobId}</p> : null}
+            {error ? <p className="text-rose-500">{error}</p> : null}
+            {!error && notice ? <p className="text-emerald-600 dark:text-emerald-300">{notice}</p> : null}
+          </div>
+        ) : null}
       </div>
     </footer>
   );

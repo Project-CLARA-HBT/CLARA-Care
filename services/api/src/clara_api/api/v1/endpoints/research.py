@@ -180,6 +180,7 @@ _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
+_ANSWER_LANGUAGE_ALLOWED = {"vi", "en"}
 
 
 async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -518,6 +519,13 @@ def _normalize_research_mode_value(raw_mode: Any, *, default: str = "fast") -> s
 def _normalize_retrieval_stack_mode_value(raw_mode: Any, *, default: str = "auto") -> str:
     normalized = str(raw_mode or "").strip().lower().replace("-", "_")
     if normalized in _RETRIEVAL_STACK_MODE_ALLOWED:
+        return normalized
+    return default
+
+
+def _normalize_answer_language_value(raw_language: Any, *, default: str = "vi") -> str:
+    normalized = str(raw_language or "").strip().lower().replace("-", "_")
+    if normalized in _ANSWER_LANGUAGE_ALLOWED:
         return normalized
     return default
 
@@ -938,23 +946,45 @@ def _extract_tier2_query_text(payload: dict[str, Any]) -> str:
 
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
     research_mode, retrieval_stack_mode = _resolve_tier2_execution_modes(payload)
-    fallback_answer_text = (
-        "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
-        "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
-        "đối chiếu tương tác thuốc quan trọng, "
-        "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
+    answer_language = _normalize_answer_language_value(
+        payload.get("ui_language") or payload.get("answer_language"),
+        default="vi",
     )
-    fallback_answer_markdown = (
-        "## Kết luận nhanh\n"
-        f"{fallback_answer_text}\n\n"
-        "## Phân tích chi tiết\n"
-        "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, "
-        "nên câu trả lời này dùng chế độ an toàn.\n"
-        "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
-        "## Khuyến nghị an toàn\n"
-        "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-        "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng."
-    )
+    if answer_language == "en":
+        fallback_answer_text = (
+            "Deep retrieval is currently busy or temporarily unable to reach the RAG stack. "
+            "Using a safety-first fallback for now: prioritize guideline-based care, "
+            "double-check major drug interactions, and escalate to a clinician when there are "
+            "comorbidities or red-flag symptoms."
+        )
+        fallback_answer_markdown = (
+            "## Quick conclusion\n"
+            f"{fallback_answer_text}\n\n"
+            "## Detailed analysis\n"
+            "- The deep research path is temporarily unavailable, so this answer stays conservative.\n"
+            "- Re-check key decisions against primary sources or the treating clinician.\n\n"
+            "## Safety recommendations\n"
+            "- Do not self-prescribe or change dosing without qualified clinical advice.\n"
+            "- If there is comorbidity or polypharmacy, confirm the next step with a clinician or pharmacist."
+        )
+    else:
+        fallback_answer_text = (
+            "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
+            "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
+            "đối chiếu tương tác thuốc quan trọng, "
+            "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
+        )
+        fallback_answer_markdown = (
+            "## Kết luận nhanh\n"
+            f"{fallback_answer_text}\n\n"
+            "## Phân tích chi tiết\n"
+            "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, "
+            "nên câu trả lời này dùng chế độ an toàn.\n"
+            "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
+            "## Khuyến nghị an toàn\n"
+            "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
+            "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng."
+        )
     return {
         "answer": fallback_answer_markdown,
         "answer_markdown": fallback_answer_markdown,
@@ -975,6 +1005,8 @@ def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "source_mode": payload.get("source_mode"),
         "research_mode": research_mode,
         "retrieval_stack_mode": retrieval_stack_mode,
+        "ui_language": answer_language,
+        "answer_language": answer_language,
         "deep_pass_count": 0,
     }
 
@@ -1626,12 +1658,24 @@ def _build_tier2_upstream_payload(
 ) -> dict[str, Any]:
     settings = get_settings()
     upstream_payload = dict(payload)
+    requested_language = str(
+        upstream_payload.get("ui_language") or upstream_payload.get("answer_language") or "vi"
+    ).strip().lower()
+    answer_language = "en" if requested_language == "en" else "vi"
+    upstream_payload["ui_language"] = answer_language
+    upstream_payload["answer_language"] = answer_language
     explicit_research_mode = "research_mode" in upstream_payload or "mode" in upstream_payload
     research_mode, retrieval_stack_mode = _resolve_tier2_execution_modes(upstream_payload)
     if explicit_research_mode:
         upstream_payload["research_mode"] = research_mode
     upstream_payload["retrieval_stack_mode"] = retrieval_stack_mode
     upstream_payload.pop("stack_mode", None)
+    answer_language = _normalize_answer_language_value(
+        upstream_payload.get("ui_language") or upstream_payload.get("answer_language"),
+        default="vi",
+    )
+    upstream_payload["ui_language"] = answer_language
+    upstream_payload["answer_language"] = answer_language
     upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
     upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
     incoming_render_hints = upstream_payload.get("render_hints")
@@ -1685,10 +1729,16 @@ def _enforce_request_execution_contract(
         response["metadata"] = metadata_obj
 
     research_mode, retrieval_stack_mode = _resolve_tier2_execution_modes(request_payload)
+    answer_language = _normalize_answer_language_value(
+        request_payload.get("ui_language") or request_payload.get("answer_language"),
+        default="vi",
+    )
     response["research_mode"] = research_mode
     metadata_obj["research_mode"] = research_mode
     response["retrieval_stack_mode"] = retrieval_stack_mode
     metadata_obj["retrieval_stack_mode"] = retrieval_stack_mode
+    response["ui_language"] = answer_language
+    metadata_obj["answer_language"] = answer_language
 
     return response
 

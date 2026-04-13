@@ -575,6 +575,78 @@ def test_research_tier2_job_create_forwards_full_retrieval_stack_mode(
         assert "stack_mode" not in row.request_payload
 
 
+def test_research_tier2_job_create_preserves_language_and_runtime_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Check language + runtime forwarding",
+            "research_mode": "deep_beta",
+            "ui_language": "en",
+            "deep_pass_count": 2,
+            "llm_runtime": {
+                "provider": "openai_compatible",
+                "api_key": "runtime-key",
+                "base_url": "https://runtime.example/v1",
+                "model": "codex-5.3",
+            },
+        },
+    )
+    assert create_response.status_code == 200
+    payload = create_response.json()
+    job_id = payload["job_id"]
+
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).first()
+        assert row is not None
+        assert isinstance(row.request_payload, dict)
+        assert row.request_payload["ui_language"] == "en"
+        assert row.request_payload["answer_language"] == "en"
+        assert row.request_payload["deep_pass_count"] == 2
+        assert isinstance(row.request_payload["llm_runtime"], dict)
+        assert row.request_payload["llm_runtime"]["base_url"] == "https://runtime.example/v1"
+
+
+def test_research_tier2_job_create_persists_ui_language(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    token = _login("alice@research.clara")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research._queue_research_job",
+        lambda _job_id: None,
+    )
+
+    create_response = client.post(
+        "/api/v1/research/tier2/jobs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query": "Summarize DASH versus Mediterranean diet",
+            "research_mode": "fast",
+            "ui_language": "en",
+        },
+    )
+    assert create_response.status_code == 200
+    payload = create_response.json()
+    job_id = payload["job_id"]
+
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).first()
+        assert row is not None
+        assert isinstance(row.request_payload, dict)
+        assert row.request_payload["ui_language"] == "en"
+        assert row.request_payload["answer_language"] == "en"
+
+
 def test_research_tier2_job_get_404_for_other_user(monkeypatch: pytest.MonkeyPatch) -> None:
     token_a = _login("alice@research.clara")
     token_b = _login("bob@example.com")

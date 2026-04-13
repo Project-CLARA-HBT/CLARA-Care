@@ -341,6 +341,14 @@ export type ResearchTier2JobCreateOptions = {
   sourceHubSources?: SourceHubSourceKey[];
   researchMode?: ResearchExecutionMode;
   retrievalStackMode?: ResearchRetrievalStackMode;
+  uiLanguage?: "vi" | "en";
+  deepPassCount?: number;
+  llmRuntime?: {
+    provider?: string;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+  };
 };
 
 export type UploadedResearchFile = {
@@ -2442,6 +2450,7 @@ export async function runResearchTier2(
     sourceIds?: number[];
     researchMode?: ResearchExecutionMode;
     retrievalStackMode?: ResearchRetrievalStackMode;
+    uiLanguage?: "vi" | "en";
   }
 ): Promise<ResearchTier2RawResponse> {
   const uploadedFileIds = uniqueIds((options?.uploadedFileIds ?? []).map((item) => item.trim()).filter(Boolean));
@@ -2453,6 +2462,9 @@ export async function runResearchTier2(
   const retrievalStackMode = normalizeResearchRetrievalStackMode(options?.retrievalStackMode);
   payload.research_mode = researchMode;
   payload.retrieval_stack_mode = retrievalStackMode;
+  if (options?.uiLanguage === "vi" || options?.uiLanguage === "en") {
+    payload.ui_language = options.uiLanguage;
+  }
   payload.answer_format = "markdown";
   payload.response_format = "markdown";
   payload.render_hints = {
@@ -2503,6 +2515,31 @@ export async function createResearchTier2Job(
       chart_spec_fences: ["chart-spec", "vega-lite", "echarts-option", "json", "yaml"]
     }
   };
+
+  if (options?.uiLanguage === "vi" || options?.uiLanguage === "en") {
+    payload.ui_language = options.uiLanguage;
+  }
+  if (typeof options?.deepPassCount === "number" && Number.isFinite(options.deepPassCount)) {
+    payload.deep_pass_count = Math.max(1, Math.trunc(options.deepPassCount));
+  }
+  if (options?.llmRuntime) {
+    const runtimePayload: Record<string, string> = {};
+    if (typeof options.llmRuntime.provider === "string" && options.llmRuntime.provider.trim()) {
+      runtimePayload.provider = options.llmRuntime.provider.trim();
+    }
+    if (typeof options.llmRuntime.apiKey === "string" && options.llmRuntime.apiKey.trim()) {
+      runtimePayload.api_key = options.llmRuntime.apiKey.trim();
+    }
+    if (typeof options.llmRuntime.baseUrl === "string" && options.llmRuntime.baseUrl.trim()) {
+      runtimePayload.base_url = options.llmRuntime.baseUrl.trim();
+    }
+    if (typeof options.llmRuntime.model === "string" && options.llmRuntime.model.trim()) {
+      runtimePayload.model = options.llmRuntime.model.trim();
+    }
+    if (Object.keys(runtimePayload).length) {
+      payload.llm_runtime = runtimePayload;
+    }
+  }
 
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;

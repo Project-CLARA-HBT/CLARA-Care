@@ -218,6 +218,52 @@ File: `services/ml/src/clara_ml/routing.py`
 
 Trong `chat/routed`:
 
+## 18) UI workspace chat update 2026-04-13
+
+Mục tiêu của đợt này: giảm rối mắt ở màn chat, nới khung chat lớn hơn, cho phép thu gọn panel phụ và đơn giản hóa telemetry.
+
+File đã chỉnh:
+
+- `apps/web/app/chat/page.tsx`
+- `apps/web/components/chat-workspace/chat-composer.tsx`
+- `apps/web/components/chat-workspace/chat-turn.tsx`
+- `apps/web/components/app-shell.tsx`
+
+Điểm chính:
+
+- `AppShell` cho các route immersive (`/chat`, `/research`, `/council`, `/scribe`) đã đổi sang header gọn:
+  - giữ logo + tên `CLARA`
+  - ẩn nav/search/action thừa ở top bar
+  - giảm padding shell để nội dung workspace chiếm nhiều diện tích hơn
+- Màn `/chat` có thêm 2 state UI lưu vào localStorage:
+  - `clara_chat_workspace_panel_collapsed`
+  - `clara_chat_telemetry_panel_open`
+- Sidebar trái của chat:
+  - có thể thu gọn thành rail nhỏ giống kiểu menu/drawer
+  - còn nút mở lại + tạo chat nhanh
+  - đổi phần heading từ kiểu “Clinical Authority / Precision Curator” sang nhãn gọn hơn
+- Header trung tâm của chat:
+  - bỏ cụm “Clinical Lens AI / Dashboard / Patient Records / Analytics”
+  - thay bằng header tập trung: `CLARA` + tiêu đề conversation hiện tại + trạng thái thời gian
+  - có nút bật/tắt workspace panel và telemetry panel
+- Composer:
+  - input lớn hơn và chiếm chiều ngang nhiều hơn
+  - `Research mode` + `Retrieval stack` thu thành chip nhỏ
+  - quick prompts chuyển xuống dưới thành hàng chip mảnh, cuộn ngang
+- Vùng answer:
+  - card assistant/chat được nới và làm phẳng hơn
+  - bớt glow nặng và bo hợp lý hơn
+- Telemetry rail bên phải:
+  - không còn layout dashboard dài và rối
+  - chỉ còn summary gọn: confidence, neural load, logic flow có tín hiệu, source intel rút gọn
+  - ẩn hoàn toàn khi user đóng panel
+  - bỏ khối trang trí `Verified Protocol Engine v4.2`
+
+Verify local:
+
+- `npm run lint` qua, chỉ còn warning cũ không chặn build
+- `npm run build` qua thành công sau khi fix thiếu import `formatHistoryTime`
+
 - Nhận `rag_flow` flags từ caller.
 - Có profile retrieval tối ưu theo intent/query length (smalltalk/lifestyle/standard).
 - Có degrade-path khi upstream lỗi:
@@ -631,3 +677,355 @@ Cập nhật: 2026-04-12 (Asia/Saigon)
 ### Kiểm tra
 - `npm run lint` (apps/web): PASS (chỉ còn warning cũ đã tồn tại từ trước).
 - `npm run build` (apps/web): PASS.
+
+## 2026-04-13 Update (Chat UI widening + answer normalization toward Perplexity)
+
+Cập nhật: 2026-04-13 (Asia/Saigon)
+
+### Mục tiêu
+- Làm giao diện chat thoáng hơn, khung trả lời lớn hơn và bớt rối.
+- Thu nhỏ side panels/composer/telemetry để ưu tiên vùng hội thoại.
+- Tune output research fallback/deep/deep_beta theo kiểu trả lời trực tiếp, bớt template báo cáo.
+
+### Web/UI đã làm
+1) `apps/web/components/app-shell.tsx`
+- Tối giản immersive header cho các route chat/research/council/scribe.
+- Ẩn bớt chrome ở top shell; với route chat chỉ còn logo CLARA + đổi ngôn ngữ.
+- Giảm padding để workspace chiếm nhiều chiều cao hơn.
+
+2) `apps/web/app/chat/page.tsx`
+- Giảm bề ngang panel trái và panel telemetry để nới rộng khung chat trung tâm.
+- Thu gọn phần đầu panel trái, bỏ stats box nặng mắt, giữ lại new chat + search + conversation list.
+- Đơn giản header chat: chỉ giữ new chat + menu thêm; các action phụ (star/export/share/rename/delete...) chuyển vào menu.
+- Tăng không gian hiển thị message center và làm telemetry panel gọn hơn.
+- Đổi label telemetry ngắn hơn (`Telemetry`, `Nguồn`) để panel đỡ chiếm chỗ.
+
+3) `apps/web/components/chat-workspace/chat-composer.tsx`
+- Composer chuyển sang layout gọn kiểu chat-first.
+- Mode/stack thành chip nhỏ phía trên.
+- Ô nhập lớn hơn, quick prompts nhỏ hơn và đẩy xuống dưới.
+- Bỏ bớt control không cần thiết để giảm nhiễu thị giác.
+
+4) `apps/web/components/chat-workspace/chat-turn.tsx`
+- Làm assistant card phẳng và sáng hơn.
+- Nới bubble và dọn metadata.
+- Sanitize thêm các câu fallback/telemetry cũ nếu còn sót trong body.
+
+### ML/Answer đã làm
+1) `services/ml/src/clara_ml/rag/pipeline.py`
+- Viết lại local fallback synthesis: không còn dump bảng context vào body.
+- Fallback giờ trả lời theo dạng kết luận + phân tích + lưu ý an toàn.
+- Prompt baseline/deep đổi sang hướng “Perplexity-like”: trả lời trực tiếp trước, sau đó mới phân tích.
+
+2) `services/ml/src/clara_ml/agents/research_tier2.py`
+- Thêm bộ `_stabilize_long_answer_layout(...)` để nén answer deep/deep_beta về 4 phần:
+  - `## Kết luận nhanh`
+  - `## Điểm chính`
+  - `## Ứng dụng thực tế`
+  - `## Lưu ý an toàn`
+- Loại bỏ thêm câu fallback/safe-synthesis và các block telemetry/table không phù hợp với UI chat.
+- Giữ fast mode gọn như cũ, nhưng deep/deep_beta giờ cũng ra output nhất quán hơn.
+
+3) `services/ml/tests/test_research_tier2_agent.py`
+- Cập nhật assertion để khớp contract output mới cho deep/deep_beta.
+
+### Kiểm tra local vòng này
+- `npm run lint` (`apps/web`): PASS, chỉ còn warning cũ của repo.
+- `./node_modules/.bin/tsc -p tsconfig.json --noEmit`: PASS.
+- `npm run build` (`apps/web`): PASS.
+- `pytest services/ml/tests/test_research_tier2_agent.py -q`: PASS.
+
+### Việc tiếp theo
+- Deploy các file web + ml mới lên VPS `36.50.26.18`.
+- Rebuild container `web` và `ml`.
+- Smoke test login/chat UI và gọi `deep_beta` để kiểm tra answer thực tế sau normalize.
+
+## 2026-04-13 Update (UI compact pass 2 + answer normalization cleanup)
+
+Cập nhật: 2026-04-13 (Asia/Saigon)
+
+### Mục tiêu
+- Thu nhỏ thêm các block đang chiếm không gian ở màn chat.
+- Làm answer nhìn gần kiểu Perplexity hơn: mở bài trực tiếp, phần chính giữ paragraph tự nhiên hơn, citation gọn hơn.
+- Dọn thêm các dòng `Query:` / context intro còn sót trong body.
+
+### Web/UI đã làm
+1) `apps/web/components/app-shell.tsx`
+- Immersive header đổi sang bản gọn hơn:
+  - logo/icon `CLARA` rõ hơn
+  - language switch đổi từ `select` sang segmented pill `VI/EN`
+  - giữ header thấp để nhường chiều cao cho workspace
+
+2) `apps/web/app/chat/page.tsx`
+- Header chat giữa được nén tiếp:
+  - title conversation + trạng thái thời gian nằm cùng block
+  - thêm quick pin button ở header
+  - bỏ kiểu title “new conversation” dài dòng, fallback về `CLARA Chat`
+- Message viewport tăng padding ngang có chủ đích để answer nhìn rộng mà vẫn dễ đọc.
+- Telemetry chuyển thành floating compact widget:
+  - nút pill nhỏ khi đóng
+  - panel mở hẹp hơn
+  - confidence số lớn nhưng gọn hơn
+  - source chip ngắn hơn
+- Container toàn trang giảm phần chrome dọc để khung chat cao hơn.
+
+3) `apps/web/components/chat-workspace/chat-composer.tsx`
+- Composer thu nhỏ thêm:
+  - chip mode/stack thấp hơn
+  - prompt tray chip nhỏ hơn
+  - ô nhập về `rows=1` mặc định, vẫn kéo cao được
+  - nút mic/send nhỏ hơn
+
+4) `apps/web/components/chat-workspace/chat-turn.tsx`
+- Bubble user sáng hơn và rộng hơn, gần kiểu chat app hơn.
+- Assistant card bớt bo và bớt shadow nặng.
+
+5) `apps/web/components/research/markdown-answer.tsx`
+- Inline citation `[1]` đổi sang dạng chip tròn nhỏ thay vì link văn bản thường.
+- Giữ action bar export/copy dạng compact.
+
+### ML/Answer đã làm
+1) `services/ml/src/clara_ml/agents/research_tier2.py`
+- Thêm `_normalize_reader_facing_block(...)`:
+  - phần chính của answer ưu tiên giữ paragraph tự nhiên
+  - chỉ ép về bullet cho các khối action/safety khi cần
+- Fast/deep/deep_beta stabilization giờ ít “checklist hóa” phần analysis hơn.
+- Strip thêm:
+  - dòng `Query: ...`
+  - dòng `Câu hỏi: ...`
+  - dòng intro kiểu “Dưới đây là ngữ cảnh đã truy xuất...” / local context intro
+
+2) `services/ml/tests/test_research_tier2_agent.py`
+- Thêm test cho:
+  - query/context line removal
+  - paragraph-preserving normalization path
+
+### Kiểm tra local vòng này
+- `./node_modules/.bin/tsc -p tsconfig.json --noEmit` (`apps/web`): PASS
+- `npm run build` (`apps/web`): PASS
+  - chỉ còn warning cũ của repo, không có lỗi mới từ lượt sửa này
+- `pytest services/ml/tests/test_research_tier2_agent.py -q`: PASS
+- `pytest services/ml/tests/test_rag_pipeline.py -q`: PASS
+
+## 2026-04-13 Update (UI chat-first pass 3 + deep-beta sanitize hardening + VPS redeploy)
+
+Cập nhật: 2026-04-13 (Asia/Saigon)
+
+### Mục tiêu vòng này
+- Ưu tiên sửa UI `/chat` trước: khung chat rộng hơn, panel trái gọn hơn, composer nhỏ lại, telemetry ít chiếm chỗ hơn.
+- Tune output research theo hướng gần Perplexity hơn nhưng vẫn giữ safety-first.
+- Deploy lại bản mới lên VPS `36.50.26.18` và smoke test `deep_beta` trên live stack.
+
+### Web/UI đã làm
+1) `apps/web/app/chat/page.tsx`
+- Giảm bề ngang panel hội thoại trái:
+  - rail thu gọn từ khoảng `3.4rem` xuống `2.95rem`
+  - panel mở từ khoảng `13rem` xuống `11.75rem`
+  - width panel mobile/overlay cũng hẹp hơn.
+- Header chat chuyển sang bản chat-first:
+  - bỏ cụm action dài trên desktop
+  - chỉ giữ `New chat` + menu `More`
+  - telemetry toggle chuyển vào menu `More` và floating dock.
+- Giảm gutter ngang vùng message (`xl:px-4`, `2xl:px-5`) để tăng chiều rộng đọc.
+- Telemetry dock đổi sang dạng compact:
+  - trạng thái đóng chỉ còn icon + confidence số
+  - panel mở chỉ giữ confidence, flow stages, source count/tóm tắt nguồn.
+- Mặc định telemetry không tự bung lại ở đa số viewport; chỉ restore khi màn rất rộng.
+- Auto-collapse workspace panel được kéo xuống breakpoint `1024px` để nhường diện tích cho chat.
+- Outer shell giảm bo góc để bớt “bo tròn quá tay”.
+
+2) `apps/web/components/chat-workspace/chat-composer.tsx`
+- Top controls (`Mode`, `Stack`, `Prompts`) đổi sang hàng ngang scrollable nhỏ hơn.
+- Ô nhập vẫn cao để gõ thoải mái nhưng footer chrome mỏng hơn.
+- Mic/send buttons gọn lại.
+- Dòng status dưới composer chỉ render khi thực sự có `job_id`, `error`, hoặc `notice`.
+
+3) `apps/web/components/chat-workspace/chat-turn.tsx`
+- Bỏ avatar assistant riêng để trả lại chiều ngang cho answer card.
+- Bubble user rộng hơn (`sm:max-w-[88%]`).
+- Answer card phẳng hơn, sáng hơn.
+- Bật `stripReferenceSection` + `stripSafetyMatrixSection` ở chat view để backend lỡ sót thì frontend vẫn chặn bớt chrome thừa.
+
+4) `apps/web/components/research/markdown-answer.tsx`
+- Action bar answer rút gọn còn một menu icon `more_horiz`.
+- H2 heading bớt “report-like”, giảm separator nặng.
+- Đoạn mở đầu của section đầu tiên được render như lead summary card để giống kiểu câu trả lời của search/answer engines hơn.
+- Inline citations đổi sang superscript/compact reference style thay vì pill to, giúp mặt đọc sạch hơn.
+
+### ML / answer shaping đã làm
+1) `services/ml/src/clara_ml/agents/research_tier2.py`
+- Thêm allowlist section cho user-facing answer:
+  - `quick_conclusion`
+  - `key_points`
+  - `practical_application`
+  - `safety_notes`
+  - optional `monitoring_red_flags`
+- `_has_reader_friendly_layout(...)` giờ không chỉ check đủ section cốt lõi, mà còn fail nếu còn extra H2 kiểu `Research plan`, `Bảng tổng hợp bằng chứng`, v.v.
+- Sau khi stabilize, sanitizer sẽ drop mọi H2 ngoài allowlist để answer body không bị report hóa.
+- Thêm heuristic ngôn ngữ để khi target language là `vi`/`en` mà block rơi vào boilerplate lệch ngôn ngữ rõ rệt thì sẽ regenerate bằng copy mặc định đúng ngôn ngữ, thay vì bê nguyên phần lệch ngôn ngữ ra UI.
+- Giữ nguyên path normalize heading mixed-language, nhưng không drop sớm các H2 alias như `Detailed analysis`; thay vào đó để stabilization hấp thụ nội dung rồi mới khóa output bằng allowlist.
+
+2) `services/ml/src/clara_ml/rag/pipeline.py`
+- Rewrite fallback/local synthesis để không còn lộ `Nguồn nổi bật`, source dump, hay `Nearest reference sources` trong body.
+- `no-rag prompt` đổi sang cùng contract 4 phần reader-facing:
+  - `Quick conclusion`
+  - `Key points`
+  - `Practical application`
+  - `Important caveats`
+- `_safe_helpful_answer(...)` cũng đổi sang markdown 4-section contract thay vì paragraph rời rạc.
+
+3) Test coverage bổ sung
+- `services/ml/tests/test_research_tier2_agent.py`
+  - thêm assert chặn `## Kế hoạch nghiên cứu`
+  - thêm assert chặn `## Bảng tổng hợp bằng chứng`
+  - thêm test `_has_reader_friendly_layout(...)` reject extra report sections.
+- `services/ml/tests/test_rag_pipeline.py`
+  - thêm test fallback body không còn source dump
+  - thêm test `no-rag prompt` dùng 4-section reader-facing contract mới.
+
+### Kiểm tra local vòng này
+- `python -m py_compile services/ml/src/clara_ml/agents/research_tier2.py services/ml/src/clara_ml/rag/pipeline.py`: PASS.
+- `pytest services/ml/tests/test_research_tier2_agent.py services/ml/tests/test_rag_pipeline.py -q`: PASS.
+- `apps/web/node_modules/.bin/tsc -p apps/web/tsconfig.json --noEmit`: PASS.
+- `cd apps/web && npm run build`: PASS.
+  - chỉ còn warning cũ của repo (`react-hooks/exhaustive-deps`, custom font warning), không có lỗi mới từ vòng sửa này.
+
+### Deploy / VPS
+- Sync repo lên VPS `36.50.26.18` bằng `sshpass + rsync`.
+- Rebuild lại `web`, `api`, `ml` bằng docker compose tại `/opt/clara-care`.
+- Recreate containers thành công:
+  - `clara-app-web-1`
+  - `clara-app-api-1`
+  - `clara-app-ml-1`
+- Health checks sau deploy: PASS
+  - `http://127.0.0.1:8100/health` -> ok
+  - `http://127.0.0.1:8110/health` -> ok
+  - `https://theclaracare.com/chat` -> `307` về login như mong đợi.
+
+### Smoke test live deep_beta
+- Login admin live: PASS.
+- Tạo `deep_beta` job trên live: PASS.
+- Với runtime tạm user đưa:
+  - `base_url`: `redacted (VPS-only temporary upstream)`
+  - `api_key`: `redacted (VPS-only temporary upstream)`
+- Truy xuất trực tiếp upstream cho thấy:
+  - `/v1/models` liệt kê `gpt-5.3-codex`
+  - upstream không có `gpt-5.3-codex-high`
+  - `/v1/chat/completions` với `gpt-5.3-codex-high` trả lỗi provider/model không tồn tại
+  - `/v1/chat/completions` với `gpt-5.3-codex` trả `200`.
+- Kết quả live `deep_beta` hiện tại:
+  - job complete
+  - flow events có dữ liệu (`flowEvents: 94`), nên telemetry không còn ở trạng thái rỗng/pending tuyệt đối
+  - answer body đã ra 4-section contract gọn hơn
+  - nhưng metadata vẫn ghi `fallback_used=true`, `fallback_reason=llm_auth_failed` cho một số reasoning node / quality-gate path.
+- Ghi chú quan trọng:
+  - `deep_beta_report_synthesis` vẫn chạy xong với LLM long-form output trong metadata
+  - nhưng vài reasoning node song song bị degrade (`RuntimeError`), nên overall pipeline vẫn tự gắn fallback flag.
+  - cần audit tiếp riêng đường runtime override cho các reasoning node nếu muốn xóa hoàn toàn `fallback_used` trên deep beta với upstream tạm.
+
+## 10) Update 2026-04-13 23:17 +07
+
+### UI chat-first tiếp tục tinh gọn
+- `apps/web/app/chat/page.tsx`
+  - Thu hẹp panel hội thoại desktop mở xuống khoảng `9.75rem` để nhường thêm chiều ngang cho khung chat.
+  - Header trong khu chat rút về một hàng gọn: bỏ icon thừa, giữ title conversation + trạng thái thời gian.
+  - Empty state và telemetry dock tiếp tục nén xuống để không chiếm không gian đọc.
+  - Source Intel compact chỉ hiện khi thực sự có source thay vì luôn chiếm chỗ.
+- `apps/web/components/chat-workspace/chat-composer.tsx`
+  - Nút `Controls` hiển thị trực tiếp summary mode/stack (`Fast/Deep/Deep Beta · Auto/Full`) thay vì nhãn chung chung.
+  - Composer tiếp tục giảm chiều cao, prompt tray nhỏ hơn.
+- `apps/web/components/chat-workspace/chat-turn.tsx`
+  - Bubble user và answer card phẳng hơn, giảm bo/trang trí để mặt đọc giống chat app hơn.
+- `apps/web/styles/globals.css`
+  - Giảm cường độ gradient nền cả light/dark để tổng thể bớt màu mè và đỡ rối mắt.
+
+### Root cause deep / deep_beta fallback đã xác nhận
+- Gateway tạm `redacted (VPS-only temporary upstream)` với các model GPT-5 trả `200 OK` cho non-stream nhưng body hoàn tất bị rỗng:
+  - `/v1/chat/completions` -> `choices[0].message.content = null`
+  - `/v1/responses` -> `output = []`
+- Tuy nhiên khi gọi cùng model với `stream=true`, gateway lại phát nội dung thật qua SSE delta:
+  - chat completions stream có `choices[0].delta.content`
+  - responses stream có `response.output_text.delta`
+- Kết luận: pipeline deep/deep_beta fallback không phải vì network/key, mà vì client cũ chỉ đọc non-stream final payload nên tưởng LLM không trả nội dung.
+
+### Vá client LLM để tương thích gateway stream-only
+- `services/ml/src/clara_ml/llm/deepseek_client.py`
+  - Bổ sung parser tổng quát cho nhiều shape payload (`content`, `text`, `output_text`, nested output arrays).
+  - Nếu non-stream payload không có content, client sẽ tự fallback sang `stream=true` trên cùng endpoint `/v1/chat/completions` và ghép `delta.content` từ SSE.
+  - Giữ nguyên failover nhiều base URL và throttle hiện có.
+- `services/ml/tests/test_deepseek_client.py`
+  - Thêm test xác nhận client recover thành công từ stream khi JSON final payload rỗng.
+
+### Kiểm tra local vòng này
+- `pytest services/ml/tests/test_deepseek_client.py services/ml/tests/test_rag_pipeline.py services/ml/tests/test_research_tier2_agent.py -q`: PASS.
+- `python -m py_compile services/ml/src/clara_ml/llm/deepseek_client.py`: PASS.
+- `apps/web/node_modules/.bin/tsc -p apps/web/tsconfig.json --noEmit`: PASS.
+- `cd apps/web && npm run build`: PASS với warning cũ của repo (`react-hooks/exhaustive-deps`, custom font warning).
+
+## 11) Update 2026-04-13 23:58 +07
+
+### Root cause thật của lỗi dính chữ sau stream fix
+- Không nằm ở `research_tier2.py` như giả thuyết ban đầu.
+- Root cause nằm ở `services/ml/src/clara_ml/llm/deepseek_client.py`:
+  - `_extract_text_parts()` đang `strip()` từng fragment stream.
+  - `_consume_chat_stream()` lại ghép fragment bằng `"".join(...)`.
+  - Khi gateway cắt token kiểu `"Kết"` + `" luận"` + `" nhanh"`, khoảng trắng đầu fragment bị mất nên answer thành `Kếtluậnnhanh`.
+- Đã sửa:
+  - thêm tham số `trim_strings`
+  - non-stream vẫn trim bình thường
+  - stream path giữ nguyên whitespace fragment và chỉ `.strip()` sau khi ghép toàn chuỗi.
+
+### Regression test mới
+- `services/ml/tests/test_deepseek_client.py`
+  - thêm test `test_generate_stream_preserves_spaces_between_chunks`
+  - xác nhận stream `"Kết" + " luận" + " nhanh"` cho ra đúng `Kết luận nhanh`.
+
+### UI chat tiếp tục làm gọn theo hướng chat-first / gần Perplexity hơn
+- `apps/web/components/app-shell.tsx`
+  - header immersive thu nhỏ thêm, bỏ cảm giác “khung chrome” phía trên.
+  - phần trên cùng giữ logo/CLARA và language switch gọn hơn.
+- `apps/web/app/chat/page.tsx`
+  - giảm tiếp chiều rộng panel hội thoại desktop còn khoảng `8.9rem`.
+  - header khu chat đổi thành badge `CLARA` + title conversation + status time trên 2 dòng gọn.
+  - empty state chuyển sang badge nhỏ, prompt chips nhỏ hơn.
+  - telemetry dock nén nhỏ hơn và hạ thấp xuống gần composer.
+  - bản tiếng Việt đổi label `systemTelemetry` về `Theo dõi` để bớt lẫn Anh/Việt.
+- `apps/web/components/chat-workspace/chat-composer.tsx`
+  - composer thấp hơn, controls/prompt tray nhỏ hơn một nhịp nữa.
+  - nút mic/send nhỏ lại, prompt chips bỏ icon để tiết kiệm chỗ.
+- `apps/web/components/chat-workspace/chat-turn.tsx`
+  - answer card và user bubble tiếp tục phẳng hơn, ít bo hơn.
+- `apps/web/components/research/markdown-answer.tsx`
+  - chỉnh renderer theo hướng article-first: heading gọn hơn, lead summary giống block mở đầu của answer engine, citation badge nhỏ hơn.
+- `apps/web/styles/globals.css`
+  - giảm thêm glow/gradient và pseudo overlay trong markdown để đỡ nặng mắt, bớt lag cảm giác viền sáng.
+
+### Deploy vòng này
+- Sync lại repo lên VPS `36.50.26.18` bằng `rsync` nhưng giữ nguyên `/opt/clara-care/.env`.
+- Rebuild và recreate:
+  - `clara-app-web-1`
+  - `clara-app-ml-1`
+- Health check sau deploy:
+  - `http://127.0.0.1:8100/health`: PASS
+  - `http://127.0.0.1:8110/health`: PASS
+  - `https://theclaracare.com/chat`: `307` về `/login` đúng như mong đợi
+
+### Xác nhận runtime thật với gateway tạm
+- Chạy trực tiếp local bằng client thật:
+  - `DeepSeekClient.generate('Reply with exactly this text and nothing else: Kết luận nhanh')`
+  - kết quả: `Kết luận nhanh`
+- Đây là bằng chứng runtime thật rằng patch whitespace trên stream path đã hoạt động với gateway tạm `redacted (VPS-only temporary upstream)`, không chỉ là unit test.
+
+### Smoke test live hiện tại
+- Login admin live: PASS.
+- Tạo mới:
+  - job `deep`: `2b1b3debaa7d4a63b751eb5ea49e0540`
+  - job `deep_beta`: `56cb4722fe9c41eb9afa9a6dbaf8acbe`
+- Trạng thái khi kiểm tra vòng này:
+  - cả 2 job đã vào stage cuối với note `Đang hoàn thiện câu trả lời và chuẩn hóa citation.`
+  - nhưng vẫn chưa commit `result_json`, nên `flow_stages` / `flow_events` trong bảng job còn `0`
+  - tức là live upstream hiện vẫn chậm ở bước tổng hợp cuối, chưa đủ dữ liệu để chốt smoke test full answer body qua job route ngay trong vòng này.
+- Kết luận tạm:
+  - code fix spacing đã xác nhận ở runtime gateway thật
+  - UI mới đã deploy lên live
+  - nhưng deep/deep_beta live job-route hiện còn chậm ở pha tổng hợp cuối nên cần theo dõi thêm nếu muốn chốt full E2E bằng chính job endpoint.

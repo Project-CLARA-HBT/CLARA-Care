@@ -11,7 +11,6 @@ import {
   getGroupMeta,
   getGroupedNavItems,
   getRoleHomePath,
-  getPageMeta,
   getTopNavLinks,
   isActiveRoute,
   isPublicRoute,
@@ -67,6 +66,12 @@ const WIDE_WORKSPACE_PREFIXES = [
   "/scribe",
   "/chat",
 ];
+const IMMERSIVE_HEADER_PREFIXES = [
+  "/chat",
+  "/research",
+  "/council",
+  "/scribe",
+];
 const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
 
 export default function AppShell({ children }: Props) {
@@ -80,6 +85,9 @@ export default function AppShell({ children }: Props) {
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  const isImmersiveHeader = IMMERSIVE_HEADER_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 
@@ -169,7 +177,6 @@ export default function AppShell({ children }: Props) {
     return () => media.removeListener(onChange);
   }, [themePreference]);
 
-  const currentPage = useMemo(() => getPageMeta(pathname), [pathname]);
   const mobileNavGroups = useMemo(() => getGroupedNavItems(role), [role]);
 
   const topNavLinks = useMemo(() => getTopNavLinks(role), [role]);
@@ -220,8 +227,15 @@ export default function AppShell({ children }: Props) {
         <SidebarNav role={role} collapsed={isSidebarCollapsed} onToggleCollapse={toggleSidebarCollapse} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#c2c6d1]/20 bg-[#f7f9fb]/85 px-4 backdrop-blur-xl dark:bg-slate-950/80 sm:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-4 lg:gap-8">
+          <header
+            className={[
+              "sticky top-0 z-40 flex items-center justify-between border-b border-[#c2c6d1]/20 bg-[#f7f9fb]/88 px-4 backdrop-blur-xl dark:bg-slate-950/84 sm:px-6 lg:px-8",
+              isImmersiveHeader
+                ? "h-8 border-transparent bg-transparent px-1 backdrop-blur-0 dark:bg-transparent sm:px-1.5 lg:px-2"
+                : "h-16",
+            ].join(" ")}
+          >
+            <div className="flex min-w-0 items-center gap-2.5 lg:gap-5">
               <button
                 type="button"
                 onClick={() => setIsMobileNavOpen(true)}
@@ -231,101 +245,190 @@ export default function AppShell({ children }: Props) {
               >
                 <span className="material-symbols-outlined text-lg">menu</span>
               </button>
-              <div className="min-w-0">
-                <p className="truncate text-lg font-black text-[#003461] dark:text-blue-400">Không gian làm việc</p>
-                <p className="hidden truncate text-xs text-[var(--text-muted)] md:block">
-                  {currentPage.title}
-                </p>
-              </div>
-              <nav className="hidden items-center gap-6 lg:flex">
-                {topNavLinks.map((item) => {
-                  const active = isActiveRoute(pathname, item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={[
-                        "inline-flex items-center gap-2 py-5 text-sm transition-all",
-                        active
-                          ? "border-b-2 border-[#003461] text-[#003461] dark:border-blue-300 dark:text-blue-300"
-                          : "text-[#424750] hover:text-[#004b87] dark:text-slate-400 dark:hover:text-blue-200"
-                      ].join(" ")}
-                    >
-                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-              <button
-                type="button"
-                onClick={toggleSidebarCollapse}
-                className="hidden h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300 lg:inline-flex"
-                aria-label={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-                title={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+
+              <Link
+                href={getRoleHomePath(role)}
+                className={[
+                  "flex min-w-0 items-center gap-3 rounded-full px-2.5 py-1.5",
+                  isImmersiveHeader
+                    ? "border border-transparent bg-transparent px-0 py-0"
+                    : "border border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
+                ].join(" ")}
               >
-                <span className="material-symbols-outlined text-base">{isSidebarCollapsed ? "left_panel_open" : "left_panel_close"}</span>
-              </button>
+                {isImmersiveHeader ? (
+                  <>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-cyan-300/45 bg-cyan-500/10 text-cyan-700 dark:border-cyan-500/25 dark:text-cyan-200">
+                      <span
+                        className="material-symbols-outlined text-[13px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                        aria-hidden="true"
+                      >
+                        clinical_notes
+                      </span>
+                    </span>
+                    <span className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[#003461] dark:text-cyan-200">
+                      CLARA
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#003461] text-white dark:bg-cyan-500/20 dark:text-cyan-200">
+                      <span
+                        className="material-symbols-outlined text-[18px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                        aria-hidden="true"
+                      >
+                        clinical_notes
+                      </span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[11px] font-black uppercase tracking-[0.24em] text-[#003461] dark:text-cyan-200">
+                        CLARA
+                      </span>
+                      <span className="block truncate text-xs text-[var(--text-muted)]">
+                        Không gian làm việc
+                      </span>
+                    </span>
+                  </>
+                )}
+              </Link>
+
+              {!isImmersiveHeader ? (
+                <nav className="hidden items-center gap-6 lg:flex">
+                  {topNavLinks.map((item) => {
+                    const active = isActiveRoute(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={[
+                          "inline-flex items-center gap-2 py-5 text-sm transition-all",
+                          active
+                            ? "border-b-2 border-[#003461] text-[#003461] dark:border-blue-300 dark:text-blue-300"
+                            : "text-[#424750] hover:text-[#004b87] dark:text-slate-400 dark:hover:text-blue-200"
+                        ].join(" ")}
+                      >
+                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                          {item.icon}
+                        </span>
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              ) : null}
+              {!isImmersiveHeader ? (
+                <button
+                  type="button"
+                  onClick={toggleSidebarCollapse}
+                  className="hidden h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300 lg:inline-flex"
+                  aria-label={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+                  title={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+                >
+                  <span className="material-symbols-outlined text-base">{isSidebarCollapsed ? "left_panel_open" : "left_panel_close"}</span>
+                </button>
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="relative hidden md:block">
-                <i className="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--text-muted)]" aria-hidden="true" />
-                <input
-                  placeholder="Tìm kiếm tài liệu y khoa..."
-                  className="h-9 w-64 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] pl-10 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-cyan-300/70"
-                />
-              </div>
+              {!isImmersiveHeader ? (
+                <div className="relative hidden md:block">
+                  <i className="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--text-muted)]" aria-hidden="true" />
+                  <input
+                    placeholder="Tìm kiếm tài liệu y khoa..."
+                    className="h-9 w-64 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] pl-10 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-cyan-300/70"
+                  />
+                </div>
+              ) : null}
 
-              <div className="hidden items-center gap-1 sm:flex">
-                {NAVBAR_ACTIONS.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-panel)] hover:text-cyan-400"
-                    aria-label={action.ariaLabel}
-                  >
-                    <i className={`fa ${action.iconClass} text-[15px]`} aria-hidden="true" />
-                  </button>
-                ))}
-              </div>
+              {!isImmersiveHeader ? (
+                <div className="hidden items-center gap-1 sm:flex">
+                  {NAVBAR_ACTIONS.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--surface-panel)] hover:text-cyan-400"
+                      aria-label={action.ariaLabel}
+                    >
+                      <i className={`fa ${action.iconClass} text-[15px]`} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-              <select
-                value={themePreference}
-                onChange={(event) => handleThemeChange(event.target.value as ThemePreference)}
-                className="h-9 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs text-[var(--text-secondary)] outline-none"
-                aria-label="Đổi giao diện"
-              >
-                {THEME_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {!isImmersiveHeader ? (
+                <select
+                  value={themePreference}
+                  onChange={(event) => handleThemeChange(event.target.value as ThemePreference)}
+                  className="h-9 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs text-[var(--text-secondary)] outline-none"
+                  aria-label="Đổi giao diện"
+                >
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
 
-              <select
-                value={uiLanguage}
-                onChange={(event) => handleLanguageChange(event.target.value as UILanguage)}
-                className="h-9 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs font-semibold text-[var(--text-secondary)] outline-none"
-                aria-label="Đổi ngôn ngữ"
-                title="Language"
-              >
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {isImmersiveHeader ? (
+                <div
+                  className="inline-flex items-center rounded-full border border-[color:var(--shell-border)]/80 bg-[var(--surface-panel)]/86 p-0.5"
+                  aria-label="Đổi ngôn ngữ"
+                >
+                  {LANGUAGE_OPTIONS.map((option) => {
+                    const active = uiLanguage === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleLanguageChange(option.value)}
+                        className={[
+                          "inline-flex min-h-[22px] min-w-[30px] items-center justify-center rounded-full px-2 text-[9px] font-semibold transition",
+                          active
+                            ? "bg-[var(--text-primary)] text-[var(--bg-canvas)]"
+                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                        ].join(" ")}
+                        aria-pressed={active}
+                        title={option.label}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <select
+                  value={uiLanguage}
+                  onChange={(event) => handleLanguageChange(event.target.value as UILanguage)}
+                  className="h-9 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs font-semibold text-[var(--text-secondary)] outline-none"
+                  aria-label="Đổi ngôn ngữ"
+                  title="Language"
+                >
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </header>
 
-          <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-4 sm:px-6 sm:pb-32 sm:pt-6 lg:px-8 lg:pb-10 lg:pt-6">
+          <main
+            className={[
+              "flex-1 px-2.5 sm:px-3",
+              isImmersiveHeader
+                ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
+                : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-4 sm:px-6 sm:pb-32 sm:pt-6 lg:px-8 lg:pb-10 lg:pt-6",
+            ].join(" ")}
+          >
             <div className={["w-full", isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1360px]"].join(" ")}>
               {children}
             </div>
-            <div className="mt-3 text-xs text-[var(--text-muted)]">{ROLE_LABELS[role]}</div>
+            {!isImmersiveHeader ? (
+              <div className="mt-3 text-xs text-[var(--text-muted)]">{ROLE_LABELS[role]}</div>
+            ) : null}
           </main>
         </div>
       </div>

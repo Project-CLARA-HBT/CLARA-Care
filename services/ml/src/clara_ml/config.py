@@ -119,13 +119,13 @@ class Settings(BaseSettings):
         ),
     )
     deep_beta_reasoning_llm_nodes: int = Field(
-        default=8,
+        default=4,
         validation_alias="DEEP_BETA_REASONING_LLM_NODES",
-        ge=2,
+        ge=1,
         le=16,
     )
     deep_beta_reasoning_llm_timeout_seconds: float = Field(
-        default=20.0,
+        default=12.0,
         validation_alias=AliasChoices(
             "DEEP_BETA_REASONING_LLM_TIMEOUT_SECONDS",
             "DEEP_BETA_LLM_REASONING_TIMEOUT_SECONDS",
@@ -134,25 +134,25 @@ class Settings(BaseSettings):
         le=120.0,
     )
     deep_beta_reasoning_parallel_workers: int = Field(
-        default=6,
+        default=3,
         validation_alias="DEEP_BETA_REASONING_PARALLEL_WORKERS",
         ge=1,
         le=8,
     )
     deep_beta_reasoning_rounds: int = Field(
-        default=3,
+        default=1,
         validation_alias="DEEP_BETA_REASONING_ROUNDS",
         ge=1,
         le=4,
     )
     deep_beta_gap_fill_max_passes: int = Field(
-        default=4,
+        default=2,
         validation_alias="DEEP_BETA_GAP_FILL_MAX_PASSES",
         ge=0,
         le=8,
     )
     deep_beta_gap_fill_max_queries: int = Field(
-        default=12,
+        default=6,
         validation_alias="DEEP_BETA_GAP_FILL_MAX_QUERIES",
         ge=1,
         le=24,
@@ -162,40 +162,40 @@ class Settings(BaseSettings):
         validation_alias="DEEP_BETA_REPORT_LLM_ENABLED",
     )
     deep_beta_report_min_words: int = Field(
-        default=20000,
+        default=1400,
         validation_alias=AliasChoices(
             "DEEP_BETA_REPORT_MIN_WORDS",
             "DEEP_BETA_REPORT_MIN_CHARS",
         ),
-        ge=2000,
+        ge=600,
         le=40000,
     )
     deep_beta_report_target_pages: int = Field(
-        default=50,
+        default=4,
         validation_alias="DEEP_BETA_REPORT_TARGET_PAGES",
-        ge=5,
+        ge=1,
         le=120,
     )
     deep_beta_report_words_per_page: int = Field(
-        default=500,
+        default=320,
         validation_alias="DEEP_BETA_REPORT_WORDS_PER_PAGE",
-        ge=250,
+        ge=200,
         le=1000,
     )
     deep_beta_report_expansion_rounds: int = Field(
-        default=6,
+        default=1,
         validation_alias="DEEP_BETA_REPORT_EXPANSION_ROUNDS",
         ge=0,
         le=10,
     )
     deep_beta_report_timeout_seconds: float = Field(
-        default=180.0,
+        default=45.0,
         validation_alias="DEEP_BETA_REPORT_TIMEOUT_SECONDS",
-        ge=20.0,
+        ge=10.0,
         le=600.0,
     )
     deep_beta_report_max_tokens: int = Field(
-        default=12288,
+        default=4096,
         validation_alias="DEEP_BETA_REPORT_MAX_TOKENS",
         ge=1024,
         le=32768,
@@ -205,7 +205,7 @@ class Settings(BaseSettings):
         validation_alias="DEEP_BETA_QUALITY_GATE_ENABLED",
     )
     deep_beta_quality_gate_timeout_seconds: float = Field(
-        default=18.0,
+        default=10.0,
         validation_alias="DEEP_BETA_QUALITY_GATE_TIMEOUT_SECONDS",
         ge=2.0,
         le=120.0,
@@ -215,7 +215,7 @@ class Settings(BaseSettings):
         validation_alias="DEEP_BETA_EVIDENCE_VERIFICATION_ENABLED",
     )
     deep_beta_evidence_verification_timeout_seconds: float = Field(
-        default=22.0,
+        default=12.0,
         validation_alias="DEEP_BETA_EVIDENCE_VERIFICATION_TIMEOUT_SECONDS",
         ge=2.0,
         le=120.0,

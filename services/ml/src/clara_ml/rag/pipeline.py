@@ -94,7 +94,7 @@ class RagPipelineP1:
         self._graphrag = GraphRagSidecar()
 
     @staticmethod
-    def _local_synthesis(query: str, docs: List[Document]) -> str:
+    def _local_synthesis(query: str, docs: List[Document], *, answer_language: str = "vi") -> str:
         def _compact(text: str, max_len: int = 180) -> str:
             clean = " ".join(str(text or "").split()).strip()
             if len(clean) <= max_len:
@@ -102,43 +102,68 @@ class RagPipelineP1:
             return f"{clean[: max_len - 3]}..."
 
         if not docs:
+            if answer_language == "en":
+                return (
+                    "## Quick conclusion\n"
+                    "There is not enough strong retrieved evidence yet for a firm conclusion, so the answer is kept cautious and safety-first.\n\n"
+                    "## Key points\n"
+                    f"- Question under review: `{query}`.\n"
+                    "- The current session does not yet provide enough context for a personalized recommendation.\n"
+                    "- The next step is to verify against primary sources or add more clinical details before concluding.\n\n"
+                    "## Practical application\n"
+                    "- If a decision is needed now, narrow the question to treatment goal, comorbidities, active medications, and urgency.\n"
+                    "- With stronger guideline or case-specific context, a more tailored answer can be produced.\n\n"
+                    "## Important caveats\n"
+                    "- Cross-check with primary sources such as official labels, guidelines, or a clinician/pharmacist.\n"
+                    "- Do not self-prescribe or adjust dosing without qualified advice.\n\n"
+                    "<!-- LOCAL_FALLBACK_V1 -->"
+                )
             return (
                 "## Kết luận nhanh\n"
-                "Hiện chưa đủ bằng chứng truy xuất đáng tin cậy cho câu hỏi này, nên hệ thống trả lời theo chế độ an toàn.\n\n"
-                "## Phân tích chi tiết\n"
-                "- Chưa tìm thấy ngữ cảnh đủ liên quan trong phiên hiện tại.\n"
-                "- Nội dung dưới đây là định hướng thận trọng để tránh trả về thông tin thiếu an toàn.\n\n"
-                "## Khuyến nghị an toàn\n"
+                "Hiện chưa có đủ bằng chứng truy xuất mạnh để kết luận dứt khoát, nên câu trả lời được giữ ở mức thận trọng và an toàn.\n\n"
+                "## Điểm chính\n"
+                f"- Câu hỏi đang xét: `{query}`.\n"
+                "- Chưa có ngữ cảnh đủ mạnh trong phiên hiện tại để xác nhận một khuyến nghị cá thể hóa.\n"
+                "- Bước phù hợp lúc này là kiểm tra lại nguồn chính thống hoặc bổ sung dữ liệu lâm sàng liên quan trước khi kết luận.\n\n"
+                "## Ứng dụng thực tế\n"
+                "- Nếu cần quyết định ngay, nên quay về câu hỏi hẹp hơn: mục tiêu điều trị, bệnh nền, thuốc đang dùng và mức độ khẩn cấp.\n"
+                "- Khi có thêm dữ liệu lâm sàng hoặc nguồn guideline cụ thể, có thể trả lời sâu hơn và sát tình huống hơn.\n\n"
+                "## Lưu ý an toàn\n"
                 "- Ưu tiên đối chiếu nguồn chính thống (nhãn thuốc, guideline, bác sĩ/dược sĩ).\n"
                 "- Không tự ý kê đơn hoặc chỉnh liều khi chưa có tư vấn chuyên môn.\n\n"
                 "<!-- LOCAL_FALLBACK_V1 -->"
             )
 
-        rows: list[str] = []
-        for idx, doc in enumerate(docs[:6], start=1):
-            metadata = doc.metadata or {}
-            source = str(metadata.get("source") or "unknown")
-            summary = _compact(doc.text)
-            summary_safe = summary.replace("|", "\\|")
-            rows.append(
-                f"| {idx} | `{doc.id}` | {source} | {summary_safe} |"
+        evidence_summary = _compact(" ".join(doc.text for doc in docs[:3]), max_len=280)
+        if answer_language == "en":
+            return (
+                "## Quick conclusion\n"
+                "The retrieved evidence supports a cautious answer with context-dependent trade-offs rather than an overconfident universal conclusion.\n\n"
+                "## Key points\n"
+                f"- Question under review: `{query}`.\n"
+                f"- Main retrieved signal: {evidence_summary}.\n"
+                "- Interpret the answer around treatment goal, comorbidity burden, concurrent medications, and urgency.\n"
+                "- The retrieved signal should guide the next question, not replace direct clinical judgement.\n\n"
+                "## Practical application\n"
+                "- Use the answer to narrow the decision, compare options, and identify what must be clarified next.\n"
+                "- For a patient-specific decision, add age, comorbidities, polypharmacy context, and treatment goals.\n\n"
+                "## Important caveats\n"
+                "- Cross-check against primary sources before applying anything to care decisions.\n"
+                "- If there is comorbidity, polypharmacy, or severe symptoms, escalate to a clinician promptly.\n\n"
+                "<!-- LOCAL_FALLBACK_V1 -->"
             )
-
-        table = "\n".join(
-            [
-                "| # | ID | Source | Summary |",
-                "|---|---|---|---|",
-                *rows,
-            ]
-        )
         return (
             "## Kết luận nhanh\n"
-            "Hệ thống chuyển sang chế độ tổng hợp an toàn để duy trì phản hồi ổn định.\n\n"
-            "## Phân tích chi tiết\n"
-            f"- Query: `{query}`\n"
-            "- Dưới đây là ngữ cảnh đã truy xuất và rút gọn ở chế độ cục bộ:\n\n"
-            f"{table}\n\n"
-            "## Khuyến nghị an toàn\n"
+            "Bằng chứng truy xuất hiện có cho thấy nên trả lời theo hướng thận trọng, bám vào tín hiệu mạnh nhất thay vì kết luận quá mức.\n\n"
+            "## Điểm chính\n"
+            f"- Câu hỏi đang xét: `{query}`.\n"
+            f"- Tín hiệu chính đang có: {evidence_summary}.\n"
+            "- Cần diễn giải kết luận theo mục tiêu điều trị, bệnh nền, thuốc đang dùng và mức độ khẩn cấp.\n"
+            "- Phần truy xuất hiện tại giúp định hướng bước tiếp theo, nhưng chưa thay thế đánh giá lâm sàng trực tiếp.\n\n"
+            "## Ứng dụng thực tế\n"
+            "- Dùng câu trả lời này để thu hẹp quyết định, so sánh các lựa chọn và xác định điểm cần làm rõ tiếp theo.\n"
+            "- Nếu áp dụng cho một ca cụ thể, cần ghép thêm tuổi, bệnh nền, đa thuốc và mục tiêu điều trị.\n\n"
+            "## Lưu ý an toàn\n"
             "- Ưu tiên kiểm chứng chéo bằng nguồn chính thống trước khi áp dụng vào quyết định y khoa.\n"
             "- Nếu có bệnh nền/đa thuốc/dấu hiệu nặng, cần trao đổi bác sĩ ngay.\n\n"
             "<!-- LOCAL_FALLBACK_V1 -->"
@@ -153,6 +178,27 @@ class RagPipelineP1:
         normalized = unicodedata.normalize("NFD", str(text or ""))
         without_marks = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
         return without_marks.lower()
+
+    @staticmethod
+    def _summarize_llm_exception(exc: Exception) -> str:
+        message = str(exc or "").strip().lower()
+        if "http_502" in message:
+            return "llm_http_502"
+        if "http_503" in message:
+            return "llm_http_503"
+        if "http_504" in message:
+            return "llm_http_504"
+        if "http_429" in message:
+            return "llm_http_429"
+        if "timeout" in message:
+            return "llm_timeout"
+        if "auth" in message or "401" in message or "403" in message:
+            return "llm_auth_failed"
+        if "connection" in message or "connect" in message:
+            return "llm_connection_failed"
+        if "deepseek_request_failed" in message:
+            return "llm_request_failed"
+        return "llm_unavailable_or_failed"
 
     @staticmethod
     def _dedupe_queries(values: list[str], *, limit: int = 8) -> list[str]:
@@ -416,6 +462,7 @@ class RagPipelineP1:
                 "internal_top_k": 3,
                 "hybrid_top_k": 3,
                 "research_mode": "",
+                "answer_language": "vi",
                 "mode": "",
                 "query_focus": "default",
                 "ddi_critical_query": False,
@@ -458,6 +505,9 @@ class RagPipelineP1:
                     reason_codes.append(text)
 
         research_mode = str(hints.get("research_mode") or "").strip().lower()
+        answer_language = str(hints.get("answer_language") or "vi").strip().lower()
+        if answer_language != "en":
+            answer_language = "vi"
         mode = str(hints.get("mode") or "").strip().lower()
         retrieval_budget_raw = (
             hints.get("retrieval_budget") if isinstance(hints.get("retrieval_budget"), dict) else {}
@@ -502,6 +552,7 @@ class RagPipelineP1:
             "internal_top_k": _as_int(hints.get("internal_top_k"), 3),
             "hybrid_top_k": _as_int(hints.get("hybrid_top_k"), 3),
             "research_mode": research_mode,
+            "answer_language": answer_language,
             "mode": mode,
             "query_focus": str(hints.get("query_focus") or "default"),
             "ddi_critical_query": bool(hints.get("ddi_critical_query")),
@@ -1065,32 +1116,35 @@ class RagPipelineP1:
         docs: List[Document],
         *,
         report_depth: str = "standard",
+        answer_language: str = "vi",
     ) -> str:
         context = "\n".join(cls._format_doc_context(doc) for doc in docs[: cls._PROMPT_MAX_DOCS])
+        language_label = "English" if answer_language == "en" else "Vietnamese"
+        preferred_headings = (
+            "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats"
+            if answer_language == "en"
+            else "## Kết luận nhanh, ## Điểm chính, ## Ứng dụng thực tế, ## Lưu ý an toàn"
+        )
         if str(report_depth).strip().lower() == "deep":
             return (
                 "You are CLARA Deep Research medical assistant.\n"
                 "Use retrieved context as primary evidence and avoid unsupported claims.\n"
-                "Output MUST be valid GitHub-Flavored Markdown (GFM) in Vietnamese, no HTML.\n"
+                f"Output MUST be valid GitHub-Flavored Markdown (GFM) in {language_label}, no HTML.\n"
                 "Do not wrap the full response in a single code fence.\n"
-                "Generate a long-form report with these sections in exact order:\n"
-                "1) ## Kết luận nhanh\n"
-                "2) ## Kế hoạch nghiên cứu\n"
-                "3) ## Tóm tắt điều hành\n"
-                "4) ## Bối cảnh lâm sàng áp dụng\n"
-                "5) ## Phân tích chi tiết\n"
-                "6) ## Bảng tổng hợp bằng chứng\n"
-                "7) ## Khuyến nghị ứng dụng thực hành\n"
-                "8) ## Giới hạn, sai số và rủi ro pháp lý\n"
+                "Write in a Perplexity-like research answer style: direct answer first, then key reasoning, then practical application, then short caveats.\n"
+                f"Preferred headings: {preferred_headings}.\n"
+                f"Keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles.\n"
                 "Requirements:\n"
-                "- Length should be detailed and structured (target >= 3500 words for baseline deep draft).\n"
-                "- Include at least two markdown tables (evidence + comparison/implementation).\n"
+                "- Be detailed, but avoid sounding like an internal dossier or compliance template.\n"
+                "- Start with a clear answer in 2-4 sentences before expanding.\n"
+                "- Make the opening feel crisp and reader-first, like a strong Perplexity answer, not like a hospital report.\n"
+                "- In section bodies, prefer short bullets or tightly edited short paragraphs over long dense blocks.\n"
+                "- Use bullet points and tables only when they improve clarity.\n"
                 "- Keep narrative natural, clinician-friendly, and avoid repetitive sentence templates.\n"
                 "- Avoid internal telemetry language (pipeline, pass log, reranker, node matrix) in answer body.\n"
                 "- For each major recommendation, explain: when to prefer it, when not to, and what to monitor next.\n"
                 "- If query is comparative, include explicit decision criteria: adherence, effectiveness, safety, feasibility, and cost/access.\n"
                 "- Do not add dedicated references section in answer body.\n"
-                "- If diagrams are not necessary, prioritize plain-language clinical reasoning.\n"
                 "- Explicitly state uncertainty, subgroup caveats, and decision boundary conditions.\n"
                 f"User query: {query}\n"
                 f"Retrieved context:\n{context}"
@@ -1100,13 +1154,15 @@ class RagPipelineP1:
             "Use retrieved context as primary evidence and avoid unsupported claims.\n"
             "If context is weak, provide a conservative safety-first answer with clear uncertainty.\n"
             "Do not say 'no context'; still provide practical next steps safely.\n"
-            "Output MUST be valid GitHub-Flavored Markdown (GFM) in Vietnamese, no HTML.\n"
+            f"Output MUST be valid GitHub-Flavored Markdown (GFM) in {language_label}, no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
-            "Response structure must include, in this order:\n"
-            "1) ## Kết luận nhanh\n"
-            "2) ## Phân tích chi tiết\n"
-            "3) ## Khuyến nghị an toàn\n"
-            "If comparing >=2 options, include a Markdown table with columns: Tiêu chí | Phương án A | Phương án B | Ghi chú.\n"
+            "Response should feel like a concise research answer, not a report template.\n"
+            f"Preferred structure: {preferred_headings}.\n"
+            f"Keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles.\n"
+            "Answer the user directly in the first 2-3 sentences, like a strong Perplexity summary.\n"
+            "Keep each section skimmable: short paragraphs, 3-5 bullets when useful, and no meta commentary about retrieval or telemetry.\n"
+            "Prefer short bullets for trade-offs, practical implications, and monitoring.\n"
+            f"If comparing >=2 options, include a Markdown table with columns: {('Criteria | Option A | Option B | Notes' if answer_language == 'en' else 'Tiêu chí | Phương án A | Phương án B | Ghi chú')}.\n"
             "Write naturally like a senior clinician explaining trade-offs, avoid robotic templates.\n"
             "Do not include PICO/methodology/legal disclaimers unless explicitly requested.\n"
             "Do not add a dedicated citations section in the main answer body.\n"
@@ -1115,20 +1171,33 @@ class RagPipelineP1:
         )
 
     @classmethod
-    def _build_compact_retry_prompt(cls, query: str, docs: List[Document]) -> str:
+    def _build_compact_retry_prompt(
+        cls,
+        query: str,
+        docs: List[Document],
+        *,
+        answer_language: str = "vi",
+    ) -> str:
         context = "\n".join(
             cls._format_doc_context_with_limit(doc, max_chars=cls._PROMPT_RETRY_MAX_DOC_CHARS)
             for doc in docs[: cls._PROMPT_RETRY_MAX_DOCS]
         )
+        language_label = "English" if answer_language == "en" else "Vietnamese"
+        compact_sections = (
+            "1) ## Quick conclusion\n2) ## Key points\n3) ## Important caveats"
+            if answer_language == "en"
+            else "1) ## Kết luận nhanh\n2) ## Điểm chính\n3) ## Lưu ý an toàn"
+        )
         return (
             "You are CLARA medical safety assistant.\n"
-            "Answer in Vietnamese, concise, evidence-grounded, no HTML.\n"
+            f"Answer in {language_label}, concise, evidence-grounded, no HTML.\n"
             "Focus on practical safety guidance and key risks only.\n"
             "Do not diagnose or prescribe dosage.\n"
+            f"Keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles.\n"
             "Output sections in order:\n"
-            "1) ## Kết luận nhanh\n"
-            "2) ## Phân tích chi tiết\n"
-            "3) ## Khuyến nghị an toàn\n"
+            f"{compact_sections}\n"
+            "Open with a crisp direct answer instead of report-style setup.\n"
+            "Use short bullets rather than long paragraphs whenever possible.\n"
             "Keep wording natural, concise, and avoid robotic repetition.\n"
             f"User query: {query}\n"
             f"Retrieved context:\n{context}"
@@ -1174,42 +1243,105 @@ class RagPipelineP1:
         return any(signal in message for signal in retryable_signals)
 
     @staticmethod
-    def _build_no_rag_prompt(query: str) -> str:
+    def _build_no_rag_prompt(query: str, *, answer_language: str = "vi") -> str:
+        language_label = "English" if answer_language == "en" else "Vietnamese"
+        no_rag_sections = (
+            "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats"
+            if answer_language == "en"
+            else "## Kết luận nhanh, ## Điểm chính, ## Ứng dụng thực tế, ## Lưu ý an toàn"
+        )
         return (
             "User asks a health/medical question with low/empty retrieved context.\n"
-            "Provide a concise safety-first answer in Vietnamese.\n"
+            f"Provide a concise safety-first answer in {language_label}.\n"
             "Do not refuse solely due to missing context.\n"
             "Be explicit about uncertainty and avoid diagnostic/prescription overreach.\n"
             "If comparative question, provide balanced criteria and a Markdown table.\n"
-            "Write naturally, avoid template-heavy legal boilerplate.\n"
+            "Write naturally, answer directly first, and avoid template-heavy legal boilerplate.\n"
+            "Keep the body scannable with short bullets for the main trade-offs and next steps.\n"
+            "Avoid meta language about retrieval, source routing, or evidence pipeline internals.\n"
             "Output MUST be valid GitHub-Flavored Markdown (GFM), no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
-            "Response must include headings in this order: ## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn.\n"
+            f"Response must include headings in this order: {no_rag_sections}.\n"
             f"User query: {query}"
         )
 
     @staticmethod
-    def _safe_helpful_answer(query: str, docs: List[Document]) -> str:
+    def _safe_helpful_answer(query: str, docs: List[Document], *, answer_language: str = "vi") -> str:
         if docs:
-            source_ids = ", ".join(doc.id for doc in docs[:3])
+            summary = " ".join(doc.text for doc in docs[:2]).strip()
+            summary = " ".join(summary.split())
+            summary = summary[:240].rstrip() + ("..." if len(summary) > 240 else "")
+            if answer_language == "en":
+                return (
+                    "## Quick conclusion\n"
+                    "The answer should stay cautious and context-based rather than overly specific.\n\n"
+                    "## Key points\n"
+                    f"- Question under review: `{query}`.\n"
+                    f"- Main usable signal: {summary or 'Current evidence remains limited and should be treated as preliminary.'}\n"
+                    "- The decision still depends on treatment goal, comorbidities, and active medications.\n\n"
+                    "## Practical application\n"
+                    "- Use this as a narrow decision-support summary, then verify the main trade-off with a clinician or pharmacist.\n"
+                    "- For patient-specific action, add age, urgency, polypharmacy context, and red-flag symptoms.\n\n"
+                    "## Important caveats\n"
+                    "- Do not self-adjust dose or start treatment based on this answer alone.\n"
+                    "- Escalate promptly if symptoms are severe, progressive, or atypical."
+                )
             return (
-                "Thông tin hiện có cho thấy cần đánh giá theo mục tiêu điều trị, "
-                "bệnh nền và thuốc đang dùng. "
-                f"Nguồn tham chiếu gần nhất: {source_ids}. "
-                "Bạn nên theo dõi triệu chứng bất thường, tránh tự ý tăng liều, "
-                "và trao đổi bác sĩ/dược sĩ để cá nhân hóa khuyến nghị."
+                "## Kết luận nhanh\n"
+                "Câu trả lời nên được giữ ở mức thận trọng và phụ thuộc bối cảnh thay vì quá cụ thể.\n\n"
+                "## Điểm chính\n"
+                f"- Câu hỏi đang xét: `{query}`.\n"
+                f"- Tín hiệu chính có thể dùng: {summary or 'Bằng chứng hiện tại còn hạn chế và nên được xem là gợi ý ban đầu.'}\n"
+                "- Quyết định vẫn phụ thuộc vào mục tiêu điều trị, bệnh nền và các thuốc đang dùng.\n\n"
+                "## Ứng dụng thực tế\n"
+                "- Dùng kết quả này như một bản tóm tắt hỗ trợ quyết định, rồi xác minh lại điểm đánh đổi chính với bác sĩ hoặc dược sĩ.\n"
+                "- Nếu áp dụng cho một ca cụ thể, cần bổ sung tuổi, mức độ khẩn cấp, bối cảnh đa thuốc và dấu hiệu cảnh báo đỏ.\n\n"
+                "## Lưu ý an toàn\n"
+                "- Không tự ý chỉnh liều hoặc bắt đầu điều trị chỉ dựa trên câu trả lời này.\n"
+                "- Cần đi khám sớm nếu triệu chứng nặng lên, kéo dài, hoặc khác thường."
+            )
+        if answer_language == "en":
+            return (
+                "## Quick conclusion\n"
+                "Use a cautious, safety-first interpretation until stronger clinical context is available.\n\n"
+                "## Key points\n"
+                f"- Question under review: `{query}`.\n"
+                "- The current context is not yet strong enough for a personalized recommendation.\n"
+                "- The next useful step is to clarify treatment goal, comorbidities, and concurrent medications.\n\n"
+                "## Practical application\n"
+                "- Keep the decision narrow and document what still needs verification.\n"
+                "- Bring a clinician or pharmacist in early if there is comorbidity or polypharmacy.\n\n"
+                "## Important caveats\n"
+                "- Do not self-prescribe or change dose based on limited context.\n"
+                "- Seek urgent care now if symptoms are severe or rapidly worsening."
             )
         return (
-            "Với câu hỏi này, bạn có thể áp dụng nguyên tắc an toàn: "
-            "dùng thuốc đúng liều, theo dõi triệu chứng bất thường, "
-            "và ưu tiên tham vấn bác sĩ nếu có bệnh nền hoặc đang dùng nhiều thuốc."
+            "## Kết luận nhanh\n"
+            "Nên giữ cách hiểu theo hướng an toàn cho tới khi có thêm bối cảnh lâm sàng rõ hơn.\n\n"
+            "## Điểm chính\n"
+            f"- Câu hỏi đang xét: `{query}`.\n"
+            "- Ngữ cảnh hiện tại chưa đủ mạnh để đưa ra khuyến nghị cá thể hóa.\n"
+            "- Bước phù hợp tiếp theo là làm rõ mục tiêu điều trị, bệnh nền và các thuốc đang dùng.\n\n"
+            "## Ứng dụng thực tế\n"
+            "- Giữ quyết định ở phạm vi hẹp và ghi rõ điều gì còn cần kiểm chứng.\n"
+            "- Nên tham vấn sớm bác sĩ hoặc dược sĩ nếu có bệnh nền hay đang dùng nhiều thuốc.\n\n"
+            "## Lưu ý an toàn\n"
+            "- Không tự ý kê đơn hoặc chỉnh liều chỉ với ngữ cảnh còn hạn chế.\n"
+            "- Cần đi khám ngay nếu triệu chứng nặng lên nhanh hoặc có dấu hiệu cảnh báo đỏ."
         )
 
     @classmethod
-    def _postprocess_answer(cls, answer: str, query: str, docs: List[Document]) -> str:
+    def _postprocess_answer(
+        cls,
+        answer: str,
+        query: str,
+        docs: List[Document],
+        *,
+        answer_language: str = "vi",
+    ) -> str:
         cleaned = (answer or "").strip()
         if not cleaned:
-            return cls._safe_helpful_answer(query, docs)
+            return cls._safe_helpful_answer(query, docs, answer_language=answer_language)
         blocked_phrases = {
             "khong co thong tin tu ngu canh",
             "không có thông tin từ ngữ cảnh",
@@ -1220,7 +1352,7 @@ class RagPipelineP1:
         }
         lowered = cleaned.lower()
         if any(phrase in lowered for phrase in blocked_phrases):
-            return cls._safe_helpful_answer(query, docs)
+            return cls._safe_helpful_answer(query, docs, answer_language=answer_language)
         return cleaned
 
     def _build_context_debug(
@@ -1338,6 +1470,9 @@ class RagPipelineP1:
         run_started = perf_counter()
         planner_active = isinstance(planner_hints, dict) and bool(planner_hints)
         normalized_hints = self._normalize_planner_hints(planner_hints)
+        answer_language = str(normalized_hints.get("answer_language") or "vi").strip().lower()
+        if answer_language != "en":
+            answer_language = "vi"
         requested_stack_mode = (
             "full"
             if str(normalized_hints.get("retrieval_stack_mode") or "").strip().lower() == "full"
@@ -2244,13 +2379,18 @@ class RagPipelineP1:
             runtime_llm_base_url = str(llm_runtime.get("base_url") or "").strip()
             runtime_llm_model = str(llm_runtime.get("model") or "").strip()
             if runtime_llm_api_key and runtime_llm_base_url and runtime_llm_model:
+                runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
+                runtime_timeout_seconds = max(2.0, min(runtime_timeout_seconds, 18.0))
                 runtime_llm_client = DeepSeekClient(
                     api_key=runtime_llm_api_key,
                     base_url=runtime_llm_base_url,
                     model=runtime_llm_model,
-                    timeout_seconds=settings.deepseek_timeout_seconds,
-                    retries_per_base=settings.deepseek_retries_per_base,
-                    retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+                    timeout_seconds=runtime_timeout_seconds,
+                    retries_per_base=0,
+                    retry_backoff_seconds=min(
+                        max(float(settings.deepseek_retry_backoff_seconds), 0.0),
+                        0.25,
+                    ),
                     max_concurrency=settings.llm_global_max_concurrency,
                     min_interval_seconds=settings.llm_global_min_interval_seconds,
                     request_jitter_seconds=settings.llm_global_jitter_seconds,
@@ -2271,7 +2411,7 @@ class RagPipelineP1:
                 )
             )
             return _build_result(
-                answer=self._safe_helpful_answer(query, docs),
+                answer=self._safe_helpful_answer(query, docs, answer_language=answer_language),
                 model_used="retrieval-only-v1",
                 generation_trace={
                     "mode": "retrieval_only",
@@ -2282,6 +2422,7 @@ class RagPipelineP1:
         if strict_deepseek_required and (not runtime_llm_client or not runtime_llm_api_key):
             raise RuntimeError("deepseek_required_but_not_configured")
 
+        llm_failure_reason = "llm_unavailable_or_failed"
         if runtime_llm_client and runtime_llm_api_key:
             try:
                 if (
@@ -2307,7 +2448,10 @@ class RagPipelineP1:
                         )
                     )
                     answer = self._postprocess_answer(
-                        self._local_synthesis(query, docs), query, docs
+                        self._local_synthesis(query, docs, answer_language=answer_language),
+                        query,
+                        docs,
+                        answer_language=answer_language,
                     )
                     return _build_result(
                         answer=answer,
@@ -2337,15 +2481,15 @@ class RagPipelineP1:
                         query,
                         docs,
                         report_depth="deep" if orchestrator_mode == "deep" else "standard",
+                        answer_language=answer_language,
                     )
                     if has_relevant_context
-                    else self._build_no_rag_prompt(query)
+                    else self._build_no_rag_prompt(query, answer_language=answer_language)
                 )
                 system_prompt_text = (
                     "You are CLARA clinical assistant. "
                     "Be concise, safe, and citation-grounded. "
-                    "Return GFM markdown with these sections: "
-                    "## Kết luận nhanh, ## Phân tích chi tiết, ## Khuyến nghị an toàn. "
+                    f"Return GFM markdown in {('English' if answer_language == 'en' else 'Vietnamese')} with a direct answer first, then analysis and safety guidance. "
                     "Use markdown table for comparisons. "
                     "Do not output HTML. "
                     "Do not prescribe dosage or diagnose. "
@@ -2354,11 +2498,11 @@ class RagPipelineP1:
                 if orchestrator_mode == "deep":
                     system_prompt_text = (
                         "You are CLARA deep research clinical assistant. "
-                        "Produce a long-form, evidence-grounded Vietnamese report. "
+                        f"Produce a long-form, evidence-grounded {('English' if answer_language == 'en' else 'Vietnamese')} answer. "
                         "Use GFM markdown only, no HTML. "
+                        "Start with the direct answer, then expand into key points, practical application, and caveats. "
                         "Prefer precise source-linked claims and explicitly note uncertainty. "
-                        "Start with '## Kế hoạch nghiên cứu' before deep analysis sections. "
-                        "Use tables where helpful but avoid unnecessary diagrams. "
+                        "Use tables only when they materially improve clarity, and avoid dossier-like boilerplate. "
                         "Do not prescribe dosage or diagnose."
                     )
                 response = runtime_llm_client.generate(
@@ -2377,7 +2521,12 @@ class RagPipelineP1:
                     )
                 )
                 return _build_result(
-                    answer=self._postprocess_answer(response.content, query, docs),
+                    answer=self._postprocess_answer(
+                        response.content,
+                        query,
+                        docs,
+                        answer_language=answer_language,
+                    ),
                     model_used=response_model,
                     generation_trace={
                         "mode": "llm",
@@ -2388,6 +2537,7 @@ class RagPipelineP1:
                 )
             except Exception as exc:
                 recovered_from_retry = False
+                llm_failure_reason = self._summarize_llm_exception(exc)
                 if self._is_retryable_llm_exception(exc):
                     flow_events.append(
                         self._flow_event(
@@ -2404,10 +2554,14 @@ class RagPipelineP1:
                     )
                     try:
                         retry_response = runtime_llm_client.generate(
-                            prompt=self._build_compact_retry_prompt(query, docs),
+                            prompt=self._build_compact_retry_prompt(
+                                query,
+                                docs,
+                                answer_language=answer_language,
+                            ),
                             system_prompt=(
                                 "You are CLARA clinical assistant. "
-                                "Prioritize stable, concise medical-safety output in Vietnamese. "
+                                f"Prioritize stable, concise medical-safety output in {('English' if answer_language == 'en' else 'Vietnamese')}. "
                                 "No HTML. Do not prescribe dosage or diagnose."
                             ),
                         )
@@ -2424,7 +2578,12 @@ class RagPipelineP1:
                         )
                         recovered_from_retry = True
                         return _build_result(
-                            answer=self._postprocess_answer(retry_response.content, query, docs),
+                            answer=self._postprocess_answer(
+                                retry_response.content,
+                                query,
+                                docs,
+                                answer_language=answer_language,
+                            ),
                             model_used=retry_model,
                             generation_trace={
                                 "mode": "llm",
@@ -2434,6 +2593,7 @@ class RagPipelineP1:
                             },
                         )
                     except Exception as retry_exc:
+                        llm_failure_reason = self._summarize_llm_exception(retry_exc)
                         flow_events.append(
                             self._flow_event(
                                 stage="llm_generation_retry",
@@ -2479,11 +2639,16 @@ class RagPipelineP1:
             )
         )
         return _build_result(
-            answer=self._postprocess_answer(self._local_synthesis(query, docs), query, docs),
+            answer=self._postprocess_answer(
+                self._local_synthesis(query, docs, answer_language=answer_language),
+                query,
+                docs,
+                answer_language=answer_language,
+            ),
             model_used="local-synth-v1",
             generation_trace={
                 "mode": "local_synthesis",
-                "fallback_reason": "llm_unavailable_or_failed",
+                "fallback_reason": llm_failure_reason,
             },
         )
 

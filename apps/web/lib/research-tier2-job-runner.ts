@@ -71,6 +71,9 @@ export async function executeResearchTier2Job(
     sourceHubSources: options?.sourceHubSources,
     researchMode: options?.researchMode,
     retrievalStackMode: options?.retrievalStackMode,
+    uiLanguage: options?.uiLanguage,
+    deepPassCount: options?.deepPassCount,
+    llmRuntime: options?.llmRuntime,
   };
 
   const job = await createResearchTier2Job(query, createOptions);

@@ -279,6 +279,25 @@ def _normalize_retrieval_stack_mode(payload: dict[str, Any]) -> str:
     return "auto"
 
 
+def _normalize_answer_language(payload: dict[str, Any]) -> str:
+    metadata_obj = payload.get("metadata")
+    metadata = metadata_obj if isinstance(metadata_obj, dict) else {}
+    raw_value = (
+        str(
+            payload.get("ui_language")
+            or payload.get("answer_language")
+            or metadata.get("ui_language")
+            or metadata.get("answer_language")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
+    if raw_value in {"en", "english"}:
+        return "en"
+    return "vi"
+
+
 def _coerce_bool(value: Any, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -1064,6 +1083,26 @@ def _resolve_runtime_llm_config(
     return "deepseek", api_key, base_url, model
 
 
+def _has_request_runtime_override(llm_runtime: dict[str, Any] | None) -> bool:
+    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
+    return bool(
+        str(runtime.get("api_key") or "").strip()
+        and str(runtime.get("base_url") or "").strip()
+        and str(runtime.get("model") or "").strip()
+    )
+
+
+def _resolve_runtime_retry_policy(
+    llm_runtime: dict[str, Any] | None,
+) -> tuple[int, float]:
+    if _has_request_runtime_override(llm_runtime):
+        return 0, min(max(float(settings.deepseek_retry_backoff_seconds), 0.0), 0.25)
+    return (
+        max(0, int(settings.deepseek_retries_per_base)),
+        max(0.0, float(settings.deepseek_retry_backoff_seconds)),
+    )
+
+
 def _pause_between_pipeline_parts(multiplier: float = 1.0) -> None:
     base_pause = max(0.0, float(settings.research_inter_step_pause_seconds))
     if base_pause <= 0:
@@ -1083,13 +1122,16 @@ def _build_query_planner_client(
     if not api_key or not base_url or not model:
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), 20.0))
+    if _has_request_runtime_override(llm_runtime):
+        timeout_seconds = min(timeout_seconds, 10.0)
+    retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
         model=model,
         timeout_seconds=timeout_seconds,
-        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
-        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
+        retries_per_base=retries_per_base,
+        retry_backoff_seconds=retry_backoff_seconds,
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,
@@ -1106,13 +1148,16 @@ def _build_reasoning_client(
         return None
     resolved_timeout = float(timeout_seconds or settings.deep_beta_reasoning_llm_timeout_seconds)
     resolved_timeout = max(2.0, min(resolved_timeout, 120.0))
+    if _has_request_runtime_override(llm_runtime):
+        resolved_timeout = min(resolved_timeout, 18.0)
+    retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
         model=model,
         timeout_seconds=resolved_timeout,
-        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
-        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
+        retries_per_base=retries_per_base,
+        retry_backoff_seconds=retry_backoff_seconds,
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,
@@ -1698,6 +1743,156 @@ def _canonical_h2_key(heading: str) -> str:
     return text
 
 
+_SECTION_TITLES_BY_LANGUAGE: dict[str, dict[str, str]] = {
+    "vi": {
+        "quick_conclusion": "Kết luận nhanh",
+        "key_points": "Điểm chính",
+        "detailed_analysis": "Phân tích chi tiết",
+        "practical_application": "Ứng dụng thực tế",
+        "safety_guidance": "Khuyến nghị an toàn",
+        "safety_notes": "Lưu ý an toàn",
+        "monitoring_red_flags": "Theo dõi & cảnh báo đỏ",
+        "research_plan": "Kế hoạch nghiên cứu",
+        "executive_summary": "Tóm tắt điều hành",
+        "clinical_context": "Bối cảnh lâm sàng áp dụng",
+        "practice_recommendations": "Khuyến nghị ứng dụng thực hành",
+        "evidence_table": "Bảng tổng hợp bằng chứng",
+        "limitations_legal": "Giới hạn, sai số và rủi ro pháp lý",
+    },
+    "en": {
+        "quick_conclusion": "Quick conclusion",
+        "key_points": "Key points",
+        "detailed_analysis": "Detailed analysis",
+        "practical_application": "Practical application",
+        "safety_guidance": "Safety recommendations",
+        "safety_notes": "Important caveats",
+        "monitoring_red_flags": "Monitoring & red flags",
+        "research_plan": "Research plan",
+        "executive_summary": "Executive summary",
+        "clinical_context": "Clinical context",
+        "practice_recommendations": "Practical recommendations",
+        "evidence_table": "Evidence summary table",
+        "limitations_legal": "Limitations, error bands, and legal risk",
+    },
+}
+
+
+def _resolve_section_title(section_id: str, answer_language: str) -> str:
+    language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
+    return _SECTION_TITLES_BY_LANGUAGE.get(language, _SECTION_TITLES_BY_LANGUAGE["vi"]).get(
+        section_id,
+        section_id,
+    )
+
+
+_USER_FACING_HEADING_ALIASES = {
+    _canonical_h2_key("Quick conclusion"): "quick_conclusion",
+    _canonical_h2_key("Quick take"): "quick_conclusion",
+    _canonical_h2_key("Bottom line"): "quick_conclusion",
+    _canonical_h2_key("Key takeaways"): "quick_conclusion",
+    _canonical_h2_key("Kết luận nhanh"): "quick_conclusion",
+    _canonical_h2_key("Key points"): "key_points",
+    _canonical_h2_key("Main points"): "key_points",
+    _canonical_h2_key("Main analysis"): "key_points",
+    _canonical_h2_key("Điểm chính"): "key_points",
+    _canonical_h2_key("Detailed analysis"): "detailed_analysis",
+    _canonical_h2_key("Analysis"): "detailed_analysis",
+    _canonical_h2_key("Clinical analysis"): "detailed_analysis",
+    _canonical_h2_key("Discussion"): "detailed_analysis",
+    _canonical_h2_key("Assessment"): "detailed_analysis",
+    _canonical_h2_key("Phân tích chi tiết"): "detailed_analysis",
+    _canonical_h2_key("Practical application"): "practical_application",
+    _canonical_h2_key("Practical implications"): "practical_application",
+    _canonical_h2_key("Next steps"): "practical_application",
+    _canonical_h2_key("Ứng dụng thực tế"): "practical_application",
+    _canonical_h2_key("Safety recommendations"): "safety_guidance",
+    _canonical_h2_key("Safety guidance"): "safety_guidance",
+    _canonical_h2_key("Safety considerations"): "safety_guidance",
+    _canonical_h2_key("Safety notes"): "safety_guidance",
+    _canonical_h2_key("Khuyến nghị an toàn"): "safety_guidance",
+    _canonical_h2_key("Important caveats"): "safety_notes",
+    _canonical_h2_key("Caveats"): "safety_notes",
+    _canonical_h2_key("Lưu ý an toàn"): "safety_notes",
+    _canonical_h2_key("Monitoring and red flags"): "monitoring_red_flags",
+    _canonical_h2_key("Monitoring & red flags"): "monitoring_red_flags",
+    _canonical_h2_key("Follow-up and red flags"): "monitoring_red_flags",
+    _canonical_h2_key("Follow up and red flags"): "monitoring_red_flags",
+    _canonical_h2_key("Theo dõi & cảnh báo đỏ"): "monitoring_red_flags",
+    _canonical_h2_key("Research plan"): "research_plan",
+    _canonical_h2_key("Search plan"): "research_plan",
+    _canonical_h2_key("Investigation plan"): "research_plan",
+    _canonical_h2_key("Kế hoạch nghiên cứu"): "research_plan",
+    _canonical_h2_key("Executive summary"): "executive_summary",
+    _canonical_h2_key("Executive overview"): "executive_summary",
+    _canonical_h2_key("Tóm tắt điều hành"): "executive_summary",
+    _canonical_h2_key("Clinical context"): "clinical_context",
+    _canonical_h2_key("Clinical applicability"): "clinical_context",
+    _canonical_h2_key("Bối cảnh lâm sàng áp dụng"): "clinical_context",
+    _canonical_h2_key("Practical recommendations"): "practice_recommendations",
+    _canonical_h2_key("Practice implications"): "practice_recommendations",
+    _canonical_h2_key("Khuyến nghị ứng dụng thực hành"): "practice_recommendations",
+    _canonical_h2_key("Evidence summary table"): "evidence_table",
+    _canonical_h2_key("Evidence table"): "evidence_table",
+    _canonical_h2_key("Bảng tổng hợp bằng chứng"): "evidence_table",
+    _canonical_h2_key("Limitations legal and safety notes"): "limitations_legal",
+    _canonical_h2_key("Limitations and legal notes"): "limitations_legal",
+    _canonical_h2_key("Giới hạn, sai số và rủi ro pháp lý"): "limitations_legal",
+}
+
+_USER_FACING_NOISE_LINE_KEYS = {
+    _canonical_h2_key("Markdown"),
+    _canonical_h2_key("Copy"),
+    _canonical_h2_key("Clinical analysis report"),
+    _canonical_h2_key("Bao cao phan tich lam sang"),
+}
+
+
+def _normalize_user_facing_answer_markdown(
+    markdown_text: str,
+    *,
+    answer_language: str = "vi",
+) -> str:
+    text = str(markdown_text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return text
+
+    output_lines: list[str] = []
+    previous_blank = False
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped:
+            if output_lines and not previous_blank:
+                output_lines.append("")
+            previous_blank = True
+            continue
+
+        previous_blank = False
+        plain_key = _canonical_h2_key(stripped)
+        if plain_key in _USER_FACING_NOISE_LINE_KEYS:
+            continue
+
+        if stripped.startswith("#"):
+            prefix_match = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+            if prefix_match:
+                hashes, heading_text = prefix_match.groups()
+                alias = _USER_FACING_HEADING_ALIASES.get(_canonical_h2_key(heading_text))
+                if alias:
+                    line = f"{hashes} {_resolve_section_title(alias, answer_language)}"
+                    stripped = line.strip()
+
+        normalized_bullet = re.sub(r"^[•●▪◦‣]\s*", "- ", stripped)
+        normalized_numbered = re.sub(r"^(\d+)\)\s+", r"\1. ", normalized_bullet)
+        if normalized_numbered != stripped:
+            line = normalized_numbered
+
+        output_lines.append(line)
+
+    normalized = "\n".join(output_lines)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()
+
+
 def _resolve_required_deep_heading_key(heading: str) -> str:
     key = _canonical_h2_key(heading)
     if not key:
@@ -1866,21 +2061,21 @@ def _build_reasoning_chain_cards(
 
 
 def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
-    # Deep research target intentionally large by product requirement.
-    min_words = max(int(settings.deep_beta_report_min_words), 20000)
-    page_target = max(int(settings.deep_beta_report_target_pages), 1)
-    words_per_page = max(int(settings.deep_beta_report_words_per_page), 250)
-    target_words = max(min_words, page_target * words_per_page)
-    max_words = max(40000, target_words)
+    # Keep deep-beta long enough to feel substantial, but not dossier-scale.
+    min_words = min(max(int(settings.deep_beta_report_min_words), 1000), 6000)
+    page_target = min(max(int(settings.deep_beta_report_target_pages), 1), 8)
+    words_per_page = min(max(int(settings.deep_beta_report_words_per_page), 220), 600)
+    target_words = max(min_words + 600, page_target * words_per_page)
+    max_words = max(min(target_words + 1800, 9000), min_words + 800)
     target_words = min(max(target_words, min_words), max_words)
     return min_words, target_words, max_words
 
 
 def _resolve_deep_word_budget() -> tuple[int, int, int]:
-    # Deep mode: long-form but practical, lower than deep-beta dossier scale.
-    min_words = 3500
-    target_words = 6500
-    max_words = 12000
+    # Deep mode should read like a dense briefing, not a dossier.
+    min_words = 900
+    target_words = 1600
+    max_words = 2800
     return min_words, target_words, max_words
 
 
@@ -1910,61 +2105,56 @@ def _resolve_adaptive_report_word_budget(
         return min_words, target_words, max_words
 
     if evidence_density >= 20:
-        adaptive_min = max(10000, int(min_words * 0.55))
-        adaptive_target = max(14000, int(target_words * 0.6))
+        adaptive_min = max(1800, int(min_words * 0.95))
+        adaptive_target = max(2600, int(target_words * 0.95))
     elif evidence_density >= 12:
-        adaptive_min = max(8000, int(min_words * 0.45))
-        adaptive_target = max(11000, int(target_words * 0.5))
+        adaptive_min = max(1400, int(min_words * 0.82))
+        adaptive_target = max(2200, int(target_words * 0.84))
     else:
-        adaptive_min = max(6000, int(min_words * 0.3))
-        adaptive_target = max(8500, int(target_words * 0.38))
+        adaptive_min = max(1100, int(min_words * 0.72))
+        adaptive_target = max(1800, int(target_words * 0.75))
 
-    adaptive_target = max(adaptive_target, adaptive_min + 1200)
-    adaptive_max = max(adaptive_target + 5000, int(max_words * 0.65))
+    adaptive_target = max(adaptive_target, adaptive_min + 450)
+    adaptive_max = max(adaptive_target + 1000, int(max_words * 0.85))
     return adaptive_min, adaptive_target, adaptive_max
 
 
-def _resolve_report_section_contract(research_mode: str) -> tuple[list[str], list[str]]:
+def _resolve_report_section_contract(
+    research_mode: str,
+    *,
+    answer_language: str = "vi",
+) -> tuple[list[str], list[str]]:
     mode = str(research_mode or "fast").strip().lower()
+    quick_conclusion = f"## {_resolve_section_title('quick_conclusion', answer_language)}"
+    key_points = f"## {_resolve_section_title('key_points', answer_language)}"
+    practical_application = f"## {_resolve_section_title('practical_application', answer_language)}"
+    important_caveats = f"## {_resolve_section_title('safety_notes', answer_language)}"
     if mode == "deep_beta":
         sections = [
-            "## Kết luận nhanh",
-            "## Kế hoạch nghiên cứu",
-            "## Tóm tắt điều hành",
-            "## Câu hỏi nghiên cứu (PICO)",
-            "## Phương pháp truy xuất & tiêu chí chọn lọc",
-            "## Hồ sơ bằng chứng & chất lượng nguồn",
-            "## Tổng hợp phát hiện chính",
-            "## Chuỗi lập luận bằng chứng",
-            "## Phản biện bằng chứng đối nghịch",
-            "## Ứng dụng lâm sàng theo nhóm bệnh nhân",
-            "## Ma trận quyết định an toàn",
-            "## Kế hoạch theo dõi sau tư vấn",
-            "## Giới hạn, sai số và rủi ro pháp lý",
+            quick_conclusion,
+            key_points,
+            practical_application,
+            important_caveats,
         ]
         requirements = [
-            "- include direct head-to-head comparison axes when relevant (adherence, efficacy, risk, feasibility, cost)",
-            "- include explicit methods narrative (search strategy, inclusion/exclusion, evidence hierarchy)",
-            "- include at least 3 markdown tables distributed across evidence, comparison, and implementation sections",
-            "- include a concise claim→evidence→inference→clinical-action chain for major conclusions",
-            "- discuss uncertainty, contradictory evidence, subgroup caveats, and boundary conditions explicitly",
+            "- open with the answer and decision boundary before background context",
+            "- keep the reasoning explicit, but readable and reader-first rather than dossier-like",
+            "- when the query compares options, cover adherence, efficacy, safety, feasibility, and cost/access",
+            "- use at most 1-2 markdown tables only when they materially improve clarity",
+            "- discuss uncertainty, contradictory evidence, subgroup caveats, and monitoring next steps explicitly",
         ]
         return sections, requirements
 
     sections = [
-        "## Kết luận nhanh",
-        "## Kế hoạch nghiên cứu",
-        "## Tóm tắt điều hành",
-        "## Bối cảnh lâm sàng áp dụng",
-        "## Phân tích chi tiết",
-        "## Bảng tổng hợp bằng chứng",
-        "## Khuyến nghị ứng dụng thực hành",
-        "## Giới hạn, sai số và rủi ro pháp lý",
+        quick_conclusion,
+        key_points,
+        practical_application,
+        important_caveats,
     ]
     requirements = [
-        "- include at least 2 markdown tables (evidence + comparison/implementation)",
-        "- keep narrative clinician-friendly and implementation-oriented",
-        "- preserve practical trade-off analysis and uncertainty notes",
+        "- answer directly in the opening 3-5 sentences before expanding",
+        "- keep narrative clinician-friendly, implementation-oriented, and free of template filler",
+        "- preserve practical trade-off analysis, uncertainty notes, and follow-up checkpoints",
     ]
     return sections, requirements
 
@@ -1973,24 +2163,24 @@ def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
         return {
-            "tone": "scholarly_clinical_dossier",
-            "narrative_density": "very_high",
-            "target_reader": "clinical research lead and multidisciplinary board",
+            "tone": "high_signal_research_answer",
+            "narrative_density": "high",
+            "target_reader": "clinician or operator who needs a rapid but rigorous synthesis",
             "must_do": [
-                "Maintain strict evidence contract and explicitly tag uncertainty boundaries.",
-                "Keep each section analytically dense with clear claim-evidence linkage.",
-                "Include counter-arguments and explain decision boundary for each major claim.",
+                "Lead with the answer, then explain why the evidence points there.",
+                "Keep claim-evidence linkage explicit without sounding like an internal report.",
+                "Translate uncertainty into concrete decision boundaries and monitoring steps.",
             ],
             "avoid": [
-                "Do not use motivational or marketing language.",
+                "Do not sound like a hospital dossier, compliance memo, or legal template.",
                 "Do not repeat identical sentence openings across adjacent paragraphs.",
-                "Do not overuse long bullet lists when a paragraph synthesis is clearer.",
+                "Do not overuse long bullet dumps when short synthesis paragraphs are clearer.",
             ],
         }
     return {
-        "tone": "clinical_briefing_natural",
+        "tone": "clinical_briefing_reader_first",
         "narrative_density": "high",
-        "target_reader": "attending physician and care coordination team",
+        "target_reader": "clinician or health operator scanning for the answer first",
         "must_do": [
             "Prioritize practical interpretation and what changes in decision-making.",
             "Keep prose natural, concise, and non-robotic while preserving rigor.",
@@ -2120,6 +2310,7 @@ def _synthesize_deep_beta_long_report(
     evidence_verification: dict[str, Any] | None = None,
     llm_runtime: dict[str, Any] | None = None,
     research_mode: str = "deep_beta",
+    answer_language: str = "vi",
 ) -> str:
     if not settings.deep_beta_report_llm_enabled:
         return answer_markdown
@@ -2166,7 +2357,10 @@ def _synthesize_deep_beta_long_report(
         deep_pass_count=len(compact_passes),
         reasoning_node_count=len(reasoning_chain_cards),
     )
-    section_contract, section_requirements = _resolve_report_section_contract(mode)
+    section_contract, section_requirements = _resolve_report_section_contract(
+        mode,
+        answer_language=answer_language,
+    )
     style_profile = _resolve_report_style_profile(mode)
     section_contract_text = "\n".join(section_contract)
     section_requirements_text = "\n".join(section_requirements)
@@ -2180,29 +2374,30 @@ def _synthesize_deep_beta_long_report(
         if mode == "deep_beta"
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
+    language_label = "English" if answer_language == "en" else "Vietnamese"
     style_target_line = (
-        "- write as a natural, fluent, clinician-facing report with deep reasoning (target: full deep dossier)"
-        if mode == "deep_beta"
-        else "- write as a natural, fluent, clinician-facing deep briefing with strong practical interpretation"
+        "- write like a high-signal Perplexity-style medical research answer: direct, analytic, reader-first, and not dossier-like"
     )
     chain_requirement_line = (
-        "- in '## Chuỗi lập luận bằng chứng', present short chains in this order: claim -> evidence -> inference -> clinical action"
-        if mode == "deep_beta"
-        else "- keep claim-to-evidence linkage explicit in paragraphs without overusing rigid chain templates"
+        "- keep claim-to-evidence linkage explicit in short paragraphs or short bullets without rigid chain templates"
     )
     prompt = (
-        "Rewrite the baseline answer into a long-form clinical research report in Vietnamese.\n"
+        f"Rewrite the baseline answer into a polished long-form medical research answer in {language_label}.\n"
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
         "Must include these sections in this exact order:\n"
         f"{section_contract_text}\n"
         "Requirements:\n"
         f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
         f"{style_target_line}\n"
+        f"- keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles\n"
+        "- answer the user directly in the opening before background context\n"
+        "- keep the opening to 2-4 strong sentences, then expand only where it helps the decision\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
-        "- use natural transitions between sections; avoid checklist-like prose\n"
-        "- each major section must contain concrete paragraph-level analysis and actionable interpretation\n"
+        "- use natural transitions between sections; avoid checklist-like prose or compliance boilerplate\n"
+        "- keep each section skimmable: paragraphs should stay short and bullets should usually stay within 3-5 items\n"
+        "- avoid meta labels such as core question, evidence coverage, working synthesis, or retrieval process unless they change the clinical interpretation\n"
+        "- each major section must contain concrete analysis and actionable interpretation\n"
         f"{chain_requirement_line}\n"
-        "- '## Kế hoạch nghiên cứu' must appear before analytic sections and contain numbered steps, including direct comparison axes when relevant\n"
         f"{section_requirements_text}\n"
         "- do not add a dedicated references/citations section in the answer body\n"
         "- keep citations concise and only when needed to support critical claims\n"
@@ -2219,9 +2414,10 @@ def _synthesize_deep_beta_long_report(
         f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
     )
     system_prompt = (
-        "You are CLARA medical report synthesizer for deep clinical research. "
-        "Be evidence-grounded, safety-first, specific, and natural in Vietnamese. "
-        "Prioritize coherent clinical reasoning over template-heavy filler."
+        "You are CLARA medical research synthesizer. "
+        f"Write natural, evidence-grounded, safety-first {language_label} with a direct answer first. "
+        "Prioritize coherent clinical reasoning over template-heavy filler or dossier language. "
+        "The answer should read like a strong Perplexity synthesis for clinicians: fast to scan, but still rigorous."
     )
     try:
         client = _build_reasoning_client(
@@ -4397,17 +4593,23 @@ def _inject_research_plan_section(
     markdown_text: str,
     *,
     plan_markdown: str,
+    answer_language: str = "vi",
 ) -> str:
     text = str(markdown_text or "").strip()
+    research_plan_heading = f"## {_resolve_section_title('research_plan', answer_language)}"
+    quick_conclusion_heading = _resolve_section_title("quick_conclusion", answer_language)
     if not text:
-        return f"## Kế hoạch nghiên cứu\n{plan_markdown}\n"
-    if _has_markdown_heading(text, "## Kế hoạch nghiên cứu"):
+        return f"{research_plan_heading}\n{plan_markdown}\n"
+    if _has_markdown_heading(text, research_plan_heading):
         return text
-    insertion = f"\n\n## Kế hoạch nghiên cứu\n{plan_markdown}\n\n"
-    pattern = re.compile(r"(##\s*Kết luận nhanh[\s\S]*?)(\n##\s)", flags=re.IGNORECASE)
+    insertion = f"\n\n{research_plan_heading}\n{plan_markdown}\n\n"
+    pattern = re.compile(
+        rf"(##\s*{re.escape(quick_conclusion_heading)}[\s\S]*?)(\n##\s)",
+        flags=re.IGNORECASE,
+    )
     if pattern.search(text):
         return pattern.sub(lambda m: f"{m.group(1)}{insertion}{m.group(2)}", text, count=1).strip()
-    return f"## Kế hoạch nghiên cứu\n{plan_markdown}\n\n{text}".strip()
+    return f"{research_plan_heading}\n{plan_markdown}\n\n{text}".strip()
 
 
 def _ensure_markdown_structure(
@@ -4417,6 +4619,7 @@ def _ensure_markdown_structure(
     *,
     research_mode: str,
     plan_steps: list[PlanStep] | None = None,
+    answer_language: str = "vi",
 ) -> str:
     def _cleanup_markdown_noise(text: str) -> str:
         lines = str(text or "").splitlines()
@@ -4504,18 +4707,34 @@ def _ensure_markdown_structure(
 
     cleaned = str(answer or "").strip()
     if not cleaned:
-        cleaned = "Chưa có nội dung trả lời chuyên sâu."
+        cleaned = (
+            "No in-depth answer content was generated yet."
+            if answer_language == "en"
+            else "Chưa có nội dung trả lời chuyên sâu."
+        )
+
+    quick_conclusion_heading = f"## {_resolve_section_title('quick_conclusion', answer_language)}"
+    key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
+    practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"
+    caveat_heading = f"## {_resolve_section_title('safety_notes', answer_language)}"
+    detailed_analysis_heading = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
+    safety_heading = f"## {_resolve_section_title('safety_guidance', answer_language)}"
+    monitoring_heading = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
 
     required_headings = (
-        ("## Kết luận nhanh",)
+        (quick_conclusion_heading,)
         if research_mode in {"deep", "deep_beta"}
-        else _REQUIRED_MARKDOWN_HEADINGS
+        else (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
     )
     plan_markdown = _build_research_plan_markdown(topic, plan_steps or [])
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
         completed = _cleanup_markdown_noise(cleaned)
         if research_mode in {"deep", "deep_beta"}:
-            completed = _inject_research_plan_section(completed, plan_markdown=plan_markdown)
+            completed = _inject_research_plan_section(
+                completed,
+                plan_markdown=plan_markdown,
+                answer_language=answer_language,
+            )
         return completed
 
     analysis_block = cleaned
@@ -4525,111 +4744,123 @@ def _ensure_markdown_structure(
     topic_snippet = _compact_snippet(topic, max_len=210)
     risk_level, risk_signal, risk_note = _estimate_medical_risk_band(f"{topic} {cleaned}")
     if research_mode in {"deep", "deep_beta"}:
-        evidence_table = _evidence_table_markdown(citations, max_rows=10)
-        executive_summary = _compact_plain_summary(cleaned, max_len=260)
-        matrix_table = _build_decision_matrix_markdown(
-            risk_level=risk_level,
-            risk_signal=risk_signal,
+        key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
+        practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"
+        caveat_heading = f"## {_resolve_section_title('safety_notes', answer_language)}"
+        executive_summary = _compact_plain_summary(cleaned, max_len=320 if research_mode == "deep_beta" else 260)
+        plan_summary = _compact_plain_summary(plan_markdown, max_len=220)
+        main_excerpt = _curate_markdown_excerpt(
+            analysis_block,
+            max_len=2200 if research_mode == "deep_beta" else 1600,
+            max_lines=12 if research_mode == "deep_beta" else 9,
         )
-        if research_mode == "deep":
-            return _cleanup_markdown_noise(
-                (
-                "## Kết luận nhanh\n"
-                f"{_compact_snippet(cleaned, max_len=360)}\n\n"
-                "## Kế hoạch nghiên cứu\n"
-                f"{plan_markdown}\n\n"
-                "## Tóm tắt điều hành\n"
-                f"- Câu hỏi chính: {topic_snippet}\n"
-                f"- Mức độ bằng chứng hiện có: {len(citations)} nguồn tham chiếu.\n"
-                f"- Tín hiệu rủi ro lâm sàng: {risk_level} ({risk_signal}). {risk_note}\n"
-                f"- Điểm chính: {executive_summary}\n\n"
-                "## Bối cảnh lâm sàng áp dụng\n"
-                "- Xác định nhóm bệnh nhân đích, mục tiêu điều trị và các yếu tố nền ảnh hưởng quyết định.\n"
-                "- Tách riêng bối cảnh phòng ngừa, kiểm soát triệu chứng và tối ưu hóa kết cục dài hạn.\n"
-                "- Ghi rõ điều kiện biên: bệnh nền nặng, đa trị liệu, thai kỳ, suy gan/thận hoặc nguy cơ xuất huyết.\n\n"
-                "## Phân tích chi tiết\n"
-                f"{analysis_block}\n\n"
-                "## Bảng tổng hợp bằng chứng\n"
-                f"{evidence_table}\n\n"
-                "## Khuyến nghị ứng dụng thực hành\n"
-                "- Chuyển hóa kết luận theo mục tiêu điều trị cụ thể và mức độ ưu tiên nguy cơ của từng nhóm bệnh nhân.\n"
-                "- Áp dụng theo nguyên tắc tăng dần, theo dõi đáp ứng sớm và hiệu chỉnh theo dữ liệu thực tế.\n"
-                "- Khi có mâu thuẫn bằng chứng, ưu tiên guideline cập nhật và thảo luận đa chuyên khoa.\n\n"
-                "## Giới hạn, sai số và rủi ro pháp lý\n"
-                "- Hệ thống chỉ cung cấp thông tin tham khảo dựa trên dữ liệu truy xuất được tại thời điểm chạy.\n"
-                "- Kết luận có thể bị ảnh hưởng bởi chất lượng nguồn, sai lệch chọn mẫu và khác biệt bối cảnh thực hành.\n"
-                "- Quyết định điều trị cuối cùng cần được xác nhận bởi bác sĩ/dược sĩ có thẩm quyền."
+        deep_comparison_table = ""
+        if _is_comparison_query(topic):
+            if answer_language == "en":
+                deep_comparison_table = (
+                    "\n\n| Criteria | Option A | Option B | Clinical note |\n"
+                    "| --- | --- | --- | --- |\n"
+                    "| Primary goal | Tighter control of the immediate target | Broader long-term cardiometabolic benefit | Match to the main treatment objective |\n"
+                    "| Ease of adherence | More structured, often easier to standardize | More flexible, often easier to sustain | Re-check after 2-4 weeks in real life |\n"
+                    "| Safety / burden | May require closer monitoring or stricter discipline | Can be easier to live with, but less tightly defined | Balance safety with feasibility |\n"
                 )
+            else:
+                deep_comparison_table = (
+                    "\n\n| Tiêu chí | Phương án A | Phương án B | Ghi chú lâm sàng |\n"
+                    "| --- | --- | --- | --- |\n"
+                    "| Mục tiêu chính | Kiểm soát chặt chỉ số đích trước mắt | Lợi ích tim mạch - chuyển hóa dài hạn | Chọn theo mục tiêu điều trị ưu tiên |\n"
+                    "| Khả năng tuân thủ | Cấu trúc rõ hơn, dễ chuẩn hóa hơn | Linh hoạt hơn, dễ duy trì dài hạn hơn | Đánh giá lại sau 2-4 tuần áp dụng thực tế |\n"
+                    "| Gánh nặng an toàn | Có thể cần theo dõi sát hoặc kỷ luật hơn | Dễ sống chung hơn nhưng ít chặt chẽ hơn | Cân bằng an toàn với tính khả thi |\n"
+                )
+
+        reader_facing_main = _normalize_reader_facing_block(
+            "\n\n".join(part for part in [executive_summary, main_excerpt] if str(part).strip()),
+            max_items=6 if research_mode == "deep_beta" else 5,
+            max_len=1900 if research_mode == "deep_beta" else 1300,
+            prefer_paragraphs=True,
+        )
+
+        if answer_language == "en":
+            practical_block = (
+                "- Most useful when the patient context matches the scenario above and the decision is between reasonable options rather than a single mandatory path.\n"
+                "- Before acting, confirm comorbidities, current medicines, baseline risk, and whether any red-flag symptoms are already present.\n"
+                f"- Best next step: {plan_summary or 'Confirm the main clinical question, compare the core options, and verify the highest-impact risk trade-offs before acting.'}"
             )
+            caveat_block = (
+                f"- Confidence boundary: {risk_level} ({risk_signal}). {risk_note}\n"
+                f"- Evidence quality still varies across settings and populations despite {len(citations)} cited source(s).\n"
+                "- Escalate urgently for chest pain, shortness of breath, syncope, bleeding, rapidly worsening symptoms, or anaphylaxis."
+            )
+        else:
+            practical_block = (
+                "- Phù hợp nhất khi bối cảnh người bệnh gần với tình huống đang phân tích và quyết định nằm ở chỗ chọn giữa vài hướng hợp lý, không phải một đáp án cứng duy nhất.\n"
+                "- Trước khi áp dụng, cần đối chiếu lại bệnh nền, thuốc đang dùng, mức nguy cơ nền và xem đã có dấu hiệu cảnh báo đỏ hay chưa.\n"
+                f"- Bước tiếp theo nên làm: {plan_summary or 'Chốt lại câu hỏi lâm sàng chính, so sánh các lựa chọn cốt lõi và xác minh các đánh đổi có ảnh hưởng lớn nhất trước khi hành động.'}"
+            )
+            caveat_block = (
+                f"- Ranh giới độ chắc chắn: {risk_level} ({risk_signal}). {risk_note}\n"
+                f"- Dù đã có {len(citations)} nguồn trích dẫn, chất lượng và mức độ áp dụng trực tiếp vẫn có thể khác nhau theo quần thể và bối cảnh.\n"
+                "- Cần đi cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết, triệu chứng nặng lên nhanh hoặc phản vệ."
+            )
+
+        key_points_block = f"{reader_facing_main}{deep_comparison_table}"
+
         return _cleanup_markdown_noise(
-            (
-            "## Kết luận nhanh\n"
-            f"{_compact_snippet(cleaned, max_len=320)}\n\n"
-            "## Kế hoạch nghiên cứu\n"
-            f"{plan_markdown}\n\n"
-            "## Tóm tắt điều hành\n"
-            f"- Câu hỏi chính: {topic_snippet}\n"
-            f"- Phạm vi nghiên cứu: {_compact_snippet(topic_snippet, max_len=150)} và bằng chứng truy xuất đa nguồn.\n"
-            f"- Mức độ bằng chứng hiện có: {len(citations)} nguồn tham chiếu.\n"
-            f"- Tín hiệu rủi ro lâm sàng: {risk_level} ({risk_signal}). {risk_note}\n"
-            f"- Điểm chính: {executive_summary}\n\n"
-            "## Câu hỏi nghiên cứu (PICO)\n"
-            f"- **Population**: Nhóm bệnh nhân liên quan đến chủ đề: {_compact_snippet(topic_snippet, max_len=120)}.\n"
-            "- **Intervention/Exposure**: Thuốc/phác đồ/yếu tố can thiệp đang được quan tâm.\n"
-            "- **Comparison**: So sánh với phương án chuẩn hoặc nhóm đối chứng nếu có.\n"
-            "- **Outcomes**: Hiệu quả lâm sàng, biến cố bất lợi, và chỉ số an toàn quan trọng.\n\n"
-            "## Phương pháp truy xuất & tiêu chí chọn lọc\n"
-            "- Chiến lược truy xuất đa nguồn (guideline, y văn, nguồn chính thống, dữ liệu nội bộ).\n"
-            "- Ưu tiên bằng chứng bậc cao (systematic review/meta-analysis/RCT), sau đó cohort/case-series.\n"
-            "- Loại trừ nguồn không rõ xuất xứ hoặc không truy cập được metadata tối thiểu.\n\n"
-            "## Hồ sơ bằng chứng & chất lượng nguồn\n"
-            f"{evidence_table}\n\n"
-            "## Tổng hợp phát hiện chính\n"
-            f"{analysis_block}\n\n"
-            "## Phản biện bằng chứng đối nghịch\n"
-            "- Nêu rõ các điểm bất đồng giữa guideline/nghiên cứu quan sát và thử nghiệm có đối chứng.\n"
-            "- Đánh giá nguy cơ sai lệch (selection bias, confounding, publication bias) trước khi kết luận.\n"
-            "- Đánh dấu claim chưa đủ hỗ trợ để tránh over-claim.\n\n"
-            "## Ứng dụng lâm sàng theo nhóm bệnh nhân\n"
-            "- Người cao tuổi/đa trị liệu: ưu tiên kiểm tra DDI và độc tính tích lũy.\n"
-            "- Bệnh nền gan-thận/tim mạch/đái tháo đường: cần hiệu chỉnh theo nguy cơ cá thể.\n"
-            "- Khi xuất hiện dấu hiệu nặng hoặc bất thường mới, chuyển khám trực tiếp thay vì tự xử lý tại nhà.\n\n"
-            "## Ma trận quyết định an toàn\n"
-            f"{matrix_table}\n\n"
-            "## Kế hoạch theo dõi sau tư vấn\n"
-            "- Theo dõi triệu chứng trong 24-72 giờ sau khi áp dụng khuyến nghị an toàn.\n"
-            "- Ghi lại thuốc đang dùng, thời điểm dùng, và phản ứng bất thường để đối chiếu với bác sĩ.\n"
-            "- Nếu có đa thuốc hoặc bệnh nền phức tạp, ưu tiên lịch tư vấn sớm với cơ sở y tế.\n\n"
-            "## Giới hạn, sai số và rủi ro pháp lý\n"
-            "- Hệ thống chỉ cung cấp thông tin tham khảo dựa trên bằng chứng truy xuất được.\n"
-            "- Có thể tồn tại sai lệch do nguồn dữ liệu chưa đầy đủ hoặc khác biệt theo bối cảnh lâm sàng.\n"
-            "- Quyết định điều trị cuối cùng phải do bác sĩ/dược sĩ có thẩm quyền xác nhận."
-            )
+            f"{quick_conclusion_heading}\n"
+            f"{_curate_sentence_excerpt(cleaned, max_len=560 if research_mode == 'deep_beta' else 420, max_sentences=5 if research_mode == 'deep_beta' else 4)}\n\n"
+            f"{key_points_heading}\n"
+            f"{key_points_block}\n\n"
+            f"{practical_heading}\n"
+            f"{practical_block}\n\n"
+            f"{caveat_heading}\n"
+            f"{caveat_block}"
         )
 
     fast_summary = _compact_plain_summary(cleaned, max_len=420)
-    fast_analysis = _compact_plain_summary(cleaned, max_len=1400)
+    fast_analysis = _curate_markdown_excerpt(
+        cleaned,
+        max_len=1450,
+        max_lines=8,
+    )
+    fast_practical = (
+        "- Match the answer to the clinical question, treatment goal, comorbidity profile, and concurrent medicines.\n"
+        "- Use the next step to confirm the highest-impact trade-off, then document what needs monitoring."
+        if answer_language == "en"
+        else "- Gắn kết luận với câu hỏi lâm sàng, mục tiêu điều trị, bệnh nền và các thuốc đang dùng.\n"
+        "- Ở bước tiếp theo, hãy xác minh điểm đánh đổi quan trọng nhất rồi ghi rõ cần theo dõi gì."
+    )
+    fast_caveats = (
+        "- Cross-check with primary sources before changing care decisions.\n"
+        "- Seek urgent care now for chest pain, shortness of breath, syncope, bleeding, or anaphylaxis."
+        if answer_language == "en"
+        else "- Ưu tiên đối chiếu nguồn chính thống trước khi thay đổi quyết định chăm sóc.\n"
+        "- Cần đi khám/cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
+    )
     comparison_table = ""
     if _is_comparison_query(topic):
         comparison_table = (
-            "\n\n| Tiêu chí | Phương án A | Phương án B | Ghi chú |\n"
+            "\n\n| Criteria | Option A | Option B | Note |\n"
             "| --- | --- | --- | --- |\n"
-            "| Mục tiêu chính | Tập trung kiểm soát chỉ số đích | Tập trung cải thiện nguy cơ tim mạch dài hạn | Chọn theo mục tiêu điều trị ưu tiên |\n"
-            "| Độ linh hoạt triển khai | Cấu trúc rõ ràng, dễ chuẩn hóa | Linh hoạt hơn, phụ thuộc thói quen sống | Cân bằng giữa tuân thủ và bền vững |\n"
-            "| Gánh nặng tuân thủ | Cao hơn do yêu cầu định lượng | Thường dễ duy trì hơn nếu khẩu vị phù hợp | Theo dõi thực tế sau 2-4 tuần |\n"
+            "| Primary goal | Tighter short-term target control | Broader long-term cardiometabolic benefit | Choose by treatment priority |\n"
+            "| Real-world adherence | More structured and standardized | More flexible and often easier to sustain | Re-check after 2-4 weeks |\n"
+            "| Safety / burden | May need closer discipline or monitoring | Usually easier to live with but less tightly defined | Balance safety with feasibility |\n"
+            if answer_language == "en"
+            else "\n\n| Tiêu chí | Phương án A | Phương án B | Ghi chú |\n"
+            "| --- | --- | --- | --- |\n"
+            "| Mục tiêu chính | Kiểm soát chặt mục tiêu ngắn hạn | Lợi ích tim mạch - chuyển hóa dài hạn | Chọn theo ưu tiên điều trị |\n"
+            "| Khả năng tuân thủ thực tế | Cấu trúc rõ và dễ chuẩn hóa hơn | Linh hoạt hơn, thường dễ duy trì hơn | Đánh giá lại sau 2-4 tuần |\n"
+            "| Gánh nặng an toàn | Có thể cần theo dõi hoặc kỷ luật chặt hơn | Dễ sống chung hơn nhưng ít chặt chẽ hơn | Cân bằng an toàn với tính khả thi |\n"
         )
 
     return _cleanup_markdown_noise(
-        "## Kết luận nhanh\n"
+        f"{quick_conclusion_heading}\n"
         f"{fast_summary or cleaned}\n\n"
-        "## Phân tích chi tiết\n"
+        f"{key_points_heading}\n"
         f"{fast_analysis or analysis_block}{comparison_table}\n\n"
-        "## Khuyến nghị an toàn\n"
-        "- Không tự ý kê đơn hoặc điều chỉnh liều nếu chưa có tư vấn chuyên môn.\n"
-        "- Ưu tiên xác minh lại thông tin với bác sĩ/dược sĩ khi có bệnh nền hoặc đa thuốc.\n\n"
-        "## Theo dõi & cảnh báo đỏ\n"
-        "- Theo dõi thay đổi triệu chứng trong 24-48 giờ và ghi chú phản ứng bất thường.\n"
-        "- Cần đi khám/cấp cứu ngay khi có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
+        f"{practical_heading}\n"
+        f"{fast_practical}\n\n"
+        f"{caveat_heading}\n"
+        f"{fast_caveats}"
     )
 
 
@@ -4674,9 +4905,19 @@ def _remove_fenced_blocks(markdown_text: str, *, languages: set[str]) -> str:
 
 _FAST_ALLOWED_H2_KEYS = {
     _canonical_h2_key("Kết luận nhanh"),
+    _canonical_h2_key("Điểm chính"),
+    _canonical_h2_key("Ứng dụng thực tế"),
+    _canonical_h2_key("Lưu ý an toàn"),
     _canonical_h2_key("Phân tích chi tiết"),
     _canonical_h2_key("Khuyến nghị an toàn"),
     _canonical_h2_key("Theo dõi & cảnh báo đỏ"),
+    _canonical_h2_key("Quick conclusion"),
+    _canonical_h2_key("Key points"),
+    _canonical_h2_key("Practical application"),
+    _canonical_h2_key("Important caveats"),
+    _canonical_h2_key("Detailed analysis"),
+    _canonical_h2_key("Safety recommendations"),
+    _canonical_h2_key("Monitoring & red flags"),
 }
 
 _FAST_DROP_H2_KEYWORDS = (
@@ -4777,41 +5018,573 @@ def _to_plain_text(markdown_text: str) -> str:
     return text
 
 
-def _stabilize_fast_answer_layout(markdown_text: str) -> str:
+def _extract_h2_body_any(markdown_text: str, headings: list[str]) -> str:
+    for heading in headings:
+        body = _extract_h2_body(markdown_text, _canonical_h2_key(heading))
+        if body:
+            return body
+    return ""
+
+
+def _curate_sentence_excerpt(markdown_text: str, *, max_len: int, max_sentences: int = 3) -> str:
+    plain = _to_plain_text(markdown_text)
+    if not plain:
+        return ""
+    sentences = re.split(r"(?<=[\.\!\?])\s+", plain)
+    curated: list[str] = []
+    current_len = 0
+    for sentence in sentences:
+        normalized = sentence.strip()
+        if not normalized:
+            continue
+        if current_len and current_len + len(normalized) + 1 > max_len:
+            break
+        curated.append(normalized)
+        current_len += len(normalized) + 1
+        if len(curated) >= max_sentences or current_len >= max_len:
+            break
+    if curated:
+        return " ".join(curated).strip()
+    return _compact_snippet(plain, max_len=max_len)
+
+
+def _extract_markdown_h2_section_ids(markdown_text: str) -> list[str]:
+    section_ids: list[str] = []
+    seen: set[str] = set()
+    for raw_line in str(markdown_text or "").splitlines():
+        line = raw_line.strip()
+        if not line.startswith("## "):
+            continue
+        section_id = _USER_FACING_HEADING_ALIASES.get(_canonical_h2_key(line[3:]))
+        if not section_id or section_id in seen:
+            continue
+        seen.add(section_id)
+        section_ids.append(section_id)
+    return section_ids
+
+
+def _approved_user_facing_section_ids(research_mode: str) -> set[str]:
+    _ = str(research_mode or "fast").strip().lower()
+    return {
+        "quick_conclusion",
+        "key_points",
+        "practical_application",
+        "safety_notes",
+        "monitoring_red_flags",
+    }
+
+
+def _find_unapproved_h2_sections(markdown_text: str, *, research_mode: str) -> list[str]:
+    approved = _approved_user_facing_section_ids(research_mode)
+    unexpected: list[str] = []
+    for raw_line in str(markdown_text or "").splitlines():
+        line = raw_line.strip()
+        if not line.startswith("## "):
+            continue
+        heading_key = _canonical_h2_key(line[3:])
+        section_id = _USER_FACING_HEADING_ALIASES.get(heading_key)
+        if section_id and section_id in approved:
+            continue
+        unexpected.append(section_id or heading_key or line[3:].strip())
+    return unexpected
+
+
+def _drop_unapproved_h2_sections(markdown_text: str, *, research_mode: str) -> str:
     text = str(markdown_text or "").strip()
     if not text:
-        text = "Nội dung phân tích tạm thời rút gọn để giữ an toàn hiển thị."
+        return text
 
-    conclusion = _extract_h2_body(text, _canonical_h2_key("Kết luận nhanh"))
-    analysis = _extract_h2_body(text, _canonical_h2_key("Phân tích chi tiết"))
-    safety = _extract_h2_body(text, _canonical_h2_key("Khuyến nghị an toàn"))
-    followup = _extract_h2_body(text, _canonical_h2_key("Theo dõi & cảnh báo đỏ"))
+    approved = _approved_user_facing_section_ids(research_mode)
+    output_lines: list[str] = []
+    keeping_block = True
+    seen_h2 = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            seen_h2 = True
+            heading_key = _canonical_h2_key(stripped[3:])
+            section_id = _USER_FACING_HEADING_ALIASES.get(heading_key)
+            keeping_block = bool(section_id and section_id in approved)
+            if not keeping_block:
+                continue
+        if keeping_block or not seen_h2:
+            output_lines.append(line)
+
+    normalized = "\n".join(output_lines)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()
+
+
+def _has_reader_friendly_layout(markdown_text: str, *, research_mode: str) -> bool:
+    section_ids = set(_extract_markdown_h2_section_ids(markdown_text))
+    if _find_unapproved_h2_sections(markdown_text, research_mode=research_mode):
+        return False
+    mode = str(research_mode).strip().lower()
+    if mode == "fast":
+        return (
+            "quick_conclusion" in section_ids
+            and "key_points" in section_ids
+            and "practical_application" in section_ids
+            and "safety_notes" in section_ids
+        )
+    return (
+        "quick_conclusion" in section_ids
+        and "key_points" in section_ids
+        and "practical_application" in section_ids
+        and bool({"safety_notes", "safety_guidance", "monitoring_red_flags"} & section_ids)
+    )
+
+
+_ENGLISH_BODY_MARKERS = (
+    " the ",
+    " and ",
+    " with ",
+    " patient ",
+    " treatment ",
+    " clinical ",
+    " evidence ",
+    " safety ",
+    " monitor ",
+)
+_VIETNAMESE_BODY_MARKERS = (
+    " benh ",
+    " thuoc ",
+    " can ",
+    " khong ",
+    " nguoi ",
+    " dieu tri ",
+    " theo doi ",
+    " canh bao ",
+    " khuyen nghi ",
+)
+
+
+def _looks_language_misaligned(markdown_text: str, *, answer_language: str) -> bool:
+    plain = f" {_ascii_fold(_to_plain_text(markdown_text))} "
+    if not plain.strip():
+        return False
+    english_hits = sum(1 for marker in _ENGLISH_BODY_MARKERS if marker in plain)
+    vietnamese_hits = sum(1 for marker in _VIETNAMESE_BODY_MARKERS if marker in plain)
+    if answer_language == "en":
+        return vietnamese_hits >= 3 and english_hits <= 2
+    return english_hits >= 4 and vietnamese_hits <= 2
+
+
+def _stabilize_fast_answer_layout(markdown_text: str, *, answer_language: str = "vi") -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        text = (
+            "The analysis was compacted temporarily to keep the answer stable."
+            if answer_language == "en"
+            else "Nội dung phân tích tạm thời rút gọn để giữ an toàn hiển thị."
+        )
+
+    conclusion_heading = _resolve_section_title("quick_conclusion", answer_language)
+    key_points_heading = _resolve_section_title("key_points", answer_language)
+    practical_heading = _resolve_section_title("practical_application", answer_language)
+    caveat_heading = _resolve_section_title("safety_notes", answer_language)
+    followup_heading = _resolve_section_title("monitoring_red_flags", answer_language)
+
+    conclusion = _extract_h2_body_any(text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"])
+    analysis = _extract_h2_body_any(
+        text,
+        [key_points_heading, "Điểm chính", "Key points", "Phân tích chi tiết", "Detailed analysis"],
+    )
+    practical = _extract_h2_body_any(
+        text,
+        [practical_heading, "Ứng dụng thực tế", "Practical application", "Khuyến nghị an toàn", "Safety recommendations"],
+    )
+    safety = _extract_h2_body_any(
+        text,
+        [caveat_heading, "Lưu ý an toàn", "Important caveats"],
+    )
+    followup = _extract_h2_body_any(
+        text,
+        [
+            followup_heading,
+            "Theo dõi & cảnh báo đỏ",
+            "Monitoring & red flags",
+        ],
+    )
 
     plain = _to_plain_text(text)
+    if _looks_language_misaligned(conclusion, answer_language=answer_language):
+        conclusion = ""
+    if _looks_language_misaligned(analysis, answer_language=answer_language):
+        analysis = ""
+    if _looks_language_misaligned(practical, answer_language=answer_language):
+        practical = ""
+    if _looks_language_misaligned(safety, answer_language=answer_language):
+        safety = ""
+    if _looks_language_misaligned(followup, answer_language=answer_language):
+        followup = ""
     if not conclusion:
-        conclusion = _compact_snippet(plain, max_len=420)
-    if not analysis:
-        analysis = _compact_snippet(plain, max_len=1400)
-    if not safety:
-        safety = (
-            "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-            "- Ưu tiên xác minh với bác sĩ/dược sĩ khi có bệnh nền hoặc đang đa trị liệu."
+        conclusion = (
+            (
+                "The safest reading from the current evidence is to stay cautious, confirm the core clinical context, and avoid overcommitting beyond what the retrieved evidence can support."
+                if answer_language == "en"
+                else "Tín hiệu an toàn nhất từ phần trả lời hiện tại là giữ kết luận ở mức thận trọng, xác minh lại bối cảnh lâm sàng chính và tránh diễn giải vượt quá bằng chứng đang có."
+            )
+            if _looks_language_misaligned(plain, answer_language=answer_language)
+            else _curate_sentence_excerpt(
+                plain,
+                max_len=520,
+                max_sentences=4,
+            )
         )
+    if not analysis:
+        analysis = (
+            (
+                "The answer should be interpreted around treatment goal, comorbidities, active medications, and the main trade-off between expected benefit and safety burden."
+                if answer_language == "en"
+                else "Cần đọc kết luận theo mục tiêu điều trị, bệnh nền, các thuốc đang dùng và điểm đánh đổi chính giữa lợi ích kỳ vọng với gánh nặng an toàn."
+            )
+            if _looks_language_misaligned(plain, answer_language=answer_language)
+            else _compact_snippet(
+                plain,
+                max_len=1750,
+            )
+        )
+    if not practical:
+        practical = (
+            "- Apply the answer against the patient's treatment goal, comorbidities, and current medications.\n"
+            "- Re-check the recommendation with a clinician or pharmacist before any concrete treatment change."
+            if answer_language == "en"
+            else "- Ghép kết luận với mục tiêu điều trị, bệnh nền và các thuốc đang dùng của người bệnh.\n"
+            "- Khi cần thay đổi điều trị cụ thể, nên xác minh lại với bác sĩ hoặc dược sĩ."
+        )
+    if not safety:
+        safety = ""
     if not followup:
         followup = (
-            "- Theo dõi triệu chứng trong 24-48 giờ và ghi nhận dấu hiệu bất thường.\n"
-            "- Cần đi khám/cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
+            "- Do not self-prescribe or change dosing without qualified clinical advice.\n"
+            "- Monitor symptoms over the next 24-48 hours and seek urgent care for chest pain, shortness of breath, syncope, bleeding, or anaphylaxis."
+            if answer_language == "en"
+            else "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
+            "- Theo dõi triệu chứng trong 24-48 giờ và cần cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
         )
+    analysis = _normalize_reader_facing_block(
+        analysis,
+        max_items=6,
+        max_len=1400,
+        prefer_paragraphs=True,
+    )
+    practical = _ensure_scannable_markdown_block(
+        practical,
+        max_items=3,
+        max_len=620,
+    )
+    followup = _ensure_scannable_markdown_block(
+        followup,
+        max_items=3,
+        max_len=460,
+    )
+    safety = _ensure_scannable_markdown_block(
+        "\n".join(part for part in [safety, followup] if part.strip()),
+        max_items=4,
+        max_len=560,
+    )
 
     stabilized = (
-        "## Kết luận nhanh\n"
+        f"## {conclusion_heading}\n"
         f"{conclusion}\n\n"
-        "## Phân tích chi tiết\n"
+        f"## {key_points_heading}\n"
         f"{analysis}\n\n"
-        "## Khuyến nghị an toàn\n"
-        f"{safety}\n\n"
-        "## Theo dõi & cảnh báo đỏ\n"
-        f"{followup}"
+        f"## {practical_heading}\n"
+        f"{practical}\n\n"
+        f"## {caveat_heading}\n"
+        f"{safety}"
+    )
+    return re.sub(r"\n{3,}", "\n\n", stabilized).strip()
+
+
+def _curate_markdown_excerpt(
+    markdown_text: str,
+    *,
+    max_len: int,
+    max_lines: int,
+) -> str:
+    lines: list[str] = []
+    seen: set[str] = set()
+    current_len = 0
+    for raw_line in str(markdown_text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#") or line.startswith("|") or line.startswith("```"):
+            continue
+        line = re.sub(r"\[(.*?)\]\((https?:\/\/[^\)]+)\)", r"\1", line)
+        line = re.sub(r"`([^`]+)`", r"\1", line)
+        line = re.sub(r"\*\*(.*?)\*\*", r"\1", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        lowered = _ascii_fold(line)
+        if not line:
+            continue
+        if any(
+            token in lowered
+            for token in (
+                "duoi day la ngu canh da truy xuat",
+                "he thong chuyen sang che do tong hop an toan",
+                "fallback local",
+                "query:",
+                "telemetry",
+                "verified protocol engine",
+                "logic flow",
+                "source intel",
+                "claim verdict confidence",
+                "pass subquery retrieved",
+            )
+        ):
+            continue
+        if re.match(r"^\d+[\)\.]\s*", line):
+            line = re.sub(r"^(\d+)[\)\.]\s*", r"\1. ", line)
+        elif re.match(r"^[\-*•]\s*", line):
+            line = re.sub(r"^[\-*•]\s*", "- ", line)
+        normalized = _ascii_fold(line)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        remaining = max_len - current_len
+        if remaining <= 0:
+            break
+        if len(line) > remaining:
+            if not lines:
+                lines.append(_compact_snippet(line, max_len=max(remaining, 80)))
+            break
+        lines.append(line)
+        current_len += len(line) + 1
+        if len(lines) >= max_lines or current_len >= max_len:
+            break
+
+    if not lines:
+        return _compact_snippet(_to_plain_text(markdown_text), max_len=max_len)
+    return "\n".join(lines).strip()
+
+
+def _looks_like_scannable_block(markdown_text: str) -> bool:
+    for raw_line in str(markdown_text or "").splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("|"):
+            return True
+        if re.match(r"^(?:[-*•]|\d+\.)\s+", stripped):
+            return True
+    return False
+
+
+def _sentence_bulletize(markdown_text: str, *, max_items: int, max_len: int) -> str:
+    plain = _to_plain_text(markdown_text)
+    if not plain:
+        return ""
+    sentences = re.split(r"(?<=[\.\!\?])\s+", plain)
+    bullets: list[str] = []
+    current_len = 0
+    for sentence in sentences:
+        normalized = sentence.strip(" -\t")
+        if not normalized:
+            continue
+        bullet = f"- {normalized}"
+        if current_len and current_len + len(bullet) + 1 > max_len:
+            break
+        bullets.append(bullet)
+        current_len += len(bullet) + 1
+        if len(bullets) >= max_items or current_len >= max_len:
+            break
+    return "\n".join(bullets).strip()
+
+
+def _ensure_scannable_markdown_block(
+    markdown_text: str,
+    *,
+    max_items: int,
+    max_len: int,
+) -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        return ""
+    if _looks_like_scannable_block(text):
+        return text
+    bulletized = _sentence_bulletize(text, max_items=max_items, max_len=max_len)
+    return bulletized or text
+
+
+def _normalize_reader_facing_block(
+    markdown_text: str,
+    *,
+    max_items: int,
+    max_len: int,
+    prefer_paragraphs: bool = False,
+) -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        return ""
+    if _looks_like_scannable_block(text):
+        return text
+    if prefer_paragraphs:
+        return _curate_markdown_excerpt(
+            text,
+            max_len=max_len,
+            max_lines=max(4, max_items + 2),
+        )
+    return _ensure_scannable_markdown_block(
+        text,
+        max_items=max_items,
+        max_len=max_len,
+    )
+
+
+def _stabilize_long_answer_layout(
+    markdown_text: str,
+    *,
+    research_mode: str,
+    answer_language: str = "vi",
+) -> str:
+    text = str(markdown_text or "").strip()
+    if not text:
+        text = (
+            "The research answer was compacted to keep the display stable."
+            if answer_language == "en"
+            else "Nội dung nghiên cứu đã được rút gọn để giữ hiển thị ổn định."
+        )
+
+    is_deep_beta = str(research_mode).strip().lower() == "deep_beta"
+    conclusion_heading = _resolve_section_title("quick_conclusion", answer_language)
+    key_points_heading = _resolve_section_title("key_points", answer_language)
+    practical_heading = _resolve_section_title("practical_application", answer_language)
+    caveat_heading = _resolve_section_title("safety_notes", answer_language)
+
+    conclusion = _extract_h2_body_any(text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"])
+
+    main_sections = "\n\n".join(
+        filter(
+            None,
+            [
+                _extract_h2_body_any(text, [key_points_heading, "Điểm chính", "Key points"]),
+                _extract_h2_body(text, _canonical_h2_key("Phân tích chính")),
+                _extract_h2_body_any(text, ["Phân tích chi tiết", "Detailed analysis"]),
+                _extract_h2_body(text, _canonical_h2_key("Tổng hợp phát hiện chính")),
+                _extract_h2_body_any(text, ["Tóm tắt điều hành", "Executive summary"]),
+            ],
+        )
+    )
+    practical_sections = "\n\n".join(
+        filter(
+            None,
+            [
+                _extract_h2_body_any(text, [practical_heading, "Ứng dụng thực tế", "Practical application"]),
+                _extract_h2_body(text, _canonical_h2_key("Khuyến nghị ứng dụng thực hành")),
+                _extract_h2_body(text, _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân")),
+                _extract_h2_body(text, _canonical_h2_key("Bối cảnh lâm sàng áp dụng")),
+            ],
+        )
+    )
+    caveat_sections = "\n\n".join(
+        filter(
+            None,
+            [
+                _extract_h2_body_any(text, [caveat_heading, "Lưu ý an toàn", "Important caveats"]),
+                _extract_h2_body_any(text, ["Khuyến nghị an toàn", "Safety recommendations"]),
+                _extract_h2_body_any(text, ["Theo dõi & cảnh báo đỏ", "Monitoring & red flags"]),
+                _extract_h2_body(text, _canonical_h2_key("Kế hoạch theo dõi sau tư vấn")),
+                _extract_h2_body(text, _canonical_h2_key("Giới hạn, sai số và rủi ro pháp lý")),
+                _extract_h2_body(text, _canonical_h2_key("Phản biện bằng chứng đối nghịch")),
+            ],
+        )
+    )
+
+    plain = _to_plain_text(text)
+    if _looks_language_misaligned(conclusion, answer_language=answer_language):
+        conclusion = ""
+    if _looks_language_misaligned(main_sections, answer_language=answer_language):
+        main_sections = ""
+    if _looks_language_misaligned(practical_sections, answer_language=answer_language):
+        practical_sections = ""
+    if _looks_language_misaligned(caveat_sections, answer_language=answer_language):
+        caveat_sections = ""
+    conclusion_block = _curate_sentence_excerpt(
+        conclusion
+        or (
+            (
+                "The evidence supports a cautious, context-dependent conclusion rather than a universal recommendation."
+                if answer_language == "en"
+                else "Bằng chứng hiện tại ủng hộ một kết luận thận trọng, phụ thuộc bối cảnh hơn là một khuyến nghị áp dụng cho mọi tình huống."
+            )
+            if _looks_language_misaligned(plain, answer_language=answer_language)
+            else plain
+        ),
+        max_len=620 if is_deep_beta else 520,
+        max_sentences=5 if is_deep_beta else 4,
+    )
+    main_block = _curate_markdown_excerpt(
+        main_sections
+        or (
+            (
+                "The main usable signal is to compare likely benefit, safety burden, implementation feasibility, and patient context before acting on a specific option."
+                if answer_language == "en"
+                else "Tín hiệu hữu ích nhất lúc này là phải so sánh lợi ích kỳ vọng, gánh nặng an toàn, tính khả thi triển khai và bối cảnh người bệnh trước khi chốt một lựa chọn cụ thể."
+            )
+            if _looks_language_misaligned(plain, answer_language=answer_language)
+            else plain
+        ),
+        max_len=2800 if is_deep_beta else 1900,
+        max_lines=16 if is_deep_beta else 11,
+    )
+    practical_block = _curate_markdown_excerpt(
+        practical_sections,
+        max_len=1600 if is_deep_beta else 1150,
+        max_lines=10 if is_deep_beta else 7,
+    )
+    caveat_block = _curate_markdown_excerpt(
+        caveat_sections,
+        max_len=1200 if is_deep_beta else 880,
+        max_lines=8 if is_deep_beta else 6,
+    )
+
+    if not practical_block:
+        practical_block = (
+            "- Apply the conclusion against the patient context, comorbidities, polypharmacy burden, and treatment goals.\n"
+            "- For any concrete treatment change, re-check the decision with the treating clinician or pharmacist."
+            if answer_language == "en"
+            else "- Ưu tiên áp dụng kết luận theo bối cảnh bệnh nền, đa thuốc và mục tiêu điều trị cụ thể.\n"
+            "- Khi cần thay đổi điều trị hoặc diễn giải kết quả cho một ca cụ thể, nên đối chiếu lại với bác sĩ/dược sĩ."
+        )
+    if not caveat_block:
+        caveat_block = (
+            "- Treat this as decision support, not a substitute for direct clinical evaluation.\n"
+            "- Seek urgent care now for chest pain, shortness of breath, syncope, bleeding, or anaphylaxis."
+            if answer_language == "en"
+            else "- Xem đây là tổng hợp hỗ trợ quyết định, không thay thế đánh giá lâm sàng trực tiếp.\n"
+            "- Cần đi khám/cấp cứu ngay nếu có đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ."
+        )
+    main_block = _normalize_reader_facing_block(
+        main_block,
+        max_items=6 if is_deep_beta else 5,
+        max_len=1800 if is_deep_beta else 1200,
+        prefer_paragraphs=True,
+    )
+    practical_block = _ensure_scannable_markdown_block(
+        practical_block,
+        max_items=4 if is_deep_beta else 3,
+        max_len=900 if is_deep_beta else 680,
+    )
+    caveat_block = _ensure_scannable_markdown_block(
+        caveat_block,
+        max_items=4 if is_deep_beta else 3,
+        max_len=720 if is_deep_beta else 560,
+    )
+
+    stabilized = (
+        f"## {conclusion_heading}\n"
+        f"{conclusion_block}\n\n"
+        f"## {key_points_heading}\n"
+        f"{main_block}\n\n"
+        f"## {practical_heading}\n"
+        f"{practical_block}\n\n"
+        f"## {caveat_heading}\n"
+        f"{caveat_block}"
     )
     return re.sub(r"\n{3,}", "\n\n", stabilized).strip()
 
@@ -4820,9 +5593,13 @@ def _sanitize_user_facing_answer_markdown(
     answer_markdown: str,
     *,
     research_mode: str = "fast",
+    answer_language: str = "vi",
 ) -> str:
     mode = str(research_mode).strip().lower()
-    sanitized = str(answer_markdown or "")
+    sanitized = _normalize_user_facing_answer_markdown(
+        answer_markdown,
+        answer_language=answer_language,
+    )
     if not sanitized.strip():
         return sanitized
 
@@ -4830,6 +5607,24 @@ def _sanitize_user_facing_answer_markdown(
     sanitized = re.sub(
         r"hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời\.?",
         "",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+    sanitized = re.sub(
+        r"hệ thống chuyển sang chế độ tổng hợp an toàn để duy trì phản hồi ổn định\.?",
+        "",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+    sanitized = re.sub(
+        r"(?:^|\n)\s*(?:query|câu hỏi)\s*:\s*.+?(?=\n|$)",
+        "\n",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+    sanitized = re.sub(
+        r"(?:^|\n)\s*-*\s*(?:dưới đây là ngữ cảnh đã truy xuất và rút gọn ở chế độ cục bộ|below is the locally retrieved and condensed context)\s*:?",
+        "\n",
         sanitized,
         flags=re.IGNORECASE,
     )
@@ -4890,26 +5685,17 @@ def _sanitize_user_facing_answer_markdown(
             flags=re.IGNORECASE,
         )
 
-    if mode == "deep":
-        # Deep mode keeps a practical long-form contract; strip deep-beta-only scaffolding.
-        sanitized = _remove_h2_sections(
-            sanitized,
-            section_heading_keys={
-                _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"),
-                _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"),
-                _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"),
-                _canonical_h2_key("Tổng hợp phát hiện chính"),
-                _canonical_h2_key("Chuỗi lập luận bằng chứng"),
-                _canonical_h2_key("Phản biện bằng chứng đối nghịch"),
-                _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"),
-                _canonical_h2_key("Ma trận quyết định an toàn"),
-                _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"),
-            },
-        )
-
     if mode in {"deep", "deep_beta"}:
         # Keep long-form reasoning in main body, but remove telemetry/citation-heavy appendices
         # because these signals are already exposed in the right-side evidence/metrics panel.
+        sanitized = _remove_h2_sections(
+            sanitized,
+            section_heading_keys={
+                _canonical_h2_key("Bảng tổng hợp bằng chứng"),
+                _canonical_h2_key("Evidence summary table"),
+                _canonical_h2_key("Evidence table"),
+            },
+        )
         sanitized = _remove_h3_sections_by_heading_keys(
             sanitized,
             heading_keys={
@@ -4929,7 +5715,15 @@ def _sanitize_user_facing_answer_markdown(
         languages={"mermaid", "chart-spec", "vega-lite", "echarts-option"},
     )
     if mode == "fast":
-        sanitized = _stabilize_fast_answer_layout(sanitized)
+        if not _has_reader_friendly_layout(sanitized, research_mode=mode):
+            sanitized = _stabilize_fast_answer_layout(sanitized, answer_language=answer_language)
+    elif mode in {"deep", "deep_beta"}:
+        sanitized = _stabilize_long_answer_layout(
+            sanitized,
+            research_mode=mode,
+            answer_language=answer_language,
+        ) if not _has_reader_friendly_layout(sanitized, research_mode=mode) else sanitized
+    sanitized = _drop_unapproved_h2_sections(sanitized, research_mode=mode)
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
 
@@ -5079,6 +5873,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     topic = _normalize_topic(payload)
     research_mode = _normalize_research_mode(payload)
     retrieval_stack_mode = _normalize_retrieval_stack_mode(payload)
+    answer_language = _normalize_answer_language(payload)
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
@@ -5089,11 +5884,15 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_sources = payload.get("rag_sources")
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
+    top_level_llm_runtime = payload.get("llm_runtime")
+    top_level_llm_runtime_dict = (
+        top_level_llm_runtime if isinstance(top_level_llm_runtime, dict) else {}
+    )
     requested_llm_runtime = {
-        "provider": rag_flow.get("llm_provider"),
-        "api_key": rag_flow.get("llm_api_key"),
-        "base_url": rag_flow.get("llm_base_url"),
-        "model": rag_flow.get("llm_model"),
+        "provider": top_level_llm_runtime_dict.get("provider") or rag_flow.get("llm_provider"),
+        "api_key": top_level_llm_runtime_dict.get("api_key") or rag_flow.get("llm_api_key"),
+        "base_url": top_level_llm_runtime_dict.get("base_url") or rag_flow.get("llm_base_url"),
+        "model": top_level_llm_runtime_dict.get("model") or rag_flow.get("llm_model"),
     }
     llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(
         requested_llm_runtime
@@ -5151,6 +5950,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         research_mode=research_mode,
         retrieval_stack_mode=retrieval_stack_mode,
     )
+    planner_hints["answer_language"] = answer_language
     source_route = decide_source_route(
         query=topic,
         research_mode=research_mode,
@@ -5421,17 +6221,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
 
     pipeline = RagPipelineP1()
-    # Production policy: when DeepSeek is required at service level, Tier2 must
-    # never degrade to local synthesis fallback, even if request-level runtime
-    # credentials are omitted.
-    # Additionally, if request provides explicit runtime upstream, enforce strict
-    # mode as well.
-    has_runtime_upstream = bool(
-        str(llm_runtime.get("api_key") or "").strip()
-        and str(llm_runtime.get("base_url") or "").strip()
-        and str(llm_runtime.get("model") or "").strip()
-    )
-    strict_deepseek_required = bool(settings.deepseek_required or has_runtime_upstream)
+    # Only service-level policy should force strict upstream generation.
+    # Request-level runtime overrides are best-effort and must still degrade
+    # gracefully to telemetry-rich fallback when the external gateway is down.
+    strict_deepseek_required = bool(settings.deepseek_required)
     deepseek_fallback_enabled = not strict_deepseek_required
     deep_beta_cap = max(6, min(int(settings.deep_beta_pass_cap), 64))
     pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else _DEFAULT_DEEP_PASS_CAP
@@ -6555,6 +7348,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         citations,
         research_mode=research_mode,
         plan_steps=plan_steps,
+        answer_language=answer_language,
     )
     if research_mode in {"deep", "deep_beta"}:
         report_stage = "deep_beta_report_synthesis" if research_mode == "deep_beta" else "deep_report_synthesis"
@@ -6584,6 +7378,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             evidence_verification=deep_beta_evidence_verification,
             llm_runtime=llm_runtime,
             research_mode=research_mode,
+            answer_language=answer_language,
         )
         report_changed = bool(
             str(rewritten_report or "").strip()
@@ -6596,6 +7391,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 citations,
                 research_mode=research_mode,
                 plan_steps=plan_steps,
+                answer_language=answer_language,
             )
             if research_mode == "deep_beta":
                 _update_beta_reasoning_step(
@@ -6646,10 +7442,19 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     answer_markdown = _sanitize_user_facing_answer_markdown(
         answer_markdown,
         research_mode=research_mode,
+        answer_language=answer_language,
     )
     if not answer_markdown.strip():
         answer_markdown = (
-            "## Kết luận nhanh\n"
+            "## Quick conclusion\n"
+            "Retrieval and synthesis completed, but the answer body was compacted automatically for stable display.\n\n"
+            "## Detailed analysis\n"
+            "Use the evidence and citation panels to inspect the underlying sources more closely.\n\n"
+            "## Safety recommendations\n"
+            "- Do not change treatment without qualified clinical advice.\n"
+            "- Seek direct medical attention promptly if severe symptoms develop."
+            if answer_language == "en"
+            else "## Kết luận nhanh\n"
             "Đã hoàn tất truy xuất và tổng hợp, nhưng nội dung cần hiển thị đã được rút gọn tự động.\n\n"
             "## Phân tích chi tiết\n"
             "Vui lòng xem bảng Evidence/Citation ở panel bên phải để kiểm tra nguồn và đối chiếu thêm.\n\n"
@@ -7561,6 +8366,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 else "p2-research-tier2-hybrid-v2"
             ),
             "stages": metadata_stages,
+            "flow_stages": metadata_stages,
             "stage_spans": stage_spans,
             "fallback_used": effective_fallback_used,
             "fallback_reason": fallback_reason or None,
@@ -7640,6 +8446,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "trace_id": trace_id,
         "run_id": run_id,
         "flow_events": flow_events,
+        "flow_stages": metadata_stages,
+        "stages": metadata_stages,
         "planner_trace": planner_trace,
         "retrieval_trace": retrieval_trace,
         "verifier_trace": verifier_trace,

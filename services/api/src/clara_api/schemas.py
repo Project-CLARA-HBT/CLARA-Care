@@ -659,6 +659,11 @@ class ResearchTier2JobCreateRequest(BaseModel):
         default="auto",
         validation_alias=AliasChoices("retrieval_stack_mode", "stack_mode"),
     )
+    ui_language: Literal["vi", "en"] = Field(
+        default="vi",
+        validation_alias=AliasChoices("ui_language", "answer_language"),
+    )
+    deep_pass_count: int | None = Field(default=None, ge=1, le=20)
     answer_format: str = "markdown"
     response_format: str = "markdown"
     render_hints: dict[str, object] = Field(default_factory=dict)
@@ -666,6 +671,13 @@ class ResearchTier2JobCreateRequest(BaseModel):
     uploaded_file_ids: list[str] = Field(default_factory=list)
     source_ids: list[int] = Field(default_factory=list)
     source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)
+    llm_runtime: dict[str, object] = Field(default_factory=dict)
+    deep_pass_count: int | None = Field(default=None, ge=1, le=6)
+    ui_language: Literal["vi", "en"] = Field(
+        default="vi",
+        validation_alias=AliasChoices("ui_language", "answer_language"),
+    )
+    llm_runtime: dict[str, Any] = Field(default_factory=dict)
 
 
 class ResearchTier2JobResponse(BaseModel):

@@ -57,7 +57,7 @@ services:
       TGC_OCR_ENDPOINTS: ${TGC_OCR_ENDPOINTS:-/api/ocr,/api/extract,/ocr}
       TGC_OCR_TIMEOUT_SECONDS: ${TGC_OCR_TIMEOUT_SECONDS:-45}
       TGC_OCR_API_KEY: ${TGC_OCR_API_KEY:-}
-      API_UVICORN_WORKERS: ${API_UVICORN_WORKERS:-4}
+      API_UVICORN_WORKERS: ${API_UVICORN_WORKERS:-1}
     ports:
       - "127.0.0.1:${APP_API_PORT:-8100}:8000"
     logging: *default-logging
@@ -116,7 +116,7 @@ services:
       SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://searxng:8080}
       SEARXNG_TIMEOUT_SECONDS: ${SEARXNG_TIMEOUT_SECONDS:-3}
       SEARXNG_CRAWL_ALLOWED_DOMAINS: ${SEARXNG_CRAWL_ALLOWED_DOMAINS:-who.int,nih.gov,ncbi.nlm.nih.gov,pubmed.ncbi.nlm.nih.gov,open.fda.gov,fda.gov,dailymed.nlm.nih.gov,clinicaltrials.gov,ema.europa.eu,bmj.com,thelancet.com}
-      ML_UVICORN_WORKERS: ${ML_UVICORN_WORKERS:-8}
+      ML_UVICORN_WORKERS: ${ML_UVICORN_WORKERS:-1}
     depends_on:
       - searxng
     ports:

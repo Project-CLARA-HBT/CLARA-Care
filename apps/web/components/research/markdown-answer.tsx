@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toPng } from "html-to-image";
+import type { UILanguage } from "@/lib/ui-language";
 import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
 
 export type MarkdownAnswerCitation = {
@@ -20,6 +21,7 @@ export type MarkdownAnswerProps = {
   stripSafetyMatrixSection?: boolean;
   stripMermaidBlocks?: boolean;
   stripChartSpecBlocks?: boolean;
+  uiLanguage?: UILanguage;
 };
 
 type MermaidBlockProps = {
@@ -54,16 +56,40 @@ function normalizeHeadingKey(input: string): string {
 
 function resolveSectionTone(title: string): SectionTone {
   const key = normalizeHeadingKey(title);
-  if (key.includes("bang tong hop") || key.includes("nguon tham chieu") || key.includes("ma tran")) {
+  if (
+    key.includes("bang tong hop")
+    || key.includes("nguon tham chieu")
+    || key.includes("ma tran")
+    || key.includes("evidence")
+    || key.includes("sources")
+  ) {
     return "evidence";
   }
-  if (key.includes("khuyen nghi") || key.includes("ke hoach theo doi")) {
+  if (
+    key.includes("khuyen nghi")
+    || key.includes("ke hoach theo doi")
+    || key.includes("practical application")
+    || key.includes("next steps")
+  ) {
     return "safety";
   }
-  if (key.includes("canh bao") || key.includes("phap ly") || key.includes("gioi han")) {
+  if (
+    key.includes("canh bao")
+    || key.includes("phap ly")
+    || key.includes("gioi han")
+    || key.includes("caveat")
+    || key.includes("safety note")
+  ) {
     return "warning";
   }
-  if (key.includes("ket luan") || key.includes("tom tat") || key.includes("boi canh")) {
+  if (
+    key.includes("ket luan")
+    || key.includes("tom tat")
+    || key.includes("boi canh")
+    || key.includes("quick conclusion")
+    || key.includes("key points")
+    || key.includes("bottom line")
+  ) {
     return "brand";
   }
   return "neutral";
@@ -72,15 +98,15 @@ function resolveSectionTone(title: string): SectionTone {
 function sectionHeadingClasses(tone: SectionTone): string {
   switch (tone) {
     case "brand":
-      return "mt-8 rounded-2xl border border-cyan-300/65 bg-cyan-500/10 px-4 py-2 text-lg font-semibold tracking-tight text-cyan-950 dark:border-cyan-700/70 dark:bg-cyan-950/30 dark:text-cyan-100";
+      return "mt-6 text-[1rem] font-semibold tracking-tight text-slate-950 first:mt-0 dark:text-slate-100";
     case "evidence":
-      return "mt-8 rounded-2xl border border-indigo-300/65 bg-indigo-500/10 px-4 py-2 text-lg font-semibold tracking-tight text-indigo-950 dark:border-indigo-700/70 dark:bg-indigo-950/30 dark:text-indigo-100";
+      return "mt-6 border-t border-slate-200/80 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-slate-800 dark:text-slate-100";
     case "safety":
-      return "mt-8 rounded-2xl border border-emerald-300/65 bg-emerald-500/10 px-4 py-2 text-lg font-semibold tracking-tight text-emerald-950 dark:border-emerald-700/70 dark:bg-emerald-950/30 dark:text-emerald-100";
+      return "mt-6 border-t border-emerald-200/70 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-emerald-900/50 dark:text-slate-100";
     case "warning":
-      return "mt-8 rounded-2xl border border-amber-300/65 bg-amber-500/10 px-4 py-2 text-lg font-semibold tracking-tight text-amber-950 dark:border-amber-700/70 dark:bg-amber-950/30 dark:text-amber-100";
+      return "mt-6 border-t border-amber-200/70 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-amber-900/50 dark:text-slate-100";
     default:
-      return "mt-8 rounded-2xl border border-slate-300/70 bg-slate-100/75 px-4 py-2 text-lg font-semibold tracking-tight text-slate-900 dark:border-slate-700/70 dark:bg-slate-800/65 dark:text-slate-100";
+      return "mt-6 border-t border-slate-200/80 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-slate-800 dark:text-slate-100";
   }
 }
 
@@ -723,6 +749,47 @@ function normalizeAnswer(
   return cleaned.replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function materializeInlineCitations(
+  markdownText: string,
+  citations: MarkdownAnswerCitation[]
+): string {
+  if (!markdownText.trim() || !citations.length) return markdownText;
+
+  const hrefByIndex = citations.reduce<Record<string, string>>((acc, citation, index) => {
+    const href = sanitizeHref(citation.url);
+    if (href) acc[String(index + 1)] = href;
+    return acc;
+  }, {});
+
+  if (!Object.keys(hrefByIndex).length) return markdownText;
+
+  const lines = markdownText.split("\n");
+  const out: string[] = [];
+  let inFence = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+    out.push(
+      line.replace(/(?<!\[)\[(\d{1,3})\](?!\()/g, (match, index: string) => {
+        const href = hrefByIndex[index];
+        if (!href) return match;
+        return `[[${index}]](${href})`;
+      })
+    );
+  }
+
+  return out.join("\n");
+}
+
 function sanitizeFileName(value: string): string {
   return value
     .replace(/[\\/:*?"<>|]+/g, "-")
@@ -838,6 +905,7 @@ export default function MarkdownAnswer({
   stripSafetyMatrixSection = false,
   stripMermaidBlocks = true,
   stripChartSpecBlocks = true,
+  uiLanguage = "vi",
 }: MarkdownAnswerProps) {
   const normalized = useMemo(
     () =>
@@ -848,6 +916,10 @@ export default function MarkdownAnswer({
         stripChartSpecBlocks,
       }),
     [answer, stripReferenceSection, stripSafetyMatrixSection, stripMermaidBlocks, stripChartSpecBlocks]
+  );
+  const renderedMarkdown = useMemo(
+    () => (showInlineCitations ? materializeInlineCitations(normalized, citations) : normalized),
+    [citations, normalized, showInlineCitations]
   );
   const [exportNotice, setExportNotice] = useState<string>("");
   const contentId = useMemo(() => `markdown-answer-${Math.random().toString(36).slice(2, 10)}`, []);
@@ -862,47 +934,52 @@ export default function MarkdownAnswer({
         : {},
     [citations, showInlineCitations]
   );
+  const isEnglishUI = uiLanguage === "en";
 
-  if (!normalized) {
+  if (!renderedMarkdown) {
     return null;
   }
 
   const onExportMarkdown = () => {
-    const blob = new Blob([normalized], { type: "text/markdown;charset=utf-8" });
+    const blob = new Blob([renderedMarkdown], { type: "text/markdown;charset=utf-8" });
     downloadBlob(blob, `${exportBaseName}.md`);
-    setExportNotice("Đã xuất file Markdown.");
+    setExportNotice(isEnglishUI ? "Markdown exported." : "Đã xuất file Markdown.");
     window.setTimeout(() => setExportNotice(""), 1400);
   };
 
   const onExportDocx = async () => {
     try {
       const blob = await exportWorkspaceDocxFromMarkdown({
-        markdown: normalized,
+        markdown: renderedMarkdown,
         title: exportBaseName,
       });
       downloadBlob(blob, `${exportBaseName}.docx`);
-      setExportNotice("Đã xuất file DOCX.");
+      setExportNotice(isEnglishUI ? "DOCX exported." : "Đã xuất file DOCX.");
     } catch (cause) {
       const reason =
         cause instanceof Error && cause.message
           ? cause.message
-          : "Lỗi không xác định.";
-      setExportNotice(`Xuất DOCX thất bại: ${reason}`);
+          : isEnglishUI
+            ? "Unknown error."
+            : "Lỗi không xác định.";
+      setExportNotice(
+        isEnglishUI ? `DOCX export failed: ${reason}` : `Xuất DOCX thất bại: ${reason}`
+      );
     }
     window.setTimeout(() => setExportNotice(""), 1600);
   };
 
   const onCopyMarkdown = async () => {
     if (!navigator?.clipboard) {
-      setExportNotice("Clipboard không khả dụng.");
+      setExportNotice(isEnglishUI ? "Clipboard unavailable." : "Clipboard không khả dụng.");
       window.setTimeout(() => setExportNotice(""), 1400);
       return;
     }
     try {
-      await navigator.clipboard.writeText(normalized);
-      setExportNotice("Đã copy markdown.");
+      await navigator.clipboard.writeText(renderedMarkdown);
+      setExportNotice(isEnglishUI ? "Markdown copied." : "Đã copy markdown.");
     } catch {
-      setExportNotice("Không thể copy markdown.");
+      setExportNotice(isEnglishUI ? "Unable to copy markdown." : "Không thể copy markdown.");
     }
     window.setTimeout(() => setExportNotice(""), 1400);
   };
@@ -910,7 +987,9 @@ export default function MarkdownAnswer({
   const onExportPng = async () => {
     const node = document.getElementById(contentId);
     if (!node) {
-      setExportNotice("Không tìm thấy nội dung để xuất PNG.");
+      setExportNotice(
+        isEnglishUI ? "No content available for PNG export." : "Không tìm thấy nội dung để xuất PNG."
+      );
       window.setTimeout(() => setExportNotice(""), 1400);
       return;
     }
@@ -923,66 +1002,57 @@ export default function MarkdownAnswer({
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       downloadBlob(blob, `${exportBaseName}.png`);
-      setExportNotice("Đã xuất PNG.");
+      setExportNotice(isEnglishUI ? "PNG exported." : "Đã xuất PNG.");
     } catch {
-      setExportNotice("Xuất PNG thất bại.");
+      setExportNotice(isEnglishUI ? "PNG export failed." : "Xuất PNG thất bại.");
     }
     window.setTimeout(() => setExportNotice(""), 1600);
   };
 
+  let sectionIndex = 0;
+  let pendingLeadTone: SectionTone | null = null;
+  let pendingLeadSummary = false;
+
   return (
-    <div className="medical-markdown prose prose-slate max-w-none dark:prose-invert prose-p:leading-7 prose-li:leading-7 prose-headings:tracking-tight">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-900 dark:border-cyan-700/70 dark:bg-cyan-950/35 dark:text-cyan-100">
-        <div className="flex flex-wrap items-center gap-2">
-        <span>Báo cáo phân tích lâm sàng</span>
-        <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
-          markdown
-        </span>
-        {showInlineCitations ? (
-          <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
-            citations inline
-          </span>
-        ) : null}
-        {enableMermaid ? (
-          <span className="rounded-full border border-cyan-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-cyan-700 dark:border-cyan-600/70 dark:bg-cyan-900/45 dark:text-cyan-200">
-            mermaid bật
-          </span>
-        ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onCopyMarkdown}
-            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
-          >
-            Copy
-          </button>
-          <button
-            type="button"
-            onClick={onExportMarkdown}
-            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
-          >
-            Xuất .md
-          </button>
-          <button
-            type="button"
-            onClick={() => void onExportDocx()}
-            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
-          >
-            Xuất .docx
-          </button>
-          <button
-            type="button"
-            onClick={() => void onExportPng()}
-            className="rounded-md border border-cyan-300/70 bg-white/70 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-white dark:border-cyan-600/70 dark:bg-cyan-900/50 dark:text-cyan-100"
-          >
-            Xuất .png
-          </button>
-        </div>
+    <div className="medical-markdown prose prose-slate max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
+      <div className="mb-1 flex items-center justify-end gap-1">
+        <details className="group relative">
+          <summary className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300">
+            <span className="material-symbols-outlined text-[14px]">more_horiz</span>
+          </summary>
+          <div className="absolute right-0 z-10 mt-2 w-40 space-y-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
+            <button
+              type="button"
+              onClick={onCopyMarkdown}
+              className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Copy markdown" : "Sao chép markdown"}
+            </button>
+            <button
+              type="button"
+              onClick={onExportMarkdown}
+              className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Export .md" : "Xuất .md"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void onExportDocx()}
+              className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Export .docx" : "Xuất .docx"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void onExportPng()}
+              className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Export .png" : "Xuất .png"}
+            </button>
+          </div>
+        </details>
       </div>
-      {exportNotice ? (
-        <p className="mb-2 text-[11px] text-cyan-700 dark:text-cyan-300">{exportNotice}</p>
-      ) : null}
+      {exportNotice ? <p className="mb-2 text-[10px] text-cyan-700 dark:text-cyan-300">{exportNotice}</p> : null}
       <div id={contentId}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -992,16 +1062,40 @@ export default function MarkdownAnswer({
           h2: ({ children }) => {
             const headingText = flattenMarkdownChildren(children).trim();
             const tone = resolveSectionTone(headingText);
+            sectionIndex += 1;
+            pendingLeadTone = tone;
+            pendingLeadSummary = sectionIndex === 1 && tone === "brand";
             return <h2 className={sectionHeadingClasses(tone)}>{children}</h2>;
           },
           h3: ({ children }) => (
-            <h3 className="mt-5 border-l-4 border-slate-300 pl-3 text-base font-semibold tracking-tight text-slate-900 dark:border-slate-600 dark:text-slate-100">
+            <h3 className="mt-5 text-[0.97rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               {children}
             </h3>
           ),
-          p: ({ children }) => (
-            <p className="mt-3 text-[15px] leading-7 text-slate-700 dark:text-slate-200">{children}</p>
-          ),
+          p: ({ children }) => {
+            const tone = pendingLeadTone;
+            const isLeadSummary = pendingLeadSummary;
+            pendingLeadTone = null;
+            pendingLeadSummary = false;
+            if (isLeadSummary) {
+              return (
+                <p className="mt-2.5 rounded-[0.85rem] border border-slate-200/80 bg-slate-50/96 px-4 py-3 text-[15px] font-medium leading-7 text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-slate-800 dark:bg-slate-900/42 dark:text-slate-100">
+                  {children}
+                </p>
+              );
+            }
+            return (
+              <p
+                className={[
+                  "mt-2.5 text-[14.2px] leading-7 text-slate-700 dark:text-slate-200",
+                  tone === "safety" ? "text-emerald-900 dark:text-emerald-100" : "",
+                  tone === "warning" ? "text-amber-950 dark:text-amber-50" : "",
+                ].join(" ").trim()}
+              >
+                {children}
+              </p>
+            );
+          },
           a: ({ href, children, ...props }) => {
             const text =
               Array.isArray(children) && typeof children[0] === "string" ? children[0] : "";
@@ -1009,6 +1103,7 @@ export default function MarkdownAnswer({
             const citation = citationMatch ? citationMap[citationMatch[1]] : undefined;
             const resolvedHref = sanitizeHref(href) ?? sanitizeHref(citation?.url) ?? "#";
             const external = resolvedHref.startsWith("http://") || resolvedHref.startsWith("https://");
+            const isCitationLink = Boolean(citationMatch);
             return (
               <a
                 {...props}
@@ -1016,7 +1111,11 @@ export default function MarkdownAnswer({
                 target={external ? "_blank" : undefined}
                 rel={external ? "noreferrer noopener nofollow" : undefined}
                 title={citation?.title}
-                className="font-medium text-cyan-700 underline decoration-cyan-500/50 underline-offset-2 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+                className={
+                  isCitationLink
+                    ? "ml-0.5 inline-flex min-w-[1rem] -translate-y-[0.28rem] items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[9px] font-semibold text-cyan-700 no-underline transition hover:bg-cyan-500/16 hover:text-cyan-900 dark:bg-cyan-500/12 dark:text-cyan-300 dark:hover:text-cyan-100"
+                    : "font-medium text-cyan-700 underline decoration-cyan-500/50 underline-offset-2 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+                }
               >
                 {children}
               </a>
@@ -1060,7 +1159,7 @@ export default function MarkdownAnswer({
             return <CodeFence code={code} language={language} isChartSpec={isChartSpec} />;
           },
           table: ({ children }) => (
-            <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="mt-3 overflow-x-auto rounded-[0.85rem] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
               <table className="w-full border-collapse text-sm leading-6">{children}</table>
             </div>
           ),
@@ -1075,17 +1174,17 @@ export default function MarkdownAnswer({
             </td>
           ),
           ul: ({ children }) => (
-            <ul className="mt-3 space-y-2 rounded-xl border border-slate-200/80 bg-slate-50/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/35">
+            <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[14.1px] text-slate-700 dark:text-slate-200">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mt-3 list-decimal space-y-2 rounded-xl border border-slate-200/80 bg-slate-50/70 px-5 py-3 dark:border-slate-700/70 dark:bg-slate-900/35">
+            <ol className="mt-2.5 list-decimal space-y-1.5 pl-5 text-[14.1px] text-slate-700 dark:text-slate-200">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="ml-2 text-[15px] leading-7 text-slate-700 marker:text-slate-400 dark:text-slate-200">
+            <li className="ml-2 text-[14.1px] leading-7 text-slate-700 marker:text-slate-400 dark:text-slate-200">
               {children}
             </li>
           ),
@@ -1097,7 +1196,7 @@ export default function MarkdownAnswer({
           hr: () => <hr className="my-6 border-slate-200 dark:border-slate-700" />,
         }}
       >
-        {normalized}
+        {renderedMarkdown}
       </ReactMarkdown>
       </div>
     </div>

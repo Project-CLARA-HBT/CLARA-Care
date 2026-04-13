@@ -1369,8 +1369,11 @@ def test_run_research_tier2_includes_chart_specs_visual_assets_and_reasoning_dig
     assert result["render_hints"]["markdown"] is True
     assert result["render_hints"]["tables"] is True
     assert result["render_hints"]["mermaid"] is False
-    assert "## Tóm tắt điều hành" in result["answer_markdown"]
-    assert "## Bảng tổng hợp bằng chứng" in result["answer_markdown"]
+    assert "## Điểm chính" in result["answer_markdown"]
+    assert "## Ứng dụng thực tế" in result["answer_markdown"]
+    assert "## Lưu ý an toàn" in result["answer_markdown"]
+    assert "## Tóm tắt điều hành" not in result["answer_markdown"]
+    assert "## Bảng tổng hợp bằng chứng" not in result["answer_markdown"]
 
 
 def test_run_research_tier2_emits_contradiction_miner_and_verification_matrix(monkeypatch):
@@ -2075,9 +2078,9 @@ def test_sanitize_user_facing_answer_markdown_fast_enforces_compact_layout() -> 
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="fast")
     assert "## Kết luận nhanh" in cleaned
-    assert "## Phân tích chi tiết" in cleaned
-    assert "## Khuyến nghị an toàn" in cleaned
-    assert "## Theo dõi & cảnh báo đỏ" in cleaned
+    assert "## Điểm chính" in cleaned
+    assert "## Ứng dụng thực tế" in cleaned
+    assert "## Lưu ý an toàn" in cleaned
     assert "## Câu hỏi nghiên cứu (PICO)" not in cleaned
     assert "Ma trận quyết định an toàn" not in cleaned
     assert "AI Verified" not in cleaned
@@ -2088,6 +2091,8 @@ def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() 
     raw = (
         "## Kết luận nhanh\n"
         "Nội dung tóm tắt.\n\n"
+        "## Kế hoạch nghiên cứu\n"
+        "- Bóc tách truy xuất.\n\n"
         "## Câu hỏi nghiên cứu (PICO)\n"
         "- Population ...\n\n"
         "## Ma trận quyết định an toàn\n"
@@ -2097,6 +2102,10 @@ def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() 
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
     assert "## Kết luận nhanh" in cleaned
+    assert "## Điểm chính" in cleaned
+    assert "## Ứng dụng thực tế" in cleaned
+    assert "## Lưu ý an toàn" in cleaned
+    assert "## Kế hoạch nghiên cứu" not in cleaned
     assert "## Câu hỏi nghiên cứu (PICO)" not in cleaned
     assert "## Ma trận quyết định an toàn" not in cleaned
 
@@ -2113,14 +2122,114 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blo
         "| Source ID | Nguồn |\n"
         "| --- | --- |\n"
         "| pmid-1 | pubmed |\n\n"
+        "## Bảng tổng hợp bằng chứng\n"
+        "| ID | Summary |\n"
+        "| --- | --- |\n"
+        "| 1 | Nội dung |\n\n"
         "## Phân tích chi tiết\n"
         "Nội dung phân tích giữ lại.\n"
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep_beta")
     assert "### Ma trận reasoning nodes" not in cleaned
     assert "### Hồ sơ nguồn mở rộng" not in cleaned
+    assert "## Bảng tổng hợp bằng chứng" not in cleaned
     assert "## Kết luận nhanh" in cleaned
-    assert "## Phân tích chi tiết" in cleaned
+    assert "## Điểm chính" in cleaned
+    assert "## Ứng dụng thực tế" in cleaned
+    assert "## Lưu ý an toàn" in cleaned
+
+
+def test_has_reader_friendly_layout_rejects_extra_report_sections() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Tóm tắt.\n\n"
+        "## Điểm chính\n"
+        "Phân tích.\n\n"
+        "## Ứng dụng thực tế\n"
+        "- Áp dụng.\n\n"
+        "## Lưu ý an toàn\n"
+        "- Theo dõi.\n\n"
+        "## Kế hoạch nghiên cứu\n"
+        "- Extra section.\n"
+    )
+    assert tier2._has_reader_friendly_layout(raw, research_mode="deep") is False
+
+
+def test_sanitize_user_facing_answer_markdown_normalizes_mixed_language_headings() -> None:
+    raw = (
+        "MARKDOWN\n"
+        "## Quick conclusion\n"
+        "This is the short conclusion.\n\n"
+        "## Detailed analysis\n"
+        "• First point\n"
+        "2) Second point\n\n"
+        "## Safety recommendations\n"
+        "Check interactions carefully.\n\n"
+        "## Monitoring and red flags\n"
+        "Escalate if chest pain develops.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="fast")
+    assert "MARKDOWN" not in cleaned
+    assert "## Quick conclusion" not in cleaned
+    assert "## Detailed analysis" not in cleaned
+    assert "## Safety recommendations" not in cleaned
+    assert "## Monitoring and red flags" not in cleaned
+    assert "## Kết luận nhanh" in cleaned
+    assert "## Điểm chính" in cleaned
+    assert "## Ứng dụng thực tế" in cleaned
+    assert "## Lưu ý an toàn" in cleaned
+    assert "- First point" in cleaned
+    assert "2. Second point" in cleaned
+
+
+def test_sanitize_user_facing_answer_markdown_can_emit_english_sections() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Nội dung chính bằng tiếng Việt.\n\n"
+        "## Phân tích chi tiết\n"
+        "- Một ý đầu tiên.\n"
+        "- Một ý thứ hai.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(
+        raw,
+        research_mode="fast",
+        answer_language="en",
+    )
+    assert "## Quick conclusion" in cleaned
+    assert "## Key points" in cleaned
+    assert "## Practical application" in cleaned
+    assert "## Important caveats" in cleaned
+    assert "## Kết luận nhanh" not in cleaned
+
+
+def test_sanitize_user_facing_answer_markdown_removes_query_and_local_context_labels() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Tóm tắt ngắn.\n\n"
+        "Query: Hello\n"
+        "Dưới đây là ngữ cảnh đã truy xuất và rút gọn ở chế độ cục bộ:\n"
+        "| ID | SOURCE |\n"
+        "| --- | --- |\n"
+        "| 1 | pubmed |\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="fast")
+    assert "Query: Hello" not in cleaned
+    assert "ngữ cảnh đã truy xuất" not in cleaned.lower()
+
+
+def test_normalize_reader_facing_block_keeps_paragraph_layout_when_requested() -> None:
+    text = (
+        "Đây là đoạn phân tích đầu tiên về khác biệt chính giữa hai chiến lược.\n\n"
+        "Đây là đoạn thứ hai giải thích ý nghĩa thực hành thay vì ép thành checklist."
+    )
+    normalized = tier2._normalize_reader_facing_block(
+        text,
+        max_items=5,
+        max_len=420,
+        prefer_paragraphs=True,
+    )
+    assert normalized.startswith("Đây là đoạn phân tích đầu tiên")
+    assert "- Đây là đoạn" not in normalized
 
 
 def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:
@@ -2131,10 +2240,10 @@ def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:
         research_mode="deep",
         plan_steps=[],
     )
-    assert "## Kế hoạch nghiên cứu" in structured
-    assert "## Bối cảnh lâm sàng áp dụng" in structured
-    assert "## Khuyến nghị ứng dụng thực hành" in structured
-    assert "## Câu hỏi nghiên cứu (PICO)" not in structured
+    assert "## Điểm chính" in structured
+    assert "## Ứng dụng thực tế" in structured
+    assert "## Lưu ý an toàn" in structured
+    assert "## Kế hoạch nghiên cứu" not in structured
 
 
 def test_resolve_report_word_budget_by_mode() -> None:
@@ -2161,17 +2270,17 @@ def test_resolve_adaptive_report_word_budget_reduces_deep_beta_for_sparse_eviden
 def test_resolve_report_section_contract_by_mode() -> None:
     deep_sections, _ = tier2._resolve_report_section_contract("deep")
     beta_sections, _ = tier2._resolve_report_section_contract("deep_beta")
-    assert "## Bối cảnh lâm sàng áp dụng" in deep_sections
-    assert "## Khuyến nghị ứng dụng thực hành" in deep_sections
+    assert "## Điểm chính" in deep_sections
+    assert "## Ứng dụng thực tế" in deep_sections
     assert "## Câu hỏi nghiên cứu (PICO)" not in deep_sections
-    assert "## Câu hỏi nghiên cứu (PICO)" in beta_sections
-    assert "## Ma trận quyết định an toàn" in beta_sections
+    assert "## Điểm chính" in beta_sections
+    assert "## Lưu ý an toàn" in beta_sections
 
 
 def test_resolve_report_style_profile_by_mode() -> None:
     deep_profile = tier2._resolve_report_style_profile("deep")
     beta_profile = tier2._resolve_report_style_profile("deep_beta")
-    assert deep_profile["tone"] == "clinical_briefing_natural"
-    assert beta_profile["tone"] == "scholarly_clinical_dossier"
+    assert deep_profile["tone"] == "clinical_briefing_reader_first"
+    assert beta_profile["tone"] == "high_signal_research_answer"
     assert isinstance(deep_profile["must_do"], list) and deep_profile["must_do"]
     assert isinstance(beta_profile["avoid"], list) and beta_profile["avoid"]
