@@ -23,44 +23,6 @@ type AuthFieldProps = {
 const baseControlClass =
   "w-full rounded-2xl border bg-white/80 px-4 py-3 text-base text-slate-900 shadow-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-200/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900/85 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-500 dark:focus:ring-sky-500/25";
 
-function EyeOpenIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-    >
-      <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeClosedIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-    >
-      <path d="M3 3l18 18" />
-      <path d="M10.6 10.7A3 3 0 0 0 13.4 13.5" />
-      <path d="M9.9 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a17.2 17.2 0 0 1-4.1 4.8" />
-      <path d="M6.7 6.8C3.9 8.6 2 12 2 12a17.7 17.7 0 0 0 7.3 6.1" />
-    </svg>
-  );
-}
-
 export default function AuthField({
   id,
   label,
@@ -150,7 +112,10 @@ export default function AuthField({
               aria-label={isPasswordVisible ? "An mat khau" : "Hien mat khau"}
               disabled={disabled}
             >
-              {isPasswordVisible ? <EyeClosedIcon /> : <EyeOpenIcon />}
+              <i
+                aria-hidden="true"
+                className={isPasswordVisible ? "fa fa-eye-slash text-base" : "fa fa-eye text-base"}
+              />
             </button>
           ) : null}
         </div>
