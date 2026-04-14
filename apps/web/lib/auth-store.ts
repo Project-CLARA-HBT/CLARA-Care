@@ -3,7 +3,8 @@ export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 const ROLE_KEY = "clara_role";
 const ACCESS_TOKEN_SESSION_KEY = "clara_access_token_session";
 const REFRESH_TOKEN_SESSION_KEY = "clara_refresh_token_session";
-const CLIENT_SESSION_COOKIE = "clara_client_session";
+const CLIENT_SESSION_COOKIE =
+  process.env.NEXT_PUBLIC_AUTH_CLIENT_SESSION_COOKIE?.trim() || "clara_client_session";
 const CSRF_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_CSRF_COOKIE?.trim() || "clara_csrf_token";
 

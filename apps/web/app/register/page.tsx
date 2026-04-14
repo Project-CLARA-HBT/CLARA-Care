@@ -10,6 +10,21 @@ import AuthFeedback from "@/components/auth/auth-feedback";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
+function getPasswordValidationError(password: string): string | null {
+  if (password.length < 8) {
+    return "Mật khẩu phải có ít nhất 8 ký tự.";
+  }
+  if (password !== password.trim()) {
+    return "Mật khẩu không được chứa khoảng trắng ở đầu/cuối.";
+  }
+  const hasAlpha = /[A-Za-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  if (!hasAlpha || !hasDigit) {
+    return "Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số.";
+  }
+  return null;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -20,7 +35,7 @@ export default function RegisterPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isPasswordStrong = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password);
+  const passwordValidationError = getPasswordValidationError(password);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -30,8 +45,8 @@ export default function RegisterPage() {
       setError("Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.");
       return;
     }
-    if (!isPasswordStrong) {
-      setError("Mật khẩu phải có ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái và 1 chữ số.");
+    if (passwordValidationError) {
+      setError(passwordValidationError);
       return;
     }
     setIsSubmitting(true);
@@ -92,7 +107,7 @@ export default function RegisterPage() {
           type="password"
           value={password}
           onChange={setPassword}
-          helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái và 1 chữ số."
+          helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối."
           placeholder="Tối thiểu 8 ký tự"
           minLength={8}
           required
