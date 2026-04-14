@@ -1,7 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  UIEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   createConversationItem,
@@ -111,7 +122,19 @@ const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
 ];
 
 const CHAT_WORKSPACE_PANEL_STORAGE_KEY = "clara_chat_workspace_panel_collapsed";
+const CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY = "clara_chat_workspace_panel_width";
 const CHAT_TELEMETRY_PANEL_STORAGE_KEY = "clara_chat_telemetry_panel_open";
+const CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH = 248;
+const CHAT_WORKSPACE_PANEL_MIN_WIDTH = 184;
+const CHAT_WORKSPACE_PANEL_MAX_WIDTH = 360;
+
+function clampWorkspacePanelWidth(value: number): number {
+  if (!Number.isFinite(value)) return CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH;
+  return Math.min(
+    CHAT_WORKSPACE_PANEL_MAX_WIDTH,
+    Math.max(CHAT_WORKSPACE_PANEL_MIN_WIDTH, Math.round(value))
+  );
+}
 
 function parsePromptText(value: string | null): string | null {
   if (typeof value !== "string") return null;
@@ -907,11 +930,16 @@ export default function ChatWorkspacePage() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [accountRole, setAccountRole] = useState<UserRole>("normal");
   const [isWorkspacePanelCollapsed, setIsWorkspacePanelCollapsed] = useState(true);
+  const [workspacePanelWidth, setWorkspacePanelWidth] = useState(
+    CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH
+  );
+  const [isWorkspacePanelResizing, setIsWorkspacePanelResizing] = useState(false);
   const [isTelemetryPanelOpen, setIsTelemetryPanelOpen] = useState(false);
 
   const isFastResearchMode = selectedResearchMode === "fast";
   const conversationScrollRef = useRef<HTMLDivElement | null>(null);
   const conversationListViewportRef = useRef<HTMLDivElement | null>(null);
+  const workspacePanelRef = useRef<HTMLElement | null>(null);
   const didAutoSelectInitialConversationRef = useRef(false);
 
   const latestTurn = useMemo(
@@ -1026,6 +1054,9 @@ export default function ChatWorkspacePage() {
     const storedMode = window.localStorage.getItem("clara_chat_research_mode");
     const storedStack = window.localStorage.getItem("clara_chat_retrieval_stack_mode");
     const storedWorkspacePanel = window.localStorage.getItem(CHAT_WORKSPACE_PANEL_STORAGE_KEY);
+    const storedWorkspacePanelWidth = window.localStorage.getItem(
+      CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY
+    );
     const storedTelemetryPanel = window.localStorage.getItem(CHAT_TELEMETRY_PANEL_STORAGE_KEY);
     if (storedMode === "fast" || storedMode === "deep" || storedMode === "deep_beta") {
       setSelectedResearchMode(storedMode);
@@ -1039,6 +1070,12 @@ export default function ChatWorkspacePage() {
       setIsWorkspacePanelCollapsed(true);
     } else {
       setIsWorkspacePanelCollapsed(window.matchMedia("(min-width: 1024px)").matches);
+    }
+    if (storedWorkspacePanelWidth) {
+      const parsedWidth = Number(storedWorkspacePanelWidth);
+      if (Number.isFinite(parsedWidth)) {
+        setWorkspacePanelWidth(clampWorkspacePanelWidth(parsedWidth));
+      }
     }
     if (storedTelemetryPanel === "1" && window.matchMedia("(min-width: 1600px)").matches) {
       setIsTelemetryPanelOpen(true);
@@ -1063,6 +1100,48 @@ export default function ChatWorkspacePage() {
       isWorkspacePanelCollapsed ? "1" : "0"
     );
   }, [isHydrated, isWorkspacePanelCollapsed]);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    window.localStorage.setItem(
+      CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY,
+      String(clampWorkspacePanelWidth(workspacePanelWidth))
+    );
+  }, [isHydrated, workspacePanelWidth]);
+
+  useEffect(() => {
+    if (!isWorkspacePanelResizing) return;
+
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const rect = workspacePanelRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const nextWidth = clampWorkspacePanelWidth(event.clientX - rect.left);
+      setWorkspacePanelWidth(nextWidth);
+    };
+
+    const stopResizing = () => setIsWorkspacePanelResizing(false);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopResizing);
+
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isWorkspacePanelResizing]);
+
+  useEffect(() => {
+    if (isWorkspacePanelCollapsed) {
+      setIsWorkspacePanelResizing(false);
+    }
+  }, [isWorkspacePanelCollapsed]);
 
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
@@ -2559,9 +2638,52 @@ export default function ChatWorkspacePage() {
     : isEnglishUI
       ? "Ready for a new chat"
       : "Sẵn sàng cho phiên mới";
+  const handleWorkspacePanelResizeStart = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
+      if (typeof window === "undefined") return;
+      if (!window.matchMedia("(min-width: 1024px)").matches) return;
+      event.preventDefault();
+      setIsWorkspacePanelResizing(true);
+    },
+    []
+  );
+  const nudgeWorkspacePanelWidth = useCallback((delta: number) => {
+    setWorkspacePanelWidth((current) => clampWorkspacePanelWidth(current + delta));
+  }, []);
+  const handleWorkspacePanelResizeKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        nudgeWorkspacePanelWidth(-16);
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        nudgeWorkspacePanelWidth(16);
+        return;
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        setWorkspacePanelWidth(CHAT_WORKSPACE_PANEL_MIN_WIDTH);
+        return;
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        setWorkspacePanelWidth(CHAT_WORKSPACE_PANEL_MAX_WIDTH);
+      }
+    },
+    [nudgeWorkspacePanelWidth]
+  );
+  const desktopGridStyle = useMemo(
+    () =>
+      ({
+        "--chat-workspace-panel-width": `${clampWorkspacePanelWidth(workspacePanelWidth)}px`,
+      }) as CSSProperties,
+    [workspacePanelWidth]
+  );
   const desktopGridClass = isWorkspacePanelCollapsed
     ? "lg:grid-cols-[2.7rem_minmax(0,1fr)]"
-    : "lg:grid-cols-[8.9rem_minmax(0,1fr)]";
+    : "lg:grid-cols-[var(--chat-workspace-panel-width)_minmax(0,1fr)]";
 
   return (
     <PageShell
@@ -2578,7 +2700,10 @@ export default function ChatWorkspacePage() {
           />
         ) : null}
 
-        <div className={["grid h-full min-h-0 gap-0 transition-[grid-template-columns] duration-300", desktopGridClass].join(" ")}>
+        <div
+          className={["grid h-full min-h-0 gap-0 transition-[grid-template-columns] duration-300", desktopGridClass].join(" ")}
+          style={desktopGridStyle}
+        >
         {isWorkspacePanelCollapsed ? (
           <aside className="hidden h-full flex-col items-center justify-between border-r border-[color:var(--shell-border)] bg-[var(--surface-muted)]/88 px-0.5 py-1.5 lg:flex">
             <div className="flex flex-col items-center gap-1">
@@ -2632,8 +2757,9 @@ export default function ChatWorkspacePage() {
           </aside>
         ) : null}
           <aside
+            ref={workspacePanelRef}
             className={[
-              "fixed inset-y-0 left-0 z-50 flex w-[min(80vw,9.6rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f7f9fb]/98 p-1.5 transition-transform duration-200 dark:bg-[#132038]/97 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
+              "fixed inset-y-0 left-0 z-50 flex w-[min(80vw,15rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f7f9fb]/98 p-1.5 transition-transform duration-200 dark:bg-[#132038]/97 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
               isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%]",
               isWorkspacePanelCollapsed ? "lg:hidden" : "lg:flex lg:translate-x-0",
             ].join(" ")}
@@ -3220,6 +3346,34 @@ export default function ChatWorkspacePage() {
               </button>
             </div>
           </div>
+          <button
+            type="button"
+            onMouseDown={handleWorkspacePanelResizeStart}
+            onDoubleClick={() => setWorkspacePanelWidth(CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH)}
+            onKeyDown={handleWorkspacePanelResizeKeyDown}
+            className="absolute inset-y-0 -right-2 hidden w-4 cursor-col-resize items-center justify-center border-0 bg-transparent p-0 lg:flex"
+            aria-label={isEnglishUI ? "Resize workspace panel" : "Điều chỉnh độ rộng panel hội thoại"}
+            aria-orientation="vertical"
+            aria-valuemin={CHAT_WORKSPACE_PANEL_MIN_WIDTH}
+            aria-valuemax={CHAT_WORKSPACE_PANEL_MAX_WIDTH}
+            aria-valuenow={workspacePanelWidth}
+            role="separator"
+            title={
+              isEnglishUI
+                ? "Drag to resize. Double-click to reset."
+                : "Kéo để đổi độ rộng. Double-click để về mặc định."
+            }
+          >
+            <span
+              className={[
+                "h-16 w-1 rounded-full transition",
+                isWorkspacePanelResizing
+                  ? "bg-cyan-400 shadow-[0_0_0_4px_rgba(34,211,238,0.18)]"
+                  : "bg-[color:var(--shell-border)]/70 hover:bg-cyan-300/70",
+              ].join(" ")}
+              aria-hidden="true"
+            />
+          </button>
         </aside>
 
         <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-canvas)]">
