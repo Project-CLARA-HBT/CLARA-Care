@@ -939,7 +939,11 @@ export default function ChatWorkspacePage() {
   const isFastResearchMode = selectedResearchMode === "fast";
   const conversationScrollRef = useRef<HTMLDivElement | null>(null);
   const conversationListViewportRef = useRef<HTMLDivElement | null>(null);
+  const workspaceGridRef = useRef<HTMLDivElement | null>(null);
   const workspacePanelRef = useRef<HTMLElement | null>(null);
+  const workspacePanelWidthRef = useRef(CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH);
+  const workspacePanelResizeFrameRef = useRef<number | null>(null);
+  const workspacePanelPendingWidthRef = useRef(CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH);
   const didAutoSelectInitialConversationRef = useRef(false);
 
   const latestTurn = useMemo(
@@ -997,6 +1001,17 @@ export default function ChatWorkspacePage() {
       return;
     }
     (element as HTMLElement).focus();
+  }, []);
+  const applyWorkspacePanelWidth = useCallback((value: number): number => {
+    const clamped = clampWorkspacePanelWidth(value);
+    workspacePanelWidthRef.current = clamped;
+    if (workspaceGridRef.current) {
+      workspaceGridRef.current.style.setProperty(
+        "--chat-workspace-panel-width",
+        `${clamped}px`
+      );
+    }
+    return clamped;
   }, []);
 
   useEffect(() => {
@@ -1110,6 +1125,11 @@ export default function ChatWorkspacePage() {
   }, [isHydrated, workspacePanelWidth]);
 
   useEffect(() => {
+    applyWorkspacePanelWidth(workspacePanelWidth);
+    workspacePanelPendingWidthRef.current = clampWorkspacePanelWidth(workspacePanelWidth);
+  }, [applyWorkspacePanelWidth, workspacePanelWidth]);
+
+  useEffect(() => {
     if (!isWorkspacePanelResizing) return;
 
     const previousCursor = document.body.style.cursor;
@@ -1117,14 +1137,31 @@ export default function ChatWorkspacePage() {
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
 
+    const flushPendingWidth = () => {
+      workspacePanelResizeFrameRef.current = null;
+      applyWorkspacePanelWidth(workspacePanelPendingWidthRef.current);
+    };
+
     const handleMouseMove = (event: MouseEvent) => {
       const rect = workspacePanelRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const nextWidth = clampWorkspacePanelWidth(event.clientX - rect.left);
-      setWorkspacePanelWidth(nextWidth);
+      workspacePanelPendingWidthRef.current = clampWorkspacePanelWidth(
+        event.clientX - rect.left
+      );
+      if (workspacePanelResizeFrameRef.current === null) {
+        workspacePanelResizeFrameRef.current = window.requestAnimationFrame(flushPendingWidth);
+      }
     };
 
-    const stopResizing = () => setIsWorkspacePanelResizing(false);
+    const stopResizing = () => {
+      if (workspacePanelResizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(workspacePanelResizeFrameRef.current);
+        workspacePanelResizeFrameRef.current = null;
+      }
+      const finalWidth = applyWorkspacePanelWidth(workspacePanelPendingWidthRef.current);
+      setWorkspacePanelWidth(finalWidth);
+      setIsWorkspacePanelResizing(false);
+    };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", stopResizing);
@@ -1132,10 +1169,14 @@ export default function ChatWorkspacePage() {
     return () => {
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
+      if (workspacePanelResizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(workspacePanelResizeFrameRef.current);
+        workspacePanelResizeFrameRef.current = null;
+      }
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", stopResizing);
     };
-  }, [isWorkspacePanelResizing]);
+  }, [applyWorkspacePanelWidth, isWorkspacePanelResizing]);
 
   useEffect(() => {
     if (isWorkspacePanelCollapsed) {
@@ -2643,6 +2684,7 @@ export default function ChatWorkspacePage() {
       if (typeof window === "undefined") return;
       if (!window.matchMedia("(min-width: 1024px)").matches) return;
       event.preventDefault();
+      workspacePanelPendingWidthRef.current = workspacePanelWidthRef.current;
       setIsWorkspacePanelResizing(true);
     },
     []
@@ -2701,7 +2743,14 @@ export default function ChatWorkspacePage() {
         ) : null}
 
         <div
-          className={["grid h-full min-h-0 gap-0 transition-[grid-template-columns] duration-300", desktopGridClass].join(" ")}
+          ref={workspaceGridRef}
+          className={[
+            "grid h-full min-h-0 gap-0",
+            isWorkspacePanelResizing
+              ? "transition-none"
+              : "transition-[grid-template-columns] duration-300",
+            desktopGridClass,
+          ].join(" ")}
           style={desktopGridStyle}
         >
         {isWorkspacePanelCollapsed ? (
