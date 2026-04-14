@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isPasswordStrong = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -27,6 +28,10 @@ export default function RegisterPage() {
     setNotice("");
     if (!acceptedLegal) {
       setError("Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.");
+      return;
+    }
+    if (!isPasswordStrong) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái và 1 chữ số.");
       return;
     }
     setIsSubmitting(true);
@@ -87,6 +92,7 @@ export default function RegisterPage() {
           type="password"
           value={password}
           onChange={setPassword}
+          helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái và 1 chữ số."
           placeholder="Tối thiểu 8 ký tự"
           minLength={8}
           required

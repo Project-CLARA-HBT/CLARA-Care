@@ -1,5 +1,6 @@
 import logging
 import secrets
+from collections.abc import Mapping, Sequence
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -107,9 +108,19 @@ async def clara_error_handler(_request: Request, exc: ClaraAPIError):
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
+def _json_safe(value: object) -> object:
+    if isinstance(value, BaseException):
+        return str(value)
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_request: Request, exc: RequestValidationError):
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": _json_safe(exc.errors())})
 
 
 @app.exception_handler(Exception)

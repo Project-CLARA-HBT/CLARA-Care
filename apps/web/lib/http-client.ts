@@ -78,6 +78,21 @@ async function resolveErrorMessage(error: AxiosError<{ detail?: string }>): Prom
   if (typeof detail === "string" && detail.trim()) {
     return detail;
   }
+  if (Array.isArray(detail) && detail.length > 0) {
+    const messages = detail
+      .map((item) => {
+        if (typeof item === "string" && item.trim()) return item.trim();
+        if (item && typeof item === "object" && "msg" in item) {
+          const msg = (item as { msg?: unknown }).msg;
+          if (typeof msg === "string" && msg.trim()) return msg.trim();
+        }
+        return null;
+      })
+      .filter((value): value is string => Boolean(value));
+    if (messages.length > 0) {
+      return messages.join("\n");
+    }
+  }
 
   const responseData: unknown = error.response?.data;
   if (typeof Blob !== "undefined" && responseData instanceof Blob) {
