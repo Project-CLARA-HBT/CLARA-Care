@@ -16,6 +16,7 @@ const PUBLIC_PATHS = new Set([
   "/legal/cookies",
   "/login",
   "/register",
+  "/logout",
   "/forgot-password",
   "/reset-password",
   "/verify-email",
