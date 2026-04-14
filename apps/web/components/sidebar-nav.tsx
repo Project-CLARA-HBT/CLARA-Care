@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { clearTokens } from "@/lib/auth-store";
-import api from "@/lib/http-client";
+import { usePathname } from "next/navigation";
+import { beginLogout } from "@/lib/logout";
 import { getGroupMeta, getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigation.config";
 
 type SidebarNavProps = {
@@ -22,23 +21,13 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 export default function SidebarNav({ role, collapsed = false, onToggleCollapse }: SidebarNavProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const groups = getGroupedNavItems(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-    try {
-      await api.post("/auth/logout", {});
-    } catch {
-      // ignore network/logout errors, local clear still proceeds
-    } finally {
-      clearTokens();
-      router.replace("/login");
-      router.refresh();
-      setIsLoggingOut(false);
-    }
+    beginLogout();
   };
 
   return (
@@ -125,7 +114,7 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
         <div className={["mt-3", collapsed ? "flex justify-center" : ""].join(" ")}>
           <button
             type="button"
-            onClick={() => void handleLogout()}
+            onClick={handleLogout}
             disabled={isLoggingOut}
             className={[
               "inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]",

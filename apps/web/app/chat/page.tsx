@@ -12,8 +12,9 @@ import { ConversationItem, ResearchResult } from "@/components/research/lib/rese
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
-import { clearTokens, getRole, type UserRole } from "@/lib/auth-store";
+import { getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
+import { beginLogout } from "@/lib/logout";
 import {
   getStoredUILanguage,
   onUILanguageChange,
@@ -1741,16 +1742,7 @@ export default function ChatWorkspacePage() {
   }, []);
 
   const onLogout = useCallback(() => {
-    void (async () => {
-      try {
-        await api.post("/auth/logout");
-      } catch {
-        // Fall back to client-side token cleanup on API failures.
-      } finally {
-        clearTokens();
-        window.location.href = "/login";
-      }
-    })();
+    beginLogout();
   }, []);
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import { getRole } from "@/lib/auth-store";
+import { beginLogout } from "@/lib/logout";
 import {
   getNavItemsByRole,
   getGroupMeta,
@@ -81,6 +82,7 @@ export default function AppShell({ children }: Props) {
   const [themePreference, setThemePreference] = useState<ThemePreference>("dark");
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
@@ -210,6 +212,13 @@ export default function AppShell({ children }: Props) {
       }
       return next;
     });
+  };
+
+  const handleLogout = () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setIsMobileNavOpen(false);
+    beginLogout();
   };
 
   if (hideSidebar) {
@@ -512,7 +521,7 @@ export default function AppShell({ children }: Props) {
             ))}
           </div>
 
-          <div className="mt-4 border-t border-[color:var(--shell-border)] pt-4">
+          <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
             <Link
               href="/role-select"
               onClick={() => setIsMobileNavOpen(false)}
@@ -520,6 +529,15 @@ export default function AppShell({ children }: Props) {
             >
               Đổi vai trò
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-500/10 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-700/70 dark:text-rose-300"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span>{isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}</span>
+            </button>
           </div>
         </aside>
       </div>
