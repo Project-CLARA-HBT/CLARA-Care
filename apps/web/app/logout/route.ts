@@ -49,7 +49,8 @@ function expireCookie(response: NextResponse, request: NextRequest, name: string
 async function handleLogout(request: NextRequest): Promise<NextResponse> {
   await bestEffortApiLogout(request);
 
-  const response = NextResponse.redirect(new URL("/login", request.url), 303);
+  const response = new NextResponse(null, { status: 303 });
+  response.headers.set("Location", "/login");
   for (const name of CLEAR_COOKIE_NAMES) {
     expireCookie(response, request, name);
   }
