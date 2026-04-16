@@ -41,10 +41,10 @@ const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
   { value: "en", label: "EN" },
 ];
 
-const LEGACY_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string }> = [
-  { id: "notifications", iconClass: "fa-bell-o", ariaLabel: "Thong bao" },
-  { id: "settings", iconClass: "fa-cog", ariaLabel: "Cai dat" },
-  { id: "help", iconClass: "fa-life-ring", ariaLabel: "Tro giup" },
+const LEGACY_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string; href: string }> = [
+  { id: "notifications", iconClass: "fa-bell-o", ariaLabel: "Thong bao", href: "/chat" },
+  { id: "settings", iconClass: "fa-cog", ariaLabel: "Cai dat", href: "/role-select" },
+  { id: "help", iconClass: "fa-life-ring", ariaLabel: "Tro giup", href: "/huong-dan" },
 ];
 
 function getNextThemePreference(current: ThemePreference): ThemePreference {
@@ -163,15 +163,15 @@ export default function SidebarNav({
 
             <div className="mt-2 flex items-center gap-1">
               {LEGACY_ACTIONS.map((action) => (
-                <button
+                <Link
                   key={action.id}
-                  type="button"
+                  href={action.href}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-cyan-300"
                   aria-label={action.ariaLabel}
                   title={action.ariaLabel}
                 >
                   <i className={`fa ${action.iconClass} text-[13px]`} aria-hidden="true" />
-                </button>
+                </Link>
               ))}
             </div>
 
