@@ -30,10 +30,10 @@ const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Quan tri",
 };
 
-const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
-  { value: "light", label: "Sang" },
-  { value: "dark", label: "Toi" },
-  { value: "system", label: "System" },
+const THEME_OPTIONS: Array<{ value: ThemePreference; label: string; iconClass: string }> = [
+  { value: "light", label: "Sang", iconClass: "fa-sun-o" },
+  { value: "dark", label: "Toi", iconClass: "fa-moon-o" },
+  { value: "system", label: "System", iconClass: "fa-desktop" },
 ];
 
 const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
@@ -41,10 +41,22 @@ const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
   { value: "en", label: "EN" },
 ];
 
+const LEGACY_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: string }> = [
+  { id: "notifications", iconClass: "fa-bell-o", ariaLabel: "Thong bao" },
+  { id: "settings", iconClass: "fa-cog", ariaLabel: "Cai dat" },
+  { id: "help", iconClass: "fa-life-ring", ariaLabel: "Tro giup" },
+];
+
 function getNextThemePreference(current: ThemePreference): ThemePreference {
   if (current === "light") return "dark";
   if (current === "dark") return "system";
   return "light";
+}
+
+function getThemeIconClass(theme: ThemePreference): string {
+  if (theme === "light") return "fa-sun-o";
+  if (theme === "dark") return "fa-moon-o";
+  return "fa-desktop";
 }
 
 export default function SidebarNav({
@@ -149,6 +161,20 @@ export default function SidebarNav({
               Preferences
             </p>
 
+            <div className="mt-2 flex items-center gap-1">
+              {LEGACY_ACTIONS.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-cyan-300"
+                  aria-label={action.ariaLabel}
+                  title={action.ariaLabel}
+                >
+                  <i className={`fa ${action.iconClass} text-[13px]`} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+
             <div className="mt-2">
               <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Theme</p>
               <div className="grid grid-cols-3 gap-1">
@@ -166,8 +192,10 @@ export default function SidebarNav({
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
+                      title={option.label}
                     >
-                      {option.label}
+                      <i className={`fa ${option.iconClass} text-[13px]`} aria-hidden="true" />
+                      <span className="sr-only">{option.label}</span>
                     </button>
                   );
                 })}
@@ -185,13 +213,14 @@ export default function SidebarNav({
                       type="button"
                       onClick={() => onLanguageChange(option.value)}
                       className={[
-                        "inline-flex min-h-[28px] items-center justify-center rounded-lg border px-1 text-[10px] font-semibold transition",
+                        "inline-flex min-h-[28px] items-center justify-center gap-1 rounded-lg border px-1 text-[10px] font-semibold transition",
                         active
                           ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
                     >
+                      <i className="fa fa-language text-[11px]" aria-hidden="true" />
                       {option.label}
                     </button>
                   );
@@ -208,9 +237,7 @@ export default function SidebarNav({
               aria-label="Toggle theme"
               title={`Theme: ${themePreference}`}
             >
-              <span className="material-symbols-outlined text-[16px]">
-                {themePreference === "light" ? "light_mode" : themePreference === "dark" ? "dark_mode" : "contrast"}
-              </span>
+              <i className={`fa ${getThemeIconClass(themePreference)} text-[13px]`} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -219,7 +246,7 @@ export default function SidebarNav({
               aria-label="Toggle language"
               title={`Language: ${uiLanguage.toUpperCase()}`}
             >
-              {uiLanguage.toUpperCase()}
+              <i className="fa fa-language text-[13px]" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -257,4 +284,3 @@ export default function SidebarNav({
     </aside>
   );
 }
-
