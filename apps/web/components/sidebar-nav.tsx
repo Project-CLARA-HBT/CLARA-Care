@@ -4,22 +4,58 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { beginLogout } from "@/lib/logout";
-import { getGroupMeta, getGroupedNavItems, isActiveRoute, type UserRole } from "@/lib/navigation.config";
+import {
+  getGroupMeta,
+  getGroupedNavItems,
+  isActiveRoute,
+  type UserRole,
+} from "@/lib/navigation.config";
+import { type ThemePreference } from "@/lib/theme";
+import { type UILanguage } from "@/lib/ui-language";
 
 type SidebarNavProps = {
   role: UserRole;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  themePreference: ThemePreference;
+  onThemeChange: (value: ThemePreference) => void;
+  uiLanguage: UILanguage;
+  onLanguageChange: (value: UILanguage) => void;
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  normal: "Người dùng",
-  researcher: "Nhà nghiên cứu",
-  doctor: "Bác sĩ",
-  admin: "Quản trị",
+  normal: "Nguoi dung",
+  researcher: "Nghien cuu",
+  doctor: "Bac si",
+  admin: "Quan tri",
 };
 
-export default function SidebarNav({ role, collapsed = false, onToggleCollapse }: SidebarNavProps) {
+const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
+  { value: "light", label: "Sang" },
+  { value: "dark", label: "Toi" },
+  { value: "system", label: "System" },
+];
+
+const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
+  { value: "vi", label: "VI" },
+  { value: "en", label: "EN" },
+];
+
+function getNextThemePreference(current: ThemePreference): ThemePreference {
+  if (current === "light") return "dark";
+  if (current === "dark") return "system";
+  return "light";
+}
+
+export default function SidebarNav({
+  role,
+  collapsed = false,
+  onToggleCollapse,
+  themePreference,
+  onThemeChange,
+  uiLanguage,
+  onLanguageChange,
+}: SidebarNavProps) {
   const pathname = usePathname();
   const groups = getGroupedNavItems(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -56,10 +92,12 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
           type="button"
           onClick={onToggleCollapse}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300"
-          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-          title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <span className="material-symbols-outlined text-base">{collapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}</span>
+          <span className="material-symbols-outlined text-base">
+            {collapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}
+          </span>
         </button>
       </div>
 
@@ -99,7 +137,95 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
         ))}
       </div>
 
-      <div className={["mt-6 border-t border-slate-200/70 pt-4 dark:border-slate-800", collapsed ? "px-0" : "px-2"].join(" ")}>
+      <div
+        className={[
+          "mt-4 border-t border-slate-200/70 pt-4 dark:border-slate-800",
+          collapsed ? "px-0" : "px-2",
+        ].join(" ")}
+      >
+        {!collapsed ? (
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              Preferences
+            </p>
+
+            <div className="mt-2">
+              <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Theme</p>
+              <div className="grid grid-cols-3 gap-1">
+                {THEME_OPTIONS.map((option) => {
+                  const active = themePreference === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => onThemeChange(option.value)}
+                      className={[
+                        "inline-flex min-h-[28px] items-center justify-center rounded-lg border px-1 text-[10px] font-semibold transition",
+                        active
+                          ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                      ].join(" ")}
+                      aria-pressed={active}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Language</p>
+              <div className="grid grid-cols-2 gap-1">
+                {LANGUAGE_OPTIONS.map((option) => {
+                  const active = uiLanguage === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => onLanguageChange(option.value)}
+                      className={[
+                        "inline-flex min-h-[28px] items-center justify-center rounded-lg border px-1 text-[10px] font-semibold transition",
+                        active
+                          ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                      ].join(" ")}
+                      aria-pressed={active}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onThemeChange(getNextThemePreference(themePreference))}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300"
+              aria-label="Toggle theme"
+              title={`Theme: ${themePreference}`}
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {themePreference === "light" ? "light_mode" : themePreference === "dark" ? "dark_mode" : "contrast"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onLanguageChange(uiLanguage === "vi" ? "en" : "vi")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[11px] font-semibold text-[var(--text-secondary)] transition hover:text-cyan-300"
+              aria-label="Toggle language"
+              title={`Language: ${uiLanguage.toUpperCase()}`}
+            >
+              {uiLanguage.toUpperCase()}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={["mt-4 border-t border-slate-200/70 pt-4 dark:border-slate-800", collapsed ? "px-0" : "px-2"].join(" ")}>
         <div className={["flex items-center", collapsed ? "justify-center" : "gap-3"].join(" ")}>
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300/70 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
             {ROLE_LABELS[role].slice(0, 1)}
@@ -118,16 +244,17 @@ export default function SidebarNav({ role, collapsed = false, onToggleCollapse }
             disabled={isLoggingOut}
             className={[
               "inline-flex min-h-[40px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]",
-              collapsed ? "w-10 px-0" : "w-full gap-2 px-3"
+              collapsed ? "w-10 px-0" : "w-full gap-2 px-3",
             ].join(" ")}
-            title="Đăng xuất"
-            aria-label="Đăng xuất"
+            title="Dang xuat"
+            aria-label="Dang xuat"
           >
             <span className="material-symbols-outlined text-[17px]">logout</span>
-            {!collapsed ? <span>{isLoggingOut ? "Đang thoát..." : "Đăng xuất"}</span> : null}
+            {!collapsed ? <span>{isLoggingOut ? "Dang thoat..." : "Dang xuat"}</span> : null}
           </button>
         </div>
       </div>
     </aside>
   );
 }
+
