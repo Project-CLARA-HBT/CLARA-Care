@@ -2156,7 +2156,7 @@ export default function ChatWorkspacePage() {
     }
   };
 
-  const onCreateInlineNote = async (fromLatestAnswer: boolean) => {
+  const onCreateInlineNote = useCallback(async (fromLatestAnswer: boolean) => {
     if (fromLatestAnswer) {
       if (!latestAnswer.trim()) {
         setNotice("Chưa có câu trả lời để lưu note.");
@@ -2172,7 +2172,7 @@ export default function ChatWorkspacePage() {
     setNoteTitleDraft("Ghi chú mới");
     setNoteMarkdownDraft("");
     setNoteTagsDraft("");
-  };
+  }, [latestAnswer, latestTurn?.query]);
 
   const onSaveNoteDraft = async () => {
     const title = parsePromptText(noteTitleDraft);
@@ -2239,7 +2239,7 @@ export default function ChatWorkspacePage() {
     }
   };
 
-  const onShareActiveConversation = async () => {
+  const onShareActiveConversation = useCallback(async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
@@ -2258,9 +2258,9 @@ export default function ChatWorkspacePage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể chia sẻ conversation.");
     }
-  };
+  }, [activeConversationId, copyText, loadShares, workspaceApiUnavailable]);
 
-  const onRevokeShareActiveConversation = async () => {
+  const onRevokeShareActiveConversation = useCallback(async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
@@ -2275,7 +2275,7 @@ export default function ChatWorkspacePage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể thu hồi liên kết.");
     }
-  };
+  }, [activeConversationId, loadShares, workspaceApiUnavailable]);
 
   const onOpenConversationFromShare = useCallback(
     async (shareItem: WorkspaceConversationShareListItem) => {
@@ -2298,7 +2298,7 @@ export default function ChatWorkspacePage() {
     [displayedConversations, loadConversations, mergedConversations, onSelectConversation]
   );
 
-  const onExportActiveConversation = async (format: "markdown" | "docx") => {
+  const onExportActiveConversation = useCallback(async (format: "markdown" | "docx") => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     const localTurns = localTurnsByConversationId[conversationId] ?? [];
@@ -2349,7 +2349,12 @@ export default function ChatWorkspacePage() {
       }
       setError(cause instanceof Error ? cause.message : "Không thể export conversation.");
     }
-  };
+  }, [
+    activeConversationId,
+    activeConversationMeta?.title,
+    localTurnsByConversationId,
+    workspaceApiUnavailable,
+  ]);
 
   const onRenameActiveConversation = async () => {
     const conversationId = asConversationId(activeConversationId);
