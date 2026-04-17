@@ -45,16 +45,16 @@ const FAQ = [
 export default function GuidePage() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">Hướng dẫn sử dụng CLARA</h1>
-        <p className="mt-3 text-sm leading-7 text-slate-600">
+      <section className="rounded-2xl border border-slate-200/80 bg-slate-50/90 p-6 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/72">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Hướng dẫn sử dụng CLARA</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
           Trang này giúp người mới bắt đầu nhanh theo đúng vai trò, giảm thao tác thử-sai và dùng đúng tính năng ngay từ đầu.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/login" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white">
             Đăng nhập
           </Link>
-          <Link href="/" className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          <Link href="/" className="rounded-md border border-slate-300/90 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
             Về trang giới thiệu
           </Link>
         </div>
@@ -62,9 +62,9 @@ export default function GuidePage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         {QUICK_START.map((item) => (
-          <article key={item.role} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-semibold text-slate-900">{item.role}</h2>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-700">
+          <article key={item.role} className="rounded-xl border border-slate-200/80 bg-slate-50/90 p-5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/72">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.role}</h2>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-700 dark:text-slate-300">
               {item.steps.map((step) => (
                 <li key={step}>{step}</li>
               ))}
@@ -73,24 +73,25 @@ export default function GuidePage() {
         ))}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Câu hỏi thường gặp</h2>
+      <section className="rounded-2xl border border-slate-200/80 bg-slate-50/90 p-6 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/72">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Câu hỏi thường gặp</h2>
         <div className="mt-4 space-y-3">
           {FAQ.map((item) => (
-            <details key={item.q} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-900">{item.q}</summary>
-              <p className="mt-2 text-sm leading-7 text-slate-700">{item.a}</p>
+            <details key={item.q} className="rounded-lg border border-slate-200/80 bg-slate-100/85 p-4 dark:border-slate-700/70 dark:bg-slate-800/70">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-100">{item.q}</summary>
+              <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-300">{item.a}</p>
             </details>
           ))}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <h2 className="text-base font-semibold text-amber-900">Lưu ý an toàn</h2>
-        <p className="mt-2 text-sm leading-7 text-amber-900">
+      <section className="rounded-2xl border border-amber-200/90 bg-amber-50/90 p-6 dark:border-amber-500/45 dark:bg-amber-500/10">
+        <h2 className="text-base font-semibold text-amber-900 dark:text-amber-200">Lưu ý an toàn</h2>
+        <p className="mt-2 text-sm leading-7 text-amber-900 dark:text-amber-100/90">
           CLARA là công cụ hỗ trợ tham khảo. Với tình huống khẩn cấp hoặc có dấu hiệu nguy hiểm, hãy liên hệ cơ sở y tế ngay.
         </p>
       </section>
     </main>
   );
 }
+
