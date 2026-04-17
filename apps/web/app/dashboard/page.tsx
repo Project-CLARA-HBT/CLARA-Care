@@ -39,7 +39,7 @@ const ROLE_GREETINGS: Record<UserRole, string> = {
 };
 
 const QUICK_ACCESS: QuickAccess[] = [
-  { href: "/chat", title: "Mở CLARA Chat", detail: "Hỏi đáp có dẫn nguồn", icon: "search_spark" },
+  { href: "/chat", title: "Mở CLARA Chat", detail: "Hỏi đáp có dẫn nguồn", icon: "search" },
   { href: "/council", title: "Mở hội chẩn AI", detail: "Phân tích ca bệnh", icon: "forum" },
   { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Đối chiếu đơn thuốc", icon: "medication" },
   { href: "/careguard", title: "Kiểm tra CareGuard", detail: "Theo dõi cảnh báo an toàn", icon: "security" },
