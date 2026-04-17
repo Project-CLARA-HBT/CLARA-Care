@@ -34,9 +34,9 @@ export default function RoleSelectionPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl rounded-2xl border border-slate-300/75 bg-slate-100/88 p-6 shadow-[0_16px_44px_-24px_rgba(15,23,42,0.35)] dark:border-slate-700/70 dark:bg-slate-900/72">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Chọn vai trò người dùng</h1>
-      <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+    <div className="mx-auto max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[0_16px_44px_-24px_rgba(15,23,42,0.35)]">
+      <h1 className="text-2xl font-bold text-[var(--text-primary)]">Chọn vai trò người dùng</h1>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">
         Vai trò sẽ quyết định menu và workflow của bạn trong hệ thống.
       </p>
 
@@ -49,8 +49,8 @@ export default function RoleSelectionPage() {
               className={[
                 "flex cursor-pointer gap-3 rounded-2xl border p-3 transition-colors",
                 isActive
-                  ? "border-cyan-300/70 bg-cyan-50/75 dark:border-cyan-400/45 dark:bg-cyan-500/14"
-                  : "border-slate-300/80 bg-slate-50/75 hover:bg-slate-100/85 dark:border-slate-700/70 dark:bg-slate-800/55 dark:hover:bg-slate-800/75",
+                  ? "border-[color:var(--shell-border-strong)] bg-[var(--surface-brand-soft)]"
+                  : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] hover:bg-[var(--surface-panel)]",
               ].join(" ")}
             >
               <input
@@ -59,13 +59,15 @@ export default function RoleSelectionPage() {
                 value={role.value}
                 checked={isActive}
                 onChange={() => setSelectedRole(role.value)}
-                className="mt-1 accent-blue-600"
+                className="mt-1 accent-cyan-500"
               />
               <div>
-                <p className={["font-medium", isActive ? "text-slate-900 dark:text-slate-100" : "text-slate-700 dark:text-slate-300"].join(" ")}>
-                  {role.label}
-                </p>
-                <p className={["text-sm", isActive ? "text-slate-700 dark:text-slate-200" : "text-slate-600 dark:text-slate-400"].join(" ")}>
+                <p className="font-medium text-[var(--text-primary)]">{role.label}</p>
+                <p className={[
+                  "text-sm",
+                  isActive ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]",
+                ].join(" ")}
+                >
                   {role.description}
                 </p>
               </div>
@@ -75,7 +77,7 @@ export default function RoleSelectionPage() {
 
         <button
           type="submit"
-          className="mt-3 rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
+          className="mt-3 rounded-xl bg-[color:var(--brand-500)] px-5 py-2.5 font-semibold text-slate-950 transition-colors hover:bg-[color:var(--brand-400)]"
         >
           Áp dụng vai trò
         </button>
@@ -83,4 +85,3 @@ export default function RoleSelectionPage() {
     </div>
   );
 }
-
