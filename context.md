@@ -1187,3 +1187,14 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 6 đã implement local tại `apps/web/components/sidebar-nav.tsx` và `apps/web/components/app-shell.tsx`.
 - Mục tiêu của slice này là nén block `Preferences` thành một hàng controls nhỏ hơn cho `Theme` và `Language`, giảm chiều cao rõ rệt nhưng không đổi logic hay đụng spacing/chat page.
+- Tester verify slice 6 lúc `2026-04-18 21:27 +0700`:
+  - Đã SSH vào VPS bằng đúng credential yêu cầu và đối chiếu `sha256` hai file deploy trong `/opt/clara-care`; `apps/web/components/sidebar-nav.tsx` = `4587755a90403dfd399e572f1f064a653792ce0d15ca5810245c1bbfab2cd83a`, `apps/web/components/app-shell.tsx` = `d8b40c9294368ef9a8af2b6e2a0a1af44257f9667e6a2e573386b8dab6c9a74c`, đều khớp blob của commit `90ff02f`.
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml ps web api` cho thấy `clara-app-api-1` và `clara-app-web-1` đều `Up`, bind lần lượt `127.0.0.1:8100->8000/tcp` và `127.0.0.1:3100->3000/tcp`.
+  - Smoke route trực tiếp trên app port: `http://127.0.0.1:3100/chat` và `http://127.0.0.1:3100/dashboard` đều trả `307` về `/login`, phù hợp route cần auth và xác nhận web process đang phục vụ request.
+  - Bằng chứng artifact/log bổ sung: `docker logs --since 10m clara-app-web-1` báo Next.js `15.5.14` `Ready`; trong `clara-app-web-1` file SSR `/app/.next/server/app/dashboard.html` có trực tiếp markup mới của slice 6 gồm `aria-label="Theme preferences"`, `aria-label="Language preferences"`, icon `fa-sun-o/fa-moon-o/fa-desktop` và các button kích thước nhỏ hơn cho sidebar/mobile shell.
+  - Residual risk: chưa có authenticated visual verification sau login nên chưa xác nhận trực quan trạng thái active/inactive của controls Preferences trên desktop sidebar và mobile drawer.
+
+## 18) Update 2026-04-18 +07 - Slice 7
+
+- Slice 7 implement local tại `apps/web/components/sidebar-nav.tsx`.
+- Mục tiêu: chuyển cụm `Preferences` (theme/language) lên hàng trên cạnh nút collapse của sidebar desktop để tiết kiệm không gian, không chỉnh `apps/web/app/chat/page.tsx`.

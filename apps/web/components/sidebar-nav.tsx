@@ -99,7 +99,74 @@ export default function SidebarNav({
         ) : null}
       </div>
 
-      <div className={collapsed ? "mb-4 flex justify-center" : "mb-4 flex justify-end px-2"}>
+      <div
+        className={[
+          "mb-4 px-2",
+          collapsed ? "flex justify-center" : "flex items-center justify-between gap-2",
+        ].join(" ")}
+      >
+        {!collapsed ? (
+          <div className="inline-flex items-center gap-1.5">
+            <div
+              className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+              role="group"
+              aria-label="Theme preferences"
+            >
+              <span className="sr-only">Theme</span>
+              {THEME_OPTIONS.map((option) => {
+                const active = themePreference === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onThemeChange(option.value)}
+                    className={[
+                      "inline-flex h-5 w-5 items-center justify-center rounded-[5px] text-[9px] transition",
+                      active
+                        ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                    ].join(" ")}
+                    aria-label={`Theme ${option.label}`}
+                    aria-pressed={active}
+                    title={`Theme: ${option.label}`}
+                  >
+                    <i className={`fa ${option.iconClass} text-[11px]`} aria-hidden="true" />
+                    <span className="sr-only">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+              role="group"
+              aria-label="Language preferences"
+            >
+              <span className="sr-only">Language</span>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const active = uiLanguage === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onLanguageChange(option.value)}
+                    className={[
+                      "inline-flex min-h-[20px] min-w-[28px] items-center justify-center rounded-[5px] px-1 text-[9px] font-semibold transition",
+                      active
+                        ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                    ].join(" ")}
+                    aria-label={`Language ${option.label}`}
+                    aria-pressed={active}
+                    title={`Language: ${option.label}`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -156,85 +223,18 @@ export default function SidebarNav({
         ].join(" ")}
       >
         {!collapsed ? (
-          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-              Preferences
-            </p>
-
-            <div className="mt-1.5 flex items-center gap-0.5">
-              {LEGACY_ACTIONS.map((action) => (
-                <Link
-                  key={action.id}
-                  href={action.href}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
-                  aria-label={action.ariaLabel}
-                  title={action.ariaLabel}
-                >
-                  <i className={`fa ${action.iconClass} text-[12px]`} aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-1.5 flex items-center justify-between gap-1.5">
-              <div
-                className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
-                role="group"
-                aria-label="Theme preferences"
+          <div className="flex items-center gap-1.5">
+            {LEGACY_ACTIONS.map((action) => (
+              <Link
+                key={action.id}
+                href={action.href}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
+                aria-label={action.ariaLabel}
+                title={action.ariaLabel}
               >
-                <span className="sr-only">Theme</span>
-                {THEME_OPTIONS.map((option) => {
-                  const active = themePreference === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => onThemeChange(option.value)}
-                      className={[
-                        "inline-flex h-5 w-5 items-center justify-center rounded-[5px] text-[9px] transition",
-                        active
-                          ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
-                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                      ].join(" ")}
-                      aria-label={`Theme ${option.label}`}
-                      aria-pressed={active}
-                      title={`Theme: ${option.label}`}
-                    >
-                      <i className={`fa ${option.iconClass} text-[11px]`} aria-hidden="true" />
-                      <span className="sr-only">{option.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div
-                className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
-                role="group"
-                aria-label="Language preferences"
-              >
-                <span className="sr-only">Language</span>
-                {LANGUAGE_OPTIONS.map((option) => {
-                  const active = uiLanguage === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => onLanguageChange(option.value)}
-                      className={[
-                        "inline-flex min-h-[20px] min-w-[28px] items-center justify-center rounded-[5px] px-1 text-[9px] font-semibold transition",
-                        active
-                          ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
-                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                      ].join(" ")}
-                      aria-label={`Language ${option.label}`}
-                      aria-pressed={active}
-                      title={`Language: ${option.label}`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                <i className={`fa ${action.iconClass} text-[12px]`} aria-hidden="true" />
+              </Link>
+            ))}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
