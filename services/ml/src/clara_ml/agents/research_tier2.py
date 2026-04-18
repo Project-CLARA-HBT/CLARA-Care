@@ -4648,8 +4648,15 @@ def _build_reasoning_digest(
     }
 
 
-def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str:
+def _build_research_plan_markdown(
+    topic: str,
+    plan_steps: list[PlanStep],
+    *,
+    answer_language: str = "vi",
+) -> str:
+    answer_language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
     topic_text = _compact_snippet(topic, max_len=240)
+
     def _clean_plan_line(value: str) -> str:
         text = str(value or "").strip()
         text = re.sub(r"^\s*\[[^\]]+\]\s*", "", text)
@@ -4657,6 +4664,20 @@ def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str
         return text
 
     if _is_nutrition_diet_query(topic) and _is_comparison_query(topic):
+        if answer_language == "en":
+            return (
+                "1. Define the core principles, signature food groups, and health goals of the DASH diet.\n"
+                "2. Define the core principles, signature food groups, and health goals of the Mediterranean diet.\n"
+                "3. Summarize DASH advantages: blood pressure control, structured meal design, and guideline-aligned standardization.\n"
+                "4. Summarize DASH limitations: adherence burden, stricter sodium or portion tracking, and long-term drop-off risk.\n"
+                "5. Summarize Mediterranean diet advantages: long-term cardiovascular benefit, flexibility, healthy-fat quality, and behavioral sustainability.\n"
+                "6. Summarize Mediterranean diet limitations: looser quantification, excess calorie risk, ingredient cost, and access barriers.\n"
+                "7. Compare both options directly across four axes:\n"
+                "   - (a) Real-world adherence in daily life.\n"
+                "   - (b) Prevention and supportive-treatment effects for cardiovascular and metabolic disease.\n"
+                "   - (c) Nutritional emphasis: sodium control versus optimization of healthy fats.\n"
+                "   - (d) Implementation feasibility given cost, food culture, and ingredient availability."
+            )
         return (
             "1. Xác định nguyên tắc cốt lõi, nhóm thực phẩm chủ đạo và mục tiêu sức khỏe của chế độ ăn DASH.\n"
             "2. Xác định nguyên tắc cốt lõi, nhóm thực phẩm chủ đạo và mục tiêu sức khỏe của chế độ ăn Địa Trung Hải.\n"
@@ -4674,15 +4695,26 @@ def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str
     for index, step in enumerate(plan_steps, start=1):
         objective = _compact_snippet(_clean_plan_line(step.objective), max_len=220)
         output = _compact_snippet(_clean_plan_line(step.output), max_len=180)
-        rows.append(f"{index}. {objective} Kết quả kỳ vọng: {output}.")
+        if answer_language == "en":
+            rows.append(f"{index}. {objective} Expected output: {output}.")
+        else:
+            rows.append(f"{index}. {objective} Kết quả kỳ vọng: {output}.")
         if len(rows) >= 8:
             break
     if not rows:
-        rows = [
-            f"1. Xác định câu hỏi trung tâm: {topic_text}.",
-            "2. Truy xuất đa nguồn ưu tiên guideline, tổng quan hệ thống và thử nghiệm lâm sàng.",
-            "3. So sánh bằng chứng thuận chiều/ngược chiều và tổng hợp khuyến nghị ứng dụng.",
-        ]
+        rows = (
+            [
+                f"1. Define the central question: {topic_text}.",
+                "2. Retrieve across multiple sources with priority on guidelines, systematic reviews, and clinical trials.",
+                "3. Compare supporting versus conflicting evidence and turn it into practical recommendations.",
+            ]
+            if answer_language == "en"
+            else [
+                f"1. Xác định câu hỏi trung tâm: {topic_text}.",
+                "2. Truy xuất đa nguồn ưu tiên guideline, tổng quan hệ thống và thử nghiệm lâm sàng.",
+                "3. So sánh bằng chứng thuận chiều/ngược chiều và tổng hợp khuyến nghị ứng dụng.",
+            ]
+        )
     return "\n".join(rows)
 
 
@@ -4718,6 +4750,8 @@ def _ensure_markdown_structure(
     plan_steps: list[PlanStep] | None = None,
     answer_language: str = "vi",
 ) -> str:
+    answer_language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
+
     def _cleanup_markdown_noise(text: str) -> str:
         lines = str(text or "").splitlines()
         cleaned_lines: list[str] = []
@@ -4760,7 +4794,12 @@ def _ensure_markdown_structure(
             return _compact_snippet(text, max_len=max_len)
         return _compact_snippet(" ".join(cleaned_lines), max_len=max_len)
 
-    def _estimate_medical_risk_band(text: str) -> tuple[str, str, str]:
+    def _estimate_medical_risk_band(
+        text: str,
+        *,
+        answer_language: str = "vi",
+    ) -> tuple[str, str, str]:
+        language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
         normalized = _ascii_fold(text)
         high_terms = (
             "warfarin",
@@ -4787,9 +4826,15 @@ def _ensure_markdown_structure(
             "tim mạch",
         )
         if any(term in normalized for term in high_terms):
+            if language == "en":
+                return ("High", "Red", "Prompt action and in-person medical evaluation are warranted.")
             return ("Cao", "Đỏ", "Cần xử trí sớm và đánh giá y tế trực tiếp.")
         if any(term in normalized for term in moderate_terms):
+            if language == "en":
+                return ("Moderate", "Orange", "Close monitoring and clinician or pharmacist confirmation are warranted.")
             return ("Trung bình", "Cam", "Cần theo dõi sát và xác minh với bác sĩ/dược sĩ.")
+        if language == "en":
+            return ("Low", "Yellow", "Routine follow-up is reasonable while continuing to verify primary sources.")
         return ("Thấp", "Vàng", "Theo dõi định kỳ, tiếp tục kiểm chứng nguồn chính thống.")
 
     def _build_decision_matrix_markdown(*, risk_level: str, risk_signal: str) -> str:
@@ -4827,7 +4872,11 @@ def _ensure_markdown_structure(
             else (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
         )
     )
-    plan_markdown = _build_research_plan_markdown(topic, plan_steps or [])
+    plan_markdown = _build_research_plan_markdown(
+        topic,
+        plan_steps or [],
+        answer_language=answer_language,
+    )
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
         completed = _cleanup_markdown_noise(cleaned)
         if research_mode in {"deep", "deep_beta"}:
@@ -4843,7 +4892,10 @@ def _ensure_markdown_structure(
         analysis_block = f"- {analysis_block}"
 
     topic_snippet = _compact_snippet(topic, max_len=210)
-    risk_level, risk_signal, risk_note = _estimate_medical_risk_band(f"{topic} {cleaned}")
+    risk_level, risk_signal, risk_note = _estimate_medical_risk_band(
+        f"{topic} {cleaned}",
+        answer_language=answer_language,
+    )
     if research_mode in {"deep", "deep_beta"}:
         key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
         practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"

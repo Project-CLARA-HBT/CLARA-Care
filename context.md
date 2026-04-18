@@ -1254,3 +1254,14 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
   - Kết quả: pass (`4 passed`).
   - Đã chạy `pytest tests/test_research_tier2_agent.py -q -k "sanitize_user_facing_answer_markdown"` trong `services/ml`.
   - Kết quả: pass (`9 passed`).
+- Deploy và tester verify:
+  - Commit `d4c6bed` đã push lên `origin/main`.
+  - Đã copy runtime file `services/ml/src/clara_ml/agents/research_tier2.py` lên host `/opt/clara-care` và chạy `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build ml`.
+  - Tester độc lập xác nhận file host có marker `_has_preservable_long_form_layout(...)` và guard `if should_stabilize_long and _has_preservable_long_form_layout(...)`, container `clara-app-ml-1` đang `Up`, và `GET /health` trả `200`.
+  - Smoke check trong container xác nhận sanitizer giữ nguyên 5 section long-form của input mẫu cho cả `deep` và `deep_beta`, không restabilize về layout ngắn.
+  - Residual risk từ tester: chưa chạy full E2E `POST /v1/research/tier2`; VPS còn cảnh báo root disk khoảng `92.4%` và `System restart required`.
+
+## 2026-04-18 Feature 3 Note
+
+- Scope: localize `services/ml/src/clara_ml/agents/research_tier2.py` plan/risk text by `answer_language` inside `_ensure_markdown_structure` so `deep`/`deep_beta` English answers no longer inject Vietnamese fallback strings.
+- Test status: targeted pytest passed, 4/4 green in `services/ml/tests/test_research_tier2_agent.py` covering English section normalization and deep/deep_beta language-fidelity regressions.

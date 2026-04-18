@@ -2304,6 +2304,54 @@ def test_ensure_markdown_structure_deep_uses_practical_sections() -> None:
     assert "## Kế hoạch nghiên cứu" not in structured
 
 
+def test_ensure_markdown_structure_deep_english_avoids_vietnamese_fallback_text() -> None:
+    structured = tier2._ensure_markdown_structure(
+        topic="Compare DASH and Mediterranean diet for blood pressure control",
+        answer="Both diets support cardiometabolic health, but DASH is usually more structured for blood pressure control.",
+        citations=[],
+        research_mode="deep",
+        plan_steps=[],
+        answer_language="en",
+    )
+
+    assert "## Quick conclusion" in structured
+    assert "## Key points" in structured
+    assert "## Practical application" in structured
+    assert "## Important caveats" in structured
+    assert "Best next step: 1. Define the core principles" in structured
+    assert "Confidence boundary: Low (Yellow)." in structured
+    assert "Xác định nguyên tắc cốt lõi" not in structured
+    assert "Ranh giới độ chắc chắn" not in structured
+    assert "Theo dõi định kỳ" not in structured
+
+
+def test_ensure_markdown_structure_deep_beta_english_injects_english_research_plan() -> None:
+    structured = tier2._ensure_markdown_structure(
+        topic="Compare DASH and Mediterranean diet for blood pressure control",
+        answer=(
+            "## Quick conclusion\n"
+            "Both dietary patterns are reasonable, but DASH is usually easier to align with a blood-pressure-first goal.\n\n"
+            "## Key points\n"
+            "- DASH is more structured.\n"
+            "- Mediterranean is often easier to sustain.\n\n"
+            "## Practical application\n"
+            "- Match the choice to the patient's treatment goal.\n\n"
+            "## Important caveats\n"
+            "- Reassess adherence and safety after implementation.\n"
+        ),
+        citations=[],
+        research_mode="deep_beta",
+        plan_steps=[],
+        answer_language="en",
+    )
+
+    assert "## Research plan" in structured
+    assert "1. Define the core principles, signature food groups, and health goals of the DASH diet." in structured
+    assert "## Kế hoạch nghiên cứu" not in structured
+    assert "Xác định nguyên tắc cốt lõi" not in structured
+    assert "Kết quả kỳ vọng" not in structured
+
+
 def test_resolve_report_word_budget_by_mode() -> None:
     deep_min, deep_target, deep_max = tier2._resolve_report_word_budget("deep")
     beta_min, beta_target, beta_max = tier2._resolve_report_word_budget("deep_beta")
