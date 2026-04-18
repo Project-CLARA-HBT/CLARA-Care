@@ -7,7 +7,6 @@ import {
   ResearchTier,
   Tier2Step
 } from "@/lib/research";
-import type { UILanguage } from "@/lib/ui-language";
 
 type ResearchWorkspaceHeaderProps = {
   roleLabel: string;
@@ -64,7 +63,6 @@ type ResearchMainCardProps = {
   result: ResearchResult | null;
   showDebugHints: boolean;
   evidenceSteps: Tier2Step[];
-  uiLanguage?: UILanguage;
 };
 
 export function ResearchMainCard({
@@ -84,12 +82,9 @@ export function ResearchMainCard({
   lastQuery,
   result,
   showDebugHints,
-  evidenceSteps,
-  uiLanguage = "vi"
+  evidenceSteps
 }: ResearchMainCardProps) {
   const isFastResearchMode = selectedResearchMode === "fast";
-  const preserveStructuredSections =
-    selectedResearchMode === "deep" || selectedResearchMode === "deep_beta";
   const onModeChange = (mode: ResearchExecutionMode) => {
     onSelectResearchMode(mode);
     if (mode === "fast" && selectedRetrievalStackMode !== "auto") {
@@ -291,7 +286,6 @@ export function ResearchMainCard({
                 stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}
-                uiLanguage={uiLanguage}
               />
             </div>
           </article>
@@ -326,11 +320,10 @@ export function ResearchMainCard({
                 citations={result.citations}
                 showInlineCitations={false}
                 enableMermaid={false}
-                stripReferenceSection={!preserveStructuredSections}
+                stripReferenceSection={true}
                 stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}
-                uiLanguage={uiLanguage}
               />
             </div>
 

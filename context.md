@@ -1327,3 +1327,15 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Test status:
   - `pytest -q services/ml/tests/test_research_tier2_agent.py -k "run_research_tier2_includes_chart_specs_visual_assets_and_reasoning_digest or sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections or sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blocks or sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_report_layout"`: pass (`4 passed`).
   - `pytest -q services/ml/tests/test_research_tier2_agent.py -k "sanitize_user_facing_answer_markdown"`: pass (`9 passed`).
+
+## 2026-04-19 Web Rollback Note
+
+- Scope: rollback đúng web slice của commit `6759f30` (`feat: preserve deep research sections in chat`) để trả UI về behavior trước feature; không đụng backend/ML.
+- Files touched: `apps/web/components/chat-workspace/chat-turn.tsx`, `apps/web/components/research/markdown-answer.tsx`, `apps/web/components/research/lib/research-page-sections.tsx`.
+- Rollback details:
+  - Chat turn luôn `stripReferenceSection={true}` và `stripSafetyMatrixSection={true}` như trước, bỏ logic `preserveStructuredSections`.
+  - Research main card bỏ mode-aware preserve ở câu trả lời tier2 (`stripReferenceSection` quay lại `true`), bỏ luồng prop `uiLanguage` được thêm trong slice này.
+  - Markdown code fence quay về label/copy notice trước đó (hardcoded như pre-slice), bỏ i18n theo `uiLanguage` cho `CodeFence`.
+- Test status:
+  - `npx eslint components/research/markdown-answer.tsx components/research/lib/research-page-sections.tsx components/chat-workspace/chat-turn.tsx` (trong `apps/web`): pass.
+  - `npx tsc --noEmit` (trong `apps/web`): pass.
