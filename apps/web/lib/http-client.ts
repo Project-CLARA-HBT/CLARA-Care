@@ -73,6 +73,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function normalizeGatewayLikePayload(rawValue: string): string | null {
+  const raw = String(rawValue ?? "").trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  const looksLikeHtml =
+    lowered.includes("<html") || lowered.includes("<!doctype html") || lowered.includes("</html>");
+  if (!looksLikeHtml) return null;
+  if (lowered.includes("502 bad gateway")) {
+    return "Dich vu tam thoi gian doan (502). Vui long thu lai sau it phut.";
+  }
+  if (lowered.includes("503 service unavailable")) {
+    return "Dich vu tam thoi khong kha dung (503). Vui long thu lai sau it phut.";
+  }
+  if (lowered.includes("504 gateway timeout")) {
+    return "Dich vu timeout tu gateway (504). Vui long thu lai sau it phut.";
+  }
+  return "He thong tra ve loi gateway khong hop le. Vui long thu lai.";
+}
+
 async function resolveErrorMessage(error: AxiosError<{ detail?: string }>): Promise<string> {
   const detail = error.response?.data?.detail;
   if (typeof detail === "string" && detail.trim()) {
@@ -112,6 +131,10 @@ async function resolveErrorMessage(error: AxiosError<{ detail?: string }>): Prom
       } catch {
         // fall through and return raw payload when JSON parse fails.
       }
+      const normalizedGateway = normalizeGatewayLikePayload(raw);
+      if (normalizedGateway) {
+        return normalizedGateway;
+      }
       return raw;
     } catch {
       return error.message || "Đã xảy ra lỗi không xác định.";
@@ -119,6 +142,10 @@ async function resolveErrorMessage(error: AxiosError<{ detail?: string }>): Prom
   }
 
   if (typeof responseData === "string" && responseData.trim()) {
+    const normalizedGateway = normalizeGatewayLikePayload(responseData);
+    if (normalizedGateway) {
+      return normalizedGateway;
+    }
     return responseData;
   }
 
