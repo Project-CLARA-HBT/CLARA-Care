@@ -1278,3 +1278,18 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Files touched: `apps/web/components/chat-workspace/chat-turn.tsx`, `apps/web/components/research/markdown-answer.tsx`, `apps/web/components/research/lib/research-page-sections.tsx`.
 - Test status: `npx eslint components/research/markdown-answer.tsx components/research/lib/research-page-sections.tsx components/chat-workspace/chat-turn.tsx` and `npx tsc --noEmit` both passed in `apps/web`.
 - Residual risk: mermaid/chart-spec blocks are still stripped in chat for all modes, and `research-page-sections.tsx` appears not wired to the current `/chat` route, so the live user-facing impact is primarily through `chat-turn.tsx`.
+- Deploy và tester verify:
+  - Commit `6759f30` đã push lên `origin/main`.
+  - Đã copy 3 file web runtime lên host `/opt/clara-care` và chạy `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build web`.
+  - Lần deploy này cũng recreate `api` do dependency stack; sau deploy, tester xác nhận cả `web` và `api` đều `Up`.
+  - Tester xác nhận 3 file host khớp commit `6759f30`, marker `preserveStructuredSections`, mode-aware strip flags, `uiLanguage` threading và copy-label i18n có mặt trong source/bundle `.next` đang chạy; smoke route `/chat` và `/dashboard` trả `307` về `/login` đúng kỳ vọng.
+  - Residual risk từ tester: chưa có authenticated visual verify trên UI thật để nhìn trực tiếp case `deep` / `deep_beta` giữ `References` và `safety matrix`, cũng như chrome của `MarkdownAnswer` theo `uiLanguage`.
+
+## 2026-04-18 Feature 5 Note
+
+- Scope: nới handoff evidence chỉ cho `deep_beta` trong `services/ml/src/clara_ml/agents/research_tier2.py`, giữ `deep`/`fast` nguyên behavior; tăng cap citation pool, reasoning/verifier payload, writer payload và cho phép citation backfill từ `merged_context` khi `effective_context` quá mỏng.
+- Files touched: `services/ml/src/clara_ml/agents/research_tier2.py`, `services/ml/tests/test_research_tier2_agent.py`.
+- Test status:
+  - `pytest tests/test_research_tier2_agent.py -q -k "build_citations_expands_pool_for_deep_beta_only or run_deep_beta_llm_reasoning_node_extracts_reasoning_chain or deep_beta_reasoning_and_verifier_prompts_expand_handoff_payloads or deep_beta_report_prompt_expands_writer_handoff_payloads"`: pass (`4 passed`).
+  - `pytest tests/test_research_tier2_agent.py -q -k "run_research_tier2_deep_beta_emits_beta_stages_and_metadata or ensure_deep_beta_report_artifacts_appends_missing_blocks or ensure_deep_beta_report_artifacts_injects_reasoning_chain_section"`: pass (`3 passed`).
+- Residual risk: cap mới làm `deep_beta` mang nhiều substance hơn nhưng cũng tăng token/latency cho reasoning/verifier/report; hiện mới verify bằng targeted unit tests, chưa có E2E latency profiling.

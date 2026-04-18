@@ -82,6 +82,35 @@ _REQUIRED_DEEP_DEDUP_HEADINGS: tuple[str, ...] = tuple(
 
 _DEFAULT_DEEP_PASS_CAP = 20
 _DEEP_BETA_PASS_CAP = 36
+_DEFAULT_EVIDENCE_HANDOFF_PROFILE: dict[str, int] = {
+    "citation_context_rows": 10,
+    "citation_trace_rows": 10,
+    "uploaded_document_rows": 8,
+    "reasoning_pass_summaries": 12,
+    "reasoning_evidence_rows": 20,
+    "verification_pass_summaries": 18,
+    "verification_evidence_rows": 28,
+    "verification_reasoning_nodes": 20,
+    "verification_reasoning_chain_per_node": 2,
+    "report_citations": 18,
+    "report_pass_summaries": 14,
+    "report_reasoning_chain_cards": 18,
+}
+_DEEP_BETA_EVIDENCE_HANDOFF_PROFILE: dict[str, int] = {
+    **_DEFAULT_EVIDENCE_HANDOFF_PROFILE,
+    "citation_context_rows": 24,
+    "citation_trace_rows": 24,
+    "uploaded_document_rows": 10,
+    "reasoning_pass_summaries": 24,
+    "reasoning_evidence_rows": 40,
+    "verification_pass_summaries": 28,
+    "verification_evidence_rows": 48,
+    "verification_reasoning_nodes": 24,
+    "verification_reasoning_chain_per_node": 3,
+    "report_citations": 30,
+    "report_pass_summaries": 24,
+    "report_reasoning_chain_cards": 28,
+}
 _DEEP_BETA_REASONING_STAGE_ORDER = (
     "deep_beta_scope",
     "deep_beta_hypothesis_map",
@@ -223,6 +252,13 @@ def _resolve_trace_identifiers(payload: dict[str, Any]) -> tuple[str, str]:
 
     seed = uuid4().hex
     return f"tier2-trace-{seed}", f"tier2-run-{seed}"
+
+
+def _resolve_evidence_handoff_profile(research_mode: str | None = None) -> dict[str, int]:
+    mode = str(research_mode or "fast").strip().lower()
+    if mode == "deep_beta":
+        return _DEEP_BETA_EVIDENCE_HANDOFF_PROFILE
+    return _DEFAULT_EVIDENCE_HANDOFF_PROFILE
 
 
 def _parse_event_timestamp(value: Any) -> datetime | None:
@@ -1227,6 +1263,7 @@ def _run_deep_beta_llm_reasoning_node(
     evidence_rows: list[dict[str, Any]],
     llm_runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    handoff_profile = _resolve_evidence_handoff_profile("deep_beta")
     if not settings.deep_beta_reasoning_llm_enabled:
         return {
             "node": node_name,
@@ -1259,7 +1296,7 @@ def _run_deep_beta_llm_reasoning_node(
             "duration_ms": item.get("duration_ms"),
             "source_errors": item.get("source_errors", {}),
         }
-        for item in deep_pass_summaries[:12]
+        for item in deep_pass_summaries[: handoff_profile["reasoning_pass_summaries"]]
         if isinstance(item, dict)
     ]
     compact_evidence = [
@@ -1270,7 +1307,7 @@ def _run_deep_beta_llm_reasoning_node(
             "score": item.get("score"),
             "text": _compact_snippet(item.get("text", ""), max_len=220),
         }
-        for item in evidence_rows[:20]
+        for item in evidence_rows[: handoff_profile["reasoning_evidence_rows"]]
         if isinstance(item, dict)
     ]
 
@@ -1505,6 +1542,7 @@ def _run_deep_beta_evidence_verification_node(
     reasoning_nodes: list[dict[str, Any]],
     llm_runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    handoff_profile = _resolve_evidence_handoff_profile("deep_beta")
     if not settings.deep_beta_evidence_verification_enabled:
         return {
             "status": "skipped",
@@ -1536,7 +1574,7 @@ def _run_deep_beta_evidence_verification_node(
             "retrieved_count": item.get("retrieved_count"),
             "source_errors": item.get("source_errors", {}),
         }
-        for item in deep_pass_summaries[:18]
+        for item in deep_pass_summaries[: handoff_profile["verification_pass_summaries"]]
         if isinstance(item, dict)
     ]
     compact_evidence = [
@@ -1547,7 +1585,7 @@ def _run_deep_beta_evidence_verification_node(
             "score": item.get("score"),
             "snippet": _compact_snippet(item.get("text"), max_len=180),
         }
-        for item in evidence_rows[:28]
+        for item in evidence_rows[: handoff_profile["verification_evidence_rows"]]
         if isinstance(item, dict)
     ]
     compact_nodes = [
@@ -1558,12 +1596,14 @@ def _run_deep_beta_evidence_verification_node(
             "insights": item.get("insights", [])[:3] if isinstance(item.get("insights"), list) else [],
             "watchouts": item.get("watchouts", [])[:3] if isinstance(item.get("watchouts"), list) else [],
             "reasoning_chain": (
-                item.get("reasoning_chain", [])[:2]
+                item.get("reasoning_chain", [])[
+                    : handoff_profile["verification_reasoning_chain_per_node"]
+                ]
                 if isinstance(item.get("reasoning_chain"), list)
                 else []
             ),
         }
-        for item in reasoning_nodes[:20]
+        for item in reasoning_nodes[: handoff_profile["verification_reasoning_nodes"]]
         if isinstance(item, dict)
     ]
     prompt = (
@@ -2379,6 +2419,8 @@ def _synthesize_deep_beta_long_report(
     if not api_key:
         return answer_markdown
 
+    mode = str(research_mode or "deep_beta").strip().lower()
+    handoff_profile = _resolve_evidence_handoff_profile(mode)
     compact_citations = [
         {
             "source_id": item.source_id,
@@ -2387,7 +2429,7 @@ def _synthesize_deep_beta_long_report(
             "url": item.url,
             "relevance": item.relevance,
         }
-        for item in citations[:18]
+        for item in citations[: handoff_profile["report_citations"]]
     ]
     verification_summary = (
         verification_matrix_payload.get("summary")
@@ -2406,12 +2448,14 @@ def _synthesize_deep_beta_long_report(
             "retrieved_count": item.get("retrieved_count"),
             "duration_ms": item.get("duration_ms"),
         }
-        for item in deep_pass_summaries[:14]
+        for item in deep_pass_summaries[: handoff_profile["report_pass_summaries"]]
         if isinstance(item, dict)
     ]
-    reasoning_chain_cards = _build_reasoning_chain_cards(reasoning_nodes, limit=18)
+    reasoning_chain_cards = _build_reasoning_chain_cards(
+        reasoning_nodes,
+        limit=handoff_profile["report_reasoning_chain_cards"],
+    )
 
-    mode = str(research_mode or "deep_beta").strip().lower()
     min_words, target_words, max_words = _resolve_adaptive_report_word_budget(
         research_mode=mode,
         citation_count=len(compact_citations),
@@ -3576,11 +3620,17 @@ def _build_citations(
     topic: str,
     retrieved_context: list[dict[str, Any]],
     uploaded_documents: list[dict[str, Any]],
+    *,
+    research_mode: str | None = None,
 ) -> list[Citation]:
+    handoff_profile = _resolve_evidence_handoff_profile(research_mode)
     citations: list[Citation] = []
     seen_source_ids: set[str] = set()
 
-    for idx, item in enumerate(retrieved_context[:10], start=1):
+    for idx, item in enumerate(
+        retrieved_context[: handoff_profile["citation_context_rows"]],
+        start=1,
+    ):
         if not isinstance(item, dict):
             continue
 
@@ -3608,7 +3658,10 @@ def _build_citations(
             )
         )
 
-    for idx, doc in enumerate(uploaded_documents[:8], start=1):
+    for idx, doc in enumerate(
+        uploaded_documents[: handoff_profile["uploaded_document_rows"]],
+        start=1,
+    ):
         if not isinstance(doc, dict):
             continue
 
@@ -4365,7 +4418,12 @@ def _infer_fallback_used(rag_result: Any) -> bool:
     return "fallback" in model_used
 
 
-def _trace_rows_for_citation(retrieval_trace: dict[str, Any]) -> list[dict[str, Any]]:
+def _trace_rows_for_citation(
+    retrieval_trace: dict[str, Any],
+    *,
+    research_mode: str | None = None,
+) -> list[dict[str, Any]]:
+    handoff_profile = _resolve_evidence_handoff_profile(research_mode)
     retriever_debug = (
         retrieval_trace.get("retriever_debug")
         if isinstance(retrieval_trace.get("retriever_debug"), dict)
@@ -4376,7 +4434,7 @@ def _trace_rows_for_citation(retrieval_trace: dict[str, Any]) -> list[dict[str, 
         return []
 
     rows: list[dict[str, Any]] = []
-    for item in top_documents[:10]:
+    for item in top_documents[: handoff_profile["citation_trace_rows"]]:
         if not isinstance(item, dict):
             continue
         source = str(item.get("source") or "retrieved")
@@ -7516,13 +7574,33 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         )
     )
 
-    citations = _build_citations(topic, effective_context, uploaded_documents)
+    citation_handoff = _resolve_evidence_handoff_profile(research_mode)
+    citation_context = effective_context
+    if research_mode == "deep_beta" and len(citation_context) < citation_handoff["citation_context_rows"]:
+        citation_context = _merge_retrieved_context(citation_context, [merged_context])
+
+    citations = _build_citations(
+        topic,
+        citation_context,
+        uploaded_documents,
+        research_mode=research_mode,
+    )
     if not citations and merged_context:
-        citations = _build_citations(topic, merged_context[:10], uploaded_documents)
+        citations = _build_citations(
+            topic,
+            merged_context[: citation_handoff["citation_context_rows"]],
+            uploaded_documents,
+            research_mode=research_mode,
+        )
     if not citations:
-        trace_rows = _trace_rows_for_citation(retrieval_trace)
+        trace_rows = _trace_rows_for_citation(retrieval_trace, research_mode=research_mode)
         if trace_rows:
-            citations = _build_citations(topic, trace_rows, uploaded_documents)
+            citations = _build_citations(
+                topic,
+                trace_rows,
+                uploaded_documents,
+                research_mode=research_mode,
+            )
     fallback_used = _infer_fallback_used(rag_result)
     generation_trace = (
         rag_result.trace.get("generation")

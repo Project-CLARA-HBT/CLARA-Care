@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import json
 from types import SimpleNamespace
 import urllib.error
 
@@ -14,6 +15,13 @@ from clara_ml.rag.retriever import Document
 @pytest.fixture(autouse=True)
 def _disable_deepseek_planner_by_default(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(tier2.settings, "deepseek_api_key", "")
+
+
+def _extract_json_assignment(prompt: str, key: str):
+    marker = f"{key}="
+    start = prompt.index(marker) + len(marker)
+    line = prompt[start:].splitlines()[0]
+    return json.loads(line)
 
 
 def test_filter_context_for_ddi_keeps_authoritative_label_rows():
@@ -126,6 +134,36 @@ def test_run_research_tier2_falls_back_to_merged_context_when_ddi_filter_empty(
     assert isinstance(result.get("telemetry", {}).get("query_plan"), dict)
     assert isinstance(result.get("metadata", {}).get("source_attempts"), list)
     assert isinstance(result.get("metadata", {}).get("source_errors"), dict)
+
+
+def test_build_citations_expands_pool_for_deep_beta_only() -> None:
+    retrieved_context = [
+        {
+            "id": f"doc-{index}",
+            "source": "pubmed",
+            "title": f"Evidence {index}",
+            "text": f"Evidence text {index}",
+            "url": f"https://example.com/{index}",
+            "score": 0.9 - (index * 0.01),
+        }
+        for index in range(1, 31)
+    ]
+
+    default_citations = tier2._build_citations(
+        "warfarin ibuprofen bleeding risk",
+        retrieved_context,
+        [],
+    )
+    beta_citations = tier2._build_citations(
+        "warfarin ibuprofen bleeding risk",
+        retrieved_context,
+        [],
+        research_mode="deep_beta",
+    )
+
+    assert len(default_citations) == 10
+    assert len(beta_citations) == 24
+    assert beta_citations[-1].source_id == "doc-24"
 
 
 def test_build_planner_hints_applies_latency_guard_for_fast_ddi_query():
@@ -2044,6 +2082,208 @@ def test_run_deep_beta_llm_reasoning_node_extracts_reasoning_chain(
     assert isinstance(result.get("reasoning_chain"), list)
     assert len(result["reasoning_chain"]) == 1
     assert "warfarin" in str(result["reasoning_chain"][0]["claim"]).lower()
+
+
+def test_deep_beta_reasoning_and_verifier_prompts_expand_handoff_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_prompts: list[str] = []
+    response_queue = [
+        (
+            "{"
+            '"confidence": 0.84,'
+            '"insights": ["Insight"],'
+            '"actions": ["Action"],'
+            '"watchouts": ["Watchout"],'
+            '"reasoning_chain": [{"claim":"Claim","evidence":"Evidence","inference":"Inference","clinical_action":"Action","confidence":0.8}],'
+            '"follow_up_queries": ["follow up"],'
+            '"evidence_checks": ["check"]'
+            "}"
+        ),
+        (
+            "{"
+            '"verification_confidence": 0.77,'
+            '"supported_claims": ["supported"],'
+            '"unsupported_claims": ["unsupported"],'
+            '"contradicted_claims": ["contradicted"],'
+            '"evidence_gaps": ["gap"],'
+            '"high_risk_flags": ["flag"]'
+            "}"
+        ),
+    ]
+
+    class _CapturingClient:
+        def generate(self, prompt: str, system_prompt: str | None = None) -> SimpleNamespace:
+            captured_prompts.append(prompt)
+            return SimpleNamespace(content=response_queue.pop(0), model="deepseek-v3.2")
+
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "test-key")
+    monkeypatch.setattr(tier2, "_build_reasoning_client", lambda **kwargs: _CapturingClient())
+
+    deep_pass_summaries = [
+        {
+            "pass_index": index,
+            "subquery": f"subquery {index}",
+            "retrieved_count": index + 1,
+            "duration_ms": float(index * 10),
+            "source_errors": {},
+        }
+        for index in range(1, 33)
+    ]
+    evidence_rows = [
+        {
+            "id": f"doc-{index}",
+            "source": "pubmed",
+            "title": f"Evidence {index}",
+            "score": 0.95,
+            "text": f"Evidence text {index}",
+        }
+        for index in range(1, 61)
+    ]
+    reasoning_nodes = [
+        {
+            "node": f"node-{index}",
+            "status": "completed",
+            "confidence": 0.75,
+            "insights": [f"Insight {index}"],
+            "watchouts": [f"Watchout {index}"],
+            "reasoning_chain": [
+                {
+                    "claim": f"Claim {index}-{chain_index}",
+                    "evidence": f"Evidence {index}-{chain_index}",
+                    "inference": f"Inference {index}-{chain_index}",
+                    "clinical_action": f"Action {index}-{chain_index}",
+                    "confidence": 0.7,
+                }
+                for chain_index in range(1, 5)
+            ],
+        }
+        for index in range(1, 31)
+    ]
+
+    reasoning_result = tier2._run_deep_beta_llm_reasoning_node(
+        node_name="deep_beta_evidence_audit",
+        objective="Audit evidence quality and unresolved gaps.",
+        topic="Tương tác warfarin với ibuprofen",
+        query_plan={},
+        retrieval_budget={},
+        deep_pass_summaries=deep_pass_summaries,
+        evidence_rows=evidence_rows,
+    )
+    verification_result = tier2._run_deep_beta_evidence_verification_node(
+        topic="Tương tác warfarin với ibuprofen",
+        deep_pass_summaries=deep_pass_summaries,
+        evidence_rows=evidence_rows,
+        reasoning_nodes=reasoning_nodes,
+    )
+
+    reasoning_prompt = captured_prompts[0]
+    verifier_prompt = captured_prompts[1]
+    reasoning_passes = _extract_json_assignment(reasoning_prompt, "deep_pass_summaries")
+    reasoning_evidence = _extract_json_assignment(reasoning_prompt, "evidence_rows")
+    verifier_passes = _extract_json_assignment(verifier_prompt, "deep_pass_summaries")
+    verifier_evidence = _extract_json_assignment(verifier_prompt, "evidence_rows")
+    verifier_nodes = _extract_json_assignment(verifier_prompt, "reasoning_nodes")
+
+    assert reasoning_result["status"] == "completed"
+    assert verification_result["status"] == "completed"
+    assert len(reasoning_passes) == 24
+    assert len(reasoning_evidence) == 40
+    assert len(verifier_passes) == 28
+    assert len(verifier_evidence) == 48
+    assert len(verifier_nodes) == 24
+    assert all(len(node["reasoning_chain"]) == 3 for node in verifier_nodes)
+
+
+def test_deep_beta_report_prompt_expands_writer_handoff_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_prompts: list[str] = []
+
+    class _CapturingWriterClient:
+        def generate(
+            self,
+            prompt: str,
+            system_prompt: str | None = None,
+            max_tokens: int | None = None,
+        ) -> SimpleNamespace:
+            captured_prompts.append(prompt)
+            return SimpleNamespace(
+                content="## Kết luận nhanh\n" + " ".join(["beta"] * 32),
+                model="deepseek-v3.2",
+            )
+
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "test-key")
+    monkeypatch.setattr(tier2.settings, "deep_beta_report_llm_enabled", True)
+    monkeypatch.setattr(tier2, "_build_reasoning_client", lambda **kwargs: _CapturingWriterClient())
+    monkeypatch.setattr(
+        tier2,
+        "_resolve_adaptive_report_word_budget",
+        lambda **kwargs: (10, 20, 40),
+    )
+    monkeypatch.setattr(
+        tier2,
+        "_ensure_deep_beta_report_artifacts",
+        lambda **kwargs: kwargs["markdown_text"],
+    )
+
+    citations = [
+        tier2.Citation(
+            source_id=f"source-{index}",
+            source="pubmed",
+            title=f"Title {index}",
+            url=f"https://example.com/{index}",
+            relevance=f"Relevance {index}",
+        )
+        for index in range(1, 36)
+    ]
+    deep_pass_summaries = [
+        {
+            "pass_index": index,
+            "subquery": f"subquery {index}",
+            "retrieved_count": index + 1,
+            "duration_ms": float(index * 10),
+        }
+        for index in range(1, 31)
+    ]
+    reasoning_nodes = [
+        {
+            "node": f"node-{index}",
+            "confidence": 0.7,
+            "reasoning_chain": [
+                {
+                    "claim": f"Claim {index}-{chain_index}",
+                    "evidence": f"Evidence {index}-{chain_index}",
+                    "inference": f"Inference {index}-{chain_index}",
+                    "clinical_action": f"Action {index}-{chain_index}",
+                    "confidence": 0.65,
+                }
+                for chain_index in range(1, 5)
+            ],
+        }
+        for index in range(1, 11)
+    ]
+
+    result = tier2._synthesize_deep_beta_long_report(
+        topic="Tương tác warfarin với ibuprofen",
+        answer_markdown="## Kết luận nhanh\nBản nháp ngắn.",
+        citations=citations,
+        verification_matrix_payload={},
+        reasoning_nodes=reasoning_nodes,
+        deep_pass_summaries=deep_pass_summaries,
+        evidence_verification={"supported_claims": ["claim"]},
+        research_mode="deep_beta",
+    )
+
+    writer_prompt = captured_prompts[0]
+    writer_citations = _extract_json_assignment(writer_prompt, "citations")
+    writer_passes = _extract_json_assignment(writer_prompt, "deep_pass_summaries")
+    writer_reasoning_cards = _extract_json_assignment(writer_prompt, "reasoning_chain_cards")
+
+    assert "## Kết luận nhanh" in result
+    assert len(writer_citations) == 30
+    assert len(writer_passes) == 24
+    assert len(writer_reasoning_cards) == 28
 
 
 def test_sanitize_user_facing_answer_markdown_removes_redundant_sections() -> None:
