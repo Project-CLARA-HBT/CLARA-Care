@@ -156,28 +156,28 @@ export default function SidebarNav({
         ].join(" ")}
       >
         {!collapsed ? (
-          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
               Preferences
             </p>
 
-            <div className="mt-2 flex items-center gap-1">
+            <div className="mt-1.5 flex items-center gap-0.5">
               {LEGACY_ACTIONS.map((action) => (
                 <Link
                   key={action.id}
                   href={action.href}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
                   aria-label={action.ariaLabel}
                   title={action.ariaLabel}
                 >
-                  <i className={`fa ${action.iconClass} text-[13px]`} aria-hidden="true" />
+                  <i className={`fa ${action.iconClass} text-[12px]`} aria-hidden="true" />
                 </Link>
               ))}
             </div>
 
-            <div className="mt-2">
-              <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Theme</p>
-              <div className="grid grid-cols-3 gap-1">
+            <div className="mt-1.5">
+              <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Theme</p>
+              <div className="grid grid-cols-3 gap-0.5">
                 {THEME_OPTIONS.map((option) => {
                   const active = themePreference === option.value;
                   return (
@@ -186,15 +186,15 @@ export default function SidebarNav({
                       type="button"
                       onClick={() => onThemeChange(option.value)}
                       className={[
-                        "inline-flex min-h-[28px] items-center justify-center rounded-lg border px-1 text-[10px] font-semibold transition",
+                        "inline-flex min-h-[24px] items-center justify-center rounded-md border px-0.5 text-[9px] font-medium transition",
                         active
-                          ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
+                          ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
                       title={option.label}
                     >
-                      <i className={`fa ${option.iconClass} text-[13px]`} aria-hidden="true" />
+                      <i className={`fa ${option.iconClass} text-[12px]`} aria-hidden="true" />
                       <span className="sr-only">{option.label}</span>
                     </button>
                   );
@@ -202,9 +202,9 @@ export default function SidebarNav({
               </div>
             </div>
 
-            <div className="mt-2">
-              <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Language</p>
-              <div className="grid grid-cols-2 gap-1">
+            <div className="mt-1.5">
+              <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Language</p>
+              <div className="grid grid-cols-2 gap-0.5">
                 {LANGUAGE_OPTIONS.map((option) => {
                   const active = uiLanguage === option.value;
                   return (
@@ -213,14 +213,14 @@ export default function SidebarNav({
                       type="button"
                       onClick={() => onLanguageChange(option.value)}
                       className={[
-                        "inline-flex min-h-[28px] items-center justify-center gap-1 rounded-lg border px-1 text-[10px] font-semibold transition",
+                        "inline-flex min-h-[24px] items-center justify-center gap-0.5 rounded-md border px-0.5 text-[9px] font-medium transition",
                         active
-                          ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
+                          ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
                     >
-                      <i className="fa fa-language text-[11px]" aria-hidden="true" />
+                      <i className="fa fa-language text-[10px]" aria-hidden="true" />
                       {option.label}
                     </button>
                   );

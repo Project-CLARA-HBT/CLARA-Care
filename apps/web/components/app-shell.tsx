@@ -371,16 +371,16 @@ export default function AppShell({ children }: Props) {
           </div>
 
           <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 Preferences
               </p>
-              <div className="mt-2">
-                <p className="mb-1 text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Theme</p>
+              <div className="mt-1.5">
+                <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Theme</p>
                 <select
                   value={themePreference}
                   onChange={(event) => handleThemeChange(event.target.value as ThemePreference)}
-                  className="h-9 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-secondary)] outline-none"
+                  className="h-8 w-full rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-secondary)] outline-none"
                   aria-label="Theme"
                 >
                   {THEME_OPTIONS.map((option) => (
@@ -390,9 +390,9 @@ export default function AppShell({ children }: Props) {
                   ))}
                 </select>
               </div>
-              <div className="mt-2">
-                <p className="mb-1 text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Language</p>
-                <div className="grid grid-cols-2 gap-1">
+              <div className="mt-1.5">
+                <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Language</p>
+                <div className="grid grid-cols-2 gap-0.5">
                   {LANGUAGE_OPTIONS.map((option) => {
                     const active = uiLanguage === option.value;
                     return (
@@ -401,9 +401,9 @@ export default function AppShell({ children }: Props) {
                         type="button"
                         onClick={() => handleLanguageChange(option.value)}
                         className={[
-                          "inline-flex min-h-[34px] items-center justify-center rounded-lg border text-xs font-semibold transition",
+                          "inline-flex min-h-[30px] items-center justify-center rounded-md border text-[11px] font-medium transition",
                           active
-                            ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
+                            ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
                             : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
                         ].join(" ")}
                         aria-pressed={active}

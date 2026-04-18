@@ -1120,6 +1120,14 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
   - Deploy script exit non-zero vì deep research smoke timeout sau 3 attempts (`curl_exit=28`); lỗi này nằm ngoài UI slice này.
   - Tester agent không có findings cho slice 1; artifacts dashboard/chat shell sau deploy có `Clara Care`, không còn `Digital Surgeon AI`; các app routes chính trả `307`.
   - Residual risk: chưa có authenticated visual browser verification.
+- Slice 2 update:
+  - Local feature commit: `d8d6894` (`feat: redesign end-user dashboard`).
+  - Đã deploy bằng cách copy `apps/web/app/dashboard/page.tsx` lên `/opt/clara-care` trên VPS `36.50.26.18`.
+  - Rollout thực hiện với web rebuild/recreate trên VPS; containers `web` và `api` đã restart và đang up.
+  - Route `http://127.0.0.1:3100/dashboard` trả `307`.
+  - Tester agent không có findings cho slice 2; artifact sau deploy có `Bảng điều khiển chăm sóc`, `Hành trình chăm sóc gần đây`, và `Hỏi CLARA`, đồng thời không còn hero wording cũ xoay quanh `ca lâm sàng`.
+  - Residual risk: chưa có authenticated visual browser verification.
+- Đang delegate một round UI polish mới: (1) thu gọn/tighten block điều khiển theme/ngôn ngữ trong Preferences, và (2) tăng spacing trong các nhóm/list chat history quanh `Lọc theo thư mục` / `Hôm nay` / `7 ngày qua` / `Cũ hơn`.
 
 ### Working rules
 - Lead chỉ đạo/điều phối, delegate implementation cho sub-agents.
@@ -1128,3 +1136,8 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Sau mỗi lần deploy phải giao agent tester riêng để test.
 - Mọi tiến độ phải log vào `context.md`.
 - Quy ước điều phối hiện tại: sub-agents dùng `gpt-5.4` với `xhigh`.
+
+## 14) Update 2026-04-18 +07 - Slice 3
+
+- Slice 3 (thu gọn block Preferences) đã implement local tại `apps/web/components/sidebar-nav.tsx`, `apps/web/components/app-shell.tsx`, và log bổ sung trong `context.md`.
+- Phạm vi chỉ là UI compact cho Preferences desktop/mobile: giảm padding, gap, chiều cao control và làm active state gọn hơn; không đổi logic theme/language và không đụng chat spacing.
