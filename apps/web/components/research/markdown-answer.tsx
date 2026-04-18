@@ -32,6 +32,7 @@ type CodeFenceProps = {
   code: string;
   language?: string;
   isChartSpec: boolean;
+  uiLanguage: UILanguage;
 };
 
 type ChartSpecData = {
@@ -840,13 +841,27 @@ function flattenMarkdownChildren(value: unknown): string {
   return "";
 }
 
-function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
+function CodeFence({ code, language, isChartSpec, uiLanguage }: CodeFenceProps) {
   const [notice, setNotice] = useState<"" | "success" | "error">("");
+  const isEnglishUI = uiLanguage === "en";
   const label = getFenceLanguageLabel(language);
   const chartSpec = useMemo(
     () => (isChartSpec ? parseChartSpec(code) : null),
     [code, isChartSpec]
   );
+  const blockTypeLabel = isChartSpec
+    ? (isEnglishUI ? "Chart spec" : "Đặc tả biểu đồ")
+    : (isEnglishUI ? "Code block" : "Khối mã");
+  const copyAriaLabel = isEnglishUI ? "Copy code block" : "Sao chép khối mã";
+  const copyButtonLabel =
+    notice === "success"
+      ? (isEnglishUI ? "Copied" : "Đã copy")
+      : notice === "error"
+        ? (isEnglishUI ? "Copy failed" : "Copy lỗi")
+        : "Copy";
+  const chartSpecNotice = isEnglishUI
+    ? "This block contains chart data spec. CLARA renders a live preview when parsing succeeds."
+    : "Block này là spec dữ liệu biểu đồ. CLARA render preview trực tiếp nếu parse được.";
 
   const onCopy = async () => {
     if (!navigator?.clipboard) {
@@ -867,16 +882,16 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-slate-100 dark:border-slate-700">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 bg-slate-950/50 px-3 py-2">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate-300">
-          <span className="font-semibold">{isChartSpec ? "chart spec" : "code block"}</span>
+          <span className="font-semibold">{blockTypeLabel}</span>
           <span className="rounded-full border border-slate-600 px-2 py-0.5">{label}</span>
         </div>
         <button
           type="button"
           onClick={() => void onCopy()}
           className="rounded-md border border-slate-600 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-          aria-label="Sao chép code block"
+          aria-label={copyAriaLabel}
         >
-          {notice === "success" ? "Đã copy" : notice === "error" ? "Copy lỗi" : "Copy"}
+          {copyButtonLabel}
         </button>
       </div>
       <pre className="overflow-x-auto p-3 text-[13px] leading-6">
@@ -889,7 +904,7 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
       ) : null}
       {isChartSpec ? (
         <p className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-300">
-          Block này là spec dữ liệu biểu đồ. CLARA đã render preview trực tiếp nếu parse được.
+          {chartSpecNotice}
         </p>
       ) : null}
     </section>
@@ -1156,7 +1171,14 @@ export default function MarkdownAnswer({
             }
 
             const isChartSpec = language ? CHART_SPEC_LANGUAGES.has(language) : false;
-            return <CodeFence code={code} language={language} isChartSpec={isChartSpec} />;
+            return (
+              <CodeFence
+                code={code}
+                language={language}
+                isChartSpec={isChartSpec}
+                uiLanguage={uiLanguage}
+              />
+            );
           },
           table: ({ children }) => (
             <div className="mt-3 overflow-x-auto rounded-[0.85rem] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">

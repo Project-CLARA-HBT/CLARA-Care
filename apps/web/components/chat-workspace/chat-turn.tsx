@@ -34,6 +34,9 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
   const result = turn.result;
   const answer = sanitizeChatboxAnswer(result.answer || "");
   const citations = result.tier === "tier2" ? result.citations : [];
+  const preserveStructuredSections =
+    result.tier === "tier2" &&
+    (result.researchMode === "deep" || result.researchMode === "deep_beta");
 
   return (
     <div className="space-y-1.5">
@@ -57,8 +60,8 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
               citations={citations}
               showInlineCitations={true}
               enableMermaid={false}
-              stripReferenceSection={true}
-              stripSafetyMatrixSection={true}
+              stripReferenceSection={!preserveStructuredSections}
+              stripSafetyMatrixSection={!preserveStructuredSections}
               stripMermaidBlocks={true}
               stripChartSpecBlocks={true}
               uiLanguage={uiLanguage}

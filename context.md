@@ -1265,3 +1265,16 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Scope: localize `services/ml/src/clara_ml/agents/research_tier2.py` plan/risk text by `answer_language` inside `_ensure_markdown_structure` so `deep`/`deep_beta` English answers no longer inject Vietnamese fallback strings.
 - Test status: targeted pytest passed, 4/4 green in `services/ml/tests/test_research_tier2_agent.py` covering English section normalization and deep/deep_beta language-fidelity regressions.
+- Deploy và tester verify:
+  - Commit `d2b3019` đã push lên `origin/main`.
+  - Đã copy runtime file `services/ml/src/clara_ml/agents/research_tier2.py` lên host `/opt/clara-care` và chạy `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build ml`.
+  - Tester độc lập xác nhận SHA-256 file host khớp blob của commit `d2b3019`, container `clara-app-ml-1` đang `Up`, và marker feature 3 (`Expected output:`, English risk labels `High/Red`, low-risk English note) hiện diện trên host.
+  - Smoke check trong container xác nhận `answer_language='en'` không còn các fallback strings Việt như `## Kế hoạch nghiên cứu`, `Kết quả kỳ vọng`, `Ranh giới độ chắc chắn`, `Theo dõi định kỳ`; nhánh `vi` vẫn giữ tiếng Việt có dấu đúng.
+  - Residual risk từ tester: chưa chạy full E2E qua endpoint live `/v1/research/tier2`; mới verify ở mức host file + container runtime + direct Python smoke.
+
+## 2026-04-18 Feature 4 Note
+
+- Scope: web render slice for `deep`/`deep_beta` in `apps/web`, keeping `References` and safety-matrix sections in chat answer cards only for deep modes, while threading `uiLanguage` through answer chrome where this helper is reused.
+- Files touched: `apps/web/components/chat-workspace/chat-turn.tsx`, `apps/web/components/research/markdown-answer.tsx`, `apps/web/components/research/lib/research-page-sections.tsx`.
+- Test status: `npx eslint components/research/markdown-answer.tsx components/research/lib/research-page-sections.tsx components/chat-workspace/chat-turn.tsx` and `npx tsc --noEmit` both passed in `apps/web`.
+- Residual risk: mermaid/chart-spec blocks are still stripped in chat for all modes, and `research-page-sections.tsx` appears not wired to the current `/chat` route, so the live user-facing impact is primarily through `chat-turn.tsx`.
