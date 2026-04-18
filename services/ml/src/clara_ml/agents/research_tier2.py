@@ -894,6 +894,50 @@ def _strip_markdown_fence(value: str) -> str:
     return text
 
 
+def _extract_first_json_object(value: str) -> str:
+    text = str(value or "").strip()
+    start = text.find("{")
+    if start < 0:
+        return ""
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        ch = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+                continue
+            if ch == "\\":
+                escaped = True
+                continue
+            if ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == "{":
+            depth += 1
+            continue
+        if ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return ""
+
+
+def _parse_planner_json_payload(raw_content: str) -> Any:
+    cleaned = _strip_markdown_fence(raw_content)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        extracted = _extract_first_json_object(cleaned)
+        if not extracted:
+            raise
+        return json.loads(extracted)
+
+
 def _safe_planner_error_code(exc: Exception) -> str:
     normalized = f"{exc.__class__.__name__}:{exc}".lower()
     if "timeout" in normalized:
@@ -2061,12 +2105,20 @@ def _build_reasoning_chain_cards(
 
 
 def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
-    # Keep deep-beta long enough to feel substantial, but not dossier-scale.
-    min_words = min(max(int(settings.deep_beta_report_min_words), 1000), 6000)
-    page_target = min(max(int(settings.deep_beta_report_target_pages), 1), 8)
-    words_per_page = min(max(int(settings.deep_beta_report_words_per_page), 220), 600)
-    target_words = max(min_words + 600, page_target * words_per_page)
-    max_words = max(min(target_words + 1800, 9000), min_words + 800)
+    # Deep Beta should produce a true long-form deep research report.
+    hard_min = 7000
+    hard_max = 15000
+    configured_min = int(settings.deep_beta_report_min_words)
+    min_words = min(max(configured_min, hard_min), hard_max)
+
+    # Keep target flexible, but still inside a readable deep-report envelope.
+    page_target = min(max(int(settings.deep_beta_report_target_pages), 10), 80)
+    words_per_page = min(max(int(settings.deep_beta_report_words_per_page), 260), 900)
+    configured_target = page_target * words_per_page
+    baseline_target = max(min_words + 900, 9000)
+    target_words = min(max(configured_target, baseline_target), hard_max - 700)
+
+    max_words = min(max(target_words + 1800, min_words + 1200), hard_max)
     target_words = min(max(target_words, min_words), max_words)
     return min_words, target_words, max_words
 
@@ -2101,21 +2153,16 @@ def _resolve_adaptive_report_word_budget(
     evidence_density = max(0, int(citation_count)) + max(0, int(deep_pass_count)) + max(
         0, int(reasoning_node_count)
     )
-    if evidence_density >= 30:
-        return min_words, target_words, max_words
 
-    if evidence_density >= 20:
-        adaptive_min = max(1800, int(min_words * 0.95))
-        adaptive_target = max(2600, int(target_words * 0.95))
-    elif evidence_density >= 12:
-        adaptive_min = max(1400, int(min_words * 0.82))
-        adaptive_target = max(2200, int(target_words * 0.84))
-    else:
-        adaptive_min = max(1100, int(min_words * 0.72))
-        adaptive_target = max(1800, int(target_words * 0.75))
-
-    adaptive_target = max(adaptive_target, adaptive_min + 450)
-    adaptive_max = max(adaptive_target + 1000, int(max_words * 0.85))
+    # Never downscale Deep Beta into short answers.
+    adaptive_min = min_words
+    adaptive_max = max_words
+    adaptive_target = target_words
+    if evidence_density >= 50:
+        adaptive_target = min(adaptive_max, max(target_words + 1800, int(target_words * 1.18)))
+    elif evidence_density >= 35:
+        adaptive_target = min(adaptive_max, max(target_words + 900, int(target_words * 1.1)))
+    adaptive_target = min(max(adaptive_target, adaptive_min), adaptive_max)
     return adaptive_min, adaptive_target, adaptive_max
 
 
@@ -2127,21 +2174,34 @@ def _resolve_report_section_contract(
     mode = str(research_mode or "fast").strip().lower()
     quick_conclusion = f"## {_resolve_section_title('quick_conclusion', answer_language)}"
     key_points = f"## {_resolve_section_title('key_points', answer_language)}"
+    research_plan = f"## {_resolve_section_title('research_plan', answer_language)}"
+    detailed_analysis = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
+    clinical_context = f"## {_resolve_section_title('clinical_context', answer_language)}"
     practical_application = f"## {_resolve_section_title('practical_application', answer_language)}"
+    practical_recommendations = f"## {_resolve_section_title('practice_recommendations', answer_language)}"
+    safety_guidance = f"## {_resolve_section_title('safety_guidance', answer_language)}"
+    monitoring_red_flags = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
     important_caveats = f"## {_resolve_section_title('safety_notes', answer_language)}"
     if mode == "deep_beta":
         sections = [
             quick_conclusion,
             key_points,
+            research_plan,
+            detailed_analysis,
+            clinical_context,
             practical_application,
+            practical_recommendations,
+            safety_guidance,
+            monitoring_red_flags,
             important_caveats,
         ]
         requirements = [
+            "- write in deep-research scientific style: explicit assumptions, evidence hierarchy, contradiction handling, and decision boundaries",
             "- open with the answer and decision boundary before background context",
-            "- keep the reasoning explicit, but readable and reader-first rather than dossier-like",
+            "- include at least one comparative evidence table and one risk-monitoring table when clinically relevant",
             "- when the query compares options, cover adherence, efficacy, safety, feasibility, and cost/access",
-            "- use at most 1-2 markdown tables only when they materially improve clarity",
-            "- discuss uncertainty, contradictory evidence, subgroup caveats, and monitoring next steps explicitly",
+            "- include subgroup caveats, uncertainty, and how new evidence could change the recommendation",
+            "- do not expose internal pipeline tags, execution steps, or debug telemetry in the answer body",
         ]
         return sections, requirements
 
@@ -2163,16 +2223,17 @@ def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
         return {
-            "tone": "high_signal_research_answer",
-            "narrative_density": "high",
-            "target_reader": "clinician or operator who needs a rapid but rigorous synthesis",
+            "tone": "scientific_deep_research_report",
+            "narrative_density": "very_high",
+            "target_reader": "clinician, researcher, or medical operator who needs a long-form deep synthesis",
             "must_do": [
                 "Lead with the answer, then explain why the evidence points there.",
-                "Keep claim-evidence linkage explicit without sounding like an internal report.",
+                "Keep claim-evidence linkage explicit and show contradiction handling clearly.",
                 "Translate uncertainty into concrete decision boundaries and monitoring steps.",
+                "Sustain analytical depth across sections; avoid shallow summary-only paragraphs.",
             ],
             "avoid": [
-                "Do not sound like a hospital dossier, compliance memo, or legal template.",
+                "Do not expose internal system nodes, debug steps, or planner tags.",
                 "Do not repeat identical sentence openings across adjacent paragraphs.",
                 "Do not overuse long bullet dumps when short synthesis paragraphs are clearer.",
             ],
@@ -2370,16 +2431,20 @@ def _synthesize_deep_beta_long_report(
         30.0,
     )
     report_max_tokens = (
-        max(int(settings.deep_beta_report_max_tokens), 1024)
+        max(int(settings.deep_beta_report_max_tokens), 4096)
         if mode == "deep_beta"
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
     language_label = "English" if answer_language == "en" else "Vietnamese"
     style_target_line = (
-        "- write like a high-signal Perplexity-style medical research answer: direct, analytic, reader-first, and not dossier-like"
+        "- write like a scientific deep-research medical report: evidence-dense, contradiction-aware, and clinically actionable"
+        if mode == "deep_beta"
+        else "- write like a high-signal Perplexity-style medical research answer: direct, analytic, reader-first, and not dossier-like"
     )
     chain_requirement_line = (
-        "- keep claim-to-evidence linkage explicit in short paragraphs or short bullets without rigid chain templates"
+        "- keep claim-to-evidence linkage explicit in concise analytical paragraphs and short tables; avoid internal debug chain labels"
+        if mode == "deep_beta"
+        else "- keep claim-to-evidence linkage explicit in short paragraphs or short bullets without rigid chain templates"
     )
     prompt = (
         f"Rewrite the baseline answer into a polished long-form medical research answer in {language_label}.\n"
@@ -2436,12 +2501,15 @@ def _synthesize_deep_beta_long_report(
             return answer_markdown
 
         expansion_rounds = (
-            max(int(settings.deep_beta_report_expansion_rounds), 0)
+            max(int(settings.deep_beta_report_expansion_rounds), 4)
             if mode == "deep_beta"
             else max(min(int(settings.deep_beta_report_expansion_rounds), 2), 1)
         )
-        if target_words >= 20000 and mode == "deep_beta":
-            expansion_rounds = max(expansion_rounds, 6)
+        if mode == "deep_beta":
+            if target_words >= 10000:
+                expansion_rounds = max(expansion_rounds, 6)
+            elif target_words >= 8000:
+                expansion_rounds = max(expansion_rounds, 5)
         for round_idx in range(expansion_rounds):
             current_words = _markdown_word_count(content)
             if current_words >= target_words:
@@ -2449,10 +2517,11 @@ def _synthesize_deep_beta_long_report(
 
             missing_words = max(target_words - current_words, 0)
             continuation_prompt = (
-                "Expand the following Vietnamese medical report by APPENDING new content only.\n"
+                f"Expand the following {language_label} medical report by APPENDING new content only.\n"
                 "Do NOT rewrite previous sections.\n"
                 "Do NOT duplicate any existing H2 section title.\n"
-                "Add deeper analysis with practical clinical caveats, subgroup handling, and uncertainty.\n"
+                "Do NOT add internal pipeline labels like [scope_question], deep_beta_scope, retrieval_budgeting, or execution logs.\n"
+                "Add deeper analysis with practical clinical caveats, subgroup handling, uncertainty, and scientific interpretation.\n"
                 f"Need at least ~{missing_words} additional words.\n"
                 "Append supplementary sections using H3/H4 headings and additional tables where useful.\n"
                 "Return Markdown only.\n\n"
@@ -2704,6 +2773,19 @@ def _refine_query_plan_with_llm(
         f"base_keywords={keywords[:12]}\n"
         f"base_plan={json.dumps(base_query_plan, ensure_ascii=False)}\n"
     )
+    compact_recovery_prompt = (
+        "Return STRICT JSON only for retrieval planning.\n"
+        "Required keys: canonical_query, language_hint, keywords, source_queries, decomposition.\n"
+        "Do not add explanations.\n"
+        "Ensure source_queries contains internal/scientific/web with at least one query each.\n"
+        "Ensure decomposition contains deep_pass_queries/deep_beta_pass_queries with at least one query each.\n"
+        f"topic={topic}\n"
+        f"research_mode={research_mode}\n"
+        f"route_role={route_role}\n"
+        f"route_intent={route_intent}\n"
+        f"keywords_hint={keywords[:8]}\n"
+        f"canonical_hint={base_query_plan.get('canonical_query')}\n"
+    )
 
     try:
         try:
@@ -2713,27 +2795,36 @@ def _refine_query_plan_with_llm(
             client = _build_query_planner_client()
         if client is None:
             raise RuntimeError("runtime_llm_unconfigured")
-        llm_response = client.generate(prompt=prompt, system_prompt=system_prompt)
-        cleaned = _strip_markdown_fence(llm_response.content)
-        parsed_payload = json.loads(cleaned)
-        sanitized = _sanitize_llm_query_plan_payload(
-            parsed_payload,
-            base_query_plan=base_query_plan,
-            research_mode=research_mode,
-        )
-        return sanitized, {
-            "attempted": True,
-            "status": "completed",
-            "reason": "ok",
-            "model_used": llm_response.model,
-        }
+        first_error: Exception | None = None
+        for attempt_index, planner_prompt in enumerate((prompt, compact_recovery_prompt), start=1):
+            try:
+                llm_response = client.generate(prompt=planner_prompt, system_prompt=system_prompt)
+                parsed_payload = _parse_planner_json_payload(llm_response.content)
+                sanitized = _sanitize_llm_query_plan_payload(
+                    parsed_payload,
+                    base_query_plan=base_query_plan,
+                    research_mode=research_mode,
+                )
+                return sanitized, {
+                    "attempted": True,
+                    "status": "completed",
+                    "reason": "ok" if attempt_index == 1 else "ok_recovered_compact_prompt",
+                    "model_used": llm_response.model,
+                }
+            except Exception as exc:  # pragma: no cover - defensive planner retry
+                if first_error is None:
+                    first_error = exc
+                continue
+        if first_error is None:
+            raise RuntimeError("planner_unknown_failure")
+        raise first_error
     except Exception as exc:  # pragma: no cover - network/provider defensive path
         return base_query_plan, {
             "attempted": True,
-            "status": "degraded",
-            "reason": _safe_planner_error_code(exc),
+            "status": "recovered",
+            "reason": f"heuristic_recovery:{_safe_planner_error_code(exc)}",
             "error": f"{exc.__class__.__name__}: {exc}",
-            "model_used": "planner-fallback-v1",
+            "model_used": "planner-heuristic-v1",
         }
 
 
@@ -4559,6 +4650,12 @@ def _build_reasoning_digest(
 
 def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str:
     topic_text = _compact_snippet(topic, max_len=240)
+    def _clean_plan_line(value: str) -> str:
+        text = str(value or "").strip()
+        text = re.sub(r"^\s*\[[^\]]+\]\s*", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
     if _is_nutrition_diet_query(topic) and _is_comparison_query(topic):
         return (
             "1. Xác định nguyên tắc cốt lõi, nhóm thực phẩm chủ đạo và mục tiêu sức khỏe của chế độ ăn DASH.\n"
@@ -4575,8 +4672,8 @@ def _build_research_plan_markdown(topic: str, plan_steps: list[PlanStep]) -> str
         )
     rows: list[str] = []
     for index, step in enumerate(plan_steps, start=1):
-        objective = _compact_snippet(step.objective, max_len=220)
-        output = _compact_snippet(step.output, max_len=180)
+        objective = _compact_snippet(_clean_plan_line(step.objective), max_len=220)
+        output = _compact_snippet(_clean_plan_line(step.output), max_len=180)
         rows.append(f"{index}. {objective} Kết quả kỳ vọng: {output}.")
         if len(rows) >= 8:
             break
@@ -4722,9 +4819,13 @@ def _ensure_markdown_structure(
     monitoring_heading = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
 
     required_headings = (
-        (quick_conclusion_heading,)
-        if research_mode in {"deep", "deep_beta"}
-        else (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
+        (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
+        if research_mode == "deep_beta"
+        else (
+            (quick_conclusion_heading, key_points_heading)
+            if research_mode == "deep"
+            else (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
+        )
     )
     plan_markdown = _build_research_plan_markdown(topic, plan_steps or [])
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
@@ -5064,13 +5165,26 @@ def _extract_markdown_h2_section_ids(markdown_text: str) -> list[str]:
 
 
 def _approved_user_facing_section_ids(research_mode: str) -> set[str]:
-    _ = str(research_mode or "fast").strip().lower()
-    return {
+    mode = str(research_mode or "fast").strip().lower()
+    base_sections = {
         "quick_conclusion",
         "key_points",
         "practical_application",
         "safety_notes",
         "monitoring_red_flags",
+    }
+    if mode == "fast":
+        return base_sections
+    # Deep/Deep Beta can expose richer sections for long-form analysis.
+    return {
+        *base_sections,
+        "detailed_analysis",
+        "safety_guidance",
+        "research_plan",
+        "executive_summary",
+        "clinical_context",
+        "practice_recommendations",
+        "limitations_legal",
     }
 
 
@@ -5119,20 +5233,20 @@ def _drop_unapproved_h2_sections(markdown_text: str, *, research_mode: str) -> s
 
 def _has_reader_friendly_layout(markdown_text: str, *, research_mode: str) -> bool:
     section_ids = set(_extract_markdown_h2_section_ids(markdown_text))
-    if _find_unapproved_h2_sections(markdown_text, research_mode=research_mode):
-        return False
     mode = str(research_mode).strip().lower()
     if mode == "fast":
+        if _find_unapproved_h2_sections(markdown_text, research_mode=research_mode):
+            return False
         return (
             "quick_conclusion" in section_ids
             and "key_points" in section_ids
             and "practical_application" in section_ids
             and "safety_notes" in section_ids
         )
+    # Deep modes tolerate extra sections as long as core structure exists.
     return (
         "quick_conclusion" in section_ids
         and "key_points" in section_ids
-        and "practical_application" in section_ids
         and bool({"safety_notes", "safety_guidance", "monitoring_red_flags"} & section_ids)
     )
 
@@ -5696,18 +5810,19 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Evidence table"),
             },
         )
-        sanitized = _remove_h3_sections_by_heading_keys(
-            sanitized,
-            heading_keys={
-                _canonical_h2_key("Nhật ký multi-pass retrieval"),
-                _canonical_h2_key("Ma trận reasoning nodes"),
-                _canonical_h2_key("Ma trận trạng thái claim-level"),
-                _canonical_h2_key("Hồ sơ nguồn mở rộng"),
-                _canonical_h2_key("Nguồn tham chiếu bổ sung"),
-                _canonical_h2_key("Bảng bổ sung Deep Beta"),
-                _canonical_h2_key("Bảng triển khai truy xuất"),
-            },
-        )
+        if mode == "deep":
+            sanitized = _remove_h3_sections_by_heading_keys(
+                sanitized,
+                heading_keys={
+                    _canonical_h2_key("Nhật ký multi-pass retrieval"),
+                    _canonical_h2_key("Ma trận reasoning nodes"),
+                    _canonical_h2_key("Ma trận trạng thái claim-level"),
+                    _canonical_h2_key("Hồ sơ nguồn mở rộng"),
+                    _canonical_h2_key("Nguồn tham chiếu bổ sung"),
+                    _canonical_h2_key("Bảng bổ sung Deep Beta"),
+                    _canonical_h2_key("Bảng triển khai truy xuất"),
+                },
+            )
 
     # Mermaid/chart spec is moved out of main answer area to reduce visual clutter.
     sanitized = _remove_fenced_blocks(
@@ -5718,12 +5833,32 @@ def _sanitize_user_facing_answer_markdown(
         if not _has_reader_friendly_layout(sanitized, research_mode=mode):
             sanitized = _stabilize_fast_answer_layout(sanitized, answer_language=answer_language)
     elif mode in {"deep", "deep_beta"}:
-        sanitized = _stabilize_long_answer_layout(
+        should_stabilize_long = not _has_reader_friendly_layout(sanitized, research_mode=mode)
+        if mode == "deep_beta":
+            # Preserve long deep-research body when it is already substantial.
+            deep_beta_guardrail = max(2500, int(max(int(settings.deep_beta_report_min_words), 7000) * 0.5))
+            if _markdown_word_count(sanitized) >= deep_beta_guardrail:
+                should_stabilize_long = False
+        sanitized = (
+            _stabilize_long_answer_layout(
+                sanitized,
+                research_mode=mode,
+                answer_language=answer_language,
+            )
+            if should_stabilize_long
+            else sanitized
+        )
+    if mode == "fast":
+        sanitized = _drop_unapproved_h2_sections(sanitized, research_mode=mode)
+    elif mode in {"deep", "deep_beta"}:
+        # Remove only the overly verbose execution appendix; keep deep sections intact.
+        sanitized = _remove_h2_sections(
             sanitized,
-            research_mode=mode,
-            answer_language=answer_language,
-        ) if not _has_reader_friendly_layout(sanitized, research_mode=mode) else sanitized
-    sanitized = _drop_unapproved_h2_sections(sanitized, research_mode=mode)
+            section_heading_keys={
+                _canonical_h2_key("Triển khai đầy đủ kế hoạch"),
+                _canonical_h2_key("Full execution plan"),
+            },
+        )
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
 
@@ -6074,18 +6209,24 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
         )
 
-    if llm_status == "completed":
+    if llm_status in {"completed", "recovered"}:
         planner_hints["query_plan"] = llm_plan
         planner_hints["reason_codes"] = [
             *planner_hints.get("reason_codes", []),
-            "llm_query_planner_enabled",
+            "llm_query_planner_enabled"
+            if llm_status == "completed"
+            else "llm_query_planner_recovered",
         ]
         flow_events.append(
             _event(
                 stage="llm_query_planner",
                 status="completed",
                 source_count=0,
-                note="LLM query planner refinement completed.",
+                note=(
+                    "LLM query planner refinement completed."
+                    if llm_status == "completed"
+                    else "LLM query planner recovered with deterministic base plan."
+                ),
                 component="planner",
                 payload={
                     "model_used": llm_plan_status.get("model_used"),
@@ -8511,3 +8652,4 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             ],
         },
     }
+
