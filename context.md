@@ -1198,3 +1198,15 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 7 implement local tại `apps/web/components/sidebar-nav.tsx`.
 - Mục tiêu: chuyển cụm `Preferences` (theme/language) lên hàng trên cạnh nút collapse của sidebar desktop để tiết kiệm không gian, không chỉnh `apps/web/app/chat/page.tsx`.
+- Tester verify slice 7 lúc `2026-04-18 21:57:42 +0700`:
+  - Đã SSH vào VPS bằng đúng credential yêu cầu và đối chiếu `sha256` file `/opt/clara-care/apps/web/components/sidebar-nav.tsx`; hash trên host là `6d99c010b754086c85ebbaf2f46303eddfb71e33f273c17a183001e8a07981f9`, khớp blob của commit `7a61826` (`feat: move preferences to sidebar header`).
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml ps web api` cho thấy `clara-app-web-1` và `clara-app-api-1` đều `Up`, bind lần lượt `127.0.0.1:3100->3000/tcp` và `127.0.0.1:8100->8000/tcp`; `docker inspect` xác nhận cả hai container đã recreate/start lúc `2026-04-18T14:49:33Z`.
+  - Smoke route trực tiếp trên app port: `http://127.0.0.1:3100/chat` trả `307` về `/login?next=%2Fchat`, `http://127.0.0.1:3100/dashboard` trả `307` về `/login?next=%2Fdashboard`, phù hợp route cần auth và xác nhận web process đang phục vụ request.
+  - Bằng chứng artifact/log bổ sung: `docker logs` của `web` báo Next.js `15.5.14` `Ready in 385ms`; trong SSR artifact `/app/.next/server/app/dashboard.html` có marker mới của slice 7 là class top-row `mb-4 px-2 flex items-center justify-between gap-2` đi cùng icon collapse `keyboard_double_arrow_left`, và không còn class sidebar cũ `mt-1.5 flex items-center justify-between gap-1.5` của block Preferences desktop trước đó.
+  - Tester result: không có findings blocking trong phạm vi verify deploy Slice 7.
+  - Residual risk: chưa có authenticated visual verification sau login nên chưa xác nhận trực quan vị trí controls Preferences trên desktop sidebar; trong payload `/dashboard` vẫn có một `Preferences` section khác ngoài sidebar nên kết luận artifact dựa trên marker sidebar-specific nêu trên, không dựa vào text `Preferences` đơn thuần.
+
+## 19) Update 2026-04-18 +07 - Slice 8
+
+- Slice 8 implement local tại `apps/web/app/chat/page.tsx`.
+- Mục tiêu: siết spacing khu chat history sát hơn theo feedback mới, ưu tiên giảm khoảng cách giữa các conversation card nhưng không đổi wording hay business logic.
