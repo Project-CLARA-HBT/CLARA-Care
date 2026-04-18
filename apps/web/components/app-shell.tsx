@@ -32,10 +32,10 @@ type Props = {
   children: ReactNode;
 };
 
-const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
-  { value: "light", label: "Sang" },
-  { value: "dark", label: "Toi" },
-  { value: "system", label: "System" },
+const THEME_OPTIONS: Array<{ value: ThemePreference; label: string; iconClass: string }> = [
+  { value: "light", label: "Sang", iconClass: "fa-sun-o" },
+  { value: "dark", label: "Toi", iconClass: "fa-moon-o" },
+  { value: "system", label: "System", iconClass: "fa-desktop" },
 ];
 
 const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
@@ -375,24 +375,43 @@ export default function AppShell({ children }: Props) {
               <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 Preferences
               </p>
-              <div className="mt-1.5">
-                <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Theme</p>
-                <select
-                  value={themePreference}
-                  onChange={(event) => handleThemeChange(event.target.value as ThemePreference)}
-                  className="h-8 w-full rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-secondary)] outline-none"
-                  aria-label="Theme"
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <div
+                  className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                  role="group"
+                  aria-label="Theme preferences"
                 >
-                  {THEME_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="mt-1.5">
-                <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Language</p>
-                <div className="grid grid-cols-2 gap-0.5">
+                  <span className="sr-only">Theme</span>
+                  {THEME_OPTIONS.map((option) => {
+                    const active = themePreference === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleThemeChange(option.value)}
+                        className={[
+                          "inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[11px] transition",
+                          active
+                            ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                        ].join(" ")}
+                        aria-label={`Theme ${option.label}`}
+                        aria-pressed={active}
+                        title={`Theme: ${option.label}`}
+                      >
+                        <i className={`fa ${option.iconClass} text-[13px]`} aria-hidden="true" />
+                        <span className="sr-only">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div
+                  className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                  role="group"
+                  aria-label="Language preferences"
+                >
+                  <span className="sr-only">Language</span>
                   {LANGUAGE_OPTIONS.map((option) => {
                     const active = uiLanguage === option.value;
                     return (
@@ -401,12 +420,14 @@ export default function AppShell({ children }: Props) {
                         type="button"
                         onClick={() => handleLanguageChange(option.value)}
                         className={[
-                          "inline-flex min-h-[30px] items-center justify-center rounded-md border text-[11px] font-medium transition",
+                          "inline-flex min-h-[28px] min-w-[38px] items-center justify-center rounded-[6px] px-2 text-[11px] font-semibold transition",
                           active
-                            ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
-                            : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+                            ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                         ].join(" ")}
+                        aria-label={`Language ${option.label}`}
                         aria-pressed={active}
+                        title={`Language: ${option.label}`}
                       >
                         {option.label}
                       </button>

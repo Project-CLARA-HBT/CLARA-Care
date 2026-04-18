@@ -175,9 +175,13 @@ export default function SidebarNav({
               ))}
             </div>
 
-            <div className="mt-1.5">
-              <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Theme</p>
-              <div className="grid grid-cols-3 gap-0.5">
+            <div className="mt-1.5 flex items-center justify-between gap-1.5">
+              <div
+                className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                role="group"
+                aria-label="Theme preferences"
+              >
+                <span className="sr-only">Theme</span>
                 {THEME_OPTIONS.map((option) => {
                   const active = themePreference === option.value;
                   return (
@@ -186,25 +190,28 @@ export default function SidebarNav({
                       type="button"
                       onClick={() => onThemeChange(option.value)}
                       className={[
-                        "inline-flex min-h-[24px] items-center justify-center rounded-md border px-0.5 text-[9px] font-medium transition",
+                        "inline-flex h-5 w-5 items-center justify-center rounded-[5px] text-[9px] transition",
                         active
-                          ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
-                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                          ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
+                      aria-label={`Theme ${option.label}`}
                       aria-pressed={active}
-                      title={option.label}
+                      title={`Theme: ${option.label}`}
                     >
-                      <i className={`fa ${option.iconClass} text-[12px]`} aria-hidden="true" />
+                      <i className={`fa ${option.iconClass} text-[11px]`} aria-hidden="true" />
                       <span className="sr-only">{option.label}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            <div className="mt-1.5">
-              <p className="mb-0.5 text-[9px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Language</p>
-              <div className="grid grid-cols-2 gap-0.5">
+              <div
+                className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                role="group"
+                aria-label="Language preferences"
+              >
+                <span className="sr-only">Language</span>
                 {LANGUAGE_OPTIONS.map((option) => {
                   const active = uiLanguage === option.value;
                   return (
@@ -213,14 +220,15 @@ export default function SidebarNav({
                       type="button"
                       onClick={() => onLanguageChange(option.value)}
                       className={[
-                        "inline-flex min-h-[24px] items-center justify-center gap-0.5 rounded-md border px-0.5 text-[9px] font-medium transition",
+                        "inline-flex min-h-[20px] min-w-[28px] items-center justify-center rounded-[5px] px-1 text-[9px] font-semibold transition",
                         active
-                          ? "border-sky-200/70 bg-sky-500/10 text-sky-700 dark:border-sky-500/25 dark:text-sky-300"
-                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                          ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
+                      aria-label={`Language ${option.label}`}
                       aria-pressed={active}
+                      title={`Language: ${option.label}`}
                     >
-                      <i className="fa fa-language text-[10px]" aria-hidden="true" />
                       {option.label}
                     </button>
                   );

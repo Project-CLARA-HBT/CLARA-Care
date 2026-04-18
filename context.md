@@ -1168,3 +1168,22 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 5 đã implement local tại `apps/web/app/chat/page.tsx`; mục tiêu là giảm spacing list chat/history sau phản hồi user để phần `Cuộc trò chuyện` gọn lại nhưng vẫn thoáng hơn trước slice 4.
 - Phạm vi chỉ chạm UI khu history/sidebar màn chat và giảm nhẹ `estimateSize` cho virtualizer; không đổi Preferences, wording, hay logic nghiệp vụ.
+- Ops unblock deploy lúc `2026-04-18 21:17:38 +0700`:
+  - VPS `36.50.26.18` fail `docker compose ... up -d --build web` do `ENOSPC: no space left on device, write` trong bước `npm run build`; kiểm tra host cho thấy root disk `/dev/sda1` còn `1.9G` trống (`95%`), `docker system df` báo Images `11.94GB` và Build Cache `4.759GB`.
+  - Đã xác nhận `/opt/clara-care/apps/web/app/chat/page.tsx` khớp hash commit slice 5 `321ca5a`, sau đó cleanup an toàn bằng `docker builder prune -a -f` trên VPS; reclaim `4.711GB`. `docker image prune -a -f` không reclaim thêm gì. Không đụng volume hay dữ liệu ứng dụng.
+  - Rerun rollout bằng `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build web`; compose build xong và recreate cả `clara-app-api-1` lẫn `clara-app-web-1`.
+  - Kết quả: PASS. Verify sau rollout cho thấy `clara-app-api-1` `Up 17 seconds` tại `127.0.0.1:8100->8000/tcp`, `clara-app-web-1` `Up 16 seconds` tại `127.0.0.1:3100->3000/tcp`; `docker logs` báo Next.js `Ready` và Uvicorn startup complete.
+- Tester verify slice 5 lúc `2026-04-18 21:19:59 +0700`:
+  - Đã SSH trực tiếp vào VPS bằng đúng credential yêu cầu và đối chiếu `sha256` file `/opt/clara-care/apps/web/app/chat/page.tsx`; hash trên host là `39aa62934125f3e38aa1286d1f3aed36b1374be119c1c294e16fba7da73dcd3e`, khớp blob commit `321ca5a`.
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml ps web api` cho thấy cả `clara-app-web-1` và `clara-app-api-1` đều `Up`, lần lượt bind `127.0.0.1:3100->3000/tcp` và `127.0.0.1:8100->8000/tcp`.
+  - Smoke route trực tiếp vào app port: `curl -I http://127.0.0.1:3100/chat` và `curl -I http://127.0.0.1:3100/dashboard` đều trả `307` về `/login`, phù hợp route cần auth.
+  - Bằng chứng runtime bổ sung: `docker logs --tail 40 clara-app-web-1` cho thấy Next.js `15.5.14` đã `Ready in 314ms`.
+  - Residual risk: `curl http://127.0.0.1/chat` qua nginx host port `80` hiện trả `Empty reply from server`, nên đường đi qua proxy host chưa được chốt pass; ngoài ra chưa có authenticated visual verification để xác nhận spacing mới trên UI sau login.
+- Clarification `2026-04-18 21:21:20 +0700`:
+  - Đã kiểm thêm nginx bằng đúng host header production: `curl -I -H 'Host: theclaracare.com' http://127.0.0.1/chat` trả `301` sang HTTPS và `curl -kI -H 'Host: theclaracare.com' https://127.0.0.1/chat` trả `307` về `/login` (tương tự với `/dashboard`).
+  - Kết luận: proxy theo domain đang hoạt động; hiện tượng `curl http://127.0.0.1/chat` trả `Empty reply from server` nhiều khả năng chỉ là do request host-local không mang host header đúng vhost, không phải dấu hiệu app web/api bị down sau deploy slice 5.
+
+## 17) Update 2026-04-18 +07 - Slice 6
+
+- Slice 6 đã implement local tại `apps/web/components/sidebar-nav.tsx` và `apps/web/components/app-shell.tsx`.
+- Mục tiêu của slice này là nén block `Preferences` thành một hàng controls nhỏ hơn cho `Theme` và `Language`, giảm chiều cao rõ rệt nhưng không đổi logic hay đụng spacing/chat page.
