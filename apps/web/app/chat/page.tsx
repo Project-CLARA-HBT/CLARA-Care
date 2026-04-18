@@ -1542,7 +1542,7 @@ export default function ChatWorkspacePage() {
   const conversationVirtualizer = useVirtualizer({
     count: conversationVirtualItems.length,
     getScrollElement: () => conversationListViewportRef.current,
-    estimateSize: () => 96,
+    estimateSize: () => 108,
     overscan: 10,
   });
 
@@ -2924,8 +2924,8 @@ export default function ChatWorkspacePage() {
 
           <div className="mt-2.5 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-            <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[var(--surface-muted)] p-2">
-              <div className="mb-2 space-y-1.5">
+            <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[var(--surface-muted)] p-2.5">
+              <div className="mb-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}
@@ -2935,7 +2935,7 @@ export default function ChatWorkspacePage() {
                   </span>
                 </div>
                 <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5 text-[10px] font-medium text-[var(--text-secondary)]">
                     <span>
                       {selectedFolderFilterId !== null
                         ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
@@ -2947,7 +2947,7 @@ export default function ChatWorkspacePage() {
                     </span>
                     <span className="material-symbols-outlined text-[14px] transition group-open:rotate-180">expand_more</span>
                   </summary>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
                     <select
                       value={String(selectedFolderFilterId ?? "none")}
                       onChange={(event) => {
@@ -2976,7 +2976,7 @@ export default function ChatWorkspacePage() {
                 </details>
               </div>
               {isSelectionMode && selectedConversationIds.length ? (
-                <div className="mb-2 space-y-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
+                <div className="mb-3 space-y-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Bulk actions" : "Thao tác hàng loạt"}
                   </p>
@@ -3094,10 +3094,10 @@ export default function ChatWorkspacePage() {
                             width: "100%",
                             transform: `translateY(${virtualRow.start}px)`,
                           }}
-                          className="space-y-1.5 pb-1"
+                          className="space-y-2.5 pb-2"
                         >
                           {row.dayLabel ? (
-                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            <p className="px-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                               {formatConversationDayLabel(row.dayLabel, uiLanguage)}
                             </p>
                           ) : null}
@@ -3110,7 +3110,7 @@ export default function ChatWorkspacePage() {
                               void onSelectConversation(item);
                             }}
                             className={[
-                              "w-full cursor-pointer rounded-xl border px-2 py-1.5 text-left",
+                              "w-full cursor-pointer rounded-xl border px-2.5 py-2 text-left",
                               isActive
                                 ? "border-cyan-300/70 bg-cyan-500/10"
                                 : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",

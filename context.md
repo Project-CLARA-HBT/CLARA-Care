@@ -1141,3 +1141,15 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 3 (thu gọn block Preferences) đã implement local tại `apps/web/components/sidebar-nav.tsx`, `apps/web/components/app-shell.tsx`, và log bổ sung trong `context.md`.
 - Phạm vi chỉ là UI compact cho Preferences desktop/mobile: giảm padding, gap, chiều cao control và làm active state gọn hơn; không đổi logic theme/language và không đụng chat spacing.
+- Tester verify deploy Slice 3 lúc `2026-04-18 16:37:53 +0700`:
+  - Đã SSH vào VPS `36.50.26.18` và xác minh `apps/web/components/sidebar-nav.tsx` + `apps/web/components/app-shell.tsx` tại `/opt/clara-care` khớp checksum commit `0cbe80a` (`feat: tighten preferences controls`).
+  - `docker compose -f deploy/docker/docker-compose.app.yml ps` cho thấy `clara-app-web-1` đang `Up` trên `127.0.0.1:3100->3000/tcp`; `docker compose -f deploy/docker/docker-compose.yml ps` cho thấy các dependency nền vẫn `Up`.
+  - `curl -I http://127.0.0.1:3100/chat` và `curl -I http://127.0.0.1:3100/dashboard` đều trả `307` redirect về `/login`.
+  - Bằng chứng runtime bổ sung: `docker inspect` cho thấy `clara-app-web-1` đã recreate sau rollout; `docker logs` báo Next.js `Ready`; trong container có artifact `.next/BUILD_ID`.
+  - Tester result: không có findings blocking trong phạm vi smoke test deploy Slice 3.
+  - Residual risk: chưa có authenticated visual verification cho desktop sidebar/mobile drawer sau login, nên chưa xác nhận trực quan block Preferences mới.
+
+## 15) Update 2026-04-18 +07 - Slice 4
+
+- Slice 4 (nới spacing chat history sidebar) đã implement local tại `apps/web/app/chat/page.tsx` và log bổ sung trong `context.md`.
+- Phạm vi chỉ là UI spacing cho khu history quanh `Lọc theo thư mục`, các bucket `Hôm nay` / `7 ngày qua` / `Cũ hơn`, và conversation cards; không đổi business logic, wording, hay Preferences.
