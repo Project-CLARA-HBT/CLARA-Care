@@ -32,18 +32,18 @@ type QuickAccess = {
 };
 
 const ROLE_GREETINGS: Record<UserRole, string> = {
-  normal: "Chào buổi tối",
-  researcher: "Chào buổi tối, Nhà nghiên cứu",
-  doctor: "Chào buổi tối, Bác sĩ",
-  admin: "Chào buổi tối, Quản trị viên",
+  normal: "Chào bạn",
+  researcher: "Chào bạn, Nhà nghiên cứu",
+  doctor: "Chào bạn, Bác sĩ",
+  admin: "Chào bạn, Quản trị viên",
 };
 
 const QUICK_ACCESS: QuickAccess[] = [
-  { href: "/chat", title: "Mở CLARA Chat", detail: "Hỏi đáp có dẫn nguồn", icon: "search" },
-  { href: "/council", title: "Mở hội chẩn AI", detail: "Phân tích ca bệnh", icon: "forum" },
-  { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Đối chiếu đơn thuốc", icon: "medication" },
-  { href: "/careguard", title: "Kiểm tra CareGuard", detail: "Theo dõi cảnh báo an toàn", icon: "security" },
-  { href: "/scribe", title: "Mở Medical Scribe", detail: "Ghi âm và ghi chép bệnh án", icon: "mic" },
+  { href: "/chat", title: "Hỏi CLARA", detail: "Nhận gợi ý chăm sóc có dẫn nguồn", icon: "chat" },
+  { href: "/council", title: "Hội chẩn ca bệnh", detail: "Xin thêm góc nhìn cho ca cần cân nhắc", icon: "groups" },
+  { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Xem lại thuốc đang theo dõi và ngày hết hạn", icon: "medication" },
+  { href: "/careguard", title: "Lưu ý an toàn", detail: "Kiểm tra tương tác và cảnh báo trước khi tiếp tục", icon: "health_and_safety" },
+  { href: "/scribe", title: "Ghi nhận buổi khám", detail: "Lưu lại diễn tiến và ghi chú chăm sóc", icon: "edit_note" },
 ];
 
 function formatCount(value: number | null): string {
@@ -152,6 +152,8 @@ export default function DashboardPage() {
     return Math.max(0, Math.min(8, risk));
   }, [alerts.length, expiredCount]);
 
+  const needsSafetyReview = alerts.length > 0 || (expiredCount ?? 0) > 0;
+
   const councilTotal = 12;
   const councilDone = useMemo(() => Math.max(0, Math.min(councilTotal, recentQueries.length)), [recentQueries.length]);
 
@@ -160,10 +162,10 @@ export default function DashboardPage() {
       return recentQueries.slice(0, 3).map((item, index) => ({
         id: item.id,
         title: item.query,
-        detail: `Mã truy vấn #${item.id.slice(0, 8)} • Hỏi đáp lâm sàng`,
+        detail: index === 0 ? `Phiên hỗ trợ #${item.id.slice(0, 8)} • Có thể mở lại để tiếp tục` : `Phiên chăm sóc #${item.id.slice(0, 8)} • Đã lưu trong hành trình gần đây`,
         timestamp: formatRelative(item.createdAt),
-        status: index === 0 ? "Hoàn tất" : index === 1 ? "Đã rà soát" : "Bản nháp",
-        tone: index === 0 ? "secondary" : index === 1 ? "muted" : "primary",
+        status: index === 0 ? "Hoàn tất" : index === 1 ? "Đã rà soát" : "Đang tiếp tục",
+        tone: index === 0 ? "primary" : index === 1 ? "secondary" : "muted",
       }));
     }
 
@@ -171,38 +173,109 @@ export default function DashboardPage() {
       {
         id: "default-1",
         title: "So sánh DASH vs Địa Trung Hải",
-        detail: "Mã bệnh nhân: #8821 • Hỏi đáp lâm sàng",
+        detail: "Phiên tư vấn dinh dưỡng gần nhất • Sẵn sàng mở lại",
         timestamp: "2 giờ trước",
         status: "Hoàn tất",
-        tone: "secondary",
+        tone: "primary",
       },
       {
         id: "default-2",
         title: "Phân tích tương tác Metformin",
-        detail: "Mã bệnh nhân: #9042 • Đồng bộ tủ thuốc",
+        detail: "Rà soát thuốc trong hành trình chăm sóc gần đây",
         timestamp: "5 giờ trước",
         status: "Đã rà soát",
-        tone: "muted",
+        tone: "secondary",
       },
       {
         id: "default-3",
         title: "Ghi âm thăm khám: Nguyễn Văn A",
-        detail: "Mã bệnh nhân: #7731 • Biên bản Scribe",
+        detail: "Ghi chú buổi khám đang chờ hoàn thiện",
         timestamp: "Hôm qua",
-        status: "Bản nháp",
-        tone: "primary",
+        status: "Đang tiếp tục",
+        tone: "muted",
       },
     ];
   }, [recentQueries]);
 
   const assistantInsight = useMemo(() => {
     if (alerts.length > 0) return alerts[0];
+    if ((expiredCount ?? 0) > 0) {
+      return `Có ${formatCount(expiredCount)} thuốc đã quá hạn. Nên kiểm tra lại trước khi tiếp tục tư vấn hoặc sử dụng.`;
+    }
     const err = Math.max(0, errorCount ?? 0);
     if (err > 0) {
-      return `Runtime đang ghi nhận ${err} lỗi gần nhất. Ưu tiên rà soát lại flow verification trước khi chốt khuyến nghị.`;
+      return "Một vài phiên gần đây cần xem kỹ thêm. Hãy đối chiếu cảnh báo và nguồn tham khảo trước khi chốt khuyến nghị.";
     }
-    return "Pipeline hoạt động ổn định. Có thể ưu tiên hội chẩn các ca đa thuốc để tăng chất lượng quyết định lâm sàng.";
-  }, [alerts, errorCount]);
+    return "Hôm nay chưa có tín hiệu khẩn cấp nổi bật. Bạn có thể bắt đầu từ tủ thuốc hoặc tiếp tục phiên hỗ trợ gần nhất.";
+  }, [alerts, errorCount, expiredCount]);
+
+  const safetySummary = useMemo(() => {
+    if ((expiredCount ?? 0) > 0) {
+      return {
+        eyebrow: "Cần xem ngay",
+        title: `${formatCount(expiredCount)} thuốc cần thay hoặc kiểm tra lại`,
+        detail: "Một vài thuốc đã quá hạn. Nên rà soát trước khi tiếp tục tư vấn hoặc dùng lại.",
+      };
+    }
+
+    if (alerts.length > 0) {
+      return {
+        eyebrow: "Lưu ý an toàn",
+        title: "Có nhắc nhở cần đọc trước khi tiếp tục",
+        detail: alerts[0],
+      };
+    }
+
+    if ((expiringSoonCount ?? 0) > 0) {
+      return {
+        eyebrow: "Sắp đến hạn",
+        title: `${formatCount(expiringSoonCount)} thuốc nên được chuẩn bị thay mới`,
+        detail: "Kiểm tra sớm để tránh gián đoạn theo dõi hoặc sử dụng.",
+      };
+    }
+
+    return {
+      eyebrow: "Tủ thuốc đang ổn",
+      title: `${formatCount(cabinetCount)} thuốc đang được theo dõi`,
+      detail: "Chưa thấy tín hiệu khẩn cấp. Bạn có thể tiếp tục hỏi CLARA hoặc rà soát ca gần nhất.",
+    };
+  }, [alerts, cabinetCount, expiredCount, expiringSoonCount]);
+
+  const heroActions = useMemo<QuickAccess[]>(() => {
+    const firstAction = needsSafetyReview
+      ? {
+          href: "/careguard",
+          title: "Xem lưu ý an toàn",
+          detail:
+            (expiredCount ?? 0) > 0
+              ? `${formatCount(expiredCount)} thuốc cần kiểm tra lại ngay`
+              : "Đọc cảnh báo trước khi tiếp tục tư vấn",
+          icon: "health_and_safety",
+        }
+      : {
+          href: "/selfmed",
+          title: "Rà soát tủ thuốc",
+          detail: `${formatCount(cabinetCount)} thuốc đang được theo dõi`,
+          icon: "medication",
+        };
+
+    const secondAction =
+      recentQueries.length > 0
+        ? {
+            href: "/chat",
+            title: "Tiếp tục cùng CLARA",
+            detail: "Mở lại hỗ trợ gần đây để làm rõ thêm cho ca đang theo dõi",
+            icon: "chat",
+          }
+        : {
+            href: "/council",
+            title: "Bắt đầu hội chẩn",
+            detail: "Xin thêm góc nhìn cho trường hợp cần cân nhắc",
+            icon: "groups",
+          };
+
+    return [firstAction, secondAction];
+  }, [cabinetCount, expiredCount, needsSafetyReview, recentQueries.length]);
 
   const todayTasks = useMemo<TodayTask[]>(() => {
     if (serverTasks.length > 0) return serverTasks.slice(0, 4);
@@ -275,17 +348,76 @@ export default function DashboardPage() {
   return (
     <PageShell title="" description="" variant="plain">
       <div className="space-y-10">
-        <section className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
-          <div>
-            <h2 className="mb-2 text-3xl font-extrabold tracking-tight text-[var(--text-brand)] sm:text-4xl">{greeting}</h2>
-            <p className="text-sm text-[var(--text-secondary)] sm:text-lg">
-              Hệ thống đang theo dõi <span className="font-bold text-[var(--text-brand)]">{activeCases} ca lâm sàng</span>. Có {" "}
-              <span className="font-bold text-[var(--text-brand)]">{cautionCases}</span> trường hợp cần lưu ý đặc biệt tối nay.
-            </p>
-          </div>
-          <div className="rounded-xl border-l-4 border-[var(--brand-600)] bg-cyan-500/10 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-600)]">Trạng thái AI</p>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Pipeline ổn định</p>
+        <section className="overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] lg:items-start">
+            <div className="space-y-5">
+              <span className="inline-flex items-center rounded-full bg-[var(--surface-muted)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
+                Bảng điều khiển chăm sóc
+              </span>
+              <div>
+                <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-[var(--text-brand)] sm:text-4xl">{greeting}</h2>
+                <p className="max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-lg">
+                  Hôm nay bạn đang theo dõi <span className="font-bold text-[var(--text-brand)]">{activeCases} hồ sơ chăm sóc</span>.
+                  {cautionCases > 0
+                    ? ` Có ${cautionCases} nhóm việc cần xem kỹ hơn trước khi chốt khuyến nghị.`
+                    : " Chưa thấy tín hiệu cần can thiệp gấp, bạn có thể tiếp tục các bước quen thuộc một cách nhẹ nhàng hơn."}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                {heroActions.map((action, index) => (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className={[
+                      "group flex min-h-16 flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition",
+                      index === 0
+                        ? "border-transparent bg-[var(--text-brand)] text-white shadow-[var(--shadow-soft)] hover:opacity-95"
+                        : "border-[color:var(--shell-border)] bg-white/80 text-[var(--text-primary)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] dark:bg-slate-900/50",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "flex h-10 w-10 items-center justify-center rounded-full",
+                        index === 0 ? "bg-white/20 text-white" : "bg-[var(--surface-muted)] text-[var(--text-brand)]",
+                      ].join(" ")}
+                    >
+                      <span className="material-symbols-outlined text-[20px]">{action.icon}</span>
+                    </span>
+                    <div>
+                      <p className={`text-sm font-bold ${index === 0 ? "text-white" : "text-[var(--text-brand)]"}`}>{action.title}</p>
+                      <p className={`text-xs ${index === 0 ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{action.detail}</p>
+                    </div>
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={refreshDashboard}
+                  disabled={isRefreshing}
+                  className="inline-flex min-h-16 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isRefreshing ? "Đang đồng bộ..." : "Làm mới dữ liệu"}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[color:var(--shell-border)] bg-white/70 p-5 shadow-[var(--shadow-soft)] dark:bg-slate-900/50">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-600)]">{safetySummary.eyebrow}</p>
+              <h3 className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-brand)]">{safetySummary.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{safetySummary.detail}</p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <div className="rounded-xl bg-[var(--surface-muted)] p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Thuốc đang theo dõi</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)}</p>
+                </div>
+                <div className="rounded-xl bg-[var(--surface-muted)] p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cần lưu ý hôm nay</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatCount(expiredCount)}</p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCount(expiringSoonCount)} thuốc sắp đến hạn</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -355,19 +487,43 @@ export default function DashboardPage() {
 
           <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
             <div className="mb-4 flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-700 dark:text-cyan-300">
-                <span className="material-symbols-outlined">pill</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                <span className="material-symbols-outlined">medication</span>
               </div>
-              <span className="rounded bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-300">Cảnh báo</span>
+              <span
+                className={[
+                  "rounded px-2 py-1 text-[10px] font-bold",
+                  needsSafetyReview
+                    ? "bg-red-500/15 text-red-700 dark:text-red-300"
+                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+                ].join(" ")}
+              >
+                {needsSafetyReview ? "Cần xem lại" : "Đang ổn"}
+              </span>
             </div>
-            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)} thuốc đang theo dõi</h4>
-            <p className="mt-1 text-xs font-bold text-red-700 dark:text-red-300">
-              {alerts[0] ?? "Hệ thống phát hiện tín hiệu tương tác thuốc cần ưu tiên kiểm tra."}
-            </p>
-            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
-              {formatCount(expiredCount)} thuốc hết hạn • {formatCount(expiringSoonCount)} sắp hết hạn
+            <h4 className="text-2xl font-bold leading-tight text-[var(--text-brand)]">{safetySummary.title}</h4>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{safetySummary.detail}</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Đang theo dõi</p>
+                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)} thuốc</p>
+              </div>
+              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cần kiểm tra sớm</p>
+                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiredCount)} thuốc</p>
+              </div>
+              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Sắp đến hạn</p>
+                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiringSoonCount)} thuốc</p>
+              </div>
             </div>
+            <Link
+              href={needsSafetyReview ? "/careguard" : "/selfmed"}
+              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-brand)] transition hover:opacity-80"
+            >
+              {needsSafetyReview ? "Mở lưu ý an toàn" : "Mở tủ thuốc"}
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </Link>
           </article>
 
           <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
@@ -392,16 +548,9 @@ export default function DashboardPage() {
         </section>
 
         <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Truy cập nhanh</h3>
-            <button
-              type="button"
-              onClick={refreshDashboard}
-              disabled={isRefreshing}
-              className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
-            >
-              {isRefreshing ? "Đang đồng bộ..." : "Làm mới"}
-            </button>
+          <div className="mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Các lối tắt quen thuộc</h3>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">Khi muốn chuyển nhanh sang một bước cụ thể, bạn có thể bắt đầu từ đây.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             {QUICK_ACCESS.map((item) => (
@@ -420,23 +569,30 @@ export default function DashboardPage() {
 
         <section className="grid grid-cols-12 gap-8">
           <div className="col-span-12 lg:col-span-8">
-            <h3 className="mb-5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Hoạt động lâm sàng gần đây</h3>
+            <div className="mb-5">
+              <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Hành trình chăm sóc gần đây</h3>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                Những phiên hỗ trợ mới nhất được sắp theo thời gian để bạn dễ tiếp tục đúng chỗ, thay vì phải tìm lại từ đầu.
+              </p>
+            </div>
             <div className="space-y-4">
               {activityItems.map((item) => (
                 <article
                   key={item.id}
-                  className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--shell-border)] border-l-4 bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] ${activityToneClass(item.tone)}`}
+                  className={`flex flex-wrap items-start justify-between gap-3 rounded-lg border border-[color:var(--shell-border)] border-l-4 bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] ${activityToneClass(item.tone)}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-muted)]">
-                      <span className="material-symbols-outlined text-[var(--text-brand)]">chat_bubble</span>
+                      <span className="material-symbols-outlined text-[var(--text-brand)]">history</span>
                     </div>
                     <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Phiên hỗ trợ</p>
                       <h5 className="text-sm font-bold text-[var(--text-brand)]">{item.title}</h5>
                       <p className="text-xs text-[var(--text-secondary)]">{item.detail}</p>
                     </div>
                   </div>
                   <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cập nhật</p>
                     <p className="text-xs font-bold text-[var(--text-brand)]">{item.timestamp}</p>
                     <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${statusPillClass(item.status)}`}>
                       {item.status}

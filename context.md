@@ -1111,6 +1111,15 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 ### Progress note
 - Thứ tự slice hiện tại: (1) dọn shared nav branding + bỏ badge `Digital Surgeon AI` (đang delegate), (2) redesign dashboard end-user, (3) redesign landing/overview admin, (4) council flow thân thiện hơn cho bác sĩ, (5) nối backend scribe realtime, (6) dọn OCR flow + tests, (7) nối admin knowledge-source/backend.
 - Slice 1 (dọn shared nav branding + bỏ badge `Digital Surgeon AI`) đã implement local tại `apps/web/components/sidebar-nav.tsx` và `apps/web/components/app-shell.tsx`; local lint đã pass. Bước tiếp theo: lead commit, deploy, rồi giao tester verify.
+- Slice 2 (dashboard redesign cho end users) đang được delegate; scope hiện tại chỉ giới hạn ở `apps/web/app/dashboard/page.tsx` và không bao gồm thay đổi backend.
+- Slice 2 (dashboard redesign cho end users) đã implement local tại `apps/web/app/dashboard/page.tsx`; local eslint đã pass. Bước tiếp theo: lead commit, deploy, rồi giao tester verify.
+- Slice 1 update:
+  - Local feature commit: `ab6d3ca` (`feat: refine shared navigation branding`).
+  - Đã deploy bằng cách copy các web component files đã update lên `/opt/clara-care` trên VPS `36.50.26.18` và chạy `scripts/deploy/redeploy_app_stack.sh /opt/clara-care`.
+  - App containers `web/api/ml` đã recreate và healthy.
+  - Deploy script exit non-zero vì deep research smoke timeout sau 3 attempts (`curl_exit=28`); lỗi này nằm ngoài UI slice này.
+  - Tester agent không có findings cho slice 1; artifacts dashboard/chat shell sau deploy có `Clara Care`, không còn `Digital Surgeon AI`; các app routes chính trả `307`.
+  - Residual risk: chưa có authenticated visual browser verification.
 
 ### Working rules
 - Lead chỉ đạo/điều phối, delegate implementation cho sub-agents.
