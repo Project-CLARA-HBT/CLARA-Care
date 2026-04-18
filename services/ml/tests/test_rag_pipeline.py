@@ -162,13 +162,41 @@ def test_rag_pipeline_deep_beta_uses_long_form_generation_path() -> None:
     assert len(client.calls) == 1
     prompt_call = client.calls[0]
     assert prompt_call["prompt"] is not None
+    assert "structured clinical dossier / evidence brief" in prompt_call["prompt"]
+    assert "Include contradiction handling" in prompt_call["prompt"]
+    assert "Perplexity-like research answer style" not in prompt_call["prompt"]
+    assert prompt_call["system_prompt"] is not None
+    assert "deep beta clinical dossier synthesizer" in prompt_call["system_prompt"]
+    assert "contradiction audit" in prompt_call["system_prompt"]
+    assert "Perplexity synthesis" not in prompt_call["system_prompt"]
+
+    retrieval_trace = result.context_debug.get("retrieval_trace", {})
+    assert retrieval_trace.get("orchestrator_mode") == "deep"
+
+
+def test_rag_pipeline_deep_mode_keeps_existing_reader_first_long_form_contract() -> None:
+    client = _CapturingClient()
+    pipe = RagPipelineP0(
+        deepseek_api_key="test-key",
+        llm_client=client,
+    )
+
+    result = pipe.run(
+        "tuong tac warfarin voi ibuprofen va naproxen nguy co xuat huyet",
+        planner_hints={"research_mode": "deep"},
+        low_context_threshold=0.0,
+    )
+
+    assert result.answer == "captured-answer"
+    assert result.model_used == "deepseek-v3.2"
+    assert len(client.calls) == 1
+    prompt_call = client.calls[0]
+    assert prompt_call["prompt"] is not None
     assert "Write in a Perplexity-like research answer style" in prompt_call["prompt"]
     assert "Be detailed, but avoid sounding like an internal dossier" in prompt_call["prompt"]
     assert prompt_call["system_prompt"] is not None
     assert "Produce a long-form, evidence-grounded" in prompt_call["system_prompt"]
-
-    retrieval_trace = result.context_debug.get("retrieval_trace", {})
-    assert retrieval_trace.get("orchestrator_mode") == "deep"
+    assert "avoid dossier-like boilerplate" in prompt_call["system_prompt"]
 
 
 def test_local_synthesis_avoids_source_dump_in_main_body() -> None:

@@ -1129,15 +1129,52 @@ class RagPipelineP1:
         *,
         report_depth: str = "standard",
         answer_language: str = "vi",
+        research_mode: str = "",
     ) -> str:
         context = "\n".join(cls._format_doc_context(doc) for doc in docs[: cls._PROMPT_MAX_DOCS])
         language_label = "English" if answer_language == "en" else "Vietnamese"
+        normalized_research_mode = str(research_mode or "").strip().lower()
         preferred_headings = (
             "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats"
             if answer_language == "en"
             else "## Kết luận nhanh, ## Điểm chính, ## Ứng dụng thực tế, ## Lưu ý an toàn"
         )
         if str(report_depth).strip().lower() == "deep":
+            if normalized_research_mode == "deep_beta":
+                deep_beta_headings = (
+                    "## Quick conclusion, ## Executive summary, ## Research question (PICO), "
+                    "## Retrieval method & selection criteria, ## Evidence profile & source quality, "
+                    "## Main findings synthesis, ## Evidence reasoning chain, "
+                    "## Counter-evidence and contradictions, ## Clinical application by patient subgroup, "
+                    "## Safety decision matrix, ## Follow-up plan after counseling, "
+                    "## Limitations, error bands, and legal risk"
+                    if answer_language == "en"
+                    else "## Kết luận nhanh, ## Tóm tắt điều hành, ## Câu hỏi nghiên cứu (PICO), "
+                    "## Phương pháp truy xuất & tiêu chí chọn lọc, ## Hồ sơ bằng chứng & chất lượng nguồn, "
+                    "## Tổng hợp phát hiện chính, ## Chuỗi lập luận bằng chứng, "
+                    "## Phản biện bằng chứng đối nghịch, ## Ứng dụng lâm sàng theo nhóm bệnh nhân, "
+                    "## Ma trận quyết định an toàn, ## Kế hoạch theo dõi sau tư vấn, "
+                    "## Giới hạn, sai số và rủi ro pháp lý"
+                )
+                return (
+                    "You are CLARA Deep Beta clinical evidence assistant.\n"
+                    "Use retrieved context as primary evidence and avoid unsupported claims.\n"
+                    f"Output MUST be valid GitHub-Flavored Markdown (GFM) in {language_label}, no HTML.\n"
+                    "Do not wrap the full response in a single code fence.\n"
+                    "Write as a structured clinical dossier / evidence brief, not a reader-summary.\n"
+                    f"Preferred headings (in order): {deep_beta_headings}.\n"
+                    f"Keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles.\n"
+                    "Requirements:\n"
+                    "- Open with a decision-oriented conclusion and explicit decision boundary.\n"
+                    "- Keep claim-to-evidence linkage explicit and traceable across sections.\n"
+                    "- Include contradiction handling: what evidence conflicts, how conflict is resolved, and what uncertainty remains.\n"
+                    "- Include subgroup applicability, monitoring/red-flag triggers, and follow-up checkpoints.\n"
+                    "- Use tables when they improve evidence comparison or risk stratification clarity.\n"
+                    "- Avoid internal telemetry language (pipeline, pass log, reranker, node matrix) in answer body.\n"
+                    "- Do not add dedicated references section in answer body.\n"
+                    f"User query: {query}\n"
+                    f"Retrieved context:\n{context}"
+                )
             return (
                 "You are CLARA Deep Research medical assistant.\n"
                 "Use retrieved context as primary evidence and avoid unsupported claims.\n"
@@ -2489,12 +2526,16 @@ class RagPipelineP1:
                     )
                 )
                 long_form_generation = self._is_long_form_orchestrator_mode(orchestrator_mode)
+                requested_research_mode = str(
+                    normalized_hints.get("research_mode") or query_plan.get("research_mode") or ""
+                ).strip().lower()
                 prompt = (
                     self._build_prompt(
                         query,
                         docs,
                         report_depth="deep" if long_form_generation else "standard",
                         answer_language=answer_language,
+                        research_mode=requested_research_mode,
                     )
                     if has_relevant_context
                     else self._build_no_rag_prompt(query, answer_language=answer_language)
@@ -2509,15 +2550,25 @@ class RagPipelineP1:
                     "Avoid robotic or repetitive sentence templates."
                 )
                 if long_form_generation:
-                    system_prompt_text = (
-                        "You are CLARA deep research clinical assistant. "
-                        f"Produce a long-form, evidence-grounded {('English' if answer_language == 'en' else 'Vietnamese')} answer. "
-                        "Use GFM markdown only, no HTML. "
-                        "Start with the direct answer, then expand into key points, practical application, and caveats. "
-                        "Prefer precise source-linked claims and explicitly note uncertainty. "
-                        "Use tables only when they materially improve clarity, and avoid dossier-like boilerplate. "
-                        "Do not prescribe dosage or diagnose."
-                    )
+                    if requested_research_mode == "deep_beta":
+                        system_prompt_text = (
+                            "You are CLARA deep beta clinical dossier synthesizer. "
+                            f"Produce a long-form, evidence-brief {('English' if answer_language == 'en' else 'Vietnamese')} answer. "
+                            "Use GFM markdown only, no HTML. "
+                            "Keep a structured clinical report flow: decision boundary first, then evidence profile, contradiction audit, subgroup applicability, safety matrix, and follow-up plan. "
+                            "Keep claim-to-evidence mapping explicit and preserve unresolved uncertainty. "
+                            "Do not prescribe dosage or diagnose."
+                        )
+                    else:
+                        system_prompt_text = (
+                            "You are CLARA deep research clinical assistant. "
+                            f"Produce a long-form, evidence-grounded {('English' if answer_language == 'en' else 'Vietnamese')} answer. "
+                            "Use GFM markdown only, no HTML. "
+                            "Start with the direct answer, then expand into key points, practical application, and caveats. "
+                            "Prefer precise source-linked claims and explicitly note uncertainty. "
+                            "Use tables only when they materially improve clarity, and avoid dossier-like boilerplate. "
+                            "Do not prescribe dosage or diagnose."
+                        )
                 response = runtime_llm_client.generate(
                     prompt=prompt,
                     system_prompt=system_prompt_text,

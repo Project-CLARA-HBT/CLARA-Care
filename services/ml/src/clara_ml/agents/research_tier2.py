@@ -1860,12 +1860,40 @@ _SECTION_TITLES_BY_LANGUAGE: dict[str, dict[str, str]] = {
     },
 }
 
+_DEEP_BETA_DOSSIER_HEADINGS_BY_LANGUAGE: dict[str, tuple[str, ...]] = {
+    "vi": _REQUIRED_DEEP_BETA_MARKDOWN_HEADINGS,
+    "en": (
+        "## Quick conclusion",
+        "## Executive summary",
+        "## Research question (PICO)",
+        "## Retrieval method & selection criteria",
+        "## Evidence profile & source quality",
+        "## Main findings synthesis",
+        "## Evidence reasoning chain",
+        "## Counter-evidence and contradictions",
+        "## Clinical application by patient subgroup",
+        "## Safety decision matrix",
+        "## Follow-up plan after counseling",
+        "## Limitations, error bands, and legal risk",
+    ),
+}
+
 
 def _resolve_section_title(section_id: str, answer_language: str) -> str:
     language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
     return _SECTION_TITLES_BY_LANGUAGE.get(language, _SECTION_TITLES_BY_LANGUAGE["vi"]).get(
         section_id,
         section_id,
+    )
+
+
+def _resolve_deep_beta_dossier_headings(answer_language: str) -> list[str]:
+    language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
+    return list(
+        _DEEP_BETA_DOSSIER_HEADINGS_BY_LANGUAGE.get(
+            language,
+            _DEEP_BETA_DOSSIER_HEADINGS_BY_LANGUAGE["vi"],
+        )
     )
 
 
@@ -1918,6 +1946,24 @@ _USER_FACING_HEADING_ALIASES = {
     _canonical_h2_key("Evidence summary table"): "evidence_table",
     _canonical_h2_key("Evidence table"): "evidence_table",
     _canonical_h2_key("Bảng tổng hợp bằng chứng"): "evidence_table",
+    _canonical_h2_key("Research question (PICO)"): "research_plan",
+    _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"): "research_plan",
+    _canonical_h2_key("Retrieval method & selection criteria"): "research_plan",
+    _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"): "research_plan",
+    _canonical_h2_key("Evidence profile & source quality"): "evidence_table",
+    _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"): "evidence_table",
+    _canonical_h2_key("Main findings synthesis"): "key_points",
+    _canonical_h2_key("Tổng hợp phát hiện chính"): "key_points",
+    _canonical_h2_key("Evidence reasoning chain"): "detailed_analysis",
+    _canonical_h2_key("Chuỗi lập luận bằng chứng"): "detailed_analysis",
+    _canonical_h2_key("Counter-evidence and contradictions"): "safety_notes",
+    _canonical_h2_key("Phản biện bằng chứng đối nghịch"): "safety_notes",
+    _canonical_h2_key("Clinical application by patient subgroup"): "clinical_context",
+    _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"): "clinical_context",
+    _canonical_h2_key("Safety decision matrix"): "safety_guidance",
+    _canonical_h2_key("Ma trận quyết định an toàn"): "safety_guidance",
+    _canonical_h2_key("Follow-up plan after counseling"): "monitoring_red_flags",
+    _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"): "monitoring_red_flags",
     _canonical_h2_key("Limitations legal and safety notes"): "limitations_legal",
     _canonical_h2_key("Limitations and legal notes"): "limitations_legal",
     _canonical_h2_key("Giới hạn, sai số và rủi ro pháp lý"): "limitations_legal",
@@ -2214,33 +2260,17 @@ def _resolve_report_section_contract(
     mode = str(research_mode or "fast").strip().lower()
     quick_conclusion = f"## {_resolve_section_title('quick_conclusion', answer_language)}"
     key_points = f"## {_resolve_section_title('key_points', answer_language)}"
-    research_plan = f"## {_resolve_section_title('research_plan', answer_language)}"
-    detailed_analysis = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
-    clinical_context = f"## {_resolve_section_title('clinical_context', answer_language)}"
     practical_application = f"## {_resolve_section_title('practical_application', answer_language)}"
-    practical_recommendations = f"## {_resolve_section_title('practice_recommendations', answer_language)}"
-    safety_guidance = f"## {_resolve_section_title('safety_guidance', answer_language)}"
-    monitoring_red_flags = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
     important_caveats = f"## {_resolve_section_title('safety_notes', answer_language)}"
     if mode == "deep_beta":
-        sections = [
-            quick_conclusion,
-            key_points,
-            research_plan,
-            detailed_analysis,
-            clinical_context,
-            practical_application,
-            practical_recommendations,
-            safety_guidance,
-            monitoring_red_flags,
-            important_caveats,
-        ]
+        sections = _resolve_deep_beta_dossier_headings(answer_language)
         requirements = [
-            "- write in deep-research scientific style: explicit assumptions, evidence hierarchy, contradiction handling, and decision boundaries",
+            "- write as a structured clinical dossier / evidence brief with explicit section-by-section traceability",
             "- open with the answer and decision boundary before background context",
+            "- keep claim-evidence mapping explicit, including contradictory or counter evidence and how it changes confidence",
             "- include at least one comparative evidence table and one risk-monitoring table when clinically relevant",
             "- when the query compares options, cover adherence, efficacy, safety, feasibility, and cost/access",
-            "- include subgroup caveats, uncertainty, and how new evidence could change the recommendation",
+            "- include subgroup caveats, uncertainty, and what new evidence could shift the recommendation",
             "- do not expose internal pipeline tags, execution steps, or debug telemetry in the answer body",
         ]
         return sections, requirements
@@ -2263,19 +2293,19 @@ def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
         return {
-            "tone": "scientific_deep_research_report",
+            "tone": "clinical_dossier_evidence_brief",
             "narrative_density": "very_high",
-            "target_reader": "clinician, researcher, or medical operator who needs a long-form deep synthesis",
+            "target_reader": "clinician, researcher, or medical operator who needs a traceable long-form synthesis",
             "must_do": [
-                "Lead with the answer, then explain why the evidence points there.",
-                "Keep claim-evidence linkage explicit and show contradiction handling clearly.",
-                "Translate uncertainty into concrete decision boundaries and monitoring steps.",
-                "Sustain analytical depth across sections; avoid shallow summary-only paragraphs.",
+                "Lead with the answer and decision boundary, then show the evidence chain explicitly.",
+                "Keep claim-evidence linkage explicit and include contradiction handling in a dedicated section.",
+                "Translate uncertainty into concrete decision boundaries, subgroup caveats, and monitoring steps.",
+                "Use structured clinical headings that make evidence provenance and applicability auditable.",
             ],
             "avoid": [
                 "Do not expose internal system nodes, debug steps, or planner tags.",
                 "Do not repeat identical sentence openings across adjacent paragraphs.",
-                "Do not overuse long bullet dumps when short synthesis paragraphs are clearer.",
+                "Do not collapse the report into short Perplexity-style summary-only prose.",
             ],
         }
     return {
@@ -2481,14 +2511,39 @@ def _synthesize_deep_beta_long_report(
     )
     language_label = "English" if answer_language == "en" else "Vietnamese"
     style_target_line = (
-        "- write like a scientific deep-research medical report: evidence-dense, contradiction-aware, and clinically actionable"
+        "- write as a structured clinical dossier / evidence brief: evidence-dense, contradiction-aware, and clinically actionable"
         if mode == "deep_beta"
         else "- write like a high-signal Perplexity-style medical research answer: direct, analytic, reader-first, and not dossier-like"
     )
     chain_requirement_line = (
-        "- keep claim-to-evidence linkage explicit in concise analytical paragraphs and short tables; avoid internal debug chain labels"
+        "- keep claim-to-evidence linkage explicit with contradiction audit and confidence boundaries; avoid internal debug chain labels"
         if mode == "deep_beta"
         else "- keep claim-to-evidence linkage explicit in short paragraphs or short bullets without rigid chain templates"
+    )
+    opening_requirement_line = (
+        "- answer with an executive conclusion and explicit decision boundary before background context"
+        if mode == "deep_beta"
+        else "- answer the user directly in the opening before background context"
+    )
+    opening_length_line = (
+        "- keep the opening to 3-6 strong sentences, then expand by dossier section where it changes decisions"
+        if mode == "deep_beta"
+        else "- keep the opening to 2-4 strong sentences, then expand only where it helps the decision"
+    )
+    transition_requirement_line = (
+        "- use structured dossier transitions and evidence labels; avoid vague narrative jumps"
+        if mode == "deep_beta"
+        else "- use natural transitions between sections; avoid checklist-like prose or compliance boilerplate"
+    )
+    skimmable_requirement_line = (
+        "- keep each section scannable with concise paragraphs/tables; bullets should usually stay within 3-6 items"
+        if mode == "deep_beta"
+        else "- keep each section skimmable: paragraphs should stay short and bullets should usually stay within 3-5 items"
+    )
+    evidence_label_requirement_line = (
+        "- include evidence-brief labels such as research question, retrieval criteria, evidence profile, contradiction audit, and safety matrix when supported by evidence"
+        if mode == "deep_beta"
+        else "- avoid meta labels such as core question, evidence coverage, working synthesis, or retrieval process unless they change the clinical interpretation"
     )
     prompt = (
         f"Rewrite the baseline answer into a polished long-form medical research answer in {language_label}.\n"
@@ -2499,12 +2554,12 @@ def _synthesize_deep_beta_long_report(
         f"- total length must be between {min_words} and {max_words} words; target around {target_words} words\n"
         f"{style_target_line}\n"
         f"- keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles\n"
-        "- answer the user directly in the opening before background context\n"
-        "- keep the opening to 2-4 strong sentences, then expand only where it helps the decision\n"
+        f"{opening_requirement_line}\n"
+        f"{opening_length_line}\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
-        "- use natural transitions between sections; avoid checklist-like prose or compliance boilerplate\n"
-        "- keep each section skimmable: paragraphs should stay short and bullets should usually stay within 3-5 items\n"
-        "- avoid meta labels such as core question, evidence coverage, working synthesis, or retrieval process unless they change the clinical interpretation\n"
+        f"{transition_requirement_line}\n"
+        f"{skimmable_requirement_line}\n"
+        f"{evidence_label_requirement_line}\n"
         "- each major section must contain concrete analysis and actionable interpretation\n"
         f"{chain_requirement_line}\n"
         f"{section_requirements_text}\n"
@@ -2528,6 +2583,14 @@ def _synthesize_deep_beta_long_report(
         "Prioritize coherent clinical reasoning over template-heavy filler or dossier language. "
         "The answer should read like a strong Perplexity synthesis for clinicians: fast to scan, but still rigorous."
     )
+    if mode == "deep_beta":
+        system_prompt = (
+            "You are CLARA deep beta clinical dossier synthesizer. "
+            f"Produce a structured {language_label} evidence brief in valid GFM markdown only. "
+            "Keep section-level traceability from claim to evidence, include contradiction audit, and state decision boundaries explicitly. "
+            "Use dossier-style clinical headings when they improve auditability. "
+            "Do not prescribe dosage or diagnose."
+        )
     try:
         client = _build_reasoning_client(
             timeout_seconds=report_timeout_seconds,

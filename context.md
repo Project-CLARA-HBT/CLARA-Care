@@ -1293,3 +1293,20 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
   - `pytest tests/test_research_tier2_agent.py -q -k "build_citations_expands_pool_for_deep_beta_only or run_deep_beta_llm_reasoning_node_extracts_reasoning_chain or deep_beta_reasoning_and_verifier_prompts_expand_handoff_payloads or deep_beta_report_prompt_expands_writer_handoff_payloads"`: pass (`4 passed`).
   - `pytest tests/test_research_tier2_agent.py -q -k "run_research_tier2_deep_beta_emits_beta_stages_and_metadata or ensure_deep_beta_report_artifacts_appends_missing_blocks or ensure_deep_beta_report_artifacts_injects_reasoning_chain_section"`: pass (`3 passed`).
 - Residual risk: cap mới làm `deep_beta` mang nhiều substance hơn nhưng cũng tăng token/latency cho reasoning/verifier/report; hiện mới verify bằng targeted unit tests, chưa có E2E latency profiling.
+- Deploy và tester verify:
+  - Commit `5601218` đã push lên `origin/main`.
+  - Đã copy runtime file `services/ml/src/clara_ml/agents/research_tier2.py` lên host `/opt/clara-care` và chạy `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build ml`.
+  - Tester độc lập xác nhận SHA-256 file host khớp blob của commit `5601218`, container `clara-app-ml-1` đang `Up`, và `/health` trả `200`.
+  - Smoke check trong container xác nhận `_resolve_evidence_handoff_profile()` chỉ nới cap cho `deep_beta`; `fast` và `deep` vẫn bằng profile mặc định.
+  - Residual risk từ tester: chưa chạy full E2E `deep_beta` live request nên chưa xác nhận chất lượng output cuối trên dữ liệu thật.
+
+## 2026-04-19 Feature 6 Note
+
+- Scope: đổi prompt/style contract cho `deep_beta` theo hướng dossier/evidence-brief trong `services/ml/src/clara_ml/rag/pipeline.py` và `services/ml/src/clara_ml/agents/research_tier2.py`; giữ contract `deep`/`fast` ổn định.
+- Thay đổi chính:
+  - `pipeline.py`: tách riêng deep-beta prompt/system-prompt (structured clinical dossier, evidence brief, contradiction audit) khỏi long-form `deep` hiện tại.
+  - `research_tier2.py`: cập nhật section contract deep-beta sang bộ heading dossier, đổi style profile sang `clinical_dossier_evidence_brief`, và thay các requirement anti-dossier bằng requirement contradiction-aware + evidence-brief labels.
+  - Test cập nhật để chứng minh prompt/system prompt deep-beta đã đổi và deep mode vẫn giữ contract cũ.
+- Test status:
+  - `pytest -q tests/test_rag_pipeline.py::test_rag_pipeline_deep_beta_uses_long_form_generation_path tests/test_rag_pipeline.py::test_rag_pipeline_deep_mode_keeps_existing_reader_first_long_form_contract tests/test_research_tier2_agent.py::test_deep_beta_report_prompt_expands_writer_handoff_payloads tests/test_research_tier2_agent.py::test_resolve_report_section_contract_by_mode tests/test_research_tier2_agent.py::test_resolve_report_style_profile_by_mode`
+  - Kết quả: pass (`5 passed`).

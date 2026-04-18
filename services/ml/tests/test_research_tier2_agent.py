@@ -2198,7 +2198,7 @@ def test_deep_beta_reasoning_and_verifier_prompts_expand_handoff_payloads(
 def test_deep_beta_report_prompt_expands_writer_handoff_payloads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured_prompts: list[str] = []
+    captured_prompts: list[dict[str, str | None]] = []
 
     class _CapturingWriterClient:
         def generate(
@@ -2207,7 +2207,7 @@ def test_deep_beta_report_prompt_expands_writer_handoff_payloads(
             system_prompt: str | None = None,
             max_tokens: int | None = None,
         ) -> SimpleNamespace:
-            captured_prompts.append(prompt)
+            captured_prompts.append({"prompt": prompt, "system_prompt": system_prompt})
             return SimpleNamespace(
                 content="## Kết luận nhanh\n" + " ".join(["beta"] * 32),
                 model="deepseek-v3.2",
@@ -2275,7 +2275,8 @@ def test_deep_beta_report_prompt_expands_writer_handoff_payloads(
         research_mode="deep_beta",
     )
 
-    writer_prompt = captured_prompts[0]
+    writer_prompt = str(captured_prompts[0].get("prompt") or "")
+    writer_system_prompt = str(captured_prompts[0].get("system_prompt") or "")
     writer_citations = _extract_json_assignment(writer_prompt, "citations")
     writer_passes = _extract_json_assignment(writer_prompt, "deep_pass_summaries")
     writer_reasoning_cards = _extract_json_assignment(writer_prompt, "reasoning_chain_cards")
@@ -2284,6 +2285,11 @@ def test_deep_beta_report_prompt_expands_writer_handoff_payloads(
     assert len(writer_citations) == 30
     assert len(writer_passes) == 24
     assert len(writer_reasoning_cards) == 28
+    assert "structured clinical dossier / evidence brief" in writer_prompt
+    assert "include evidence-brief labels such as research question" in writer_prompt
+    assert "Perplexity-style medical research answer" not in writer_prompt
+    assert "deep beta clinical dossier synthesizer" in writer_system_prompt
+    assert "contradiction audit" in writer_system_prompt
 
 
 def test_sanitize_user_facing_answer_markdown_removes_redundant_sections() -> None:
@@ -2619,14 +2625,17 @@ def test_resolve_report_section_contract_by_mode() -> None:
     assert "## Điểm chính" in deep_sections
     assert "## Ứng dụng thực tế" in deep_sections
     assert "## Câu hỏi nghiên cứu (PICO)" not in deep_sections
-    assert "## Điểm chính" in beta_sections
-    assert "## Lưu ý an toàn" in beta_sections
+    assert "## Câu hỏi nghiên cứu (PICO)" in beta_sections
+    assert "## Tổng hợp phát hiện chính" in beta_sections
+    assert "## Ma trận quyết định an toàn" in beta_sections
+    assert "## Điểm chính" not in beta_sections
 
 
 def test_resolve_report_style_profile_by_mode() -> None:
     deep_profile = tier2._resolve_report_style_profile("deep")
     beta_profile = tier2._resolve_report_style_profile("deep_beta")
     assert deep_profile["tone"] == "clinical_briefing_reader_first"
-    assert beta_profile["tone"] == "high_signal_research_answer"
+    assert beta_profile["tone"] == "clinical_dossier_evidence_brief"
     assert isinstance(deep_profile["must_do"], list) and deep_profile["must_do"]
     assert isinstance(beta_profile["avoid"], list) and beta_profile["avoid"]
+    assert any("contradiction" in str(item).lower() for item in beta_profile["must_do"])
