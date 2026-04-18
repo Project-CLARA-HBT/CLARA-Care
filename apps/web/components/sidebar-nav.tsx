@@ -86,15 +86,15 @@ export default function SidebarNav({
       ].join(" ")}
     >
       <div className={["mb-8 flex items-center", collapsed ? "justify-center" : "gap-3 px-2"].join(" ")}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gradient-to-br from-cyan-400 to-cyan-700 text-slate-900">
-          <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
+          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             clinical_notes
           </span>
         </div>
         {!collapsed ? (
           <div>
-            <h1 className="text-xl font-bold tracking-tighter text-[#003461] dark:text-blue-400">The Clara Care</h1>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">Digital Surgeon AI</p>
+            <h1 className="text-[17px] font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-100">Clara Care</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Không gian chăm sóc</p>
           </div>
         ) : null}
       </div>
@@ -103,9 +103,9 @@ export default function SidebarNav({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
+          aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
         >
           <span className="material-symbols-outlined text-base">
             {collapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}
@@ -166,7 +166,7 @@ export default function SidebarNav({
                 <Link
                   key={action.id}
                   href={action.href}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-cyan-300"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
                   aria-label={action.ariaLabel}
                   title={action.ariaLabel}
                 >
@@ -188,7 +188,7 @@ export default function SidebarNav({
                       className={[
                         "inline-flex min-h-[28px] items-center justify-center rounded-lg border px-1 text-[10px] font-semibold transition",
                         active
-                          ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
@@ -215,7 +215,7 @@ export default function SidebarNav({
                       className={[
                         "inline-flex min-h-[28px] items-center justify-center gap-1 rounded-lg border px-1 text-[10px] font-semibold transition",
                         active
-                          ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       aria-pressed={active}
@@ -233,7 +233,7 @@ export default function SidebarNav({
             <button
               type="button"
               onClick={() => onThemeChange(getNextThemePreference(themePreference))}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-cyan-300"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
               aria-label="Toggle theme"
               title={`Theme: ${themePreference}`}
             >
@@ -242,7 +242,7 @@ export default function SidebarNav({
             <button
               type="button"
               onClick={() => onLanguageChange(uiLanguage === "vi" ? "en" : "vi")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[11px] font-semibold text-[var(--text-secondary)] transition hover:text-cyan-300"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[11px] font-semibold text-[var(--text-secondary)] transition hover:text-sky-700 dark:hover:text-sky-300"
               aria-label="Toggle language"
               title={`Language: ${uiLanguage.toUpperCase()}`}
             >

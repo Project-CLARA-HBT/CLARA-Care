@@ -1096,3 +1096,26 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
   - `deep_beta` sync đi qua public domain chạy quá ngưỡng `120s` cũ nhưng vẫn trả `200`
   - không còn `504 Gateway Time-out`
   - telemetry không còn rỗng/pending giả do bị cắt connection giữa chừng
+
+## 13) Update 2026-04-18 +07
+
+### Workstreams
+- Dashboard redesign cho end users.
+- AI consultation flow cho doctors.
+- Tích hợp backend medical scribe với realtime transcript.
+- Bỏ OCR verification report trong medicine cabinet và test lại toàn bộ OCR flows.
+- Fix admin/system-management và nối backend knowledge-source.
+- Bỏ digital surgeon AI badge gần logo góc trên trái.
+- Hướng redesign hiện tại dùng Stitch.
+
+### Progress note
+- Thứ tự slice hiện tại: (1) dọn shared nav branding + bỏ badge `Digital Surgeon AI` (đang delegate), (2) redesign dashboard end-user, (3) redesign landing/overview admin, (4) council flow thân thiện hơn cho bác sĩ, (5) nối backend scribe realtime, (6) dọn OCR flow + tests, (7) nối admin knowledge-source/backend.
+- Slice 1 (dọn shared nav branding + bỏ badge `Digital Surgeon AI`) đã implement local tại `apps/web/components/sidebar-nav.tsx` và `apps/web/components/app-shell.tsx`; local lint đã pass. Bước tiếp theo: lead commit, deploy, rồi giao tester verify.
+
+### Working rules
+- Lead chỉ đạo/điều phối, delegate implementation cho sub-agents.
+- Commit từng feature nhỏ một.
+- Deploy sau mỗi feature.
+- Sau mỗi lần deploy phải giao agent tester riêng để test.
+- Mọi tiến độ phải log vào `context.md`.
+- Quy ước điều phối hiện tại: sub-agents dùng `gpt-5.4` với `xhigh`.

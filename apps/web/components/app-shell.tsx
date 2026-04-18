@@ -233,14 +233,14 @@ export default function AppShell({ children }: Props) {
               <span className="material-symbols-outlined text-lg">menu</span>
             </button>
 
-            <Link href={getRoleHomePath(role)} className="flex min-w-0 items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-gradient-to-br from-cyan-400 to-cyan-700 text-slate-900">
+            <Link href={getRoleHomePath(role)} className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
                 <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   clinical_notes
                 </span>
               </span>
-              <span className="truncate text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
-                CLARA
+              <span className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                Clara Care
               </span>
             </Link>
 
@@ -284,11 +284,22 @@ export default function AppShell({ children }: Props) {
           }`}
         >
           <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.19em] text-[var(--text-brand)]">
-                The Clara Care
-              </p>
-              <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Navigation</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
+                <span
+                  className="material-symbols-outlined text-[18px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                  aria-hidden="true"
+                >
+                  clinical_notes
+                </span>
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                  Clara Care
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">Không gian chăm sóc</p>
+              </div>
             </div>
             <button
               type="button"
@@ -319,7 +330,7 @@ export default function AppShell({ children }: Props) {
                         className={[
                           "block rounded-xl border px-3.5 py-2.5 transition",
                           active
-                            ? "border-cyan-300/70 bg-cyan-500/10"
+                            ? "border-sky-200/80 bg-sky-500/10 dark:border-sky-500/30 dark:bg-sky-500/10"
                             : "border-transparent bg-[var(--surface-panel)] hover:border-[color:var(--shell-border)]",
                         ].join(" ")}
                       >
@@ -328,7 +339,7 @@ export default function AppShell({ children }: Props) {
                             <span
                               className={
                                 active
-                                  ? "material-symbols-outlined text-[18px] text-cyan-300"
+                                  ? "material-symbols-outlined text-[18px] text-sky-700 dark:text-sky-200"
                                   : "material-symbols-outlined text-[18px] text-[var(--text-muted)]"
                               }
                             >
@@ -337,7 +348,7 @@ export default function AppShell({ children }: Props) {
                             <span
                               className={
                                 active
-                                  ? "text-sm font-semibold text-cyan-300"
+                                  ? "text-sm font-semibold text-sky-800 dark:text-sky-100"
                                   : "text-sm font-semibold text-[var(--text-primary)]"
                               }
                             >
@@ -346,7 +357,7 @@ export default function AppShell({ children }: Props) {
                           </span>
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              active ? "bg-cyan-300" : "bg-[var(--text-muted)]/55"
+                              active ? "bg-sky-500 dark:bg-sky-300" : "bg-[var(--text-muted)]/55"
                             }`}
                           />
                         </div>
@@ -392,7 +403,7 @@ export default function AppShell({ children }: Props) {
                         className={[
                           "inline-flex min-h-[34px] items-center justify-center rounded-lg border text-xs font-semibold transition",
                           active
-                            ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                            ? "border-sky-200/80 bg-sky-500/12 text-sky-700 dark:border-sky-500/30 dark:text-sky-300"
                             : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
                         ].join(" ")}
                         aria-pressed={active}
@@ -429,4 +440,3 @@ export default function AppShell({ children }: Props) {
     </div>
   );
 }
-
