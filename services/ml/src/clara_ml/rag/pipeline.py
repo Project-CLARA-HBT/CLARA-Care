@@ -42,6 +42,14 @@ class RagPipelineP1:
     _PROMPT_MAX_DOC_CHARS = 520
     _PROMPT_RETRY_MAX_DOCS = 5
     _PROMPT_RETRY_MAX_DOC_CHARS = 280
+    _LONG_FORM_ORCHESTRATOR_MODES = {
+        "deep",
+        "deep-beta",
+        "deep_beta",
+        "deep_research",
+        "long",
+    }
+    _STANDARD_ORCHESTRATOR_MODES = {"fast", "quick", "default", "standard"}
     _SCIENTIFIC_PROVIDER_KEYS = {
         "pubmed",
         "europepmc",
@@ -582,11 +590,15 @@ class RagPipelineP1:
         ]
         for value in candidates:
             text = str(value or "").strip().lower()
-            if text in {"deep", "deep_research", "long"}:
+            if text in RagPipelineP1._LONG_FORM_ORCHESTRATOR_MODES:
                 return "deep"
-            if text in {"fast", "quick", "default", "standard"}:
+            if text in RagPipelineP1._STANDARD_ORCHESTRATOR_MODES:
                 return "fast"
         return "fast"
+
+    @staticmethod
+    def _is_long_form_orchestrator_mode(mode: str) -> bool:
+        return str(mode or "").strip().lower() in RagPipelineP1._LONG_FORM_ORCHESTRATOR_MODES
 
     @staticmethod
     def _infer_retrieval_complexity(
@@ -2476,11 +2488,12 @@ class RagPipelineP1:
                         },
                     )
                 )
+                long_form_generation = self._is_long_form_orchestrator_mode(orchestrator_mode)
                 prompt = (
                     self._build_prompt(
                         query,
                         docs,
-                        report_depth="deep" if orchestrator_mode == "deep" else "standard",
+                        report_depth="deep" if long_form_generation else "standard",
                         answer_language=answer_language,
                     )
                     if has_relevant_context
@@ -2495,7 +2508,7 @@ class RagPipelineP1:
                     "Do not prescribe dosage or diagnose. "
                     "Avoid robotic or repetitive sentence templates."
                 )
-                if orchestrator_mode == "deep":
+                if long_form_generation:
                     system_prompt_text = (
                         "You are CLARA deep research clinical assistant. "
                         f"Produce a long-form, evidence-grounded {('English' if answer_language == 'en' else 'Vietnamese')} answer. "

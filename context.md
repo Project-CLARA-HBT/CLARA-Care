@@ -1210,3 +1210,26 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 8 implement local tại `apps/web/app/chat/page.tsx`.
 - Mục tiêu: siết spacing khu chat history sát hơn theo feedback mới, ưu tiên giảm khoảng cách giữa các conversation card nhưng không đổi wording hay business logic.
+- Tester verify slice 8 lúc `2026-04-18 22:09:30 +0700`:
+  - Đã SSH vào VPS bằng đúng credential yêu cầu và đối chiếu `sha256` file `/opt/clara-care/apps/web/app/chat/page.tsx`; hash trên host là `a08ea1eae5ce26577fe0c6966100009e43e441a0a3e26655467071822d9fe4c9`, khớp blob của commit `bfc228f` (`feat: compress chat history list`).
+  - `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml ps web api` cho thấy `clara-app-web-1` và `clara-app-api-1` đều `Up`, bind lần lượt `127.0.0.1:3100->3000/tcp` và `127.0.0.1:8100->8000/tcp`.
+  - Smoke route trực tiếp trên app port: `http://127.0.0.1:3100/chat` trả `307` về `/login?next=%2Fchat`, `http://127.0.0.1:3100/dashboard` trả `307` về `/login?next=%2Fdashboard`, phù hợp route cần auth và xác nhận web process đang phục vụ request.
+  - Bằng chứng artifact/log bổ sung: `docker logs --tail 20 clara-app-web-1` báo Next.js `15.5.14` `Ready in 517ms`; trong bundle đang chạy `/app/.next/server/app/chat/page.js` có marker `measureElement`, class spacing mới `space-y-1.5 pb-1`, và snippet estimate `dayLabel?90:78`.
+  - Tester result: không có findings blocking trong phạm vi verify deploy Slice 8.
+  - Residual risk: chưa có authenticated visual verification sau login nên chưa xác nhận trực quan spacing/history virtualizer khi history rất dài hoặc row height thay đổi sâu trong danh sách; kết luận hiện tại dựa trên checksum deploy, process health, HTTP smoke và marker trong bundle.
+
+## 20) Update 2026-04-18 +07 - Feature 1 backend long-mode parity cho `deep`/`deep_beta`
+
+- Phạm vi implement local:
+  - `services/ml/src/clara_ml/rag/pipeline.py`
+  - `services/ml/tests/test_rag_pipeline.py`
+- Thay đổi:
+  - Bổ sung `deep_beta`/`deep-beta` vào resolver alias để `_resolve_orchestrator_mode()` chuẩn hóa về `deep`, thay vì rơi sang nhánh `fast`.
+  - Gom điều kiện long-form generation thành helper `_is_long_form_orchestrator_mode()` và dùng helper này cho cả `report_depth` lẫn `system_prompt_text`, để `deep_beta` đi cùng baseline long-form prompt/system prompt như `deep`.
+  - Thêm regression test capture prompt/system prompt để chứng minh `planner_hints={"research_mode": "deep_beta"}` tạo `retrieval_trace["orchestrator_mode"] == "deep"` và dùng nhánh long-form generation.
+- Test status:
+  - Đã chạy `pytest services/ml/tests/test_rag_pipeline.py -q -k "deep_beta_uses_long_form_generation_path or emits_retrieval_orchestrator_events"` tại local worktree.
+  - Kết quả: pass (exit code `0`).
+- Ghi chú phạm vi:
+  - Chưa đụng research tier2 sanitize/rewrite.
+  - Chưa đụng web/API rendering contract.
