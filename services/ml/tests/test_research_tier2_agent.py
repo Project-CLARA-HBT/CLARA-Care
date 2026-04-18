@@ -1411,7 +1411,7 @@ def test_run_research_tier2_includes_chart_specs_visual_assets_and_reasoning_dig
     assert "## Ứng dụng thực tế" in result["answer_markdown"]
     assert "## Lưu ý an toàn" in result["answer_markdown"]
     assert "## Tóm tắt điều hành" not in result["answer_markdown"]
-    assert "## Bảng tổng hợp bằng chứng" not in result["answer_markdown"]
+    assert "## Bảng tổng hợp bằng chứng" in result["answer_markdown"]
 
 
 def test_run_research_tier2_emits_contradiction_miner_and_verification_matrix(monkeypatch):
@@ -2337,23 +2337,31 @@ def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() 
     raw = (
         "## Kết luận nhanh\n"
         "Nội dung tóm tắt.\n\n"
-        "## Kế hoạch nghiên cứu\n"
-        "- Bóc tách truy xuất.\n\n"
-        "## Câu hỏi nghiên cứu (PICO)\n"
-        "- Population ...\n\n"
+        "## Điểm chính\n"
+        "Tổng hợp ngắn.\n\n"
+        "## Ứng dụng thực tế\n"
+        "- Theo dõi sát và xác minh lại chỉ định.\n\n"
+        "## Lưu ý an toàn\n"
+        "- Không tự ý đổi liều.\n\n"
         "## Ma trận quyết định an toàn\n"
         "| Mục đánh giá | Mức hiện tại | Hành động khuyến nghị |\n"
         "| --- | --- | --- |\n"
-        "| Mức rủi ro tổng quát | Trung bình | Theo dõi sát |\n"
+        "| Mức rủi ro tổng quát | Trung bình | Theo dõi sát |\n\n"
+        "## Bảng tổng hợp bằng chứng\n"
+        "| ID | Summary |\n"
+        "| --- | --- |\n"
+        "| 1 | Nội dung |\n\n"
+        "## Nguồn tham chiếu\n"
+        "- [1] https://example.org\n"
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
     assert "## Kết luận nhanh" in cleaned
     assert "## Điểm chính" in cleaned
     assert "## Ứng dụng thực tế" in cleaned
     assert "## Lưu ý an toàn" in cleaned
-    assert "## Kế hoạch nghiên cứu" not in cleaned
-    assert "## Câu hỏi nghiên cứu (PICO)" not in cleaned
     assert "## Ma trận quyết định an toàn" not in cleaned
+    assert "## Bảng tổng hợp bằng chứng" not in cleaned
+    assert "## Nguồn tham chiếu" not in cleaned
 
 
 def test_sanitize_user_facing_answer_markdown_deep_preserves_long_form_report_layout() -> None:
@@ -2389,6 +2397,12 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blo
     raw = (
         "## Kết luận nhanh\n"
         "Nội dung chính.\n\n"
+        "## Điểm chính\n"
+        "Tổng hợp phát hiện.\n\n"
+        "## Ứng dụng thực tế\n"
+        "- Áp dụng theo bối cảnh bệnh nhân.\n\n"
+        "## Lưu ý an toàn\n"
+        "- Theo dõi dấu hiệu chảy máu.\n\n"
         "### Ma trận reasoning nodes\n"
         "| Node | Status |\n"
         "| --- | --- |\n"
@@ -2401,13 +2415,16 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blo
         "| ID | Summary |\n"
         "| --- | --- |\n"
         "| 1 | Nội dung |\n\n"
+        "## Nguồn tham chiếu\n"
+        "- [1] https://example.org\n\n"
         "## Phân tích chi tiết\n"
         "Nội dung phân tích giữ lại.\n"
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep_beta")
     assert "### Ma trận reasoning nodes" not in cleaned
     assert "### Hồ sơ nguồn mở rộng" not in cleaned
-    assert "## Bảng tổng hợp bằng chứng" not in cleaned
+    assert "## Bảng tổng hợp bằng chứng" in cleaned
+    assert "## Nguồn tham chiếu" in cleaned
     assert "## Kết luận nhanh" in cleaned
     assert "## Điểm chính" in cleaned
     assert "## Ứng dụng thực tế" in cleaned
@@ -2429,7 +2446,13 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_repo
         "## Khuyến nghị ứng dụng thực hành\n"
         "- Thiết lập checkpoint theo dõi sau tư vấn.\n\n"
         "## Giới hạn, sai số và rủi ro pháp lý\n"
-        "- Cần xác minh ngoài đời thực trước khi đổi điều trị.\n"
+        "- Cần xác minh ngoài đời thực trước khi đổi điều trị.\n\n"
+        "## Bảng tổng hợp bằng chứng\n"
+        "| Chỉ số | Giá trị |\n"
+        "| --- | --- |\n"
+        "| Supported claims | 3 |\n\n"
+        "## Nguồn tham chiếu\n"
+        "- [1] https://example.org\n"
     )
     cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep_beta")
     assert "## Kế hoạch nghiên cứu" in cleaned
@@ -2438,6 +2461,8 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_repo
     assert "## Bối cảnh lâm sàng áp dụng" in cleaned
     assert "## Khuyến nghị ứng dụng thực hành" in cleaned
     assert "## Giới hạn, sai số và rủi ro pháp lý" in cleaned
+    assert "## Bảng tổng hợp bằng chứng" in cleaned
+    assert "## Nguồn tham chiếu" in cleaned
     assert "## Điểm chính" not in cleaned
     assert "## Ứng dụng thực tế" not in cleaned
     assert "## Lưu ý an toàn" not in cleaned

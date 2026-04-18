@@ -1310,3 +1310,20 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Test status:
   - `pytest -q tests/test_rag_pipeline.py::test_rag_pipeline_deep_beta_uses_long_form_generation_path tests/test_rag_pipeline.py::test_rag_pipeline_deep_mode_keeps_existing_reader_first_long_form_contract tests/test_research_tier2_agent.py::test_deep_beta_report_prompt_expands_writer_handoff_payloads tests/test_research_tier2_agent.py::test_resolve_report_section_contract_by_mode tests/test_research_tier2_agent.py::test_resolve_report_style_profile_by_mode`
   - Kết quả: pass (`5 passed`).
+- Deploy và tester verify:
+  - Commit `4768bf4` đã push lên `origin/main`.
+  - Deploy đầu tiên bị lỗi: file mới đã lên host nhưng container `ml` vẫn chạy code cũ do build lấy context/layer cũ; tester đã bắt được mismatch giữa host hash và runtime hash trong container.
+  - Đã redeploy lại theo thứ tự tuần tự: `scp` xong mới `docker compose build --no-cache ml`, sau đó `docker compose up -d ml`.
+  - Tester verify lại `PASS`: hash trong `/app/src` và `/usr/local/lib/python3.14/site-packages` của container khớp commit `4768bf4`; runtime smoke-check xác nhận `deep_beta` dùng contract dossier mới còn `deep` giữ contract cũ.
+  - Residual risk từ tester: chưa chạy full E2E qua live API/job route; cần tiếp tục nhớ kiểm tra import path thực tế từ `site-packages` ở các redeploy sau.
+
+## 2026-04-19 Feature 7 Note
+
+- Scope: nới backend output sanitize cho `deep_beta` trong `services/ml/src/clara_ml/agents/research_tier2.py` để giữ section evidence/reference trong `answer_markdown`; không đổi prompt style và không đụng web/UI.
+- Thay đổi chính:
+  - `_sanitize_user_facing_answer_markdown()` chỉ strip `Nguồn tham chiếu` ở `fast/deep`, không strip ở `deep_beta`.
+  - `Bảng tổng hợp bằng chứng` chỉ strip ở `deep`; `deep_beta` giữ lại.
+  - Dọn các H3 telemetry (`reasoning nodes`, `hồ sơ nguồn mở rộng`, ...) cho cả `deep` và `deep_beta` để tránh noise.
+- Test status:
+  - `pytest -q services/ml/tests/test_research_tier2_agent.py -k "run_research_tier2_includes_chart_specs_visual_assets_and_reasoning_digest or sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections or sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blocks or sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_report_layout"`: pass (`4 passed`).
+  - `pytest -q services/ml/tests/test_research_tier2_agent.py -k "sanitize_user_facing_answer_markdown"`: pass (`9 passed`).

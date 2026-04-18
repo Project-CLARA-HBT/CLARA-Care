@@ -5903,6 +5903,7 @@ def _sanitize_user_facing_answer_markdown(
     answer_language: str = "vi",
 ) -> str:
     mode = str(research_mode).strip().lower()
+    is_deep_beta = mode == "deep_beta"
     sanitized = _normalize_user_facing_answer_markdown(
         answer_markdown,
         answer_language=answer_language,
@@ -5936,21 +5937,22 @@ def _sanitize_user_facing_answer_markdown(
         flags=re.IGNORECASE,
     )
 
-    # Citations are rendered in evidence sidebar; keep answer body focused on analysis.
-    sanitized = _remove_h2_sections(
-        sanitized,
-        section_heading_keys={
-            _canonical_h2_key("Nguồn tham chiếu"),
-            _canonical_h2_key("Danh mục nguồn dùng để hiệu chỉnh nhận định"),
-            _canonical_h2_key("Nguồn tham chiếu bổ sung"),
-        },
-    )
-    sanitized = re.sub(
-        r"(?:^|\n)\s*###\s*Nguồn tham chiếu[^\n]*[\s\S]*?(?=\n##\s|\n#\s|$)",
-        "\n",
-        sanitized,
-        flags=re.IGNORECASE,
-    )
+    if not is_deep_beta:
+        # Fast/deep keep citations in side panels to reduce answer-body verbosity.
+        sanitized = _remove_h2_sections(
+            sanitized,
+            section_heading_keys={
+                _canonical_h2_key("Nguồn tham chiếu"),
+                _canonical_h2_key("Danh mục nguồn dùng để hiệu chỉnh nhận định"),
+                _canonical_h2_key("Nguồn tham chiếu bổ sung"),
+            },
+        )
+        sanitized = re.sub(
+            r"(?:^|\n)\s*###\s*Nguồn tham chiếu[^\n]*[\s\S]*?(?=\n##\s|\n#\s|$)",
+            "\n",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
 
     if mode == "fast":
         # Fast mode should stay compact and natural; deep template sections are moved to telemetry.
@@ -5992,9 +5994,8 @@ def _sanitize_user_facing_answer_markdown(
             flags=re.IGNORECASE,
         )
 
-    if mode in {"deep", "deep_beta"}:
-        # Keep long-form reasoning in main body, but remove telemetry/citation-heavy appendices
-        # because these signals are already exposed in the right-side evidence/metrics panel.
+    if mode == "deep":
+        # Deep keeps analysis sections but removes heavy evidence table from body.
         sanitized = _remove_h2_sections(
             sanitized,
             section_heading_keys={
@@ -6003,19 +6004,20 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Evidence table"),
             },
         )
-        if mode == "deep":
-            sanitized = _remove_h3_sections_by_heading_keys(
-                sanitized,
-                heading_keys={
-                    _canonical_h2_key("Nhật ký multi-pass retrieval"),
-                    _canonical_h2_key("Ma trận reasoning nodes"),
-                    _canonical_h2_key("Ma trận trạng thái claim-level"),
-                    _canonical_h2_key("Hồ sơ nguồn mở rộng"),
-                    _canonical_h2_key("Nguồn tham chiếu bổ sung"),
-                    _canonical_h2_key("Bảng bổ sung Deep Beta"),
-                    _canonical_h2_key("Bảng triển khai truy xuất"),
-                },
-            )
+    if mode in {"deep", "deep_beta"}:
+        # Remove telemetry-heavy H3 blocks in deep modes; keep user-facing report sections.
+        sanitized = _remove_h3_sections_by_heading_keys(
+            sanitized,
+            heading_keys={
+                _canonical_h2_key("Nhật ký multi-pass retrieval"),
+                _canonical_h2_key("Ma trận reasoning nodes"),
+                _canonical_h2_key("Ma trận trạng thái claim-level"),
+                _canonical_h2_key("Hồ sơ nguồn mở rộng"),
+                _canonical_h2_key("Nguồn tham chiếu bổ sung"),
+                _canonical_h2_key("Bảng bổ sung Deep Beta"),
+                _canonical_h2_key("Bảng triển khai truy xuất"),
+            },
+        )
 
     # Mermaid/chart spec is moved out of main answer area to reduce visual clutter.
     sanitized = _remove_fenced_blocks(
