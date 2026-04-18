@@ -1153,3 +1153,18 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 
 - Slice 4 (nới spacing chat history sidebar) đã implement local tại `apps/web/app/chat/page.tsx` và log bổ sung trong `context.md`.
 - Phạm vi chỉ là UI spacing cho khu history quanh `Lọc theo thư mục`, các bucket `Hôm nay` / `7 ngày qua` / `Cũ hơn`, và conversation cards; không đổi business logic, wording, hay Preferences.
+- Tester partial verify deploy Slice 4 lúc `2026-04-18 16:49 +0700`:
+  - Local commit đích: `2e50f39` (`feat: relax chat history spacing`); checksum blob của `apps/web/app/chat/page.tsx` tại commit là `65b2763a48206cd48c188bf661a0f68bba368b9165438083b974e2a0d598e3e9`.
+  - Public route ẩn danh: `https://theclaracare.com/chat` và `https://theclaracare.com/dashboard` đều trả `307` về `/login` như mong đợi.
+  - Runtime authenticated: login public thành công, `GET /chat` và `GET /dashboard` đều trả `200`; HTML `/chat` nạp chunk `/_next/static/chunks/app/chat/page-b36764ae5bb96cc2.js`.
+  - Bằng chứng artifact web mới đang chạy: chat chunk public chứa đúng marker của slice 4 gồm `estimateSize:()=>108`, `p-2.5`, `mb-3 space-y-2`, `mt-2 flex flex-wrap items-center gap-2`, `space-y-2.5 pb-2`, `px-2.5 py-2 text-left`, và các label `Lọc theo thư mục`, `Hôm nay`, `7 ngày qua`, `Cũ hơn`.
+  - Tester result: không thấy lỗi runtime/blocking trên web live trong phạm vi smoke test đã thực hiện; slice 4 có bằng chứng mạnh ở compiled artifact public.
+  - Residual risk: chưa thể SSH vào VPS `36.50.26.18` từ môi trường tester hiện tại (`Permission denied (publickey,password)`), nên chưa independent-verify được file `/opt/clara-care/apps/web/app/chat/page.tsx` khớp checksum commit và cũng chưa đọc trực tiếp `docker compose ps`/`docker inspect` để chốt trạng thái `web` và side effect `api`.
+- Correction note `2026-04-18 17:00 +0700`:
+  - Đã rerun host-level verify bằng đúng lệnh `sshpass -p '3Ys29nxTpAMmS7cF' ssh -o 'StrictHostKeyChecking=no' root@36.50.26.18 ...`, nhưng tại thời điểm chạy SSH tới `36.50.26.18:22` bị `Connection timed out`.
+  - Vì vậy host-level verify cho checksum file `/opt/clara-care/apps/web/app/chat/page.tsx`, trạng thái container `web/api`, và route localhost trên VPS: FAILED do không kết nối được host, chưa thể chốt pass/fail ở mức máy chủ trong lần rerun này.
+
+## 16) Update 2026-04-18 +07 - Slice 5
+
+- Slice 5 đã implement local tại `apps/web/app/chat/page.tsx`; mục tiêu là giảm spacing list chat/history sau phản hồi user để phần `Cuộc trò chuyện` gọn lại nhưng vẫn thoáng hơn trước slice 4.
+- Phạm vi chỉ chạm UI khu history/sidebar màn chat và giảm nhẹ `estimateSize` cho virtualizer; không đổi Preferences, wording, hay logic nghiệp vụ.
