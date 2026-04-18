@@ -296,11 +296,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="relative grid gap-4 md:grid-cols-4">
-            <div className="absolute left-[8%] right-[8%] top-5 hidden h-1 rounded-full bg-[var(--surface-muted)] md:block" />
-            <div
-              className="absolute left-[8%] top-5 hidden h-1 rounded-full bg-[var(--brand-500)] md:block"
-              style={{ width: `${Math.max(20, Math.min(92, workflowProgress - 8))}%` }}
-            />
+            <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-1 overflow-hidden rounded-full bg-[var(--surface-muted)] md:block">
+              <div
+                className="h-full rounded-full bg-[var(--brand-500)] transition-[width] duration-300 ease-out"
+                style={{ width: `${Math.max(0, Math.min(100, workflowProgress))}%` }}
+              />
+            </div>
 
             {workflowTasks.map((task, index) => {
               const state = workflowStates[index] ?? "pending";
