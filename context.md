@@ -1233,3 +1233,24 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Ghi chú phạm vi:
   - Chưa đụng research tier2 sanitize/rewrite.
   - Chưa đụng web/API rendering contract.
+
+- Deploy và tester verify:
+  - Commit `9943d4d` đã push lên `origin/main`.
+  - Đã copy runtime file `services/ml/src/clara_ml/rag/pipeline.py` lên host `/opt/clara-care` và chạy `docker compose --env-file .env -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d --build ml`.
+  - Tester độc lập xác nhận SHA-256 file host khớp blob của commit `9943d4d`, container `clara-app-ml-1` đang `Up`, `GET /health` và `GET /health/details` trả `200`, và runtime helper trong container xác nhận `deep_beta` được normalize sang nhánh long-form như `deep`.
+  - Residual risk từ tester: chưa chạy full E2E `POST /v1/research/tier2` vì đó không còn là smoke nhẹ trên shared VPS; ngoài ra `/health/details` hiện báo `environment="development"` trên VPS.
+
+## 21) Update 2026-04-18 +07 - Feature 2 preserve long-form content trong research tier2 cho `deep`/`deep_beta`
+
+- Phạm vi implement local:
+  - `services/ml/src/clara_ml/agents/research_tier2.py`
+  - `services/ml/tests/test_research_tier2_agent.py`
+- Thay đổi:
+  - Thêm guard nhỏ ở `_sanitize_user_facing_answer_markdown()` để `deep`/`deep_beta` không bị restabilize về layout 4-section khi answer đã có cấu trúc report long-form đủ giàu.
+  - Guard mới chỉ kích hoạt cho deep modes và dựa trên số lượng/loại H2 section research-report đã có, nên giữ scope hẹp và tránh nới fast mode.
+  - Thêm 2 regression test chứng minh deep/deep_beta giữ nguyên các section long-form như `Kế hoạch nghiên cứu`, `Tóm tắt điều hành`, `Phân tích chi tiết`, `Bối cảnh lâm sàng áp dụng`, `Khuyến nghị ứng dụng thực hành`, `Giới hạn...` thay vì bị ép lại thành `Điểm chính` / `Ứng dụng thực tế` / `Lưu ý an toàn`.
+- Test status:
+  - Đã chạy `pytest tests/test_research_tier2_agent.py -q -k "sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections or sanitize_user_facing_answer_markdown_deep_preserves_long_form_report_layout or sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blocks or sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_report_layout"` trong `services/ml`.
+  - Kết quả: pass (`4 passed`).
+  - Đã chạy `pytest tests/test_research_tier2_agent.py -q -k "sanitize_user_facing_answer_markdown"` trong `services/ml`.
+  - Kết quả: pass (`9 passed`).

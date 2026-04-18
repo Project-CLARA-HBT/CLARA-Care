@@ -5251,6 +5251,26 @@ def _has_reader_friendly_layout(markdown_text: str, *, research_mode: str) -> bo
     )
 
 
+def _has_preservable_long_form_layout(markdown_text: str, *, research_mode: str) -> bool:
+    mode = str(research_mode or "fast").strip().lower()
+    if mode not in {"deep", "deep_beta"}:
+        return False
+
+    section_ids = set(_extract_markdown_h2_section_ids(markdown_text))
+    if len(section_ids) >= 5:
+        return True
+
+    long_form_sections = {
+        "research_plan",
+        "executive_summary",
+        "detailed_analysis",
+        "clinical_context",
+        "practice_recommendations",
+        "limitations_legal",
+    }
+    return len(section_ids) >= 4 and len(section_ids & long_form_sections) >= 2
+
+
 _ENGLISH_BODY_MARKERS = (
     " the ",
     " and ",
@@ -5834,6 +5854,11 @@ def _sanitize_user_facing_answer_markdown(
             sanitized = _stabilize_fast_answer_layout(sanitized, answer_language=answer_language)
     elif mode in {"deep", "deep_beta"}:
         should_stabilize_long = not _has_reader_friendly_layout(sanitized, research_mode=mode)
+        if should_stabilize_long and _has_preservable_long_form_layout(
+            sanitized,
+            research_mode=mode,
+        ):
+            should_stabilize_long = False
         if mode == "deep_beta":
             # Preserve long deep-research body when it is already substantial.
             deep_beta_guardrail = max(2500, int(max(int(settings.deep_beta_report_min_words), 7000) * 0.5))
@@ -8652,4 +8677,3 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             ],
         },
     }
-

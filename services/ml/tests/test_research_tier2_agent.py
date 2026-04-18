@@ -2110,6 +2110,35 @@ def test_sanitize_user_facing_answer_markdown_deep_removes_deep_beta_sections() 
     assert "## Ma trận quyết định an toàn" not in cleaned
 
 
+def test_sanitize_user_facing_answer_markdown_deep_preserves_long_form_report_layout() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Kết luận tổng quát.\n\n"
+        "## Kế hoạch nghiên cứu\n"
+        "- Tách câu hỏi và ưu tiên nguồn mạnh.\n\n"
+        "## Tóm tắt điều hành\n"
+        "Tổng hợp luận điểm chính theo mức độ chắc chắn.\n\n"
+        "## Phân tích chi tiết\n"
+        "Đoạn phân tích dài giải thích trade-off giữa hiệu quả, an toàn và tính khả thi.\n\n"
+        "## Bối cảnh lâm sàng áp dụng\n"
+        "Phù hợp hơn với nhóm người bệnh có đa bệnh nền và đa trị liệu.\n\n"
+        "## Khuyến nghị ứng dụng thực hành\n"
+        "- Đối chiếu lại bệnh nền, thuốc đang dùng và mốc theo dõi.\n\n"
+        "## Giới hạn, sai số và rủi ro pháp lý\n"
+        "- Không thay thế đánh giá trực tiếp của bác sĩ.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep")
+    assert "## Kế hoạch nghiên cứu" in cleaned
+    assert "## Tóm tắt điều hành" in cleaned
+    assert "## Phân tích chi tiết" in cleaned
+    assert "## Bối cảnh lâm sàng áp dụng" in cleaned
+    assert "## Khuyến nghị ứng dụng thực hành" in cleaned
+    assert "## Giới hạn, sai số và rủi ro pháp lý" in cleaned
+    assert "## Điểm chính" not in cleaned
+    assert "## Ứng dụng thực tế" not in cleaned
+    assert "## Lưu ý an toàn" not in cleaned
+
+
 def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blocks() -> None:
     raw = (
         "## Kết luận nhanh\n"
@@ -2137,6 +2166,35 @@ def test_sanitize_user_facing_answer_markdown_deep_beta_removes_telemetry_h3_blo
     assert "## Điểm chính" in cleaned
     assert "## Ứng dụng thực tế" in cleaned
     assert "## Lưu ý an toàn" in cleaned
+
+
+def test_sanitize_user_facing_answer_markdown_deep_beta_preserves_long_form_report_layout() -> None:
+    raw = (
+        "## Kết luận nhanh\n"
+        "Kết luận chính.\n\n"
+        "## Kế hoạch nghiên cứu\n"
+        "- Chia nhỏ truy xuất theo subgroup và outcome.\n\n"
+        "## Tóm tắt điều hành\n"
+        "Tổng hợp tín hiệu thuận chiều và điểm bất định còn lại.\n\n"
+        "## Phân tích chi tiết\n"
+        "Phần này giữ diễn giải dài, tránh ép lại thành tóm tắt bốn section.\n\n"
+        "## Bối cảnh lâm sàng áp dụng\n"
+        "Nhóm nguy cơ cao cần ngưỡng can thiệp thấp hơn.\n\n"
+        "## Khuyến nghị ứng dụng thực hành\n"
+        "- Thiết lập checkpoint theo dõi sau tư vấn.\n\n"
+        "## Giới hạn, sai số và rủi ro pháp lý\n"
+        "- Cần xác minh ngoài đời thực trước khi đổi điều trị.\n"
+    )
+    cleaned = tier2._sanitize_user_facing_answer_markdown(raw, research_mode="deep_beta")
+    assert "## Kế hoạch nghiên cứu" in cleaned
+    assert "## Tóm tắt điều hành" in cleaned
+    assert "## Phân tích chi tiết" in cleaned
+    assert "## Bối cảnh lâm sàng áp dụng" in cleaned
+    assert "## Khuyến nghị ứng dụng thực hành" in cleaned
+    assert "## Giới hạn, sai số và rủi ro pháp lý" in cleaned
+    assert "## Điểm chính" not in cleaned
+    assert "## Ứng dụng thực tế" not in cleaned
+    assert "## Lưu ý an toàn" not in cleaned
 
 
 def test_has_reader_friendly_layout_rejects_extra_report_sections() -> None:
