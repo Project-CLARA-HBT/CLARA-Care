@@ -40,6 +40,9 @@ from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
     KnowledgeSource,
+    MedicineCabinet,
+    MedicineItem,
+    PhrProfile,
     ResearchJob,
     SessionModel,
     SystemSetting,
@@ -1650,6 +1653,158 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
     return attach_attribution(normalized, attribution=attribution)
 
 
+def _coerce_personal_mode(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def _as_dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _compact_text(value: Any, *, limit: int = 160) -> str:
+    text = str(value or "").strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
+def _build_personal_context_payload(
+    db: Session,
+    *,
+    user_id: int,
+    answer_language: str,
+) -> dict[str, Any]:
+    profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user_id)).scalar_one_or_none()
+    allergies: list[dict[str, Any]] = []
+    conditions: list[dict[str, Any]] = []
+    profile_medications: list[dict[str, Any]] = []
+    profile_payload: dict[str, Any] = {}
+
+    if profile is not None:
+        allergies = _as_dict_list(profile.allergies_json)
+        conditions = _as_dict_list(profile.conditions_json)
+        profile_medications = _as_dict_list(profile.medications_json)
+        profile_payload = {
+            "full_name": profile.full_name or "",
+            "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+            "gender": profile.gender or "",
+            "blood_type": profile.blood_type or "",
+            "height_cm": profile.height_cm,
+            "weight_kg": profile.weight_kg,
+            "notes": profile.notes or "",
+        }
+
+    cabinet = db.execute(
+        select(MedicineCabinet).where(MedicineCabinet.user_id == user_id)
+    ).scalar_one_or_none()
+    cabinet_items: list[dict[str, Any]] = []
+    if cabinet is not None:
+        rows = (
+            db.execute(
+                select(MedicineItem)
+                .where(MedicineItem.cabinet_id == cabinet.id)
+                .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
+                .limit(120)
+            )
+            .scalars()
+            .all()
+        )
+        cabinet_items = [
+            {
+                "name": item.drug_name or item.normalized_name or "",
+                "normalized_name": item.normalized_name or "",
+                "dose": item.dosage or "",
+                "dosage_form": item.dosage_form or "",
+                "quantity": item.quantity,
+                "source": item.source or "",
+                "expires_on": item.expires_on.isoformat() if item.expires_on else None,
+                "note": item.note or "",
+            }
+            for item in rows
+        ]
+
+    merged_medications: list[dict[str, Any]] = []
+    seen_medication_keys: set[str] = set()
+    for item in profile_medications:
+        name = _compact_text(item.get("name"), limit=120)
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen_medication_keys:
+            continue
+        seen_medication_keys.add(key)
+        merged_medications.append(
+            {
+                "name": name,
+                "dose": _compact_text(item.get("dose"), limit=80),
+                "frequency": _compact_text(item.get("frequency"), limit=80),
+                "note": _compact_text(item.get("note"), limit=140),
+                "source": "phr",
+            }
+        )
+    for item in cabinet_items:
+        name = _compact_text(item.get("name"), limit=120)
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen_medication_keys:
+            continue
+        seen_medication_keys.add(key)
+        merged_medications.append(
+            {
+                "name": name,
+                "dose": _compact_text(item.get("dose"), limit=80),
+                "frequency": "",
+                "note": _compact_text(item.get("note"), limit=140),
+                "source": "cabinet",
+            }
+        )
+
+    if answer_language == "en":
+        header = "Personal health context (PHR + medicine cabinet):"
+        allergies_label = "Allergies"
+        conditions_label = "Conditions"
+        meds_label = "Current meds"
+    else:
+        header = "Bối cảnh sức khỏe cá nhân (PHR + tủ thuốc):"
+        allergies_label = "Dị ứng"
+        conditions_label = "Bệnh nền"
+        meds_label = "Thuốc hiện có"
+
+    allergy_names = [str(item.get("name") or "").strip() for item in allergies][:12]
+    condition_names = [str(item.get("name") or "").strip() for item in conditions][:12]
+    med_names = [str(item.get("name") or "").strip() for item in merged_medications][:16]
+    summary_lines = [f"- {header}"]
+    if allergy_names:
+        summary_lines.append(f"- {allergies_label}: {', '.join([name for name in allergy_names if name])}.")
+    if condition_names:
+        summary_lines.append(f"- {conditions_label}: {', '.join([name for name in condition_names if name])}.")
+    if med_names:
+        summary_lines.append(f"- {meds_label}: {', '.join([name for name in med_names if name])}.")
+    summary_markdown = "\n".join(summary_lines)
+
+    return {
+        "profile": profile_payload,
+        "allergies": allergies,
+        "conditions": conditions,
+        "medications": merged_medications,
+        "medicine_cabinet": {
+            "exists": cabinet is not None,
+            "label": cabinet.label if cabinet is not None else "",
+            "items": cabinet_items,
+        },
+        "summary_markdown": summary_markdown,
+    }
+
+
 def _build_tier2_upstream_payload(
     payload: dict[str, Any],
     *,
@@ -1675,6 +1830,8 @@ def _build_tier2_upstream_payload(
         upstream_payload.get("ui_language") or upstream_payload.get("answer_language"),
         default="vi",
     )
+    personal_mode = _coerce_personal_mode(upstream_payload.get("personal_mode"))
+    upstream_payload["personal_mode"] = personal_mode
     upstream_payload["ui_language"] = answer_language
     upstream_payload["answer_language"] = answer_language
     upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
@@ -1705,6 +1862,22 @@ def _build_tier2_upstream_payload(
 
     if uploaded_documents or payload.get("source_mode") in {"uploaded_files", "knowledge_sources"}:
         upstream_payload["uploaded_documents"] = uploaded_documents
+
+    if personal_mode:
+        personal_context = _build_personal_context_payload(
+            db,
+            user_id=user.id,
+            answer_language=answer_language,
+        )
+        upstream_payload["personal_context"] = personal_context
+        metadata = upstream_payload.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+        metadata["personal_mode"] = True
+        metadata["personal_context_available"] = bool(personal_context.get("summary_markdown"))
+        metadata["personal_context_medication_count"] = len(personal_context.get("medications", []))
+        upstream_payload["metadata"] = metadata
+
     upstream_payload["role"] = token.role
     upstream_payload["strict_deepseek_required"] = bool(settings.deepseek_strict_mode)
     runtime_rag_flow, runtime_rag_sources = _load_research_rag_runtime(db)

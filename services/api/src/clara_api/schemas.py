@@ -655,6 +655,7 @@ class ResearchTier2JobCreateRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
     message: str | None = None
     research_mode: Literal["fast", "deep", "deep_beta"] = "fast"
+    personal_mode: bool = False
     retrieval_stack_mode: Literal["auto", "full"] = Field(
         default="auto",
         validation_alias=AliasChoices("retrieval_stack_mode", "stack_mode"),

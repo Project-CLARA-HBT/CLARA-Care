@@ -341,6 +341,7 @@ export type ResearchTier2JobCreateOptions = {
   sourceHubSources?: SourceHubSourceKey[];
   researchMode?: ResearchExecutionMode;
   retrievalStackMode?: ResearchRetrievalStackMode;
+  personalMode?: boolean;
   uiLanguage?: "vi" | "en";
   deepPassCount?: number;
   llmRuntime?: {
@@ -2450,6 +2451,7 @@ export async function runResearchTier2(
     sourceIds?: number[];
     researchMode?: ResearchExecutionMode;
     retrievalStackMode?: ResearchRetrievalStackMode;
+    personalMode?: boolean;
     uiLanguage?: "vi" | "en";
   }
 ): Promise<ResearchTier2RawResponse> {
@@ -2462,6 +2464,9 @@ export async function runResearchTier2(
   const retrievalStackMode = normalizeResearchRetrievalStackMode(options?.retrievalStackMode);
   payload.research_mode = researchMode;
   payload.retrieval_stack_mode = retrievalStackMode;
+  if (typeof options?.personalMode === "boolean") {
+    payload.personal_mode = options.personalMode;
+  }
   if (options?.uiLanguage === "vi" || options?.uiLanguage === "en") {
     payload.ui_language = options.uiLanguage;
   }
@@ -2516,6 +2521,9 @@ export async function createResearchTier2Job(
     }
   };
 
+  if (typeof options?.personalMode === "boolean") {
+    payload.personal_mode = options.personalMode;
+  }
   if (options?.uiLanguage === "vi" || options?.uiLanguage === "en") {
     payload.ui_language = options.uiLanguage;
   }

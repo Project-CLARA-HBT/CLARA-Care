@@ -334,6 +334,133 @@ def _normalize_answer_language(payload: dict[str, Any]) -> str:
     return "vi"
 
 
+def _normalize_personal_mode(payload: dict[str, Any]) -> bool:
+    value = payload.get("personal_mode")
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def _extract_personal_context(payload: dict[str, Any]) -> dict[str, Any]:
+    value = payload.get("personal_context")
+    return value if isinstance(value, dict) else {}
+
+
+def _compact_personal_text(value: Any, *, limit: int = 120) -> str:
+    text = " ".join(str(value or "").split()).strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
+def _build_personal_context_suffix(
+    personal_context: dict[str, Any],
+    *,
+    answer_language: str,
+) -> str:
+    profile = personal_context.get("profile") if isinstance(personal_context.get("profile"), dict) else {}
+    allergies = personal_context.get("allergies") if isinstance(personal_context.get("allergies"), list) else []
+    conditions = personal_context.get("conditions") if isinstance(personal_context.get("conditions"), list) else []
+    medications = personal_context.get("medications") if isinstance(personal_context.get("medications"), list) else []
+    cabinet = (
+        personal_context.get("medicine_cabinet")
+        if isinstance(personal_context.get("medicine_cabinet"), dict)
+        else {}
+    )
+    cabinet_items = cabinet.get("items") if isinstance(cabinet.get("items"), list) else []
+
+    allergy_names = [
+        _compact_personal_text(item.get("name"), limit=100)
+        for item in allergies[:12]
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    ]
+    condition_names = [
+        _compact_personal_text(item.get("name"), limit=100)
+        for item in conditions[:12]
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    ]
+    medication_rows = []
+    for raw in medications[:18]:
+        if not isinstance(raw, dict):
+            continue
+        med_name = _compact_personal_text(raw.get("name"), limit=100)
+        if not med_name:
+            continue
+        med_dose = _compact_personal_text(raw.get("dose"), limit=64)
+        med_frequency = _compact_personal_text(raw.get("frequency"), limit=64)
+        parts = [med_name]
+        if med_dose:
+            parts.append(med_dose)
+        if med_frequency:
+            parts.append(med_frequency)
+        medication_rows.append(" - ".join(parts))
+
+    cabinet_rows = []
+    for raw in cabinet_items[:18]:
+        if not isinstance(raw, dict):
+            continue
+        med_name = _compact_personal_text(raw.get("name"), limit=100)
+        if not med_name:
+            continue
+        med_dose = _compact_personal_text(raw.get("dose"), limit=64)
+        if med_dose:
+            cabinet_rows.append(f"{med_name} ({med_dose})")
+        else:
+            cabinet_rows.append(med_name)
+
+    profile_lines: list[str] = []
+    if profile:
+        full_name = _compact_personal_text(profile.get("full_name"), limit=80)
+        date_of_birth = _compact_personal_text(profile.get("date_of_birth"), limit=20)
+        gender = _compact_personal_text(profile.get("gender"), limit=32)
+        blood_type = _compact_personal_text(profile.get("blood_type"), limit=16)
+        if full_name:
+            profile_lines.append(full_name)
+        if date_of_birth:
+            profile_lines.append(f"DOB: {date_of_birth}")
+        if gender:
+            profile_lines.append(f"Gender: {gender}")
+        if blood_type:
+            profile_lines.append(f"Blood: {blood_type}")
+
+    if answer_language == "en":
+        lines = [
+            "### Personal Context (PHR + Medicine Cabinet)",
+            "Use this context to personalize recommendations, contraindications, and monitoring.",
+        ]
+        if profile_lines:
+            lines.append(f"- Profile: {', '.join(profile_lines)}")
+        if allergy_names:
+            lines.append(f"- Allergies: {', '.join(allergy_names)}")
+        if condition_names:
+            lines.append(f"- Conditions: {', '.join(condition_names)}")
+        if medication_rows:
+            lines.append(f"- Medications in PHR: {'; '.join(medication_rows)}")
+        if cabinet_rows:
+            lines.append(f"- Medicines from cabinet: {'; '.join(cabinet_rows)}")
+    else:
+        lines = [
+            "### Bối Cảnh Cá Nhân (PHR + Tủ Thuốc)",
+            "Dùng ngữ cảnh này để cá thể hóa khuyến nghị, chống chỉ định và kế hoạch theo dõi.",
+        ]
+        if profile_lines:
+            lines.append(f"- Hồ sơ: {', '.join(profile_lines)}")
+        if allergy_names:
+            lines.append(f"- Dị ứng: {', '.join(allergy_names)}")
+        if condition_names:
+            lines.append(f"- Bệnh nền: {', '.join(condition_names)}")
+        if medication_rows:
+            lines.append(f"- Thuốc trong PHR: {'; '.join(medication_rows)}")
+        if cabinet_rows:
+            lines.append(f"- Thuốc trong tủ thuốc: {'; '.join(cabinet_rows)}")
+
+    return "\n".join(lines).strip()
+
+
 def _coerce_bool(value: Any, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -6212,6 +6339,15 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     research_mode = _normalize_research_mode(payload)
     retrieval_stack_mode = _normalize_retrieval_stack_mode(payload)
     answer_language = _normalize_answer_language(payload)
+    personal_mode = _normalize_personal_mode(payload)
+    personal_context = _extract_personal_context(payload) if personal_mode else {}
+    personal_context_suffix = (
+        _build_personal_context_suffix(personal_context, answer_language=answer_language)
+        if personal_mode and personal_context
+        else ""
+    )
+    if personal_context_suffix:
+        topic = f"{topic}\n\n{personal_context_suffix}".strip()
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
@@ -6288,6 +6424,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         research_mode=research_mode,
         retrieval_stack_mode=retrieval_stack_mode,
     )
+    planner_hints["personal_mode"] = personal_mode
+    if personal_context_suffix:
+        planner_hints["personal_context_summary"] = personal_context_suffix[:2000]
     planner_hints["answer_language"] = answer_language
     source_route = decide_source_route(
         query=topic,
