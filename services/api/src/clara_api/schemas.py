@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, EmailStr, Field, field_validator, model_validator
@@ -912,3 +912,67 @@ class WorkspaceSummaryResponse(BaseModel):
 class WorkspaceExportFormatResponse(BaseModel):
     format: Literal["markdown", "docx"]
     filename: str
+
+
+class PhrAllergyItem(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=140)
+    reaction: str = Field(default="", max_length=200)
+    severity: Literal["mild", "moderate", "severe", "unknown"] = "unknown"
+    note: str = Field(default="", max_length=500)
+
+
+class PhrConditionItem(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    status: Literal["active", "resolved", "monitoring", "unknown"] = "unknown"
+    diagnosed_on: date | None = None
+    note: str = Field(default="", max_length=500)
+
+
+class PhrMedicationItem(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    dose: str = Field(default="", max_length=140)
+    frequency: str = Field(default="", max_length=140)
+    started_on: date | None = None
+    is_current: bool = True
+    note: str = Field(default="", max_length=500)
+
+
+class PhrRecordUpdateRequest(BaseModel):
+    full_name: str = Field(default="", max_length=255)
+    date_of_birth: date | None = None
+    gender: str = Field(default="", max_length=32)
+    blood_type: str = Field(default="", max_length=16)
+    height_cm: float | None = Field(default=None, ge=0, le=300)
+    weight_kg: float | None = Field(default=None, ge=0, le=800)
+    phone: str = Field(default="", max_length=64)
+    address: str = Field(default="", max_length=2000)
+    emergency_contact_name: str = Field(default="", max_length=255)
+    emergency_contact_phone: str = Field(default="", max_length=64)
+    insurance_id: str = Field(default="", max_length=128)
+    notes: str = Field(default="", max_length=4000)
+    allergies: list[PhrAllergyItem] = Field(default_factory=list, max_length=80)
+    conditions: list[PhrConditionItem] = Field(default_factory=list, max_length=80)
+    medications: list[PhrMedicationItem] = Field(default_factory=list, max_length=120)
+
+
+class PhrRecordResponse(BaseModel):
+    full_name: str = ""
+    date_of_birth: date | None = None
+    gender: str = ""
+    blood_type: str = ""
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    phone: str = ""
+    address: str = ""
+    emergency_contact_name: str = ""
+    emergency_contact_phone: str = ""
+    insurance_id: str = ""
+    notes: str = ""
+    allergies: list[PhrAllergyItem] = Field(default_factory=list)
+    conditions: list[PhrConditionItem] = Field(default_factory=list)
+    medications: list[PhrMedicationItem] = Field(default_factory=list)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

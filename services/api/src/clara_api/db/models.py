@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Date,
     Float,
     ForeignKey,
     Integer,
@@ -540,3 +541,37 @@ class WorkspaceNote(Base):
 
     owner: Mapped[User] = relationship("User")
     conversation: Mapped[SessionModel | None] = relationship("SessionModel")
+
+
+class PhrProfile(Base):
+    __tablename__ = "phr_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        unique=True,
+    )
+    full_name: Mapped[str] = mapped_column(String(255), default="")
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gender: Mapped[str] = mapped_column(String(32), default="")
+    blood_type: Mapped[str] = mapped_column(String(16), default="")
+    height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    phone: Mapped[str] = mapped_column(String(64), default="")
+    address: Mapped[str] = mapped_column(Text, default="")
+    emergency_contact_name: Mapped[str] = mapped_column(String(255), default="")
+    emergency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    insurance_id: Mapped[str] = mapped_column(String(128), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    allergies_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
+    conditions_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
+    medications_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship("User")
