@@ -6,6 +6,8 @@ const ACCESS_COOKIE_NAME = process.env.NEXT_PUBLIC_AUTH_ACCESS_COOKIE ?? "clara_
 const REFRESH_COOKIE_NAME = process.env.NEXT_PUBLIC_AUTH_REFRESH_COOKIE ?? "clara_refresh_token";
 const CLIENT_SESSION_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_CLIENT_SESSION_COOKIE ?? "clara_client_session";
+const AUTH_BYPASS_ENABLED =
+  process.env.AUTH_BYPASS === "true" || process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
 
 const PUBLIC_PATHS = new Set([
   "/",
@@ -35,6 +37,10 @@ export function middleware(request: NextRequest) {
     const chatUrl = new URL("/chat", request.url);
     chatUrl.search = search;
     return NextResponse.redirect(chatUrl);
+  }
+
+  if (AUTH_BYPASS_ENABLED) {
+    return NextResponse.next();
   }
 
   const hasSession = Boolean(

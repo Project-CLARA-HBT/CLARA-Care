@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import {
@@ -2729,6 +2729,20 @@ export default function ChatWorkspacePage() {
       }) as CSSProperties,
     [workspacePanelWidth]
   );
+  const chatSurfaceStyle = useMemo(
+    () =>
+      ({
+        "--bg-canvas": "#07142b",
+        "--surface-panel": "rgba(14, 25, 46, 0.94)",
+        "--surface-muted": "rgba(43, 60, 95, 0.76)",
+        "--shell-border": "rgba(84, 107, 148, 0.55)",
+        "--shell-border-strong": "rgba(56, 189, 248, 0.62)",
+        "--text-primary": "#d8e4ff",
+        "--text-secondary": "#b5c4e5",
+        "--text-muted": "#7f95bf",
+      }) as CSSProperties,
+    []
+  );
   const desktopGridClass = isWorkspacePanelCollapsed
     ? "lg:grid-cols-[2.7rem_minmax(0,1fr)]"
     : "lg:grid-cols-[var(--chat-workspace-panel-width)_minmax(0,1fr)]";
@@ -2738,7 +2752,10 @@ export default function ChatWorkspacePage() {
       variant="plain"
       title=""
     >
-      <div className="relative h-[calc(100dvh-4rem)] min-h-[680px] overflow-hidden rounded-[0.5rem] border border-[color:var(--shell-border)]/80 bg-[var(--surface-panel)] shadow-[0_16px_40px_-38px_rgba(15,23,42,0.24)] sm:h-[calc(100dvh-3.9rem)] lg:h-[calc(100dvh-3.35rem)]">
+      <div
+        className="relative h-[100dvh] min-h-[680px] overflow-hidden rounded-[0.5rem] bg-[radial-gradient(120%_130%_at_100%_-10%,rgba(34,211,238,0.11)_0%,rgba(7,20,43,0.98)_45%,rgba(5,14,30,1)_100%)] shadow-[0_20px_48px_-36px_rgba(2,6,23,0.86)]"
+        style={chatSurfaceStyle}
+      >
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -2814,25 +2831,25 @@ export default function ChatWorkspacePage() {
           <aside
             ref={workspacePanelRef}
             className={[
-              "fixed inset-y-0 left-0 z-50 flex w-[min(80vw,15rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[#f7f9fb]/98 p-1.5 transition-transform duration-200 dark:bg-[#132038]/97 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
+              "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,24rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 transition-transform duration-200 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
               isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%]",
               isWorkspacePanelCollapsed ? "lg:hidden" : "lg:flex lg:translate-x-0",
             ].join(" ")}
           >
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500/80 dark:text-slate-400">
-                CLARA
+              <p className="text-[10px] font-black uppercase tracking-[0.17em] text-cyan-300/95">
+                CLARA CHAT
               </p>
-              <h2 className="mt-0.5 text-[12px] font-semibold text-[var(--text-primary)]">
-                {isEnglishUI ? "Chats" : "Hội thoại"}
+              <h2 className="mt-0.5 text-[1.4rem] leading-none font-semibold text-[var(--text-primary)]">
+                {isEnglishUI ? "Workspace" : "Không gian chat"}
               </h2>
             </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(true)}
-                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
+                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
                 aria-label={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
                 title={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
               >
@@ -2841,102 +2858,150 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)] lg:hidden"
+                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-semibold text-[var(--text-secondary)] lg:hidden"
               >
-                <span className="material-symbols-outlined text-base">close</span>
+                <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
             </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={createNewConversation}
-              className="inline-flex min-h-[32px] flex-1 items-center justify-center gap-1 rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-2 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              {isEnglishUI ? "New" : "Mới"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsSelectionMode((prev) => !prev)}
-              className={[
-                "inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border px-2 text-[10px] font-semibold",
-                isSelectionMode
-                  ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
-                  : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
-              ].join(" ")}
-              aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
-              title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {isSelectionMode ? "done_all" : "checklist"}
-              </span>
-            </button>
+          <div className="mt-2.5 overflow-hidden rounded-full border border-cyan-400/70 bg-[linear-gradient(90deg,rgba(3,105,161,0.96),rgba(3,78,122,0.9))] shadow-[0_10px_24px_-20px_rgba(3,78,122,0.98)]">
+            <div className="flex items-stretch">
+              <button
+                type="button"
+                onClick={createNewConversation}
+                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-slate-100 transition hover:brightness-105"
+              >
+                + {isEnglishUI ? "New chat" : "Chat mới"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSelectionMode((prev) => !prev)}
+                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-cyan-200/45 bg-sky-950/35 text-slate-100 transition hover:bg-sky-950/45"
+                aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+              >
+                <span className="material-symbols-outlined text-[15px]">edit_square</span>
+              </button>
+            </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-1.5">
-            <select
-              value={workspaceLeftView}
-              onChange={(event) => setWorkspaceLeftView(event.target.value as WorkspaceLeftView)}
-            className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-medium text-[var(--text-primary)] outline-none"
-              aria-label={isEnglishUI ? "Workspace view" : "Chế độ hiển thị"}
-            >
-              {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => (
-                <option key={`workspace-view-${option.id}`} value={option.id}>
+          <div className="mt-2.5 rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-2">
+            <div className="grid grid-cols-3">
+              <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">chat_bubble</span>
+                <div>
+                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.conversations}
+                  </p>
+                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Chats" : "Chat"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">forum</span>
+                <div>
+                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.messages}
+                  </p>
+                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Messages" : "Tin nhắn"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">description</span>
+                <div>
+                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.notes}
+                  </p>
+                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Notes" : "Ghi chú"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap gap-1">
+            {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => {
+              const active = workspaceLeftView === option.id;
+              return (
+                <button
+                  key={`workspace-view-chip-${option.id}`}
+                  type="button"
+                  onClick={() => setWorkspaceLeftView(option.id)}
+                  className={[
+                    "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
+                    active
+                      ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                  ].join(" ")}
+                  title={option.title[uiLanguage]}
+                  aria-label={option.title[uiLanguage]}
+                >
                   {option.title[uiLanguage]}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => setIsScopeManagerOpen(true)}
-              className="inline-flex min-h-[30px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)]"
-            >
-              {isEnglishUI ? "Folders" : "Thư mục"}
-            </button>
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-2.5">
-            <div className="flex gap-2">
+            <div className="relative mt-1.5">
               <input
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder={isEnglishUI ? "Search..." : "Tìm kiếm..."}
-                className="min-h-[32px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
+                placeholder={isEnglishUI ? "Search conversation, note..." : "Tìm conversation, note..."}
+                className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
-              {searchText.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchText("")}
-                  className="inline-flex min-h-[32px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)]"
-                >
-                  {isEnglishUI ? "Clear" : "Xóa"}
-                </button>
-              ) : null}
+              <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
+                search
+              </span>
             </div>
-            {isSearching ? (
-              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                {isEnglishUI ? "Searching..." : "Đang tìm..."}
-              </p>
-            ) : null}
           </div>
 
-          <div className="mt-2.5 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div className="mt-2.5 flex items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={() => setIsScopeManagerOpen(true)}
+              className="text-[0.95rem] font-semibold text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Folder: All" : "Folder: Tất cả"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsScopeManagerOpen(true)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
+              aria-label={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
+            >
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+          </div>
+
+          <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-            <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[var(--surface-muted)] p-1.5">
-              <div className="mb-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}
+            <section className="flex min-h-0 flex-1 flex-col rounded-[1.05rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1.5">
+              <div className="mb-1.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}{" "}
+                    <span className="font-medium normal-case tracking-normal">
+                      {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} ·{" "}
+                      {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
+                    </span>
                   </p>
-                  <span className="text-[10px] text-[var(--text-muted)]">
-                    {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chat" : "chat"} · {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectionMode((prev) => !prev)}
+                    className="inline-flex min-h-[24px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
+                  >
+                    {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                  </button>
                 </div>
                 <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]">
                     <span>
                       {selectedFolderFilterId !== null
                         ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
@@ -2946,16 +3011,16 @@ export default function ChatWorkspacePage() {
                           ? "Filter by folder"
                           : "Lọc theo thư mục"}
                     </span>
-                    <span className="material-symbols-outlined text-[14px] transition group-open:rotate-180">expand_more</span>
+                    <span className="material-symbols-outlined text-[16px] transition group-open:rotate-180">expand_more</span>
                   </summary>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                     <select
                       value={String(selectedFolderFilterId ?? "none")}
                       onChange={(event) => {
                         const raw = event.target.value;
                         setSelectedFolderFilterId(raw === "none" ? null : Number(raw));
                       }}
-                      className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] text-[var(--text-primary)]"
+                      className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                     >
                       <option value="none">{isEnglishUI ? "All folders" : "Tất cả thư mục"}</option>
                       {folderFilterList.map((folder) => (
@@ -3064,7 +3129,7 @@ export default function ChatWorkspacePage() {
                 <div
                   ref={conversationListViewportRef}
                   onScroll={onConversationListScroll}
-                  className="min-h-0 flex-1 overflow-y-auto pr-1"
+                  className="clara-scrollbar min-h-0 flex-1 overflow-y-auto pr-1"
                 >
                   <div
                     style={{ height: `${conversationVirtualizer.getTotalSize()}px` }}
@@ -3100,7 +3165,7 @@ export default function ChatWorkspacePage() {
                           className="space-y-1.5 pb-1"
                         >
                           {row.dayLabel ? (
-                            <p className="px-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            <p className="px-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                               {formatConversationDayLabel(row.dayLabel, uiLanguage)}
                             </p>
                           ) : null}
@@ -3113,9 +3178,9 @@ export default function ChatWorkspacePage() {
                               void onSelectConversation(item);
                             }}
                             className={[
-                              "w-full cursor-pointer rounded-xl border px-2.5 py-1 text-left",
+                              "w-full cursor-pointer rounded-[0.95rem] border px-2.5 py-2 text-left",
                               isActive
-                                ? "border-cyan-300/70 bg-cyan-500/10"
+                                ? "border-cyan-300/70 bg-cyan-500/10 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.9)]"
                                 : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
                               draggingConversationId === item.conversation_id
                                 ? "opacity-70"
@@ -3141,13 +3206,13 @@ export default function ChatWorkspacePage() {
                                 onClick={() => void onSelectConversation(item)}
                                 className="flex-1 text-left"
                               >
-                                <p className="line-clamp-1 text-[11px] font-semibold text-[var(--text-primary)]">
+                                <p className="truncate whitespace-nowrap text-[12px] font-semibold leading-tight text-[var(--text-primary)]">
                                   {buildConversationPreview(item)}
                                 </p>
-                                <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
+                                <p className="mt-0.5 truncate whitespace-nowrap text-[10px] text-[var(--text-muted)]">
                                   #{item.conversation_id} · {item.message_count} msg · {timeLabel}
                                   {item.is_favorite ? " · fav" : ""}
-                                  {isLocalOnly ? " · local-cache" : ""}
+                                  {isLocalOnly ? " · local" : ""}
                                 </p>
                               </button>
                             </div>
@@ -3349,60 +3414,6 @@ export default function ChatWorkspacePage() {
             ) : null}
           </div>
 
-          <div className="mt-3 border-t border-[color:var(--shell-border)] pt-3">
-            <div className="relative">
-              {accountMenuOpen ? (
-                <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
-                  <button
-                    type="button"
-                    onClick={onGoBack}
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    ← {isEnglishUI ? "Go back" : "Quay lại"}
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    {isEnglishUI ? "Go to CLARA workspace" : "Tới workspace CLARA"}
-                  </Link>
-                  <Link
-                    href="/"
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    {isEnglishUI ? "Go to CLARA website" : "Tới website CLARA"}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    className="inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-xs font-semibold text-rose-700 dark:border-rose-700/70 dark:text-rose-300"
-                  >
-                    {isEnglishUI ? "Log out" : "Đăng xuất"}
-                  </button>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setAccountMenuOpen((prev) => !prev)}
-                className="inline-flex min-h-[42px] w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3"
-                aria-expanded={accountMenuOpen}
-                aria-haspopup="menu"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/60 bg-cyan-500/10 text-[11px] font-bold text-cyan-700 dark:border-cyan-700/60 dark:text-cyan-300">
-                    {accountRole.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="text-left">
-                    <span className="block text-xs font-semibold text-[var(--text-primary)]">
-                      {isEnglishUI ? "Account" : "Tài khoản"}
-                    </span>
-                    <span className="block text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">{accountRole}</span>
-                  </span>
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">{accountMenuOpen ? "▲" : "▼"}</span>
-              </button>
-            </div>
-          </div>
           <button
             type="button"
             onMouseDown={handleWorkspacePanelResizeStart}
@@ -3434,57 +3445,78 @@ export default function ChatWorkspacePage() {
         </aside>
 
         <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-canvas)]">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)]/95 px-2 py-1 backdrop-blur-lg sm:px-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsMobileSidebarOpen(true)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
-                  aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
-                >
-                  <span className="material-symbols-outlined text-[18px]">menu</span>
-                </button>
-                <div className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-cyan-300/45 bg-cyan-500/10 px-2 text-cyan-700 dark:text-cyan-200">
-                  <span className="material-symbols-outlined text-[13px]">smart_toy</span>
-                  <span className="text-[9px] font-black uppercase tracking-[0.16em]">CLARA</span>
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)]/95 px-2.5 py-1.5 backdrop-blur-lg sm:px-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileSidebarOpen(true)}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
+                    aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">menu</span>
+                  </button>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
+                  </p>
                 </div>
-                <div className="min-w-0">
-                  <h2 className="truncate text-[12px] font-semibold text-[var(--text-primary)] sm:text-[13px]">
-                    {activeConversationMeta?.title?.trim() || "CLARA Chat"}
-                  </h2>
-                  <span className="block truncate text-[9px] font-medium text-[var(--text-muted)]">
-                    {activeConversationStatusLabel}
-                  </span>
-                </div>
+                <h2 className="mt-0.5 truncate text-[1.55rem] leading-none font-semibold text-[var(--text-primary)]">
+                  {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
+                </h2>
+                <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--text-muted)]">
+                  {activeConversationStatusLabel}
+                </span>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="hidden items-center gap-1.5 lg:flex">
                 <button
                   type="button"
                   onClick={createNewConversation}
-                  className="hidden h-7 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[9px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] sm:inline-flex"
+                  className="inline-flex min-h-[30px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
                 >
-                  <span className="material-symbols-outlined text-[14px]">edit_square</span>
-                  {isEnglishUI ? "New chat" : "Chat mới"}
+                  + {isEnglishUI ? "New chat" : "New chat"}
                 </button>
                 <button
                   type="button"
-                  onClick={createNewConversation}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] sm:hidden"
-                  aria-label={isEnglishUI ? "New chat" : "Chat mới"}
-                  title={isEnglishUI ? "New chat" : "Chat mới"}
+                  disabled={!activeConversationId}
+                  onClick={() => void onUpdateActiveConversationMeta({ isFavorite: !activeConversationMeta?.is_favorite })}
+                  className="inline-flex min-h-[30px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span className="material-symbols-outlined text-[15px]">edit_square</span>
+                  ★ {isEnglishUI ? "Favorite" : "Favorite"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onExportActiveConversation("docx")}
+                  disabled={!activeConversationId}
+                  className="inline-flex min-h-[30px] items-center rounded-full border border-emerald-300/75 bg-emerald-500/15 px-2.5 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                >
+                  Xuất Word (.docx)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onExportActiveConversation("markdown")}
+                  disabled={!activeConversationId}
+                  className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Export .md
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onShareActiveConversation()}
+                  disabled={!activeConversationId || workspaceApiUnavailable}
+                  className="inline-flex min-h-[30px] items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2.5 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
+                >
+                  Share public
                 </button>
 
                 <details className="group relative">
                   <summary
-                    className="inline-flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+                    className="inline-flex min-h-[30px] cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]"
                     aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
                     title={isEnglishUI ? "More actions" : "Thao tác khác"}
                   >
-                    <span className="material-symbols-outlined text-[15px]">more_horiz</span>
+                    {isEnglishUI ? "More actions" : "More actions"}
                   </summary>
                   <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
                     <button
@@ -3603,35 +3635,12 @@ export default function ChatWorkspacePage() {
               ) : null}
 
               {!conversationTurns.length && !isLoadingTurns ? (
-                <article className="rounded-[0.75rem] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3.5">
-                  <div className="max-w-2xl">
-                    <div className="inline-flex items-center gap-1 rounded-full border border-cyan-300/45 bg-cyan-500/10 px-2 py-1 text-cyan-700 dark:text-cyan-200">
-                      <span className="material-symbols-outlined text-[12px]">smart_toy</span>
-                      <span className="text-[9px] font-black uppercase tracking-[0.16em]">CLARA</span>
-                    </div>
-                    <h3 className="mt-2 text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                      {isEnglishUI
-                        ? "Start with a focused medical question."
-                        : "Bắt đầu bằng một câu hỏi y khoa rõ ràng."}
-                    </h3>
-                    <p className="mt-2 max-w-xl text-[13px] leading-6 text-[var(--text-secondary)]">
-                      {isEnglishUI
-                        ? "Use Fast for quick synthesis, Deep for broader evidence, and Deep Beta when you want the longest reasoning path."
-                        : "Dùng Fast cho câu trả lời nhanh, Deep để mở rộng bằng chứng, và Deep Beta khi cần chuỗi suy luận dài hơn."}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {quickPrompts.map((prompt) => (
-                        <button
-                          key={`empty-prompt-${prompt}`}
-                          type="button"
-                          onClick={() => setQuery(prompt)}
-                          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-0.5 text-[10px] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <article className="rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-3.5">
+                  <p className="text-[0.92rem] text-[var(--text-secondary)]">
+                    {isEnglishUI
+                      ? "No chat turns yet. Start with a question in the input below."
+                      : "Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới."}
+                  </p>
                 </article>
               ) : (
                 conversationTurns.map((turn) => (

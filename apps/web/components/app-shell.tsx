@@ -75,6 +75,7 @@ export default function AppShell({ children }: Props) {
   const isImmersiveLayout = IMMERSIVE_LAYOUT_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
+  const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
 
   useEffect(() => {
     setRole(getRole());
@@ -253,7 +254,9 @@ export default function AppShell({ children }: Props) {
             className={[
               "flex-1 px-2.5 sm:px-3",
               isImmersiveLayout
-                ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
+                ? isChatLayout
+                  ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0 sm:pb-20 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
+                  : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
                 : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-4 sm:px-6 sm:pb-32 sm:pt-6 lg:px-8 lg:pb-10 lg:pt-6",
             ].join(" ")}
           >
