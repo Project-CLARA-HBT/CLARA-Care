@@ -23,7 +23,6 @@ import { ConversationItem, ResearchResult } from "@/components/research/lib/rese
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
-import { getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
@@ -916,6 +915,7 @@ export default function ChatWorkspacePage() {
     useState<ResearchExecutionMode>("fast");
   const [selectedRetrievalStackMode, setSelectedRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
+  const [isPersonalMode, setIsPersonalMode] = useState(true);
   const [workspaceLeftView, setWorkspaceLeftView] = useState<WorkspaceLeftView>("chat");
   const [liveStatusNote, setLiveStatusNote] = useState("");
   const [liveJobId, setLiveJobId] = useState<string | null>(null);
@@ -927,8 +927,6 @@ export default function ChatWorkspacePage() {
   const [visibleConversationLimit, setVisibleConversationLimit] = useState(40);
   const [isScopeManagerOpen, setIsScopeManagerOpen] = useState(false);
   const [scopeFolderDraft, setScopeFolderDraft] = useState("");
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [accountRole, setAccountRole] = useState<UserRole>("normal");
   const [isWorkspacePanelCollapsed, setIsWorkspacePanelCollapsed] = useState(true);
   const [workspacePanelWidth, setWorkspacePanelWidth] = useState(
     CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH
@@ -1044,10 +1042,6 @@ export default function ChatWorkspacePage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileSidebarOpen]);
-
-  useEffect(() => {
-    setAccountRole(getRole());
-  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -1851,7 +1845,6 @@ export default function ChatWorkspacePage() {
     setIsMobileSidebarOpen(false);
     setIsCommandPaletteOpen(false);
     setCommandPaletteQuery("");
-    setAccountMenuOpen(false);
   }, []);
 
   const onGoBack = useCallback(() => {
@@ -1910,7 +1903,6 @@ export default function ChatWorkspacePage() {
         setCommandPaletteQuery("");
         setIsScopeManagerOpen(false);
         setIsMobileSidebarOpen(false);
-        setAccountMenuOpen(false);
       }
 
       if (
@@ -1960,6 +1952,7 @@ export default function ChatWorkspacePage() {
       const { finalPayload } = await executeResearchTier2Job(message, {
         researchMode: selectedResearchMode,
         retrievalStackMode: selectedRetrievalStackMode,
+        personalMode: isPersonalMode,
         uiLanguage,
         onJobCreated: (job) => {
           setLiveJobId(job.job_id);
@@ -2732,14 +2725,14 @@ export default function ChatWorkspacePage() {
   const chatSurfaceStyle = useMemo(
     () =>
       ({
-        "--bg-canvas": "#07142b",
-        "--surface-panel": "rgba(14, 25, 46, 0.94)",
-        "--surface-muted": "rgba(43, 60, 95, 0.76)",
-        "--shell-border": "rgba(84, 107, 148, 0.55)",
+        "--bg-canvas": "#051126",
+        "--surface-panel": "rgba(11, 23, 42, 0.95)",
+        "--surface-muted": "rgba(37, 53, 84, 0.78)",
+        "--shell-border": "rgba(73, 97, 142, 0.56)",
         "--shell-border-strong": "rgba(56, 189, 248, 0.62)",
-        "--text-primary": "#d8e4ff",
-        "--text-secondary": "#b5c4e5",
-        "--text-muted": "#7f95bf",
+        "--text-primary": "#d7e3fb",
+        "--text-secondary": "#b2c2e2",
+        "--text-muted": "#8096bf",
       }) as CSSProperties,
     []
   );
@@ -2753,7 +2746,7 @@ export default function ChatWorkspacePage() {
       title=""
     >
       <div
-        className="relative h-[100dvh] min-h-[680px] overflow-hidden rounded-[0.5rem] bg-[radial-gradient(120%_130%_at_100%_-10%,rgba(34,211,238,0.11)_0%,rgba(7,20,43,0.98)_45%,rgba(5,14,30,1)_100%)] shadow-[0_20px_48px_-36px_rgba(2,6,23,0.86)]"
+        className="relative h-[100dvh] min-h-[680px] overflow-hidden rounded-none bg-[radial-gradient(120%_130%_at_100%_-10%,rgba(34,211,238,0.09)_0%,rgba(5,17,38,0.99)_45%,rgba(4,13,29,1)_100%)] shadow-none"
         style={chatSurfaceStyle}
       >
         {isMobileSidebarOpen ? (
@@ -2816,16 +2809,7 @@ export default function ChatWorkspacePage() {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setAccountMenuOpen((prev) => !prev)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-xs font-bold text-[var(--text-secondary)]"
-              aria-expanded={accountMenuOpen}
-              aria-haspopup="menu"
-              title={isEnglishUI ? "Account" : "Tài khoản"}
-            >
-              {accountRole.slice(0, 1).toUpperCase()}
-            </button>
+            <div className="h-8 w-8" aria-hidden="true" />
           </aside>
         ) : null}
           <aside
@@ -2865,7 +2849,7 @@ export default function ChatWorkspacePage() {
             </div>
           </div>
 
-          <div className="mt-2.5 overflow-hidden rounded-full border border-cyan-400/70 bg-[linear-gradient(90deg,rgba(3,105,161,0.96),rgba(3,78,122,0.9))] shadow-[0_10px_24px_-20px_rgba(3,78,122,0.98)]">
+          <div className="mt-2.5 overflow-hidden rounded-full border border-cyan-400/70 bg-[linear-gradient(90deg,rgba(2,88,136,0.96),rgba(2,66,108,0.92))] shadow-[0_10px_24px_-20px_rgba(3,78,122,0.98)]">
             <div className="flex items-stretch">
               <button
                 type="button"
@@ -2891,10 +2875,10 @@ export default function ChatWorkspacePage() {
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
                 <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">chat_bubble</span>
                 <div>
-                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
                     {effectiveSummary.conversations}
                   </p>
-                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Chats" : "Chat"}
                   </p>
                 </div>
@@ -2902,10 +2886,10 @@ export default function ChatWorkspacePage() {
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
                 <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">forum</span>
                 <div>
-                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
                     {effectiveSummary.messages}
                   </p>
-                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Messages" : "Tin nhắn"}
                   </p>
                 </div>
@@ -2913,10 +2897,10 @@ export default function ChatWorkspacePage() {
               <div className="flex items-center gap-1 px-1.5">
                 <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">description</span>
                 <div>
-                  <p className="text-[1.2rem] leading-none font-semibold text-[var(--text-primary)]">
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
                     {effectiveSummary.notes}
                   </p>
-                  <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Notes" : "Ghi chú"}
                   </p>
                 </div>
@@ -3461,7 +3445,7 @@ export default function ChatWorkspacePage() {
                     {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
                   </p>
                 </div>
-                <h2 className="mt-0.5 truncate text-[1.55rem] leading-none font-semibold text-[var(--text-primary)]">
+                <h2 className="mt-0.5 truncate text-[1.3rem] leading-none font-semibold text-[var(--text-primary)]">
                   {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
                 </h2>
                 <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--text-muted)]">
@@ -3469,11 +3453,11 @@ export default function ChatWorkspacePage() {
                 </span>
               </div>
 
-              <div className="hidden items-center gap-1.5 lg:flex">
+              <div className="hidden items-center gap-1.5 whitespace-nowrap lg:flex">
                 <button
                   type="button"
                   onClick={createNewConversation}
-                  className="inline-flex min-h-[30px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
                 >
                   + {isEnglishUI ? "New chat" : "New chat"}
                 </button>
@@ -3481,7 +3465,7 @@ export default function ChatWorkspacePage() {
                   type="button"
                   disabled={!activeConversationId}
                   onClick={() => void onUpdateActiveConversationMeta({ isFavorite: !activeConversationMeta?.is_favorite })}
-                  className="inline-flex min-h-[30px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   ★ {isEnglishUI ? "Favorite" : "Favorite"}
                 </button>
@@ -3489,7 +3473,7 @@ export default function ChatWorkspacePage() {
                   type="button"
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
-                  className="inline-flex min-h-[30px] items-center rounded-full border border-emerald-300/75 bg-emerald-500/15 px-2.5 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-emerald-300/75 bg-emerald-500/15 px-2 text-[10px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
                 >
                   Xuất Word (.docx)
                 </button>
@@ -3497,7 +3481,7 @@ export default function ChatWorkspacePage() {
                   type="button"
                   onClick={() => void onExportActiveConversation("markdown")}
                   disabled={!activeConversationId}
-                  className="inline-flex min-h-[30px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Export .md
                 </button>
@@ -3505,14 +3489,14 @@ export default function ChatWorkspacePage() {
                   type="button"
                   onClick={() => void onShareActiveConversation()}
                   disabled={!activeConversationId || workspaceApiUnavailable}
-                  className="inline-flex min-h-[30px] items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2.5 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2 text-[10px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
                 >
                   Share public
                 </button>
 
                 <details className="group relative">
                   <summary
-                    className="inline-flex min-h-[30px] cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]"
+                    className="inline-flex min-h-[28px] cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)]"
                     aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
                     title={isEnglishUI ? "More actions" : "Thao tác khác"}
                   >
@@ -3666,6 +3650,8 @@ export default function ChatWorkspacePage() {
               }
             }}
             onChangeRetrievalStackMode={setSelectedRetrievalStackMode}
+            personalMode={isPersonalMode}
+            onTogglePersonalMode={() => setIsPersonalMode((prev) => !prev)}
             liveJobId={liveJobId}
             liveStatusNote={liveStatusNote}
             error={error}
