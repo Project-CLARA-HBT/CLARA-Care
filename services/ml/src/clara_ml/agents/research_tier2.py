@@ -2191,20 +2191,22 @@ def _build_reasoning_chain_cards(
 
 
 def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
-    # Deep Beta should produce a true long-form deep research report.
-    hard_min = 7000
+    # Respect runtime tuning while keeping a sensible long-form envelope.
+    hard_min = 1200
     hard_max = 15000
     configured_min = int(settings.deep_beta_report_min_words)
-    min_words = min(max(configured_min, hard_min), hard_max)
+    min_words = min(max(configured_min, hard_min), hard_max - 1200)
 
-    # Keep target flexible, but still inside a readable deep-report envelope.
-    page_target = min(max(int(settings.deep_beta_report_target_pages), 10), 80)
-    words_per_page = min(max(int(settings.deep_beta_report_words_per_page), 260), 900)
+    # Keep page-based target, but avoid exploding target size when min_words is
+    # intentionally tuned down for latency-sensitive environments.
+    page_target = min(max(int(settings.deep_beta_report_target_pages), 3), 80)
+    words_per_page = min(max(int(settings.deep_beta_report_words_per_page), 220), 900)
     configured_target = page_target * words_per_page
-    baseline_target = max(min_words + 900, 9000)
-    target_words = min(max(configured_target, baseline_target), hard_max - 700)
+    baseline_target = min_words + max(450, int(min_words * 0.25))
+    target_ceiling = min(hard_max - 900, max(min_words + 700, int(min_words * 2.0)))
+    target_words = min(max(configured_target, baseline_target), target_ceiling)
 
-    max_words = min(max(target_words + 1800, min_words + 1200), hard_max)
+    max_words = min(max(target_words + 1400, min_words + 900), hard_max)
     target_words = min(max(target_words, min_words), max_words)
     return min_words, target_words, max_words
 
@@ -2607,16 +2609,17 @@ def _synthesize_deep_beta_long_report(
         if not content:
             return answer_markdown
 
+        configured_rounds = max(1, int(settings.deep_beta_report_expansion_rounds))
         expansion_rounds = (
-            max(int(settings.deep_beta_report_expansion_rounds), 4)
+            configured_rounds
             if mode == "deep_beta"
-            else max(min(int(settings.deep_beta_report_expansion_rounds), 2), 1)
+            else max(min(configured_rounds, 2), 1)
         )
         if mode == "deep_beta":
-            if target_words >= 10000:
-                expansion_rounds = max(expansion_rounds, 6)
+            if target_words >= 12000:
+                expansion_rounds = max(expansion_rounds, 3)
             elif target_words >= 8000:
-                expansion_rounds = max(expansion_rounds, 5)
+                expansion_rounds = max(expansion_rounds, 2)
         for round_idx in range(expansion_rounds):
             current_words = _markdown_word_count(content)
             if current_words >= target_words:
