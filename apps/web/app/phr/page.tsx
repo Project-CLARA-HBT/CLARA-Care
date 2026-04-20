@@ -14,7 +14,7 @@ import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/
 
 const COPY = {
   vi: {
-    title: "PHR",
+    title: "PHR (beta)",
     description: "Không gian quản lý hồ sơ sức khỏe cá nhân.",
     save: "Lưu hồ sơ",
     saving: "Đang lưu...",
@@ -56,7 +56,7 @@ const COPY = {
     unknown: "Chưa rõ",
   },
   en: {
-    title: "PHR",
+    title: "PHR (beta)",
     description: "Personal health record management workspace.",
     save: "Save record",
     saving: "Saving...",

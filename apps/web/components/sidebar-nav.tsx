@@ -66,7 +66,7 @@ const GROUP_LABEL_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
 const NAV_LABEL_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
   "/chat": { vi: "Chat", en: "Chat" },
   "/dashboard": { vi: "T\u1ED5ng quan", en: "Dashboard" },
-  "/phr": { vi: "PHR", en: "PHR" },
+  "/phr": { vi: "PHR (beta)", en: "PHR (beta)" },
   "/selfmed": { vi: "T\u1EE7 thu\u1ED1c", en: "Medicine Cabinet" },
   "/careguard": { vi: "Ki\u1EC3m tra t\u01B0\u01A1ng t\u00E1c", en: "DDI Check" },
   "/council": { vi: "H\u1ED9i ch\u1EA9n AI", en: "AI Council" },
