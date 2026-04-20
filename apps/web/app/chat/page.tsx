@@ -2966,10 +2966,10 @@ export default function ChatWorkspacePage() {
 
           <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-            <section className="flex min-h-0 flex-1 flex-col rounded-[1.05rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1.5">
+            <section className="flex min-h-0 flex-1 flex-col overflow-x-hidden rounded-[1.05rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1.5">
               <div className="mb-1.5 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                  <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}{" "}
                     <span className="font-medium normal-case tracking-normal">
                       {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} ·{" "}
@@ -2979,7 +2979,7 @@ export default function ChatWorkspacePage() {
                   <button
                     type="button"
                     onClick={() => setIsSelectionMode((prev) => !prev)}
-                    className="inline-flex min-h-[24px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
+                    className="inline-flex min-h-[24px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
                   >
                     {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
                   </button>
@@ -3113,7 +3113,7 @@ export default function ChatWorkspacePage() {
                 <div
                   ref={conversationListViewportRef}
                   onScroll={onConversationListScroll}
-                  className="clara-scrollbar min-h-0 flex-1 overflow-y-auto pr-1"
+                  className="clara-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1"
                 >
                   <div
                     style={{ height: `${conversationVirtualizer.getTotalSize()}px` }}
@@ -3222,7 +3222,7 @@ export default function ChatWorkspacePage() {
             ) : null}
 
             {(workspaceLeftView === "all" || workspaceLeftView === "notes") ? (
-            <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
+            <section className="min-h-0 overflow-x-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                   {isEnglishUI ? "Notes" : "Ghi chú"}
@@ -3279,10 +3279,15 @@ export default function ChatWorkspacePage() {
                 </div>
               ) : null}
               {displayedNotes.length ? (
-                <ul className="space-y-1.5">
+                <ul
+                  className={[
+                    "space-y-1.5 overflow-x-hidden",
+                    workspaceLeftView === "all" ? "clara-scrollbar max-h-56 overflow-y-auto pr-1" : "",
+                  ].join(" ")}
+                >
                   {displayedNotes.slice(0, 10).map((note) => (
                     <li key={note.id} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2">
-                      <p className="line-clamp-1 text-xs font-semibold text-[var(--text-primary)]">{note.title}</p>
+                      <p className="line-clamp-1 break-words text-xs font-semibold text-[var(--text-primary)]">{note.title}</p>
                       <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{note.summary || note.content_markdown || "(Trống)"}</p>
                       <div className="mt-1.5 flex items-center gap-1">
                         <button
