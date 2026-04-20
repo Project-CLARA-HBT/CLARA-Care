@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import {
@@ -23,7 +23,6 @@ import { ConversationItem, ResearchResult } from "@/components/research/lib/rese
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
-import { getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
@@ -34,6 +33,7 @@ import {
 import {
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
+  type ResearchTier2JobProgress,
   type ResearchTier2Result,
   appendResearchConversationMessage,
   createResearchConversation,
@@ -124,9 +124,10 @@ const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
 const CHAT_WORKSPACE_PANEL_STORAGE_KEY = "clara_chat_workspace_panel_collapsed";
 const CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY = "clara_chat_workspace_panel_width";
 const CHAT_TELEMETRY_PANEL_STORAGE_KEY = "clara_chat_telemetry_panel_open";
-const CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH = 332;
-const CHAT_WORKSPACE_PANEL_MIN_WIDTH = 284;
-const CHAT_WORKSPACE_PANEL_MAX_WIDTH = 460;
+const CHAT_TELEMETRY_DETAILS_STORAGE_KEY = "clara_chat_telemetry_details_open";
+const CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH = 248;
+const CHAT_WORKSPACE_PANEL_MIN_WIDTH = 184;
+const CHAT_WORKSPACE_PANEL_MAX_WIDTH = 360;
 
 function clampWorkspacePanelWidth(value: number): number {
   if (!Number.isFinite(value)) return CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH;
@@ -152,9 +153,7 @@ function parseTagsInput(value: string): string[] {
 
 function buildConversationPreview(item: WorkspaceConversationItem): string {
   const candidate = item.title || item.preview || "Conversation";
-  const singleLine = candidate.replace(/\s+/g, " ").trim();
-  if (!singleLine) return "Conversation";
-  return singleLine.length > 74 ? `${singleLine.slice(0, 74).trimEnd()}...` : singleLine;
+  return candidate.length > 80 ? `${candidate.slice(0, 80)}...` : candidate;
 }
 
 function toConversationTimestamp(item: WorkspaceConversationItem): number {
@@ -868,6 +867,38 @@ function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
   };
 }
 
+function hasProgressSignal(progress: ResearchTier2JobProgress | null): boolean {
+  if (!progress) return false;
+  return (
+    progress.flowStages.length > 0 ||
+    progress.flowEvents.length > 0 ||
+    progress.reasoningNotes.length > 0 ||
+    Boolean(progress.statusNote?.trim()) ||
+    Boolean(progress.activeStage?.trim())
+  );
+}
+
+function formatTelemetryTimestamp(value: string | undefined, language: UILanguage): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  return date.toLocaleTimeString(language === "en" ? "en-US" : "vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function formatTelemetryDuration(value: number | undefined): string | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  if (value < 1000) return `${Math.round(value)}ms`;
+  const seconds = value / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainSeconds}s`;
+}
+
 export default function ChatWorkspacePage() {
   const [query, setQuery] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -918,6 +949,7 @@ export default function ChatWorkspacePage() {
     useState<ResearchExecutionMode>("fast");
   const [selectedRetrievalStackMode, setSelectedRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
+  const [isPersonalMode, setIsPersonalMode] = useState(true);
   const [workspaceLeftView, setWorkspaceLeftView] = useState<WorkspaceLeftView>("chat");
   const [liveStatusNote, setLiveStatusNote] = useState("");
   const [liveJobId, setLiveJobId] = useState<string | null>(null);
@@ -929,14 +961,14 @@ export default function ChatWorkspacePage() {
   const [visibleConversationLimit, setVisibleConversationLimit] = useState(40);
   const [isScopeManagerOpen, setIsScopeManagerOpen] = useState(false);
   const [scopeFolderDraft, setScopeFolderDraft] = useState("");
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [accountRole, setAccountRole] = useState<UserRole>("normal");
   const [isWorkspacePanelCollapsed, setIsWorkspacePanelCollapsed] = useState(true);
   const [workspacePanelWidth, setWorkspacePanelWidth] = useState(
     CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH
   );
   const [isWorkspacePanelResizing, setIsWorkspacePanelResizing] = useState(false);
   const [isTelemetryPanelOpen, setIsTelemetryPanelOpen] = useState(false);
+  const [isTelemetryDetailsOpen, setIsTelemetryDetailsOpen] = useState(true);
+  const [liveJobProgress, setLiveJobProgress] = useState<ResearchTier2JobProgress | null>(null);
 
   const isFastResearchMode = selectedResearchMode === "fast";
   const conversationScrollRef = useRef<HTMLDivElement | null>(null);
@@ -1048,10 +1080,6 @@ export default function ChatWorkspacePage() {
   }, [isMobileSidebarOpen]);
 
   useEffect(() => {
-    setAccountRole(getRole());
-  }, []);
-
-  useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
     const onChange = (event: MediaQueryListEvent) => {
       if (event.matches) {
@@ -1075,6 +1103,7 @@ export default function ChatWorkspacePage() {
       CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY
     );
     const storedTelemetryPanel = window.localStorage.getItem(CHAT_TELEMETRY_PANEL_STORAGE_KEY);
+    const storedTelemetryDetails = window.localStorage.getItem(CHAT_TELEMETRY_DETAILS_STORAGE_KEY);
     if (storedMode === "fast" || storedMode === "deep" || storedMode === "deep_beta") {
       setSelectedResearchMode(storedMode);
     }
@@ -1086,7 +1115,7 @@ export default function ChatWorkspacePage() {
     } else if (storedWorkspacePanel === "1") {
       setIsWorkspacePanelCollapsed(true);
     } else {
-      setIsWorkspacePanelCollapsed(!window.matchMedia("(min-width: 1024px)").matches);
+      setIsWorkspacePanelCollapsed(window.matchMedia("(min-width: 1024px)").matches);
     }
     if (storedWorkspacePanelWidth) {
       const parsedWidth = Number(storedWorkspacePanelWidth);
@@ -1096,6 +1125,11 @@ export default function ChatWorkspacePage() {
     }
     if (storedTelemetryPanel === "1" && window.matchMedia("(min-width: 1600px)").matches) {
       setIsTelemetryPanelOpen(true);
+    }
+    if (storedTelemetryDetails === "0") {
+      setIsTelemetryDetailsOpen(false);
+    } else if (storedTelemetryDetails === "1") {
+      setIsTelemetryDetailsOpen(true);
     }
     setIsHydrated(true);
   }, []);
@@ -1193,6 +1227,14 @@ export default function ChatWorkspacePage() {
       isTelemetryPanelOpen ? "1" : "0"
     );
   }, [isHydrated, isTelemetryPanelOpen]);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    window.localStorage.setItem(
+      CHAT_TELEMETRY_DETAILS_STORAGE_KEY,
+      isTelemetryDetailsOpen ? "1" : "0"
+    );
+  }, [isHydrated, isTelemetryDetailsOpen]);
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -1544,7 +1586,8 @@ export default function ChatWorkspacePage() {
   const conversationVirtualizer = useVirtualizer({
     count: conversationVirtualItems.length,
     getScrollElement: () => conversationListViewportRef.current,
-    estimateSize: () => 96,
+    estimateSize: (index) =>
+      conversationVirtualItems[index]?.dayLabel ? 90 : 78,
     overscan: 10,
   });
 
@@ -1849,10 +1892,10 @@ export default function ChatWorkspacePage() {
     setError("");
     setLiveStatusNote("");
     setLiveJobId(null);
+    setLiveJobProgress(null);
     setIsMobileSidebarOpen(false);
     setIsCommandPaletteOpen(false);
     setCommandPaletteQuery("");
-    setAccountMenuOpen(false);
   }, []);
 
   const onGoBack = useCallback(() => {
@@ -1911,7 +1954,6 @@ export default function ChatWorkspacePage() {
         setCommandPaletteQuery("");
         setIsScopeManagerOpen(false);
         setIsMobileSidebarOpen(false);
-        setAccountMenuOpen(false);
       }
 
       if (
@@ -1956,11 +1998,14 @@ export default function ChatWorkspacePage() {
 
     setIsSubmitting(true);
     setError("");
+    setLiveJobProgress(null);
+    setIsTelemetryPanelOpen(true);
 
     try {
       const { finalPayload } = await executeResearchTier2Job(message, {
         researchMode: selectedResearchMode,
         retrievalStackMode: selectedRetrievalStackMode,
+        personalMode: isPersonalMode,
         uiLanguage,
         onJobCreated: (job) => {
           setLiveJobId(job.job_id);
@@ -1968,6 +2013,7 @@ export default function ChatWorkspacePage() {
         onSnapshot: (snapshot) => {
           const progress = normalizeResearchTier2JobProgress(snapshot.progress);
           setLiveStatusNote(progress.statusNote ?? "");
+          setLiveJobProgress(hasProgressSignal(progress) ? progress : null);
         },
         onStreamingFallback: (streamMessage) => {
           setLiveStatusNote(`${streamMessage} Đang fallback sang polling.`);
@@ -2077,6 +2123,7 @@ export default function ChatWorkspacePage() {
       setQuery("");
       setLiveJobId(null);
       setLiveStatusNote("");
+      setLiveJobProgress(null);
       const [refreshedItems] = await Promise.all([
         loadConversations(targetConversationId),
         refreshSummary(),
@@ -2089,6 +2136,7 @@ export default function ChatWorkspacePage() {
         if (found) setActiveConversationMeta(found);
       }
     } catch (cause) {
+      setLiveJobId(null);
       setError(cause instanceof Error ? cause.message : "Không thể xử lý câu hỏi.");
     } finally {
       setIsSubmitting(false);
@@ -2426,14 +2474,14 @@ export default function ChatWorkspacePage() {
       {
         id: "new-chat",
         label: "New chat",
-        hint: "Ctrl/âŒ˜+Shift+N",
+        hint: "Ctrl/⌘+Shift+N",
         keywords: ["new", "chat", "conversation"],
         run: () => createNewConversation(),
       },
       {
         id: "focus-search",
         label: "Focus workspace search",
-        hint: "Ctrl/âŒ˜+K",
+        hint: "Ctrl/⌘+K",
         keywords: ["focus", "search", "workspace"],
         run: () => focusById("workspace-search"),
       },
@@ -2592,6 +2640,19 @@ export default function ChatWorkspacePage() {
 
   const latestTier2Result = latestTier2Turn?.result.tier === "tier2" ? latestTier2Turn.result : null;
   const telemetryCopy = TELEMETRY_COPY_BY_LANGUAGE[uiLanguage];
+  const isStreamActive = Boolean(liveJobId) || isSubmitting;
+  const liveFlowStages = useMemo(
+    () => liveJobProgress?.flowStages ?? [],
+    [liveJobProgress?.flowStages]
+  );
+  const liveFlowEvents = useMemo(
+    () => liveJobProgress?.flowEvents ?? [],
+    [liveJobProgress?.flowEvents]
+  );
+  const liveReasoningNotes = useMemo(
+    () => liveJobProgress?.reasoningNotes ?? [],
+    [liveJobProgress?.reasoningNotes]
+  );
   const logicFlowNodes = useMemo(
     () => buildLogicFlowNodes(latestTier2Result),
     [latestTier2Result]
@@ -2672,12 +2733,59 @@ export default function ChatWorkspacePage() {
   const visibleLogicFlowNodes = logicFlowNodes.filter(
     (node) => node.status !== "pending" || Boolean(node.detail)
   );
-  const telemetryFlowPreviewNodes = visibleLogicFlowNodes.slice(0, 3);
   const compactSourceIntel = sourceIntel.all.slice(0, 2);
+  const telemetryFlowStages = useMemo(
+    () => (liveFlowStages.length ? liveFlowStages : (latestTier2Result?.flowStages ?? [])),
+    [liveFlowStages, latestTier2Result?.flowStages]
+  );
+  const telemetryFlowEvents = useMemo(
+    () => (liveFlowEvents.length ? liveFlowEvents : (latestTier2Result?.flowEvents ?? [])),
+    [liveFlowEvents, latestTier2Result?.flowEvents]
+  );
+  const telemetryReasoningNotes = useMemo(() => {
+    const notes: string[] = [];
+    const append = (value: string | undefined) => {
+      const text = normalizeTelemetryText(value ?? "");
+      if (!text) return;
+      if (notes.includes(text)) return;
+      notes.push(text);
+    };
+    if (isStreamActive) {
+      append(liveJobProgress?.statusNote);
+      for (const item of liveReasoningNotes) append(item);
+      for (const event of telemetryFlowEvents) append(event.detail);
+    } else if (latestTier2Result) {
+      append(latestTier2Result.reasoningDigest.summary);
+      for (const item of latestTier2Result.reasoningDigest.items) {
+        append(item.title);
+        append(item.detail);
+      }
+      for (const event of telemetryFlowEvents) append(event.detail);
+    }
+    return notes;
+  }, [
+    isStreamActive,
+    latestTier2Result,
+    liveJobProgress?.statusNote,
+    liveReasoningNotes,
+    telemetryFlowEvents,
+  ]);
+  const telemetryStageCount = telemetryFlowStages.length;
+  const telemetryEventCount = telemetryFlowEvents.length;
+  const telemetrySourceAttempts = latestTier2Result?.telemetry.sourceAttempts ?? [];
+  const telemetryScores = latestTier2Result?.telemetry.scores ?? [];
+  const telemetryVerificationRows = latestTier2Result?.telemetry.verificationMatrix ?? [];
+  const telemetryErrors = latestTier2Result?.telemetry.errors ?? [];
   const telemetryHasSignal =
     confidenceRatio !== undefined ||
     visibleLogicFlowNodes.length > 0 ||
-    compactSourceIntel.length > 0;
+    compactSourceIntel.length > 0 ||
+    telemetryStageCount > 0 ||
+    telemetryEventCount > 0 ||
+    telemetryReasoningNotes.length > 0 ||
+    telemetrySourceAttempts.length > 0 ||
+    telemetryScores.length > 0 ||
+    telemetryErrors.length > 0;
   const activeConversationTimestamp = activeConversationMeta
     ? toConversationTimestamp(activeConversationMeta)
     : 0;
@@ -2686,13 +2794,6 @@ export default function ChatWorkspacePage() {
     : isEnglishUI
       ? "Ready for a new chat"
       : "Sẵn sàng cho phiên mới";
-  const workspaceChatCount = displayedConversations.length;
-  const workspaceMessageCount = displayedConversationMessageCount;
-  const workspaceNoteCount = displayedNotes.length;
-  const activeConversationTitle = activeConversationMeta?.title?.trim() || "";
-  const activeConversationHeading = activeConversationId
-    ? `#${activeConversationId} · ${activeConversationTitle || (isEnglishUI ? "Untitled conversation" : "Hội thoại chưa đặt tên")}`
-    : (isEnglishUI ? "New conversation" : "Hội thoại mới");
   const handleWorkspacePanelResizeStart = useCallback(
     (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (typeof window === "undefined") return;
@@ -2737,6 +2838,20 @@ export default function ChatWorkspacePage() {
       }) as CSSProperties,
     [workspacePanelWidth]
   );
+  const chatSurfaceStyle = useMemo(
+    () =>
+      ({
+        "--bg-canvas": "#051126",
+        "--surface-panel": "rgba(11, 23, 42, 0.95)",
+        "--surface-muted": "rgba(37, 53, 84, 0.78)",
+        "--shell-border": "rgba(73, 97, 142, 0.56)",
+        "--shell-border-strong": "rgba(56, 189, 248, 0.62)",
+        "--text-primary": "#d7e3fb",
+        "--text-secondary": "#b2c2e2",
+        "--text-muted": "#8096bf",
+      }) as CSSProperties,
+    []
+  );
   const desktopGridClass = isWorkspacePanelCollapsed
     ? "lg:grid-cols-[2.7rem_minmax(0,1fr)]"
     : "lg:grid-cols-[var(--chat-workspace-panel-width)_minmax(0,1fr)]";
@@ -2746,7 +2861,10 @@ export default function ChatWorkspacePage() {
       variant="plain"
       title=""
     >
-      <div className="clara-chat-redesign relative h-[calc(100dvh-4rem)] min-h-[680px] overflow-hidden rounded-[0.5rem] border border-[color:var(--shell-border)]/80 bg-[var(--surface-panel)] shadow-[0_16px_40px_-38px_rgba(15,23,42,0.24)] sm:h-[calc(100dvh-3.9rem)] lg:h-[calc(100dvh-3.35rem)]">
+      <div
+        className="relative h-[100dvh] min-h-[680px] overflow-hidden rounded-none bg-[radial-gradient(120%_130%_at_100%_-10%,rgba(34,211,238,0.09)_0%,rgba(5,17,38,0.99)_45%,rgba(4,13,29,1)_100%)] shadow-none"
+        style={chatSurfaceStyle}
+      >
         {isMobileSidebarOpen ? (
           <button
             type="button"
@@ -2807,32 +2925,23 @@ export default function ChatWorkspacePage() {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setAccountMenuOpen((prev) => !prev)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-xs font-bold text-[var(--text-secondary)]"
-              aria-expanded={accountMenuOpen}
-              aria-haspopup="menu"
-              title={isEnglishUI ? "Account" : "Tài khoản"}
-            >
-              {accountRole.slice(0, 1).toUpperCase()}
-            </button>
+            <div className="h-8 w-8" aria-hidden="true" />
           </aside>
         ) : null}
           <aside
             ref={workspacePanelRef}
             className={[
-              "clara-chat-workspace fixed inset-y-0 left-0 z-50 flex w-[min(86vw,24rem)] flex-col overflow-hidden border-r border-cyan-300/20 bg-[radial-gradient(120%_90%_at_50%_0%,#102445_0%,#0a1734_46%,#071126_100%)] p-3.5 text-[#dbe8fb] shadow-[inset_-1px_0_0_rgba(56,189,248,0.16)] transition-transform duration-200 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
+              "fixed inset-y-0 left-0 z-50 flex w-[min(88vw,24rem)] flex-col overflow-hidden border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 transition-transform duration-200 lg:relative lg:inset-auto lg:z-0 lg:h-full lg:w-auto lg:max-h-none",
               isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%]",
               isWorkspacePanelCollapsed ? "lg:hidden" : "lg:flex lg:translate-x-0",
             ].join(" ")}
           >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[0.78rem] font-black uppercase tracking-[0.2em] text-cyan-300/95">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.17em] text-cyan-300/95">
                 CLARA CHAT
               </p>
-              <h2 className="mt-1 truncate text-[2rem] font-semibold leading-none tracking-[-0.02em] text-[#eaf3ff]">
+              <h2 className="mt-0.5 text-[1.4rem] leading-none font-semibold text-[var(--text-primary)]">
                 {isEnglishUI ? "Workspace" : "Không gian chat"}
               </h2>
             </div>
@@ -2840,7 +2949,7 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(true)}
-                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-cyan-300/20 bg-[#1a2e4f]/80 px-2 text-xs font-semibold text-[#b5c8e4] transition hover:border-cyan-300/70 hover:text-cyan-100 lg:inline-flex"
+                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
                 aria-label={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
                 title={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
               >
@@ -2849,179 +2958,191 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-cyan-300/20 bg-[#1a2e4f]/80 text-xs font-semibold text-[#b5c8e4] lg:hidden"
+                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-semibold text-[var(--text-secondary)] lg:hidden"
               >
-                <span className="material-symbols-outlined text-base">close</span>
+                <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
             </div>
           </div>
 
-          <div className="mt-3 flex items-stretch overflow-hidden rounded-full border border-cyan-300/35 bg-[#17385f]/85 shadow-[0_10px_24px_-18px_rgba(56,189,248,0.9)]">
-            <button
-              type="button"
-              onClick={createNewConversation}
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center bg-gradient-to-r from-cyan-500/40 via-cyan-400/30 to-blue-500/35 px-4 text-sm font-semibold text-[#dff5ff] transition hover:brightness-110"
-            >
-              + {isEnglishUI ? "New chat" : "Chat mới"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsScopeManagerOpen(true)}
-              className={[
-                "inline-flex h-11 w-11 items-center justify-center border-l border-cyan-300/25 bg-[#20466f] text-[#b9d7f8] transition hover:text-[#e7f6ff]",
-              ].join(" ")}
-              aria-label="Manage folders"
-              title="Manage folders"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                edit_square
-              </span>
-            </button>
-          </div>
-
-          <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-2xl border border-cyan-300/18 bg-[#23395c]/65">
-            <div className="px-3 py-2.5">
-              <p className="text-[0.66rem] uppercase tracking-[0.1em] text-[#8fa5c7]">
-                {isEnglishUI ? "Chats" : "Chat"}
-              </p>
-              <p className="mt-0.5 text-[1.85rem] leading-none font-semibold text-[#edf5ff]">{workspaceChatCount}</p>
-            </div>
-            <div className="border-x border-cyan-300/14 px-3 py-2.5">
-              <p className="text-[0.66rem] uppercase tracking-[0.1em] text-[#8fa5c7]">
-                {isEnglishUI ? "Messages" : "Tin nhắn"}
-              </p>
-              <p className="mt-0.5 text-[1.85rem] leading-none font-semibold text-[#edf5ff]">{workspaceMessageCount}</p>
-            </div>
-            <div className="px-3 py-2.5">
-              <p className="text-[0.66rem] uppercase tracking-[0.1em] text-[#8fa5c7]">
-                {isEnglishUI ? "Notes" : "Ghi chú"}
-              </p>
-              <p className="mt-0.5 text-[1.85rem] leading-none font-semibold text-[#edf5ff]">{workspaceNoteCount}</p>
+          <div className="mt-2.5 overflow-hidden rounded-full border border-cyan-400/70 bg-[linear-gradient(90deg,rgba(2,88,136,0.96),rgba(2,66,108,0.92))] shadow-[0_10px_24px_-20px_rgba(3,78,122,0.98)]">
+            <div className="flex items-stretch">
+              <button
+                type="button"
+                onClick={createNewConversation}
+                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-slate-100 transition hover:brightness-105"
+              >
+                + {isEnglishUI ? "New chat" : "Chat mới"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSelectionMode((prev) => !prev)}
+                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-cyan-200/45 bg-sky-950/35 text-slate-100 transition hover:bg-sky-950/45"
+                aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+              >
+                <span className="material-symbols-outlined text-[15px]">edit_square</span>
+              </button>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {WORKSPACE_LEFT_VIEW_OPTIONS.filter((option) => option.id !== "shares").map((option) => {
-              const isActive = workspaceLeftView === option.id || (workspaceLeftView === "all" && option.id === "all");
+          <div className="mt-2.5 rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-2">
+            <div className="grid grid-cols-3">
+              <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">chat_bubble</span>
+                <div>
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.conversations}
+                  </p>
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Chats" : "Chat"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">forum</span>
+                <div>
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.messages}
+                  </p>
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Messages" : "Tin nhắn"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 px-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">description</span>
+                <div>
+                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
+                    {effectiveSummary.notes}
+                  </p>
+                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Notes" : "Ghi chú"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap gap-1">
+            {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => {
+              const active = workspaceLeftView === option.id;
               return (
                 <button
                   key={`workspace-view-chip-${option.id}`}
                   type="button"
                   onClick={() => setWorkspaceLeftView(option.id)}
-                    className={[
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                      isActive
-                        ? "border-cyan-300/70 bg-cyan-500/14 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
-                        : "border-cyan-300/12 bg-[#2c3f61]/70 text-[#b3c5df] hover:border-cyan-300/45",
-                    ].join(" ")}
+                  className={[
+                    "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
+                    active
+                      ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                  ].join(" ")}
+                  title={option.title[uiLanguage]}
+                  aria-label={option.title[uiLanguage]}
                 >
                   {option.title[uiLanguage]}
                 </button>
               );
             })}
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setWorkspaceLeftView("shares")}
-              className={[
-                "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                workspaceLeftView === "shares"
-                  ? "border-cyan-300/70 bg-cyan-500/14 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
-                  : "border-cyan-300/12 bg-[#2c3f61]/70 text-[#b3c5df] hover:border-cyan-300/45",
-              ].join(" ")}
-            >
-              {isEnglishUI ? "Shares" : "Chia sẻ"}
-            </button>
-          </div>
 
-          <div className="mt-4">
-            <div className="relative">
+          <div className="mt-2.5">
+            <div className="relative mt-1.5">
               <input
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder={isEnglishUI ? "Search conversation, note..." : "Tìm conversation, note..."}
-                className="min-h-[44px] w-full rounded-[0.95rem] border border-cyan-300/28 bg-[#0f2140]/70 pl-4 pr-10 text-[15px] text-[#dce9fb] outline-none focus:border-cyan-300/65"
+                className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
-              <span className="pointer-events-none material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-[#8ea8cb]">
+              <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
                 search
               </span>
             </div>
-            {isSearching ? (
-              <p className="mt-1 text-[11px] text-[#96aecd]">
-                {isEnglishUI ? "Searching..." : "Đang tìm..."}
-              </p>
-            ) : null}
           </div>
 
-          <div className="mt-3">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-cyan-300/16 bg-[#15294a]/55 px-3 py-2 text-sm text-[#c2d3eb]">
-                <span>
-                  {selectedFolderFilterId !== null
-                    ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
-                        folderFilterList.find((folder) => folder.id === selectedFolderFilterId)?.name || "#"
-                      }`
-                    : `${isEnglishUI ? "Folder" : "Thư mục"}: ${isEnglishUI ? "All" : "Tất cả"}`}
-                </span>
-                <span className="material-symbols-outlined text-[18px] text-[#95afd0] transition group-open:rotate-180">expand_more</span>
-              </summary>
-              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-300/14 bg-[#15294a]/60 p-2">
-                <select
-                  value={String(selectedFolderFilterId ?? "none")}
-                  onChange={(event) => {
-                    const raw = event.target.value;
-                    setSelectedFolderFilterId(raw === "none" ? null : Number(raw));
-                  }}
-                  className="min-h-[34px] min-w-0 flex-1 rounded-xl border border-cyan-300/18 bg-[#0f2140]/75 px-2 text-xs text-[#d8e7fb]"
-                >
-                  <option value="none">{isEnglishUI ? "All folders" : "Tất cả thư mục"}</option>
-                  {folderFilterList.map((folder) => (
-                    <option key={`filter-folder-${folder.id}`} value={String(folder.id)}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
-                {selectedFolderFilterId !== null ? (
+          <div className="mt-2.5 flex items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={() => setIsScopeManagerOpen(true)}
+              className="text-[0.95rem] font-semibold text-[var(--text-primary)]"
+            >
+              {isEnglishUI ? "Folder: All" : "Folder: Tất cả"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsScopeManagerOpen(true)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
+              aria-label={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
+            >
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+          </div>
+
+          <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+            {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
+            <section className="flex min-h-0 flex-1 flex-col rounded-[1.05rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1.5">
+              <div className="mb-1.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}{" "}
+                    <span className="font-medium normal-case tracking-normal">
+                      {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} ·{" "}
+                      {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
+                    </span>
+                  </p>
                   <button
                     type="button"
-                    onClick={() => setSelectedFolderFilterId(null)}
-                    className="rounded-xl border border-cyan-300/18 px-3 py-1.5 text-xs text-[#b4c7e2]"
+                    onClick={() => setIsSelectionMode((prev) => !prev)}
+                    className="inline-flex min-h-[24px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
                   >
-                    {isEnglishUI ? "Clear" : "Xóa"}
+                    {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setIsScopeManagerOpen(true)}
-                  className="rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-100"
-                >
-                  {isEnglishUI ? "Manage folders" : "Quản lý thư mục"}
-                </button>
-              </div>
-            </details>
-          </div>
-
-          <div className="mt-2.5 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-            {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
-            <section className="flex min-h-0 flex-1 flex-col rounded-[1.2rem] border border-cyan-300/14 bg-[#15294a]/58 p-2.5">
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.11em] text-[#9db3d2]">
-                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"} {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} · {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
-                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSelectionMode((prev) => !prev)}
-                  className="rounded-lg border border-cyan-300/18 bg-[#22395e]/80 px-2.5 py-1 text-xs font-semibold text-[#c0d4ec]"
-                >
-                  {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
-                </button>
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]">
+                    <span>
+                      {selectedFolderFilterId !== null
+                        ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
+                            folderFilterList.find((folder) => folder.id === selectedFolderFilterId)?.name || "#"
+                          }`
+                        : isEnglishUI
+                          ? "Filter by folder"
+                          : "Lọc theo thư mục"}
+                    </span>
+                    <span className="material-symbols-outlined text-[16px] transition group-open:rotate-180">expand_more</span>
+                  </summary>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
+                    <select
+                      value={String(selectedFolderFilterId ?? "none")}
+                      onChange={(event) => {
+                        const raw = event.target.value;
+                        setSelectedFolderFilterId(raw === "none" ? null : Number(raw));
+                      }}
+                      className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
+                    >
+                      <option value="none">{isEnglishUI ? "All folders" : "Tất cả thư mục"}</option>
+                      {folderFilterList.map((folder) => (
+                        <option key={`filter-folder-${folder.id}`} value={String(folder.id)}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedFolderFilterId !== null ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFolderFilterId(null)}
+                        className="rounded-lg border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                      >
+                        {isEnglishUI ? "Clear" : "Xóa"}
+                      </button>
+                    ) : null}
+                  </div>
+                </details>
               </div>
               {isSelectionMode && selectedConversationIds.length ? (
-                <div className="mb-2 space-y-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
+                <div className="mb-2 space-y-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     {isEnglishUI ? "Bulk actions" : "Thao tác hàng loạt"}
                   </p>
@@ -3108,7 +3229,7 @@ export default function ChatWorkspacePage() {
                 <div
                   ref={conversationListViewportRef}
                   onScroll={onConversationListScroll}
-                  className="min-h-0 flex-1 overflow-y-auto pr-1"
+                  className="clara-scrollbar min-h-0 flex-1 overflow-y-auto pr-1"
                 >
                   <div
                     style={{ height: `${conversationVirtualizer.getTotalSize()}px` }}
@@ -3132,6 +3253,8 @@ export default function ChatWorkspacePage() {
                       return (
                         <div
                           key={row.key}
+                          data-index={virtualRow.index}
+                          ref={conversationVirtualizer.measureElement}
                           style={{
                             position: "absolute",
                             top: 0,
@@ -3142,7 +3265,7 @@ export default function ChatWorkspacePage() {
                           className="space-y-1.5 pb-1"
                         >
                           {row.dayLabel ? (
-                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                            <p className="px-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                               {formatConversationDayLabel(row.dayLabel, uiLanguage)}
                             </p>
                           ) : null}
@@ -3155,16 +3278,16 @@ export default function ChatWorkspacePage() {
                               void onSelectConversation(item);
                             }}
                             className={[
-                              "w-full cursor-pointer rounded-xl border px-2.5 py-2 text-left transition",
+                              "w-full cursor-pointer rounded-[0.95rem] border px-2.5 py-2 text-left",
                               isActive
-                                ? "border-cyan-300/45 bg-gradient-to-r from-[#27476f]/92 to-[#1e3659]/88 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.18)]"
-                                : "border-transparent bg-transparent hover:border-cyan-300/16 hover:bg-[#22395e]/60",
+                                ? "border-cyan-300/70 bg-cyan-500/10 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.9)]"
+                                : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
                               draggingConversationId === item.conversation_id
                                 ? "opacity-70"
                                 : "",
                             ].join(" ")}
                           >
-                            <div className="flex items-start gap-2">
+                            <div className="flex items-start gap-1.5">
                               {isSelectionMode ? (
                                 <input
                                   type="checkbox"
@@ -3183,13 +3306,13 @@ export default function ChatWorkspacePage() {
                                 onClick={() => void onSelectConversation(item)}
                                 className="flex-1 text-left"
                               >
-                                <p className="line-clamp-1 text-[17px] font-semibold leading-snug text-[#e8f2ff]">
+                                <p className="truncate whitespace-nowrap text-[12px] font-semibold leading-tight text-[var(--text-primary)]">
                                   {buildConversationPreview(item)}
                                 </p>
-                                <p className="mt-1 text-[13px] text-[#96aac7]">
+                                <p className="mt-0.5 truncate whitespace-nowrap text-[10px] text-[var(--text-muted)]">
                                   #{item.conversation_id} · {item.message_count} msg · {timeLabel}
                                   {item.is_favorite ? " · fav" : ""}
-                                  {isLocalOnly ? " · local-cache" : ""}
+                                  {isLocalOnly ? " · local" : ""}
                                 </p>
                               </button>
                             </div>
@@ -3391,60 +3514,6 @@ export default function ChatWorkspacePage() {
             ) : null}
           </div>
 
-          <div className="mt-3 border-t border-[color:var(--shell-border)] pt-3">
-            <div className="relative">
-              {accountMenuOpen ? (
-                <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
-                  <button
-                    type="button"
-                    onClick={onGoBack}
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    ← {isEnglishUI ? "Go back" : "Quay lại"}
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    {isEnglishUI ? "Go to CLARA workspace" : "Tới workspace CLARA"}
-                  </Link>
-                  <Link
-                    href="/"
-                    className="mb-1 inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-                  >
-                    {isEnglishUI ? "Go to CLARA website" : "Tới website CLARA"}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    className="inline-flex min-h-[34px] w-full items-center justify-start rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-xs font-semibold text-rose-700 dark:border-rose-700/70 dark:text-rose-300"
-                  >
-                    {isEnglishUI ? "Log out" : "Đăng xuất"}
-                  </button>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setAccountMenuOpen((prev) => !prev)}
-                className="inline-flex min-h-[42px] w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3"
-                aria-expanded={accountMenuOpen}
-                aria-haspopup="menu"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/60 bg-cyan-500/10 text-[11px] font-bold text-cyan-700 dark:border-cyan-700/60 dark:text-cyan-300">
-                    {accountRole.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="text-left">
-                    <span className="block text-xs font-semibold text-[var(--text-primary)]">
-                      {isEnglishUI ? "Account" : "Tài khoản"}
-                    </span>
-                    <span className="block text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">{accountRole}</span>
-                  </span>
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">{accountMenuOpen ? "â–²" : "â–¼"}</span>
-              </button>
-            </div>
-          </div>
           <button
             type="button"
             onMouseDown={handleWorkspacePanelResizeStart}
@@ -3476,68 +3545,59 @@ export default function ChatWorkspacePage() {
         </aside>
 
         <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-canvas)]">
-          <header className="clara-chat-header sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)]/95 px-3 py-3 backdrop-blur-lg sm:px-4">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-2">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)]/95 px-2.5 py-1.5 backdrop-blur-lg sm:px-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setIsMobileSidebarOpen(true)}
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
                     aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
                   >
-                    <span className="material-symbols-outlined text-[18px]">menu</span>
+                    <span className="material-symbols-outlined text-[16px]">menu</span>
                   </button>
-                  <div className="min-w-0">
-                    <p className="text-[0.73rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      {isEnglishUI ? "Active conversation" : "Hội thoại đang mở"}
-                    </p>
-                    <h2 className="mt-1 truncate text-[1.95rem] font-semibold leading-[1.08] text-[var(--text-primary)]">
-                      {activeConversationHeading}
-                    </h2>
-                    <span className="mt-1 block truncate text-[0.78rem] text-[var(--text-muted)]">
-                      {activeConversationStatusLabel}
-                    </span>
-                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
+                  </p>
                 </div>
+                <h2 className="mt-0.5 truncate text-[1.3rem] leading-none font-semibold text-[var(--text-primary)]">
+                  {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
+                </h2>
+                <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--text-muted)]">
+                  {activeConversationStatusLabel}
+                </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden items-center gap-1.5 whitespace-nowrap lg:flex">
                 <button
                   type="button"
                   onClick={createNewConversation}
-                  className="inline-flex h-10 items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/60 hover:text-[var(--text-primary)]"
+                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
                 >
-                  + {isEnglishUI ? "New chat" : "Chat mới"}
+                  + {isEnglishUI ? "New chat" : "New chat"}
                 </button>
                 <button
                   type="button"
                   disabled={!activeConversationId}
                   onClick={() => void onUpdateActiveConversationMeta({ isFavorite: !activeConversationMeta?.is_favorite })}
-                  className={[
-                    "inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
-                    activeConversationMeta?.is_favorite
-                      ? "border-amber-300/70 bg-amber-500/15 text-amber-300"
-                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-cyan-300/60",
-                  ].join(" ")}
+                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {activeConversationMeta?.is_favorite
-                    ? (isEnglishUI ? "★ Favorite" : "★ Yêu thích")
-                    : (isEnglishUI ? "☆ Favorite" : "☆ Yêu thích")}
+                  ★ {isEnglishUI ? "Favorite" : "Favorite"}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
-                  className="inline-flex h-10 items-center rounded-full border border-emerald-300/70 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-emerald-300/75 bg-emerald-500/15 px-2 text-[10px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
                 >
-                  {isEnglishUI ? "Export Word (.docx)" : "Xuất Word (.docx)"}
+                  Xuất Word (.docx)
                 </button>
                 <button
                   type="button"
                   onClick={() => void onExportActiveConversation("markdown")}
                   disabled={!activeConversationId}
-                  className="inline-flex h-10 items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Export .md
                 </button>
@@ -3545,20 +3605,20 @@ export default function ChatWorkspacePage() {
                   type="button"
                   onClick={() => void onShareActiveConversation()}
                   disabled={!activeConversationId || workspaceApiUnavailable}
-                  className="inline-flex h-10 items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-h-[28px] items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2 text-[10px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
                 >
-                  {isEnglishUI ? "Share public" : "Chia sẻ public"}
+                  Share public
                 </button>
 
                 <details className="group relative">
                   <summary
-                    className="inline-flex h-10 cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
+                    className="inline-flex min-h-[28px] cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)]"
                     aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
                     title={isEnglishUI ? "More actions" : "Thao tác khác"}
                   >
-                    {isEnglishUI ? "More actions" : "Thao tác khác"}
+                    {isEnglishUI ? "More actions" : "More actions"}
                   </summary>
-                  <div className="absolute right-0 z-20 mt-2 w-[17rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
+                  <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
                     <button
                       type="button"
                       onClick={() => setIsTelemetryPanelOpen((prev) => !prev)}
@@ -3591,6 +3651,45 @@ export default function ChatWorkspacePage() {
                         {isEnglishUI ? "Rename" : "Đổi tên"}
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      disabled={!activeConversationId}
+                      onClick={() => void onUpdateActiveConversationMeta({ isFavorite: !activeConversationMeta?.is_favorite })}
+                      className={[
+                        "inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border px-3 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60",
+                        activeConversationMeta?.is_favorite
+                          ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+                      ].join(" ")}
+                    >
+                      {activeConversationMeta?.is_favorite
+                        ? isEnglishUI ? "Unpin conversation" : "Bỏ ghim hội thoại"
+                        : isEnglishUI ? "Pin conversation" : "Ghim hội thoại"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onExportActiveConversation("docx")}
+                      disabled={!activeConversationId}
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-500/15 px-3 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                    >
+                      Xuất Word (.docx)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onExportActiveConversation("markdown")}
+                      disabled={!activeConversationId}
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isEnglishUI ? "Export .md" : "Xuất .md"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onShareActiveConversation()}
+                      disabled={!activeConversationId || workspaceApiUnavailable}
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
+                    >
+                      {isEnglishUI ? "Share" : "Chia sẻ"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => void onCreateInlineNote(true)}
@@ -3636,35 +3735,12 @@ export default function ChatWorkspacePage() {
               ) : null}
 
               {!conversationTurns.length && !isLoadingTurns ? (
-                <article className="rounded-[0.75rem] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3.5">
-                  <div className="max-w-2xl">
-                    <div className="inline-flex items-center gap-1 rounded-full border border-cyan-300/45 bg-cyan-500/10 px-2 py-1 text-cyan-700 dark:text-cyan-200">
-                      <span className="material-symbols-outlined text-[12px]">smart_toy</span>
-                      <span className="text-[9px] font-black uppercase tracking-[0.16em]">CLARA</span>
-                    </div>
-                    <h3 className="mt-2 text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                      {isEnglishUI
-                        ? "Start with a focused medical question."
-                        : "Bắt đầu bằng một câu hỏi y khoa rõ ràng."}
-                    </h3>
-                    <p className="mt-2 max-w-xl text-[13px] leading-6 text-[var(--text-secondary)]">
-                      {isEnglishUI
-                        ? "Use Fast for quick synthesis, Deep for broader evidence, and Deep Beta when you want the longest reasoning path."
-                        : "Dùng Fast cho câu trả lời nhanh, Deep để mở rộng bằng chứng, và Deep Beta khi cần chuỗi suy luận dài hơn."}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {quickPrompts.map((prompt) => (
-                        <button
-                          key={`empty-prompt-${prompt}`}
-                          type="button"
-                          onClick={() => setQuery(prompt)}
-                          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-0.5 text-[10px] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <article className="rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-3.5">
+                  <p className="text-[0.92rem] text-[var(--text-secondary)]">
+                    {isEnglishUI
+                      ? "No chat turns yet. Start with a question in the input below."
+                      : "Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới."}
+                  </p>
                 </article>
               ) : (
                 conversationTurns.map((turn) => (
@@ -3690,6 +3766,8 @@ export default function ChatWorkspacePage() {
               }
             }}
             onChangeRetrievalStackMode={setSelectedRetrievalStackMode}
+            personalMode={isPersonalMode}
+            onTogglePersonalMode={() => setIsPersonalMode((prev) => !prev)}
             liveJobId={liveJobId}
             liveStatusNote={liveStatusNote}
             error={error}
@@ -3719,97 +3797,357 @@ export default function ChatWorkspacePage() {
           ) : null}
 
           {isTelemetryPanelOpen ? (
-            <aside className="pointer-events-auto w-[8rem]">
-              <div className="rounded-[0.75rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/97 p-1.5 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.4)] backdrop-blur-lg">
+            <aside className="pointer-events-auto w-[min(92vw,30rem)]">
+              <div className="rounded-[0.95rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/97 p-2 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.4)] backdrop-blur-lg">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--text-muted)]">
                       {telemetryCopy.systemTelemetry}
                     </p>
-                    <h3 className="mt-0.5 text-[10px] font-semibold text-[var(--text-primary)]">
+                    <h3 className="mt-0.5 text-[11px] font-semibold text-[var(--text-primary)]">
                       {telemetryHasSignal ? confidenceLabel : telemetryCopy.confidenceSignalPending}
                     </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsTelemetryPanelOpen(false)}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                    aria-label={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsTelemetryDetailsOpen((prev) => !prev)}
+                      className="inline-flex min-h-[26px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[9px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70"
+                    >
+                      {isTelemetryDetailsOpen
+                        ? isEnglishUI ? "Hide details" : "Ẩn chi tiết"
+                        : isEnglishUI ? "Show details" : "Hiện chi tiết"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsTelemetryPanelOpen(false)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+                      aria-label={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
+                    </button>
+                  </div>
                 </div>
 
                 {telemetryHasSignal ? (
                   <>
-                    <div className="mt-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5">
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <p className="text-[7px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    <div className="mt-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
                             {telemetryCopy.confidence}
                           </p>
-                          <p className="mt-0.5 text-[0.98rem] font-semibold text-[var(--text-primary)]">{confidenceDisplay}</p>
+                          <p className="mt-0.5 text-[1rem] font-semibold text-[var(--text-primary)]">{confidenceDisplay}</p>
+                          {liveStatusNote ? (
+                            <p className="mt-1 whitespace-pre-wrap break-words text-[10px] leading-4 text-[var(--text-secondary)]">
+                              {liveStatusNote}
+                            </p>
+                          ) : null}
                         </div>
-                        <span className="text-[8px] font-medium text-[var(--text-muted)]">
-                          {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 space-y-1">
-                      <p className="text-[7px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                        {telemetryCopy.logicFlow}
-                      </p>
-                      <div className="space-y-1">
-                        {telemetryFlowPreviewNodes.length ? (
-                          telemetryFlowPreviewNodes.slice(0, 2).map((node, index) => {
-                            const meta = logicFlowStatusMeta(node.status);
-                            const localizedDetail = localizeTelemetryDetail(node.detail, uiLanguage);
-                            return (
-                              <div
-                                key={`telemetry-flow-compact-${node.id}-${index}`}
-                                className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5"
-                              >
-                                <div className="flex items-center justify-between gap-1.5">
-                                  <div className="flex min-w-0 items-center gap-1.5">
-                                    <span className={["h-2 w-2 rounded-full", meta.dotClass].join(" ")} />
-                                    <p className="truncate text-[9px] font-semibold text-[var(--text-primary)]">
-                                      {localizeLogicFlowLabel(node.id as LogicFlowNode["id"], uiLanguage)}
-                                    </p>
-                                  </div>
-                                  <span className={["shrink-0 text-[8px]", meta.detailClass].join(" ")}>
-                                    {localizeLogicFlowStatus(node.status, uiLanguage)}
-                                  </span>
-                                </div>
-                                {localizedDetail ? (
-                                  <p className={["mt-1 line-clamp-2 text-[8px] leading-4", meta.detailClass].join(" ")}>
-                                    {localizedDetail}
-                                  </p>
-                                ) : null}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2 text-[10px] text-[var(--text-muted)]">
-                            {telemetryCopy.confidenceSignalPending}
+                        <div className="shrink-0 space-y-1 text-right">
+                          <p className="text-[10px] font-medium text-[var(--text-muted)]">
+                            {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
                           </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {compactSourceIntel.length ? (
-                      <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[7px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                            {telemetryCopy.sourceIntel}
-                          </p>
-                          <span className="text-[9px] font-semibold text-[var(--text-primary)]">
-                            {sourceIntel.activeCount}
+                          <span
+                            className={[
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]",
+                              isStreamActive
+                                ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                                : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]",
+                            ].join(" ")}
+                          >
+                            {isStreamActive
+                              ? isEnglishUI ? "streaming" : "đang stream"
+                              : isEnglishUI ? "idle" : "chờ"}
                           </span>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-[8px] leading-4 text-[var(--text-muted)]">
-                          {compactSourceIntel.map((item) => item.name).join(" · ")}
-                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[9px] text-[var(--text-secondary)]">
+                          stages: {telemetryStageCount}
+                        </span>
+                        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[9px] text-[var(--text-secondary)]">
+                          events: {telemetryEventCount}
+                        </span>
+                        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[9px] text-[var(--text-secondary)]">
+                          reasoning: {telemetryReasoningNotes.length}
+                        </span>
+                        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[9px] text-[var(--text-secondary)]">
+                          errors: {telemetryErrors.length}
+                        </span>
+                        {liveJobId ? (
+                          <span className="rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2 py-0.5 text-[9px] text-cyan-700 dark:text-cyan-300">
+                            job: {liveJobId}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {isTelemetryDetailsOpen ? (
+                      <div className="mt-2 max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+                        <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                            {isEnglishUI ? "Reasoning stream" : "Reasoning stream"}
+                          </p>
+                          {telemetryReasoningNotes.length ? (
+                            <ol className="mt-1.5 space-y-1">
+                              {telemetryReasoningNotes.map((note, index) => (
+                                <li
+                                  key={`telemetry-reasoning-${index}`}
+                                  className="whitespace-pre-wrap break-words rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-[10px] leading-4 text-[var(--text-secondary)]"
+                                >
+                                  {note}
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
+                              {isEnglishUI ? "No reasoning notes yet." : "Chưa có reasoning note."}
+                            </p>
+                          )}
+                        </section>
+
+                        <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                            {telemetryCopy.logicFlow}
+                          </p>
+                          {telemetryFlowStages.length ? (
+                            <ol className="mt-1.5 space-y-1">
+                              {telemetryFlowStages.map((stage, index) => {
+                                const meta = logicFlowStatusMeta(normalizeLogicFlowStatus(stage.status));
+                                const localizedDetail = localizeTelemetryDetail(stage.detail, uiLanguage);
+                                const duration = formatTelemetryDuration(stage.durationMs);
+                                return (
+                                  <li
+                                    key={`telemetry-flow-stage-${stage.id}-${index}`}
+                                    className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5"
+                                  >
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <div className="flex min-w-0 items-center gap-1.5">
+                                        <span className={["h-2 w-2 rounded-full", meta.dotClass].join(" ")} />
+                                        <p className="truncate text-[10px] font-semibold text-[var(--text-primary)]">
+                                          {stage.label}
+                                        </p>
+                                      </div>
+                                      <span className={["shrink-0 text-[9px]", meta.detailClass].join(" ")}>
+                                        {localizeLogicFlowStatus(normalizeLogicFlowStatus(stage.status), uiLanguage)}
+                                      </span>
+                                    </div>
+                                    {localizedDetail ? (
+                                      <p className={["mt-1 whitespace-pre-wrap break-words text-[10px] leading-4", meta.detailClass].join(" ")}>
+                                        {localizedDetail}
+                                      </p>
+                                    ) : null}
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      {stage.start ? (
+                                        <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                          start: {formatTelemetryTimestamp(stage.start, uiLanguage)}
+                                        </span>
+                                      ) : null}
+                                      {stage.end ? (
+                                        <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                          end: {formatTelemetryTimestamp(stage.end, uiLanguage)}
+                                        </span>
+                                      ) : null}
+                                      {duration ? (
+                                        <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                          duration: {duration}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          ) : (
+                            <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
+                              {telemetryCopy.confidenceSignalPending}
+                            </p>
+                          )}
+                        </section>
+
+                        <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                            {isEnglishUI ? "Flow events" : "Flow events"}
+                          </p>
+                          {telemetryFlowEvents.length ? (
+                            <ul className="mt-1.5 space-y-1">
+                              {telemetryFlowEvents.map((event) => {
+                                const meta = logicFlowStatusMeta(normalizeLogicFlowStatus(event.status));
+                                const detail = localizeTelemetryDetail(event.detail, uiLanguage);
+                                return (
+                                  <li
+                                    key={`telemetry-flow-event-${event.id}`}
+                                    className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-1">
+                                      <p className="text-[10px] font-semibold text-[var(--text-primary)]">
+                                        {event.label}
+                                      </p>
+                                      <span className={["text-[9px]", meta.detailClass].join(" ")}>
+                                        {localizeLogicFlowStatus(normalizeLogicFlowStatus(event.status), uiLanguage)}
+                                      </span>
+                                    </div>
+                                    {event.component ? (
+                                      <p className="mt-0.5 text-[9px] text-[var(--text-muted)]">
+                                        component: {event.component}
+                                      </p>
+                                    ) : null}
+                                    {event.timestamp ? (
+                                      <p className="mt-0.5 text-[9px] text-[var(--text-muted)]">
+                                        time: {formatTelemetryTimestamp(event.timestamp, uiLanguage)}
+                                      </p>
+                                    ) : null}
+                                    {detail ? (
+                                      <p className={["mt-1 whitespace-pre-wrap break-words text-[10px] leading-4", meta.detailClass].join(" ")}>
+                                        {detail}
+                                      </p>
+                                    ) : null}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
+                              {isEnglishUI ? "No flow events yet." : "Chưa có flow event."}
+                            </p>
+                          )}
+                        </section>
+
+                        <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                            {telemetryCopy.sourceIntel}
+                          </p>
+                          {telemetrySourceAttempts.length ? (
+                            <ul className="mt-1.5 space-y-1">
+                              {telemetrySourceAttempts.map((attempt, index) => (
+                                <li
+                                  key={`telemetry-source-attempt-${attempt.source}-${index}`}
+                                  className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5"
+                                >
+                                  <p className="text-[10px] font-semibold text-[var(--text-primary)]">
+                                    {attempt.source}
+                                  </p>
+                                  <div className="mt-0.5 flex flex-wrap gap-1">
+                                    {attempt.status ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        {telemetryCopy.sourceStatusPrefix}: {attempt.status}
+                                      </span>
+                                    ) : null}
+                                    {attempt.documents !== undefined ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        docs: {attempt.documents}
+                                      </span>
+                                    ) : null}
+                                    {attempt.passIndex !== undefined ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        pass: {attempt.passIndex}
+                                      </span>
+                                    ) : null}
+                                    {attempt.durationMs !== undefined ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        duration: {formatTelemetryDuration(attempt.durationMs)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {attempt.query || attempt.subquery ? (
+                                    <p className="mt-1 whitespace-pre-wrap break-words text-[10px] leading-4 text-[var(--text-secondary)]">
+                                      {telemetryCopy.sourceQueryPrefix}: {attempt.query ?? attempt.subquery}
+                                    </p>
+                                  ) : null}
+                                  {attempt.error ? (
+                                    <p className="mt-1 whitespace-pre-wrap break-words text-[10px] leading-4 text-rose-700 dark:text-rose-300">
+                                      {attempt.error}
+                                    </p>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
+                              {isEnglishUI ? "No source attempts yet." : "Chưa có lượt truy xuất nguồn."}
+                            </p>
+                          )}
+                        </section>
+
+                        {telemetryVerificationRows.length ? (
+                          <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                              {isEnglishUI ? "Verification matrix" : "Verification matrix"}
+                            </p>
+                            <ul className="mt-1.5 space-y-1">
+                              {telemetryVerificationRows.map((row, index) => (
+                                <li
+                                  key={`telemetry-verification-${index}`}
+                                  className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5"
+                                >
+                                  <p className="whitespace-pre-wrap break-words text-[10px] leading-4 text-[var(--text-primary)]">
+                                    {row.claim}
+                                  </p>
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {row.supportStatus ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        support: {row.supportStatus}
+                                      </span>
+                                    ) : null}
+                                    {row.confidence !== undefined ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        confidence: {row.confidence}
+                                      </span>
+                                    ) : null}
+                                    {row.severity ? (
+                                      <span className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]">
+                                        severity: {row.severity}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {row.note ? (
+                                    <p className="mt-1 whitespace-pre-wrap break-words text-[10px] leading-4 text-[var(--text-secondary)]">
+                                      {row.note}
+                                    </p>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null}
+
+                        {telemetryScores.length ? (
+                          <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                              {isEnglishUI ? "Scores" : "Scores"}
+                            </p>
+                            <ul className="mt-1.5 space-y-1">
+                              {telemetryScores.map((score, index) => (
+                                <li
+                                  key={`telemetry-score-${score.label}-${index}`}
+                                  className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5 text-[10px] text-[var(--text-secondary)]"
+                                >
+                                  <span className="font-semibold text-[var(--text-primary)]">{score.label}: </span>
+                                  <span>{String(score.value)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null}
+
+                        {telemetryErrors.length ? (
+                          <section className="rounded-lg border border-rose-300/70 bg-rose-500/10 px-2.5 py-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-rose-700 dark:text-rose-300">
+                              {isEnglishUI ? "Errors" : "Lỗi"}
+                            </p>
+                            <ul className="mt-1.5 space-y-1">
+                              {telemetryErrors.map((item, index) => (
+                                <li
+                                  key={`telemetry-error-${index}`}
+                                  className="whitespace-pre-wrap break-words rounded border border-rose-300/70 bg-rose-500/15 px-2 py-1 text-[10px] leading-4 text-rose-700 dark:text-rose-300"
+                                >
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null}
                       </div>
                     ) : null}
                   </>
@@ -3843,7 +4181,7 @@ export default function ChatWorkspacePage() {
                   onClick={() => setIsScopeManagerOpen(false)}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
                 >
-                  âœ•
+                  ✕
                 </button>
               </div>
 
@@ -4003,7 +4341,7 @@ export default function ChatWorkspacePage() {
                   }}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
                 >
-                  âœ•
+                  ✕
                 </button>
               </div>
               <input
