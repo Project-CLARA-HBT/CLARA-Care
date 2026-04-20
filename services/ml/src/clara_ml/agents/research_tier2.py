@@ -2016,18 +2016,12 @@ def _resolve_section_title(section_id: str, answer_language: str) -> str:
 
 def _resolve_deep_beta_dossier_headings(answer_language: str) -> list[str]:
     language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
-    # Deep Beta should output a publishable clinical report, not retrieval scaffolding.
-    section_ids = (
-        "quick_conclusion",
-        "key_points",
-        "detailed_analysis",
-        "clinical_context",
-        "practical_application",
-        "safety_notes",
-        "monitoring_red_flags",
-        "limitations_legal",
+    return list(
+        _DEEP_BETA_DOSSIER_HEADINGS_BY_LANGUAGE.get(
+            language,
+            _DEEP_BETA_DOSSIER_HEADINGS_BY_LANGUAGE["vi"],
+        )
     )
-    return [f"## {_resolve_section_title(section_id, language)}" for section_id in section_ids]
 
 
 _USER_FACING_HEADING_ALIASES = {
@@ -2403,7 +2397,7 @@ def _resolve_report_section_contract(
             "- write as a structured clinical dossier / evidence brief with explicit section-by-section traceability",
             "- open with the answer and decision boundary before background context",
             "- keep claim-evidence mapping explicit, including contradictory or counter evidence and how it changes confidence",
-            "- tables are optional; use them only when they improve clarity over prose",
+            "- include at least one comparative evidence table and one risk-monitoring table when clinically relevant",
             "- when the query compares options, cover adherence, efficacy, safety, feasibility, and cost/access",
             "- include subgroup caveats, uncertainty, and what new evidence could shift the recommendation",
             "- do not expose internal pipeline tags, execution steps, or debug telemetry in the answer body",
@@ -2488,10 +2482,6 @@ def _ensure_deep_beta_report_artifacts(
 ) -> str:
     mode = str(research_mode or "deep_beta").strip().lower()
     output = _sanitize_deep_beta_markdown_output(markdown_text)
-    if mode == "deep_beta":
-        # User-facing Deep Beta answer must remain a clean clinical report body.
-        # Keep telemetry matrices/claim-graph tables in metadata panels only.
-        return output
     appendix_sections: list[str] = []
     reasoning_cards = _build_reasoning_chain_cards(
         reasoning_nodes if isinstance(reasoning_nodes, list) else [],
@@ -2792,7 +2782,7 @@ def _synthesize_deep_beta_long_report(
                 break
             content = f"{content.rstrip()}\n\n{continuation.strip()}"
 
-        if _markdown_word_count(content) < target_words and mode != "deep_beta":
+        if _markdown_word_count(content) < target_words:
             pass_rows = [
                 "| Pass | Subquery | Retrieved | Duration (ms) |",
                 "| --- | --- | ---: | ---: |",
@@ -5140,7 +5130,7 @@ def _ensure_markdown_structure(
     )
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
         completed = _cleanup_markdown_noise(cleaned)
-        if research_mode == "deep":
+        if research_mode in {"deep", "deep_beta"}:
             completed = _inject_research_plan_section(
                 completed,
                 plan_markdown=plan_markdown,
@@ -6143,53 +6133,6 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Evidence summary table"),
                 _canonical_h2_key("Evidence table"),
             },
-        )
-    if mode == "deep_beta":
-        # Deep Beta user-facing answer should not expose retrieval/planner scaffolding sections.
-        scaffold_h2_keys = {
-            _canonical_h2_key(_resolve_section_title("research_plan", "vi")),
-            _canonical_h2_key(_resolve_section_title("research_plan", "en")),
-            _canonical_h2_key("Research question (PICO)"),
-            _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"),
-            _canonical_h2_key("Retrieval method & selection criteria"),
-            _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"),
-            _canonical_h2_key("Evidence profile & source quality"),
-            _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"),
-            _canonical_h2_key("Main findings synthesis"),
-            _canonical_h2_key("Tổng hợp phát hiện chính"),
-            _canonical_h2_key("Evidence reasoning chain"),
-            _canonical_h2_key("Chuỗi lập luận bằng chứng"),
-            _canonical_h2_key("Counter-evidence and contradictions"),
-            _canonical_h2_key("Phản biện bằng chứng đối nghịch"),
-            _canonical_h2_key("Safety decision matrix"),
-            _canonical_h2_key("Ma trận quyết định an toàn"),
-            _canonical_h2_key("Follow-up plan after counseling"),
-            _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"),
-            _canonical_h2_key(_resolve_section_title("evidence_table", "vi")),
-            _canonical_h2_key(_resolve_section_title("evidence_table", "en")),
-            _canonical_h2_key("Phụ lục mở rộng Deep Beta (chuyên sâu)"),
-        }
-        sanitized = _remove_h2_sections(
-            sanitized,
-            section_heading_keys=scaffold_h2_keys,
-        )
-        sanitized = re.sub(
-            r"(?:^|\n)\s*\|?\s*Node\s*\|?\s*Claim\s*\|?\s*Evidence\s*\|?\s*Inference\s*\|?\s*Clinical action[^\n]*\n(?:\s*\|?.*?\n){1,40}",
-            "\n",
-            sanitized,
-            flags=re.IGNORECASE,
-        )
-        sanitized = re.sub(
-            r"(?:^|\n)\s*\|?\s*Pass\s*\|?\s*Subquery\s*\|?\s*Retrieved\s*\|?\s*Duration\s*\(ms\)[^\n]*\n(?:\s*\|?.*?\n){1,40}",
-            "\n",
-            sanitized,
-            flags=re.IGNORECASE,
-        )
-        sanitized = re.sub(
-            r"(?:^|\n)\s*###\s*Bảng bổ sung Deep Beta[^\n]*[\s\S]*?(?=\n##\s|\n#\s|$)",
-            "\n",
-            sanitized,
-            flags=re.IGNORECASE,
         )
     if mode in {"deep", "deep_beta"}:
         # Remove telemetry-heavy H3 blocks in deep modes; keep user-facing report sections.
