@@ -7,6 +7,7 @@ REQUIRE_DEEPSEEK="${REQUIRE_DEEPSEEK:-true}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 SKIP_ENV_GUARD="${SKIP_ENV_GUARD:-false}"
 ENV_GUARD_SCRIPT="${ENV_GUARD_SCRIPT:-${ROOT_DIR}/scripts/ops/validate_runtime_env.sh}"
+SMOKE_RESEARCH_TIMEOUT_SECONDS="${SMOKE_RESEARCH_TIMEOUT_SECONDS:-300}"
 ML_INTERNAL_API_KEY_VALUE=""
 AUTH_CSRF_COOKIE_NAME_VALUE="${AUTH_CSRF_COOKIE_NAME:-clara_csrf_token}"
 
@@ -109,7 +110,7 @@ smoke_research_mode() {
       curl_args+=(-H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}")
     fi
 
-    if curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
+    if curl -fsS -m "${SMOKE_RESEARCH_TIMEOUT_SECONDS}" -X POST "${ml_url}/v1/research/tier2" \
       -H 'Content-Type: application/json' \
       "${curl_args[@]}" \
       -d "{\"query\":\"aspirin and ibuprofen interaction risk\",\"research_mode\":\"${research_mode}\",\"source_mode\":\"hybrid\"}" > "${output_file}"; then
