@@ -340,16 +340,26 @@ export default function SelfMedPage() {
                 </div>
 
                 <div className="flex flex-col gap-8 md:flex-row md:items-center">
-                  <div className="relative h-28 w-56 overflow-hidden">
-                    <div className="absolute h-56 w-56 rounded-full border-[12px] border-[color:var(--shell-border)]" />
-                    <div
-                      className="absolute h-56 w-56 rounded-full border-[12px] border-cyan-400"
-                      style={{
-                        clipPath: "polygon(0 0, 100% 0, 100% 75%, 0 75%)",
-                        transform: `rotate(${Math.max(-110, Math.min(110, stats.riskScore * 1.8 - 90))}deg)`,
-                        transformOrigin: "50% 50%",
-                      }}
-                    />
+                  <div className="relative h-28 w-56">
+                    <svg viewBox="0 0 220 120" className="h-full w-full" aria-hidden="true">
+                      <path
+                        d="M20 100 A90 90 0 0 1 200 100"
+                        fill="none"
+                        stroke="var(--shell-border)"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        pathLength={100}
+                      />
+                      <path
+                        d="M20 100 A90 90 0 0 1 200 100"
+                        fill="none"
+                        stroke="rgb(34 211 238)"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        pathLength={100}
+                        strokeDasharray={`${Math.max(0, Math.min(100, stats.riskScore))} 100`}
+                      />
+                    </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
                       <span className="text-3xl font-extrabold text-cyan-300">{stats.riskScore}%</span>
                       <span className="text-[10px] uppercase text-[var(--text-muted)]">Confidence Score</span>
