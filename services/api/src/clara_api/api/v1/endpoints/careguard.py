@@ -1137,7 +1137,7 @@ def _scan_with_tgc_ocr(
     if not endpoints:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Chua cau hinh TGC_OCR_ENDPOINTS",
+            detail="Chưa cấu hình TGC_OCR_ENDPOINTS",
         )
 
     base_url = settings.tgc_ocr_base_url.rstrip("/")
@@ -1148,7 +1148,7 @@ def _scan_with_tgc_ocr(
         headers["x-api-key"] = api_key
         headers["authorization"] = f"Bearer {api_key}"
 
-    last_error = "Khong lay duoc van ban OCR tu TGC service"
+    last_error = "Không lấy được văn bản OCR từ TGC service"
     for endpoint in endpoints:
         url = f"{base_url}{endpoint}"
         response: httpx.Response | None = None
@@ -1167,11 +1167,11 @@ def _scan_with_tgc_ocr(
                     field_name=field_name,
                 )
             except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-                last_error = f"Khong ket noi duoc OCR service: {exc.__class__.__name__}"
+                last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
                 response = None
                 break
             except httpx.HTTPError as exc:
-                last_error = f"OCR request loi: {exc}"
+                last_error = f"OCR request lỗi: {exc}"
                 response = None
                 break
 
@@ -1183,7 +1183,7 @@ def _scan_with_tgc_ocr(
                 response = None
                 break
             if response.status_code not in {400, 405, 415, 422}:
-                last_error = f"OCR endpoint tu choi request: status={response.status_code}"
+                last_error = f"OCR endpoint từ chối request: status={response.status_code}"
                 response = None
                 break
 
@@ -1202,11 +1202,11 @@ def _scan_with_tgc_ocr(
                         headers=headers,
                     )
                 except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-                    last_error = f"Khong ket noi duoc OCR service: {exc.__class__.__name__}"
+                    last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
                     response = None
                     break
                 except httpx.HTTPError as exc:
-                    last_error = f"OCR request loi: {exc}"
+                    last_error = f"OCR request lỗi: {exc}"
                     response = None
                     break
 
@@ -1218,7 +1218,7 @@ def _scan_with_tgc_ocr(
                     response = None
                     break
                 if response.status_code not in {400, 405, 415, 422}:
-                    last_error = f"OCR endpoint tu choi request: status={response.status_code}"
+                    last_error = f"OCR endpoint từ chối request: status={response.status_code}"
                     response = None
                     break
 
@@ -1228,12 +1228,12 @@ def _scan_with_tgc_ocr(
         try:
             payload = response.json()
         except ValueError:
-            last_error = "OCR endpoint tra ve JSON khong hop le"
+            last_error = "OCR endpoint trả về JSON không hợp lệ"
             continue
 
         extracted_text = _extract_ocr_text(payload)
         if not extracted_text:
-            last_error = "OCR endpoint khong tra ve text huu ich"
+            last_error = "OCR endpoint không trả về text hữu ích"
             continue
 
         return extracted_text, endpoint, "tgc-transhub"
