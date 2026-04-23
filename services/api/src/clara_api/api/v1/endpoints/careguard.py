@@ -1097,20 +1097,34 @@ def _post_tgc_ocr_multipart(
     content_type: str,
     timeout_seconds: float,
     headers: dict[str, str],
+    field_name: str = "file",
 ) -> httpx.Response:
-    files = {"file": (file_name, file_bytes, content_type)}
+    files = {field_name: (file_name, file_bytes, content_type)}
     return httpx.post(url, files=files, headers=headers, timeout=timeout_seconds)
 
 
 def _post_tgc_ocr_json(
     url: str,
-    file_bytes: bytes,
+    payload: dict[str, Any],
     timeout_seconds: float,
     headers: dict[str, str],
 ) -> httpx.Response:
-    encoded = base64.b64encode(file_bytes).decode("utf-8")
-    payload = {"image": encoded, "lang": "vi"}
     return httpx.post(url, json=payload, headers=headers, timeout=timeout_seconds)
+
+
+def _build_tgc_ocr_json_payloads(
+    file_bytes: bytes,
+    file_name: str,
+    content_type: str,
+) -> list[dict[str, Any]]:
+    encoded = base64.b64encode(file_bytes).decode("utf-8")
+    return [
+        {"image": encoded, "lang": "vi"},
+        {"image_base64": encoded, "lang": "vi"},
+        {"file": encoded, "lang": "vi"},
+        {"base64": encoded, "mime_type": content_type, "filename": file_name, "lang": "vi"},
+        {"content": encoded, "content_type": content_type, "filename": file_name, "lang": "vi"},
+    ]
 
 
 def _scan_with_tgc_ocr(
@@ -1123,65 +1137,103 @@ def _scan_with_tgc_ocr(
     if not endpoints:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Chưa cấu hình TGC_OCR_ENDPOINTS",
+            detail="Chua cau hinh TGC_OCR_ENDPOINTS",
         )
 
     base_url = settings.tgc_ocr_base_url.rstrip("/")
     headers: dict[str, str] = {}
-    if settings.tgc_ocr_api_key.strip():
-        headers["x-api-key"] = settings.tgc_ocr_api_key.strip()
+    api_key = settings.tgc_ocr_api_key.strip()
+    if api_key:
+        # Shared TGC OCR service may accept either x-api-key or Bearer auth.
+        headers["x-api-key"] = api_key
+        headers["authorization"] = f"Bearer {api_key}"
 
-    last_error = "Không lấy được văn bản OCR từ TGC service"
+    last_error = "Khong lay duoc van ban OCR tu TGC service"
     for endpoint in endpoints:
         url = f"{base_url}{endpoint}"
-        try:
-            response = _post_tgc_ocr_multipart(
-                url=url,
+        response: httpx.Response | None = None
+        request_succeeded = False
+
+        # Try common multipart field names used by OCR providers.
+        for field_name in ("file", "image", "document", "upload_file"):
+            try:
+                response = _post_tgc_ocr_multipart(
+                    url=url,
+                    file_bytes=file_bytes,
+                    file_name=file_name,
+                    content_type=content_type,
+                    timeout_seconds=settings.tgc_ocr_timeout_seconds,
+                    headers=headers,
+                    field_name=field_name,
+                )
+            except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
+                last_error = f"Khong ket noi duoc OCR service: {exc.__class__.__name__}"
+                response = None
+                break
+            except httpx.HTTPError as exc:
+                last_error = f"OCR request loi: {exc}"
+                response = None
+                break
+
+            if response.status_code < 400:
+                request_succeeded = True
+                break
+            if response.status_code >= 500:
+                last_error = f"OCR upstream error: status={response.status_code}"
+                response = None
+                break
+            if response.status_code not in {400, 405, 415, 422}:
+                last_error = f"OCR endpoint tu choi request: status={response.status_code}"
+                response = None
+                break
+
+        # Some deployments expose /ocr as JSON(base64) instead of multipart.
+        if (not request_succeeded) and endpoint.endswith("/ocr"):
+            for payload in _build_tgc_ocr_json_payloads(
                 file_bytes=file_bytes,
                 file_name=file_name,
                 content_type=content_type,
-                timeout_seconds=settings.tgc_ocr_timeout_seconds,
-                headers=headers,
-            )
-        except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-            last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
-            continue
-        except httpx.HTTPError as exc:
-            last_error = f"OCR request lỗi: {exc}"
-            continue
+            ):
+                try:
+                    response = _post_tgc_ocr_json(
+                        url=url,
+                        payload=payload,
+                        timeout_seconds=settings.tgc_ocr_timeout_seconds,
+                        headers=headers,
+                    )
+                except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
+                    last_error = f"Khong ket noi duoc OCR service: {exc.__class__.__name__}"
+                    response = None
+                    break
+                except httpx.HTTPError as exc:
+                    last_error = f"OCR request loi: {exc}"
+                    response = None
+                    break
 
-        # Some OCR services expose `/ocr` with JSON (base64 image), not multipart.
-        if response.status_code in {400, 415, 422} and endpoint.endswith("/ocr"):
-            try:
-                response = _post_tgc_ocr_json(
-                    url=url,
-                    file_bytes=file_bytes,
-                    timeout_seconds=settings.tgc_ocr_timeout_seconds,
-                    headers=headers,
-                )
-            except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-                last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
-                continue
-            except httpx.HTTPError as exc:
-                last_error = f"OCR request lỗi: {exc}"
-                continue
+                if response.status_code < 400:
+                    request_succeeded = True
+                    break
+                if response.status_code >= 500:
+                    last_error = f"OCR upstream error: status={response.status_code}"
+                    response = None
+                    break
+                if response.status_code not in {400, 405, 415, 422}:
+                    last_error = f"OCR endpoint tu choi request: status={response.status_code}"
+                    response = None
+                    break
 
-        if response.status_code >= 500:
-            last_error = f"OCR upstream error: status={response.status_code}"
-            continue
-        if response.status_code >= 400:
-            last_error = f"OCR endpoint từ chối request: status={response.status_code}"
+        if response is None or not request_succeeded:
             continue
 
         try:
             payload = response.json()
         except ValueError:
-            last_error = "OCR endpoint trả về JSON không hợp lệ"
+            last_error = "OCR endpoint tra ve JSON khong hop le"
             continue
 
         extracted_text = _extract_ocr_text(payload)
         if not extracted_text:
-            last_error = "OCR endpoint không trả về text hữu ích"
+            last_error = "OCR endpoint khong tra ve text huu ich"
             continue
 
         return extracted_text, endpoint, "tgc-transhub"

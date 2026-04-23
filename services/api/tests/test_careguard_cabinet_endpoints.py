@@ -367,6 +367,51 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
     assert any(has_json for _, has_json in call_kinds)
 
 
+def test_scan_file_tgc_ocr_fallbacks_multipart_field(monkeypatch) -> None:
+    token = _login("scan-file-fallback-field@example.com")
+
+    class _FakeResponse:
+        def __init__(self, status_code: int, payload: dict[str, object]) -> None:
+            self.status_code = status_code
+            self._payload = payload
+
+        def json(self) -> dict[str, object]:
+            return self._payload
+
+    fields_seen: list[str] = []
+    json_calls = 0
+
+    def _fake_post(*args, **kwargs):  # type: ignore[no-untyped-def]
+        nonlocal json_calls
+        files = kwargs.get("files")
+        json_payload = kwargs.get("json")
+        if files is not None:
+            field_name = next(iter(files.keys()))
+            fields_seen.append(field_name)
+            if field_name == "image":
+                return _FakeResponse(200, {"text": "Don thuoc: Metformin 500mg"})
+            return _FakeResponse(422, {"detail": f"field '{field_name}' not supported"})
+        if json_payload is not None:
+            json_calls += 1
+            return _FakeResponse(500, {"detail": "json should not be needed in this case"})
+        return _FakeResponse(500, {"detail": "unexpected request"})
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.careguard.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("receipt.jpg", b"fake-image-data", "image/jpeg")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ocr_provider"] == "tgc-transhub"
+    assert payload["ocr_endpoint"] == "/api/ocr"
+    assert "file" in fields_seen
+    assert "image" in fields_seen
+    assert json_calls == 0
+
+
 def test_vn_dictionary_requires_doctor_role() -> None:
     normal_token = _login("normal-mapping@example.com")
     response = client.get(
