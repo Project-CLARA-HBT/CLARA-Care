@@ -23,6 +23,8 @@ import { ConversationItem, ResearchResult } from "@/components/research/lib/rese
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import PageShell from "@/components/ui/page-shell";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { getChatIntentDebug, getChatReply, sendChatMessage } from "@/lib/chat";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
@@ -1949,32 +1951,46 @@ export default function ChatWorkspacePage() {
     setError("");
 
     try {
-      const { finalPayload } = await executeResearchTier2Job(message, {
-        researchMode: selectedResearchMode,
-        retrievalStackMode: selectedRetrievalStackMode,
-        personalMode: isPersonalMode,
-        uiLanguage,
-        onJobCreated: (job) => {
-          setLiveJobId(job.job_id);
-        },
-        onSnapshot: (snapshot) => {
-          const progress = normalizeResearchTier2JobProgress(snapshot.progress);
-          setLiveStatusNote(progress.statusNote ?? "");
-        },
-        onStreamingFallback: (streamMessage) => {
-          setLiveStatusNote(`${streamMessage} Đang fallback sang polling.`);
-        },
-      });
+      let nextResult: ResearchResult;
+      if (selectedResearchMode === "fast") {
+        const chatPayload = await sendChatMessage(message);
+        const reply = getChatReply(chatPayload);
+        if (!reply) {
+          throw new Error("Chưa có phản hồi chat hợp lệ.");
+        }
+        nextResult = {
+          tier: "tier1",
+          answer: reply,
+          debug: getChatIntentDebug(chatPayload),
+        };
+      } else {
+        const { finalPayload } = await executeResearchTier2Job(message, {
+          researchMode: selectedResearchMode,
+          retrievalStackMode: selectedRetrievalStackMode,
+          personalMode: isPersonalMode,
+          uiLanguage,
+          onJobCreated: (job) => {
+            setLiveJobId(job.job_id);
+          },
+          onSnapshot: (snapshot) => {
+            const progress = normalizeResearchTier2JobProgress(snapshot.progress);
+            setLiveStatusNote(progress.statusNote ?? "");
+          },
+          onStreamingFallback: (streamMessage) => {
+            setLiveStatusNote(`${streamMessage} Đang fallback sang polling.`);
+          },
+        });
 
-      const normalized = normalizeResearchTier2(finalPayload);
-      if (!normalized.answer && !normalized.citations.length) {
-        throw new Error("Chưa có phản hồi research hợp lệ.");
+        const normalized = normalizeResearchTier2(finalPayload);
+        if (!normalized.answer && !normalized.citations.length) {
+          throw new Error("Chưa có phản hồi research hợp lệ.");
+        }
+
+        nextResult = {
+          tier: "tier2",
+          ...normalized,
+        };
       }
-
-      const nextResult: ResearchResult = {
-        tier: "tier2",
-        ...normalized,
-      };
 
       const localTurn = createConversationItem(message, nextResult, {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

@@ -1,3 +1,5 @@
+import api from "@/lib/http-client";
+
 export type ChatResponse = {
   message?: string;
   reply?: string;
@@ -27,4 +29,9 @@ export function getChatIntentDebug(data: ChatResponse): ChatIntentDebug {
     emergency: data.emergency,
     model_used: data.model_used
   };
+}
+
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
+  const response = await api.post("/chat", { message });
+  return (response.data ?? {}) as ChatResponse;
 }
