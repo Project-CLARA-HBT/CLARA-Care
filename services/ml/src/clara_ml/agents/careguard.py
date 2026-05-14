@@ -541,11 +541,18 @@ def _risk_from_signals(
         and _normalize_severity(alert.get("severity")) in {"high", "critical"}
         for alert in ddi_alerts
     )
+    has_medium_risk_ddi = any(
+        alert.get("type") == "drug_drug"
+        and _normalize_severity(alert.get("severity")) == "medium"
+        for alert in ddi_alerts
+    )
 
     if severe_bleeding and has_high_risk_ddi:
         return max(score, 9), "critical"
     if has_high_risk_ddi and score >= 3:
         return max(score, 5), "high"
+    if has_medium_risk_ddi:
+        return max(score, 1), "medium"
     if score >= 9:
         return score, "critical"
     if score >= 5:

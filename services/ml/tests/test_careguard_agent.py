@@ -20,6 +20,31 @@ def test_high_risk_pair_escalates_to_high() -> None:
     assert len(result["ddi_alerts"]) >= 1
 
 
+def test_medium_risk_pair_no_longer_collapses_to_low() -> None:
+    result = run_careguard_analyze(
+        {
+            "medications": ["clopidogrel", "omeprazole"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert any(alert.get("severity") == "medium" for alert in result["ddi_alerts"])
+    assert result["risk"]["level"] == "medium"
+    assert result["risk"]["score"] >= 1
+
+
+def test_low_risk_pair_stays_low() -> None:
+    result = run_careguard_analyze(
+        {
+            "medications": ["cetirizine", "diazepam"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert any(alert.get("severity") == "low" for alert in result["ddi_alerts"])
+    assert result["risk"]["level"] == "low"
+
+
 def test_local_ddi_rules_loaded_from_versioned_seed_file() -> None:
     rules, version = _load_local_ddi_rules()
 

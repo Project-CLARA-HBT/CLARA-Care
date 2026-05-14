@@ -6,6 +6,10 @@ HEAD snapshot: `6bf2820`
 
 ## Build note 2026-05-14
 
+- DDI note 2026-05-15: aggregator risk của CareGuard từng làm tụt các cặp `drug_drug` mức `medium` xuống `risk.level = low`.
+  - Root cause: [careguard.py](/root/UIT/clara/services/ml/src/clara_ml/agents/careguard.py) dùng `_SEVERITY_SCORE["medium"] = 1` nhưng `_risk_from_signals()` chỉ trả `medium` từ ngưỡng `score >= 2`, nên một DDI đơn lẻ mức vừa như `clopidogrel + omeprazole`, `ibuprofen + prednisone`, `paracetamol + warfarin` bị tổng hợp sai thành `low`.
+  - Fix: nếu có `drug_drug` alert mức `medium` thì tổng hợp tối thiểu phải là `medium`; alert `low` vẫn giữ `low`, `high/critical` giữ logic cũ.
+  - Regression tests thêm ở [test_careguard_agent.py](/root/UIT/clara/services/ml/tests/test_careguard_agent.py) để khóa hai chiều: `medium` không collapse xuống `low`, và `low` thật không bị bump sai.
 - Incident note 2026-05-14: production chat symptom queries từng fail theo 2 tầng nối tiếp nhau.
   - Tầng 1: `api` trả `503 deepseek_required_unavailable:ml_unavailable:ConnectError` vì container `ml` và `searxng` không chạy trên server thật.
   - Tầng 2: sau khi bật lại `ml`, các query như `khi bị sổ mũi tôi nên làm gì và uống thuốc gì` tiếp tục fail với `503 ... ReadTimeout/RuntimeError`.
