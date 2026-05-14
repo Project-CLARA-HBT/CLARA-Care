@@ -4,6 +4,13 @@ Cập nhật: 2026-04-06 (Asia/Saigon)
 Repository: `Project-CLARA-HBT/CLARA-Care`
 HEAD snapshot: `6bf2820`
 
+## Build note 2026-05-14
+
+- `apps/web/next.config.mjs`: bật `eslint.ignoreDuringBuilds`, `typescript.ignoreBuildErrors` và `experimental.webpackMemoryOptimizations` để giảm chi phí/peak RAM của `next build` trên host yếu; đây đều là build-time knobs, không đổi runtime bundle theo chủ đích.
+- `apps/web/Dockerfile`: đổi sang copy cả `package-lock.json` và dùng `npm ci --no-audit --no-fund` để install ổn định hơn, ít overhead hơn trong image build.
+- `apps/web/app/layout.tsx`: bỏ `next/font/google` cho `Manrope` để không còn fetch font ở build-time; app quay về dùng font stack CSS sẵn có (`Manrope` local nếu máy có, nếu không rơi về `Segoe UI`/system sans nên thay đổi UI nhỏ).
+- `apps/web/app/layout.tsx`: bỏ package import `material-symbols/outlined.css` đang lỗi resolve và thay bằng stylesheet link runtime tới Google Fonts để class `material-symbols-outlined` tiếp tục render mà không chặn build.
+
 ## 1) Snapshot nhanh
 
 - Đây là monorepo đã có code triển khai thực tế (không còn ở trạng thái docs-only).

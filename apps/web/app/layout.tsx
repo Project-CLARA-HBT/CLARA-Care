@@ -1,16 +1,9 @@
 import "@/styles/globals.css";
-import "material-symbols/outlined.css";
 import AppShell from "@/components/app-shell";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theclaracare.com").replace(/\/+$/, "");
-const manrope = Manrope({
-  subsets: ["latin", "vietnamese"],
-  display: "swap",
-  weight: ["200", "300", "400", "500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -34,10 +27,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning className={manrope.className}>
+    <html lang="vi" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+        />
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
       </head>
       <body>

@@ -1,21 +1,21 @@
 FROM node:25-alpine AS base
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 
 FROM base AS deps
 COPY apps/web/package.json ./package.json
-RUN npm install
+COPY apps/web/package-lock.json ./package-lock.json
+RUN npm ci --no-audit --no-fund
 
 FROM base AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:8100/api/v1
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/web .
 RUN npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
