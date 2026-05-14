@@ -1,8 +1,11 @@
+import pytest
+
 from clara_ml.agents.careguard import (
     _load_local_ddi_rules,
     _load_vn_drug_dictionary,
     run_careguard_analyze,
 )
+from clara_ml.clients.drug_sources import ExternalDDIResult
 
 
 def test_high_risk_pair_escalates_to_high() -> None:
@@ -98,3 +101,145 @@ def test_decorated_medication_names_still_match_local_ddi_rules() -> None:
     assert any({"warfarin", "ibuprofen"}.issubset(pair) for pair in ddi_pairs)
     assert result["metadata"]["normalization_pair_coverage_low"] is False
     assert result["metadata"]["normalized_medication_count"] >= 2
+
+
+def test_openfda_only_evidence_does_not_create_synthetic_alert(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            openfda_evidence={
+                tuple(sorted(("alphaone", "betatwo"))): {
+                    "label_mentions": 2,
+                    "event_reports": 12,
+                }
+            },
+            openfda_pairs_checked=1,
+            source_used=["openfda"],
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    assert result["ddi_alerts"] == []
+    assert result["risk"]["level"] == "low"
+
+
+def test_openfda_evidence_enriches_existing_rxnav_alert_without_duplicate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            rxnav_alerts=[
+                {
+                    "type": "drug_drug",
+                    "severity": "medium",
+                    "medications": ["alphaone", "betatwo"],
+                    "message": "RxNav interaction alert.",
+                    "source": "rxnav",
+                }
+            ],
+            openfda_evidence={
+                tuple(sorted(("alphaone", "betatwo"))): {
+                    "label_mentions": 3,
+                    "event_reports": 25,
+                }
+            },
+            openfda_pairs_checked=1,
+            source_used=["rxnav", "openfda"],
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    ddi_alerts = result["ddi_alerts"]
+    assert len(ddi_alerts) == 1
+    alert = ddi_alerts[0]
+    assert set(alert.get("source", "").split(",")) == {"openfda", "rxnav"}
+    assert "tương tác" in str(alert.get("message", "")).lower()
+    assert alert.get("evidence", {}).get("openfda_label_mentions") == 3
+    assert alert.get("evidence", {}).get("openfda_event_reports") == 25
+
+
+def test_openfda_http_400_is_suppressed_when_rxnav_has_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            rxnav_alerts=[
+                {
+                    "type": "drug_drug",
+                    "severity": "low",
+                    "medications": ["alphaone", "betatwo"],
+                    "message": "Potential interaction identified by RxNav.",
+                    "source": "rxnav",
+                }
+            ],
+            openfda_pairs_checked=1,
+            source_used=["rxnav"],
+            source_errors={"openfda": ["http_400:bad_request"]},
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert "openfda" not in metadata["source_errors"]
+    assert metadata["fallback_used"] is False
+
+
+def test_openfda_http_400_kept_when_no_other_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            openfda_pairs_checked=1,
+            source_errors={"openfda": ["http_400:bad_request"]},
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert metadata["source_errors"].get("openfda") == ["http_400:bad_request"]
+    assert metadata["fallback_used"] is True

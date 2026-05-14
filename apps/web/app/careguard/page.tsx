@@ -7,9 +7,11 @@ import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import {
   CareguardAnalyzeResult,
   analyzeCareguard,
+  formatCareguardRiskLabel,
   normalizeCareguardResult,
   parseFreeTextList,
-  parseLabsInput
+  parseLabsInput,
+  toCareguardUserMessage
 } from "@/lib/careguard";
 import {
   addCabinetItem,
@@ -420,7 +422,7 @@ export default function CareguardPage() {
       });
       setAutoResult(result);
     } catch (error) {
-      setAutoError(error instanceof Error ? error.message : "Không thể chạy auto DDI.");
+      setAutoError(toCareguardUserMessage(error, "Không thể chạy Auto DDI lúc này. Vui lòng thử lại."));
     } finally {
       setAutoChecking(false);
     }
@@ -451,7 +453,9 @@ export default function CareguardPage() {
       });
       setManualResult(normalizeCareguardResult(response));
     } catch (error) {
-      setManualError(error instanceof Error ? error.message : "Không thể chạy phân tích nâng cao.");
+      setManualError(
+        toCareguardUserMessage(error, "Không thể chạy phân tích nâng cao lúc này. Vui lòng thử lại.")
+      );
     } finally {
       setManualChecking(false);
     }
@@ -979,7 +983,7 @@ export default function CareguardPage() {
               <div className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Mức rủi ro</p>
                 <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult?.riskTier ?? null)}`}>
-                  {displayedResult?.riskTier ?? "N/A"}
+                  {formatCareguardRiskLabel(displayedResult?.riskTier ?? null)}
                 </div>
               </div>
 

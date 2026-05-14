@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
-import { CareguardAnalyzeResult } from "@/lib/careguard";
+import { CareguardAnalyzeResult, formatCareguardRiskLabel, toCareguardUserMessage } from "@/lib/careguard";
 import { CabinetItem, getCabinet, runCabinetAutoDdi } from "@/lib/selfmed";
 
 function parseLineList(value: string): string[] {
@@ -38,28 +38,6 @@ function riskPanelClass(value: string | null | undefined): string {
   return "border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
 }
 
-function modeBadgeLabel(mode: string | null): string {
-  const value = mode?.toLowerCase() ?? "";
-  if (value.includes("external_plus_local") || value.includes("external")) {
-    return "Runtime: External + Local";
-  }
-  if (value.includes("local_only") || value.includes("local")) {
-    return "Runtime: Local only";
-  }
-  return "Runtime: Chưa xác định";
-}
-
-function modeBadgeClass(mode: string | null): string {
-  const value = mode?.toLowerCase() ?? "";
-  if (value.includes("external_plus_local") || value.includes("external")) {
-    return "border-sky-300/60 bg-sky-500/20 text-sky-100";
-  }
-  if (value.includes("local_only") || value.includes("local")) {
-    return "border-amber-300/60 bg-amber-500/20 text-amber-100";
-  }
-  return "border-slate-300/50 bg-slate-500/20 text-slate-100";
-}
-
 export default function SelfMedDdiPage() {
   const [items, setItems] = useState<CabinetItem[]>([]);
   const [isLoadingCabinet, setIsLoadingCabinet] = useState(true);
@@ -77,7 +55,7 @@ export default function SelfMedDdiPage() {
       const response = await getCabinet();
       setItems(response.items ?? []);
     } catch (cause) {
-      setCabinetError(cause instanceof Error ? cause.message : "Không thể tải danh mục tủ thuốc.");
+      setCabinetError(toCareguardUserMessage(cause, "Không thể tải tủ thuốc lúc này. Vui lòng thử lại."));
     } finally {
       setIsLoadingCabinet(false);
     }
@@ -95,7 +73,9 @@ export default function SelfMedDdiPage() {
       const next = await runCabinetAutoDdi({ allergies: parseLineList(allergiesInput) });
       setResult(next);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chạy DDI.");
+      setError(
+        toCareguardUserMessage(cause, "Không thể hoàn tất phân tích tương tác thuốc. Vui lòng thử lại.")
+      );
     } finally {
       setIsChecking(false);
     }
@@ -197,19 +177,7 @@ export default function SelfMedDdiPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Kết quả tổng quan</p>
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(result.riskTier)}`}>
-                  Mức rủi ro: {result.riskTier ?? "Chưa xác định"}
-                </span>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${modeBadgeClass(result.mode)}`}>
-                  {modeBadgeLabel(result.mode)}
-                </span>
-                <span
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                    result.fallbackUsed
-                      ? "border-amber-300/60 bg-amber-500/20 text-amber-100"
-                      : "border-emerald-300/60 bg-emerald-500/20 text-emerald-100"
-                  }`}
-                >
-                  {result.fallbackUsed ? "Fallback cục bộ: Có" : "Fallback cục bộ: Không"}
+                  Mức rủi ro: {formatCareguardRiskLabel(result.riskTier)}
                 </span>
               </div>
 
@@ -221,7 +189,7 @@ export default function SelfMedDdiPage() {
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.title}</p>
                         {alert.severity ? (
                           <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
-                            {alert.severity}
+                            {formatCareguardRiskLabel(alert.severity)}
                           </span>
                         ) : null}
                       </div>
@@ -245,25 +213,13 @@ export default function SelfMedDdiPage() {
               ) : null}
 
               <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Minh bạch nguồn phân tích</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Mode trả về: {result.mode ?? "N/A"}</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Nguồn tham khảo</p>
                 {result.attribution?.sources.length ? (
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Nguồn: {result.attribution.sources.map((source) => source.name).join(", ")}
+                    {result.attribution.sources.map((source) => source.name).join(", ")}
                   </p>
                 ) : (
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Nguồn: chưa có attribution.</p>
-                )}
-                {Object.keys(result.sourceErrors).length ? (
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-200">
-                    {Object.entries(result.sourceErrors).map(([source, issues]) => (
-                      <li key={source}>
-                        {source}: {issues.join(", ")}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">source_errors: không ghi nhận.</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Chưa có dữ liệu nguồn tham khảo.</p>
                 )}
               </article>
             </section>

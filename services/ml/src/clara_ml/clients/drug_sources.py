@@ -167,7 +167,7 @@ class DrugSourceClient:
                     allow_not_found=True,
                 )
                 if label_error:
-                    errors.add(label_error)
+                    errors.add(self._normalize_openfda_error(label_error))
                     label_hits = 0
                     label_query_success = False
                 else:
@@ -187,7 +187,7 @@ class DrugSourceClient:
                     allow_not_found=True,
                 )
                 if event_error:
-                    errors.add(event_error)
+                    errors.add(self._normalize_openfda_error(event_error))
                     event_hits = 0
                     event_query_success = False
                 else:
@@ -204,6 +204,15 @@ class DrugSourceClient:
                     }
 
         return evidence, errors, success, pairs_checked
+
+    @staticmethod
+    def _normalize_openfda_error(error: str) -> str:
+        normalized = str(error).strip()
+        if not normalized:
+            return "unknown_error"
+        if normalized.lower().startswith("http_400:"):
+            return "http_400:bad_request"
+        return normalized
 
     def _request_json(
         self,

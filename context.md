@@ -6,6 +6,23 @@ HEAD snapshot: `6bf2820`
 
 ## Build note 2026-05-14
 
+- DDI UX note 2026-05-15: flow Auto DDI từng trả output khó hiểu cho end user.
+  - Vấn đề chính:
+    - UI `/selfmed/ddi` lộ `mode`, `fallback`, `source_errors` và raw connector errors kiểu `openfda: http_400:...`.
+    - Backend `careguard.py` tự sinh synthetic openFDA alert low-signal (`openFDA reports label/event co-occurrence...`) làm trùng và nhiễu output.
+    - Message DDI và recommendation chủ yếu là tiếng Anh chuyên môn (`GI bleeding`, `CYP interaction`, `hold non-essential interacting drugs`) nên user phổ thông khó hiểu.
+  - Fix đã áp dụng:
+    - `services/ml/src/clara_ml/agents/careguard.py`: bỏ synthetic openFDA-only alert khi không có local/RxNav alert thật; giữ openFDA chỉ như evidence bổ sung cho alert đã có. Đồng thời sanitize `openfda http_400` khỏi source errors user-facing khi vẫn còn tín hiệu hợp lệ từ nguồn khác.
+    - `services/ml/src/clara_ml/clients/drug_sources.py`: chuẩn hóa lỗi openFDA `http_400` thành `http_400:bad_request` để không lộ full URL nội bộ trong metadata.
+    - `apps/web/app/selfmed/ddi/page.tsx`: ẩn badge runtime/fallback và block `source_errors`; chỉ giữ risk, alert, recommendation, nguồn tham khảo gọn.
+    - `apps/web/lib/careguard.ts`: thêm cleanup cho error copy kỹ thuật, dedupe/source normalization, và formatter risk label tiếng Việt.
+    - `apps/web/app/careguard/page.tsx`: chuẩn hóa error copy cho Auto DDI / phân tích nâng cao và hiển thị risk label tiếng Việt.
+    - Output DDI user-facing được Việt hóa theo nhóm nguy cơ hay gặp như chảy máu, giảm hiệu quả clopidogrel, buồn ngủ/chóng mặt, tăng kali máu, và nguy cơ đau cơ.
+  - Regression tests thêm ở `services/ml/tests/test_careguard_agent.py` để khóa:
+    - openFDA-only evidence không tạo alert standalone,
+    - openFDA evidence chỉ enrich alert đã có thay vì duplicate,
+    - `openfda http_400` bị ẩn khi RxNav/local vẫn đủ tín hiệu,
+    - `openfda http_400` vẫn được giữ lại trong metadata khi không còn tín hiệu thay thế nào khác.
 - DDI note 2026-05-15: aggregator risk của CareGuard từng làm tụt các cặp `drug_drug` mức `medium` xuống `risk.level = low`.
   - Root cause: [careguard.py](/root/UIT/clara/services/ml/src/clara_ml/agents/careguard.py) dùng `_SEVERITY_SCORE["medium"] = 1` nhưng `_risk_from_signals()` chỉ trả `medium` từ ngưỡng `score >= 2`, nên một DDI đơn lẻ mức vừa như `clopidogrel + omeprazole`, `ibuprofen + prednisone`, `paracetamol + warfarin` bị tổng hợp sai thành `low`.
   - Fix: nếu có `drug_drug` alert mức `medium` thì tổng hợp tối thiểu phải là `medium`; alert `low` vẫn giữ `low`, `high/critical` giữ logic cũ.

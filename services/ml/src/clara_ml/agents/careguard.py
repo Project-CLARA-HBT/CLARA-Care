@@ -366,6 +366,80 @@ def _parse_sources(value: object, default: str | None = None) -> set[str]:
     return sources
 
 
+def _is_openfda_bad_request_error(error: object) -> bool:
+    if not isinstance(error, str):
+        return False
+    return error.strip().lower().startswith("http_400")
+
+
+def _sanitize_source_errors_for_output(
+    source_errors: dict[str, list[str]],
+    *,
+    has_non_openfda_signal: bool,
+) -> dict[str, list[str]]:
+    sanitized: dict[str, list[str]] = {}
+    for source_name, raw_errors in source_errors.items():
+        normalized_errors = [
+            str(raw_error).strip() for raw_error in raw_errors if str(raw_error).strip()
+        ]
+        if not normalized_errors:
+            continue
+
+        if source_name == "openfda":
+            bad_request_errors = [
+                error for error in normalized_errors if _is_openfda_bad_request_error(error)
+            ]
+            other_errors = [
+                error for error in normalized_errors if not _is_openfda_bad_request_error(error)
+            ]
+            if other_errors:
+                if has_non_openfda_signal:
+                    sanitized[source_name] = sorted(set(other_errors))
+                else:
+                    sanitized[source_name] = sorted(
+                        set(other_errors + bad_request_errors)
+                    )
+                continue
+
+            if not has_non_openfda_signal and bad_request_errors:
+                sanitized[source_name] = sorted(set(bad_request_errors))
+            continue
+
+        sanitized[source_name] = sorted(set(normalized_errors))
+
+    return sanitized
+
+
+def _contains_vietnamese_text(value: str) -> bool:
+    return bool(re.search(r"[À-ỹ]", value))
+
+
+def _localize_ddi_message(message: object) -> str:
+    raw_message = str(message).strip()
+    if not raw_message:
+        return "Hai thuốc này có thể tương tác với nhau."
+
+    normalized = raw_message.lower()
+    if "gi bleeding risk" in normalized or "blunt aspirin effect" in normalized:
+        return (
+            "Dùng cùng nhau có thể làm tăng nguy cơ chảy máu dạ dày "
+            "và làm giảm tác dụng bảo vệ tim mạch của aspirin."
+        )
+    if "antiplatelet activation may be reduced" in normalized or "cyp interaction" in normalized:
+        return "Omeprazole có thể làm giảm hiệu quả chống kết tập tiểu cầu của clopidogrel."
+    if "additive cns sedation" in normalized or "sedation may occur" in normalized:
+        return "Dùng cùng nhau có thể làm tăng buồn ngủ, chóng mặt và giảm tập trung."
+    if "myopathy" in normalized or "rhabdomyolysis" in normalized:
+        return "Phối hợp này có thể làm tăng nguy cơ đau cơ, yếu cơ hoặc tổn thương cơ."
+    if "hyperkalemia" in normalized or "potassium-sparing" in normalized:
+        return "Phối hợp này có thể làm tăng kali máu, nhất là khi có bệnh thận."
+    if "major bleeding risk" in normalized or "bleeding risk increases" in normalized:
+        return "Phối hợp này có thể làm tăng nguy cơ chảy máu."
+    if _contains_vietnamese_text(raw_message):
+        return raw_message
+    return "Hai thuốc này có thể tương tác với nhau. Nên hỏi bác sĩ hoặc dược sĩ để kiểm tra lại."
+
+
 def _detect_ddi_alerts(
     medications: list[str],
     rules: list[InteractionRule],
@@ -379,7 +453,7 @@ def _detect_ddi_alerts(
                     "type": "drug_drug",
                     "severity": rule.severity,
                     "medications": sorted(rule.meds),
-                    "message": rule.message,
+                    "message": _localize_ddi_message(rule.message),
                     "source": "local_rules",
                 }
             )
@@ -402,7 +476,9 @@ def _merge_drug_alerts(
 
         incoming_severity = _normalize_severity(alert.get("severity"))
         incoming_rank = _SEVERITY_RANK[incoming_severity]
-        incoming_message = str(alert.get("message", "")).strip() or "Potential DDI detected."
+        incoming_message = _localize_ddi_message(
+            str(alert.get("message", "")).strip() or "Potential DDI detected."
+        )
         incoming_sources = _parse_sources(alert.get("source"), default=default_source)
 
         existing = merged_by_pair.get(key)
@@ -438,18 +514,6 @@ def _merge_drug_alerts(
 
         existing = merged_by_pair.get(key)
         if existing is None:
-            severity = "medium" if label_mentions > 0 or event_reports >= 100 else "low"
-            merged_by_pair[key] = {
-                "type": "drug_drug",
-                "severity": severity,
-                "medications": list(key),
-                "message": "openFDA reports label/event co-occurrence for this medication pair.",
-                "evidence": {
-                    "openfda_label_mentions": label_mentions,
-                    "openfda_event_reports": event_reports,
-                },
-                "_sources": {"openfda"},
-            }
             continue
 
         existing_sources = existing.setdefault("_sources", set())
@@ -493,7 +557,7 @@ def _detect_allergy_conflicts(medications: list[str], allergies: list[str]) -> l
                     "type": "drug_allergy",
                     "severity": "high",
                     "medications": [allergy],
-                    "message": f"Medication matches documented allergy: {allergy}.",
+                    "message": f"Thuốc này trùng với dị ứng đã khai báo: {allergy}.",
                     "source": "local_rules",
                 }
             )
@@ -567,26 +631,58 @@ def _recommendation_for(
     ddi_alerts: list[dict[str, Any]],
     critical_symptoms: list[str],
 ) -> str:
+    primary_message = " ".join(
+        str(alert.get("message", "")).strip().lower()
+        for alert in ddi_alerts
+        if str(alert.get("message", "")).strip()
+    )
     if level == "critical":
         return (
-            "Treat as critical medication safety risk: urgent clinician escalation now, "
-            "hold non-essential interacting drugs, and triage emergency symptoms immediately."
+            "Đây là nguy cơ rất cao. Đến cơ sở y tế ngay, nhất là khi có khó thở, ngất, "
+            "đau ngực hoặc chảy máu nhiều."
         )
     if level == "high":
+        if "chảy máu" in primary_message:
+            return (
+                "Không tự tiếp tục phối hợp nếu chưa được bác sĩ xác nhận. Đi khám ngay nếu có "
+                "nôn ra máu, đi ngoài phân đen, chóng mặt nhiều hoặc chảy máu khó cầm."
+            )
+        if "đau cơ" in primary_message or "tổn thương cơ" in primary_message:
+            return (
+                "Liên hệ bác sĩ hoặc dược sĩ sớm để rà soát đơn thuốc. Đi khám ngay nếu đau cơ tăng nhanh, "
+                "yếu cơ nhiều hoặc nước tiểu sẫm màu."
+            )
+        if "kali máu" in primary_message:
+            return (
+                "Cần được bác sĩ hoặc dược sĩ kiểm tra sớm. Đi khám nếu mệt nhiều, yếu cơ, hồi hộp "
+                "hoặc tiểu ít hơn bình thường."
+            )
         return (
-            "Escalate urgently for clinician review; hold non-essential interacting drugs and "
-            "assess emergency symptoms immediately."
+            "Không tự phối hợp hoặc tiếp tục dùng cùng nếu chưa được bác sĩ xác nhận. "
+            "Liên hệ bác sĩ hoặc dược sĩ sớm để rà soát đơn thuốc."
         )
     if level == "medium":
+        if "aspirin" in primary_message or "chảy máu" in primary_message:
+            return (
+                "Không tự dùng kéo dài cùng nhau. Nên hỏi bác sĩ hoặc dược sĩ trong ngày "
+                "để kiểm tra lại cách dùng và thời điểm uống."
+            )
+        if "clopidogrel" in primary_message or "chống kết tập tiểu cầu" in primary_message:
+            return (
+                "Nên hỏi bác sĩ hoặc dược sĩ trong ngày để kiểm tra lại phối hợp này. "
+                "Không tự đổi giờ uống hoặc kéo dài dùng cùng nếu chưa được hướng dẫn."
+            )
         return (
-            "Schedule same-day medication review, confirm dosing, and repeat key labs if symptoms "
-            "or renal risk are present."
+            "Nên hỏi bác sĩ hoặc dược sĩ trong ngày để kiểm tra lại cách dùng. "
+            "Không tự tăng liều hoặc phối hợp kéo dài."
         )
     if critical_symptoms:
-        return "Critical symptoms detected despite low interaction burden; seek urgent care now."
+        return "Dù mức tương tác không cao, các triệu chứng hiện tại vẫn cần được đi khám gấp."
     if ddi_alerts:
-        return "Interaction signals detected; monitor closely and confirm treatment intent."
-    return "No major immediate risk signals detected; continue routine monitoring."
+        if "buồn ngủ" in primary_message or "chóng mặt" in primary_message:
+            return "Theo dõi buồn ngủ hoặc chóng mặt. Tránh lái xe và vận hành máy nếu thấy lơ mơ."
+        return "Theo dõi triệu chứng mới và hỏi bác sĩ hoặc dược sĩ nếu cần dùng cùng trong nhiều ngày."
+    return "Chưa thấy nguy cơ tương tác lớn ngay lúc này. Nếu đơn thuốc thay đổi, nên kiểm tra lại."
 
 
 def run_careguard_analyze(payload: dict) -> dict:
@@ -632,6 +728,14 @@ def run_careguard_analyze(payload: dict) -> dict:
     normalization_pair_coverage_low = bool(raw_medications) and len(set(medications)) < 2
     if normalization_pair_coverage_low:
         source_errors.setdefault("normalization", []).append("low_pair_coverage")
+
+    has_non_openfda_signal = bool(local_ddi_alerts or external_ddi_alerts) or (
+        "rxnav" in source_used
+    )
+    source_errors = _sanitize_source_errors_for_output(
+        source_errors,
+        has_non_openfda_signal=has_non_openfda_signal,
+    )
 
     ddi_alerts = _merge_drug_alerts(local_ddi_alerts, external_ddi_alerts, openfda_evidence)
     allergy_alerts = _detect_allergy_conflicts(medications, allergies)
