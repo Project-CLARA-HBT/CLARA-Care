@@ -1291,6 +1291,22 @@ class RagPipelineP1:
         )
         return any(signal in message for signal in retryable_signals)
 
+    def _should_reuse_default_runtime_client(self, llm_runtime: dict[str, Any]) -> bool:
+        if not settings.llm_deepseek_only:
+            return False
+        if self._llm_client is None:
+            return False
+        provider = str(llm_runtime.get("provider") or "").strip().lower()
+        api_key = str(llm_runtime.get("api_key") or "").strip()
+        base_url = str(llm_runtime.get("base_url") or "").strip()
+        model = str(llm_runtime.get("model") or "").strip()
+        return (
+            provider == "deepseek"
+            and api_key == str(self._deepseek_api_key or "").strip()
+            and base_url == str(settings.deepseek_base_url or "").strip()
+            and model == str(settings.deepseek_model or "").strip()
+        )
+
     @staticmethod
     def _build_no_rag_prompt(query: str, *, answer_language: str = "vi") -> str:
         language_label = "English" if answer_language == "en" else "Vietnamese"
@@ -2428,22 +2444,23 @@ class RagPipelineP1:
             runtime_llm_base_url = str(llm_runtime.get("base_url") or "").strip()
             runtime_llm_model = str(llm_runtime.get("model") or "").strip()
             if runtime_llm_api_key and runtime_llm_base_url and runtime_llm_model:
-                runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
-                runtime_timeout_seconds = max(2.0, min(runtime_timeout_seconds, 18.0))
-                runtime_llm_client = DeepSeekClient(
-                    api_key=runtime_llm_api_key,
-                    base_url=runtime_llm_base_url,
-                    model=runtime_llm_model,
-                    timeout_seconds=runtime_timeout_seconds,
-                    retries_per_base=0,
-                    retry_backoff_seconds=min(
-                        max(float(settings.deepseek_retry_backoff_seconds), 0.0),
-                        0.25,
-                    ),
-                    max_concurrency=settings.llm_global_max_concurrency,
-                    min_interval_seconds=settings.llm_global_min_interval_seconds,
-                    request_jitter_seconds=settings.llm_global_jitter_seconds,
-                )
+                if not self._should_reuse_default_runtime_client(llm_runtime):
+                    runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
+                    runtime_timeout_seconds = max(2.0, min(runtime_timeout_seconds, 18.0))
+                    runtime_llm_client = DeepSeekClient(
+                        api_key=runtime_llm_api_key,
+                        base_url=runtime_llm_base_url,
+                        model=runtime_llm_model,
+                        timeout_seconds=runtime_timeout_seconds,
+                        retries_per_base=0,
+                        retry_backoff_seconds=min(
+                            max(float(settings.deepseek_retry_backoff_seconds), 0.0),
+                            0.25,
+                        ),
+                        max_concurrency=settings.llm_global_max_concurrency,
+                        min_interval_seconds=settings.llm_global_min_interval_seconds,
+                        request_jitter_seconds=settings.llm_global_jitter_seconds,
+                    )
             elif runtime_llm_api_key:
                 runtime_llm_client = None
 

@@ -6,6 +6,12 @@ HEAD snapshot: `6bf2820`
 
 ## Build note 2026-05-14
 
+- Incident note 2026-05-14: production chat symptom queries từng fail theo 2 tầng nối tiếp nhau.
+  - Tầng 1: `api` trả `503 deepseek_required_unavailable:ml_unavailable:ConnectError` vì container `ml` và `searxng` không chạy trên server thật.
+  - Tầng 2: sau khi bật lại `ml`, các query như `khi bị sổ mũi tôi nên làm gì và uống thuốc gì` tiếp tục fail với `503 ... ReadTimeout/RuntimeError`.
+  - Root cause chức năng: khi `LLM_DEEPSEEK_ONLY=true`, `main._resolve_llm_runtime_from_rag_flow()` luôn inject runtime DeepSeek env vào `rag_pipeline.run()`. `RagPipelineP1.run()` nhìn thấy `llm_runtime` dict thì tạo `DeepSeekClient` runtime mới và cap timeout xuống `min(settings.deepseek_timeout_seconds, 18s)`, vô tình bỏ qua default client timeout dài hơn.
+  - Tác động thực tế: prompt y tế no-RAG qua YEScale `deepseek-v3.2` có thể mất hơn 60s để hoàn tất, nên runtime client 18s chết sớm, compact retry chạy thêm một lượt rồi ML trả `503 deepseek_required_unavailable:RuntimeError`; trong khi API production còn chỉ chờ ML 20s.
+  - Hướng fix đã áp dụng trong repo: chỉ reuse default DeepSeek client khi `llm_runtime` thực chất trùng với config env deepseek-only, tránh recreate runtime client 18s cap ngoài ý muốn; đồng thời cần align timeout deploy giữa API và ML khi rollout production.
 - `apps/web/next.config.mjs`: bật `eslint.ignoreDuringBuilds`, `typescript.ignoreBuildErrors` và `experimental.webpackMemoryOptimizations` để giảm chi phí/peak RAM của `next build` trên host yếu; đây đều là build-time knobs, không đổi runtime bundle theo chủ đích.
 - `apps/web/Dockerfile`: đổi sang copy cả `package-lock.json` và dùng `npm ci --no-audit --no-fund` để install ổn định hơn, ít overhead hơn trong image build.
 - `apps/web/app/layout.tsx`: bỏ `next/font/google` cho `Manrope` để không còn fetch font ở build-time; app quay về dùng font stack CSS sẵn có (`Manrope` local nếu máy có, nếu không rơi về `Segoe UI`/system sans nên thay đổi UI nhỏ).

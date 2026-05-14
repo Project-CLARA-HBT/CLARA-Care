@@ -91,6 +91,21 @@ class _CapturingClient:
         return DeepSeekResponse(content="captured-answer", model="deepseek-v3.2")
 
 
+class _RecordingRuntimeClient:
+    calls: list[dict[str, object]] = []
+
+    def __init__(self, **kwargs) -> None:
+        self._kwargs = dict(kwargs)
+        type(self).calls.append(self._kwargs)
+
+    @property
+    def model(self) -> str:
+        return str(self._kwargs.get("model") or "deepseek-v3.2")
+
+    def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse:
+        return DeepSeekResponse(content="runtime-answer", model=self.model)
+
+
 class _ExternalFailureRetriever:
     def retrieve_internal(
         self,
@@ -236,6 +251,70 @@ def test_rag_pipeline_recovers_from_transient_llm_failure_with_compact_retry():
         event.get("stage") == "llm_generation_retry" and event.get("status") == "completed"
         for event in result.flow_events
     )
+
+
+def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime(monkeypatch):
+    pipe = RagPipelineP0(
+        deepseek_api_key="deepseek-only-key",
+        llm_client=_SuccessfulClient(),
+    )
+    previous_deepseek_only = settings.llm_deepseek_only
+    previous_base_url = settings.deepseek_base_url
+    previous_model = settings.deepseek_model
+    try:
+        settings.llm_deepseek_only = True
+        settings.deepseek_base_url = "https://api.yescale.vip/v1"
+        settings.deepseek_model = "deepseek-v3.2"
+        _RecordingRuntimeClient.calls = []
+        monkeypatch.setattr("clara_ml.rag.pipeline.DeepSeekClient", _RecordingRuntimeClient)
+
+        result = pipe.run(
+            "khi bi so mui toi nen lam gi",
+            llm_runtime={
+                "provider": "deepseek",
+                "api_key": "deepseek-only-key",
+                "base_url": "https://api.yescale.vip/v1",
+                "model": "deepseek-v3.2",
+            },
+        )
+    finally:
+        settings.llm_deepseek_only = previous_deepseek_only
+        settings.deepseek_base_url = previous_base_url
+        settings.deepseek_model = previous_model
+
+    assert result.answer == "provider-answer"
+    assert _RecordingRuntimeClient.calls == []
+
+
+def test_rag_pipeline_caps_timeout_for_runtime_override_client(monkeypatch):
+    pipe = RagPipelineP0(
+        deepseek_api_key="default-key",
+        llm_client=_SuccessfulClient(),
+    )
+    previous_timeout = settings.deepseek_timeout_seconds
+    previous_deepseek_only = settings.llm_deepseek_only
+    try:
+        settings.deepseek_timeout_seconds = 60
+        settings.llm_deepseek_only = False
+        _RecordingRuntimeClient.calls = []
+        monkeypatch.setattr("clara_ml.rag.pipeline.DeepSeekClient", _RecordingRuntimeClient)
+
+        result = pipe.run(
+            "compare dash and mediterranean",
+            llm_runtime={
+                "provider": "deepseek",
+                "api_key": "runtime-key",
+                "base_url": "https://runtime.example/v1",
+                "model": "deepseek-v3.2",
+            },
+        )
+    finally:
+        settings.deepseek_timeout_seconds = previous_timeout
+        settings.llm_deepseek_only = previous_deepseek_only
+
+    assert result.answer == "runtime-answer"
+    assert len(_RecordingRuntimeClient.calls) == 1
+    assert _RecordingRuntimeClient.calls[0]["timeout_seconds"] == 18.0
 
 
 def test_rag_pipeline_survives_external_retrieval_exception():
