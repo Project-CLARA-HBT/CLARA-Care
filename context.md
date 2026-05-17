@@ -1383,3 +1383,9 @@ Cập nhật: 2026-04-13 (Asia/Saigon)
 - Test status:
   - `npx eslint components/research/markdown-answer.tsx components/research/lib/research-page-sections.tsx components/chat-workspace/chat-turn.tsx` (trong `apps/web`): pass.
   - `npx tsc --noEmit` (trong `apps/web`): pass.
+
+## 2026-05-18 Chat Label Deploy Note
+
+- Scope: dọn nốt nhãn kỹ thuật còn sót trong command palette `/chat` sau cleanup UX.
+- Thay đổi chính: đổi `Switch mode: Fast/Deep/Deep Beta` thành `Đổi chế độ: Nhanh/Tư duy/Pro`, `Retrieval stack: Auto/Full` thành `Nguồn: Tự chọn/Đầy đủ`, và Việt hóa vài command chat/export.
+- Lý do: user báo web thật chưa thấy nhãn `Nhanh/Tư duy/Pro`; source composer đã có nhãn mới nhưng command palette vẫn còn wording cũ, đồng thời production chưa deploy lại sau push.

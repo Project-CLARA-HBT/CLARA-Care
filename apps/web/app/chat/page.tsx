@@ -2433,28 +2433,28 @@ export default function ChatWorkspacePage() {
     return [
       {
         id: "new-chat",
-        label: "New chat",
+        label: "Chat mới",
         hint: "Ctrl/⌘+Shift+N",
         keywords: ["new", "chat", "conversation"],
         run: () => createNewConversation(),
       },
       {
         id: "focus-search",
-        label: "Focus workspace search",
+        label: "Tìm trong workspace",
         hint: "Ctrl/⌘+K",
         keywords: ["focus", "search", "workspace"],
         run: () => focusById("workspace-search"),
       },
       {
         id: "focus-composer",
-        label: "Focus chat composer",
+        label: "Nhập câu hỏi",
         hint: "/",
         keywords: ["focus", "composer", "input", "prompt"],
         run: () => focusById("chat-composer-input"),
       },
       {
         id: "mode-fast",
-        label: "Switch mode: Fast",
+        label: "Đổi chế độ: Nhanh",
         keywords: ["mode", "fast", "research"],
         run: () => {
           setSelectedResearchMode("fast");
@@ -2463,32 +2463,32 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "mode-deep",
-        label: "Switch mode: Deep",
+        label: "Đổi chế độ: Tư duy",
         keywords: ["mode", "deep", "research"],
         run: () => setSelectedResearchMode("deep"),
       },
       {
         id: "mode-deep-beta",
-        label: "Switch mode: Deep Beta",
+        label: "Đổi chế độ: Pro",
         keywords: ["mode", "deep", "beta", "research"],
         run: () => setSelectedResearchMode("deep_beta"),
       },
       {
         id: "stack-auto",
-        label: "Retrieval stack: Auto",
+        label: "Nguồn: Tự chọn",
         keywords: ["retrieval", "stack", "auto"],
         run: () => setSelectedRetrievalStackMode("auto"),
       },
       {
         id: "stack-full",
-        label: "Retrieval stack: Full",
+        label: "Nguồn: Đầy đủ",
         disabled: isFastResearchMode,
         keywords: ["retrieval", "stack", "full"],
         run: () => setSelectedRetrievalStackMode("full"),
       },
       {
         id: "export-docx",
-        label: "Export active conversation as DOCX",
+        label: "Xuất hội thoại ra DOCX",
         disabled: !canExport,
         keywords: ["export", "docx", "word"],
         run: () => {
@@ -2497,7 +2497,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "export-markdown",
-        label: "Export active conversation as Markdown",
+        label: "Xuất hội thoại ra Markdown",
         disabled: !canExport,
         keywords: ["export", "markdown", "md"],
         run: () => {
