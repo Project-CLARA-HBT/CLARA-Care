@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export const RESEARCH_LAB_NAV_ITEMS = [
-  { href: "/research", label: "Overview" },
-  { href: "/research/deepdive", label: "Deep Dive" },
-  { href: "/research/analyze", label: "Analyze" },
-  { href: "/research/citations", label: "Citations" },
-  { href: "/research/details", label: "Details" }
+  { href: "/research", label: "Tổng quan" },
+  { href: "/research/deepdive", label: "Tư duy sâu" },
+  { href: "/research/analyze", label: "Phân tích" },
+  { href: "/research/citations", label: "Nguồn" },
+  { href: "/research/details", label: "Chi tiết" }
 ] as const;
 
 type ResearchLabRoute = (typeof RESEARCH_LAB_NAV_ITEMS)[number]["href"];
@@ -38,7 +38,7 @@ export default function ResearchLabNav({ className, pathname: pathnameProp }: Re
       aria-label="Research navigation"
       className={panelClassName}
     >
-      <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Research Lab</p>
+      <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Không gian nghiên cứu</p>
       <ul className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {RESEARCH_LAB_NAV_ITEMS.map((item) => {
           const active = isActiveRoute(pathname, item.href);

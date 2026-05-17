@@ -6,6 +6,13 @@ HEAD snapshot: `6bf2820`
 
 ## Build note 2026-05-14
 
+- UX clarity note 2026-05-18: review thực tế từ end user cho thấy nhiều nhãn và flow còn khó hiểu với người ít tiếp xúc công nghệ.
+  - `apps/web/components/chat-workspace/chat-composer.tsx`: đổi nhãn mode `Fast / Deep / Deep Beta` thành `Nhanh / Tư duy / Pro`; đổi `Auto / Full` thành `Tự chọn / Đầy đủ` theo ngôn ngữ người dùng.
+  - `apps/web/components/research/lib/research-page-sections.tsx` và `apps/web/components/research/research-lab-nav.tsx`: đồng bộ nhãn research, bỏ wording kỹ thuật như `research mode`, `retrieval`, `Fallback mode`, `RAG mode`, `Policy: Warn/Allow` khỏi UI chính.
+  - `apps/web/app/huong-dan/page.tsx`: viết lại hướng dẫn theo tác vụ cụ thể: hỏi CLARA, dùng Tư duy/Pro, lưu tủ thuốc, kiểm tra tương tác, hội chẩn AI, ghi chép y khoa; thêm giải nghĩa `Nhanh / Tư duy / Pro / Tự chọn nguồn / Đầy đủ nguồn`.
+  - `apps/web/app/selfmed/page.tsx` và `apps/web/app/selfmed/add/page.tsx`: đổi nhãn chuẩn hóa thuốc `Dictionary exact / Candidate match / Fallback` sang tiếng Việt dễ hiểu, bỏ block `Báo Cáo Xác Minh OCR` trong tủ thuốc, đổi copy `DDI Risk Meter`/`Confidence Score` thành wording về mức cần rà soát thuốc.
+  - `apps/web/app/selfmed/ddi/page.tsx` và `apps/web/app/careguard/page.tsx`: đổi `Auto DDI`/`DDI` thành `Kiểm tra tương tác thuốc`, yêu cầu tối thiểu 2 thuốc để chạy DDI, và làm phần điểm an toàn/cảnh báo dễ hiểu hơn.
+  - Verify: `npm run lint -- --file ...` cho 8 file web đã sửa pass; `npm run build` trong `apps/web` pass.
 - DDI UX note 2026-05-15: flow Auto DDI từng trả output khó hiểu cho end user.
   - Vấn đề chính:
     - UI `/selfmed/ddi` lộ `mode`, `fallback`, `source_errors` và raw connector errors kiểu `openfda: http_400:...`.

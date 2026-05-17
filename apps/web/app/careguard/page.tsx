@@ -115,6 +115,16 @@ function getRiskScoreLabel(score: number): string {
   return "Rủi ro thấp";
 }
 
+function getRiskScoreMeaning(result: CareguardAnalyzeResult | null, score: number): string {
+  if (!result) return "Chưa kiểm tra tương tác thuốc.";
+  const alertCount = result.ddiAlerts.length;
+  if (alertCount > 0) {
+    return `${alertCount} cảnh báo tương tác cần đọc trước khi dùng thuốc cùng nhau.`;
+  }
+  if (score >= 45) return "Có yếu tố cần rà soát thêm dù chưa thấy cặp tương tác rõ ràng.";
+  return "Chưa thấy cảnh báo tương tác rõ trong tủ thuốc hiện tại.";
+}
+
 export default function CareguardPage() {
   const [consentLoading, setConsentLoading] = useState(true);
   const [consentAccepted, setConsentAccepted] = useState(false);
@@ -204,7 +214,7 @@ export default function CareguardPage() {
 
   const aiInsight = useMemo(() => {
     if (!displayedResult) {
-      return "Hãy chạy nhận diện OCR/văn bản trước, sau đó chạy Auto DDI hoặc Phân tích nâng cao để tạo insight an toàn theo thời gian thực.";
+      return "Hãy thêm thuốc vào tủ, sau đó bấm kiểm tra tương tác để xem cặp thuốc nào cần lưu ý.";
     }
     if (displayedResult.recommendations.length > 0) {
       return displayedResult.recommendations[0];
@@ -422,7 +432,7 @@ export default function CareguardPage() {
       });
       setAutoResult(result);
     } catch (error) {
-      setAutoError(toCareguardUserMessage(error, "Không thể chạy Auto DDI lúc này. Vui lòng thử lại."));
+      setAutoError(toCareguardUserMessage(error, "Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại."));
     } finally {
       setAutoChecking(false);
     }
@@ -731,7 +741,7 @@ export default function CareguardPage() {
                 onChange={(event) => setIncludeHerbalOverlay(event.target.checked)}
                 className="h-4 w-4"
               />
-              Bổ sung thảo dược/OTC
+              Thuốc không kê đơn / thảo dược
             </label>
           </div>
 
@@ -769,7 +779,7 @@ export default function CareguardPage() {
               disabled={autoChecking || cabinet.length === 0}
               className="rounded-lg bg-[#003461] px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {autoChecking ? "Đang chạy Auto DDI..." : "Chạy Auto DDI"}
+              {autoChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
             </button>
             <button
               type="button"
@@ -777,7 +787,7 @@ export default function CareguardPage() {
               disabled={manualChecking || cabinet.length === 0}
               className="rounded-lg border border-[#003461] px-5 py-2 text-sm font-bold text-[#003461] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#93efee] dark:text-[#93efee] dark:hover:bg-slate-800"
             >
-              {manualChecking ? "Đang chạy phân tích nâng cao..." : "Chạy phân tích nâng cao"}
+              {manualChecking ? "Đang phân tích kỹ hơn..." : "Phân tích kỹ hơn"}
             </button>
             <span className="text-xs text-[#727781] dark:text-slate-400">Số thuốc trong tủ: {cabinetStats.total}</span>
           </div>
@@ -788,7 +798,7 @@ export default function CareguardPage() {
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-12">
           <article className="md:col-span-4 flex flex-col items-center rounded-2xl border border-white bg-white/80 p-8 text-center shadow-xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
-            <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[#424750] dark:text-slate-300">Điểm an toàn tổng hợp</h4>
+            <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[#424750] dark:text-slate-300">Mức rủi ro tương tác</h4>
             <div className="relative mb-4 flex h-48 w-48 items-center justify-center">
               <svg className="h-full w-full -rotate-90" viewBox="0 0 192 192">
                 <circle cx="96" cy="96" r="88" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-[#e0e3e5] dark:text-slate-700" />
@@ -810,8 +820,8 @@ export default function CareguardPage() {
                 <span className="text-[10px] font-bold uppercase text-[#727781] dark:text-slate-400">{displayedResult ? aggregateRiskLabel : "Chưa có kết quả"}</span>
               </div>
             </div>
-            <p className="text-sm text-[#424750] dark:text-slate-300">
-              {displayedResult ? `${displayedResult.ddiAlerts.length} cảnh báo tương tác` : "Hãy chạy phân tích để xem mức rủi ro tương tác."}
+            <p className="text-sm leading-6 text-[#424750] dark:text-slate-300">
+              {getRiskScoreMeaning(displayedResult, aggregateRiskScore)}
             </p>
             <div className="mt-6 flex h-1.5 w-full overflow-hidden rounded-full bg-[#eceef0] dark:bg-slate-700">
               <div className="h-full w-1/4 bg-emerald-400" />
@@ -862,7 +872,7 @@ export default function CareguardPage() {
               })
             ) : (
               <div className="rounded-xl border border-[#c2c6d1]/20 bg-white p-6 text-sm text-[#424750] shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                Chưa có cảnh báo DDI. Hãy chạy Auto DDI hoặc phân tích nâng cao.
+                Chưa có cảnh báo tương tác. Hãy thêm ít nhất 2 thuốc vào tủ rồi bấm Kiểm tra tương tác thuốc.
               </div>
             )}
 
@@ -876,8 +886,8 @@ export default function CareguardPage() {
                 </div>
                 <div className="flex-1">
                   <div className="mb-2 flex items-start justify-between gap-2">
-                    <h5 className="text-lg font-bold">CLARA Phân tích sâu</h5>
-                    <span className="rounded bg-[#93efee] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#003461]">AI xác nhận</span>
+                    <h5 className="text-lg font-bold">CLARA giải thích kết quả</h5>
+                    <span className="rounded bg-[#93efee] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#003461]">Gợi ý an toàn</span>
                   </div>
                   <p className="text-sm leading-relaxed text-[#d3e4ff]">{aiInsight}</p>
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -885,11 +895,11 @@ export default function CareguardPage() {
                       type="button"
                       className="rounded-lg bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-tight text-[#003461] transition hover:bg-[#eceef0]"
                     >
-                      Áp dụng logic an toàn
+                      Đọc khuyến nghị
                     </button>
                     <button type="button" className="inline-flex items-center gap-1 text-xs font-bold text-white/80 hover:text-white">
                       <span className="material-symbols-outlined text-sm">visibility</span>
-                      Xem logic
+                      Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -974,7 +984,7 @@ export default function CareguardPage() {
 
             <div className="space-y-3">
               <div className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Chế độ</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Cách đối chiếu</p>
                 <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getModeBadgeClass(displayedResult?.mode ?? null)}`}>
                   {getModeBadgeLabel(displayedResult?.mode ?? null)}
                 </div>

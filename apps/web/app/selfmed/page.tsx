@@ -36,10 +36,10 @@ function sourceClass(source: string): string {
 }
 
 function normalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Dictionary exact";
-  if (source === "candidate") return "Candidate match";
-  if (source === "fallback") return "Fallback";
-  return "Unknown";
+  if (source === "db") return "Khớp chuẩn";
+  if (source === "candidate") return "Cần kiểm tra lại";
+  if (source === "fallback") return "Nhập thủ công";
+  return "Chưa rõ";
 }
 
 function normalizationClass(source: string | null | undefined): string {
@@ -224,26 +224,6 @@ export default function SelfMedPage() {
     return alerts.slice(0, 4);
   }, [items, stats.expired, stats.missingDosage]);
 
-  const ocrMetrics = useMemo(() => {
-    const ocrItems = items.filter((item) => item.source === "ocr");
-    const confidences = ocrItems
-      .map((item) => item.ocr_confidence)
-      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-
-    const avgConfidence =
-      confidences.length > 0
-        ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
-        : null;
-    const accuracyPercent = avgConfidence !== null ? Math.round(avgConfidence * 1000) / 10 : null;
-
-    return {
-      ocrCount: ocrItems.length,
-      avgConfidence,
-      accuracyPercent,
-      progressWidth: accuracyPercent !== null ? Math.max(8, Math.min(100, accuracyPercent)) : 0,
-    };
-  }, [items]);
-
   const refreshCabinet = async () => {
     setError("");
     setIsLoading(true);
@@ -277,7 +257,7 @@ export default function SelfMedPage() {
   return (
     <PageShell
       title="Tủ Thuốc Cá Nhân CLARA"
-      description="ClinicalOS cabinet chạy trên backend persistent thật: quản lý thuốc, theo dõi rủi ro, và chuyển thẳng sang DDI khi cần."
+      description="Lưu danh sách thuốc đang dùng, bổ sung liều nếu có, rồi kiểm tra tương tác khi dùng nhiều thuốc cùng lúc."
       variant="plain"
     >
       <SelfMedConsentGate>
@@ -287,7 +267,7 @@ export default function SelfMedPage() {
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Dữ liệu tủ thuốc dùng chung với <Link href="/careguard" className="text-cyan-300 underline underline-offset-2">CareGuard</Link>. Không dùng localStorage làm nguồn dữ liệu chính.
+                  Thêm thuốc đang dùng vào đây. Khi có từ 2 thuốc trở lên, CLARA có thể kiểm tra cặp thuốc nào cần lưu ý.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -295,13 +275,13 @@ export default function SelfMedPage() {
                   href="/selfmed/add"
                   className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
                 >
-                  + Thêm Thuốc Mới
+                  + Thêm thuốc
                 </Link>
                 <Link
                   href="/selfmed/ddi"
                   className="inline-flex min-h-11 items-center rounded-lg border border-cyan-300/50 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-100"
                 >
-                  Chạy Auto DDI
+                  Kiểm tra tương tác thuốc
                 </Link>
                 <button
                   type="button"
@@ -314,9 +294,9 @@ export default function SelfMedPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-              <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Consent 2026-04-v1</span>
-              <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Node: SEA-MAIN-01</span>
-              <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Runtime: Live</span>
+              <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Có cảnh báo an toàn y tế</span>
+              <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Dữ liệu lưu trên tài khoản</span>
+              <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Có thể cập nhật bất cứ lúc nào</span>
             </div>
           </section>
 
@@ -324,7 +304,7 @@ export default function SelfMedPage() {
             <div className="col-span-12 lg:col-span-8 space-y-6">
               <article className="clara-glass-panel rounded-xl border border-[color:var(--shell-border)] p-6">
                 <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">DDI Risk Meter</h3>
+                  <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
                   <span
                     className={[
                       "rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
@@ -362,13 +342,13 @@ export default function SelfMedPage() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
                       <span className="text-3xl font-extrabold text-cyan-300">{stats.riskScore}%</span>
-                      <span className="text-[10px] uppercase text-[var(--text-muted)]">Confidence Score</span>
+                      <span className="text-[10px] uppercase text-[var(--text-muted)]">Điểm cần rà soát</span>
                     </div>
                   </div>
 
                   <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Tương tác nghiêm trọng</p>
+                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Dữ liệu để kiểm tra tương tác</p>
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                       </p>
@@ -436,7 +416,7 @@ export default function SelfMedPage() {
                           Liều dùng: {item.dosage || "Chưa có"} · Số lượng: {item.quantity}
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          Brand: {item.brand_name || "N/A"} · Hãng: {item.manufacturer || "N/A"}
+                          Tên thương mại: {item.brand_name || "Chưa có"} · Hãng: {item.manufacturer || "Chưa có"}
                         </p>
 
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[var(--text-muted)]">
@@ -452,7 +432,7 @@ export default function SelfMedPage() {
                       </div>
 
                       <div className="text-right">
-                        <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Inventory</p>
+                        <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Số lượng</p>
                         <p className="text-xl font-extrabold text-[var(--text-primary)]">{item.quantity}</p>
                         <button
                           type="button"
@@ -466,7 +446,7 @@ export default function SelfMedPage() {
 
                     <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-3">
                       <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                        <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> Đồng bộ backend thật</span>
+                        <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> Đã lưu vào tủ thuốc</span>
                         <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> Cập nhật: {formatDate(item.updated_at)}</span>
                       </div>
                     </div>
@@ -525,35 +505,10 @@ export default function SelfMedPage() {
                   href="/careguard"
                   className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-300/40 py-2 text-[10px] font-bold uppercase tracking-widest text-red-100 hover:bg-red-500/10"
                 >
-                  Mở CareGuard
+                  Mở kiểm tra tương tác
                 </Link>
               </article>
 
-              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
-                <h3 className="mb-4 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Báo Cáo Xác Minh OCR</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded bg-[var(--surface-panel)]">
-                      <span className="material-symbols-outlined text-cyan-300">camera_alt</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900/40">
-                        <div className="h-full rounded-full bg-cyan-300" style={{ width: `${ocrMetrics.progressWidth}%` }} />
-                      </div>
-                      <div className="mt-1 flex justify-between">
-                        <span className="text-[10px] text-[var(--text-muted)]">Độ chính xác OCR</span>
-                        <span className="text-[10px] font-bold text-cyan-300">{ocrMetrics.accuracyPercent !== null ? `${ocrMetrics.accuracyPercent}%` : "--"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded text-[10px] italic text-[var(--text-secondary)]">
-                    {ocrMetrics.ocrCount > 0
-                      ? `Đã quét ${ocrMetrics.ocrCount} thuốc từ OCR và đối chiếu từ điển chuẩn hóa backend.`
-                      : "Chưa có thuốc nguồn OCR để tính điểm xác minh."}
-                  </div>
-                </div>
-              </article>
             </div>
           </section>
         </div>

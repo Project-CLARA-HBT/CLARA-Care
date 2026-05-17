@@ -83,8 +83,8 @@ export default function SelfMedDdiPage() {
 
   return (
     <PageShell
-      title="Phân Tích DDI"
-      description="Kiểm tra tương tác thuốc trực tiếp từ tủ thuốc cá nhân với giao diện tập trung vào quyết định an toàn."
+      title="Kiểm Tra Tương Tác Thuốc"
+      description="Đọc các cặp thuốc cần lưu ý trong tủ thuốc cá nhân và khuyến nghị an toàn tiếp theo."
     >
       <SelfMedConsentGate>
         <div className="space-y-5">
@@ -92,7 +92,7 @@ export default function SelfMedDdiPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Mô-đun an toàn thuốc</p>
-                <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Auto DDI theo tủ thuốc cá nhân</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Kiểm tra tương tác trong tủ thuốc</h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -125,7 +125,7 @@ export default function SelfMedDdiPage() {
 
               {!isLoadingCabinet && !items.length ? (
                 <div className="mt-3 rounded-2xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
-                  <p className="text-sm text-[var(--text-secondary)]">Tủ thuốc chưa có dữ liệu. Vui lòng thêm thuốc trước khi chạy DDI.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Tủ thuốc chưa có dữ liệu. Vui lòng thêm thuốc trước khi kiểm tra tương tác.</p>
                 </div>
               ) : null}
 
@@ -145,7 +145,7 @@ export default function SelfMedDdiPage() {
             </section>
 
             <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
-              <h3 className="text-xl font-semibold text-[var(--text-primary)]">Thiết lập chạy DDI</h3>
+              <h3 className="text-xl font-semibold text-[var(--text-primary)]">Thiết lập kiểm tra</h3>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">Có thể thêm dị ứng để tăng độ chính xác cảnh báo.</p>
 
               <label className="mt-3 block space-y-1">
@@ -161,13 +161,13 @@ export default function SelfMedDdiPage() {
               <button
                 type="button"
                 onClick={() => void onRunDdi()}
-                disabled={isChecking || items.length === 0}
+                disabled={isChecking || items.length < 2}
                 className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-indigo-300/55 bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-500/30 disabled:opacity-60"
               >
-                {isChecking ? "Đang phân tích DDI..." : "Chạy Auto DDI"}
+                {isChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
               </button>
 
-              {items.length === 0 ? <p className="mt-2 text-xs text-amber-200">Cần ít nhất 1 thuốc trong tủ để phân tích DDI.</p> : null}
+              {items.length < 2 ? <p className="mt-2 text-xs text-amber-200">Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác.</p> : null}
               {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
             </section>
           </div>

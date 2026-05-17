@@ -25,10 +25,10 @@ function getDetectionKey(item: ScanDetection, index: number): string {
 }
 
 function normalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Dictionary exact";
-  if (source === "candidate") return "Candidate match";
-  if (source === "fallback") return "Fallback";
-  return "Unknown";
+  if (source === "db") return "Khớp chuẩn";
+  if (source === "candidate") return "Cần kiểm tra lại";
+  if (source === "fallback") return "Nhập thủ công";
+  return "Chưa rõ";
 }
 
 function normalizationClass(source: string | null | undefined): string {

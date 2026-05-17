@@ -8,6 +8,16 @@ import {
   Tier2Step
 } from "@/lib/research";
 
+function researchModeLabel(mode: ResearchExecutionMode): string {
+  if (mode === "fast") return "Nhanh";
+  if (mode === "deep") return "Tư duy";
+  return "Pro";
+}
+
+function retrievalStackLabel(mode: ResearchRetrievalStackMode): string {
+  return mode === "full" ? "Đầy đủ nguồn" : "Tự chọn nguồn";
+}
+
 type ResearchWorkspaceHeaderProps = {
   roleLabel: string;
   selectedSourceCount: number;
@@ -164,7 +174,7 @@ export function ResearchMainCard({
                           : "text-sky-700 dark:text-sky-300"
                       ].join(" ")}
                     >
-                      Fast research
+                      Nhanh
                     </button>
                     <button
                       type="button"
@@ -177,7 +187,7 @@ export function ResearchMainCard({
                           : "text-sky-700 dark:text-sky-300"
                       ].join(" ")}
                     >
-                      Deep research
+                      Tư duy
                     </button>
                     <button
                       type="button"
@@ -190,7 +200,7 @@ export function ResearchMainCard({
                           : "text-sky-700 dark:text-sky-300"
                       ].join(" ")}
                     >
-                      Deep beta
+                      Pro
                     </button>
                   </fieldset>
 
@@ -207,13 +217,13 @@ export function ResearchMainCard({
                           : "text-cyan-700 dark:text-cyan-300"
                       ].join(" ")}
                     >
-                      Auto stack
+                      Tự chọn nguồn
                     </button>
                     <button
                       type="button"
                       onClick={() => onSelectRetrievalStackMode("full")}
                       disabled={isSubmitting || isFastResearchMode}
-                      title={isFastResearchMode ? "Fast mode chỉ hỗ trợ Auto stack." : undefined}
+                      title={isFastResearchMode ? "Chế độ Nhanh dùng phạm vi nguồn tự chọn để trả lời nhanh hơn." : undefined}
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedRetrievalStackMode === "full"
@@ -221,13 +231,13 @@ export function ResearchMainCard({
                           : "text-cyan-700 dark:text-cyan-300"
                       ].join(" ")}
                     >
-                      Full stack
+                      Đầy đủ nguồn
                     </button>
                   </fieldset>
 
                   {isFastResearchMode ? (
                     <p className="text-xs text-cyan-700 dark:text-cyan-300">
-                      Fast mode cố định retrieval ở Auto stack để giảm độ trễ.
+                      Chế độ Nhanh dùng phạm vi nguồn tự chọn để giảm thời gian chờ.
                     </p>
                   ) : null}
                 </>
@@ -267,7 +277,7 @@ export function ResearchMainCard({
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
               {selectedTier === "tier2"
-                ? `Server đang xử lý research mode: ${selectedResearchMode === "deep_beta" ? "DEEP BETA" : selectedResearchMode.toUpperCase()} · retrieval: ${selectedRetrievalStackMode === "full" ? "FULL STACK" : "AUTO STACK"}. Timeline sẽ cập nhật theo flow thật từ backend.`
+                ? `CLARA đang xử lý ở chế độ ${researchModeLabel(selectedResearchMode)} · ${retrievalStackLabel(selectedRetrievalStackMode)}. Tiến trình sẽ cập nhật khi có kết quả.`
                 : "CLARA đang tổng hợp trả lời nhanh..."}
             </span>
           </article>
@@ -304,12 +314,12 @@ export function ResearchMainCard({
                       : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                   ].join(" ")}
                 >
-                  {result.policyAction === "warn" ? "Policy: Warn" : "Policy: Allow"}
+                  {result.policyAction === "warn" ? "Cần đọc lưu ý" : "Có thể tham khảo"}
                 </span>
               ) : null}
               {typeof result.fallbackUsed === "boolean" ? (
                 <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {result.fallbackUsed ? "Fallback mode" : "RAG mode"}
+                  {result.fallbackUsed ? "Nguồn giới hạn" : "Có đối chiếu nguồn"}
                 </span>
               ) : null}
             </div>
