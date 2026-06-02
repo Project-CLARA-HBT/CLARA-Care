@@ -66,7 +66,7 @@ const GROUP_LABEL_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
 const NAV_LABEL_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
   "/chat": { vi: "Chat", en: "Chat" },
   "/dashboard": { vi: "T\u1ED5ng quan", en: "Dashboard" },
-  "/phr": { vi: "PHR (beta)", en: "PHR (beta)" },
+  "/phr": { vi: "Hồ sơ sức khỏe cá nhân", en: "Personal Health Record" },
   "/selfmed": { vi: "T\u1EE7 thu\u1ED1c", en: "Medicine Cabinet" },
   "/careguard": { vi: "Ki\u1EC3m tra t\u01B0\u01A1ng t\u00E1c", en: "DDI Check" },
   "/council": { vi: "H\u1ED9i ch\u1EA9n AI", en: "AI Council" },
@@ -104,6 +104,7 @@ export default function SidebarNav({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isEnglishUI = uiLanguage === "en";
   const roleLabel = ROLE_LABELS[uiLanguage][role];
+  const assistantRoleLabel = isEnglishUI ? "Health information support" : "Hỗ trợ thông tin y tế";
   const collapseLabel = isEnglishUI ? "Collapse sidebar" : "Thu g\u1ECDn sidebar";
   const expandLabel = isEnglishUI ? "Expand sidebar" : "M\u1EDF r\u1ED9ng sidebar";
   const sidebarTitle = isEnglishUI ? "Care workspace" : "Kh\u00F4ng gian ch\u0103m s\u00F3c";
@@ -296,8 +297,8 @@ export default function SidebarNav({
           </div>
           {!collapsed ? (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">CLARA Operator</p>
-              <p className="truncate text-xs text-[var(--text-muted)]">{roleLabel}</p>
+              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">CLARA AI Assistant</p>
+              <p className="truncate text-xs text-[var(--text-muted)]">{assistantRoleLabel}</p>
             </div>
           ) : null}
         </div>

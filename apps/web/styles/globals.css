@@ -279,6 +279,40 @@ a {
   border-radius: 10px;
 }
 
+.clara-chat-workspace {
+  --bg-canvas: #f0f6ff;
+  --surface-panel: rgba(255, 255, 255, 0.98);
+  --surface-muted: #eff6ff;
+  --shell-border: rgba(59, 130, 246, 0.16);
+  --shell-border-strong: rgba(37, 99, 235, 0.5);
+  --text-primary: #1e2a44;
+  --text-secondary: #3b4a6b;
+  --text-muted: #64748b;
+  background:
+    radial-gradient(120% 130% at 100% -10%, rgba(59, 130, 246, 0.08) 0%, #f0f6ff 45%, #e8f0fe 100%);
+}
+
+html.dark .clara-chat-workspace,
+html[data-theme="dark"] .clara-chat-workspace {
+  --bg-canvas: #091326;
+  --surface-panel: rgba(13, 25, 48, 0.96);
+  --surface-muted: rgba(22, 38, 70, 0.92);
+  --shell-border: rgba(96, 165, 250, 0.24);
+  --shell-border-strong: rgba(125, 211, 252, 0.48);
+  --text-primary: #e6edff;
+  --text-secondary: #c4d1ea;
+  --text-muted: #91a0ba;
+  background:
+    radial-gradient(68rem 34rem at 100% -12%, rgba(37, 99, 235, 0.18), transparent 58%),
+    radial-gradient(46rem 26rem at 0% 108%, rgba(20, 184, 166, 0.08), transparent 62%),
+    linear-gradient(180deg, #081225 0%, #091326 48%, #0d1629 100%);
+}
+
+html.dark .clara-chat-workspace .clara-scrollbar::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .clara-chat-workspace .clara-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.38);
+}
+
 /* Compat classes */
 .glass-card,
 .glass-surface-1 {
@@ -494,6 +528,68 @@ textarea:focus-visible,
 select:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
+}
+
+@layer components {
+  .input {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      background-color 0.15s ease;
+  }
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.input:hover:not(:disabled):not(:focus) {
+  border-color: var(--brand-500);
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--brand-600);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+  background-color: var(--surface-muted);
+  opacity: 0.7;
+}
+
+html.dark .input,
+html[data-theme="dark"] .input {
+  border-color: rgba(71, 85, 105, 0.7);
+  background-color: rgba(15, 23, 42, 0.55);
+  color: #e2e8f0;
+}
+
+html.dark .input::placeholder,
+html[data-theme="dark"] .input::placeholder {
+  color: #94a3b8;
+}
+
+html.dark .input:focus,
+html[data-theme="dark"] .input:focus,
+html.dark .input:focus-visible,
+html[data-theme="dark"] .input:focus-visible {
+  border-color: #38bdf8;
+  background-color: rgba(15, 23, 42, 0.75);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
 }
 
 html.dark body,
