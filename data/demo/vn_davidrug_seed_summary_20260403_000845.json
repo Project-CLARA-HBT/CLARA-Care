@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-04-02T17:08:47.676846+00:00",
+  "ended_at": "2026-04-02T17:15:59.602122+00:00",
+  "duration_seconds": 431.925,
+  "dry_run": false,
+  "page_size": 100,
+  "max_records": 0,
+  "timeout_seconds": 45.0,
+  "sleep_seconds": 0.01,
+  "commit_every": 500,
+  "stats": {
+    "page_count": 539,
+    "fetched_rows": 53814,
+    "parsed_rows": 53814,
+    "inserted": 43149,
+    "updated": 138,
+    "skipped_empty_brand": 0,
+    "skipped_alias_conflict": 6,
+    "commit_count": 108
+  }
+}

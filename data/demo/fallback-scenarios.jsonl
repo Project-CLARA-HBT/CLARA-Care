@@ -1,0 +1,4 @@
+{"case_id":"FAL-001","mode":"force_local","medications":["warfarin","ibuprofen"],"expect_fallback_used":true,"expected_min_alerts":1,"expected_source_any":["local","fallback"],"notes":"Primary offline fallback proof case."}
+{"case_id":"FAL-002","mode":"force_local","medications":["aspirin","ibuprofen"],"expect_fallback_used":true,"expected_min_alerts":1,"expected_source_any":["local","fallback"],"notes":"NSAID + antiplatelet fallback check."}
+{"case_id":"FAL-003","mode":"force_local","medications":["lisinopril","ibuprofen"],"expect_fallback_used":true,"expected_min_alerts":1,"expected_source_any":["local","fallback"],"notes":"Non-bleeding medium severity fallback check."}
+{"case_id":"FAL-004","mode":"force_local","medications":["apixaban","aspirin"],"expect_fallback_used":true,"expected_min_alerts":1,"expected_source_any":["local","fallback"],"notes":"DOAC + aspirin fallback check."}

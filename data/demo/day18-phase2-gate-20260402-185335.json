@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-04-02T18:53:35.269707+00:00",
+  "gate_passed": true,
+  "checks": {
+    "mapping_accuracy": {
+      "threshold": 0.9,
+      "actual": 1.0,
+      "passed": true
+    },
+    "critical_miss_reduction": {
+      "threshold": 0.4,
+      "actual": 1.0,
+      "passed": true
+    }
+  },
+  "metrics": {
+    "mapping_accuracy": 1.0,
+    "current_critical_miss_rate": 0.0,
+    "baseline_critical_miss_rate": 1.0,
+    "critical_miss_reduction": 1.0,
+    "baseline_critical_miss_cases": 30,
+    "baseline_critical_total": 30,
+    "current_critical_total": 30,
+    "baseline_source_mode": "from_summary"
+  },
+  "inputs": {
+    "day17_report": "/Users/nguyennt/Documents/CLARA-Care/data/demo/day17-vn-brand-combo-eval-20260402-184837.json",
+    "baseline_summary": "/Users/nguyennt/Documents/CLARA-Care/data/demo/hard-negative-mined-phase1-day9-20260402-224131.jsonl.summary.json"
+  }
+}

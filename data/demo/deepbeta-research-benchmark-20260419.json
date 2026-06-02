@@ -1,0 +1,390 @@
+{
+  "run_id": "deepbeta-research-20260419",
+  "generated_at_utc": "2026-04-19T01:53:15.505738+00:00",
+  "started_at_utc": "2026-04-19T01:42:13.283535+00:00",
+  "finished_at_utc": "2026-04-19T01:53:15.505738+00:00",
+  "config": {
+    "ml_base_url": "http://127.0.0.1:8110",
+    "endpoint": "/v1/research/tier2",
+    "resolved_endpoint_url": "http://127.0.0.1:8110/v1/research/tier2",
+    "source_mode": "hybrid",
+    "top_k": [
+      3,
+      5,
+      10
+    ],
+    "timeout_seconds": 180.0,
+    "case_file": "/tmp/clara-deepbeta-bench/data/demo/deepbeta_research_benchmark_cases.json",
+    "internal_key_provided": true,
+    "max_cases": 0
+  },
+  "metrics": {
+    "classification": {
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 3,
+        "tn": 0,
+        "fn": 0,
+        "total": 6
+      },
+      "accuracy": 0.5,
+      "precision": 0.5,
+      "recall": 1.0,
+      "specificity": 0.0,
+      "f1_score": 0.6666666666666666,
+      "balanced_accuracy": 0.5,
+      "log_loss": 0.6601027374988045,
+      "brier_score": 0.23883937499999996
+    },
+    "retrieval": {
+      "3": {
+        "macro": {
+          "precision_at_k": 0.7222222222222222,
+          "recall_at_k": 0.5555555555555555,
+          "f1_at_k": 0.6055555555555555
+        },
+        "micro": {
+          "precision_at_k": 0.7222222222222222,
+          "recall_at_k": 0.5555555555555556,
+          "f1_at_k": 0.6280193236714976
+        }
+      },
+      "5": {
+        "macro": {
+          "precision_at_k": 0.6,
+          "recall_at_k": 0.5555555555555555,
+          "f1_at_k": 0.5549066516558776
+        },
+        "micro": {
+          "precision_at_k": 0.6206896551724138,
+          "recall_at_k": 0.5555555555555556,
+          "f1_at_k": 0.5863192182410423
+        }
+      },
+      "10": {
+        "macro": {
+          "precision_at_k": 0.6319444444444444,
+          "recall_at_k": 0.611111111111111,
+          "f1_at_k": 0.6182273918610298
+        },
+        "micro": {
+          "precision_at_k": 0.7058823529411765,
+          "recall_at_k": 0.6111111111111112,
+          "f1_at_k": 0.6550868486352357
+        }
+      }
+    },
+    "runtime": {
+      "latency_ms": {
+        "count": 6,
+        "p50": 109565.73030888103,
+        "p95": 118277.68487238791,
+        "max": 118504.386076238,
+        "mean": 110269.30396243308
+      },
+      "fallback_rate": 0.0,
+      "keyword_pass_rate": 1.0,
+      "case_pass_rate": 0.5,
+      "deep_pass_count": {
+        "mean": 6.0,
+        "max": 6
+      }
+    }
+  },
+  "case_results": [
+    {
+      "case_id": "DBR-001",
+      "query": "aspirin and ibuprofen interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": true,
+      "predicted_risk": true,
+      "risk_probability": 0.796,
+      "classification_correct": true,
+      "keyword_hits": 2,
+      "keyword_total": 4,
+      "keyword_recall": 0.5,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.9,
+      "latency_ms": 112613.156,
+      "citation_count": 15,
+      "topk_metrics": {
+        "3": {
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8,
+          "relevant_hits": 3.0,
+          "retrieved": 3.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 0.8,
+          "recall": 0.6666666666666666,
+          "f1": 0.7272727272727272,
+          "relevant_hits": 4.0,
+          "retrieved": 5.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 0.9,
+          "recall": 0.6666666666666666,
+          "f1": 0.7659574468085106,
+          "relevant_hits": 9.0,
+          "retrieved": 10.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Không nên dùng ibuprofen cùng lúc với aspirin liều thấp để bảo vệ tim mạch, vì ibuprofen có thể làm giảm tác dụng bảo vệ tim của aspirin. Dùng đồng thời ibuprofen và aspirin có thể làm giảm hiệu quả chống kết tập tiểu cầu "
+    },
+    {
+      "case_id": "DBR-002",
+      "query": "warfarin and trimethoprim sulfamethoxazole interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": true,
+      "predicted_risk": true,
+      "risk_probability": 0.718,
+      "classification_correct": true,
+      "keyword_hits": 3,
+      "keyword_total": 5,
+      "keyword_recall": 0.6,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.9,
+      "latency_ms": 117597.581,
+      "citation_count": 4,
+      "topk_metrics": {
+        "3": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "relevant_hits": 0.0,
+          "retrieved": 3.0,
+          "matched_hints": 0.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "relevant_hits": 0.0,
+          "retrieved": 4.0,
+          "matched_hints": 0.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "relevant_hits": 0.0,
+          "retrieved": 4.0,
+          "matched_hints": 0.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Tương tác giữa warfarin và trimethoprim/sulfamethoxazole là nghiêm trọng, làm tăng đáng kể nguy cơ chảy máu. Trimethoprim/sulfamethoxazole (TMP SMX) làm tăng mạnh tác dụng chống đông của warfarin, dẫn đến nguy cơ chảy máu "
+    },
+    {
+      "case_id": "DBR-003",
+      "query": "simvastatin and clarithromycin interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": true,
+      "predicted_risk": true,
+      "risk_probability": 0.796,
+      "classification_correct": true,
+      "keyword_hits": 2,
+      "keyword_total": 4,
+      "keyword_recall": 0.5,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.9,
+      "latency_ms": 118504.386,
+      "citation_count": 15,
+      "topk_metrics": {
+        "3": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "relevant_hits": 3.0,
+          "retrieved": 3.0,
+          "matched_hints": 3.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "relevant_hits": 5.0,
+          "retrieved": 5.0,
+          "matched_hints": 3.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "relevant_hits": 10.0,
+          "retrieved": 10.0,
+          "matched_hints": 3.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Tương tác giữa simvastatin và clarithromycin là nghiêm trọng, làm tăng đáng kể nguy cơ tổn thương cơ (tiêu cơ vân) và cần có biện pháp quản lý ngay lập tức. Tránh dùng đồng thời simvastatin và clarithromycin. Clarithromyci"
+    },
+    {
+      "case_id": "DBR-004",
+      "query": "amoxicillin and paracetamol interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": false,
+      "predicted_risk": true,
+      "risk_probability": 0.64,
+      "classification_correct": false,
+      "keyword_hits": 1,
+      "keyword_total": 4,
+      "keyword_recall": 0.25,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.9,
+      "latency_ms": 104824.125,
+      "citation_count": 9,
+      "topk_metrics": {
+        "3": {
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1": 0.6666666666666666,
+          "relevant_hits": 2.0,
+          "retrieved": 3.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 0.6,
+          "recall": 0.6666666666666666,
+          "f1": 0.631578947368421,
+          "relevant_hits": 3.0,
+          "retrieved": 5.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1": 0.6666666666666666,
+          "relevant_hits": 6.0,
+          "retrieved": 9.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Amoxicillin (một kháng sinh) và paracetamol (thuốc giảm đau, hạ sốt) thường được kê đơn cùng nhau và không có tương tác thuốc trực tiếp, nguy hiểm đã được thiết lập. Tuy nhiên, việc dùng chúng đòi hỏi sự thận trọng vì cả h"
+    },
+    {
+      "case_id": "DBR-005",
+      "query": "loratadine and paracetamol interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": false,
+      "predicted_risk": true,
+      "risk_probability": 0.718,
+      "classification_correct": false,
+      "keyword_hits": 1,
+      "keyword_total": 4,
+      "keyword_recall": 0.25,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.9,
+      "latency_ms": 106518.304,
+      "citation_count": 8,
+      "topk_metrics": {
+        "3": {
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1": 0.6666666666666666,
+          "relevant_hits": 2.0,
+          "retrieved": 3.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 0.4,
+          "recall": 0.6666666666666666,
+          "f1": 0.5,
+          "relevant_hits": 2.0,
+          "retrieved": 5.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 0.625,
+          "recall": 0.6666666666666666,
+          "f1": 0.6451612903225806,
+          "relevant_hits": 5.0,
+          "retrieved": 8.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Loratadine (một thuốc kháng histamine không gây buồn ngủ) và paracetamol (thuốc giảm đau, hạ sốt) thường được coi là an toàn để sử dụng cùng nhau trong thời gian ngắn và với liều điều trị thông thường. Nguy cơ tương tác th"
+    },
+    {
+      "case_id": "DBR-006",
+      "query": "cetirizine and saline nasal spray interaction risk",
+      "status": "ok",
+      "error": null,
+      "expected_risk": false,
+      "predicted_risk": true,
+      "risk_probability": 0.5875,
+      "classification_correct": false,
+      "keyword_hits": 1,
+      "keyword_total": 4,
+      "keyword_recall": 0.25,
+      "keyword_pass": true,
+      "fallback_used": false,
+      "deep_pass_count": 6,
+      "router_confidence": 0.75,
+      "latency_ms": 101558.271,
+      "citation_count": 16,
+      "topk_metrics": {
+        "3": {
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "f1": 0.5,
+          "relevant_hits": 3.0,
+          "retrieved": 3.0,
+          "matched_hints": 1.0,
+          "total_hints": 3.0
+        },
+        "5": {
+          "precision": 0.8,
+          "recall": 0.3333333333333333,
+          "f1": 0.47058823529411764,
+          "relevant_hits": 4.0,
+          "retrieved": 5.0,
+          "matched_hints": 1.0,
+          "total_hints": 3.0
+        },
+        "10": {
+          "precision": 0.6,
+          "recall": 0.6666666666666666,
+          "f1": 0.631578947368421,
+          "relevant_hits": 6.0,
+          "retrieved": 10.0,
+          "matched_hints": 2.0,
+          "total_hints": 3.0
+        }
+      },
+      "answer_preview": "## Kết luận nhanh Không có tương tác dược lý trực tiếp hoặc nguy cơ an toàn đáng kể nào được báo cáo giữa cetirizine (thuốc kháng histamine) và saline nasal spray (xịt mũi nước muối sinh lý). Cả hai có thể được sử dụng cùng nhau một cách an"
+    }
+  ]
+}

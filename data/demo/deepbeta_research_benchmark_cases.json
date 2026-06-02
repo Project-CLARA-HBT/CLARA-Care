@@ -1,0 +1,50 @@
+[
+  {
+    "case_id": "DBR-001",
+    "query": "aspirin and ibuprofen interaction risk",
+    "expected_risk": true,
+    "expected_terms_any": ["bleeding", "chảy máu", "avoid", "monitor"],
+    "min_expected_term_hits": 2,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  },
+  {
+    "case_id": "DBR-002",
+    "query": "warfarin and trimethoprim sulfamethoxazole interaction risk",
+    "expected_risk": true,
+    "expected_terms_any": ["inr", "bleeding", "chảy máu", "avoid", "monitor"],
+    "min_expected_term_hits": 2,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  },
+  {
+    "case_id": "DBR-003",
+    "query": "simvastatin and clarithromycin interaction risk",
+    "expected_risk": true,
+    "expected_terms_any": ["rhabdomyolysis", "contraindicated", "avoid", "statin"],
+    "min_expected_term_hits": 2,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  },
+  {
+    "case_id": "DBR-004",
+    "query": "amoxicillin and paracetamol interaction risk",
+    "expected_risk": false,
+    "expected_terms_any": ["no clinically significant interaction", "không có tương tác đáng kể", "generally safe", "an toàn"],
+    "min_expected_term_hits": 1,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  },
+  {
+    "case_id": "DBR-005",
+    "query": "loratadine and paracetamol interaction risk",
+    "expected_risk": false,
+    "expected_terms_any": ["no clinically significant interaction", "không có tương tác đáng kể", "generally safe", "an toàn"],
+    "min_expected_term_hits": 1,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  },
+  {
+    "case_id": "DBR-006",
+    "query": "cetirizine and saline nasal spray interaction risk",
+    "expected_risk": false,
+    "expected_terms_any": ["no clinically significant interaction", "không có tương tác đáng kể", "generally safe", "an toàn"],
+    "min_expected_term_hits": 1,
+    "expected_source_hints": ["dailymed", "openfda", "pubmed"]
+  }
+]

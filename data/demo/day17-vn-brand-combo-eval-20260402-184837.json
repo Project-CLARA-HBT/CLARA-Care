@@ -1,0 +1,511 @@
+{
+  "generated_at": "2026-04-02T18:48:37.754813+00:00",
+  "brand_combo": {
+    "total": 24,
+    "passed": 24,
+    "failed": 0,
+    "accuracy": 1.0,
+    "results": [
+      {
+        "input": "Panadol Extra",
+        "expected_normalized": "paracetamol caffeine",
+        "actual_normalized": "paracetamol caffeine",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Paracetamol + Caffeine",
+        "expected_normalized": "paracetamol caffeine",
+        "actual_normalized": "paracetamol caffeine",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Klamentin",
+        "expected_normalized": "amoxicillin clavulanate",
+        "actual_normalized": "amoxicillin clavulanate",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Augmentin",
+        "expected_normalized": "amoxicillin clavulanate",
+        "actual_normalized": "amoxicillin clavulanate",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Hapacol",
+        "expected_normalized": "paracetamol",
+        "actual_normalized": "paracetamol",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Efferalgan",
+        "expected_normalized": "paracetamol",
+        "actual_normalized": "paracetamol",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Brufen",
+        "expected_normalized": "ibuprofen",
+        "actual_normalized": "ibuprofen",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Voltaren",
+        "expected_normalized": "diclofenac",
+        "actual_normalized": "diclofenac",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Naprosyn",
+        "expected_normalized": "naproxen",
+        "actual_normalized": "naproxen",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Aspirin Protect",
+        "expected_normalized": "aspirin",
+        "actual_normalized": "aspirin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Coumadin",
+        "expected_normalized": "warfarin",
+        "actual_normalized": "warfarin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Xarelto",
+        "expected_normalized": "rivaroxaban",
+        "actual_normalized": "rivaroxaban",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Eliquis",
+        "expected_normalized": "apixaban",
+        "actual_normalized": "apixaban",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Plavix",
+        "expected_normalized": "clopidogrel",
+        "actual_normalized": "clopidogrel",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Concor",
+        "expected_normalized": "bisoprolol",
+        "actual_normalized": "bisoprolol",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Glucophage",
+        "expected_normalized": "metformin",
+        "actual_normalized": "metformin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Lipitor",
+        "expected_normalized": "atorvastatin",
+        "actual_normalized": "atorvastatin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Crestor",
+        "expected_normalized": "rosuvastatin",
+        "actual_normalized": "rosuvastatin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Losec",
+        "expected_normalized": "omeprazole",
+        "actual_normalized": "omeprazole",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Nexium",
+        "expected_normalized": "esomeprazole",
+        "actual_normalized": "esomeprazole",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Klacid",
+        "expected_normalized": "clarithromycin",
+        "actual_normalized": "clarithromycin",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Diflucan",
+        "expected_normalized": "fluconazole",
+        "actual_normalized": "fluconazole",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Valium",
+        "expected_normalized": "diazepam",
+        "actual_normalized": "diazepam",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      },
+      {
+        "input": "Viagra",
+        "expected_normalized": "sildenafil",
+        "actual_normalized": "sildenafil",
+        "passed": true,
+        "mapped_count": 1,
+        "normalization_confidence": 1.0
+      }
+    ]
+  },
+  "critical_ddi": {
+    "total_high_expected_cases": 30,
+    "high_detected_cases": 30,
+    "critical_ddi_miss_cases": 0,
+    "critical_ddi_miss_rate": 0.0,
+    "evaluations": [
+      {
+        "case_id": "DDI-001",
+        "medications": [
+          "warfarin",
+          "ibuprofen"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-002",
+        "medications": [
+          "warfarin",
+          "aspirin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-003",
+        "medications": [
+          "warfarin",
+          "naproxen"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-004",
+        "medications": [
+          "warfarin",
+          "diclofenac"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-005",
+        "medications": [
+          "warfarin",
+          "clopidogrel"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-006",
+        "medications": [
+          "warfarin",
+          "amiodarone"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-007",
+        "medications": [
+          "warfarin",
+          "fluconazole"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-008",
+        "medications": [
+          "warfarin",
+          "metronidazole"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-009",
+        "medications": [
+          "warfarin",
+          "trimethoprim"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-010",
+        "medications": [
+          "warfarin",
+          "clarithromycin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-013",
+        "medications": [
+          "rivaroxaban",
+          "aspirin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-014",
+        "medications": [
+          "rivaroxaban",
+          "ibuprofen"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-015",
+        "medications": [
+          "apixaban",
+          "aspirin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-016",
+        "medications": [
+          "apixaban",
+          "ibuprofen"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-017",
+        "medications": [
+          "heparin",
+          "aspirin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-026",
+        "medications": [
+          "simvastatin",
+          "clarithromycin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-027",
+        "medications": [
+          "simvastatin",
+          "erythromycin"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-028",
+        "medications": [
+          "simvastatin",
+          "ketoconazole"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-029",
+        "medications": [
+          "simvastatin",
+          "gemfibrozil"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-033",
+        "medications": [
+          "digoxin",
+          "amiodarone"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-037",
+        "medications": [
+          "spironolactone",
+          "lisinopril"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-038",
+        "medications": [
+          "spironolactone",
+          "losartan"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-039",
+        "medications": [
+          "spironolactone",
+          "trimethoprim"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-040",
+        "medications": [
+          "spironolactone",
+          "potassium chloride"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-041",
+        "medications": [
+          "lisinopril",
+          "potassium chloride"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-042",
+        "medications": [
+          "losartan",
+          "potassium chloride"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-044",
+        "medications": [
+          "insulin",
+          "gliclazide"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-048",
+        "medications": [
+          "allopurinol",
+          "azathioprine"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-049",
+        "medications": [
+          "tacrolimus",
+          "fluconazole"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      },
+      {
+        "case_id": "DDI-050",
+        "medications": [
+          "sertraline",
+          "tramadol"
+        ],
+        "expected_min_severity": "high",
+        "actual_max_severity_rank": 3,
+        "hit": true
+      }
+    ]
+  }
+}

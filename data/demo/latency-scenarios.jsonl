@@ -1,0 +1,6 @@
+{"case_id":"LAT-001","endpoint":"careguard","profile":"online","payload":{"medications":["warfarin","ibuprofen"]},"budget_ms":2500,"notes":"Fast high-signal DDI query."}
+{"case_id":"LAT-002","endpoint":"careguard","profile":"online","payload":{"medications":["aspirin","ibuprofen"]},"budget_ms":2500,"notes":"Medium severity DDI query."}
+{"case_id":"LAT-003","endpoint":"careguard","profile":"offline","payload":{"medications":["lisinopril","ibuprofen"]},"budget_ms":500,"notes":"Forced local fallback latency probe."}
+{"case_id":"LAT-004","endpoint":"research_tier2","profile":"fast","payload":{"query":"Tương tác warfarin với thuốc giảm đau phổ biến","research_mode":"fast"},"budget_ms":5000,"notes":"Short research path."}
+{"case_id":"LAT-005","endpoint":"research_tier2","profile":"fast","payload":{"query":"Compare aspirin and ibuprofen bleeding risk in older adults","research_mode":"fast"},"budget_ms":5000,"notes":"English retrieval probe."}
+{"case_id":"LAT-006","endpoint":"research_tier2","profile":"deep","payload":{"query":"Evaluate evidence for warfarin and NSAID co-prescribing in older adults","research_mode":"deep"},"budget_ms":15000,"notes":"Longer research path for p95 visibility."}
