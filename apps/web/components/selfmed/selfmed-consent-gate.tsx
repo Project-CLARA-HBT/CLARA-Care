@@ -12,9 +12,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
   const [isLoading, setIsLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
   const [requiredVersion, setRequiredVersion] = useState("");
-  const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
   const [acceptedAt, setAcceptedAt] = useState<string | null>(null);
-  const [consentUserId, setConsentUserId] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -29,9 +27,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
       const status = await getConsentStatus();
       setRequiredVersion(status.required_version);
       setAccepted(status.accepted);
-      setAcceptedVersion(status.accepted_version ?? null);
       setAcceptedAt(status.accepted_at ?? null);
-      setConsentUserId(typeof status.user_id === "number" ? status.user_id : null);
       return status.accepted;
     } catch (cause) {
       setAccepted(false);
@@ -151,18 +147,19 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
 
   return (
     <div className="space-y-4">
-      <section className="chrome-panel rounded-2xl border border-emerald-300/50 bg-emerald-500/10 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">Consent đã được mở khóa</p>
-        <div className="mt-2 grid gap-2 text-sm text-emerald-100/95 md:grid-cols-3">
-          <p>
-            Phiên bản đã chấp thuận: <span className="font-semibold">{acceptedVersion ?? requiredVersion ?? "-"}</span>
-          </p>
-          <p>
-            Thời điểm chấp thuận: <span className="font-semibold">{acceptedAtDisplay ?? "Chưa có dữ liệu"}</span>
-          </p>
-          <p>
-            User context: <span className="font-semibold">{consentUserId ? `user_id=${consentUserId}` : "Ẩn danh/không có"}</span>
-          </p>
+      <section className="chrome-panel rounded-2xl border border-emerald-400/60 bg-emerald-500/10 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-300" aria-hidden="true">
+            verified_user
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
+              Bạn đã đồng ý điều khoản sử dụng y tế của CLARA
+            </p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-100/85">
+              {acceptedAtDisplay ? `Đã xác nhận lúc ${acceptedAtDisplay}` : "Có thể bắt đầu sử dụng tủ thuốc."}
+            </p>
+          </div>
         </div>
       </section>
       {children}

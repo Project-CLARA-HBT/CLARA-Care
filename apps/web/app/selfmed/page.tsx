@@ -132,6 +132,8 @@ export default function SelfMedPage() {
     };
   }, [items]);
 
+  const canCheckInteractions = stats.total >= 2;
+
   const topItems = useMemo(
     () =>
       [...items]
@@ -267,29 +269,45 @@ export default function SelfMedPage() {
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Thêm thuốc đang dùng vào đây. Khi có từ 2 thuốc trở lên, CLARA có thể kiểm tra cặp thuốc nào cần lưu ý.
+                  Thêm các thuốc bạn đang dùng để CLARA kiểm tra tương tác và nhắc lịch dùng thuốc.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/selfmed/add"
-                  className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
-                >
-                  + Thêm thuốc
-                </Link>
-                <Link
-                  href="/selfmed/ddi"
-                  className="inline-flex min-h-11 items-center rounded-lg border border-cyan-300/50 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-100"
-                >
-                  Kiểm tra tương tác thuốc
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void refreshCabinet()}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
-                >
-                  Làm mới
-                </button>
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/selfmed/add"
+                    className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
+                  >
+                    + Thêm thuốc
+                  </Link>
+                  {canCheckInteractions ? (
+                    <Link
+                      href="/selfmed/ddi"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-cyan-400/60 bg-cyan-500/15 px-4 text-sm font-semibold text-cyan-700 dark:text-cyan-100"
+                    >
+                      Kiểm tra tương tác thuốc
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Cần thêm ít nhất 2 thuốc để kiểm tra tương tác."
+                      className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-muted)]"
+                    >
+                      Kiểm tra tương tác thuốc
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void refreshCabinet()}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
+                  >
+                    Làm mới
+                  </button>
+                </div>
+                {!canCheckInteractions ? (
+                  <p className="text-xs text-[var(--text-muted)]">Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.</p>
+                ) : null}
               </div>
             </div>
 
@@ -308,14 +326,22 @@ export default function SelfMedPage() {
                   <span
                     className={[
                       "rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
-                      stats.riskTone === "high"
-                        ? "border-red-300/40 bg-red-500/15 text-red-200"
-                        : stats.riskTone === "moderate"
-                          ? "border-amber-300/40 bg-amber-500/15 text-amber-200"
-                          : "border-emerald-300/40 bg-emerald-500/15 text-emerald-200",
+                      stats.total === 0
+                        ? "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                        : stats.riskTone === "high"
+                          ? "border-red-300/40 bg-red-500/15 text-red-700 dark:text-red-200"
+                          : stats.riskTone === "moderate"
+                            ? "border-amber-300/40 bg-amber-500/15 text-amber-700 dark:text-amber-200"
+                            : "border-emerald-300/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
                     ].join(" ")}
                   >
-                    {stats.riskTone === "high" ? "CẢNH BÁO CAO" : stats.riskTone === "moderate" ? "TRUNG BÌNH" : "ỔN ĐỊNH"}
+                    {stats.total === 0
+                      ? "CHƯA CÓ THUỐC"
+                      : stats.riskTone === "high"
+                        ? "CẢNH BÁO CAO"
+                        : stats.riskTone === "moderate"
+                          ? "TRUNG BÌNH"
+                          : "ỔN ĐỊNH"}
                   </span>
                 </div>
 
@@ -352,8 +378,8 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
-                        <div className="h-full rounded-full bg-red-300" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
+                        <div className="h-full rounded-full bg-cyan-500 dark:bg-cyan-300" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
                       </div>
                     </div>
                     <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -361,9 +387,9 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
                         <div
-                          className="h-full rounded-full bg-cyan-300"
+                          className="h-full rounded-full bg-cyan-500 dark:bg-cyan-300"
                           style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
                         />
                       </div>

@@ -14,12 +14,12 @@ import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/
 
 const COPY = {
   vi: {
-    title: "PHR (beta)",
+    title: "Hồ sơ sức khỏe cá nhân",
     description: "Không gian quản lý hồ sơ sức khỏe cá nhân.",
     save: "Lưu hồ sơ",
     saving: "Đang lưu...",
     loading: "Đang tải hồ sơ...",
-    loadError: "Không tải được hồ sơ PHR.",
+    loadError: "Chưa thể tải hồ sơ sức khỏe. Vui lòng thử lại sau.",
     saveOk: "Đã lưu hồ sơ PHR thành công.",
     saveError: "Lưu hồ sơ thất bại.",
     profile: "Thông tin hồ sơ",
@@ -56,12 +56,12 @@ const COPY = {
     unknown: "Chưa rõ",
   },
   en: {
-    title: "PHR (beta)",
+    title: "Personal Health Record",
     description: "Personal health record management workspace.",
     save: "Save record",
     saving: "Saving...",
     loading: "Loading PHR record...",
-    loadError: "Unable to load PHR record.",
+    loadError: "Unable to load your health record. Please try again later.",
     saveOk: "PHR record saved.",
     saveError: "Failed to save PHR record.",
     profile: "Profile",
@@ -199,9 +199,9 @@ export default function PhrPage() {
         const data = await getPhrRecord();
         if (!mounted) return;
         setRecord(normalizeRecord(data));
-      } catch (err) {
+      } catch {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : text.loadError);
+        setError(text.loadError);
       } finally {
         if (mounted) setLoading(false);
       }

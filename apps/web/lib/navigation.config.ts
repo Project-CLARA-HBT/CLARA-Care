@@ -79,14 +79,14 @@ const NAV_ITEMS: NavigationItem[] = [
   },
   {
     href: "/phr",
-    label: "PHR",
+    label: "Hồ sơ sức khỏe cá nhân",
     icon: "description",
     desc: "Hồ sơ sức khỏe cá nhân",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
-      title: "PHR",
+      title: "Hồ sơ sức khỏe cá nhân",
       subtitle: "Lưu trữ và tổng hợp hồ sơ sức khỏe cá nhân."
     }
   },
