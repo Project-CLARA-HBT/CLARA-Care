@@ -80,12 +80,21 @@ const RETRIEVER_LABEL: Record<RetrieverId, string> = {
 const DEFAULT_FLOW: ControlTowerRagFlow = {
   role_router_enabled: true,
   intent_router_enabled: true,
+  rule_verification_enabled: true,
+  nli_model_enabled: true,
+  rag_reranker_enabled: true,
+  rag_nli_enabled: true,
+  rag_graphrag_enabled: true,
   verification_enabled: true,
   deepseek_fallback_enabled: true,
   low_context_threshold: 0.2,
   scientific_retrieval_enabled: true,
   web_retrieval_enabled: true,
-  file_retrieval_enabled: true
+  file_retrieval_enabled: true,
+  llm_provider: "hitechcloud_gpt53_codex_high",
+  llm_base_url: "https://platform.hitechcloud.one/v1",
+  llm_model: "gpt-5.3-codex-high",
+  llm_api_key: ""
 };
 
 function formatNumber(value: number): string {
@@ -143,9 +152,12 @@ export default function AdminFlowDebugger({
     (scenario.id === "low-context" || !retrieveActive);
 
   const synthesizeActive = retrieveActive || fallbackBranchActive;
+  const verificationGateEnabled = Boolean(flow.rule_verification_enabled ?? flow.verification_enabled);
+  const nliActive = Boolean(flow.nli_model_enabled) && Boolean(flow.rag_nli_enabled);
   const verifyActive =
     synthesizeActive &&
-    flow.verification_enabled &&
+    verificationGateEnabled &&
+    nliActive &&
     scenario.requiresVerification;
 
   const policyActive = synthesizeActive;
@@ -187,10 +199,10 @@ export default function AdminFlowDebugger({
       id: "verify",
       title: "verify",
       detail: verifyActive
-        ? "Verification đang bật cho scenario này."
-        : flow.verification_enabled
+        ? "Rule verification + NLI đang bật cho scenario này."
+        : verificationGateEnabled && nliActive
           ? "Scenario này đi nhánh không bắt buộc verify."
-          : "Verification đang bị tắt trong ragFlow.",
+          : "Rule verification hoặc NLI đang bị tắt trong ragFlow.",
       active: verifyActive
     },
     {
@@ -222,8 +234,8 @@ export default function AdminFlowDebugger({
     {
       id: "run-2",
       scenario: "evidence-heavy",
-      status: flow.verification_enabled ? "success" : "warn",
-      policyAction: flow.verification_enabled ? "allow" : "warn",
+      status: verificationGateEnabled && nliActive ? "success" : "warn",
+      policyAction: verificationGateEnabled && nliActive ? "allow" : "warn",
       durationMs: 2240
     },
     {

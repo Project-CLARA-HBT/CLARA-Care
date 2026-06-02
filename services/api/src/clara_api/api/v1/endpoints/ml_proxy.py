@@ -20,14 +20,28 @@ def proxy_ml_post(
     payload: dict[str, Any],
     *,
     fail_soft_payload: dict[str, Any] | None = None,
+    timeout_seconds: float | None = None,
 ) -> dict[str, Any]:
     settings = get_settings()
     url = f"{settings.ml_service_url.rstrip('/')}/{ml_path.lstrip('/')}"
     response: httpx.Response | None = None
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
 
     for attempt in range(2):
         try:
-            response = httpx.post(url, json=payload, timeout=settings.ml_service_timeout_seconds)
+            request_kwargs: dict[str, Any] = {
+                "json": payload,
+                "timeout": (
+                    timeout_seconds
+                    if isinstance(timeout_seconds, (int, float)) and timeout_seconds > 0
+                    else settings.ml_service_timeout_seconds
+                ),
+            }
+            if headers:
+                request_kwargs["headers"] = headers
+            response = httpx.post(url, **request_kwargs)
             break
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             if attempt < 1:

@@ -1,7 +1,22 @@
 import { ChangeEvent, FormEvent, RefObject } from "react";
 import MarkdownAnswer from "@/components/research/markdown-answer";
 import { ResearchResult } from "@/components/research/lib/research-page-types";
-import { ResearchTier, Tier2Step } from "@/lib/research";
+import {
+  ResearchExecutionMode,
+  ResearchRetrievalStackMode,
+  ResearchTier,
+  Tier2Step
+} from "@/lib/research";
+
+function researchModeLabel(mode: ResearchExecutionMode): string {
+  if (mode === "fast") return "Nhanh";
+  if (mode === "deep") return "Tư duy";
+  return "Pro";
+}
+
+function retrievalStackLabel(mode: ResearchRetrievalStackMode): string {
+  return mode === "full" ? "Đầy đủ nguồn" : "Tự chọn nguồn";
+}
 
 type ResearchWorkspaceHeaderProps = {
   roleLabel: string;
@@ -49,6 +64,10 @@ type ResearchMainCardProps = {
   onUploadInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onQueryChange: (value: string) => void;
   onSelectTier: (tier: ResearchTier) => void;
+  selectedResearchMode: ResearchExecutionMode;
+  onSelectResearchMode: (mode: ResearchExecutionMode) => void;
+  selectedRetrievalStackMode: ResearchRetrievalStackMode;
+  onSelectRetrievalStackMode: (mode: ResearchRetrievalStackMode) => void;
 
   lastQuery: string;
   result: ResearchResult | null;
@@ -66,11 +85,23 @@ export function ResearchMainCard({
   onUploadInputChange,
   onQueryChange,
   onSelectTier,
+  selectedResearchMode,
+  onSelectResearchMode,
+  selectedRetrievalStackMode,
+  onSelectRetrievalStackMode,
   lastQuery,
   result,
   showDebugHints,
   evidenceSteps
 }: ResearchMainCardProps) {
+  const isFastResearchMode = selectedResearchMode === "fast";
+  const onModeChange = (mode: ResearchExecutionMode) => {
+    onSelectResearchMode(mode);
+    if (mode === "fast" && selectedRetrievalStackMode !== "auto") {
+      onSelectRetrievalStackMode("auto");
+    }
+  };
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85 sm:p-5 lg:p-6">
       <form onSubmit={onSubmit} className="space-y-3">
@@ -103,8 +134,9 @@ export function ResearchMainCard({
                 <button
                   type="button"
                   onClick={() => onSelectTier("tier1")}
+                  disabled={isSubmitting}
                   className={[
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier1"
                       ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
                       : "text-slate-600 dark:text-slate-300"
@@ -115,8 +147,9 @@ export function ResearchMainCard({
                 <button
                   type="button"
                   onClick={() => onSelectTier("tier2")}
+                  disabled={isSubmitting}
                   className={[
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier2"
                       ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
                       : "text-slate-600 dark:text-slate-300"
@@ -125,6 +158,90 @@ export function ResearchMainCard({
                   Chuyên sâu
                 </button>
               </fieldset>
+
+              {selectedTier === "tier2" ? (
+                <>
+                  <fieldset className="inline-flex rounded-full border border-sky-300 bg-sky-50 p-1 dark:border-sky-700 dark:bg-sky-950/30">
+                    <legend className="sr-only">Chọn mức research</legend>
+                    <button
+                      type="button"
+                      onClick={() => onModeChange("fast")}
+                      disabled={isSubmitting}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selectedResearchMode === "fast"
+                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                          : "text-sky-700 dark:text-sky-300"
+                      ].join(" ")}
+                    >
+                      Nhanh
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onModeChange("deep")}
+                      disabled={isSubmitting}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selectedResearchMode === "deep"
+                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                          : "text-sky-700 dark:text-sky-300"
+                      ].join(" ")}
+                    >
+                      Tư duy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onModeChange("deep_beta")}
+                      disabled={isSubmitting}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selectedResearchMode === "deep_beta"
+                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
+                          : "text-sky-700 dark:text-sky-300"
+                      ].join(" ")}
+                    >
+                      Pro
+                    </button>
+                  </fieldset>
+
+                  <fieldset className="inline-flex rounded-full border border-cyan-300 bg-cyan-50 p-1 dark:border-cyan-700 dark:bg-cyan-950/30">
+                    <legend className="sr-only">Chọn retrieval stack</legend>
+                    <button
+                      type="button"
+                      onClick={() => onSelectRetrievalStackMode("auto")}
+                      disabled={isSubmitting}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selectedRetrievalStackMode === "auto"
+                          ? "bg-cyan-700 text-white dark:bg-cyan-300 dark:text-slate-900"
+                          : "text-cyan-700 dark:text-cyan-300"
+                      ].join(" ")}
+                    >
+                      Tự chọn nguồn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelectRetrievalStackMode("full")}
+                      disabled={isSubmitting || isFastResearchMode}
+                      title={isFastResearchMode ? "Chế độ Nhanh dùng phạm vi nguồn tự chọn để trả lời nhanh hơn." : undefined}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                        selectedRetrievalStackMode === "full"
+                          ? "bg-cyan-700 text-white dark:bg-cyan-300 dark:text-slate-900"
+                          : "text-cyan-700 dark:text-cyan-300"
+                      ].join(" ")}
+                    >
+                      Đầy đủ nguồn
+                    </button>
+                  </fieldset>
+
+                  {isFastResearchMode ? (
+                    <p className="text-xs text-cyan-700 dark:text-cyan-300">
+                      Chế độ Nhanh dùng phạm vi nguồn tự chọn để giảm thời gian chờ.
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
             </div>
 
             <button
@@ -159,7 +276,9 @@ export function ResearchMainCard({
           <article className="rounded-3xl border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm text-sky-800 dark:border-sky-700 dark:bg-sky-950/30 dark:text-sky-200">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
-              CLARA đang tổng hợp phản hồi và cập nhật timeline xử lý...
+              {selectedTier === "tier2"
+                ? `CLARA đang xử lý ở chế độ ${researchModeLabel(selectedResearchMode)} · ${retrievalStackLabel(selectedRetrievalStackMode)}. Tiến trình sẽ cập nhật khi có kết quả.`
+                : "CLARA đang tổng hợp trả lời nhanh..."}
             </span>
           </article>
         ) : null}
@@ -168,7 +287,16 @@ export function ResearchMainCard({
           <article className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
             <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Trả lời nhanh</p>
             <div className="mt-2">
-              <MarkdownAnswer answer={result.answer} citations={[]} />
+              <MarkdownAnswer
+                answer={result.answer}
+                citations={[]}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </div>
           </article>
         ) : null}
@@ -186,18 +314,27 @@ export function ResearchMainCard({
                       : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                   ].join(" ")}
                 >
-                  {result.policyAction === "warn" ? "Policy: Warn" : "Policy: Allow"}
+                  {result.policyAction === "warn" ? "Cần đọc lưu ý" : "Có thể tham khảo"}
                 </span>
               ) : null}
               {typeof result.fallbackUsed === "boolean" ? (
                 <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {result.fallbackUsed ? "Fallback mode" : "RAG mode"}
+                  {result.fallbackUsed ? "Nguồn giới hạn" : "Có đối chiếu nguồn"}
                 </span>
               ) : null}
             </div>
 
             <div className="mt-2">
-              <MarkdownAnswer answer={result.answer || "Chưa có nội dung."} citations={result.citations} />
+              <MarkdownAnswer
+                answer={result.answer || "Chưa có nội dung."}
+                citations={result.citations}
+                showInlineCitations={false}
+                enableMermaid={false}
+                stripReferenceSection={true}
+                stripSafetyMatrixSection={false}
+                stripMermaidBlocks={true}
+                stripChartSpecBlocks={true}
+              />
             </div>
 
             {result.citations.length ? (
@@ -219,11 +356,14 @@ export function ResearchMainCard({
             {result.verificationStatus ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
                 <p className="font-semibold">
-                  FIDES-lite: {result.verificationStatus.verdict ?? "n/a"} | confidence:{" "}
+                  FIDES-lite: {result.verificationStatus.verdict ?? "n/a"} | độ tin cậy:{" "}
                   {typeof result.verificationStatus.confidence === "number"
                     ? result.verificationStatus.confidence.toFixed(2)
                     : "n/a"}
-                  {result.verificationStatus.severity ? ` | severity: ${result.verificationStatus.severity}` : ""}
+                  {result.verificationStatus.severity ? ` | mức độ: ${result.verificationStatus.severity}` : ""}
+                  {typeof result.verificationStatus.evidenceCount === "number"
+                    ? ` | số bằng chứng: ${result.verificationStatus.evidenceCount}`
+                    : ""}
                 </p>
                 {result.verificationStatus.note ? (
                   <p className="mt-1 text-slate-600 dark:text-slate-300">{result.verificationStatus.note}</p>

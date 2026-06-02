@@ -1,6 +1,6 @@
-# CLARA Mobile (Flutter Skeleton)
+# CLARA Mobile (Flutter Starter)
 
-This folder contains a minimal Flutter app skeleton for CLARA mobile integration.
+This folder contains a lightweight Flutter client starter for CLARA mobile integration.
 
 ## Included
 
@@ -32,7 +32,7 @@ This folder contains a minimal Flutter app skeleton for CLARA mobile integration
    - `cd apps/mobile`
    - `flutter pub get`
 
-This skeleton intentionally excludes generated platform folders. To run on a device/emulator, generate platforms locally (do not commit generated folders if not needed):
+Generated platform folders are intentionally excluded from git. To run on a device/emulator, generate platforms locally (do not commit generated folders if not needed):
 
 - `flutter create . --platforms=android,ios,web`
 

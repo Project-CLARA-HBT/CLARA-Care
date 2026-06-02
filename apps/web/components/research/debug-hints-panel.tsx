@@ -1,3 +1,5 @@
+import { ResearchTier2PolicyAction } from "@/lib/research";
+
 type DebugHintsPanelProps = {
   enabled: boolean;
   roleLabel: string;
@@ -5,8 +7,8 @@ type DebugHintsPanelProps = {
   conversationCount: number;
   selectedSourceCount: number;
   uploadedFileCount: number;
-  flowMode: "idle" | "flow-events" | "metadata-stages" | "local-fallback";
-  policyAction?: "allow" | "warn";
+  flowMode: "idle" | "flow-events" | "metadata-stages" | "local-fallback" | "server-await";
+  policyAction?: ResearchTier2PolicyAction;
   fallbackUsed?: boolean;
   verificationVerdict?: string;
   verificationConfidence?: number;
@@ -14,6 +16,14 @@ type DebugHintsPanelProps = {
   routingIntent?: string;
   routingConfidence?: number;
   pipeline?: string;
+  telemetryKeywordCount?: number;
+  telemetryDocCount?: number;
+  telemetrySourceAttemptCount?: number;
+  telemetryErrorCount?: number;
+  telemetryTopError?: string;
+  crawlDomainCount?: number;
+  researchMode?: string;
+  deepPassCount?: number;
 };
 
 function formatConfidence(value?: number): string {
@@ -36,7 +46,15 @@ export default function DebugHintsPanel({
   routingRole,
   routingIntent,
   routingConfidence,
-  pipeline
+  pipeline,
+  telemetryKeywordCount,
+  telemetryDocCount,
+  telemetrySourceAttemptCount,
+  telemetryErrorCount,
+  telemetryTopError,
+  crawlDomainCount,
+  researchMode,
+  deepPassCount
 }: DebugHintsPanelProps) {
   if (!enabled) return null;
 
@@ -58,6 +76,14 @@ export default function DebugHintsPanel({
         <p>routing_intent: {routingIntent ?? "n/a"}</p>
         <p>routing_confidence: {formatConfidence(routingConfidence)}</p>
         <p>pipeline: {pipeline ?? "n/a"}</p>
+        <p>research_mode: {researchMode ?? "n/a"}</p>
+        <p>deep_pass_count: {deepPassCount ?? 0}</p>
+        <p>telemetry_keywords: {telemetryKeywordCount ?? 0}</p>
+        <p>telemetry_docs: {telemetryDocCount ?? 0}</p>
+        <p>telemetry_source_attempts: {telemetrySourceAttemptCount ?? 0}</p>
+        <p>telemetry_errors: {telemetryErrorCount ?? 0}</p>
+        <p>crawl_domains: {crawlDomainCount ?? 0}</p>
+        <p>telemetry_top_error: {telemetryTopError ?? "n/a"}</p>
       </div>
     </section>
   );

@@ -1,5 +1,10 @@
-import { ResearchFlowStage, UploadedResearchFile } from "@/lib/research";
-import { LOCAL_FLOW_BLUEPRINT } from "@/components/research/lib/research-page-constants";
+import {
+  PersistedResearchConversation,
+  ResearchFlowStage,
+  ResearchTier2RawResponse,
+  UploadedResearchFile,
+  normalizeResearchTier2
+} from "@/lib/research";
 import { ConversationItem, FlowVisibilityMode, ResearchResult, Tier2Result } from "@/components/research/lib/research-page-types";
 
 export function mergeUploadedFiles(current: UploadedResearchFile[], incoming: UploadedResearchFile[]): UploadedResearchFile[] {
@@ -32,52 +37,94 @@ export function resolveFlowModeFromResult(result: Tier2Result): FlowVisibilityMo
   return "idle";
 }
 
-export function buildLocalFlowStages(activeIndex: number, terminalStatus?: "completed" | "failed"): ResearchFlowStage[] {
-  const cappedIndex = Math.max(0, Math.min(activeIndex, LOCAL_FLOW_BLUEPRINT.length - 1));
-
-  return LOCAL_FLOW_BLUEPRINT.map((stage, index) => {
-    let status: ResearchFlowStage["status"] = "pending";
-    if (index < cappedIndex) status = "completed";
-    if (index === cappedIndex) status = terminalStatus ?? "in_progress";
-    if (terminalStatus === "completed" && index <= cappedIndex) status = "completed";
-    if (terminalStatus === "failed" && index < cappedIndex) status = "completed";
-
-    return {
-      ...stage,
-      status,
-      source: "local"
-    };
-  });
-}
-
 export function markTimelineFailed(stages: ResearchFlowStage[]): ResearchFlowStage[] {
   if (!stages.length) {
-    return buildLocalFlowStages(0, "failed");
+    return [
+      {
+        id: "server_processing",
+        label: "Server processing",
+        detail: "Không thể hoàn tất xử lý từ backend cho phiên nghiên cứu này.",
+        status: "failed",
+        source: "local"
+      }
+    ];
   }
 
-  const activeIndex = stages.findIndex((stage) => stage.status === "in_progress");
-  if (activeIndex >= 0) {
-    return stages.map((stage, index) => (index === activeIndex ? { ...stage, status: "failed" } : stage));
+  const inProgressIndex = stages.findIndex((stage) => stage.status === "in_progress");
+  if (inProgressIndex >= 0) {
+    return stages.map((stage, index) => (index === inProgressIndex ? { ...stage, status: "failed" } : stage));
   }
 
-  const lastCompletedIndex = stages.reduce((acc, stage, index) => {
-    if (stage.status === "completed") return index;
-    return acc;
-  }, 0);
+  const latestNonCompletedIndex = [...stages].reverse().findIndex((stage) => stage.status !== "completed");
+  const failedIndex = latestNonCompletedIndex === -1 ? stages.length - 1 : stages.length - 1 - latestNonCompletedIndex;
 
   return stages.map((stage, index) => {
-    if (index < lastCompletedIndex) return stage;
-    if (index === lastCompletedIndex) return { ...stage, status: "failed" };
-    return stage;
+    if (index !== failedIndex) return stage;
+    return { ...stage, status: "failed" };
   });
 }
 
-export function createConversationItem(query: string, result: ResearchResult): ConversationItem {
-  const createdAt = Date.now();
+export function createConversationItem(
+  query: string,
+  result: ResearchResult,
+  options?: { id?: string; createdAt?: number }
+): ConversationItem {
+  const createdAt = options?.createdAt ?? Date.now();
   return {
-    id: `${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
+    id: options?.id ?? `${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
     query,
     result,
     createdAt
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const next = value.trim();
+  return next ? next : undefined;
+}
+
+function normalizePersistedTier(value: Record<string, unknown>): "tier1" | "tier2" {
+  const raw = asText(value.tier)?.toLowerCase();
+  if (raw === "tier2") return "tier2";
+  if (raw === "tier1") return "tier1";
+  if (value.citations || value.flowEvents || value.flow_events || value.telemetry) return "tier2";
+  return "tier1";
+}
+
+function parsePersistedResult(value: Record<string, unknown>): ResearchResult {
+  const tier = normalizePersistedTier(value);
+  if (tier === "tier2") {
+    const raw: ResearchTier2RawResponse = {
+      ...(value as ResearchTier2RawResponse),
+      flow_events: value.flow_events ?? value.flowEvents,
+      metadata: asRecord(value.metadata) ?? undefined,
+      context_debug: asRecord(value.context_debug) ?? asRecord(value.contextDebug)
+    };
+    return {
+      tier: "tier2",
+      ...normalizeResearchTier2(raw)
+    };
+  }
+
+  return {
+    tier: "tier1",
+    answer: asText(value.answer) ?? asText(value.summary) ?? "",
+    debug: null
+  };
+}
+
+export function createConversationItemFromPersisted(
+  persisted: PersistedResearchConversation
+): ConversationItem {
+  return createConversationItem(
+    persisted.query,
+    parsePersistedResult(persisted.result),
+    { id: persisted.id, createdAt: persisted.createdAt }
+  );
 }

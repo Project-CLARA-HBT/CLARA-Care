@@ -94,6 +94,16 @@ class P1RoleIntentRouter:
         "mediterranean",
         "che do an",
     )
+    GREETING_HINTS = (
+        "hi",
+        "hello",
+        "hey",
+        "xin chao",
+        "chao",
+        "alo",
+        "good morning",
+        "good afternoon",
+    )
 
     def route(self, query: str, role_hint: str | None = None) -> RouteResult:
         normalized = self._normalize(query)
@@ -143,6 +153,9 @@ class P1RoleIntentRouter:
         return role, min(0.95, 0.62 + 0.11 * hits)
 
     def _classify_intent(self, role: str, normalized_query: str) -> tuple[str, float]:
+        if role == "normal" and self._is_general_greeting(normalized_query):
+            return "general_guidance", 0.76
+
         if role == "normal" and self._contains_any(normalized_query, self.COMPARATIVE_NORMAL_HINTS):
             return "lifestyle_guidance", 0.74
 
@@ -165,3 +178,21 @@ class P1RoleIntentRouter:
             }[role]
             return default_intent, 0.58
         return intent, min(0.95, 0.64 + 0.1 * hits)
+
+    def _is_general_greeting(self, normalized_query: str) -> bool:
+        compact = normalized_query.strip()
+        if not compact:
+            return False
+
+        token_count = len([token for token in compact.split(" ") if token])
+        if token_count > 5:
+            return False
+
+        if not self._contains_any(compact, self.GREETING_HINTS):
+            return False
+
+        medical_hits = sum(
+            self._count_hits(compact, keywords)
+            for keywords in self.INTENT_KEYWORDS["normal"].values()
+        )
+        return medical_hits == 0

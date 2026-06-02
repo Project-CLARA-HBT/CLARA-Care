@@ -40,6 +40,74 @@ export type SystemDependenciesSnapshot = {
   mlStatus: string;
 };
 
+export type SystemDashboardRawResponse = {
+  generated_at?: string;
+  user?: Record<string, unknown>;
+  runtime?: Record<string, unknown>;
+  sources?: Record<string, unknown>;
+  cabinet?: Record<string, unknown>;
+  research?: Record<string, unknown>;
+  alerts?: unknown[];
+  tasks?: unknown[];
+  [key: string]: unknown;
+};
+
+export type SystemDashboardTask = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "normal" | "warn" | "critical";
+  href: string;
+  count: number | null;
+};
+
+export type SystemDashboardSnapshot = {
+  generatedAt: string | null;
+  user: {
+    role: string;
+    subject: string;
+  };
+  runtime: {
+    apiStatus: string;
+    mlStatus: string;
+    mlReachable: boolean | null;
+    requestCount: number | null;
+    errorCount: number | null;
+    avgLatencyMs: number | null;
+    errorRatePct: number | null;
+  };
+  cabinet: {
+    itemTotal: number | null;
+    expiredTotal: number | null;
+    expiringSoonTotal: number | null;
+    missingDosageTotal: number | null;
+  };
+  sources: {
+    enabled: number;
+    total: number;
+    lowContextThreshold: number;
+    flowFlags: {
+      roleRouter: boolean;
+      intentRouter: boolean;
+      ruleVerification: boolean;
+      nliModel: boolean;
+      ragNli: boolean;
+      ragReranker: boolean;
+      ragGraphRag: boolean;
+      deepseekFallback: boolean;
+      scientificRetrieval: boolean;
+      webRetrieval: boolean;
+      fileRetrieval: boolean;
+    };
+    flowEnabledCount: number;
+  };
+  research: {
+    recentQueries: Array<{ id: string; query: string; createdAt: number }>;
+  };
+  alerts: string[];
+  tasks: SystemDashboardTask[];
+};
+
 export type SystemEcosystemRawResponse = {
   generated_at?: string;
   summary?: Record<string, unknown>;
@@ -101,17 +169,39 @@ export type ControlTowerRagSource = {
 export type ControlTowerRagFlow = {
   role_router_enabled: boolean;
   intent_router_enabled: boolean;
-  verification_enabled: boolean;
+  rule_verification_enabled: boolean;
+  nli_model_enabled: boolean;
+  rag_reranker_enabled: boolean;
+  rag_nli_enabled: boolean;
+  rag_graphrag_enabled: boolean;
+  verification_enabled?: boolean;
   deepseek_fallback_enabled: boolean;
   low_context_threshold: number;
   scientific_retrieval_enabled: boolean;
   web_retrieval_enabled: boolean;
   file_retrieval_enabled: boolean;
+  llm_provider: "deepseek" | "hitechcloud_gpt53_codex_high";
+  llm_base_url: string;
+  llm_model: string;
+  llm_api_key: string;
+};
+
+export type ControlTowerRagFlowMetrics = {
+  precision_at_k?: number;
+  recall_at_k?: number;
+  ndcg_at_k?: number;
+};
+
+export type ControlTowerRagFlowConfig = ControlTowerRagFlow & ControlTowerRagFlowMetrics;
+
+export type CareguardRuntimeConfig = {
+  external_ddi_enabled: boolean;
 };
 
 export type ControlTowerConfig = {
   rag_sources: ControlTowerRagSource[];
-  rag_flow: ControlTowerRagFlow;
+  rag_flow: ControlTowerRagFlowConfig;
+  careguard_runtime: CareguardRuntimeConfig;
 };
 
 export type SystemFlowEventsRawResponse = {
@@ -254,6 +344,11 @@ export async function getSystemMetrics(): Promise<SystemMetricsRawResponse> {
 
 export async function getSystemDependencies(): Promise<SystemDependenciesRawResponse> {
   const response = await api.get<SystemDependenciesRawResponse>("/system/dependencies");
+  return response.data;
+}
+
+export async function getSystemDashboard(): Promise<SystemDashboardRawResponse> {
+  const response = await api.get<SystemDashboardRawResponse>("/system/dashboard");
   return response.data;
 }
 
@@ -405,6 +500,107 @@ export function normalizeSystemDependencies(data: SystemDependenciesRawResponse)
     mlReachable === true ? "reachable" : mlReachable === false ? "unreachable" : mlStatusText ?? "unknown";
 
   return { mlReachable, mlStatus };
+}
+
+export function normalizeSystemDashboard(data: SystemDashboardRawResponse): SystemDashboardSnapshot {
+  const root = asRecord(data) ?? {};
+  const user = asRecord(root.user);
+  const runtime = asRecord(root.runtime);
+  const runtimeApi = asRecord(runtime?.api);
+  const runtimeMl = asRecord(runtime?.ml);
+  const sources = asRecord(root.sources);
+  const flowFlags = asRecord(sources?.flow_flags);
+  const cabinet = asRecord(root.cabinet);
+  const research = asRecord(root.research);
+
+  const alerts = asArray(root.alerts)
+    .map((row) => {
+      const item = asRecord(row);
+      if (!item) return asText(row);
+      return asText(item.message) ?? asText(item.detail) ?? asText(item.id);
+    })
+    .filter((row): row is string => Boolean(row));
+
+  const tasks = asArray(root.tasks)
+    .map((row) => asRecord(row))
+    .filter((row): row is Record<string, unknown> => Boolean(row))
+    .map((row, index) => {
+      const toneText = asLowerText(row.tone);
+      const tone: "normal" | "warn" | "critical" =
+        toneText === "critical" ? "critical" : toneText === "warn" || toneText === "warning" ? "warn" : "normal";
+
+      return {
+        id: asText(row.id) ?? `task-${index + 1}`,
+        title: asText(row.title) ?? "Task",
+        detail: asText(row.detail) ?? "",
+        tone,
+        href: asText(row.href) ?? "/dashboard",
+        count: asNumber(row.count),
+      };
+    });
+
+  const recentQueries = asArray(research?.recent_queries)
+    .map((row) => asRecord(row))
+    .filter((row): row is Record<string, unknown> => Boolean(row))
+    .map((row, index) => {
+      const createdAtIso = asText(row.created_at) ?? "";
+      const createdAtMs = createdAtIso ? Date.parse(createdAtIso) : Number.NaN;
+      return {
+        id: asText(row.id) ?? `query-${index + 1}`,
+        query: asText(row.query) ?? "",
+        createdAt: Number.isFinite(createdAtMs) ? createdAtMs : Date.now(),
+      };
+    })
+    .filter((row) => row.query.trim().length > 0);
+
+  const normalizedFlowFlags = {
+    roleRouter: Boolean(flowFlags?.role_router_enabled),
+    intentRouter: Boolean(flowFlags?.intent_router_enabled),
+    ruleVerification: Boolean(flowFlags?.rule_verification_enabled),
+    nliModel: Boolean(flowFlags?.nli_model_enabled),
+    ragNli: Boolean(flowFlags?.rag_nli_enabled),
+    ragReranker: Boolean(flowFlags?.rag_reranker_enabled),
+    ragGraphRag: Boolean(flowFlags?.rag_graphrag_enabled),
+    deepseekFallback: Boolean(flowFlags?.deepseek_fallback_enabled),
+    scientificRetrieval: Boolean(flowFlags?.scientific_retrieval_enabled),
+    webRetrieval: Boolean(flowFlags?.web_retrieval_enabled),
+    fileRetrieval: Boolean(flowFlags?.file_retrieval_enabled),
+  };
+
+  return {
+    generatedAt: asText(root.generated_at),
+    user: {
+      role: asLowerText(user?.role) || "normal",
+      subject: asText(user?.email) ?? asText(user?.full_name) ?? "",
+    },
+    runtime: {
+      apiStatus: asText(runtimeApi?.status) ?? "unknown",
+      mlStatus: asText(runtimeMl?.status) ?? "unknown",
+      mlReachable: asBoolean(runtimeMl?.reachable),
+      requestCount: asNumber(runtimeApi?.requests_total),
+      errorCount: asNumber(runtimeApi?.error_total),
+      avgLatencyMs: asNumber(runtimeApi?.avg_latency_ms),
+      errorRatePct: asNumber(runtimeApi?.error_rate_pct),
+    },
+    cabinet: {
+      itemTotal: asNumber(cabinet?.item_total),
+      expiredTotal: asNumber(cabinet?.expired_total),
+      expiringSoonTotal: asNumber(cabinet?.expiring_soon_total),
+      missingDosageTotal: asNumber(cabinet?.missing_dosage_total),
+    },
+    sources: {
+      enabled: Math.max(0, Math.trunc(asNumber(sources?.enabled) ?? 0)),
+      total: Math.max(0, Math.trunc(asNumber(sources?.total) ?? 0)),
+      lowContextThreshold: asNumber(sources?.low_context_threshold) ?? 0,
+      flowFlags: normalizedFlowFlags,
+      flowEnabledCount: Object.values(normalizedFlowFlags).filter(Boolean).length,
+    },
+    research: {
+      recentQueries,
+    },
+    alerts,
+    tasks,
+  };
 }
 
 export function normalizeSystemEcosystem(data: SystemEcosystemRawResponse): SystemEcosystemSnapshot {

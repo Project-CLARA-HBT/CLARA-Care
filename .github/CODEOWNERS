@@ -1,0 +1,19 @@
+# Default owners
+* @nguyennt
+
+# Frontend
+/apps/web/ @nguyennt
+
+# API backend
+/services/api/ @nguyennt
+
+# ML backend
+/services/ml/ @nguyennt
+
+# DevOps / workflow
+/.github/workflows/ @nguyennt
+/deploy/ @nguyennt
+/scripts/ @nguyennt
+
+# Documentation
+/docs/ @nguyennt

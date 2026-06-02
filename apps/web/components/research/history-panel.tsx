@@ -41,7 +41,7 @@ export default function HistoryPanel({
                 className={[
                   "w-full rounded-2xl border px-3 py-2.5 text-left transition",
                   item.active
-                    ? "border-sky-300 bg-gradient-to-r from-sky-50 to-cyan-50 text-sky-900 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.25)] dark:border-sky-600 dark:from-sky-950/35 dark:to-cyan-950/35 dark:text-sky-200"
+                    ? "border-sky-300 bg-gradient-to-r from-sky-50 to-cyan-50 text-sky-900 shadow-[inset_0_0_0_1px_rgba(96,165,250,0.25)] dark:border-sky-600 dark:from-sky-950/35 dark:to-cyan-950/35 dark:text-sky-200"
                     : "border-slate-200 bg-slate-50/80 text-slate-700 hover:border-slate-300 hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-slate-600"
                 ].join(" ")}
               >

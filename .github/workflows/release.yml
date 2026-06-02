@@ -1,0 +1,231 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      target_branch:
+        description: "Branch to release from"
+        required: false
+        default: "main"
+        type: string
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  create-semver-tag:
+    name: create semver tag
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag.outputs.release_tag }}
+      release_sha: ${{ steps.tag.outputs.release_sha }}
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Compute and push next semver tag
+        id: tag
+        run: |
+          release_tag="$(bash scripts/release/compute_next_semver.sh "${{ github.event.inputs.bump }}")"
+          release_sha="$(git rev-parse HEAD)"
+
+          if git rev-parse "$release_tag" >/dev/null 2>&1; then
+            echo "[error] tag already exists: $release_tag"
+            exit 1
+          fi
+
+          git tag -a "$release_tag" -m "release: $release_tag"
+          git push origin "$release_tag"
+
+          {
+            echo "release_tag=$release_tag"
+            echo "release_sha=$release_sha"
+          } >> "$GITHUB_OUTPUT"
+
+  prepare-release-context:
+    name: prepare release context
+    runs-on: ubuntu-latest
+    needs: [create-semver-tag]
+    if: always() && (github.event_name == 'push' || needs.create-semver-tag.result == 'success')
+    outputs:
+      release_tag: ${{ steps.ctx.outputs.release_tag }}
+      release_sha: ${{ steps.ctx.outputs.release_sha }}
+      release_ref: ${{ steps.ctx.outputs.release_ref }}
+      short_sha: ${{ steps.ctx.outputs.short_sha }}
+      registry_repo: ${{ steps.ctx.outputs.registry_repo }}
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'push' && github.ref || needs.create-semver-tag.outputs.release_tag }}
+
+      - name: Resolve release context
+        id: ctx
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            release_ref="${GITHUB_REF}"
+            release_tag="${GITHUB_REF_NAME}"
+            release_sha="${GITHUB_SHA}"
+          else
+            release_tag="${{ needs.create-semver-tag.outputs.release_tag }}"
+            release_sha="${{ needs.create-semver-tag.outputs.release_sha }}"
+            release_ref="refs/tags/${release_tag}"
+          fi
+
+          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "[error] invalid release tag: $release_tag"
+            exit 1
+          fi
+
+          short_sha="${release_sha:0:7}"
+          registry_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+
+          {
+            echo "release_tag=$release_tag"
+            echo "release_sha=$release_sha"
+            echo "release_ref=$release_ref"
+            echo "short_sha=$short_sha"
+            echo "registry_repo=$registry_repo"
+          } >> "$GITHUB_OUTPUT"
+
+  build-push-images:
+    name: build and push release images
+    runs-on: ubuntu-latest
+    needs: [prepare-release-context]
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare-release-context.outputs.release_ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure jq is available
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+
+      - name: Build and push release images
+        id: build
+        run: |
+          manifest_path="$(bash scripts/release/build_and_push_images.sh \
+            --release-tag "${{ needs.prepare-release-context.outputs.release_tag }}" \
+            --commit-sha "${{ needs.prepare-release-context.outputs.release_sha }}" \
+            --registry "${{ needs.prepare-release-context.outputs.registry_repo }}")"
+          echo "manifest_path=$manifest_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release manifest artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-manifest-${{ needs.prepare-release-context.outputs.release_tag }}
+          path: ${{ steps.build.outputs.manifest_path }}
+          if-no-files-found: error
+
+      - name: Write standalone release SHA artifact
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          sha_file="release-artifacts/release-sha-${{ needs.prepare-release-context.outputs.release_tag }}.txt"
+          printf '%s\n' "${{ needs.prepare-release-context.outputs.release_sha }}" > "$sha_file"
+
+      - name: Upload standalone release SHA artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-sha-${{ needs.prepare-release-context.outputs.release_tag }}
+          path: release-artifacts/release-sha-${{ needs.prepare-release-context.outputs.release_tag }}.txt
+          if-no-files-found: error
+
+  publish-github-release:
+    name: publish github release
+    runs-on: ubuntu-latest
+    needs: [prepare-release-context, build-push-images]
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare-release-context.outputs.release_ref }}
+
+      - name: Download release manifest artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: image-manifest-${{ needs.prepare-release-context.outputs.release_tag }}
+          path: release-artifacts
+
+      - name: Download standalone release SHA artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: release-sha-${{ needs.prepare-release-context.outputs.release_tag }}
+          path: release-artifacts
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release_tag="${{ needs.prepare-release-context.outputs.release_tag }}"
+          manifest="release-artifacts/image-manifest-${release_tag}.json"
+          sha_file="release-artifacts/release-sha-${release_tag}.txt"
+
+          if gh release view "$release_tag" >/dev/null 2>&1; then
+            echo "Release ${release_tag} already exists. Keep existing notes."
+          else
+            gh release create "$release_tag" \
+              --target "${{ needs.prepare-release-context.outputs.release_sha }}" \
+              --title "$release_tag" \
+              --generate-notes
+          fi
+
+          gh release upload "$release_tag" "$manifest" "$sha_file" --clobber
+
+      - name: Release summary
+        run: |
+          {
+            echo "## Release Summary"
+            echo ""
+            echo "- Tag: \`${{ needs.prepare-release-context.outputs.release_tag }}\`"
+            echo "- Commit SHA: \`${{ needs.prepare-release-context.outputs.release_sha }}\`"
+            echo "- Registry: \`${{ needs.prepare-release-context.outputs.registry_repo }}\`"
+            echo "- Manifest: \`release-artifacts/image-manifest-${{ needs.prepare-release-context.outputs.release_tag }}.json\`"
+            echo "- SHA artifact: \`release-artifacts/release-sha-${{ needs.prepare-release-context.outputs.release_tag }}.txt\`"
+          } >> "$GITHUB_STEP_SUMMARY"

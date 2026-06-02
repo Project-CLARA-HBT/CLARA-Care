@@ -1,4 +1,9 @@
-from clara_api.schemas import RagFlowConfig, RagSourceEntry, SystemControlTowerConfig
+from clara_api.schemas import (
+    CareguardRuntimeConfig,
+    RagFlowConfig,
+    RagSourceEntry,
+    SystemControlTowerConfig,
+)
 
 CONTROL_TOWER_KEY = "control_tower_config_v1"
 
@@ -88,13 +93,25 @@ _DEFAULT_CONTROL_TOWER_CONFIG = SystemControlTowerConfig(
     rag_flow=RagFlowConfig(
         role_router_enabled=True,
         intent_router_enabled=True,
-        verification_enabled=True,
+        rule_verification_enabled=True,
+        nli_model_enabled=True,
+        rag_reranker_enabled=True,
+        rag_nli_enabled=True,
+        rag_graphrag_enabled=True,
         deepseek_fallback_enabled=True,
         low_context_threshold=0.2,
+        precision_at_k=10,
+        recall_at_k=10,
+        ndcg_at_k=10,
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=True,
         file_retrieval_enabled=True,
+        llm_provider="hitechcloud_gpt53_codex_high",
+        llm_base_url="https://platform.hitechcloud.one/v1",
+        llm_model="gpt-5.3-codex-high",
+        llm_api_key="",
     ),
+    careguard_runtime=CareguardRuntimeConfig(external_ddi_enabled=False),
 )
 
 

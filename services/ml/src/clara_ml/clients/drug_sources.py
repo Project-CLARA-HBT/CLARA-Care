@@ -19,6 +19,9 @@ _SEVERITY_MAP = {
     "minor": "low",
     "low": "low",
 }
+_CACHE_TTL_SECONDS = 600.0
+_OPENFDA_PAIR_LIMIT = 12
+_DDI_CONTEXT_CACHE: dict[tuple[str, ...], tuple[float, "ExternalDDIResult"]] = {}
 
 
 @dataclass
@@ -26,6 +29,7 @@ class ExternalDDIResult:
     rxnorm_map: dict[str, str] = field(default_factory=dict)
     rxnav_alerts: list[dict[str, Any]] = field(default_factory=list)
     openfda_evidence: dict[tuple[str, str], dict[str, int]] = field(default_factory=dict)
+    openfda_pairs_checked: int = 0
     source_used: list[str] = field(default_factory=list)
     source_errors: dict[str, list[str]] = field(default_factory=dict)
 
@@ -46,6 +50,14 @@ class DrugSourceClient:
         result = ExternalDDIResult()
         if len(meds) < 2:
             return result
+        cache_key = tuple(meds)
+        now = time.time()
+        cached_item = _DDI_CONTEXT_CACHE.get(cache_key)
+        if cached_item:
+            cached_at, cached_value = cached_item
+            if (now - cached_at) <= _CACHE_TTL_SECONDS:
+                return self._clone_result(cached_value)
+            _DDI_CONTEXT_CACHE.pop(cache_key, None)
 
         rxnorm_map, rxnav_alerts, rxnav_errors = self._fetch_rxnav_interactions(meds)
         if rxnorm_map:
@@ -57,15 +69,36 @@ class DrugSourceClient:
         if rxnav_errors:
             result.source_errors["rxnav"] = sorted(rxnav_errors)
 
-        openfda_evidence, openfda_errors, openfda_success = self._fetch_openfda_evidence(meds)
+        openfda_evidence, openfda_errors, openfda_success, openfda_pairs_checked = (
+            self._fetch_openfda_evidence(meds)
+        )
         if openfda_evidence:
             result.openfda_evidence = openfda_evidence
+        result.openfda_pairs_checked = openfda_pairs_checked
         if openfda_success and "openfda" not in result.source_used:
             result.source_used.append("openfda")
         if openfda_errors:
             result.source_errors["openfda"] = sorted(openfda_errors)
 
+        _DDI_CONTEXT_CACHE[cache_key] = (now, self._clone_result(result))
         return result
+
+    @staticmethod
+    def _clone_result(result: ExternalDDIResult) -> ExternalDDIResult:
+        return ExternalDDIResult(
+            rxnorm_map=dict(result.rxnorm_map),
+            rxnav_alerts=[dict(item) for item in result.rxnav_alerts],
+            openfda_evidence={
+                tuple(pair): dict(values)
+                for pair, values in result.openfda_evidence.items()
+            },
+            openfda_pairs_checked=int(result.openfda_pairs_checked),
+            source_used=list(result.source_used),
+            source_errors={
+                source_name: list(errors)
+                for source_name, errors in result.source_errors.items()
+            },
+        )
 
     def _fetch_rxnav_interactions(
         self,
@@ -107,35 +140,39 @@ class DrugSourceClient:
     def _fetch_openfda_evidence(
         self,
         medications: list[str],
-    ) -> tuple[dict[tuple[str, str], dict[str, int]], set[str], bool]:
+    ) -> tuple[dict[tuple[str, str], dict[str, int]], set[str], bool, int]:
         evidence: dict[tuple[str, str], dict[str, int]] = {}
         errors: set[str] = set()
         success = False
+        pairs_checked = 0
 
         with httpx.Client(timeout=self._timeout_seconds) as client:
-            for med_a, med_b in list(combinations(medications, 2))[:8]:
+            # Keep a bounded pair-set for predictable latency on demo paths.
+            # Increased bound to reduce misses on polypharmacy without exploding latency.
+            for med_a, med_b in list(combinations(medications, 2))[:_OPENFDA_PAIR_LIMIT]:
                 pair_key = tuple(sorted((med_a, med_b)))
+                pairs_checked += 1
 
-                label_hits = 0
-                label_query_success = False
-                for subject, object_ in ((med_a, med_b), (med_b, med_a)):
-                    label_data, label_error = self._request_json(
-                        client,
-                        f"{_OPENFDA_BASE_URL}/label.json",
-                        params={
-                            "search": (
-                                f'openfda.generic_name:"{subject}" AND '
-                                f'drug_interactions:"{object_}"'
-                            ),
-                            "limit": 1,
-                        },
-                        allow_not_found=True,
-                    )
-                    if label_error:
-                        errors.add(label_error)
-                        continue
+                label_search = (
+                    f'(openfda.generic_name:"{med_a}" AND drug_interactions:"{med_b}") OR '
+                    f'(openfda.generic_name:"{med_b}" AND drug_interactions:"{med_a}")'
+                )
+                label_data, label_error = self._request_json(
+                    client,
+                    f"{_OPENFDA_BASE_URL}/label.json",
+                    params={
+                        "search": label_search,
+                        "limit": 1,
+                    },
+                    allow_not_found=True,
+                )
+                if label_error:
+                    errors.add(self._normalize_openfda_error(label_error))
+                    label_hits = 0
+                    label_query_success = False
+                else:
                     label_query_success = True
-                    label_hits = max(label_hits, self._extract_total_count(label_data))
+                    label_hits = self._extract_total_count(label_data)
 
                 event_data, event_error = self._request_json(
                     client,
@@ -150,7 +187,7 @@ class DrugSourceClient:
                     allow_not_found=True,
                 )
                 if event_error:
-                    errors.add(event_error)
+                    errors.add(self._normalize_openfda_error(event_error))
                     event_hits = 0
                     event_query_success = False
                 else:
@@ -166,7 +203,16 @@ class DrugSourceClient:
                         "event_reports": event_hits,
                     }
 
-        return evidence, errors, success
+        return evidence, errors, success, pairs_checked
+
+    @staticmethod
+    def _normalize_openfda_error(error: str) -> str:
+        normalized = str(error).strip()
+        if not normalized:
+            return "unknown_error"
+        if normalized.lower().startswith("http_400:"):
+            return "http_400:bad_request"
+        return normalized
 
     def _request_json(
         self,

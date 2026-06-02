@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 def should_expose_action_token_preview(settings: Settings) -> bool:
+    if settings.environment.lower() == "production":
+        return False
     if settings.auth_expose_action_token_preview:
         return True
     return settings.auth_email_delivery_mode == "preview"
@@ -21,6 +23,8 @@ def _build_action_link(settings: Settings, action: str, token: str) -> str:
         path = settings.auth_verify_email_path
     elif action == "reset_password":
         path = settings.auth_reset_password_path
+    elif action == "login_otp":
+        path = "/login"
     else:
         path = "/"
     base = settings.auth_public_web_base_url.rstrip("/")
@@ -29,7 +33,24 @@ def _build_action_link(settings: Settings, action: str, token: str) -> str:
     return f"{base}{path}?token={quote(token)}"
 
 
-def _build_message(action: str, *, action_link: str) -> tuple[str, str]:
+def _build_message(
+    action: str,
+    *,
+    action_link: str,
+    token: str,
+    settings: Settings,
+) -> tuple[str, str]:
+    if action == "login_otp":
+        subject = "[CLARA] Ma OTP dang nhap"
+        body = (
+            "Chao ban,\n\n"
+            "Ma OTP dang nhap cua ban la:\n"
+            f"{token}\n\n"
+            f"Ma co hieu luc trong {settings.auth_login_otp_ttl_minutes} phut. "
+            "Vui long khong chia se voi nguoi khac.\n"
+        )
+        return subject, body
+
     if action == "verify_email":
         subject = "[CLARA] Xac thuc email"
         body = (
@@ -97,7 +118,7 @@ def dispatch_action_email(
 ) -> str:
     mode = settings.auth_email_delivery_mode
     link = _build_action_link(settings, action=action, token=token)
-    subject, body = _build_message(action, action_link=link)
+    subject, body = _build_message(action, action_link=link, token=token, settings=settings)
 
     if mode == "disabled":
         return "disabled"
