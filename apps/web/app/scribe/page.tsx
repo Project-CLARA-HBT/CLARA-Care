@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { trackScribeGenerated, trackScribeViewed } from "@/lib/analytics/events";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
@@ -195,6 +199,7 @@ function confidenceFromSoap(analytics: ScribeAnalyticsSummary | null, session: S
 
 export default function ScribePage() {
   const [mode, setMode] = useState<WorkspaceMode>("workspace");
+  const [role, setRole] = useState<UserRole>("normal");
   const [sessions, setSessions] = useState<ScribeSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<ScribeSession | null>(null);
@@ -347,6 +352,13 @@ export default function ScribePage() {
   useEffect(() => {
     void refreshData();
   }, [refreshData]);
+
+  // Read the requesting role for admin-only telemetry gating and emit a single
+  // named "scribe_viewed" product event on mount (Req 4.1, 4.3, 9.1).
+  useEffect(() => {
+    setRole(getRole());
+    trackScribeViewed();
+  }, []);
 
   useEffect(() => {
     selectedSessionIdRef.current = selectedSessionId;
@@ -663,6 +675,7 @@ export default function ScribePage() {
       upsertSession(updated);
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
+      trackScribeGenerated({ action: "regenerate" });
       pushNotice("success", "Đã regenerate SOAP.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể regenerate SOAP.");
@@ -679,6 +692,7 @@ export default function ScribePage() {
       const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
       setSelectedSession(updated);
       upsertSession(updated);
+      trackScribeGenerated({ action: "finalize" });
       pushNotice("success", "Đã finalize note.");
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
@@ -948,9 +962,11 @@ export default function ScribePage() {
                     <p className="text-sm text-[var(--text-secondary)]">
                       {isLiveAnalyzing ? "Đang phân tích realtime..." : "Live analyze sẵn sàng."}
                     </p>
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      Processing speed: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/chunk` : "--"}
-                    </p>
+                    <TelemetryPanel role={role}>
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        Processing speed: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/chunk` : "--"}
+                      </p>
+                    </TelemetryPanel>
                   </div>
                   <div className="mt-4 space-y-2">
                     {liveInsights.length === 0 ? (
@@ -959,7 +975,7 @@ export default function ScribePage() {
                       liveInsights.map((item) => (
                         <article key={item.id} className="rounded-lg border border-cyan-400/20 bg-cyan-500/8 p-3">
                           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-200">{item.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-cyan-100/90">{item.detail}</p>
+                          <p className="mt-1 text-xs leading-5 text-cyan-100/90">{stripTelemetryLabels(item.detail)}</p>
                         </article>
                       ))
                     )}
@@ -981,7 +997,7 @@ export default function ScribePage() {
                             cx="60"
                             cy="60"
                             r="50"
-                            stroke="#22d3ee"
+                            stroke="var(--brand-500)"
                             strokeWidth="8"
                             fill="none"
                             strokeDasharray={314}
@@ -1063,7 +1079,7 @@ export default function ScribePage() {
                   <div className="mt-3 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                     <p className="text-[10px] font-bold uppercase text-cyan-300">Executive Summary</p>
                     <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                      {liveInsights[0]?.detail || "Chưa có dữ liệu tổng hợp để handoff."}
+                      {stripTelemetryLabels(liveInsights[0]?.detail ?? "") || "Chưa có dữ liệu tổng hợp để handoff."}
                     </p>
                     <p className="mt-3 text-[10px] text-[var(--text-muted)]">
                       Transcript tokens: {transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0}
@@ -1077,21 +1093,23 @@ export default function ScribePage() {
                   </button>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[8px] uppercase tracking-[0.15em] text-[var(--text-muted)]">Processing Speed</p>
-                      <p className="text-sm font-bold text-cyan-200">
-                        {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
-                        <span className="text-[10px] text-[var(--text-secondary)]"> / chunk</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-                      <span className="text-[10px] font-bold uppercase text-emerald-300">{isRecording ? "Live" : "Idle"}</span>
+                <TelemetryPanel role={role}>
+                  <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[8px] uppercase tracking-[0.15em] text-[var(--text-muted)]">Processing Speed</p>
+                        <p className="text-sm font-bold text-cyan-200">
+                          {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
+                          <span className="text-[10px] text-[var(--text-secondary)]"> / chunk</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+                        <span className="text-[10px] font-bold uppercase text-emerald-300">{isRecording ? "Live" : "Idle"}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </TelemetryPanel>
               </aside>
             </>
           )}

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
+import logging
 import random
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -24,6 +25,8 @@ from clara_ml.rag.retrieval.source_router import (
 )
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.routing import P1RoleIntentRouter
+
+logger = logging.getLogger(__name__)
 
 router = P1RoleIntentRouter()
 
@@ -5110,9 +5113,6 @@ def _ensure_markdown_structure(
     key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
     practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"
     caveat_heading = f"## {_resolve_section_title('safety_notes', answer_language)}"
-    detailed_analysis_heading = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
-    safety_heading = f"## {_resolve_section_title('safety_guidance', answer_language)}"
-    monitoring_heading = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
 
     required_headings = (
         (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
@@ -5142,7 +5142,6 @@ def _ensure_markdown_structure(
     if "\n" not in analysis_block:
         analysis_block = f"- {analysis_block}"
 
-    topic_snippet = _compact_snippet(topic, max_len=210)
     risk_level, risk_signal, risk_note = _estimate_medical_risk_band(
         f"{topic} {cleaned}",
         answer_language=answer_language,
@@ -6026,11 +6025,297 @@ def _stabilize_long_answer_layout(
     return re.sub(r"\n{3,}", "\n\n", stabilized).strip()
 
 
+def _stabilize_deep_beta_fallback_dossier_layout(
+    markdown_text: str,
+    *,
+    answer_language: str = "vi",
+) -> str:
+    language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
+    text = str(markdown_text or "").strip()
+    if not text:
+        text = (
+            "Fallback synthesis is active; treat this as a conservative evidence brief."
+            if language == "en"
+            else "Fallback synthesis đang hoạt động; xem đây là bản evidence brief thận trọng."
+        )
+
+    quick_heading = _resolve_section_title("quick_conclusion", language)
+    key_points_heading = _resolve_section_title("key_points", language)
+    practical_heading = _resolve_section_title("practical_application", language)
+    caveat_heading = _resolve_section_title("safety_notes", language)
+    monitoring_heading = _resolve_section_title("monitoring_red_flags", language)
+    detailed_heading = _resolve_section_title("detailed_analysis", language)
+    plan_heading = _resolve_section_title("research_plan", language)
+    executive_heading = _resolve_section_title("executive_summary", language)
+
+    quick_conclusion = _extract_h2_body_any(text, [quick_heading, "Kết luận nhanh", "Quick conclusion"])
+    research_plan = _extract_h2_body_any(text, [plan_heading, "Kế hoạch nghiên cứu", "Research plan"])
+    executive_summary = _extract_h2_body_any(
+        text,
+        [executive_heading, "Tóm tắt điều hành", "Executive summary", key_points_heading, "Điểm chính", "Key points"],
+    )
+    pico_question = _extract_h2_body_any(text, ["Câu hỏi nghiên cứu (PICO)", "Research question (PICO)"])
+    retrieval_method = _extract_h2_body_any(
+        text,
+        ["Phương pháp truy xuất & tiêu chí chọn lọc", "Retrieval method & selection criteria"],
+    )
+    evidence_profile = _extract_h2_body_any(
+        text,
+        [
+            "Hồ sơ bằng chứng & chất lượng nguồn",
+            "Evidence profile & source quality",
+            "Bảng tổng hợp bằng chứng",
+            "Evidence summary table",
+        ],
+    )
+    main_findings = _extract_h2_body_any(
+        text,
+        [
+            "Tổng hợp phát hiện chính",
+            "Main findings synthesis",
+            key_points_heading,
+            "Điểm chính",
+            "Key points",
+            executive_heading,
+            "Tóm tắt điều hành",
+            "Executive summary",
+        ],
+    )
+    reasoning_chain = _extract_h2_body_any(
+        text,
+        [detailed_heading, "Phân tích chi tiết", "Detailed analysis", "Chuỗi lập luận bằng chứng", "Evidence reasoning chain"],
+    )
+    counter_evidence = _extract_h2_body_any(
+        text,
+        [
+            "Phản biện bằng chứng đối nghịch",
+            "Counter-evidence and contradictions",
+            caveat_heading,
+            "Lưu ý an toàn",
+            "Important caveats",
+        ],
+    )
+    clinical_application = _extract_h2_body_any(
+        text,
+        [
+            "Ứng dụng lâm sàng theo nhóm bệnh nhân",
+            "Clinical application by patient subgroup",
+            "Bối cảnh lâm sàng áp dụng",
+            "Clinical context",
+            practical_heading,
+            "Ứng dụng thực tế",
+            "Practical application",
+        ],
+    )
+    safety_matrix = _extract_h2_body_any(text, ["Ma trận quyết định an toàn", "Safety decision matrix"])
+    follow_up_plan = _extract_h2_body_any(
+        text,
+        [
+            "Kế hoạch theo dõi sau tư vấn",
+            "Follow-up plan after counseling",
+            monitoring_heading,
+            "Theo dõi & cảnh báo đỏ",
+            "Monitoring & red flags",
+        ],
+    )
+    limitations = _extract_h2_body_any(
+        text,
+        ["Giới hạn, sai số và rủi ro pháp lý", "Limitations, error bands, and legal risk"],
+    )
+
+    summary_excerpt = _curate_sentence_excerpt(text, max_len=680, max_sentences=5)
+    detail_excerpt = _curate_markdown_excerpt(text, max_len=1800, max_lines=12)
+
+    if language == "en":
+        quick_default = (
+            "Current output is in local fallback mode; keep conclusions conservative and verify any treatment changes with primary sources."
+        )
+        plan_default = (
+            "- Lock the question scope and patient safety boundaries before acting.\n"
+            "- Prioritize guideline-level sources, systematic reviews, and high-quality clinical studies.\n"
+            "- Reconcile supportive and contradictory evidence before final recommendations."
+        )
+        pico_default = (
+            "- Population: patients matching the presented scenario and risk profile.\n"
+            "- Intervention/Comparator: evaluate the relevant options and key trade-offs.\n"
+            "- Outcomes: prioritize safety, efficacy, and practical feasibility."
+        )
+        retrieval_default = (
+            "- Use multi-source retrieval with quality-first ranking.\n"
+            "- Down-rank weak or non-clinical sources when stronger evidence exists.\n"
+            "- Keep only evidence rows that can be traced back to explicit source references."
+        )
+        evidence_default = (
+            "- Evidence quality is mixed in fallback mode; treat certainty as provisional.\n"
+            "- Prioritize claims that are supported by multiple independent sources."
+        )
+        counter_default = (
+            "- Contradictory evidence remains possible and should be reviewed before commitment.\n"
+            "- Any recommendation should include uncertainty boundaries and conditions that would change the decision."
+        )
+        clinical_default = (
+            "- Apply conclusions only after matching comorbidities, active medications, and treatment goals.\n"
+            "- Escalate to clinician review for high-risk subgroups or unstable symptoms."
+        )
+        safety_matrix_default = (
+            "| Decision axis | Current signal | Safe action |\n"
+            "| --- | --- | --- |\n"
+            "| Overall risk | Moderate/uncertain | Do not self-adjust treatment; confirm with clinician/pharmacist. |\n"
+            "| Evidence confidence | Mixed | Prefer primary guidance and source-verified drug labels. |\n"
+            "| Immediate escalation | Red-flag dependent | Seek urgent care for chest pain, dyspnea, syncope, bleeding, or anaphylaxis. |"
+        )
+        followup_default = (
+            "- Document symptom trajectory and medication context after counseling.\n"
+            "- Reassess red flags in the next 24-48 hours and escalate promptly if symptoms worsen."
+        )
+        limitations_default = (
+            "- This report is decision support, not a replacement for direct clinical evaluation.\n"
+            "- Residual uncertainty remains because fallback synthesis may miss newly emerged evidence."
+        )
+    else:
+        quick_default = (
+            "Đầu ra hiện ở chế độ fallback local; cần giữ kết luận thận trọng và xác minh lại trước khi đổi điều trị."
+        )
+        plan_default = (
+            "- Khóa phạm vi câu hỏi và ranh giới an toàn trước khi áp dụng.\n"
+            "- Ưu tiên guideline, tổng quan hệ thống và nghiên cứu lâm sàng chất lượng cao.\n"
+            "- Đối chiếu bằng chứng thuận chiều và đối nghịch trước khi chốt khuyến nghị."
+        )
+        pico_default = (
+            "- Population: nhóm người bệnh phù hợp bối cảnh và mức nguy cơ đang xem xét.\n"
+            "- Intervention/Comparator: các lựa chọn điều trị hoặc hành động cần so sánh.\n"
+            "- Outcomes: ưu tiên an toàn, hiệu quả và tính khả thi triển khai."
+        )
+        retrieval_default = (
+            "- Truy xuất đa nguồn theo thứ tự ưu tiên chất lượng bằng chứng.\n"
+            "- Giảm trọng số nguồn yếu hoặc không phù hợp lâm sàng khi đã có nguồn mạnh hơn.\n"
+            "- Chỉ giữ các claim có thể truy vết về nguồn tham chiếu rõ ràng."
+        )
+        evidence_default = (
+            "- Chất lượng bằng chứng trong fallback còn không đồng đều; xem mức chắc chắn là tạm thời.\n"
+            "- Ưu tiên nhận định được hậu thuẫn bởi nhiều nguồn độc lập."
+        )
+        counter_default = (
+            "- Vẫn có khả năng tồn tại bằng chứng đối nghịch cần rà soát trước khi quyết định.\n"
+            "- Mọi khuyến nghị cần nêu rõ ranh giới bất định và điều kiện đảo chiều quyết định."
+        )
+        clinical_default = (
+            "- Áp dụng theo nhóm bệnh nhân, bệnh nền, đa thuốc và mục tiêu điều trị cụ thể.\n"
+            "- Nhóm nguy cơ cao hoặc triệu chứng không ổn định cần ưu tiên trao đổi bác sĩ sớm."
+        )
+        safety_matrix_default = (
+            "| Mục đánh giá | Tín hiệu hiện tại | Hành động an toàn |\n"
+            "| --- | --- | --- |\n"
+            "| Mức rủi ro tổng quát | Trung bình/bất định | Không tự ý đổi thuốc hoặc liều; xác minh với bác sĩ/dược sĩ. |\n"
+            "| Độ tin cậy bằng chứng | Không đồng nhất | Ưu tiên guideline và nhãn thuốc có truy xuất nguồn. |\n"
+            "| Chuyển tuyến khẩn | Phụ thuộc red flag | Cần cấp cứu ngay nếu đau ngực, khó thở, ngất, xuất huyết hoặc phản vệ. |"
+        )
+        followup_default = (
+            "- Ghi nhận diễn tiến triệu chứng và bối cảnh dùng thuốc sau tư vấn.\n"
+            "- Tái đánh giá dấu hiệu cảnh báo đỏ trong 24-48 giờ và chuyển tuyến ngay khi nặng lên."
+        )
+        limitations_default = (
+            "- Báo cáo này chỉ hỗ trợ quyết định, không thay thế đánh giá lâm sàng trực tiếp.\n"
+            "- Fallback synthesis có thể bỏ sót bằng chứng mới nên vẫn còn sai số tồn dư."
+        )
+
+    quick_block = quick_conclusion or summary_excerpt or quick_default
+    plan_block = _ensure_scannable_markdown_block(research_plan or plan_default, max_items=4, max_len=620)
+    executive_block = _normalize_reader_facing_block(
+        executive_summary or main_findings or detail_excerpt or summary_excerpt,
+        max_items=6,
+        max_len=1800,
+        prefer_paragraphs=True,
+    )
+    pico_block = _ensure_scannable_markdown_block(pico_question or pico_default, max_items=4, max_len=620)
+    retrieval_block = _ensure_scannable_markdown_block(
+        retrieval_method or retrieval_default,
+        max_items=4,
+        max_len=680,
+    )
+    evidence_block = _ensure_scannable_markdown_block(
+        evidence_profile or evidence_default,
+        max_items=5,
+        max_len=900,
+    )
+    main_findings_block = _normalize_reader_facing_block(
+        main_findings or executive_summary or detail_excerpt,
+        max_items=6,
+        max_len=1800,
+        prefer_paragraphs=True,
+    )
+    reasoning_block = _normalize_reader_facing_block(
+        reasoning_chain or detail_excerpt,
+        max_items=6,
+        max_len=1800,
+        prefer_paragraphs=True,
+    )
+    counter_block = _ensure_scannable_markdown_block(
+        counter_evidence or counter_default,
+        max_items=4,
+        max_len=900,
+    )
+    clinical_block = _ensure_scannable_markdown_block(
+        clinical_application or clinical_default,
+        max_items=4,
+        max_len=900,
+    )
+    matrix_block = safety_matrix.strip() if safety_matrix.strip() else safety_matrix_default
+    followup_block = _ensure_scannable_markdown_block(
+        follow_up_plan or followup_default,
+        max_items=4,
+        max_len=900,
+    )
+    limitations_block = _ensure_scannable_markdown_block(
+        limitations or counter_evidence or limitations_default,
+        max_items=4,
+        max_len=900,
+    )
+
+    section_body_by_key = {
+        _canonical_h2_key("Kết luận nhanh"): quick_block,
+        _canonical_h2_key("Quick conclusion"): quick_block,
+        _canonical_h2_key("Kế hoạch nghiên cứu"): plan_block,
+        _canonical_h2_key("Research plan"): plan_block,
+        _canonical_h2_key("Tóm tắt điều hành"): executive_block,
+        _canonical_h2_key("Executive summary"): executive_block,
+        _canonical_h2_key("Câu hỏi nghiên cứu (PICO)"): pico_block,
+        _canonical_h2_key("Research question (PICO)"): pico_block,
+        _canonical_h2_key("Phương pháp truy xuất & tiêu chí chọn lọc"): retrieval_block,
+        _canonical_h2_key("Retrieval method & selection criteria"): retrieval_block,
+        _canonical_h2_key("Hồ sơ bằng chứng & chất lượng nguồn"): evidence_block,
+        _canonical_h2_key("Evidence profile & source quality"): evidence_block,
+        _canonical_h2_key("Tổng hợp phát hiện chính"): main_findings_block,
+        _canonical_h2_key("Main findings synthesis"): main_findings_block,
+        _canonical_h2_key("Chuỗi lập luận bằng chứng"): reasoning_block,
+        _canonical_h2_key("Evidence reasoning chain"): reasoning_block,
+        _canonical_h2_key("Phản biện bằng chứng đối nghịch"): counter_block,
+        _canonical_h2_key("Counter-evidence and contradictions"): counter_block,
+        _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân"): clinical_block,
+        _canonical_h2_key("Clinical application by patient subgroup"): clinical_block,
+        _canonical_h2_key("Ma trận quyết định an toàn"): matrix_block,
+        _canonical_h2_key("Safety decision matrix"): matrix_block,
+        _canonical_h2_key("Kế hoạch theo dõi sau tư vấn"): followup_block,
+        _canonical_h2_key("Follow-up plan after counseling"): followup_block,
+        _canonical_h2_key("Giới hạn, sai số và rủi ro pháp lý"): limitations_block,
+        _canonical_h2_key("Limitations, error bands, and legal risk"): limitations_block,
+    }
+
+    sections: list[str] = []
+    for heading in _resolve_deep_beta_dossier_headings(language):
+        heading_key = _canonical_h2_key(heading)
+        section_body = section_body_by_key.get(heading_key) or summary_excerpt or detail_excerpt
+        sections.append(f"{heading}\n{section_body}".rstrip())
+
+    return re.sub(r"\n{3,}", "\n\n", "\n\n".join(sections)).strip()
+
+
 def _sanitize_user_facing_answer_markdown(
     answer_markdown: str,
     *,
     research_mode: str = "fast",
     answer_language: str = "vi",
+    fallback_used: bool = False,
 ) -> str:
     mode = str(research_mode).strip().lower()
     is_deep_beta = mode == "deep_beta"
@@ -6188,6 +6473,11 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Triển khai đầy đủ kế hoạch"),
                 _canonical_h2_key("Full execution plan"),
             },
+        )
+    if mode == "deep_beta" and fallback_used:
+        sanitized = _stabilize_deep_beta_fallback_dossier_layout(
+            sanitized,
+            answer_language=answer_language,
         )
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
@@ -7946,6 +8236,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         answer_markdown,
         research_mode=research_mode,
         answer_language=answer_language,
+        fallback_used=fallback_used,
     )
     if not answer_markdown.strip():
         answer_markdown = (

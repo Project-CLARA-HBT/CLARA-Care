@@ -16,6 +16,12 @@ from clara_ml.rag.retriever import Document, InMemoryRetriever
 from clara_ml.rag.seed_documents import base_documents, load_seed_documents
 
 
+# Module-level settings alias so ``resolve_llm_client`` can default to the
+# process settings while still accepting an explicit ``settings`` argument
+# (Requirement 2.3 wiring; mirrors the design's ``resolve_llm_client(..., settings)``).
+_module_settings = settings
+
+
 @dataclass
 class RagResult:
     query: str
@@ -1291,10 +1297,20 @@ class RagPipelineP1:
         )
         return any(signal in message for signal in retryable_signals)
 
-    def _should_reuse_default_runtime_client(self, llm_runtime: dict[str, Any]) -> bool:
+    def _matches_configured_deepseek_env(self, llm_runtime: Any, settings: Any) -> bool:
+        """True when ``llm_runtime`` exactly matches the configured DeepSeek env.
+
+        Used by :meth:`resolve_llm_client` to decide whether the default client
+        (with its longer timeout) can be reused instead of building a capped
+        runtime-override client (Requirement 2.3, design Property 2). Reuse is
+        only safe when DeepSeek-only mode is active, a default client exists,
+        and the supplied runtime points at the same provider/key/base/model.
+        """
         if not settings.llm_deepseek_only:
             return False
         if self._llm_client is None:
+            return False
+        if not isinstance(llm_runtime, dict):
             return False
         provider = str(llm_runtime.get("provider") or "").strip().lower()
         api_key = str(llm_runtime.get("api_key") or "").strip()
@@ -1306,6 +1322,78 @@ class RagPipelineP1:
             and base_url == str(settings.deepseek_base_url or "").strip()
             and model == str(settings.deepseek_model or "").strip()
         )
+
+    @staticmethod
+    def _runtime_client_timeout_seconds(settings: Any) -> float:
+        """Timeout (seconds) applied to an *explicit* runtime override client.
+
+        A runtime override client is intentionally capped to a short ceiling so
+        a stuck runtime endpoint cannot block the pipeline. This cap must never
+        be applied to the default DeepSeek client, whose longer timeout is
+        preserved by :meth:`resolve_llm_client` (Requirement 2.3).
+        """
+        runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
+        return max(2.0, min(runtime_timeout_seconds, 18.0))
+
+    def resolve_llm_client(
+        self, llm_runtime: Any, settings: Any = None
+    ) -> LlmGenerator | None:
+        """Resolve the LLM client a request should use (Requirement 2.3, Property 2).
+
+        - When ``LLM_DEEPSEEK_ONLY`` is enabled and ``llm_runtime`` matches the
+          configured DeepSeek env, the default client is reused as-is so its
+          longer timeout is never silently capped to ``min(deepseek_timeout, 18s)``.
+        - For a non-matching, fully-specified runtime override (api_key +
+          base_url + model), an explicit short-timeout client is built via
+          :meth:`DeepSeekClient.from_runtime`.
+        - When only an api key is supplied (no base_url/model), no client can be
+          built and ``None`` is returned.
+        - Otherwise (no override) the default client is returned unchanged.
+        """
+        if settings is None:
+            settings = _module_settings
+
+        if self._matches_configured_deepseek_env(llm_runtime, settings):
+            # Reuse the default client (preserve its longer timeout).
+            return self._llm_client
+
+        if isinstance(llm_runtime, dict):
+            api_key = str(llm_runtime.get("api_key") or "").strip()
+            base_url = str(llm_runtime.get("base_url") or "").strip()
+            model = str(llm_runtime.get("model") or "").strip()
+            if api_key and base_url and model:
+                return DeepSeekClient.from_runtime(
+                    llm_runtime,
+                    timeout_seconds=self._runtime_client_timeout_seconds(settings),
+                    retries_per_base=0,
+                    retry_backoff_seconds=min(
+                        max(float(settings.deepseek_retry_backoff_seconds), 0.0),
+                        0.25,
+                    ),
+                    max_concurrency=settings.llm_global_max_concurrency,
+                    min_interval_seconds=settings.llm_global_min_interval_seconds,
+                    request_jitter_seconds=settings.llm_global_jitter_seconds,
+                )
+            if api_key:
+                # api key supplied without base_url/model: cannot build a client.
+                return None
+        return self._llm_client
+
+    def _resolve_runtime_llm_client(
+        self, llm_runtime: Any
+    ) -> tuple[LlmGenerator | None, str]:
+        """Resolve the LLM client + api key that ``run`` should use.
+
+        Thin integration seam over :meth:`resolve_llm_client` that also resolves
+        the api key ``run`` uses for its presence/strict-mode checks.
+        """
+        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
+        if isinstance(llm_runtime, dict):
+            override_api_key = str(llm_runtime.get("api_key") or "").strip()
+            if override_api_key:
+                runtime_llm_api_key = override_api_key
+        runtime_llm_client = self.resolve_llm_client(llm_runtime, settings)
+        return runtime_llm_client, runtime_llm_api_key
 
     @staticmethod
     def _build_no_rag_prompt(query: str, *, answer_language: str = "vi") -> str:
@@ -2437,32 +2525,7 @@ class RagPipelineP1:
                 trace=trace,
             )
 
-        runtime_llm_client = self._llm_client
-        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
-        if isinstance(llm_runtime, dict):
-            runtime_llm_api_key = str(llm_runtime.get("api_key") or "").strip()
-            runtime_llm_base_url = str(llm_runtime.get("base_url") or "").strip()
-            runtime_llm_model = str(llm_runtime.get("model") or "").strip()
-            if runtime_llm_api_key and runtime_llm_base_url and runtime_llm_model:
-                if not self._should_reuse_default_runtime_client(llm_runtime):
-                    runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
-                    runtime_timeout_seconds = max(2.0, min(runtime_timeout_seconds, 18.0))
-                    runtime_llm_client = DeepSeekClient(
-                        api_key=runtime_llm_api_key,
-                        base_url=runtime_llm_base_url,
-                        model=runtime_llm_model,
-                        timeout_seconds=runtime_timeout_seconds,
-                        retries_per_base=0,
-                        retry_backoff_seconds=min(
-                            max(float(settings.deepseek_retry_backoff_seconds), 0.0),
-                            0.25,
-                        ),
-                        max_concurrency=settings.llm_global_max_concurrency,
-                        min_interval_seconds=settings.llm_global_min_interval_seconds,
-                        request_jitter_seconds=settings.llm_global_jitter_seconds,
-                    )
-            elif runtime_llm_api_key:
-                runtime_llm_client = None
+        runtime_llm_client, runtime_llm_api_key = self._resolve_runtime_llm_client(llm_runtime)
 
         if not generation_enabled:
             used_stages.append("retrieval_only")

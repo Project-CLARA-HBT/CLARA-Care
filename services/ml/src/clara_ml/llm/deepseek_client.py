@@ -46,6 +46,38 @@ class DeepSeekClient:
         self._min_interval_seconds = max(0.0, float(min_interval_seconds))
         self._request_jitter_seconds = max(0.0, float(request_jitter_seconds))
 
+    @classmethod
+    def from_runtime(
+        cls,
+        llm_runtime: dict[str, object],
+        *,
+        timeout_seconds: float,
+        retries_per_base: int = 0,
+        retry_backoff_seconds: float = 0.25,
+        max_concurrency: int = 2,
+        min_interval_seconds: float = 0.4,
+        request_jitter_seconds: float = 0.15,
+    ) -> "DeepSeekClient":
+        """Build an explicit runtime-override client from a ``llm_runtime`` dict.
+
+        The caller supplies ``timeout_seconds`` so the (short) runtime-override
+        ceiling stays a policy decision of the pipeline; this constructor never
+        touches the default client whose longer timeout must be preserved
+        (Requirement 2.3).
+        """
+        runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
+        return cls(
+            api_key=str(runtime.get("api_key") or "").strip(),
+            base_url=str(runtime.get("base_url") or "").strip(),
+            model=str(runtime.get("model") or "").strip(),
+            timeout_seconds=timeout_seconds,
+            retries_per_base=retries_per_base,
+            retry_backoff_seconds=retry_backoff_seconds,
+            max_concurrency=max_concurrency,
+            min_interval_seconds=min_interval_seconds,
+            request_jitter_seconds=request_jitter_seconds,
+        )
+
     @property
     def model(self) -> str:
         return self._model

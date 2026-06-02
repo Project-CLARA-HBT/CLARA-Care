@@ -8,6 +8,8 @@ import {
   RadarPulseChart,
   SegmentRingGauge
 } from "@/components/dashboard/futuristic-charts";
+import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
   getApiHealth,
   getControlTowerConfig,
@@ -240,7 +242,9 @@ export default function AdminObservabilityPanel() {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: cause instanceof Error ? cause.message : "Không thể tải ảnh chụp trạng thái hệ thống."
+        error: sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể tải ảnh chụp trạng thái hệ thống."
+        )
       }));
     }
   }, []);
@@ -248,6 +252,12 @@ export default function AdminObservabilityPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Emit a single named product event when the Observability surface is opened
+  // (Req 9.1). No PII — only the coarse Admin view label.
+  useEffect(() => {
+    trackAdminSurfaceViewed({ view: "observability" });
+  }, []);
 
   useEffect(() => {
     if (!autoRefresh) return;

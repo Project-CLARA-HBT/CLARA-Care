@@ -18,6 +18,7 @@ from clara_api.core.metrics import (
 )
 from clara_api.core.rate_limit import RateLimiterMiddleware
 from clara_api.core.rbac import AuthContextMiddleware
+from clara_api.core.timeouts import TimeoutFloorError, assert_settings_timeout_floors
 from clara_api.db import models as _db_models  # noqa: F401
 from clara_api.db.base import Base
 from clara_api.db.session import SessionLocal, engine
@@ -73,6 +74,22 @@ app.add_middleware(APIMetricsMiddleware)
 
 @app.on_event("startup")
 def init_db_schema() -> None:
+    # Timeout-floor invariant (Requirement 2.4): the API ML request timeout must
+    # never sit below the downstream CLARA_ML synthesis timeout. Validated in
+    # every environment so a misconfiguration fails fast at startup.
+    try:
+        assert_settings_timeout_floors(
+            ml_service_timeout_seconds=settings.ml_service_timeout_seconds,
+            ml_research_timeout_seconds=settings.ml_research_timeout_seconds,
+            deepseek_timeout_seconds=settings.deepseek_timeout_seconds,
+        )
+    except TimeoutFloorError as exc:
+        raise RuntimeError(
+            "ML request timeout misconfigured: "
+            "ML_SERVICE_TIMEOUT_SECONDS must be >= DEEPSEEK_TIMEOUT_SECONDS "
+            "and the sync-research path must stay >= ML_RESEARCH_TIMEOUT_SECONDS. "
+            f"{exc}"
+        ) from exc
     if settings.environment.lower() == "production":
         if settings.jwt_secret_key.strip() == "change-me":
             raise RuntimeError("JWT_SECRET_KEY must be configured in production.")
@@ -85,9 +102,10 @@ def init_db_schema() -> None:
         if settings.auth_auto_provision_users:
             raise RuntimeError("AUTH_AUTO_PROVISION_USERS must be disabled in production.")
         insecure_bootstrap_passwords = {"wrongpass", "change-me", "admin", "password", "12345678"}
+        bootstrap_password = settings.auth_bootstrap_admin_password.strip().lower()
         if (
             settings.auth_bootstrap_admin_enabled
-            and settings.auth_bootstrap_admin_password.strip().lower() in insecure_bootstrap_passwords
+            and bootstrap_password in insecure_bootstrap_passwords
         ):
             raise RuntimeError(
                 "AUTH_BOOTSTRAP_ADMIN_PASSWORD uses insecure default; configure a strong secret."

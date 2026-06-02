@@ -70,6 +70,37 @@ export type CareguardAnalyzeResult = {
   sourceUsed: string[];
 };
 
+/** Coarse, machine-readable DDI risk classification used by end-user views. */
+export type DdiRiskLevel = "low" | "medium" | "high" | "critical" | "unknown";
+
+/** A single end-user-facing DDI alert. Excludes telemetry/severity internals. */
+export type DdiUserAlert = {
+  message: string;
+  details?: string;
+  severity: DdiRiskLevel;
+};
+
+/** A reference source shown to the end user (label only, optional link). */
+export type DdiUserSource = {
+  label: string;
+  url?: string;
+};
+
+/**
+ * The projected DDI view shown to an End_User. It exposes only risk level,
+ * alerts, recommendations, and reference sources. It intentionally omits
+ * runtime `mode`, `fallback` flags, and `source_errors` (Requirements 3.1, 3.6).
+ */
+export type DdiUserView = {
+  riskLevel: DdiRiskLevel;
+  alerts: DdiUserAlert[];
+  recommendations: string[];
+  sources: DdiUserSource[];
+};
+
+/** Minimum number of medicines required before a DDI check may run (Requirement 3.5). */
+export const MINIMUM_DDI_MEDICINES = 2;
+
 const NORMALIZED_SOURCE_NAMES: Record<string, string> = {
   openfda: "OpenFDA",
   rxnav: "RxNav",
@@ -458,5 +489,311 @@ export function normalizeCareguardResult(data: CareguardAnalyzeRawResponse): Car
     fallbackUsed,
     sourceErrors,
     sourceUsed
+  };
+}
+
+/**
+ * Classify any raw risk/severity token into a coarse DDI risk level.
+ * `critical` is detected before `high` so the most severe match wins.
+ */
+export function classifyDdiRiskLevel(value: string | null | undefined): DdiRiskLevel {
+  const normalized = normalizeSourceToken(value);
+  if (!normalized) return "unknown";
+  if (/(critical|contra|fatal|lifethreat)/.test(normalized)) return "critical";
+  if (/(severe|major|high|red|danger)/.test(normalized)) return "high";
+  if (/(moderate|medium|amber|intermediate)/.test(normalized)) return "medium";
+  if (/(minor|low|green|safe|none)/.test(normalized)) return "low";
+  return "unknown";
+}
+
+/** Common DDI risk groups recognized for Vietnamese localization (Requirement 3.4). */
+export type DdiRiskGroup =
+  | "bleeding"
+  | "reducedClopidogrelEfficacy"
+  | "drowsinessOrDizziness"
+  | "hyperkalemia"
+  | "myopathy";
+
+/** Vietnamese alert message + recommendation shown for a recognized risk group. */
+export type DdiRiskGroupCopy = {
+  message: string;
+  recommendation: string;
+};
+
+/**
+ * Detection patterns per risk group. Each set matches both the English
+ * passthrough markers emitted by the ML-layer `_localize_ddi_message`
+ * (`services/ml/src/clara_ml/agents/careguard.py`) and the Vietnamese copy it
+ * produces, so a group is recognized whether the upstream text arrived
+ * localized or slipped through as an English passthrough (audit CG-6).
+ */
+const DDI_RISK_GROUP_PATTERNS: Record<DdiRiskGroup, RegExp[]> = {
+  bleeding: [/\bbleed/, /h(?:a)?emorrhage/, /\bgi bleeding\b/, /blunt aspirin/, /\binr\b/, /chảy máu/],
+  reducedClopidogrelEfficacy: [
+    /clopidogrel/,
+    /plavix/,
+    /antiplatelet/,
+    /cyp\s*2?c?19/,
+    /cyp interaction/,
+    /chống kết tập tiểu cầu/
+  ],
+  drowsinessOrDizziness: [
+    /sedation/,
+    /sedat/,
+    /drowsi/,
+    /somnolence/,
+    /\bdizz/,
+    /cns depress/,
+    /buồn ngủ/,
+    /chóng mặt/
+  ],
+  hyperkalemia: [/hyperkal(?:a|e)mia/, /potassium[-\s]?sparing/, /\bpotassium\b/, /kali máu/],
+  myopathy: [
+    /myopathy/,
+    /rhabdomyolysis/,
+    /myalgia/,
+    /muscle (?:pain|ache|weakness|damage|injury)/,
+    /đau cơ/,
+    /tổn thương cơ/
+  ]
+};
+
+/**
+ * The canonical Vietnamese alert message and recommendation shown for each
+ * common risk group (Requirement 3.4). The messages mirror the ML-layer copy
+ * so localization is consistent across the ML aggregation and the web client.
+ */
+export const DDI_RISK_GROUP_LOCALIZATION: Record<DdiRiskGroup, DdiRiskGroupCopy> = {
+  bleeding: {
+    message: "Phối hợp này có thể làm tăng nguy cơ chảy máu.",
+    recommendation:
+      "Không tự dùng kéo dài cùng nhau khi chưa được bác sĩ xác nhận. Đi khám ngay nếu nôn ra máu, " +
+      "đi ngoài phân đen, chóng mặt nhiều hoặc chảy máu khó cầm."
+  },
+  reducedClopidogrelEfficacy: {
+    message: "Thuốc này có thể làm giảm hiệu quả chống kết tập tiểu cầu của clopidogrel.",
+    recommendation:
+      "Hỏi bác sĩ hoặc dược sĩ để kiểm tra lại phối hợp này. Không tự đổi giờ uống hoặc kéo dài dùng cùng " +
+      "nếu chưa được hướng dẫn."
+  },
+  drowsinessOrDizziness: {
+    message: "Dùng cùng nhau có thể làm tăng buồn ngủ, chóng mặt và giảm tập trung.",
+    recommendation:
+      "Theo dõi buồn ngủ và chóng mặt. Tránh lái xe hoặc vận hành máy móc khi thấy lơ mơ, và hỏi bác sĩ " +
+      "hoặc dược sĩ nếu cần dùng cùng trong nhiều ngày."
+  },
+  hyperkalemia: {
+    message: "Phối hợp này có thể làm tăng kali máu, nhất là khi có bệnh thận.",
+    recommendation:
+      "Cần được bác sĩ hoặc dược sĩ kiểm tra sớm. Đi khám nếu mệt nhiều, yếu cơ, hồi hộp hoặc tiểu ít hơn " +
+      "bình thường."
+  },
+  myopathy: {
+    message: "Phối hợp này có thể làm tăng nguy cơ đau cơ, yếu cơ hoặc tổn thương cơ.",
+    recommendation:
+      "Liên hệ bác sĩ hoặc dược sĩ sớm để rà soát đơn thuốc. Đi khám ngay nếu đau cơ tăng nhanh, yếu cơ " +
+      "nhiều hoặc nước tiểu sẫm màu."
+  }
+};
+
+/**
+ * Order used when more than one group could match the same text. Bleeding is
+ * checked first because it is the most actionable signal; the drowsiness group
+ * is checked last so a more specific organ-system match wins over generic CNS
+ * wording.
+ */
+const DDI_RISK_GROUP_ORDER: DdiRiskGroup[] = [
+  "bleeding",
+  "reducedClopidogrelEfficacy",
+  "hyperkalemia",
+  "myopathy",
+  "drowsinessOrDizziness"
+];
+
+/** Calm, generic Vietnamese fallback used when English passthrough cannot be mapped. */
+const GENERIC_DDI_MESSAGE_VI =
+  "Hai thuốc này có thể tương tác với nhau. Nên hỏi bác sĩ hoặc dược sĩ để kiểm tra lại.";
+
+/** Mirrors the ML-layer Vietnamese-text check (`[À-ỹ]`). */
+const VIETNAMESE_DIACRITIC_PATTERN = /[\u00C0-\u1EF9]/;
+
+function containsVietnameseText(value: string): boolean {
+  return VIETNAMESE_DIACRITIC_PATTERN.test(value);
+}
+
+/**
+ * Classify free-text DDI copy into one of the common risk groups, or `null`
+ * when no group matches. Matching is case-insensitive and recognizes both the
+ * English passthrough markers and the Vietnamese copy.
+ */
+export function classifyDdiRiskGroup(text: string | null | undefined): DdiRiskGroup | null {
+  const normalized = normalizeUserFacingText(String(text ?? "")).toLowerCase();
+  if (!normalized) return null;
+  for (const group of DDI_RISK_GROUP_ORDER) {
+    if (DDI_RISK_GROUP_PATTERNS[group].some((pattern) => pattern.test(normalized))) {
+      return group;
+    }
+  }
+  return null;
+}
+
+/**
+ * Localize a DDI alert message to Vietnamese. Mirrors the ML-layer
+ * `_localize_ddi_message`: a recognized English passthrough maps to its
+ * canonical Vietnamese copy, copy already in Vietnamese is preserved, and any
+ * remaining English (audit CG-6) falls back to a calm generic Vietnamese line
+ * so internal English never reaches the End_User.
+ */
+export function localizeDdiMessage(message: string | null | undefined): string {
+  const normalized = normalizeUserFacingText(String(message ?? ""));
+  if (!normalized) return GENERIC_DDI_MESSAGE_VI;
+  if (containsVietnameseText(normalized)) return normalized;
+  const group = classifyDdiRiskGroup(normalized);
+  if (group) return DDI_RISK_GROUP_LOCALIZATION[group].message;
+  return GENERIC_DDI_MESSAGE_VI;
+}
+
+/**
+ * Return the Vietnamese recommendations for the supplied risk groups, in order.
+ */
+export function recommendationsForRiskGroups(groups: DdiRiskGroup[]): string[] {
+  return groups.map((group) => DDI_RISK_GROUP_LOCALIZATION[group].recommendation);
+}
+
+/**
+ * Collect the recognized risk groups present across DDI alert copy, preserving
+ * first-seen order and de-duplicating repeats.
+ */
+function detectDdiRiskGroups(texts: (string | null | undefined)[]): DdiRiskGroup[] {
+  const seen = new Set<DdiRiskGroup>();
+  const output: DdiRiskGroup[] = [];
+  for (const text of texts) {
+    const group = classifyDdiRiskGroup(text);
+    if (group && !seen.has(group)) {
+      seen.add(group);
+      output.push(group);
+    }
+  }
+  return output;
+}
+
+/**
+ * Localize an optional alert detail line. Vietnamese detail is preserved; an
+ * English passthrough that maps to a risk group becomes that group's Vietnamese
+ * copy (when it differs from the primary message); unmapped English detail is
+ * dropped so internal English never leaks to the End_User.
+ */
+function localizeDdiDetail(detail: string | undefined, message: string): string | undefined {
+  const sanitized = sanitizeReadableLine(detail);
+  if (!sanitized) return undefined;
+  if (containsVietnameseText(sanitized)) return sanitized;
+  const group = classifyDdiRiskGroup(sanitized);
+  if (group) {
+    const localized = DDI_RISK_GROUP_LOCALIZATION[group].message;
+    return localized === message ? undefined : localized;
+  }
+  return undefined;
+}
+
+/**
+ * Count distinct, non-empty medicine names. A drug-drug interaction requires
+ * two *different* medicines, so case-insensitive duplicates collapse to one.
+ */
+function countDistinctMedicines(medicines: string[] | null | undefined): number {
+  if (!Array.isArray(medicines)) return 0;
+  const seen = new Set<string>();
+  for (const medicine of medicines) {
+    const normalized = normalizeUserFacingText(String(medicine ?? "")).toLowerCase();
+    if (!normalized) continue;
+    seen.add(normalized);
+  }
+  return seen.size;
+}
+
+/**
+ * Returns true when a DDI check must NOT run because the input has fewer than
+ * two distinct medicines. The caller should prompt the user to add at least
+ * two medicines and SHALL NOT call the DDI analysis (Requirement 3.5).
+ */
+export function requiresTwoMedicines(medicines: string[] | null | undefined): boolean {
+  return countDistinctMedicines(medicines) < MINIMUM_DDI_MEDICINES;
+}
+
+function coerceCareguardResult(
+  input: CareguardAnalyzeRawResponse | CareguardAnalyzeResult
+): CareguardAnalyzeResult {
+  const candidate = input as CareguardAnalyzeResult;
+  if (Array.isArray(candidate.ddiAlerts) && Array.isArray(candidate.recommendations)) {
+    return candidate;
+  }
+  return normalizeCareguardResult(input as CareguardAnalyzeRawResponse);
+}
+
+function toDdiUserSources(attribution: CareguardAttribution | null): DdiUserSource[] {
+  if (!attribution) return [];
+  const citationByLabel = new Map<string, string>();
+  for (const citation of attribution.citations) {
+    const key = normalizeSourceToken(citation.source);
+    if (key && citation.url && !citationByLabel.has(key)) {
+      citationByLabel.set(key, citation.url);
+    }
+  }
+  return attribution.sources.map((source) => {
+    const url = citationByLabel.get(normalizeSourceToken(source.name));
+    return url ? { label: source.name, url } : { label: source.name };
+  });
+}
+
+/**
+ * Project a CareGuard payload (raw response or normalized result) into the
+ * End_User DDI view. Exposes only risk level, alerts, recommendations, and
+ * reference sources. Runtime `mode`, `fallback` flags, and `source_errors`
+ * are intentionally dropped, so connector errors are never surfaced to the
+ * end user while a valid signal remains (Requirements 3.1, 3.6).
+ */
+export function toDdiUserView(
+  raw: CareguardAnalyzeRawResponse | CareguardAnalyzeResult
+): DdiUserView {
+  const result = coerceCareguardResult(raw);
+
+  // Re-run the readable-text guard so the projection is self-contained: even
+  // when a caller hands in a manually constructed result, alert copy and
+  // recommendations stay free of connector identifiers, HTTP status detail,
+  // and `source_errors` fragments (Requirements 3.1, 3.6).
+  const alerts: DdiUserAlert[] = result.ddiAlerts
+    .map((alert): DdiUserAlert | null => {
+      const sanitizedTitle = sanitizeReadableLine(alert.title);
+      if (!sanitizedTitle) return null;
+      // Map any English passthrough for a recognized risk group to Vietnamese
+      // before display, complementing the ML-layer localization (Requirement 3.4).
+      const message = localizeDdiMessage(sanitizedTitle);
+      const details = localizeDdiDetail(alert.details, message);
+      const userAlert: DdiUserAlert = {
+        message,
+        severity: classifyDdiRiskLevel(alert.severity ?? result.riskTier)
+      };
+      // `details` is optional: only attach it when a readable line survives.
+      if (details) userAlert.details = details;
+      return userAlert;
+    })
+    .filter((alert): alert is DdiUserAlert => alert !== null);
+
+  // Risk-group-aware Vietnamese recommendations (Requirement 3.4): derive them
+  // from the recognized groups in the alert copy and merge with any upstream
+  // recommendations, dropping duplicates and English passthrough.
+  const riskGroups = detectDdiRiskGroups([
+    ...alerts.map((alert) => alert.message),
+    ...result.ddiAlerts.map((alert) => alert.details)
+  ]);
+  const recommendations = dedupeReadableLines([
+    ...recommendationsForRiskGroups(riskGroups),
+    ...result.recommendations
+  ]);
+
+  return {
+    riskLevel: classifyDdiRiskLevel(result.riskTier),
+    alerts,
+    recommendations,
+    sources: toDdiUserSources(result.attribution)
   };
 }

@@ -243,3 +243,97 @@ def test_openfda_http_400_kept_when_no_other_signal(
     metadata = result["metadata"]
     assert metadata["source_errors"].get("openfda") == ["http_400:bad_request"]
     assert metadata["fallback_used"] is True
+
+
+def test_rxnav_connector_error_suppressed_when_local_signal_remains(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            openfda_pairs_checked=0,
+            source_used=[],
+            source_errors={"rxnav": ["status_503:service_unavailable"]},
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    # warfarin + ibuprofen is covered by the local seed rules, so a valid local
+    # signal remains even though the rxnav connector failed.
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert "rxnav" not in metadata["source_errors"]
+    assert len(result["ddi_alerts"]) >= 1
+
+
+def test_rxnav_connector_error_kept_when_no_other_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            openfda_pairs_checked=0,
+            source_used=[],
+            source_errors={"rxnav": ["status_503:service_unavailable"]},
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    # alphaone + betatwo have no local rule and no successful upstream source,
+    # so the rxnav connector is the lone source and its error is retained.
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert metadata["source_errors"].get("rxnav") == ["status_503:service_unavailable"]
+    assert result["ddi_alerts"] == []
+
+
+def test_openfda_error_kept_while_rxnav_failure_still_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        assert len(medications) >= 2
+        return ExternalDDIResult(
+            openfda_pairs_checked=1,
+            source_used=[],
+            source_errors={
+                "openfda": ["http_400:bad_request"],
+                "rxnav": ["status_503:service_unavailable"],
+            },
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    # No local rule and no successful upstream source: neither connector has an
+    # alternative valid signal, so both errors are retained in metadata only.
+    result = run_careguard_analyze(
+        {
+            "medications": ["alphaone", "betatwo"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    metadata = result["metadata"]
+    assert metadata["source_errors"].get("openfda") == ["http_400:bad_request"]
+    assert metadata["source_errors"].get("rxnav") == ["status_503:service_unavailable"]
+    assert result["ddi_alerts"] == []

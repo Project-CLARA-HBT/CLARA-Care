@@ -15,3 +15,14 @@ apps/web/tsconfig.tsbuildinfo
 artifacts/
 context
 context2
+
+# --- secrets / local state / scratch (never commit) ---
+.env.*
+!.env.example
+.env.backups/
+*.db
+.vscode/
+_fix_pw.*
+_test_vision*.py
+_build_api.sh
+_deploy_gvision.sh

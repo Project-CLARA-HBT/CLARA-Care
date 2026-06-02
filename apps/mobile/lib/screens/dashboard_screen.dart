@@ -1,7 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
+import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/session_store.dart';
 import 'careguard_screen.dart';
@@ -34,6 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    getAnalyticsClient()
+        .captureScreenView(MobileAnalyticsEvents.dashboardViewed);
     _loadSummary();
   }
 
@@ -84,14 +85,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return;
       }
       setState(() {
-        _summaryError = error.toString();
+        _summaryError = error.message;
       });
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _summaryError = 'Unexpected error while loading mobile summary.';
+        _summaryError = 'Không thể tải dữ liệu trang chính. Vui lòng thử lại.';
       });
     } finally {
       if (mounted) {
@@ -126,14 +127,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return;
       }
       setState(() {
-        _metricsError = error.toString();
+        _metricsError = error.message;
       });
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _metricsError = 'Unexpected error while loading system metrics.';
+        _metricsError = 'Không thể tải chỉ số hệ thống. Vui lòng thử lại.';
       });
     } finally {
       if (mounted) {
@@ -150,8 +151,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  String _prettyJson(Map<String, dynamic> json) {
-    return const JsonEncoder.withIndent('  ').convert(json);
+  /// Signs the user out by clearing all persisted credentials from the
+  /// Session_Store (Requirement 10.5). Clearing notifies listeners, so the
+  /// app shell routes back to the login screen.
+  Future<void> _signOut() async {
+    await widget.sessionStore.clear();
+  }
+
+  int? _metricInt(String key) {
+    final value = _metrics?[key];
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return null;
   }
 
   @override
@@ -164,118 +175,177 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CLARA Dashboard'),
+        title: const Text('CLARA'),
         actions: [
           IconButton(
-            onPressed: widget.sessionStore.clear,
+            onPressed: _signOut,
             icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
+            tooltip: 'Đăng xuất',
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Signed in as ${widget.sessionStore.email ?? '-'}'),
-                  const SizedBox(height: 8),
-                  Text('Role: $role'),
-                ],
+      body: RefreshIndicator(
+        onRefresh: _loadSummary,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.sessionStore.email ?? '-',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Vai trò: $role'),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: canResearch
-                ? () {
-              _openScreen(
+            const SizedBox(height: 16),
+            Text('Công cụ', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            _FeatureTile(
+              icon: Icons.science,
+              title: 'Nghiên cứu y khoa',
+              subtitle: 'Tìm hiểu sâu với dẫn chứng',
+              enabled: canResearch,
+              onTap: () => _openScreen(
                 ResearchScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
                 ),
-              );
-            }
-                : null,
-            child: const Text('Research Tier 2'),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: canCareguard
-                ? () {
-              _openScreen(
+              ),
+            ),
+            _FeatureTile(
+              icon: Icons.medication,
+              title: 'Kiểm tra tương tác thuốc',
+              subtitle: 'Phân tích an toàn cho tủ thuốc',
+              enabled: canCareguard,
+              onTap: () => _openScreen(
                 CareguardScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
                 ),
-              );
-            }
-                : null,
-            child: const Text('CareGuard Analyze'),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: canCouncil
-                ? () {
-              _openScreen(
+              ),
+            ),
+            _FeatureTile(
+              icon: Icons.groups,
+              title: 'Hội chẩn AI',
+              subtitle: 'Tổng hợp ý kiến nhiều chuyên khoa',
+              enabled: canCouncil,
+              onTap: () => _openScreen(
                 CouncilScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
                 ),
-              );
-            }
-                : null,
-            child: const Text('Council Run'),
-          ),
-          const SizedBox(height: 12),
-          if (_loadingSummary)
-            const LinearProgressIndicator()
-          else if (_summaryError != null)
-            Text(
-              _summaryError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            )
-          else if (_summary != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: SelectableText(_prettyJson(_summary!)),
               ),
             ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'System Metrics',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            const SizedBox(height: 16),
+            if (_loadingSummary) const LinearProgressIndicator(),
+            if (_summaryError != null)
+              Text(
+                _summaryError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Chỉ số hệ thống',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ),
+                OutlinedButton(
+                  onPressed:
+                      _loadingSummary || _loadingMetrics ? null : _loadSummary,
+                  child: const Text('Làm mới'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (!canSystemMonitor)
+              const Text('Vai trò này không có quyền xem chỉ số hệ thống.')
+            else if (_loadingMetrics)
+              const Center(child: CircularProgressIndicator())
+            else if (_metricsError != null)
+              Text(
+                _metricsError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              )
+            else if (_metrics != null)
+              _MetricsView(
+                requestsTotal: _metricInt('requests_total'),
+                avgLatencyMs: _metrics!['avg_latency_ms'],
+              )
+            else
+              const Text('Chưa có chỉ số nào được tải.'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureTile extends StatelessWidget {
+  const _FeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(enabled ? subtitle : 'Không khả dụng với vai trò này'),
+        trailing: const Icon(Icons.chevron_right),
+        enabled: enabled,
+        onTap: enabled ? onTap : null,
+      ),
+    );
+  }
+}
+
+class _MetricsView extends StatelessWidget {
+  const _MetricsView({this.requestsTotal, this.avgLatencyMs});
+
+  final int? requestsTotal;
+  final dynamic avgLatencyMs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (requestsTotal != null)
+              Text('Tổng số request: $requestsTotal'),
+            if (avgLatencyMs != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('Độ trễ trung bình: $avgLatencyMs ms'),
               ),
-              OutlinedButton(
-                onPressed: _loadingSummary || _loadingMetrics ? null : _loadSummary,
-                child: const Text('Refresh'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (!canSystemMonitor)
-            const Text('Role này không có quyền xem system metrics.')
-          else if (_loadingMetrics)
-            const Center(child: CircularProgressIndicator())
-          else if (_metricsError != null)
-            Text(
-              _metricsError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            )
-          else if (_metrics != null)
-            SelectableText(_prettyJson(_metrics!))
-          else
-            const Text('No metrics loaded yet.'),
-        ],
+            if (requestsTotal == null && avgLatencyMs == null)
+              const Text('Đã tải chỉ số hệ thống.'),
+          ],
+        ),
       ),
     );
   }

@@ -1,11 +1,21 @@
 import ResearchEmptyState from "@/components/research/research-empty-state";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import { ResearchTier2Result } from "@/lib/research";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { toModeLabel } from "@/lib/user-facing-text";
 
 type ResearchLatestTier2Props = {
   result: ResearchTier2Result | null | undefined;
   title?: string;
   excerptChars?: number;
   className?: string;
+  /**
+   * Requesting user's role. Detailed runtime telemetry (policy action,
+   * fallback usage, raw mode string) is rendered for Admin_Users only; every
+   * other role sees a sanitized, plain-language summary (Requirement 4.3).
+   * Defaults to the current stored role.
+   */
+  role?: UserRole;
 };
 
 function toExcerpt(answer: string, maxChars: number): string {
@@ -18,6 +28,46 @@ function toExcerpt(answer: string, maxChars: number): string {
 function resolveResearchMode(result: ResearchTier2Result): string {
   const mode = result.researchMode?.trim() || result.debug.researchMode?.trim();
   return mode || "unknown";
+}
+
+/**
+ * Plain-language, End_User-safe phrasing for a policy action. Internal labels
+ * such as `Policy: warn` / `Policy: allow` are never shown to non-admin roles
+ * (Requirement 4.1); they map to calm Vietnamese summaries instead.
+ */
+function friendlyPolicySummary(action?: "allow" | "warn" | "block" | "escalate"): {
+  label: string;
+  className: string;
+} | null {
+  if (action === "warn") {
+    return {
+      label: "Cần đọc lưu ý",
+      className:
+        "border-amber-300/55 bg-amber-100/80 text-amber-800 dark:border-amber-700/45 dark:bg-amber-950/45 dark:text-amber-200"
+    };
+  }
+  if (action === "allow") {
+    return {
+      label: "Có thể tham khảo",
+      className:
+        "border-emerald-300/55 bg-emerald-100/80 text-emerald-800 dark:border-emerald-700/45 dark:bg-emerald-950/45 dark:text-emerald-200"
+    };
+  }
+  if (action === "block") {
+    return {
+      label: "Nội dung bị giới hạn",
+      className:
+        "border-rose-300/55 bg-rose-100/80 text-rose-800 dark:border-rose-700/45 dark:bg-rose-950/45 dark:text-rose-200"
+    };
+  }
+  if (action === "escalate") {
+    return {
+      label: "Cần hỗ trợ chuyên môn",
+      className:
+        "border-indigo-300/55 bg-indigo-100/80 text-indigo-800 dark:border-indigo-700/45 dark:bg-indigo-950/45 dark:text-indigo-200"
+    };
+  }
+  return null;
 }
 
 function policyBadge(action?: "allow" | "warn" | "block" | "escalate"): {
@@ -62,7 +112,8 @@ export default function ResearchLatestTier2({
   result,
   title = "Latest Tier2 Summary",
   excerptChars = 320,
-  className
+  className,
+  role
 }: ResearchLatestTier2Props) {
   if (!result) {
     return (
@@ -85,11 +136,16 @@ export default function ResearchLatestTier2({
     );
   }
 
+  const viewerRole = role ?? getRole();
   const policy = policyBadge(result.policyAction);
+  const friendlyPolicy = friendlyPolicySummary(result.policyAction);
   const fallbackBadgeClass = result.fallbackUsed
     ? "border-amber-300/55 bg-amber-100/80 text-amber-800 dark:border-amber-700/45 dark:bg-amber-950/45 dark:text-amber-200"
     : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
-  const mode = resolveResearchMode(result);
+  // Internal mode strings (e.g. `deep_beta`) are never shown directly; map to a
+  // friendly Vietnamese End_User label (Requirement 4.4).
+  const internalMode = resolveResearchMode(result);
+  const modeLabel = toModeLabel(internalMode);
   const panelClassName = ["chrome-panel rounded-[1.6rem] p-5 sm:p-6", className]
     .filter(Boolean)
     .join(" ");
@@ -106,15 +162,28 @@ export default function ResearchLatestTier2({
         </span>
       </div>
 
+      {/* End_User-safe summary: friendly mode label + plain-language policy. */}
       <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+          Chế độ: {modeLabel}
+        </span>
+        {friendlyPolicy ? (
+          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${friendlyPolicy.className}`}>
+            {friendlyPolicy.label}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Detailed runtime telemetry — Admin_Users only (Requirement 4.3). */}
+      <TelemetryPanel role={viewerRole} className="mt-3 flex flex-wrap gap-2">
         <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${policy.className}`}>{policy.label}</span>
         <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${fallbackBadgeClass}`}>
           {result.fallbackUsed ? "Fallback: used" : "Fallback: none"}
         </span>
         <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-          Mode: {mode}
+          Mode: {internalMode}
         </span>
-      </div>
+      </TelemetryPanel>
 
       <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{excerpt}</p>
     </section>

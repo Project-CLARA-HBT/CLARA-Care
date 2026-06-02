@@ -366,17 +366,34 @@ def _parse_sources(value: object, default: str | None = None) -> set[str]:
     return sources
 
 
-def _is_openfda_bad_request_error(error: object) -> bool:
-    if not isinstance(error, str):
-        return False
-    return error.strip().lower().startswith("http_400")
+# Upstream connector sources whose transport/HTTP errors are diagnostic noise.
+# Their errors (e.g. ``openfda http_400``, ``rxnav status=503``) must never reach
+# the End_User; they are only meaningful when no alternative signal could be obtained.
+_CONNECTOR_SOURCE_NAMES = frozenset({"rxnav", "openfda"})
 
 
 def _sanitize_source_errors_for_output(
     source_errors: dict[str, list[str]],
     *,
-    has_non_openfda_signal: bool,
+    signal_sources: frozenset[str],
 ) -> dict[str, list[str]]:
+    """Suppress upstream connector errors from output metadata when an
+    alternative valid signal still exists, retaining them only when no
+    alternative signal remains.
+
+    Connector errors such as ``openfda http_400`` or ``rxnav status=503`` are
+    internal diagnostics. Per Requirement 3.6 / Property 9, a connector error
+    from source ``X`` is dropped entirely (so it can never surface to the
+    End_User) whenever a valid signal from a source *other than* ``X`` remains;
+    it is retained in metadata for operators only when ``X`` is the sole source
+    that could have produced a signal. Checking for an *alternative* source
+    (rather than any signal) keeps a connector's own partial success from
+    masking that same connector's failures.
+
+    Non-connector internal markers (e.g. ``normalization`` coverage notes or
+    ``external`` config/state flags) are preserved as-is since they are not
+    upstream connector errors.
+    """
     sanitized: dict[str, list[str]] = {}
     for source_name, raw_errors in source_errors.items():
         normalized_errors = [
@@ -385,24 +402,13 @@ def _sanitize_source_errors_for_output(
         if not normalized_errors:
             continue
 
-        if source_name == "openfda":
-            bad_request_errors = [
-                error for error in normalized_errors if _is_openfda_bad_request_error(error)
-            ]
-            other_errors = [
-                error for error in normalized_errors if not _is_openfda_bad_request_error(error)
-            ]
-            if other_errors:
-                if has_non_openfda_signal:
-                    sanitized[source_name] = sorted(set(other_errors))
-                else:
-                    sanitized[source_name] = sorted(
-                        set(other_errors + bad_request_errors)
-                    )
+        if source_name in _CONNECTOR_SOURCE_NAMES:
+            # Drop the connector error when any *other* source still yielded a
+            # valid signal; retain it only when this connector is the lone
+            # source that could have produced one.
+            if signal_sources - {source_name}:
                 continue
-
-            if not has_non_openfda_signal and bad_request_errors:
-                sanitized[source_name] = sorted(set(bad_request_errors))
+            sanitized[source_name] = sorted(set(normalized_errors))
             continue
 
         sanitized[source_name] = sorted(set(normalized_errors))
@@ -615,15 +621,26 @@ def _risk_from_signals(
         return max(score, 9), "critical"
     if has_high_risk_ddi and score >= 3:
         return max(score, 5), "high"
-    if has_medium_risk_ddi:
-        return max(score, 1), "medium"
+
+    # Compute the base level from the aggregate score thresholds first, then apply
+    # the medium floor. The medium floor is a lower bound only: a `medium` drug_drug
+    # alert raises the overall level to at least `medium`, but it must never reduce
+    # an already-higher level (e.g. when symptoms/labs push the score into the
+    # `high`/`critical` range). Placing the floor after the thresholds keeps
+    # `high`/`critical` aggregation unchanged and a genuine `low` preserved.
     if score >= 9:
-        return score, "critical"
-    if score >= 5:
-        return score, "high"
-    if score >= 2:
-        return score, "medium"
-    return score, "low"
+        level = "critical"
+    elif score >= 5:
+        level = "high"
+    elif score >= 2:
+        level = "medium"
+    else:
+        level = "low"
+
+    if has_medium_risk_ddi and _SEVERITY_RANK[level] < _SEVERITY_RANK["medium"]:
+        return max(score, 1), "medium"
+
+    return score, level
 
 
 def _recommendation_for(
@@ -729,12 +746,22 @@ def run_careguard_analyze(payload: dict) -> dict:
     if normalization_pair_coverage_low:
         source_errors.setdefault("normalization", []).append("low_pair_coverage")
 
-    has_non_openfda_signal = bool(local_ddi_alerts or external_ddi_alerts) or (
-        "rxnav" in source_used
-    )
+    # Determine which sources produced a valid signal (a DDI alert or a
+    # successful upstream lookup). A connector's transport/HTTP error is only
+    # retained in metadata when no *alternative* source produced a signal; while
+    # an alternative signal exists the connector error is suppressed entirely so
+    # it can never reach the End_User (Requirement 3.6 / Property 9).
+    signal_sources: set[str] = set()
+    if local_ddi_alerts:
+        signal_sources.add("local_rules")
+    if external_ddi_alerts:
+        signal_sources.add("rxnav")
+    for source in source_used:
+        if source in {"rxnav", "openfda"}:
+            signal_sources.add(source)
     source_errors = _sanitize_source_errors_for_output(
         source_errors,
-        has_non_openfda_signal=has_non_openfda_signal,
+        signal_sources=frozenset(signal_sources),
     )
 
     ddi_alerts = _merge_drug_alerts(local_ddi_alerts, external_ddi_alerts, openfda_evidence)

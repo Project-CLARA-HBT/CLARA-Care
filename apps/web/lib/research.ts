@@ -5,6 +5,13 @@ export type ResearchTier = "tier1" | "tier2";
 export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 export type ResearchRetrievalStackMode = "auto" | "full";
 
+/**
+ * Transport used to fulfil a chat/research submission.
+ * - `tier1_chat`: the fast tier1 `POST /chat` proxy.
+ * - `tier2_job`: the long-running research tier2 job pipeline.
+ */
+export type ChatTransport = "tier1_chat" | "tier2_job";
+
 export const RESEARCH_UPLOAD_TIMEOUT_MS = 60000;
 export const RESEARCH_TIER2_TIMEOUT_MS = 10 * 60 * 1000;
 export const RESEARCH_TIER2_JOB_POLL_MS = 1800;
@@ -537,6 +544,21 @@ function uniqueText(values: string[]): string[] {
 function normalizeResearchExecutionMode(mode?: ResearchExecutionMode): ResearchExecutionMode {
   if (mode === "deep" || mode === "deep_beta" || mode === "fast") return mode;
   return "fast";
+}
+
+/**
+ * Pure dispatch for the chat surface: maps a research execution mode to the
+ * transport that should fulfil it.
+ *
+ * - `fast` -> `tier1_chat` (the fast tier1 `POST /chat` proxy)
+ * - `deep` / `deep_beta` -> `tier2_job` (the research tier2 job pipeline)
+ *
+ * Any unknown/undefined mode is normalized to `fast`, so it routes to tier1.
+ * Keeping this decision as a small, side-effect-free unit makes the routing
+ * testable in isolation (see Requirements 2.1, 2.2).
+ */
+export function resolveChatTransport(mode?: ResearchExecutionMode): ChatTransport {
+  return normalizeResearchExecutionMode(mode) === "fast" ? "tier1_chat" : "tier2_job";
 }
 
 function normalizeResearchRetrievalStackMode(

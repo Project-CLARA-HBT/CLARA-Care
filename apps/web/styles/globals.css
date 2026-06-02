@@ -20,7 +20,7 @@
   /* Text */
   --text-primary: #1f2937;
   --text-secondary: #374151;
-  --text-muted: #6b7280;
+  --text-muted: #666c7a;
   --text-brand: #003461;
 
   /* Shell surfaces */
@@ -34,9 +34,20 @@
 
   /* Brand + status */
   --brand-500: #28d9f3;
-  --brand-600: #00abc0;
+  --brand-600: #00a2b6;
   --brand-700: #006876;
   --accent-500: #b7c8e1;
+  /* Brand navy + cyan accents (CareGuard / SelfMed safety surfaces).
+     These are fixed brand-palette values; surfaces supply explicit
+     dark-mode variants where needed. */
+  --brand-navy: #003461;
+  --brand-navy-strong: #004b87;
+  --brand-navy-dark: #1f4876;
+  --brand-navy-dark-soft: rgba(31, 72, 118, 0.4);
+  --brand-cyan-soft: #93efee;
+  --brand-cyan-soft-fill: rgba(147, 239, 238, 0.4);
+  --brand-cyan-soft-border: rgba(147, 239, 238, 0.6);
+  --brand-cyan-on-soft: #006e6e;
   --success-500: #16a34a;
   --warn-500: #f59e0b;
   --danger-500: #dc2626;
@@ -45,7 +56,7 @@
   --status-ok-text: #047857;
   --status-warn-bg: rgba(217, 119, 6, 0.14);
   --status-warn-border: rgba(217, 119, 6, 0.34);
-  --status-warn-text: #b45309;
+  --status-warn-text: #af5109;
   --status-danger-bg: rgba(220, 38, 38, 0.14);
   --status-danger-border: rgba(220, 38, 38, 0.34);
   --status-danger-text: #b91c1c;
@@ -75,6 +86,11 @@
   --shadow-hero: 0 34px 88px -42px rgba(2, 132, 199, 0.62);
   --shadow-focus: 0 0 0 3px rgba(14, 116, 205, 0.28);
   --shadow-chrome: 0 20px 54px -34px rgba(2, 132, 199, 0.52);
+
+  /* Focus indicator (keyboard) */
+  --focus-ring-color: #0e74cd;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   --font-sans:
     "Manrope",
@@ -157,7 +173,7 @@ html[data-theme="dark"] {
   --bg-elev-3: #1d2840;
   --text-primary: #dae2fd;
   --text-secondary: #c3c6d0;
-  --text-muted: #8d919a;
+  --text-muted: #9da0a8;
   --text-brand: #28d9f3;
   --surface-sidebar: rgba(16, 26, 44, 0.94);
   --surface-header: rgba(22, 32, 50, 0.82);
@@ -188,6 +204,7 @@ html[data-theme="dark"] {
   --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
   --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.32);
   --shadow-chrome: 0 22px 56px -34px rgba(2, 6, 23, 0.9);
+  --focus-ring-color: #67e8f9;
 }
 
 * {
@@ -491,9 +508,33 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
-  outline: none;
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="link"]:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   box-shadow: var(--shadow-focus);
+}
+
+/* Preserve a visible focus indicator under Windows High Contrast / forced colors,
+   where box-shadow is dropped and custom outline colors are overridden. */
+@media (forced-colors: active) {
+  .focus-ring:focus-visible,
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="link"]:focus-visible,
+  [tabindex]:focus-visible,
+  summary:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 html.dark body,

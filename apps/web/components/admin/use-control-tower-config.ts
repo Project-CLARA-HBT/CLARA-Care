@@ -8,6 +8,7 @@ import {
   getControlTowerConfig,
   updateControlTowerConfig
 } from "@/lib/system";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 
 export type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
 export type LlmProviderKey = "deepseek" | "hitechcloud_gpt53_codex_high";
@@ -201,7 +202,11 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
       setConfig(next);
       setSnapshot(JSON.stringify(next));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load control tower config.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Unable to load control tower config."
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +230,11 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
       setMessage("Saved control tower configuration.");
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save control tower config.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Unable to save control tower config."
+        )
+      );
       return false;
     } finally {
       setIsSaving(false);

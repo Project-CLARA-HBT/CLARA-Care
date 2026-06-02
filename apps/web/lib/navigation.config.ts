@@ -189,6 +189,30 @@ const NAV_ITEMS: NavigationItem[] = [
     }
   },
   {
+    href: "/admin/analytics",
+    label: "Phân tích sản phẩm",
+    icon: "insights",
+    desc: "Người dùng, Surface và giữ chân",
+    group: "admin",
+    roles: ["admin"],
+    page: {
+      title: "Phân tích sản phẩm",
+      subtitle: "Xu hướng người dùng, mức độ sử dụng theo Surface, phễu chuyển đổi và giữ chân."
+    }
+  },
+  {
+    href: "/admin/analytics/clinical",
+    label: "Phân tích lâm sàng",
+    icon: "vital_signs",
+    desc: "Kiểm chứng, DDI và độ trễ",
+    group: "admin",
+    roles: ["admin"],
+    page: {
+      title: "Phân tích lâm sàng",
+      subtitle: "Phán quyết kiểm chứng FIDES, phân bố tương tác thuốc và độ trễ theo tier."
+    }
+  },
+  {
     href: "/huong-dan",
     label: "Hướng dẫn",
     icon: "widgets",

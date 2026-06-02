@@ -5,7 +5,9 @@ export type AdminTabKey =
   | "overview"
   | "knowledge-sources"
   | "answer-flow"
-  | "observability";
+  | "observability"
+  | "product-analytics"
+  | "clinical-analytics";
 
 type AdminShellProps = {
   activeTab: AdminTabKey;
@@ -48,6 +50,20 @@ const ADMIN_TABS: Array<{
     label: "Giám sát",
     hint: "Health, metrics và signal board",
     code: "A04"
+  },
+  {
+    key: "product-analytics",
+    href: "/admin/analytics",
+    label: "Phân tích sản phẩm",
+    hint: "Người dùng, Surface và giữ chân",
+    code: "A05"
+  },
+  {
+    key: "clinical-analytics",
+    href: "/admin/analytics/clinical",
+    label: "Phân tích lâm sàng",
+    hint: "Kiểm chứng, DDI và độ trễ",
+    code: "A06"
   }
 ];
 

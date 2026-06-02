@@ -6,13 +6,20 @@ import PageShell from "@/components/ui/page-shell";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import {
   CareguardAnalyzeResult,
+  DdiRiskLevel,
+  DdiUserView,
   analyzeCareguard,
   formatCareguardRiskLabel,
   normalizeCareguardResult,
   parseFreeTextList,
   parseLabsInput,
-  toCareguardUserMessage
+  requiresTwoMedicines,
+  toCareguardUserMessage,
+  toDdiUserView
 } from "@/lib/careguard";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { getRole, UserRole } from "@/lib/auth-store";
+import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
 import {
   addCabinetItem,
   CabinetItem,
@@ -84,27 +91,19 @@ function getNormalizationClass(source: string | null | undefined): string {
   return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
-function getSeverityTone(severity: string | undefined, fallbackIndex: number): "major" | "moderate" {
-  const normalized = severity?.toLowerCase() ?? "";
-  if (["major", "high", "critical", "severe"].some((token) => normalized.includes(token))) {
-    return "major";
-  }
-  if (["moderate", "medium", "amber"].some((token) => normalized.includes(token))) {
-    return "moderate";
-  }
-  return fallbackIndex === 0 ? "major" : "moderate";
+function isMajorSeverity(level: DdiRiskLevel): boolean {
+  return level === "high" || level === "critical";
 }
 
-function getRiskScore(result: CareguardAnalyzeResult | null): number {
-  if (!result) return 0;
-  const tier = (result.riskTier ?? "").toLowerCase();
+function getRiskScore(view: DdiUserView | null): number {
+  if (!view) return 0;
   let base = 46;
-  if (["high", "critical", "red"].some((token) => tier.includes(token))) base = 72;
-  if (["medium", "moderate", "amber"].some((token) => tier.includes(token))) base = 54;
-  if (["low", "green"].some((token) => tier.includes(token))) base = 28;
+  if (isMajorSeverity(view.riskLevel)) base = 72;
+  else if (view.riskLevel === "medium") base = 54;
+  else if (view.riskLevel === "low") base = 28;
 
-  const severeAlerts = result.ddiAlerts.filter((alert) => getSeverityTone(alert.severity, 0) === "major").length;
-  const moderateAlerts = Math.max(0, result.ddiAlerts.length - severeAlerts);
+  const severeAlerts = view.alerts.filter((alert) => isMajorSeverity(alert.severity)).length;
+  const moderateAlerts = Math.max(0, view.alerts.length - severeAlerts);
   const weighted = base + severeAlerts * 7 + moderateAlerts * 3;
   return Math.max(5, Math.min(95, weighted));
 }
@@ -115,9 +114,9 @@ function getRiskScoreLabel(score: number): string {
   return "Rủi ro thấp";
 }
 
-function getRiskScoreMeaning(result: CareguardAnalyzeResult | null, score: number): string {
-  if (!result) return "Chưa kiểm tra tương tác thuốc.";
-  const alertCount = result.ddiAlerts.length;
+function getRiskScoreMeaning(view: DdiUserView | null, score: number): string {
+  if (!view) return "Chưa kiểm tra tương tác thuốc.";
+  const alertCount = view.alerts.length;
   if (alertCount > 0) {
     return `${alertCount} cảnh báo tương tác cần đọc trước khi dùng thuốc cùng nhau.`;
   }
@@ -132,6 +131,8 @@ export default function CareguardPage() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentError, setConsentError] = useState("");
   const [acceptingConsent, setAcceptingConsent] = useState(false);
+
+  const [userRole, setUserRole] = useState<UserRole>("normal");
 
   const [cabinet, setCabinet] = useState<CabinetItem[]>([]);
   const [cabinetLabel, setCabinetLabel] = useState("Tủ thuốc cá nhân");
@@ -177,6 +178,8 @@ export default function CareguardPage() {
     [cabinet]
   );
 
+  const needsMoreMedicines = useMemo(() => requiresTwoMedicines(medicationNames), [medicationNames]);
+
   const pendingLowConfidenceDetections = useMemo(() => {
     return receiptDetections.filter((item, index) => {
       if (!isLowConfidenceDetection(item)) return false;
@@ -190,40 +193,48 @@ export default function CareguardPage() {
   );
 
   const displayedResult = manualResult ?? autoResult;
-  const aggregateRiskScore = useMemo(() => getRiskScore(displayedResult), [displayedResult]);
+  // End_User projection: only risk level, alerts, recommendations, and sources.
+  // Runtime mode, fallback flags, and connector source_errors are dropped, so
+  // connector errors are never surfaced while a valid signal remains
+  // (Requirements 3.1, 3.6).
+  const displayedView = useMemo<DdiUserView | null>(
+    () => (displayedResult ? toDdiUserView(displayedResult) : null),
+    [displayedResult]
+  );
+  const aggregateRiskScore = useMemo(() => getRiskScore(displayedView), [displayedView]);
   const aggregateRiskLabel = useMemo(() => getRiskScoreLabel(aggregateRiskScore), [aggregateRiskScore]);
 
   const gaugeOffset = useMemo(() => {
-    if (!displayedResult) return RISK_GAUGE_CIRCUMFERENCE;
+    if (!displayedView) return RISK_GAUGE_CIRCUMFERENCE;
     return RISK_GAUGE_CIRCUMFERENCE - (aggregateRiskScore / 100) * RISK_GAUGE_CIRCUMFERENCE;
-  }, [aggregateRiskScore, displayedResult]);
+  }, [aggregateRiskScore, displayedView]);
 
   const visibleAlerts = useMemo(() => {
-    if (!displayedResult) return [] as Array<{ title: string; details: string; tone: "major" | "moderate" }>;
+    if (!displayedView) return [] as Array<{ title: string; details: string; tone: "major" | "moderate" }>;
 
-    return displayedResult.ddiAlerts.slice(0, 2).map((alert, index) => ({
-      title: alert.title,
+    return displayedView.alerts.slice(0, 2).map((alert, index) => ({
+      title: alert.message,
       details:
         alert.details ??
         (index === 0
           ? "Dùng đồng thời có thể làm tăng nguy cơ tác dụng bất lợi có ý nghĩa lâm sàng."
           : "Cần theo dõi sát hơn và đánh giá lợi ích - nguy cơ trong lần tái khám."),
-      tone: getSeverityTone(alert.severity, index)
+      tone: (isMajorSeverity(alert.severity) ? "major" : "moderate") as "major" | "moderate"
     }));
-  }, [displayedResult]);
+  }, [displayedView]);
 
   const aiInsight = useMemo(() => {
-    if (!displayedResult) {
+    if (!displayedView) {
       return "Hãy thêm thuốc vào tủ, sau đó bấm kiểm tra tương tác để xem cặp thuốc nào cần lưu ý.";
     }
-    if (displayedResult.recommendations.length > 0) {
-      return displayedResult.recommendations[0];
+    if (displayedView.recommendations.length > 0) {
+      return displayedView.recommendations[0];
     }
-    if (displayedResult.ddiAlerts.length > 0) {
+    if (displayedView.alerts.length > 0) {
       return "Mẫu tương tác phát hiện được cần đối chiếu thêm theo tuổi, chức năng thận và diễn tiến triệu chứng hiện tại.";
     }
     return "Chưa ghi nhận tương tác nghiêm trọng trong bộ thuốc hiện tại. Tiếp tục rà soát định kỳ khi thay đổi đơn thuốc.";
-  }, [displayedResult]);
+  }, [displayedView]);
 
   const refreshConsentStatus = async (): Promise<boolean> => {
     setConsentError("");
@@ -255,6 +266,8 @@ export default function CareguardPage() {
 
   useEffect(() => {
     const initialize = async () => {
+      setUserRole(getRole());
+      trackCareguardViewed({ surface: "careguard" });
       setConsentLoading(true);
       const accepted = await refreshConsentStatus();
       if (accepted) {
@@ -423,6 +436,10 @@ export default function CareguardPage() {
   };
 
   const onRunAutoDdi = async () => {
+    if (requiresTwoMedicines(medicationNames)) {
+      setAutoError("Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác thuốc.");
+      return;
+    }
     setAutoChecking(true);
     setAutoError("");
     setAutoResult(null);
@@ -431,6 +448,13 @@ export default function CareguardPage() {
         allergies: includeHerbalOverlay ? parseFreeTextList(allergiesInput) : []
       });
       setAutoResult(result);
+      const view = toDdiUserView(result);
+      trackCareguardDdiChecked({
+        riskLevel: view.riskLevel,
+        alertCount: view.alerts.length,
+        medicineCount: medicationNames.length,
+        source: "auto"
+      });
     } catch (error) {
       setAutoError(toCareguardUserMessage(error, "Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại."));
     } finally {
@@ -439,8 +463,8 @@ export default function CareguardPage() {
   };
 
   const onRunAdvancedAnalyze = async () => {
-    if (!medicationNames.length) {
-      setManualError("Cần ít nhất 1 thuốc trong tủ để chạy phân tích nâng cao.");
+    if (requiresTwoMedicines(medicationNames)) {
+      setManualError("Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác thuốc.");
       return;
     }
 
@@ -461,7 +485,15 @@ export default function CareguardPage() {
         medications: medicationNames,
         allergies: includeHerbalOverlay ? parseFreeTextList(allergiesInput) : []
       });
-      setManualResult(normalizeCareguardResult(response));
+      const normalized = normalizeCareguardResult(response);
+      setManualResult(normalized);
+      const view = toDdiUserView(normalized);
+      trackCareguardDdiChecked({
+        riskLevel: view.riskLevel,
+        alertCount: view.alerts.length,
+        medicineCount: medicationNames.length,
+        source: "advanced"
+      });
     } catch (error) {
       setManualError(
         toCareguardUserMessage(error, "Không thể chạy phân tích nâng cao lúc này. Vui lòng thử lại.")
@@ -519,7 +551,7 @@ export default function CareguardPage() {
             type="button"
             onClick={onAcceptConsent}
             disabled={!consentChecked || acceptingConsent}
-            className="mt-5 min-h-11 rounded-xl bg-[#003461] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="mt-5 min-h-11 rounded-xl bg-[var(--brand-navy)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
             {acceptingConsent ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
           </button>
@@ -533,13 +565,13 @@ export default function CareguardPage() {
   return (
     <PageShell title="" description="" variant="plain">
       <div className="space-y-6 pb-8">
-        <section className="rounded-3xl border border-[#c2c6d1]/20 bg-[#f7f9fb] p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <section className="rounded-3xl border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-[#003461] dark:text-[#93efee]">Trung tâm Phân tích An toàn</h1>
-              <p className="mt-1 text-sm text-[#424750] dark:text-slate-300">Không gian phân tích tương tác thuốc chuẩn lâm sàng, dùng dữ liệu backend thật.</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-brand)]">Trung tâm Phân tích An toàn</h1>
+              <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-slate-300">Không gian phân tích tương tác thuốc chuẩn lâm sàng, dùng dữ liệu backend thật.</p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#93efee] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#006e6e] ring-1 ring-[#93efee]/40 dark:bg-[#1f4876]/40 dark:text-[#93efee]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-cyan-soft)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[var(--brand-cyan-on-soft)] ring-1 ring-[color:var(--brand-cyan-soft-border)] dark:bg-[var(--brand-navy-dark-soft)] dark:text-[var(--brand-cyan-soft)]">
               <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
               Chế độ an toàn độc lập: Dữ liệu nhập không tự lưu vào tủ thuốc cá nhân
             </div>
@@ -547,12 +579,12 @@ export default function CareguardPage() {
         </section>
 
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <article className="rounded-2xl border-2 border-dashed border-[#93efee]/60 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-[#1f4876] dark:bg-slate-900">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#93efee]/40 text-[#003461]">
+          <article className="rounded-2xl border-2 border-dashed border-[color:var(--brand-cyan-soft-border)] bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-[color:var(--brand-navy-dark)] dark:bg-slate-900">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-cyan-soft-fill)] text-[var(--brand-navy)]">
               <span className="material-symbols-outlined text-3xl">cloud_upload</span>
             </div>
-            <h3 className="text-center text-lg font-bold text-[#003461] dark:text-[#93efee]">Tải lên hoặc quét OCR</h3>
-            <p className="mx-auto mt-2 max-w-sm text-center text-sm text-[#424750] dark:text-slate-300">
+            <h3 className="text-center text-lg font-bold text-[var(--text-brand)]">Tải lên hoặc quét OCR</h3>
+            <p className="mx-auto mt-2 max-w-sm text-center text-sm text-[var(--text-secondary)] dark:text-slate-300">
               Thả đơn thuốc, tóm tắt ra viện hoặc nhãn thuốc để trích xuất dữ liệu thuốc từ OCR backend thật.
             </p>
 
@@ -576,14 +608,14 @@ export default function CareguardPage() {
               <button
                 type="button"
                 onClick={() => hiddenFileInputRef.current?.click()}
-                className="rounded-lg bg-[#003461] px-6 py-2 text-sm font-bold text-white transition hover:opacity-90"
+                className="rounded-lg bg-[var(--brand-navy)] px-6 py-2 text-sm font-bold text-white transition hover:opacity-90"
               >
                 Chọn tệp
               </button>
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="rounded-lg border border-[#003461] px-6 py-2 text-sm font-bold text-[#003461] transition hover:bg-[#eceef0] dark:border-[#93efee] dark:text-[#93efee] dark:hover:bg-slate-800"
+                className="rounded-lg border border-[color:var(--brand-navy)] px-6 py-2 text-sm font-bold text-[var(--brand-navy)] transition hover:bg-[var(--surface-muted)] dark:border-[color:var(--brand-cyan-soft)] dark:text-[var(--brand-cyan-soft)] dark:hover:bg-slate-800"
               >
                 Mở camera
               </button>
@@ -591,28 +623,28 @@ export default function CareguardPage() {
                 type="button"
                 onClick={onScanReceiptFile}
                 disabled={isScanning || !receiptFile}
-                className="rounded-lg bg-[#004b87] px-6 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg bg-[var(--brand-navy-strong)] px-6 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isScanning ? "Đang quét..." : "Phân tích tệp OCR"}
               </button>
             </div>
             {receiptFile ? (
-              <p className="mt-3 text-center text-xs text-[#424750] dark:text-slate-300">Đã chọn tệp: {receiptFile.name}</p>
+              <p className="mt-3 text-center text-xs text-[var(--text-secondary)] dark:text-slate-300">Đã chọn tệp: {receiptFile.name}</p>
             ) : null}
           </article>
 
-          <article className="flex flex-col rounded-2xl border border-[#c2c6d1]/30 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <article className="flex flex-col rounded-2xl border border-[color:var(--shell-border)] bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-lg font-bold text-[#003461] dark:text-[#93efee]">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-[var(--text-brand)]">
                 <span className="material-symbols-outlined">edit_note</span>
                 Ghi chú lâm sàng
               </h3>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#727781]">Nhập liệu ngôn ngữ tự nhiên</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Nhập liệu ngôn ngữ tự nhiên</span>
             </div>
             <textarea
               value={receiptTextInput}
               onChange={(event) => setReceiptTextInput(event.target.value)}
-              className="min-h-[220px] w-full flex-1 rounded-lg border border-[#c2c6d1]/30 bg-[#f2f4f6] p-4 text-sm text-[#191c1e] focus:ring-2 focus:ring-[#003461]/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="min-h-[220px] w-full flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-primary)] focus:ring-2 focus:ring-[color:var(--shell-border-strong)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               placeholder="Dán danh sách thuốc thô hoặc ghi chú lâm sàng ngắn (ví dụ: Warfarin 5mg mỗi ngày + Ibuprofen trị đau lưng)"
             />
             <div className="mt-4 flex justify-end">
@@ -620,7 +652,7 @@ export default function CareguardPage() {
                 type="button"
                 onClick={onRecognizeReceiptText}
                 disabled={isScanning}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#93efee] px-6 py-2 text-sm font-bold text-[#006e6e] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-cyan-soft)] px-6 py-2 text-sm font-bold text-[var(--brand-cyan-on-soft)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
                 {isScanning ? "Đang phân tích..." : "Phân tích văn bản"}
@@ -630,15 +662,15 @@ export default function CareguardPage() {
         </section>
 
         {receiptNotice ? (
-          <p className="rounded-xl border border-[#c2c6d1]/20 bg-white px-4 py-3 text-sm text-[#424750] shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" aria-live="polite">
+          <p className="rounded-xl border border-[color:var(--shell-border)] bg-white px-4 py-3 text-sm text-[var(--text-secondary)] shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" aria-live="polite">
             {receiptNotice}
           </p>
         ) : null}
 
         {receiptDetections.length > 0 ? (
-          <section className="rounded-2xl border border-[#c2c6d1]/20 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <section className="rounded-2xl border border-[color:var(--shell-border)] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-[#003461] dark:text-[#93efee]">Thuốc đã nhận diện</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-[var(--text-brand)]">Thuốc đã nhận diện</h4>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -652,7 +684,7 @@ export default function CareguardPage() {
                   type="button"
                   onClick={onImportDetections}
                   disabled={pendingLowConfidenceDetections.length > 0}
-                  className="rounded-lg bg-[#003461] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg bg-[var(--brand-navy)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Nhập vào {cabinetLabel}
                 </button>
@@ -671,19 +703,19 @@ export default function CareguardPage() {
                 const isLowConfidence = isLowConfidenceDetection(item);
                 const isConfirmed = Boolean(confirmedDetectionKeys[key]);
                 return (
-                  <li key={key} className="rounded-xl border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
-                    <p className="text-sm font-bold text-[#003461] dark:text-[#93efee]">{item.drug_name}</p>
-                    <p className="mt-1 text-xs text-[#424750] dark:text-slate-300">
+                  <li key={key} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-3 dark:border-slate-700 dark:bg-slate-950">
+                    <p className="text-sm font-bold text-[var(--text-brand)]">{item.drug_name}</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-slate-300">
                       {item.dosage ? `Liều: ${item.dosage}` : "Liều: Chưa có"}
                     </p>
-                    <p className="mt-1 text-xs text-[#424750] dark:text-slate-300">Độ tin cậy: {Math.round(item.confidence * 100)}%</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-slate-300">Độ tin cậy: {Math.round(item.confidence * 100)}%</p>
                     <span
                       className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.mapping_source)}`}
                     >
                       {getNormalizationLabel(item.mapping_source)}
                     </span>
                     {isLowConfidence ? (
-                      <label className="mt-2 flex items-center gap-2 text-xs font-medium text-[#424750] dark:text-slate-300">
+                      <label className="mt-2 flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={isConfirmed}
@@ -700,14 +732,14 @@ export default function CareguardPage() {
           </section>
         ) : null}
 
-        <section className="rounded-2xl border border-[#c2c6d1]/20 bg-[#eceef0] p-4 dark:border-slate-800 dark:bg-slate-900">
+        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-wrap items-center gap-6">
-            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#424750] dark:text-slate-300">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] dark:text-slate-300">
               <span className="material-symbols-outlined text-[16px]">tune</span>
               Tham số nâng cao
             </span>
 
-            <label className="inline-flex items-center gap-2 text-sm text-[#191c1e] dark:text-slate-200">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeAgeRisk}
@@ -716,7 +748,7 @@ export default function CareguardPage() {
               />
               Rủi ro theo tuổi
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-[#191c1e] dark:text-slate-200">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeLabs}
@@ -725,7 +757,7 @@ export default function CareguardPage() {
               />
               Kết quả xét nghiệm
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-[#191c1e] dark:text-slate-200">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeSymptoms}
@@ -734,7 +766,7 @@ export default function CareguardPage() {
               />
               Triệu chứng hiện tại
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-[#191c1e] dark:text-slate-200">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeHerbalOverlay}
@@ -750,25 +782,25 @@ export default function CareguardPage() {
               value={ageInput}
               onChange={(event) => setAgeInput(event.target.value)}
               placeholder="Tuổi (không bắt buộc)"
-              className="rounded-lg border border-[#c2c6d1]/30 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
             />
             <input
               value={allergiesInput}
               onChange={(event) => setAllergiesInput(event.target.value)}
               placeholder="Dị ứng / OTC / thảo dược"
-              className="rounded-lg border border-[#c2c6d1]/30 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
             />
             <input
               value={symptomsInput}
               onChange={(event) => setSymptomsInput(event.target.value)}
               placeholder="Triệu chứng (ngăn cách bằng dấu phẩy)"
-              className="rounded-lg border border-[#c2c6d1]/30 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
             />
             <input
               value={labsInput}
               onChange={(event) => setLabsInput(event.target.value)}
               placeholder="Xét nghiệm: egfr=28, creatinine=2.1"
-              className="rounded-lg border border-[#c2c6d1]/30 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
             />
           </div>
 
@@ -776,32 +808,37 @@ export default function CareguardPage() {
             <button
               type="button"
               onClick={onRunAutoDdi}
-              disabled={autoChecking || cabinet.length === 0}
-              className="rounded-lg bg-[#003461] px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={autoChecking || needsMoreMedicines}
+              className="rounded-lg bg-[var(--brand-navy)] px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {autoChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
             </button>
             <button
               type="button"
               onClick={onRunAdvancedAnalyze}
-              disabled={manualChecking || cabinet.length === 0}
-              className="rounded-lg border border-[#003461] px-5 py-2 text-sm font-bold text-[#003461] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#93efee] dark:text-[#93efee] dark:hover:bg-slate-800"
+              disabled={manualChecking || needsMoreMedicines}
+              className="rounded-lg border border-[color:var(--brand-navy)] px-5 py-2 text-sm font-bold text-[var(--brand-navy)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-[color:var(--brand-cyan-soft)] dark:text-[var(--brand-cyan-soft)] dark:hover:bg-slate-800"
             >
               {manualChecking ? "Đang phân tích kỹ hơn..." : "Phân tích kỹ hơn"}
             </button>
-            <span className="text-xs text-[#727781] dark:text-slate-400">Số thuốc trong tủ: {cabinetStats.total}</span>
+            <span className="text-xs text-[var(--text-muted)] dark:text-slate-400">Số thuốc trong tủ: {cabinetStats.total}</span>
           </div>
 
+          {needsMoreMedicines ? (
+            <p className="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác thuốc.
+            </p>
+          ) : null}
           {autoError ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{autoError}</p> : null}
           {manualError ? <p className="mt-2 text-sm text-red-700 dark:text-red-300">{manualError}</p> : null}
         </section>
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-12">
           <article className="md:col-span-4 flex flex-col items-center rounded-2xl border border-white bg-white/80 p-8 text-center shadow-xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
-            <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[#424750] dark:text-slate-300">Mức rủi ro tương tác</h4>
+            <h4 className="mb-6 text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] dark:text-slate-300">Mức rủi ro tương tác</h4>
             <div className="relative mb-4 flex h-48 w-48 items-center justify-center">
               <svg className="h-full w-full -rotate-90" viewBox="0 0 192 192">
-                <circle cx="96" cy="96" r="88" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-[#e0e3e5] dark:text-slate-700" />
+                <circle cx="96" cy="96" r="88" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-[var(--surface-muted)] dark:text-slate-700" />
                 <circle
                   cx="96"
                   cy="96"
@@ -812,22 +849,22 @@ export default function CareguardPage() {
                   strokeLinecap="round"
                   strokeDasharray={RISK_GAUGE_CIRCUMFERENCE}
                   strokeDashoffset={gaugeOffset}
-                  className={aggregateRiskScore >= 70 ? "text-[#ba1a1a]" : aggregateRiskScore >= 45 ? "text-amber-500" : "text-emerald-500"}
+                  className={aggregateRiskScore >= 70 ? "text-[var(--danger-500)]" : aggregateRiskScore >= 45 ? "text-amber-500" : "text-emerald-500"}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-extrabold text-[#ba1a1a] dark:text-red-300">{displayedResult ? aggregateRiskScore : "--"}</span>
-                <span className="text-[10px] font-bold uppercase text-[#727781] dark:text-slate-400">{displayedResult ? aggregateRiskLabel : "Chưa có kết quả"}</span>
+                <span className="text-5xl font-extrabold text-[var(--danger-500)] dark:text-red-300">{displayedView ? aggregateRiskScore : "--"}</span>
+                <span className="text-[10px] font-bold uppercase text-[var(--text-muted)] dark:text-slate-400">{displayedView ? aggregateRiskLabel : "Chưa có kết quả"}</span>
               </div>
             </div>
-            <p className="text-sm leading-6 text-[#424750] dark:text-slate-300">
-              {getRiskScoreMeaning(displayedResult, aggregateRiskScore)}
+            <p className="text-sm leading-6 text-[var(--text-secondary)] dark:text-slate-300">
+              {getRiskScoreMeaning(displayedView, aggregateRiskScore)}
             </p>
-            <div className="mt-6 flex h-1.5 w-full overflow-hidden rounded-full bg-[#eceef0] dark:bg-slate-700">
+            <div className="mt-6 flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)] dark:bg-slate-700">
               <div className="h-full w-1/4 bg-emerald-400" />
               <div className="h-full w-1/4 bg-yellow-400" />
               <div className="h-full w-1/4 bg-orange-500" />
-              <div className="h-full w-1/4 bg-[#ba1a1a]" />
+              <div className="h-full w-1/4 bg-[var(--danger-500)]" />
             </div>
           </article>
 
@@ -840,29 +877,29 @@ export default function CareguardPage() {
                     key={`${alert.title}-${index}`}
                     className={`rounded-xl border-l-4 p-6 shadow-sm transition-shadow hover:shadow-md ${
                       major
-                        ? "border-[#ba1a1a] bg-white dark:bg-slate-900"
+                        ? "border-[color:var(--danger-500)] bg-white dark:bg-slate-900"
                         : "border-yellow-500 bg-white dark:bg-slate-900"
-                    } border border-[#c2c6d1]/20 dark:border-slate-800`}
+                    } border border-[color:var(--shell-border)] dark:border-slate-800`}
                   >
                     <div className="mb-2 flex items-start justify-between gap-3">
-                      <h5 className="text-lg font-bold text-[#003461] dark:text-[#93efee]">{alert.title}</h5>
+                      <h5 className="text-lg font-bold text-[var(--text-brand)]">{alert.title}</h5>
                       <span
                         className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${
-                          major ? "bg-[#ba1a1a] text-white" : "bg-yellow-500 text-white"
+                          major ? "bg-[var(--danger-500)] text-white" : "bg-yellow-500 text-white"
                         }`}
                       >
                         {major ? "Nặng" : "Trung bình"}
                       </span>
                     </div>
-                    <p className="text-sm leading-relaxed text-[#424750] dark:text-slate-300">{alert.details}</p>
-                    <div className="mt-4 flex items-center justify-between rounded-lg bg-[#f2f4f6] p-3 dark:bg-slate-800">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-[#006e6e] dark:text-[#93efee]">
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)] dark:text-slate-300">{alert.details}</p>
+                    <div className="mt-4 flex items-center justify-between rounded-lg bg-[var(--surface-muted)] p-3 dark:bg-slate-800">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[var(--brand-cyan-on-soft)] dark:text-[var(--brand-cyan-soft)]">
                         <span className="material-symbols-outlined text-sm">lightbulb</span>
                         Khuyến nghị: Rà soát với bác sĩ điều trị
                       </div>
                       <button
                         type="button"
-                        className="text-xs font-bold text-[#003461] hover:underline dark:text-[#93efee]"
+                        className="text-xs font-bold text-[var(--brand-navy)] hover:underline dark:text-[var(--brand-cyan-soft)]"
                       >
                         Xem bằng chứng
                       </button>
@@ -871,12 +908,12 @@ export default function CareguardPage() {
                 );
               })
             ) : (
-              <div className="rounded-xl border border-[#c2c6d1]/20 bg-white p-6 text-sm text-[#424750] shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+              <div className="rounded-xl border border-[color:var(--shell-border)] bg-white p-6 text-sm text-[var(--text-secondary)] shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 Chưa có cảnh báo tương tác. Hãy thêm ít nhất 2 thuốc vào tủ rồi bấm Kiểm tra tương tác thuốc.
               </div>
             )}
 
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#003461] to-[#004b87] p-6 text-white shadow-xl">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[var(--brand-navy)] to-[var(--brand-navy-strong)] p-6 text-white shadow-xl">
               <div className="absolute -bottom-12 -right-12 opacity-10">
                 <span className="material-symbols-outlined text-[160px]">psychology</span>
               </div>
@@ -887,13 +924,13 @@ export default function CareguardPage() {
                 <div className="flex-1">
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <h5 className="text-lg font-bold">CLARA giải thích kết quả</h5>
-                    <span className="rounded bg-[#93efee] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#003461]">Gợi ý an toàn</span>
+                    <span className="rounded bg-[var(--brand-cyan-soft)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-navy)]">Gợi ý an toàn</span>
                   </div>
-                  <p className="text-sm leading-relaxed text-[#d3e4ff]">{aiInsight}</p>
+                  <p className="text-sm leading-relaxed text-[var(--surface-brand-soft)]">{aiInsight}</p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
-                      className="rounded-lg bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-tight text-[#003461] transition hover:bg-[#eceef0]"
+                      className="rounded-lg bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-tight text-[var(--brand-navy)] transition hover:bg-[var(--surface-muted)]"
                     >
                       Đọc khuyến nghị
                     </button>
@@ -909,14 +946,14 @@ export default function CareguardPage() {
         </section>
 
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <article className="rounded-2xl border border-[#c2c6d1]/20 bg-white p-5 shadow-sm xl:col-span-7 dark:border-slate-800 dark:bg-slate-900">
+          <article className="rounded-2xl border border-[color:var(--shell-border)] bg-white p-5 shadow-sm xl:col-span-7 dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-[#003461] dark:text-[#93efee]">Tủ thuốc</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-[var(--text-brand)]">Tủ thuốc</h4>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#eceef0] px-2.5 py-1 text-xs font-semibold text-[#424750] dark:bg-slate-800 dark:text-slate-300">
+                <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] dark:bg-slate-800 dark:text-slate-300">
                   Tổng: {cabinetStats.total}
                 </span>
-                <span className="rounded-full bg-[#93efee]/30 px-2.5 py-1 text-xs font-semibold text-[#006e6e] dark:bg-[#1f4876]/40 dark:text-[#93efee]">
+                <span className="rounded-full bg-[var(--brand-cyan-soft-fill)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-cyan-on-soft)] dark:bg-[var(--brand-navy-dark-soft)] dark:text-[var(--brand-cyan-soft)]">
                   OCR: {cabinetStats.fromOcr}
                 </span>
               </div>
@@ -927,36 +964,36 @@ export default function CareguardPage() {
                 value={manualMedicationInput}
                 onChange={(event) => setManualMedicationInput(event.target.value)}
                 placeholder="Thêm nhanh thuốc (ngăn cách bằng dấu phẩy)"
-                className="min-w-[260px] flex-1 rounded-lg border border-[#c2c6d1]/30 bg-[#f7f9fb] px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="min-w-[260px] flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
               />
               <button
                 type="button"
                 onClick={onAddManualMedication}
-                className="rounded-lg border border-[#003461] px-4 py-2 text-xs font-bold text-[#003461] hover:bg-[#eceef0] dark:border-[#93efee] dark:text-[#93efee] dark:hover:bg-slate-800"
+                className="rounded-lg border border-[color:var(--brand-navy)] px-4 py-2 text-xs font-bold text-[var(--brand-navy)] hover:bg-[var(--surface-muted)] dark:border-[color:var(--brand-cyan-soft)] dark:text-[var(--brand-cyan-soft)] dark:hover:bg-slate-800"
               >
                 Thêm
               </button>
               <button
                 type="button"
                 onClick={refreshCabinet}
-                className="rounded-lg border border-[#c2c6d1] px-4 py-2 text-xs font-bold text-[#424750] hover:bg-[#eceef0] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="rounded-lg border border-[color:var(--shell-border)] px-4 py-2 text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Làm mới
               </button>
             </div>
 
-            {cabinetLoading ? <p className="text-sm text-[#424750] dark:text-slate-300">Đang tải tủ thuốc...</p> : null}
+            {cabinetLoading ? <p className="text-sm text-[var(--text-secondary)] dark:text-slate-300">Đang tải tủ thuốc...</p> : null}
             {cabinetError ? <p className="text-sm text-red-700 dark:text-red-300">{cabinetError}</p> : null}
-            {cabinetNotice ? <p className="text-sm text-[#424750] dark:text-slate-300">{cabinetNotice}</p> : null}
+            {cabinetNotice ? <p className="text-sm text-[var(--text-secondary)] dark:text-slate-300">{cabinetNotice}</p> : null}
 
             {cabinet.length > 0 ? (
               <ul className="mt-2 grid gap-2 md:grid-cols-2">
                 {cabinet.map((item) => (
-                  <li key={item.id} className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
+                  <li key={item.id} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-3 dark:border-slate-700 dark:bg-slate-950">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold text-[#003461] dark:text-[#93efee]">{item.drug_name}</p>
-                        <p className="mt-1 text-xs text-[#424750] dark:text-slate-300">{item.dosage || "Liều: Chưa có"}</p>
+                        <p className="text-sm font-semibold text-[var(--text-brand)]">{item.drug_name}</p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-slate-300">{item.dosage || "Liều: Chưa có"}</p>
                         <span
                           className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_source)}`}
                         >
@@ -975,42 +1012,44 @@ export default function CareguardPage() {
                 ))}
               </ul>
             ) : (
-              !cabinetLoading && <p className="text-sm text-[#424750] dark:text-slate-300">Tủ thuốc đang trống.</p>
+              !cabinetLoading && <p className="text-sm text-[var(--text-secondary)] dark:text-slate-300">Tủ thuốc đang trống.</p>
             )}
           </article>
 
-          <article className="rounded-2xl border border-[#c2c6d1]/20 bg-white p-5 shadow-sm xl:col-span-5 dark:border-slate-800 dark:bg-slate-900">
-            <h4 className="mb-3 text-sm font-bold uppercase tracking-widest text-[#003461] dark:text-[#93efee]">Tín hiệu vận hành</h4>
+          <TelemetryPanel role={userRole} className="xl:col-span-5">
+            <article className="rounded-2xl border border-[color:var(--shell-border)] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h4 className="mb-3 text-sm font-bold uppercase tracking-widest text-[var(--text-brand)]">Tín hiệu vận hành</h4>
 
-            <div className="space-y-3">
-              <div className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Cách đối chiếu</p>
-                <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getModeBadgeClass(displayedResult?.mode ?? null)}`}>
-                  {getModeBadgeLabel(displayedResult?.mode ?? null)}
+              <div className="space-y-3">
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-3 dark:border-slate-700 dark:bg-slate-950">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Cách đối chiếu</p>
+                  <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getModeBadgeClass(displayedResult?.mode ?? null)}`}>
+                    {getModeBadgeLabel(displayedResult?.mode ?? null)}
+                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Mức rủi ro</p>
-                <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult?.riskTier ?? null)}`}>
-                  {formatCareguardRiskLabel(displayedResult?.riskTier ?? null)}
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-3 dark:border-slate-700 dark:bg-slate-950">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Mức rủi ro</p>
+                  <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult?.riskTier ?? null)}`}>
+                    {formatCareguardRiskLabel(displayedResult?.riskTier ?? null)}
+                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-lg border border-[#c2c6d1]/20 bg-[#f7f9fb] p-3 dark:border-slate-700 dark:bg-slate-950">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#727781]">Độ phủ bằng chứng</p>
-                <p className="mt-2 text-sm text-[#424750] dark:text-slate-300">
-                  Nguồn: {displayedResult?.attribution?.sourceCount ?? 0} • Trích dẫn: {displayedResult?.attribution?.citationCount ?? 0}
-                </p>
-                {displayedResult?.attribution?.sources?.length ? (
-                  <p className="mt-1 text-xs text-[#424750] dark:text-slate-400">
-                    {displayedResult.attribution.sources.map((source) => source.name).join(", ")}
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--bg-canvas)] p-3 dark:border-slate-700 dark:bg-slate-950">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Độ phủ bằng chứng</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-slate-300">
+                    Nguồn: {displayedResult?.attribution?.sourceCount ?? 0} • Trích dẫn: {displayedResult?.attribution?.citationCount ?? 0}
                   </p>
-                ) : null}
-              </div>
+                  {displayedResult?.attribution?.sources?.length ? (
+                    <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-slate-400">
+                      {displayedResult.attribution.sources.map((source) => source.name).join(", ")}
+                    </p>
+                  ) : null}
+                </div>
 
-            </div>
-          </article>
+              </div>
+            </article>
+          </TelemetryPanel>
         </section>
       </div>
     </PageShell>

@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/admin/admin-shell";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
+import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
   KnowledgeSource,
   KnowledgeSourceDocument,
@@ -105,7 +107,11 @@ export default function AdminKnowledgeSourcesPage() {
       });
       if (!items.length) setDocuments([]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải knowledge sources.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể tải knowledge sources."
+        )
+      );
     } finally {
       setIsLoadingSources(false);
     }
@@ -118,7 +124,11 @@ export default function AdminKnowledgeSourcesPage() {
       const items = await listKnowledgeSourceDocuments(sourceId);
       setDocuments(items);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải tài liệu của source.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể tải tài liệu của source."
+        )
+      );
     } finally {
       setIsLoadingDocs(false);
     }
@@ -127,6 +137,12 @@ export default function AdminKnowledgeSourcesPage() {
   useEffect(() => {
     void loadSources();
   }, [loadSources]);
+
+  // Emit a single named product event when the Knowledge Sources surface is
+  // opened (Req 9.1). No PII — only the coarse Admin view label.
+  useEffect(() => {
+    trackAdminSurfaceViewed({ view: "knowledge_sources" });
+  }, []);
 
   useEffect(() => {
     if (!activeSourceId) return;
@@ -148,7 +164,9 @@ export default function AdminKnowledgeSourcesPage() {
       setNewSourceName("");
       setMessage("Đã tạo knowledge source mới.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo source.");
+      setError(
+        sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tạo source.")
+      );
     } finally {
       setIsCreatingSource(false);
     }
@@ -165,7 +183,11 @@ export default function AdminKnowledgeSourcesPage() {
       await loadSources();
       setMessage("Upload tài liệu thành công.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể upload file vào source.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể upload file vào source."
+        )
+      );
     } finally {
       setIsUploading(false);
     }
@@ -177,7 +199,11 @@ export default function AdminKnowledgeSourcesPage() {
       const updated = await setKnowledgeDocumentStatus(document.id, !document.is_active);
       setDocuments((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái document.");
+      setError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái document."
+        )
+      );
     }
   };
 
@@ -189,7 +215,11 @@ export default function AdminKnowledgeSourcesPage() {
         setActiveHubSource((current) => (items.some((item) => item.key === current) ? current : items[0].key));
       }
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải federated catalog.");
+      setSourceHubError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể tải federated catalog."
+        )
+      );
     }
   }, []);
 
@@ -204,7 +234,11 @@ export default function AdminKnowledgeSourcesPage() {
       });
       setSourceHubRecords(items);
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể tải federated records.");
+      setSourceHubError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể tải federated records."
+        )
+      );
     } finally {
       setIsLoadingSourceHubRecords(false);
     }
@@ -246,7 +280,11 @@ export default function AdminKnowledgeSourcesPage() {
         setSourceHubMessage((prev) => `${prev} Cảnh báo: ${result.warnings.join(" | ")}`);
       }
     } catch (cause) {
-      setSourceHubError(cause instanceof Error ? cause.message : "Không thể đồng bộ federation.");
+      setSourceHubError(
+        sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể đồng bộ federation."
+        )
+      );
     } finally {
       setIsSyncingSourceHub(false);
     }

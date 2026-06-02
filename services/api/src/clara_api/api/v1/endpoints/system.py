@@ -1,14 +1,20 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.analytics import (
+    AnalyticsAggregator,
+    ClinicalAnalytics,
+    ProductAnalytics,
+)
 from clara_api.core.config import get_settings
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.flow import FLOW_EVENTS_DEFAULT_LIMIT, get_flow_event_stream_service
+from clara_api.core.flow.event_stream_service import FLOW_EVENTS_MAX_LIMIT
 from clara_api.core.metrics import get_api_metrics_store
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
@@ -1111,4 +1117,84 @@ async def stream_flow_events(
         source=source,
         heartbeat_seconds=heartbeat_seconds,
         poll_interval_seconds=poll_interval_seconds,
+    )
+
+
+def _resolve_analytics_range(date_from: date | None, date_to: date | None) -> tuple[date, date]:
+    """Resolve the inclusive ``[start, end]`` window for an analytics request.
+
+    ``from``/``to`` are optional ISO dates. When omitted, the window defaults to
+    the trailing ``ANALYTICS_DEFAULT_RANGE_DAYS`` ending today (UTC). An inverted
+    range (``from`` after ``to``) is invalid and raises HTTP 422 (the request
+    schema already returns 422 for unparseable dates).
+    """
+
+    settings = get_settings()
+    default_days = max(int(settings.analytics_default_range_days), 1)
+    end = date_to if date_to is not None else datetime.now(tz=UTC).date()
+    start = date_from if date_from is not None else end - timedelta(days=default_days)
+    if start > end:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Khoảng thời gian không hợp lệ: 'from' phải nhỏ hơn hoặc bằng 'to'.",
+        )
+    return start, end
+
+
+@router.get("/analytics/product", response_model=ProductAnalytics)
+def get_product_analytics(
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> ProductAnalytics:
+    """Admin-only Product_Analytics over a selectable date range (Requirement 7).
+
+    Returns the active-user trend, per-Surface usage counts, conversion funnels,
+    retention, and a ``has_data`` flag. An empty range returns the populated
+    shape with ``has_data=False`` to drive the dashboard empty state; an invalid
+    range returns HTTP 422; a non-admin role returns HTTP 403 via RBAC.
+    """
+
+    if not get_settings().product_analytics_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product_Analytics đã bị tắt.",
+        )
+    start, end = _resolve_analytics_range(date_from, date_to)
+    return AnalyticsAggregator().product_metrics(db, start=start, end=end)
+
+
+@router.get("/analytics/clinical", response_model=ClinicalAnalytics)
+def get_clinical_analytics(
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> ClinicalAnalytics:
+    """Admin-only Clinical_Analytics over a selectable date range (Requirement 8).
+
+    Returns the FIDES verdict distribution (including the blocked-claims count),
+    DDI severity distribution, router role/intent confidence buckets, fallback
+    rate, and per-tier latency percentiles. Every signal is derived from the
+    existing observability sources — the in-memory ``FlowEventStore`` and the
+    ``APIMetricsStore`` snapshot (the same sources ``/ecosystem`` reads) — so no
+    duplicate collection path is introduced (Requirement 8.2). This surface is
+    kept separate from the scribe ``/analytics/summary`` (Requirement 8.5).
+
+    An empty range returns the populated shape with ``has_data=False`` to drive
+    the dashboard empty state; an invalid range returns HTTP 422; a non-admin
+    role returns HTTP 403 via RBAC.
+    """
+
+    if not get_settings().clinical_analytics_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinical_Analytics đã bị tắt.",
+        )
+    start, end = _resolve_analytics_range(date_from, date_to)
+    flow_events = get_flow_event_stream_service().list_events(limit=FLOW_EVENTS_MAX_LIMIT)
+    metrics = get_api_metrics_store().snapshot()
+    return AnalyticsAggregator().clinical_metrics(
+        db, flow_events, metrics, start=start, end=end
     )

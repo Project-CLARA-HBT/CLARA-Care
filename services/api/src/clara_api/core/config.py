@@ -196,6 +196,13 @@ class Settings(BaseSettings):
         validation_alias="ML_RESEARCH_TIMEOUT_SECONDS",
         gt=0,
     )
+    # Mirrors the CLARA_ML DeepSeek synthesis timeout so the API can guarantee its
+    # ML request timeout never drops below the downstream synthesis floor (2.4).
+    deepseek_timeout_seconds: float = Field(
+        default=45.0,
+        validation_alias=AliasChoices("DEEPSEEK_TIMEOUT_SECONDS", "DEEPSEEK_TIMEOUT"),
+        gt=0,
+    )
     research_job_max_workers: int = Field(
         default=8,
         validation_alias="RESEARCH_JOB_MAX_WORKERS",
@@ -233,6 +240,61 @@ class Settings(BaseSettings):
         gt=0,
     )
     tgc_ocr_api_key: str = Field(default="", validation_alias="TGC_OCR_API_KEY")
+
+    # Google Cloud Vision OCR
+    google_vision_enabled: bool = Field(
+        default=False,
+        validation_alias="GOOGLE_VISION_ENABLED",
+    )
+    google_vision_service_account_json: str = Field(
+        default="",
+        validation_alias="GOOGLE_VISION_SERVICE_ACCOUNT_JSON",
+    )
+    google_vision_timeout_seconds: float = Field(
+        default=30.0,
+        validation_alias="GOOGLE_VISION_TIMEOUT_SECONDS",
+        gt=0,
+    )
+    google_vision_language_hints: str = Field(
+        default="vi,en",
+        validation_alias="GOOGLE_VISION_LANGUAGE_HINTS",
+    )
+
+    # Local Tesseract OCR (fallback)
+    tesseract_ocr_enabled: bool = Field(
+        default=True,
+        validation_alias="TESSERACT_OCR_ENABLED",
+    )
+    tesseract_ocr_languages: str = Field(
+        default="vie+eng",
+        validation_alias="TESSERACT_OCR_LANGUAGES",
+    )
+    tesseract_ocr_psm: int = Field(
+        default=6,
+        validation_alias="TESSERACT_OCR_PSM",
+        ge=0,
+        le=13,
+    )
+
+    # Internal analytics dashboards (Requirement 12.4).
+    # The Product_Analytics and Clinical_Analytics admin surfaces honor these
+    # flags so a disabled surface returns 404, and an omitted date range
+    # defaults to the trailing ``analytics_default_range_days`` window.
+    product_analytics_enabled: bool = Field(
+        default=True,
+        validation_alias="PRODUCT_ANALYTICS_ENABLED",
+    )
+    clinical_analytics_enabled: bool = Field(
+        default=True,
+        validation_alias="CLINICAL_ANALYTICS_ENABLED",
+    )
+    analytics_default_range_days: int = Field(
+        default=30,
+        validation_alias="ANALYTICS_DEFAULT_RANGE_DAYS",
+        gt=0,
+        le=365,
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

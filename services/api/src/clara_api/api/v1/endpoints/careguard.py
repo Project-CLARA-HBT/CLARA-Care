@@ -1127,11 +1127,74 @@ def _build_tgc_ocr_json_payloads(
     ]
 
 
+def _scan_with_google_vision(
+    file_bytes: bytes,
+) -> tuple[str, str, str] | None:
+    """Try Google Cloud Vision OCR. Returns (text, endpoint, provider) or None on failure."""
+    settings = get_settings()
+    if not settings.google_vision_enabled:
+        return None
+    sa_json = settings.google_vision_service_account_json.strip()
+    if not sa_json:
+        return None
+    try:
+        from clara_api.core.google_vision_ocr import detect_text
+
+        language_hints = [
+            lang.strip()
+            for lang in settings.google_vision_language_hints.split(",")
+            if lang.strip()
+        ] or ["vi", "en"]
+        text = detect_text(
+            image_bytes=file_bytes,
+            service_account_json=sa_json,
+            language_hints=language_hints,
+            timeout_seconds=settings.google_vision_timeout_seconds,
+        )
+        if text and len(text.strip()) >= 3:
+            return text.strip(), "/v1/images:annotate", "google-cloud-vision"
+    except Exception:
+        pass
+    return None
+
+
+def _scan_with_tesseract(
+    file_bytes: bytes,
+) -> tuple[str, str, str] | None:
+    """Try local Tesseract OCR. Returns (text, endpoint, provider) or None on failure."""
+    settings = get_settings()
+    if not settings.tesseract_ocr_enabled:
+        return None
+    try:
+        from clara_api.core.tesseract_ocr import detect_text
+
+        text = detect_text(
+            image_bytes=file_bytes,
+            languages=settings.tesseract_ocr_languages,
+            psm=settings.tesseract_ocr_psm,
+        )
+        if text and len(text.strip()) >= 3:
+            return text.strip(), "local-tesseract", "tesseract-ocr"
+    except Exception:
+        pass
+    return None
+
+
 def _scan_with_tgc_ocr(
     file_bytes: bytes,
     file_name: str,
     content_type: str,
 ) -> tuple[str, str, str]:
+    # Try Google Vision first if configured
+    google_result = _scan_with_google_vision(file_bytes)
+    if google_result is not None:
+        return google_result
+
+    # Try local Tesseract OCR if enabled
+    tesseract_result = _scan_with_tesseract(file_bytes)
+    if tesseract_result is not None:
+        return tesseract_result
+
     settings = get_settings()
     endpoints = _parse_ocr_endpoints(settings.tgc_ocr_endpoints)
     if not endpoints:
