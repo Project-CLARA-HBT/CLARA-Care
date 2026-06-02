@@ -1,0 +1,148 @@
+name: Branch Protection Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to protect"
+        required: true
+        default: "main"
+        type: string
+      required_checks:
+        description: "Comma separated required checks"
+        required: true
+        default: "required-ci-gates"
+        type: string
+      dry_run:
+        description: "Only print payload (do not apply)"
+        required: true
+        default: true
+        type: boolean
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+  administration: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  sync:
+    name: sync branch protection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve execution mode
+        id: mode
+        run: |
+          if [ -n "${{ secrets.BRANCH_PROTECTION_TOKEN }}" ]; then
+            echo "can_apply=true" >> "$GITHUB_OUTPUT"
+            echo "token_source=BRANCH_PROTECTION_TOKEN" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "can_apply=true" >> "$GITHUB_OUTPUT"
+            echo "token_source=dry-run-with-github-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "can_apply=false" >> "$GITHUB_OUTPUT"
+            echo "token_source=missing-admin-token" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Branch protection skipped notice
+        if: ${{ steps.mode.outputs.can_apply != 'true' }}
+        run: |
+          echo "::warning::Skip branch protection apply: missing BRANCH_PROTECTION_TOKEN with admin permission."
+          echo "Configure secret BRANCH_PROTECTION_TOKEN then re-run workflow."
+
+      - name: Build protection payload
+        if: ${{ steps.mode.outputs.can_apply == 'true' }}
+        id: payload
+        env:
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          INPUT_CHECKS: ${{ github.event.inputs.required_checks }}
+          EVENT_NAME: ${{ github.event_name }}
+          CHECKS_RAW: ${{ github.event.inputs.required_checks }}
+        run: |
+          set -euo pipefail
+          branch="${INPUT_BRANCH:-main}"
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            branch="main"
+          fi
+
+          checks_raw="${INPUT_CHECKS:-required-ci-gates}"
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            checks_raw="required-ci-gates"
+          fi
+          checks_json="$(python - <<'PY'
+          import json
+          import os
+
+          raw = os.getenv("CHECKS_RAW", "required-ci-gates")
+          values = [item.strip() for item in raw.split(",") if item.strip()]
+          if not values:
+              values = ["required-ci-gates"]
+          print(json.dumps(values))
+          PY
+          )"
+
+          {
+            echo "branch=${branch}"
+            echo "checks_json=${checks_json}"
+            echo "required_approvals=2"
+            echo "require_code_owner_reviews=true"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Apply branch protection
+        if: ${{ steps.mode.outputs.can_apply == 'true' }}
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.BRANCH_PROTECTION_TOKEN || github.token }}
+          script: |
+            const branch = "${{ steps.payload.outputs.branch }}";
+            const checks = JSON.parse(`${{ steps.payload.outputs.checks_json }}`);
+            const requiredApprovals = Number("${{ steps.payload.outputs.required_approvals }}");
+            const requireCodeOwnerReviews =
+              `${{ steps.payload.outputs.require_code_owner_reviews }}` === "true";
+            const dryRun = `${{ github.event.inputs.dry_run || 'false' }}` === "true" && context.eventName !== "schedule";
+
+            const payload = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch,
+              required_status_checks: {
+                strict: true,
+                contexts: checks,
+              },
+              enforce_admins: true,
+              required_pull_request_reviews: {
+                dismiss_stale_reviews: true,
+                require_code_owner_reviews: requireCodeOwnerReviews,
+                required_approving_review_count: requiredApprovals,
+                require_last_push_approval: true,
+              },
+              restrictions: null,
+              allow_force_pushes: false,
+              allow_deletions: false,
+              block_creations: false,
+              required_conversation_resolution: true,
+              lock_branch: false,
+              allow_fork_syncing: true,
+            };
+
+            core.summary
+              .addHeading("Branch protection payload")
+              .addCodeBlock(JSON.stringify(payload, null, 2), "json")
+              .addRaw(`Dry run: ${dryRun}\n`)
+              .write();
+
+            if (dryRun) {
+              core.notice("Dry run enabled. No change applied.");
+              return;
+            }
+
+            await github.rest.repos.updateBranchProtection(payload);
+            core.notice(`Branch protection applied for ${branch}`);
+
+      - name: Validate CODEOWNERS exists
+        if: ${{ steps.mode.outputs.can_apply == 'true' }}
+        run: |
+          test -f .github/CODEOWNERS

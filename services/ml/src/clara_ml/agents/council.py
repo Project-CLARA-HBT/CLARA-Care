@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from itertools import combinations
+from typing import Any
+
+from clara_ml.agents.council_neural import score_council_risk
+from clara_ml.config import settings
 
 SUPPORTED_SPECIALISTS = (
     "cardiology",
@@ -44,6 +50,26 @@ _RED_FLAG_RULES = {
         "black stool",
     ),
 }
+
+_NEGATION_PREFIX_RE = re.compile(
+    r"(?:\bno\b|\bnot\b|\bdeny\b|\bdenies\b|\bdenied\b|\bwithout\b|"
+    r"\bnegative\s+for\b|\bkhong\b|\bkhông\b|\bko\b|\bchua\b|\bchưa\b)"
+    r"(?:\s+\w+){0,3}\s*$",
+    flags=re.IGNORECASE,
+)
+_NEGATION_SUFFIX_RE = re.compile(
+    r"^\W*(?:none|absent|denied|negative|unlikely|ruled\s*out|resolved)\b",
+    flags=re.IGNORECASE,
+)
+_DURATION_HINT_RE = re.compile(
+    r"\b(\d+\s*(?:h|hr|hour|hours|day|days|week|weeks|month|months)|"
+    r"today|yesterday|since|onset|ngay|hom nay|hom qua|tuan|thang|gio)\b",
+    flags=re.IGNORECASE,
+)
+_SEVERITY_HINT_RE = re.compile(
+    r"\b(severe|worsening|intense|sudden|acute|du doi|nang|tang dan)\b",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -120,12 +146,55 @@ def _normalize_history(value: object) -> list[str]:
     return []
 
 
-def _contains_phrase(texts: list[str], phrases: tuple[str, ...]) -> bool:
-    for text in texts:
-        for phrase in phrases:
-            if phrase in text:
-                return True
+def _is_negated_span(text: str, start: int, end: int) -> bool:
+    prefix = text[max(0, start - 52) : start].strip()
+    suffix = text[end : min(len(text), end + 24)].strip()
+    if _NEGATION_PREFIX_RE.search(prefix):
+        return True
+    if _NEGATION_SUFFIX_RE.match(suffix):
+        return True
     return False
+
+
+def _scan_phrase_hits(
+    texts: list[str], phrases: tuple[str, ...], *, negation_aware: bool = False
+) -> dict[str, list[dict[str, str]]]:
+    positive: list[dict[str, str]] = []
+    negated: list[dict[str, str]] = []
+    seen_positive: set[tuple[str, str]] = set()
+    seen_negated: set[tuple[str, str]] = set()
+
+    for raw_text in texts:
+        text = raw_text.lower()
+        for phrase in phrases:
+            search_from = 0
+            while True:
+                start = text.find(phrase, search_from)
+                if start < 0:
+                    break
+                end = start + len(phrase)
+                hit_key = (raw_text, phrase)
+                if negation_aware and _is_negated_span(text, start, end):
+                    if hit_key not in seen_negated:
+                        seen_negated.add(hit_key)
+                        negated.append({"phrase": phrase, "text": raw_text})
+                else:
+                    if hit_key not in seen_positive:
+                        seen_positive.add(hit_key)
+                        positive.append({"phrase": phrase, "text": raw_text})
+                search_from = end
+
+    return {
+        "positive": positive,
+        "negated": negated,
+    }
+
+
+def _contains_phrase(
+    texts: list[str], phrases: tuple[str, ...], *, negation_aware: bool = False
+) -> bool:
+    hits = _scan_phrase_hits(texts, phrases, negation_aware=negation_aware)
+    return bool(hits["positive"])
 
 
 def _med_present(medications: list[str], keyword: str) -> bool:
@@ -162,12 +231,21 @@ def _resolve_specialists(requested: object) -> list[str]:
     return selected
 
 
-def _detect_red_flags(symptoms: list[str]) -> list[str]:
+def _detect_red_flags(symptoms: list[str]) -> tuple[list[str], list[dict[str, str]], list[dict[str, str]]]:
     hits: list[str] = []
+    positive_matches: list[dict[str, str]] = []
+    negated_matches: list[dict[str, str]] = []
+
     for flag_name, phrases in _RED_FLAG_RULES.items():
-        if _contains_phrase(symptoms, phrases):
+        scan = _scan_phrase_hits(symptoms, phrases, negation_aware=True)
+        for item in scan["positive"]:
+            positive_matches.append({"flag": flag_name, **item})
+        for item in scan["negated"]:
+            negated_matches.append({"flag": flag_name, **item})
+        if scan["positive"]:
             hits.append(flag_name)
-    return hits
+
+    return hits, positive_matches, negated_matches
 
 
 def _evaluate_cardiology(
@@ -176,9 +254,9 @@ def _evaluate_cardiology(
     findings: list[str] = []
     log: list[str] = ["Reviewed cardiovascular symptoms, medications, labs, and history."]
 
-    chest_pain = _contains_phrase(symptoms, ("chest pain", "dau nguc"))
-    dyspnea = _contains_phrase(symptoms, ("shortness of breath", "kho tho"))
-    palpitations = _contains_phrase(symptoms, ("palpitations", "tachycardia"))
+    chest_pain = _contains_phrase(symptoms, ("chest pain", "dau nguc"), negation_aware=True)
+    dyspnea = _contains_phrase(symptoms, ("shortness of breath", "kho tho"), negation_aware=True)
+    palpitations = _contains_phrase(symptoms, ("palpitations", "tachycardia"), negation_aware=True)
     troponin = labs.get("troponin")
     bnp = labs.get("bnp")
     cardiac_history = _contains_phrase(
@@ -239,10 +317,11 @@ def _evaluate_neurology(
     stroke_signs = _contains_phrase(
         symptoms,
         ("one sided weakness", "slurred speech", "facial droop", "sudden vision loss"),
+        negation_aware=True,
     )
-    seizure = _contains_phrase(symptoms, ("seizure", "convulsion"))
-    confusion = _contains_phrase(symptoms, ("confusion", "altered mental status"))
-    severe_headache = _contains_phrase(symptoms, ("severe headache", "worst headache"))
+    seizure = _contains_phrase(symptoms, ("seizure", "convulsion"), negation_aware=True)
+    confusion = _contains_phrase(symptoms, ("confusion", "altered mental status"), negation_aware=True)
+    severe_headache = _contains_phrase(symptoms, ("severe headache", "worst headache"), negation_aware=True)
     neuro_history = _contains_phrase(history, ("stroke", "tia", "epilepsy", "migraine"))
 
     if stroke_signs:
@@ -349,7 +428,11 @@ def _evaluate_pharmacology(
         for med in ("lisinopril", "enalapril", "losartan", "valsartan", "ramipril")
     )
     on_diuretic = any(_med_present(medications, med) for med in ("furosemide", "hydrochlorothiazide"))
-    bleeding_symptoms = _contains_phrase(symptoms, ("severe bleeding", "vomiting blood", "black stool"))
+    bleeding_symptoms = _contains_phrase(
+        symptoms,
+        ("severe bleeding", "vomiting blood", "black stool"),
+        negation_aware=True,
+    )
 
     if on_warfarin and on_nsaid:
         findings.append("warfarin_nsaid_interaction")
@@ -400,9 +483,11 @@ def _evaluate_endocrinology(
     hba1c = labs.get("hba1c")
     diabetes_history = _contains_phrase(history, ("diabetes", "t2dm", "t1dm"))
     hyperglycemia_symptoms = _contains_phrase(
-        symptoms, ("polyuria", "polydipsia", "fatigue", "unintentional weight loss")
+        symptoms,
+        ("polyuria", "polydipsia", "fatigue", "unintentional weight loss"),
+        negation_aware=True,
     )
-    hypoglycemia_symptoms = _contains_phrase(symptoms, ("sweating", "tremor", "confusion"))
+    hypoglycemia_symptoms = _contains_phrase(symptoms, ("sweating", "tremor", "confusion"), negation_aware=True)
 
     if isinstance(glucose, float) and glucose >= 400:
         findings.append("glucose_above_400")
@@ -484,15 +569,46 @@ def _consensus_triage(assessments: list[SpecialistAssessment]) -> str:
     return max(counts, key=lambda triage: (counts[triage], _TRIAGE_SCORE[triage]))
 
 
+def _build_consensus_metadata(
+    assessments: list[SpecialistAssessment],
+    consensus_triage: str,
+    conflicts: list[dict[str, object]],
+) -> dict[str, Any]:
+    triage_counts = {triage: 0 for triage in _TRIAGE_SCORE}
+    for item in assessments:
+        triage_counts[item.triage] += 1
+
+    total = max(1, len(assessments))
+    support_ratio = triage_counts[consensus_triage] / total
+    disagreement_index = (total - triage_counts[consensus_triage]) / total
+
+    strongest_dissent = ""
+    strongest_dissent_votes = 0
+    for triage, votes in triage_counts.items():
+        if triage == consensus_triage:
+            continue
+        if votes > strongest_dissent_votes:
+            strongest_dissent = triage
+            strongest_dissent_votes = votes
+
+    return {
+        "winning_triage": consensus_triage,
+        "vote_breakdown": triage_counts,
+        "support_ratio": round(support_ratio, 3),
+        "disagreement_index": round(disagreement_index, 3),
+        "conflict_count": len(conflicts),
+        "strongest_dissent": strongest_dissent,
+        "strongest_dissent_votes": strongest_dissent_votes,
+    }
+
+
 def _consensus_summary(assessments: list[SpecialistAssessment], consensus_triage: str) -> str:
     finding_counts: dict[str, int] = {}
     for item in assessments:
         for finding in item.key_findings:
             finding_counts[finding] = finding_counts.get(finding, 0) + 1
 
-    shared_findings = sorted(
-        [name for name, count in finding_counts.items() if count >= 2]
-    )
+    shared_findings = sorted([name for name, count in finding_counts.items() if count >= 2])
     if shared_findings:
         shared_text = ", ".join(shared_findings)
     else:
@@ -531,15 +647,592 @@ def _divergence_notes(
     return notes
 
 
+def _score_level(score: float) -> str:
+    if score >= 0.75:
+        return "high"
+    if score >= 0.55:
+        return "medium"
+    return "low"
+
+
+def _compute_data_quality(
+    symptoms: list[str],
+    labs: dict[str, float],
+    medications: list[str],
+    history: list[str],
+) -> dict[str, Any]:
+    section_counts = {
+        "symptoms": len(symptoms),
+        "labs": len(labs),
+        "medications": len(medications),
+        "history": len(history),
+    }
+    non_empty_sections = sum(1 for count in section_counts.values() if count > 0)
+    total_observations = sum(section_counts.values())
+
+    symptom_detail_tokens = sum(len(item.split()) for item in symptoms)
+    symptom_detail_score = min(1.0, symptom_detail_tokens / max(1, len(symptoms) * 5))
+
+    score = (
+        0.35 * (non_empty_sections / 4.0)
+        + 0.35 * min(1.0, total_observations / 8.0)
+        + 0.20 * symptom_detail_score
+        + 0.10 * min(1.0, len(labs) / 3.0)
+    )
+
+    if section_counts["symptoms"] == 0:
+        score -= 0.08
+    if section_counts["medications"] == 0 and section_counts["history"] == 0:
+        score -= 0.05
+
+    score = max(0.0, min(1.0, score))
+    missing_sections = [name for name, count in section_counts.items() if count == 0]
+
+    return {
+        "score": round(score, 3),
+        "level": _score_level(score),
+        "section_counts": section_counts,
+        "non_empty_sections": non_empty_sections,
+        "total_observations": total_observations,
+        "missing_sections": missing_sections,
+    }
+
+
+def _build_followup_questions(
+    symptoms: list[str],
+    labs: dict[str, float],
+    medications: list[str],
+    history: list[str],
+) -> list[str]:
+    questions: list[str] = []
+
+    if not symptoms:
+        questions.append("What are the current symptoms, and which symptom is the most severe right now?")
+    else:
+        if not any(_DURATION_HINT_RE.search(item) for item in symptoms):
+            questions.append("When did these symptoms start, and how have they changed over time?")
+        if not any(_SEVERITY_HINT_RE.search(item) for item in symptoms):
+            questions.append("How severe are the symptoms now on a 0-10 scale?")
+
+    if not labs:
+        questions.append("Do you have recent vitals or lab results (for example BP, HR, oxygen, glucose, creatinine)?")
+    if not medications:
+        questions.append("What medications and supplements are currently being used, with recent dose changes?")
+    if not history:
+        questions.append("What relevant medical history exists, including chronic disease, allergies, and prior events?")
+    if len(symptoms) <= 1:
+        questions.append("Are there associated symptoms such as chest pain, shortness of breath, neurologic changes, or bleeding?")
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for question in questions:
+        key = question.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(question)
+        if len(deduped) >= 6:
+            break
+
+    return deduped
+
+
+def _should_request_more_info(
+    data_quality: dict[str, Any],
+    red_flags: list[str],
+) -> bool:
+    if red_flags:
+        return False
+    score = float(data_quality["score"])
+    non_empty_sections = int(data_quality["non_empty_sections"])
+    total_observations = int(data_quality["total_observations"])
+    return score < 0.55 or non_empty_sections < 2 or total_observations < 3
+
+
+def _compute_confidence(
+    *,
+    data_quality_score: float,
+    assessments: list[SpecialistAssessment],
+    conflicts: list[dict[str, object]],
+    red_flags: list[str],
+    needs_more_info: bool,
+) -> dict[str, Any]:
+    triage_counts = {triage: 0 for triage in _TRIAGE_SCORE}
+    for item in assessments:
+        triage_counts[item.triage] += 1
+
+    consensus_support = max(triage_counts.values()) / max(1, len(assessments))
+    finding_density = min(
+        1.0,
+        sum(len(item.key_findings) for item in assessments) / max(1, len(assessments) * 4),
+    )
+
+    possible_conflicts = max(1, (len(assessments) * (len(assessments) - 1)) // 2)
+    conflict_ratio = len(conflicts) / possible_conflicts
+
+    score = (
+        0.40 * data_quality_score
+        + 0.30 * consensus_support
+        + 0.20 * finding_density
+        + 0.10 * (1.0 - min(1.0, conflict_ratio))
+    )
+
+    if red_flags:
+        score = max(score, 0.82)
+    if needs_more_info:
+        score = min(score, 0.45)
+
+    score = max(0.0, min(1.0, score))
+
+    return {
+        "score": round(score, 3),
+        "level": _score_level(score),
+        "components": {
+            "data_quality": round(data_quality_score, 3),
+            "consensus_support": round(consensus_support, 3),
+            "finding_density": round(finding_density, 3),
+            "conflict_ratio": round(conflict_ratio, 3),
+        },
+    }
+
+
+def _build_citations(
+    symptoms: list[str],
+    labs: dict[str, float],
+    medications: list[str],
+    history: list[str],
+    assessments: list[SpecialistAssessment],
+    red_flag_matches: list[dict[str, str]],
+    negated_red_flag_matches: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    citations: list[dict[str, Any]] = []
+
+    for index, symptom in enumerate(symptoms[:6], start=1):
+        citations.append(
+            {
+                "source_id": f"symptom-{index}",
+                "source": "patient_intake",
+                "title": f"Symptom report {index}",
+                "url": None,
+                "relevance": "Patient-reported symptom considered in triage.",
+                "snippet": symptom,
+                "section": "symptoms",
+                "evidence_type": "reported_symptom",
+            }
+        )
+
+    for index, (lab_name, lab_value) in enumerate(sorted(labs.items())[:6], start=1):
+        citations.append(
+            {
+                "source_id": f"lab-{index}",
+                "source": "patient_intake",
+                "title": f"Lab or vital: {lab_name}",
+                "url": None,
+                "relevance": "Quantitative marker used by specialist rules.",
+                "snippet": f"{lab_name}={lab_value}",
+                "section": "labs",
+                "evidence_type": "numeric_observation",
+            }
+        )
+
+    for index, medication in enumerate(medications[:4], start=1):
+        citations.append(
+            {
+                "source_id": f"med-{index}",
+                "source": "patient_intake",
+                "title": f"Medication exposure {index}",
+                "url": None,
+                "relevance": "Medication exposure checked for interaction and safety risk.",
+                "snippet": medication,
+                "section": "medications",
+                "evidence_type": "medication",
+            }
+        )
+
+    for index, item in enumerate(red_flag_matches[:6], start=1):
+        citations.append(
+            {
+                "source_id": f"red-flag-{index}",
+                "source": "council_rule_engine",
+                "title": f"Red-flag rule matched: {item['flag']}",
+                "url": None,
+                "relevance": "Safety escalation rule was positively matched.",
+                "snippet": item["text"],
+                "section": "safety",
+                "evidence_type": "red_flag_match",
+                "phrase": item["phrase"],
+            }
+        )
+
+    for index, item in enumerate(negated_red_flag_matches[:4], start=1):
+        citations.append(
+            {
+                "source_id": f"negated-red-flag-{index}",
+                "source": "council_rule_engine",
+                "title": f"Negated red-flag phrase: {item['flag']}",
+                "url": None,
+                "relevance": "Phrase ignored because local negation was detected.",
+                "snippet": item["text"],
+                "section": "safety",
+                "evidence_type": "negated_symptom",
+                "phrase": item["phrase"],
+            }
+        )
+
+    for assessment in assessments:
+        for index, finding in enumerate(assessment.key_findings[:2], start=1):
+            citations.append(
+                {
+                    "source_id": f"{assessment.specialist}-finding-{index}",
+                    "source": "council_rule_engine",
+                    "title": f"{assessment.specialist} finding: {finding}",
+                    "url": None,
+                    "relevance": f"Specialist rule output supported triage {assessment.triage}.",
+                    "snippet": finding,
+                    "section": "specialist_assessment",
+                    "evidence_type": "derived_finding",
+                }
+            )
+
+    for index, item in enumerate(history[:4], start=1):
+        citations.append(
+            {
+                "source_id": f"history-{index}",
+                "source": "patient_intake",
+                "title": f"Relevant history {index}",
+                "url": None,
+                "relevance": "History item used for baseline risk context.",
+                "snippet": item,
+                "section": "history",
+                "evidence_type": "history",
+            }
+        )
+
+    return citations
+
+
+def _citation_strength(evidence_type: str) -> float:
+    strength_map = {
+        "red_flag_match": 0.95,
+        "numeric_observation": 0.9,
+        "derived_finding": 0.85,
+        "medication": 0.8,
+        "reported_symptom": 0.75,
+        "history": 0.7,
+        "negated_symptom": 0.55,
+    }
+    return strength_map.get(evidence_type, 0.65)
+
+
+def _annotate_citation_quality(citations: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if not citations:
+        return [], {
+            "total_citations": 0,
+            "average_evidence_strength": 0.0,
+            "high_signal_count": 0,
+            "supporting_signal_count": 0,
+            "context_only_count": 0,
+            "negated_context_count": 0,
+        }
+
+    annotated: list[dict[str, Any]] = []
+    high_signal_count = 0
+    supporting_signal_count = 0
+    context_only_count = 0
+    negated_context_count = 0
+    strength_total = 0.0
+
+    for item in citations:
+        evidence_type = str(item.get("evidence_type") or "")
+        evidence_strength = _citation_strength(evidence_type)
+        strength_total += evidence_strength
+
+        if evidence_type == "negated_symptom":
+            quality_flag = "negated_context"
+            negated_context_count += 1
+        elif evidence_strength >= 0.85:
+            quality_flag = "high_signal"
+            high_signal_count += 1
+        elif evidence_strength >= 0.7:
+            quality_flag = "supporting_signal"
+            supporting_signal_count += 1
+        else:
+            quality_flag = "context_only"
+            context_only_count += 1
+
+        annotated.append(
+            {
+                **item,
+                "evidence_strength": round(evidence_strength, 3),
+                "quality_flag": quality_flag,
+            }
+        )
+
+    return annotated, {
+        "total_citations": len(annotated),
+        "average_evidence_strength": round(strength_total / len(annotated), 3),
+        "high_signal_count": high_signal_count,
+        "supporting_signal_count": supporting_signal_count,
+        "context_only_count": context_only_count,
+        "negated_context_count": negated_context_count,
+    }
+
+
+def _build_reasoning_timeline(
+    *,
+    data_quality: dict[str, Any],
+    assessments: list[SpecialistAssessment],
+    conflicts: list[dict[str, object]],
+    consensus_metadata: dict[str, Any],
+    red_flags: list[str],
+    followup_questions: list[str],
+    needs_more_info: bool,
+    final_recommendation: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "sequence": 1,
+            "step": "intake_normalized",
+            "detail": "Input payload normalized into symptoms, labs, medications, and history.",
+            "metadata": {
+                "section_counts": data_quality.get("section_counts", {}),
+                "data_quality_score": data_quality.get("score"),
+            },
+        },
+        {
+            "sequence": 2,
+            "step": "specialist_assessment",
+            "detail": "Rule-based specialist assessments completed.",
+            "metadata": {
+                "specialists": [item.specialist for item in assessments],
+                "triage_votes": [item.triage for item in assessments],
+            },
+        },
+        {
+            "sequence": 3,
+            "step": "conflict_review",
+            "detail": "Cross-specialty triage conflicts evaluated.",
+            "metadata": {
+                "conflict_count": len(conflicts),
+                "conflict_detected": bool(conflicts),
+            },
+        },
+        {
+            "sequence": 4,
+            "step": "consensus_decision",
+            "detail": "Council consensus score and dissent profile computed.",
+            "metadata": {
+                "winning_triage": consensus_metadata.get("winning_triage"),
+                "support_ratio": consensus_metadata.get("support_ratio"),
+                "disagreement_index": consensus_metadata.get("disagreement_index"),
+            },
+        },
+        {
+            "sequence": 5,
+            "step": "safety_gate",
+            "detail": "Red-flag safety gate applied before final recommendation.",
+            "metadata": {
+                "red_flags": red_flags,
+                "triggered": bool(red_flags),
+                "needs_more_info": needs_more_info,
+                "followup_questions_count": len(followup_questions),
+            },
+        },
+        {
+            "sequence": 6,
+            "step": "final_recommendation",
+            "detail": final_recommendation,
+            "metadata": {
+                "needs_more_info": needs_more_info,
+            },
+        },
+    ]
+
+
+def _build_escalation_metadata(
+    *,
+    red_flags: list[str],
+    red_flag_matches: list[dict[str, str]],
+    assessments: list[SpecialistAssessment],
+) -> dict[str, Any]:
+    if red_flags:
+        priority = "critical"
+        recommended_sla_minutes = 5
+        requires_human_handoff = True
+    else:
+        highest_score = max(_TRIAGE_SCORE[item.triage] for item in assessments)
+        if highest_score >= _TRIAGE_SCORE["emergency_escalation"]:
+            priority = "urgent"
+            recommended_sla_minutes = 30
+            requires_human_handoff = True
+        elif highest_score >= _TRIAGE_SCORE["same_day_review"]:
+            priority = "same_day"
+            recommended_sla_minutes = 180
+            requires_human_handoff = False
+        else:
+            priority = "routine"
+            recommended_sla_minutes = 720
+            requires_human_handoff = False
+
+    created_at_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    trigger_evidence = [
+        {
+            "flag": item["flag"],
+            "phrase": item["phrase"],
+            "snippet": item["text"],
+        }
+        for item in red_flag_matches[:5]
+    ]
+
+    return {
+        "priority": priority,
+        "recommended_sla_minutes": recommended_sla_minutes,
+        "requires_human_handoff": requires_human_handoff,
+        "trigger_evidence": trigger_evidence,
+        "generated_at_utc": created_at_utc,
+    }
+
+
+def _build_neural_feature_map(
+    *,
+    red_flags: list[str],
+    conflicts: list[dict[str, object]],
+    consensus_metadata: dict[str, Any],
+    data_quality: dict[str, Any],
+    confidence: dict[str, Any],
+    followup_questions: list[str],
+    assessments: list[SpecialistAssessment],
+    medications: list[str],
+) -> dict[str, float]:
+    specialist_count = max(1, len(assessments))
+    high_triage_votes = sum(
+        1 for item in assessments if item.triage in {"same_day_review", "emergency_escalation"}
+    )
+    support_ratio = float(consensus_metadata.get("support_ratio", 0.0) or 0.0)
+    disagreement_index = float(consensus_metadata.get("disagreement_index", 0.0) or 0.0)
+    data_quality_score = float(data_quality.get("score", 0.0) or 0.0)
+    confidence_score = float(confidence.get("score", 0.0) or 0.0)
+
+    return {
+        "red_flag_rate": min(1.0, len(red_flags) / 3.0),
+        "conflict_rate": min(1.0, len(conflicts) / specialist_count),
+        "disagreement_index": max(disagreement_index, 1.0 - support_ratio),
+        "inverse_data_quality": max(0.0, 1.0 - data_quality_score),
+        "inverse_confidence": max(0.0, 1.0 - confidence_score),
+        "followup_density": min(1.0, len(followup_questions) / 8.0),
+        "high_triage_pressure": min(1.0, high_triage_votes / specialist_count),
+        "medication_burden": min(1.0, len(medications) / 8.0),
+    }
+
+
+def _build_neural_risk_payload(
+    *,
+    payload: dict,
+    red_flags: list[str],
+    conflicts: list[dict[str, object]],
+    consensus_metadata: dict[str, Any],
+    data_quality: dict[str, Any],
+    confidence: dict[str, Any],
+    followup_questions: list[str],
+    assessments: list[SpecialistAssessment],
+    medications: list[str],
+) -> dict[str, Any]:
+    neural_enabled = bool(payload.get("council_neural_enabled", settings.council_neural_enabled))
+    shadow_mode = bool(payload.get("council_neural_shadow_mode", settings.council_neural_shadow_mode))
+
+    if not neural_enabled:
+        return {
+            "enabled": False,
+            "shadow_mode": shadow_mode,
+            "model_version": "council-neural-shadow-v1",
+        }
+
+    feature_map = _build_neural_feature_map(
+        red_flags=red_flags,
+        conflicts=conflicts,
+        consensus_metadata=consensus_metadata,
+        data_quality=data_quality,
+        confidence=confidence,
+        followup_questions=followup_questions,
+        assessments=assessments,
+        medications=medications,
+    )
+    score = score_council_risk(
+        feature_map,
+        medium_threshold=settings.council_neural_medium_threshold,
+        high_threshold=settings.council_neural_high_threshold,
+    )
+
+    recommended_triage = "routine_follow_up"
+    if score.band == "high":
+        recommended_triage = "emergency_escalation"
+    elif score.band == "medium":
+        recommended_triage = "same_day_review"
+
+    return {
+        "enabled": True,
+        "shadow_mode": shadow_mode,
+        "model_version": score.model_version,
+        "risk_probability": score.probability,
+        "risk_band": score.band,
+        "recommended_triage": recommended_triage,
+        "feature_map": {key: round(value, 4) for key, value in feature_map.items()},
+        "top_contributors": score.top_contributors,
+    }
+
+
+def _build_research_topics(
+    assessments: list[SpecialistAssessment],
+    red_flags: list[str],
+    followup_questions: list[str],
+) -> list[str]:
+    topics: list[str] = []
+
+    for red_flag in red_flags:
+        topics.append(f"Confirm emergency protocol pathway for {red_flag}.")
+
+    for assessment in assessments:
+        if assessment.triage != "routine_follow_up":
+            topics.append(
+                f"Validate {assessment.specialist} recommendation for {assessment.triage} with local protocol."
+            )
+
+    for question in followup_questions[:3]:
+        topics.append(f"Resolve missing intake detail: {question}")
+
+    if not topics:
+        topics.append("Monitor symptoms and repeat structured intake if condition changes.")
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for topic in topics:
+        key = topic.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(topic)
+        if len(deduped) >= 8:
+            break
+
+    return deduped
+
+
 def _final_recommendation(
     consensus_triage: str,
     red_flags: list[str],
     assessments: list[SpecialistAssessment],
+    needs_more_info: bool,
 ) -> str:
     if red_flags:
         return (
             "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency "
             "services immediately while preparing rapid specialist handoff."
+        )
+
+    if needs_more_info:
+        return (
+            "Input data is insufficient for a reliable council conclusion. Collect targeted follow-up "
+            "details before final triage decisions unless the patient acutely worsens."
         )
 
     highest_score = max(_TRIAGE_SCORE[item.triage] for item in assessments)
@@ -570,23 +1263,86 @@ def run_council(payload: dict) -> dict:
         _SPECIALIST_EVALUATORS[specialist](symptoms, labs, medications, history)
         for specialist in specialists
     ]
+    assessments_payload = [asdict(item) for item in assessments]
 
-    red_flags = _detect_red_flags(symptoms)
+    red_flags, red_flag_matches, negated_red_flag_matches = _detect_red_flags(symptoms)
     conflicts = _build_conflicts(assessments)
     consensus_triage = _consensus_triage(assessments)
+    consensus_metadata = _build_consensus_metadata(assessments, consensus_triage, conflicts)
     consensus_summary = _consensus_summary(assessments, consensus_triage)
     divergence_notes = _divergence_notes(assessments, conflicts)
-    final_recommendation = _final_recommendation(consensus_triage, red_flags, assessments)
+
+    data_quality = _compute_data_quality(symptoms, labs, medications, history)
+    followup_questions = _build_followup_questions(symptoms, labs, medications, history)
+    needs_more_info = _should_request_more_info(data_quality, red_flags)
+
+    confidence = _compute_confidence(
+        data_quality_score=float(data_quality["score"]),
+        assessments=assessments,
+        conflicts=conflicts,
+        red_flags=red_flags,
+        needs_more_info=needs_more_info,
+    )
+
+    final_recommendation = _final_recommendation(
+        consensus_triage,
+        red_flags,
+        assessments,
+        needs_more_info,
+    )
+
+    citations = _build_citations(
+        symptoms,
+        labs,
+        medications,
+        history,
+        assessments,
+        red_flag_matches,
+        negated_red_flag_matches,
+    )
+    citations, citation_quality = _annotate_citation_quality(citations)
+
+    escalation_metadata = _build_escalation_metadata(
+        red_flags=red_flags,
+        red_flag_matches=red_flag_matches,
+        assessments=assessments,
+    )
 
     if red_flags:
         estimated_duration_minutes = 5
+    elif needs_more_info:
+        estimated_duration_minutes = 10 + min(8, len(followup_questions) * 2)
     else:
         estimated_duration_minutes = 12 + (len(assessments) * 8) + (len(conflicts) * 6)
 
+    research_topics = _build_research_topics(assessments, red_flags, followup_questions)
+    reasoning_timeline = _build_reasoning_timeline(
+        data_quality=data_quality,
+        assessments=assessments,
+        conflicts=conflicts,
+        consensus_metadata=consensus_metadata,
+        red_flags=red_flags,
+        followup_questions=followup_questions,
+        needs_more_info=needs_more_info,
+        final_recommendation=final_recommendation,
+    )
+    neural_risk = _build_neural_risk_payload(
+        payload=payload,
+        red_flags=red_flags,
+        conflicts=conflicts,
+        consensus_metadata=consensus_metadata,
+        data_quality=data_quality,
+        confidence=confidence,
+        followup_questions=followup_questions,
+        assessments=assessments,
+        medications=medications,
+    )
+
     return {
         "requested_specialists": specialists,
-        "per_specialist_reasoning_logs": [asdict(item) for item in assessments],
+        "per_specialist_reasoning_logs": assessments_payload,
         "conflict_list": conflicts,
+        "council_consensus": consensus_metadata,
         "consensus_summary": consensus_summary,
         "divergence_notes": divergence_notes,
         "final_recommendation": final_recommendation,
@@ -599,5 +1355,61 @@ def run_council(payload: dict) -> dict:
                 if red_flags
                 else "standard_multidisciplinary_pathway"
             ),
+            "negated_red_flags": negated_red_flag_matches,
+            "metadata": escalation_metadata,
+        },
+        "needs_more_info": needs_more_info,
+        "followup_questions": followup_questions,
+        "confidence_score": confidence["score"],
+        "confidence_level": confidence["level"],
+        "data_quality_score": data_quality["score"],
+        "data_quality_level": data_quality["level"],
+        "analyze": {
+            "consensus_triage": consensus_triage,
+            "emergency_triggered": bool(red_flags),
+            "needs_more_info": needs_more_info,
+            "followup_questions": followup_questions,
+            "confidence": confidence,
+            "data_quality": data_quality,
+            "final_recommendation": final_recommendation,
+        },
+        "details": {
+            "requested_specialists": specialists,
+            "specialist_assessments": assessments_payload,
+            "conflicts": conflicts,
+            "red_flag_matches": red_flag_matches,
+            "negated_red_flag_matches": negated_red_flag_matches,
+            "consensus": consensus_metadata,
+            "consensus_summary": consensus_summary,
+            "divergence_notes": divergence_notes,
+        },
+        "citations": citations,
+        "citation_quality": citation_quality,
+        "reasoning_timeline": reasoning_timeline,
+        "neural_risk": neural_risk,
+        "research": {
+            "mode": "rule_based_council_v2",
+            "topics": research_topics,
+            "followup_questions": followup_questions,
+            "confidence_components": confidence["components"],
+            "data_gaps": data_quality["missing_sections"],
+        },
+        "deepdive": {
+            "cross_specialty": {
+                "consensus_triage": consensus_triage,
+                "conflict_count": len(conflicts),
+                "red_flag_count": len(red_flags),
+                "highest_triage_score": max(_TRIAGE_SCORE[item.triage] for item in assessments),
+            },
+            "specialist_sections": [
+                {
+                    "specialist": item.specialist,
+                    "triage": item.triage,
+                    "key_findings": item.key_findings,
+                    "reasoning_log": item.reasoning_log,
+                    "recommendation": item.recommendation,
+                }
+                for item in assessments
+            ],
         },
     }

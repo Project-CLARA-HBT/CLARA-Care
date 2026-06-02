@@ -9,6 +9,7 @@ export type PageMeta = {
 export type NavigationItem = {
   href: string;
   label: string;
+  icon: string;
   desc: string;
   group: NavGroupKey;
   roles: UserRole[];
@@ -16,8 +17,19 @@ export type NavigationItem = {
   page: PageMeta;
 };
 
+export type NavGroupMeta = {
+  label: string;
+  shortLabel: string;
+  icon: string;
+};
+
 export const PUBLIC_ROUTES = new Set([
   "/",
+  "/legal",
+  "/legal/privacy",
+  "/legal/terms",
+  "/legal/consent",
+  "/legal/cookies",
   "/huong-dan",
   "/login",
   "/register",
@@ -27,10 +39,35 @@ export const PUBLIC_ROUTES = new Set([
   "/verify-email"
 ]);
 
+export const DEFAULT_POST_LOGIN_PATH = "/chat";
+
+const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
+
+const ROLE_HOME_PATHS: Record<UserRole, string> = {
+  normal: "/chat",
+  researcher: "/chat",
+  doctor: "/chat",
+  admin: "/chat",
+};
+
 const NAV_ITEMS: NavigationItem[] = [
+  {
+    href: "/chat",
+    label: "Chat",
+    icon: "chat_paste_go",
+    desc: "Hỏi đáp y tế hợp nhất",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
+    page: {
+      title: "CLARA Chat",
+      subtitle: "Không gian chat tập trung với 3 chế độ phản hồi: Nhanh, Sâu, Sâu mở rộng."
+    }
+  },
   {
     href: "/dashboard",
     label: "Tổng quan",
+    icon: "dashboard",
     desc: "Bức tranh nhanh hôm nay",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -41,20 +78,22 @@ const NAV_ITEMS: NavigationItem[] = [
     }
   },
   {
-    href: "/research",
-    label: "Hỏi đáp y tế",
-    desc: "Hỏi nhanh hoặc chuyên sâu",
+    href: "/phr",
+    label: "PHR",
+    icon: "description",
+    desc: "Hồ sơ sức khỏe cá nhân",
     group: "core",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
-      title: "Hỏi đáp chuyên môn",
-      subtitle: "Tra cứu câu trả lời có dẫn nguồn để hỗ trợ quyết định lâm sàng."
+      title: "PHR",
+      subtitle: "Lưu trữ và tổng hợp hồ sơ sức khỏe cá nhân."
     }
   },
   {
     href: "/selfmed",
     label: "Tủ thuốc",
+    icon: "pill",
     desc: "Quản lý thuốc cá nhân",
     group: "medication",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -67,6 +106,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/careguard",
     label: "Kiểm tra tương tác",
+    icon: "security",
     desc: "DDI và cảnh báo an toàn",
     group: "medication",
     roles: ["normal", "doctor", "admin"],
@@ -79,6 +119,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/council",
     label: "Hội chẩn AI",
+    icon: "groups",
     desc: "Nhiều góc nhìn chuyên khoa",
     group: "clinical",
     roles: ["doctor", "admin"],
@@ -90,6 +131,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/scribe",
     label: "Medical Scribe",
+    icon: "clinical_notes",
     desc: "Ghi chép khám bệnh",
     group: "clinical",
     roles: ["doctor", "admin"],
@@ -100,43 +142,35 @@ const NAV_ITEMS: NavigationItem[] = [
   },
   {
     href: "/admin/overview",
-    label: "Admin Control Tower",
-    desc: "Nguồn RAG và answer flow",
+    label: "Quản trị hệ thống",
+    icon: "settings_input_component",
+    desc: "Điều phối cấu hình và vận hành",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Quản trị hệ thống",
       subtitle: "Bảng điều phối trung tâm cho cấu hình, chất lượng phản hồi và vận hành."
     }
   },
   {
-    href: "/admin/rag-sources",
+    href: "/admin/knowledge-sources",
     label: "Nguồn tri thức",
-    desc: "Quản lý nguồn dữ liệu",
+    icon: "database",
+    desc: "Nguồn dữ liệu hợp nhất",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Nguồn tri thức",
-      subtitle: "Quản lý nguồn dữ liệu và mức ưu tiên truy xuất."
-    }
-  },
-  {
-    href: "/admin/knowledge-sources",
-    label: "Knowledge Sources",
-    desc: "Dataset upload theo từng kho",
-    group: "admin",
-    roles: ["researcher", "doctor", "admin"],
-    page: {
-      title: "Knowledge Sources",
-      subtitle: "Tạo kho tri thức riêng, upload tài liệu và bật/tắt document cho RAG."
+      subtitle: "Trung tâm hợp nhất connector truy xuất, tài liệu và đồng bộ nguồn y khoa."
     }
   },
   {
     href: "/admin/answer-flow",
     label: "Luồng trả lời",
+    icon: "alt_route",
     desc: "Điều phối phân tích và phản hồi",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Luồng trả lời",
       subtitle: "Điều phối các bước phân tích, xác minh và phản hồi cuối."
@@ -145,9 +179,10 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/admin/observability",
     label: "Giám sát vận hành",
+    icon: "monitoring",
     desc: "Theo dõi cảnh báo runtime",
     group: "admin",
-    roles: ["researcher", "doctor", "admin"],
+    roles: ["admin"],
     page: {
       title: "Giám sát vận hành",
       subtitle: "Theo dõi tình trạng hệ thống, cảnh báo và tín hiệu runtime."
@@ -156,6 +191,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/huong-dan",
     label: "Hướng dẫn",
+    icon: "widgets",
     desc: "Bắt đầu trong 5 phút",
     group: "support",
     roles: ["normal", "researcher", "doctor", "admin"],
@@ -169,11 +205,19 @@ const NAV_ITEMS: NavigationItem[] = [
 const GROUP_ORDER: NavGroupKey[] = ["core", "clinical", "medication", "admin", "support"];
 
 export const GROUP_LABELS: Record<NavGroupKey, string> = {
-  core: "Điều hướng chính",
+  core: "Không gian làm việc",
   clinical: "Lâm sàng",
   medication: "Thuốc và an toàn",
-  admin: "Quản trị",
+  admin: "Quản trị hệ thống",
   support: "Hỗ trợ"
+};
+
+const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
+  core: { label: "Không gian làm việc", shortLabel: "Không gian", icon: "workspaces" },
+  clinical: { label: "Lâm sàng", shortLabel: "Lâm sàng", icon: "stethoscope" },
+  medication: { label: "Thuốc và an toàn", shortLabel: "An toàn", icon: "shield" },
+  admin: { label: "Quản trị hệ thống", shortLabel: "Quản trị", icon: "settings_input_component" },
+  support: { label: "Hỗ trợ", shortLabel: "Hỗ trợ", icon: "help" }
 };
 
 const DEFAULT_PAGE_META: PageMeta = {
@@ -183,6 +227,26 @@ const DEFAULT_PAGE_META: PageMeta = {
 
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.has(pathname);
+}
+
+export function getRoleHomePath(role: UserRole = "normal"): string {
+  return ROLE_HOME_PATHS[role] ?? DEFAULT_POST_LOGIN_PATH;
+}
+
+export function sanitizeNextPath(nextPath: string | null | undefined): string | null {
+  if (!nextPath) return null;
+  if (!nextPath.startsWith("/") || nextPath.startsWith("//")) return null;
+  try {
+    const parsed = new URL(nextPath, "http://localhost");
+    if (AUTH_ENTRY_ROUTES.has(parsed.pathname)) return null;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+export function resolvePostLoginPath(options: { nextPath?: string | null; role?: UserRole }): string {
+  return sanitizeNextPath(options.nextPath) ?? getRoleHomePath(options.role ?? "normal");
 }
 
 export function getNavItemsByRole(role: UserRole): NavigationItem[] {
@@ -195,7 +259,7 @@ export function getGroupedNavItems(role: UserRole): Array<{ key: NavGroupKey; la
     const groupItems = items.filter((item) => item.group === groupKey);
     return {
       key: groupKey,
-      label: GROUP_LABELS[groupKey],
+      label: GROUP_META[groupKey].label,
       items: groupItems
     };
   }).filter((group) => group.items.length > 0);
@@ -205,9 +269,37 @@ export function getMobilePrimaryNav(role: UserRole): NavigationItem[] {
   return getNavItemsByRole(role).filter((item) => item.mobilePrimary).slice(0, 4);
 }
 
+export function getGroupMeta(group: NavGroupKey): NavGroupMeta {
+  return GROUP_META[group];
+}
+
+export function getTopNavLinks(role: UserRole): Array<{ href: string; label: string; icon: string }> {
+  const grouped = getGroupedNavItems(role);
+  const desiredOrder: NavGroupKey[] = ["clinical", "medication", "admin"];
+  return desiredOrder
+    .map((groupKey) => {
+      const group = grouped.find((entry) => entry.key === groupKey);
+      if (!group || group.items.length === 0) return null;
+      const meta = GROUP_META[groupKey];
+      return {
+        href: group.items[0].href,
+        label: meta.shortLabel,
+        icon: meta.icon
+      };
+    })
+    .filter((item): item is { href: string; label: string; icon: string } => Boolean(item));
+}
+
 export function getPageMeta(pathname: string): PageMeta {
   const exact = NAV_ITEMS.find((item) => item.href === pathname);
   if (exact) return exact.page;
+
+  if (pathname === "/research" || pathname.startsWith("/research/")) {
+    return {
+      title: "Hỏi đáp y tế",
+      subtitle: "Luồng hỏi đáp đã hợp nhất về CLARA Chat."
+    };
+  }
 
   const prefixSorted = [...NAV_ITEMS].sort((a, b) => b.href.length - a.href.length);
   const prefixMatch = prefixSorted.find((item) => pathname.startsWith(`${item.href}/`));

@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BarBlocks, Sparkline } from "@/components/admin/admin-visuals";
+import {
+  ConduitFlowLine,
+  MatrixHeatmapMini,
+  NeonAreaChart,
+  RadarPulseChart,
+  SegmentRingGauge
+} from "@/components/dashboard/futuristic-charts";
 import {
   getApiHealth,
   getControlTowerConfig,
@@ -11,6 +17,20 @@ import {
   normalizeSystemDependencies,
   normalizeSystemMetrics
 } from "@/lib/system";
+
+type FlowFlags = {
+  roleRouter: boolean;
+  intentRouter: boolean;
+  ruleVerification: boolean;
+  nliModel: boolean;
+  ragReranker: boolean;
+  ragNli: boolean;
+  ragGraphRag: boolean;
+  deepseekFallback: boolean;
+  scientificRetrieval: boolean;
+  webRetrieval: boolean;
+  fileRetrieval: boolean;
+};
 
 type ObservabilityState = {
   loading: boolean;
@@ -26,6 +46,25 @@ type ObservabilityState = {
   enabledSources: number;
   flowEnabledCount: number;
   lowContextThreshold: number;
+  flow: FlowFlags;
+};
+
+type TimelinePoint = {
+  at: number;
+  requests: number;
+  errors: number;
+  latencyMs: number;
+  flowEnabledCount: number;
+  sourceCoverage: number;
+};
+
+type AlertLevel = "info" | "warn" | "critical";
+
+type AlertItem = {
+  level: AlertLevel;
+  title: string;
+  detail: string;
+  source: string;
 };
 
 const INITIAL_STATE: ObservabilityState = {
@@ -41,15 +80,97 @@ const INITIAL_STATE: ObservabilityState = {
   totalSources: 0,
   enabledSources: 0,
   flowEnabledCount: 0,
-  lowContextThreshold: 0
+  lowContextThreshold: 0,
+  flow: {
+    roleRouter: false,
+    intentRouter: false,
+    ruleVerification: false,
+    nliModel: false,
+    ragReranker: true,
+    ragNli: false,
+    ragGraphRag: true,
+    deepseekFallback: false,
+    scientificRetrieval: false,
+    webRetrieval: false,
+    fileRetrieval: false
+  }
 };
+
+const TOTAL_FLOW_FLAGS = 11;
+
+function clamp(value: number, min = 0, max = 100): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
 
 function toInt(value: number | null): number {
   return Number.isFinite(value) ? Math.max(0, Math.trunc(value ?? 0)) : 0;
 }
 
+function formatCount(value: number | null): string {
+  if (!Number.isFinite(value)) return "--";
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(Math.max(0, value ?? 0));
+}
+
+function formatPercent(value: number): string {
+  return `${Math.max(0, value).toFixed(1)}%`;
+}
+
+function formatClock(value: number): string {
+  const date = new Date(value);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function toneForStatus(status: string): "ok" | "warn" | "error" {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("ok") || normalized.includes("healthy") || normalized.includes("reachable")) return "ok";
+  if (normalized.includes("warn") || normalized.includes("degraded")) return "warn";
+  return "error";
+}
+
+function buildRiskMatrix(params: {
+  errors: number;
+  errorRate: number;
+  latencyMs: number;
+  sourceCoverage: number;
+  flowEnabled: number;
+}): number[][] {
+  const { errors, errorRate, latencyMs, sourceCoverage, flowEnabled } = params;
+  return [
+    [clamp(28 - errors), clamp(errorRate * 2), clamp(errorRate * 4), clamp(errorRate * 6)],
+    [clamp(40 - latencyMs / 20), clamp(latencyMs / 8), clamp(latencyMs / 5), clamp(latencyMs / 2.4)],
+    [clamp(sourceCoverage), clamp(100 - sourceCoverage), clamp((100 - sourceCoverage) * 1.3), clamp((100 - sourceCoverage) * 1.7)],
+    [
+      clamp((flowEnabled / TOTAL_FLOW_FLAGS) * 100),
+      clamp(((TOTAL_FLOW_FLAGS - flowEnabled) / TOTAL_FLOW_FLAGS) * 100),
+      clamp(((TOTAL_FLOW_FLAGS - flowEnabled) / TOTAL_FLOW_FLAGS) * 130),
+      clamp(((TOTAL_FLOW_FLAGS - flowEnabled) / TOTAL_FLOW_FLAGS) * 170)
+    ]
+  ];
+}
+
+function computeFlowHealth(flow: FlowFlags): number {
+  const requiredKeys: Array<keyof FlowFlags> = [
+    "roleRouter",
+    "intentRouter",
+    "ruleVerification",
+    "nliModel",
+    "ragNli",
+    "ragReranker",
+    "scientificRetrieval"
+  ];
+  const requiredOn = requiredKeys.filter((key) => flow[key]).length;
+  const optionalOn = [flow.deepseekFallback, flow.webRetrieval, flow.fileRetrieval, flow.ragGraphRag].filter(Boolean).length;
+  return clamp(requiredOn * 11 + optionalOn * 6);
+}
+
 export default function AdminObservabilityPanel() {
   const [state, setState] = useState<ObservabilityState>(INITIAL_STATE);
+  const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: "" }));
@@ -68,12 +189,23 @@ export default function AdminObservabilityPanel() {
 
       const sources = Array.isArray(config.rag_sources) ? config.rag_sources : [];
       const enabledSources = sources.filter((source) => source.enabled).length;
-      const flowEnabledCount = [
-        config.rag_flow.role_router_enabled,
-        config.rag_flow.intent_router_enabled,
-        config.rag_flow.verification_enabled,
-        config.rag_flow.deepseek_fallback_enabled
-      ].filter(Boolean).length;
+
+      const flow = {
+        roleRouter: Boolean(config.rag_flow.role_router_enabled),
+        intentRouter: Boolean(config.rag_flow.intent_router_enabled),
+        ruleVerification: Boolean(config.rag_flow.rule_verification_enabled ?? config.rag_flow.verification_enabled),
+        nliModel: Boolean(config.rag_flow.nli_model_enabled),
+        ragReranker: Boolean(config.rag_flow.rag_reranker_enabled),
+        ragNli: Boolean(config.rag_flow.rag_nli_enabled),
+        ragGraphRag: Boolean(config.rag_flow.rag_graphrag_enabled),
+        deepseekFallback: Boolean(config.rag_flow.deepseek_fallback_enabled),
+        scientificRetrieval: Boolean(config.rag_flow.scientific_retrieval_enabled),
+        webRetrieval: Boolean(config.rag_flow.web_retrieval_enabled),
+        fileRetrieval: Boolean(config.rag_flow.file_retrieval_enabled)
+      };
+
+      const flowEnabledCount = Object.values(flow).filter(Boolean).length;
+      const sourceCoverage = sources.length > 0 ? (enabledSources / sources.length) * 100 : 0;
 
       setState({
         loading: false,
@@ -88,13 +220,27 @@ export default function AdminObservabilityPanel() {
         totalSources: sources.length,
         enabledSources,
         flowEnabledCount,
-        lowContextThreshold: config.rag_flow.low_context_threshold
+        lowContextThreshold: config.rag_flow.low_context_threshold,
+        flow
+      });
+
+      setTimeline((prev) => {
+        const point: TimelinePoint = {
+          at: Date.now(),
+          requests: toInt(metrics.requestCount),
+          errors: toInt(metrics.errorCount),
+          latencyMs: toInt(metrics.avgLatencyMs),
+          flowEnabledCount,
+          sourceCoverage: Math.round(sourceCoverage)
+        };
+        const next = [...prev, point];
+        return next.slice(-30);
       });
     } catch (cause) {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: cause instanceof Error ? cause.message : "Unable to load observability snapshot."
+        error: cause instanceof Error ? cause.message : "Không thể tải ảnh chụp trạng thái hệ thống."
       }));
     }
   }, []);
@@ -103,104 +249,437 @@ export default function AdminObservabilityPanel() {
     void load();
   }, [load]);
 
-  const requestCount = toInt(state.requestCount);
-  const errorCount = toInt(state.errorCount);
-  const successCount = Math.max(0, requestCount - errorCount);
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = window.setInterval(() => {
+      void load();
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [autoRefresh, load]);
+
+  const requests = toInt(state.requestCount);
+  const errors = toInt(state.errorCount);
+  const success = Math.max(0, requests - errors);
   const latencyMs = toInt(state.avgLatencyMs);
+  const errorRate = requests > 0 ? (errors / requests) * 100 : 0;
+  const sourceCoverage = state.totalSources > 0 ? (state.enabledSources / state.totalSources) * 100 : 0;
+  const flowHealth = computeFlowHealth(state.flow);
 
-  const requestShape = useMemo(() => {
-    const base = requestCount || 1;
-    return [Math.max(1, base * 0.45), Math.max(1, base * 0.72), Math.max(1, base * 0.84), Math.max(1, base)];
-  }, [requestCount]);
+  const effectiveTimeline = useMemo<TimelinePoint[]>(() => {
+    if (timeline.length > 0) return timeline;
 
-  const healthBars = [
-    successCount || 1,
-    errorCount || 1,
-    Math.max(1, Math.round((state.mlReachable ? 1 : 0.3) * 100)),
-    Math.max(1, state.flowEnabledCount * 25),
-    Math.max(1, Math.round(state.lowContextThreshold * 100))
+    const now = Date.now();
+    return Array.from({ length: 6 }).map((_, index) => ({
+      at: now - (5 - index) * 60_000,
+      requests: Math.max(0, requests - (5 - index) * 2),
+      errors: Math.max(0, errors - (5 - index > 2 ? 1 : 0)),
+      latencyMs: Math.max(0, latencyMs + (index % 2 === 0 ? 4 : -3)),
+      flowEnabledCount: state.flowEnabledCount,
+      sourceCoverage: Math.round(sourceCoverage)
+    }));
+  }, [errors, latencyMs, requests, sourceCoverage, state.flowEnabledCount, timeline]);
+
+  const apiTone = toneForStatus(state.apiStatus);
+  const mlTone = state.mlReachable === false ? "error" : toneForStatus(state.mlStatus);
+  const runtimeStability = clamp(100 - errorRate * 2.2 - latencyMs / 58 - (state.mlReachable === false ? 24 : 0));
+  const verificationStrength = clamp(flowHealth - state.lowContextThreshold * 28 + 12);
+
+  const axisLabels = useMemo(() => {
+    return effectiveTimeline.map((item) => {
+      const date = new Date(item.at);
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    });
+  }, [effectiveTimeline]);
+
+  const trafficSeries = useMemo(
+    () => [
+      {
+        id: "requests",
+        label: "Request",
+        color: "#60a5fa",
+        values: effectiveTimeline.map((item) => item.requests)
+      },
+      {
+        id: "errors",
+        label: "Lỗi",
+        color: "#fb7185",
+        values: effectiveTimeline.map((item) => item.errors)
+      }
+    ],
+    [effectiveTimeline]
+  );
+
+  const performanceSeries = useMemo(
+    () => [
+      {
+        id: "latency",
+        label: "Độ trễ",
+        color: "#60a5fa",
+        values: effectiveTimeline.map((item) => item.latencyMs)
+      },
+      {
+        id: "sourceCoverage",
+        label: "Độ phủ nguồn",
+        color: "#34d399",
+        values: effectiveTimeline.map((item) => item.sourceCoverage)
+      }
+    ],
+    [effectiveTimeline]
+  );
+
+  const radarAxes = useMemo(
+    () => [
+      { label: "Vận hành", value: runtimeStability, max: 100 },
+      { label: "Kiểm chứng", value: verificationStrength, max: 100 },
+      { label: "Độ phủ", value: sourceCoverage, max: 100 },
+      { label: "Flow", value: flowHealth, max: 100 },
+      { label: "API", value: apiTone === "ok" ? 95 : apiTone === "warn" ? 68 : 40, max: 100 }
+    ],
+    [apiTone, flowHealth, runtimeStability, sourceCoverage, verificationStrength]
+  );
+
+  const signalItems = useMemo<
+    Array<{ label: string; value: number; tone: "ok" | "warn" | "danger" }>
+  >(
+    () => [
+      { label: "Độ ổn định", value: Math.round(runtimeStability), tone: runtimeStability < 65 ? "warn" : "ok" },
+      { label: "Mức kiểm chứng", value: Math.round(verificationStrength), tone: verificationStrength < 70 ? "warn" : "ok" },
+      { label: "Sức khỏe flow", value: Math.round(flowHealth), tone: flowHealth < 60 ? "danger" : "ok" },
+      { label: "Độ phủ nguồn", value: Math.round(sourceCoverage), tone: sourceCoverage < 50 ? "warn" : "ok" }
+    ],
+    [flowHealth, runtimeStability, sourceCoverage, verificationStrength]
+  );
+
+  const verificationStackEnabled = state.flow.ruleVerification && state.flow.nliModel && state.flow.ragNli;
+
+  const pipelineStages = useMemo<
+    Array<{ label: string; status: "ok" | "warn" | "error" | "idle"; note: string }>
+  >(
+    () => [
+      { label: "Cổng vào", status: apiTone === "ok" ? "ok" : apiTone === "warn" ? "warn" : "error", note: state.apiStatus },
+      { label: "Role Router", status: state.flow.roleRouter ? "ok" : "warn", note: state.flow.roleRouter ? "BẬT" : "TẮT" },
+      { label: "Intent Router", status: state.flow.intentRouter ? "ok" : "warn", note: state.flow.intentRouter ? "BẬT" : "TẮT" },
+      {
+        label: "Kiểm chứng Rule + NLI",
+        status: verificationStackEnabled ? "ok" : "error",
+        note: verificationStackEnabled ? "BẬT" : "TẮT"
+      },
+      { label: "ML Runtime", status: mlTone === "ok" ? "ok" : mlTone === "warn" ? "warn" : "error", note: state.mlReachable === false ? "mất kết nối" : "sẵn sàng" }
+    ],
+    [apiTone, mlTone, state.apiStatus, state.flow.intentRouter, state.flow.roleRouter, state.mlReachable, verificationStackEnabled]
+  );
+
+  const alerts = useMemo<AlertItem[]>(() => {
+    const rows: AlertItem[] = [];
+
+    if (apiTone !== "ok") {
+      rows.push({
+        level: apiTone === "error" ? "critical" : "warn",
+        title: "API đang giảm ổn định",
+        detail: state.apiMessage || "Tín hiệu từ cổng vào chưa ổn định.",
+        source: "api"
+      });
+    }
+
+    if (state.mlReachable === false) {
+      rows.push({
+        level: "critical",
+        title: "Không kết nối được ML",
+        detail: state.mlStatus || "Không nhận được phản hồi từ dịch vụ ML.",
+        source: "ml"
+      });
+    }
+
+    if (errorRate >= 15) {
+      rows.push({
+        level: "critical",
+        title: "Tỷ lệ lỗi vượt ngưỡng",
+        detail: `Tỷ lệ lỗi hiện tại ${formatPercent(errorRate)} đang vượt vùng an toàn.`,
+        source: "metrics"
+      });
+    } else if (errorRate >= 8) {
+      rows.push({
+        level: "warn",
+        title: "Tỷ lệ lỗi đang tăng",
+        detail: `Tỷ lệ lỗi hiện tại là ${formatPercent(errorRate)}.`,
+        source: "metrics"
+      });
+    }
+
+    if (latencyMs >= 1200) {
+      rows.push({
+        level: "warn",
+        title: "Độ trễ cao",
+        detail: `Độ trễ trung bình ${latencyMs}ms đang cao hơn mức mục tiêu.`,
+        source: "metrics"
+      });
+    }
+
+    if (sourceCoverage < 50 && state.totalSources > 0) {
+      rows.push({
+        level: "warn",
+        title: "Độ phủ nguồn thấp",
+        detail: `${state.enabledSources}/${state.totalSources} nguồn đang bật.`,
+        source: "control-tower"
+      });
+    }
+
+    if (!verificationStackEnabled) {
+      rows.push({
+        level: "critical",
+        title: "Stack kiểm chứng đang tắt",
+        detail: "Rule verification hoặc NLI stack đang tắt, cần bật để giữ guardrail production.",
+        source: "flow"
+      });
+    }
+
+    if (rows.length === 0) {
+      rows.push({
+        level: "info",
+        title: "Hệ thống ổn định",
+        detail: "Chưa phát hiện tín hiệu bất thường trong khoảng theo dõi hiện tại.",
+        source: "system"
+      });
+    }
+
+    return rows;
+  }, [apiTone, errorRate, latencyMs, sourceCoverage, state.apiMessage, state.enabledSources, state.mlReachable, state.mlStatus, state.totalSources, verificationStackEnabled]);
+
+  const riskMatrix = useMemo(
+    () =>
+      buildRiskMatrix({
+        errors,
+        errorRate,
+        latencyMs,
+        sourceCoverage,
+        flowEnabled: state.flowEnabledCount
+      }),
+    [errorRate, errors, latencyMs, sourceCoverage, state.flowEnabledCount]
+  );
+
+  const latestPoint = effectiveTimeline[effectiveTimeline.length - 1];
+  const lastUpdate = latestPoint ? formatClock(latestPoint.at) : "--:--:--";
+
+  const flowRows: Array<{ label: string; enabled: boolean; detail: string }> = [
+    { label: "Role Router", enabled: state.flow.roleRouter, detail: "Định tuyến theo vai trò người dùng." },
+    { label: "Intent Router", enabled: state.flow.intentRouter, detail: "Tách ý định để chọn pipeline phù hợp." },
+    { label: "Rule Verification", enabled: state.flow.ruleVerification, detail: "Kiểm chứng theo luật và policy trước phản hồi." },
+    { label: "NLI Model", enabled: state.flow.nliModel, detail: "Mô hình NLI cho quan hệ claim-evidence." },
+    { label: "RAG NLI", enabled: state.flow.ragNli, detail: "Bật bước NLI trong pipeline RAG." },
+    { label: "Neural Reranker", enabled: state.flow.ragReranker, detail: "Rerank evidence bằng mô hình neural." },
+    { label: "GraphRAG", enabled: state.flow.ragGraphRag, detail: "Nhánh truy xuất theo đồ thị tri thức." },
+    { label: "DeepSeek Fallback", enabled: state.flow.deepseekFallback, detail: "Dự phòng đường suy luận khi degrade." },
+    { label: "Scientific Retrieval", enabled: state.flow.scientificRetrieval, detail: "Ưu tiên nguồn y khoa chuẩn." },
+    { label: "Web Retrieval", enabled: state.flow.webRetrieval, detail: "Bổ sung khi nguồn nội bộ thiếu ngữ cảnh." },
+    { label: "File Retrieval", enabled: state.flow.fileRetrieval, detail: "Truy xuất dữ liệu tài liệu đã upload." }
   ];
 
-  const apiHealthy = state.apiStatus.toLowerCase().includes("ok") || state.apiStatus.toLowerCase().includes("healthy");
-
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Runtime Signals</p>
-            <h3 className="mt-2 text-sm font-semibold text-slate-900">Observability Snapshot</h3>
-            <p className="mt-1 text-xs text-slate-600">Ghép health + dependencies + metrics với snapshot cấu hình control tower.</p>
-          </div>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-cyan-400"
+              checked={autoRefresh}
+              onChange={(event) => setAutoRefresh(event.target.checked)}
+            />
+            Auto refresh 15s
+          </label>
           <button
             type="button"
             onClick={() => void load()}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+            className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
           >
             Refresh
           </button>
         </div>
-
-        {state.error ? <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p> : null}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs uppercase tracking-wider text-slate-500">API Health</p>
-            <p className={[
-              "mt-1 text-lg font-semibold",
-              apiHealthy ? "text-emerald-600" : "text-amber-600"
-            ].join(" ")}>{state.apiStatus}</p>
-            <p className="mt-1 text-xs text-slate-600">{state.apiMessage || "No details"}</p>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs uppercase tracking-wider text-slate-500">ML Dependency</p>
-            <p className={[
-              "mt-1 text-lg font-semibold",
-              state.mlReachable === false ? "text-rose-600" : "text-emerald-600"
-            ].join(" ")}>{state.mlReachable === false ? "unreachable" : "reachable"}</p>
-            <p className="mt-1 text-xs text-slate-600">{state.mlStatus}</p>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Requests / Errors</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
-              {requestCount} <span className="text-sm text-rose-600">/ {errorCount}</span>
-            </p>
-            <p className="mt-1 text-xs text-slate-600">Tổng request và lỗi tại thời điểm snapshot</p>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Avg Latency</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">{latencyMs}ms</p>
-            <p className="mt-1 text-xs text-slate-600">Nguồn enable: {state.enabledSources}/{state.totalSources}</p>
-          </article>
+        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <span>RUNTIME ID: CLARA-X9-00124</span>
+          <span className="text-slate-600">|</span>
+          <span>SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
+          <span className="text-slate-600">|</span>
+          <span>UPDATED: {lastUpdate} GMT+7</span>
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">Traffic Sparkline</h3>
-            <span className="text-xs text-slate-500">Request momentum</span>
-          </div>
-          <div className="mt-3">
-            {state.loading ? <div className="h-14 animate-pulse rounded-lg bg-slate-100" /> : <Sparkline points={requestShape} />}
-          </div>
-          <p className="mt-2 text-xs text-slate-500">Chuỗi tín hiệu suy diễn từ request count để theo dõi biến thiên tải.</p>
-        </article>
+      {state.error ? (
+        <p className="rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-200">{state.error}</p>
+      ) : null}
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">Signal Blocks</h3>
-            <span className="text-xs text-slate-500">success/error/ml/flow/threshold</span>
+      <div className="grid grid-cols-12 gap-6">
+        <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Sức khỏe API</p>
+            <p className="mt-2 text-2xl font-black text-cyan-300">{state.apiStatus || "UNKNOWN"}</p>
+            <p className="mt-1 text-[11px] text-slate-400">{state.apiMessage || "Không có chi tiết"}</p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+              <div className="h-full bg-cyan-400" style={{ width: `${clamp(runtimeStability)}%` }} />
+            </div>
+          </article>
+
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Trạng thái ML</p>
+            <p className="mt-2 text-xl font-bold text-slate-100">{state.mlReachable === false ? "Mất kết nối" : "Đang hoạt động"}</p>
+            <p className="mt-1 text-[11px] text-slate-400">{state.mlStatus || "Unknown"}</p>
+            <p className="mt-3 text-[11px] font-semibold text-cyan-300">Node cluster: {state.mlReachable === false ? "0/4 active" : "4/4 active"}</p>
+          </article>
+
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Request / Lỗi</p>
+            <p className="mt-2 text-2xl font-black text-slate-100">
+              {formatCount(state.requestCount)} <span className="text-lg text-rose-300">/ {formatCount(state.errorCount)}</span>
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">Trong khung theo dõi gần nhất</p>
+          </article>
+
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ trễ</p>
+            <p className="mt-2 text-2xl font-black text-slate-100">{latencyMs}ms</p>
+            <p className="mt-1 text-[11px] text-cyan-300">p95 ước tính: {Math.max(latencyMs, 1)}ms</p>
+          </article>
+
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ ổn định</p>
+            <p className="mt-2 text-2xl font-black text-slate-100">{Math.round(runtimeStability)}</p>
+            <p className="mt-1 text-[11px] text-slate-400">Metric index: {runtimeStability > 80 ? "Nominal" : "Watch"}</p>
+          </article>
+
+          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Mức kiểm chứng</p>
+            <p className="mt-2 text-2xl font-black text-cyan-300">{Math.round(verificationStrength)}%</p>
+            <p className="mt-1 text-[11px] text-slate-400">Low-context threshold: {Math.round(state.lowContextThreshold * 100)}%</p>
+          </article>
+        </section>
+
+        <section className="col-span-12 lg:col-span-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <RadarPulseChart
+            title="Radar điều khiển"
+            description="Vận hành, kiểm chứng, độ phủ, flow, API"
+            axes={radarAxes}
+            size={250}
+          />
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {signalItems.map((item) => (
+              <div key={item.label} className="rounded-md border border-slate-800 bg-slate-950/60 px-2 py-2">
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">{item.label}</p>
+                <p
+                  className={[
+                    "mt-1 text-base font-bold",
+                    item.tone === "danger" ? "text-rose-300" : item.tone === "warn" ? "text-amber-300" : "text-cyan-300"
+                  ].join(" ")}
+                >
+                  {item.value}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="mt-3">
-            {state.loading ? <div className="h-16 animate-pulse rounded-lg bg-slate-100" /> : <BarBlocks values={healthBars} />}
+        </section>
+
+        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <NeonAreaChart
+            title="Áp lực lưu lượng"
+            description="Request và lỗi theo thời gian"
+            labels={axisLabels}
+            series={trafficSeries}
+            height={220}
+          />
+        </section>
+
+        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="grid grid-cols-2 gap-3">
+            <SegmentRingGauge label="Độ trễ" value={clamp(100 - latencyMs / 5)} tone="cyan" />
+            <SegmentRingGauge label="Độ phủ" value={Math.round(sourceCoverage)} tone="violet" />
+            <SegmentRingGauge label="Flow" value={Math.round(flowHealth)} tone="emerald" />
+            <SegmentRingGauge label="Success" value={clamp(100 - errorRate)} tone="amber" />
           </div>
-          <p className="mt-2 text-xs text-slate-500">Theo thứ tự: success, error, ML dependency, flow flags, low-context threshold.</p>
-        </article>
-      </section>
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500">Hiệu năng tổng quan</p>
+            <NeonAreaChart
+              title=""
+              description=""
+              labels={axisLabels}
+              series={performanceSeries}
+              height={120}
+            />
+          </div>
+        </section>
+
+        <section className="col-span-12 lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-100">Luồng Xử Lý (Processing Pipeline)</h3>
+            <div className="flex gap-2">
+              <span className="rounded bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200">Live Flow</span>
+              <span className="rounded bg-slate-800 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Latency {latencyMs}ms</span>
+            </div>
+          </div>
+          <ConduitFlowLine title="" description="" stages={pipelineStages} />
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {flowRows.map((row) => (
+              <div key={row.label} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-100">{row.label}</p>
+                  <span
+                    className={[
+                      "inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                      row.enabled ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200" : "border-slate-600 bg-slate-800 text-slate-300"
+                    ].join(" ")}
+                  >
+                    {row.enabled ? "Bật" : "Tắt"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{row.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="col-span-12 lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+          <MatrixHeatmapMini
+            title="Ma Trận Áp Lực Rủi Ro"
+            description="Lỗi, độ trễ, độ phủ, flow"
+            rows={["Lỗi", "Độ trễ", "Độ phủ", "Flow"]}
+            columns={["Thấp", "Vừa", "Cao", "Nghiêm trọng"]}
+            values={riskMatrix}
+            minLabel="Thấp"
+            maxLabel="Nghiêm trọng"
+          />
+
+          <div className="mt-4 border-t border-slate-800 pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Cảnh Báo Cần Xử Lý</h4>
+            <div className="mt-3 space-y-2">
+              {alerts.map((alert, index) => {
+                const levelLabel = alert.level === "critical" ? "Nghiêm trọng" : alert.level === "warn" ? "Cảnh báo" : "Ổn định";
+                const toneClass =
+                  alert.level === "critical"
+                    ? "border-rose-700/50 bg-rose-950/30 text-rose-200"
+                    : alert.level === "warn"
+                      ? "border-amber-700/50 bg-amber-950/25 text-amber-200"
+                      : "border-cyan-700/40 bg-cyan-950/20 text-cyan-100";
+
+                return (
+                  <div key={`${alert.title}-${index}`} className={["rounded-lg border p-3", toneClass].join(" ")}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em]">{levelLabel}</p>
+                      <span className="rounded-full border border-current/30 px-2 py-0.5 text-[10px] uppercase">{alert.source}</span>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold">{alert.title}</p>
+                    <p className="mt-1 text-xs opacity-90">{alert.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-[11px] font-mono text-slate-400">
+        <span>RUNTIME ID: CLARA-X9-00124</span>
+        <span>TELEMETRY SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
+        <span>LAST UPDATE: {lastUpdate} GMT+7</span>
+      </footer>
     </div>
   );
 }

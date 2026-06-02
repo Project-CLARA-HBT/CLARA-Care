@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 
-export type AdminTabKey = "overview" | "rag-sources" | "knowledge-sources" | "answer-flow" | "observability";
+export type AdminTabKey =
+  | "overview"
+  | "knowledge-sources"
+  | "answer-flow"
+  | "observability";
 
 type AdminShellProps = {
   activeTab: AdminTabKey;
@@ -10,63 +14,85 @@ type AdminShellProps = {
   children: ReactNode;
 };
 
-const ADMIN_TABS: Array<{ key: AdminTabKey; href: string; label: string }> = [
-  { key: "overview", href: "/admin/overview", label: "Overview" },
-  { key: "rag-sources", href: "/admin/rag-sources", label: "RAG Sources" },
-  { key: "knowledge-sources", href: "/admin/knowledge-sources", label: "Knowledge" },
-  { key: "answer-flow", href: "/admin/answer-flow", label: "Answer Flow" },
-  { key: "observability", href: "/admin/observability", label: "Observability" }
+const ADMIN_TABS: Array<{
+  key: AdminTabKey;
+  href: string;
+  label: string;
+  hint: string;
+  code: string;
+}> = [
+  {
+    key: "overview",
+    href: "/admin/overview",
+    label: "Tổng quan",
+    hint: "Toàn cảnh cấu hình và trạng thái",
+    code: "A01"
+  },
+  {
+    key: "knowledge-sources",
+    href: "/admin/knowledge-sources",
+    label: "Nguồn tri thức",
+    hint: "Kho tri thức và connector truy xuất",
+    code: "A02"
+  },
+  {
+    key: "answer-flow",
+    href: "/admin/answer-flow",
+    label: "Luồng trả lời",
+    hint: "Flow flags và runtime debug",
+    code: "A03"
+  },
+  {
+    key: "observability",
+    href: "/admin/observability",
+    label: "Giám sát",
+    hint: "Health, metrics và signal board",
+    code: "A04"
+  }
 ];
 
 export default function AdminShell({ activeTab, title, description, children }: AdminShellProps) {
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/70 to-sky-50/50 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900/90 dark:via-slate-900/70 dark:to-sky-950/40">
-        <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/70 to-cyan-100/40 blur-2xl dark:from-sky-700/35 dark:to-cyan-700/20" />
-        <div className="pointer-events-none absolute -bottom-16 -left-8 h-32 w-44 rounded-full bg-gradient-to-tr from-slate-200/40 to-sky-100/30 blur-2xl dark:from-slate-700/30 dark:to-sky-700/20" />
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Admin Control Plane</p>
-        <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_auto]">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{title}</h2>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">{description}</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/80">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Config Endpoint</p>
-              <p className="mt-1 text-xs font-mono text-slate-700 dark:text-slate-200">/system/control-tower/config</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/80">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Surface</p>
-              <p className="mt-1 text-xs font-mono text-slate-700 dark:text-slate-200">RAG + Answer Flow + Runtime</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="sr-only">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
 
-      <nav className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-        <ul className="grid gap-2 sm:grid-cols-5">
-          {ADMIN_TABS.map((tab, index) => {
+      <nav
+        className="rounded-[1.4rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-soft"
+        aria-label="Admin navigation"
+      >
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+          {ADMIN_TABS.map((tab) => {
             const isActive = tab.key === activeTab;
             return (
               <li key={tab.key}>
                 <Link
                   href={tab.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={[
-                    "flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
+                    "group flex min-h-[90px] flex-col justify-between rounded-xl border p-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900",
                     isActive
-                      ? "border-sky-500 bg-sky-50 text-sky-700 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.15)] dark:border-sky-500 dark:bg-sky-950/45 dark:text-sky-200"
-                      : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+                      ? "border-sky-500 bg-sky-100/80 text-sky-900 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)] dark:bg-sky-950/50 dark:text-sky-100"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)]"
                   ].join(" ")}
                 >
-                  <span>{tab.label}</span>
-                  <span
-                    className={[
-                      "inline-flex min-w-[1.5rem] items-center justify-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
-                      isActive ? "bg-sky-100 text-sky-700 dark:bg-sky-900/70 dark:text-sky-200" : "bg-slate-200/70 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                    ].join(" ")}
-                  >
-                    0{index + 1}
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">{tab.label}</span>
+                    <span
+                      className={[
+                        "inline-flex min-w-[2rem] items-center justify-center rounded-lg border px-2 py-0.5 text-[11px] font-semibold",
+                        isActive
+                          ? "border-sky-300/80 bg-white/70 text-sky-800 dark:border-sky-700 dark:bg-sky-950/80 dark:text-sky-200"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-muted)]"
+                      ].join(" ")}
+                      aria-hidden="true"
+                    >
+                      {tab.code}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">{tab.hint}</p>
                 </Link>
               </li>
             );

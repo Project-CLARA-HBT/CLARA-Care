@@ -9,9 +9,25 @@ export const FLOW_FLAG_META: Record<FlowToggleKey, { label: string; hint: string
     label: "Intent Router",
     hint: "Chọn nhánh xử lý theo loại yêu cầu (clinical, policy, triage)."
   },
-  verification_enabled: {
-    label: "Verification",
-    hint: "Bật lớp kiểm chứng FIDES trước khi phát hành câu trả lời."
+  rule_verification_enabled: {
+    label: "Rule Verification",
+    hint: "Bật lớp kiểm chứng theo luật/policy trước khi phát hành câu trả lời."
+  },
+  nli_model_enabled: {
+    label: "NLI Model",
+    hint: "Bật mô hình NLI để chấm quan hệ claim-evidence."
+  },
+  rag_reranker_enabled: {
+    label: "Neural Reranker",
+    hint: "Bật reranker neural để ưu tiên bằng chứng chất lượng cao."
+  },
+  rag_nli_enabled: {
+    label: "RAG NLI",
+    hint: "Bật bước NLI trong pipeline RAG cho claim verification."
+  },
+  rag_graphrag_enabled: {
+    label: "GraphRAG",
+    hint: "Bật nhánh GraphRAG cho truy xuất theo quan hệ/đồ thị tri thức."
   },
   deepseek_fallback_enabled: {
     label: "DeepSeek Fallback",

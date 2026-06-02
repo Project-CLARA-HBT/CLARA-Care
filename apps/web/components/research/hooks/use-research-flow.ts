@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { LOCAL_FLOW_BLUEPRINT } from "@/components/research/lib/research-page-constants";
-import { buildLocalFlowStages, markTimelineFailed, resolveFlowModeFromResult } from "@/components/research/lib/research-page-helpers";
+import { useCallback, useState } from "react";
+import { markTimelineFailed, resolveFlowModeFromResult } from "@/components/research/lib/research-page-helpers";
 import { FlowVisibilityMode, Tier2Result } from "@/components/research/lib/research-page-types";
 import { ResearchFlowEvent, ResearchFlowStage } from "@/lib/research";
 
@@ -17,35 +16,22 @@ export function useResearchFlow() {
   const [liveFlowEvents, setLiveFlowEvents] = useState<ResearchFlowEvent[]>([]);
   const [flowMode, setFlowMode] = useState<FlowVisibilityMode>("idle");
 
-  const localFlowIndexRef = useRef(0);
-  const localFlowTimerRef = useRef<number | null>(null);
-
-  const stopLocalFlowSimulation = useCallback(() => {
-    if (localFlowTimerRef.current !== null) {
-      window.clearInterval(localFlowTimerRef.current);
-      localFlowTimerRef.current = null;
-    }
+  const stopServerProcessing = useCallback(() => {
+    // No-op by design. `isSubmitting` from page controls active processing UI.
   }, []);
 
   const resetFlow = useCallback(() => {
-    stopLocalFlowSimulation();
     setFlowMode("idle");
     setLiveFlowStages([]);
     setLiveFlowEvents([]);
-  }, [stopLocalFlowSimulation]);
+  }, []);
 
-  const startLocalFlowSimulation = useCallback(() => {
-    stopLocalFlowSimulation();
-    localFlowIndexRef.current = 0;
-    setFlowMode("local-fallback");
+  const startServerProcessing = useCallback(() => {
+    // Honest waiting state: do not fabricate completed timeline steps.
+    setFlowMode("idle");
     setLiveFlowEvents([]);
-    setLiveFlowStages(buildLocalFlowStages(0));
-
-    localFlowTimerRef.current = window.setInterval(() => {
-      localFlowIndexRef.current = Math.min(localFlowIndexRef.current + 1, LOCAL_FLOW_BLUEPRINT.length - 1);
-      setLiveFlowStages(buildLocalFlowStages(localFlowIndexRef.current));
-    }, 1300);
-  }, [stopLocalFlowSimulation]);
+    setLiveFlowStages([]);
+  }, []);
 
   const setResolvedFlow = useCallback(({ mode, stages, events }: ResolvedFlowPayload) => {
     setFlowMode(mode);
@@ -55,7 +41,7 @@ export function useResearchFlow() {
 
   const markFlowFailed = useCallback(() => {
     setLiveFlowStages((prev) => markTimelineFailed(prev));
-    setFlowMode("local-fallback");
+    setFlowMode("metadata-stages");
   }, []);
 
   const hydrateFlowFromTier2Result = useCallback((result: Tier2Result) => {
@@ -64,19 +50,13 @@ export function useResearchFlow() {
     setFlowMode(resolveFlowModeFromResult(result));
   }, []);
 
-  useEffect(() => {
-    return () => {
-      stopLocalFlowSimulation();
-    };
-  }, [stopLocalFlowSimulation]);
-
   return {
     liveFlowStages,
     liveFlowEvents,
     flowMode,
     resetFlow,
-    startLocalFlowSimulation,
-    stopLocalFlowSimulation,
+    startServerProcessing,
+    stopServerProcessing,
     setResolvedFlow,
     markFlowFailed,
     hydrateFlowFromTier2Result

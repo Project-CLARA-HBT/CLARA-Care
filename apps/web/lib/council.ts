@@ -9,11 +9,99 @@ export type CouncilRunRequest = {
   specialists: string[];
 };
 
+export type CouncilIntakeRequest = {
+  transcript?: string;
+  audioFile?: File | null;
+};
+
+export type CouncilConsultRequest = {
+  transcript?: string;
+  symptoms?: string[];
+  labs?: Record<string, number | string>;
+  medications?: string[];
+  history?: string;
+  specialists?: string[];
+  specialistCount?: number;
+};
+
+export type CouncilIntakeResult = {
+  transcript: string;
+  symptomsInput: string;
+  labsInput: string;
+  medicationsInput: string;
+  historyInput: string;
+  modelUsed: string;
+  warnings: string[];
+  fieldConfidence?: Record<string, number>;
+  missingFields?: string[];
+  councilPayload?: {
+    symptoms: string[];
+    labs: Record<string, number>;
+    medications: string[];
+    history: string[];
+  };
+};
+
 export type CouncilReasoningLog = {
   specialist: string;
   reasoning: string;
   recommendation?: string;
   confidence?: string;
+};
+
+export type CouncilCitation = {
+  source: string;
+  title: string;
+  url?: string;
+  summary?: string;
+  specialist?: string;
+};
+
+export type CouncilConsensusMetadata = {
+  winningTriage: string;
+  voteBreakdown: Record<string, number>;
+  supportRatio: number | null;
+  disagreementIndex: number | null;
+  conflictCount: number | null;
+  strongestDissent: string;
+  strongestDissentVotes: number | null;
+};
+
+export type CouncilEscalationMetadata = {
+  priority: string;
+  recommendedSlaMinutes: number | null;
+  requiresHumanHandoff: boolean;
+  generatedAtUtc?: string;
+};
+
+export type CouncilCitationQuality = {
+  totalCitations: number | null;
+  averageEvidenceStrength: number | null;
+  highSignalCount: number | null;
+  supportingSignalCount: number | null;
+  contextOnlyCount: number | null;
+  negatedContextCount: number | null;
+};
+
+export type CouncilReasoningTimelineStep = {
+  sequence: number;
+  step: string;
+  detail: string;
+  metadata: Record<string, unknown>;
+};
+
+export type CouncilNeuralRisk = {
+  enabled: boolean;
+  shadowMode: boolean;
+  modelVersion: string;
+  riskProbability: number | null;
+  riskBand: string;
+  recommendedTriage: string;
+  topContributors: Array<{
+    feature: string;
+    impact: number | null;
+    direction: string;
+  }>;
 };
 
 export type CouncilRunRawResponse = {
@@ -28,7 +116,44 @@ export type CouncilRunResult = {
   finalRecommendation: string;
   isEmergency: boolean;
   escalationReason: string;
+  confidenceScore: number | null;
+  dataQualityScore: number | null;
+  missingInfoQuestions: string[];
+  uncertaintyNotes: string[];
+  citations: CouncilCitation[];
+  consensusMetadata: CouncilConsensusMetadata | null;
+  escalationMetadata: CouncilEscalationMetadata | null;
+  citationQuality: CouncilCitationQuality | null;
+  reasoningTimeline: CouncilReasoningTimelineStep[];
+  neuralRisk: CouncilNeuralRisk | null;
+  analysisSections: {
+    analyze: string[];
+    details: string[];
+    research: string[];
+    deepdive: string[];
+    citations: string[];
+  };
 };
+
+export type CouncilCaseDraft = {
+  symptomsInput: string;
+  labsInput: string;
+  medicationsInput: string;
+  historyInput: string;
+  specialistCount: number;
+  selectedSpecialists: string[];
+};
+
+export type CouncilRunSnapshot = {
+  request: CouncilRunRequest;
+  result: CouncilRunResult;
+  raw: CouncilRunRawResponse;
+  createdAt: string;
+};
+
+let councilDraftMemory: CouncilCaseDraft | null = null;
+let councilSnapshotMemory: CouncilRunSnapshot | null = null;
+const ACTIVE_COUNCIL_CASE_KEY = "clara_active_council_case_id";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -195,6 +320,168 @@ function parseBoolean(value: unknown): boolean {
   return ["true", "1", "yes", "y", "emergency", "urgent", "escalate", "escalated"].includes(normalized);
 }
 
+function parseNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asText(item))
+    .filter((item): item is string => Boolean(item));
+}
+
+function parseCitationList(value: unknown): CouncilCitation[] {
+  if (!Array.isArray(value)) return [];
+  const citations: CouncilCitation[] = [];
+  for (const item of value) {
+    const row = asRecord(item);
+    if (!row) continue;
+    const source = asText(row.source) ?? asText(row.journal) ?? asText(row.publisher) ?? "Clinical source";
+    const title = asText(row.title) ?? asText(row.label) ?? source;
+    const url = asText(row.url);
+    const summary = asText(row.summary) ?? asText(row.note);
+    const specialist = asText(row.specialist);
+    citations.push({
+      source,
+      title,
+      url,
+      summary,
+      specialist
+    });
+  }
+  return citations;
+}
+
+function parseAnalysisSection(value: unknown): string[] {
+  if (Array.isArray(value)) return parseStringArray(value);
+  const text = parseText(value);
+  return text ? [text] : [];
+}
+
+function parseConsensusMetadata(value: unknown): CouncilConsensusMetadata | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const voteBreakdownRaw = asRecord(record.vote_breakdown) ?? asRecord(record.voteBreakdown) ?? {};
+  const voteBreakdown: Record<string, number> = {};
+  for (const [key, item] of Object.entries(voteBreakdownRaw)) {
+    const parsed = parseNumber(item);
+    voteBreakdown[key] = parsed ?? 0;
+  }
+
+  return {
+    winningTriage: asText(record.winning_triage) ?? asText(record.winningTriage) ?? "",
+    voteBreakdown,
+    supportRatio: parseNumber(record.support_ratio ?? record.supportRatio),
+    disagreementIndex: parseNumber(record.disagreement_index ?? record.disagreementIndex),
+    conflictCount: parseNumber(record.conflict_count ?? record.conflictCount),
+    strongestDissent: asText(record.strongest_dissent) ?? asText(record.strongestDissent) ?? "",
+    strongestDissentVotes: parseNumber(record.strongest_dissent_votes ?? record.strongestDissentVotes)
+  };
+}
+
+function parseEscalationMetadata(value: unknown): CouncilEscalationMetadata | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    priority: asText(record.priority) ?? "",
+    recommendedSlaMinutes: parseNumber(record.recommended_sla_minutes ?? record.recommendedSlaMinutes),
+    requiresHumanHandoff: parseBoolean(record.requires_human_handoff ?? record.requiresHumanHandoff),
+    generatedAtUtc: asText(record.generated_at_utc) ?? asText(record.generatedAtUtc)
+  };
+}
+
+function parseCitationQuality(value: unknown): CouncilCitationQuality | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    totalCitations: parseNumber(record.total_citations ?? record.totalCitations),
+    averageEvidenceStrength: parseNumber(record.average_evidence_strength ?? record.averageEvidenceStrength),
+    highSignalCount: parseNumber(record.high_signal_count ?? record.highSignalCount),
+    supportingSignalCount: parseNumber(record.supporting_signal_count ?? record.supportingSignalCount),
+    contextOnlyCount: parseNumber(record.context_only_count ?? record.contextOnlyCount),
+    negatedContextCount: parseNumber(record.negated_context_count ?? record.negatedContextCount),
+  };
+}
+
+function parseReasoningTimeline(value: unknown): CouncilReasoningTimelineStep[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      const record = asRecord(item);
+      if (!record) return null;
+      const sequence = parseNumber(record.sequence) ?? 0;
+      const step = asText(record.step) ?? "";
+      const detail = asText(record.detail) ?? "";
+      const metadata = asRecord(record.metadata) ?? {};
+      if (!step && !detail) return null;
+      return {
+        sequence,
+        step,
+        detail,
+        metadata
+      } satisfies CouncilReasoningTimelineStep;
+    })
+    .filter((item): item is CouncilReasoningTimelineStep => Boolean(item))
+    .sort((a, b) => a.sequence - b.sequence);
+}
+
+function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const contributorsRaw = Array.isArray(record.top_contributors) ? record.top_contributors : [];
+  const topContributors = contributorsRaw
+    .map((item) => {
+      const row = asRecord(item);
+      if (!row) return null;
+      return {
+        feature: asText(row.feature) ?? "",
+        impact: parseNumber(row.impact),
+        direction: asText(row.direction) ?? "",
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  return {
+    enabled: parseBoolean(record.enabled),
+    shadowMode: parseBoolean(record.shadow_mode ?? record.shadowMode),
+    modelVersion: asText(record.model_version) ?? asText(record.modelVersion) ?? "",
+    riskProbability: parseNumber(record.risk_probability ?? record.riskProbability),
+    riskBand: asText(record.risk_band) ?? asText(record.riskBand) ?? "",
+    recommendedTriage:
+      asText(record.recommended_triage) ?? asText(record.recommendedTriage) ?? "",
+    topContributors,
+  };
+}
+
+function formatLabsInput(value: unknown): string {
+  const rows = Array.isArray(value) ? value : [];
+  const formattedRows = rows
+    .map((item) => {
+      const record = asRecord(item);
+      if (!record) return "";
+      const name = asText(record.name) ?? asText(record.key) ?? asText(record.lab) ?? "";
+      const val = asText(record.value) ?? asText(record.result) ?? "";
+      const unit = asText(record.unit) ?? "";
+      const raw = asText(record.raw) ?? "";
+      if (name && val) {
+        return unit ? `${name}=${val} ${unit}` : `${name}=${val}`;
+      }
+      if (name && raw) return `${name}: ${raw}`;
+      if (raw) return raw;
+      return "";
+    })
+    .filter(Boolean);
+  return formattedRows.join("\n");
+}
+
 export async function runCouncil(payload: CouncilRunRequest): Promise<CouncilRunRawResponse> {
   const response = await api.post<CouncilRunRawResponse>("/council/run", {
     symptoms: payload.symptoms,
@@ -206,6 +493,62 @@ export async function runCouncil(payload: CouncilRunRequest): Promise<CouncilRun
   });
 
   return response.data;
+}
+
+export async function runCouncilConsult(payload: CouncilConsultRequest): Promise<CouncilRunRawResponse> {
+  const response = await api.post<CouncilRunRawResponse>("/council/consult", {
+    transcript: payload.transcript,
+    symptoms: payload.symptoms,
+    labs: payload.labs,
+    medications: payload.medications,
+    history: payload.history,
+    specialists: payload.specialists,
+    specialist_count: payload.specialistCount
+  });
+  return response.data;
+}
+
+export async function extractCouncilIntake(payload: CouncilIntakeRequest): Promise<CouncilIntakeResult> {
+  const formData = new FormData();
+  const transcript = (payload.transcript ?? "").trim();
+  if (transcript) {
+    formData.append("transcript", transcript);
+  }
+  if (payload.audioFile) {
+    formData.append("audio_file", payload.audioFile);
+  }
+
+  const response = await api.post<unknown>("/council/intake", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+  const root = asRecord(response.data) ?? {};
+  const textFields = asRecord(root.text_fields);
+
+  const symptomsInput =
+    asText(textFields?.symptoms_input) ??
+    parseStringArray(root.symptoms).join("\n");
+  const labsInput =
+    asText(textFields?.labs_input) ??
+    formatLabsInput(root.labs);
+  const medicationsInput =
+    asText(textFields?.medications_input) ??
+    parseStringArray(root.medications).join("\n");
+  const historyInput =
+    asText(textFields?.history_input) ??
+    parseStringArray(root.history).join("\n");
+
+  return {
+    transcript: asText(root.transcript) ?? transcript,
+    symptomsInput,
+    labsInput,
+    medicationsInput,
+    historyInput,
+    modelUsed: asText(root.model_used) ?? "deepseek-v3.2",
+    warnings: parseStringArray(root.warnings),
+    fieldConfidence: asRecord(root.field_confidence) as Record<string, number> | undefined,
+    missingFields: parseStringArray(root.missing_fields),
+    councilPayload: asRecord(root.council_payload) as CouncilIntakeResult["councilPayload"] | undefined
+  };
 }
 
 export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilRunResult {
@@ -259,6 +602,17 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     ) || "";
 
   const emergencyRecord = asRecord(pickUnknown(candidates, ["emergency_escalation", "emergency"]));
+  const detailsRecord = asRecord(pickUnknown(candidates, ["details"]));
+  const consensusMetadata =
+    parseConsensusMetadata(pickUnknown(candidates, ["council_consensus", "consensus_metadata"])) ??
+    parseConsensusMetadata(detailsRecord?.consensus);
+  const escalationMetadata = parseEscalationMetadata(
+    emergencyRecord?.metadata ?? pickUnknown(candidates, ["escalation_metadata"])
+  );
+  const citationQuality = parseCitationQuality(pickUnknown(candidates, ["citation_quality"]));
+  const reasoningTimeline = parseReasoningTimeline(pickUnknown(candidates, ["reasoning_timeline"]));
+  const neuralRisk = parseNeuralRisk(pickUnknown(candidates, ["neural_risk"]));
+
   const policyAction = parseText(pickUnknown(candidates, ["policy_action", "action"])).toLowerCase();
   const explicitEmergencyFlag = parseBoolean(
     pickUnknown(candidates, ["is_emergency", "escalated", "needs_escalation", "should_escalate"])
@@ -282,6 +636,43 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     parseTextList(emergencyRecord?.red_flags).join(", ") ||
     "";
 
+  const confidenceScore = parseNumber(
+    pickUnknown(candidates, ["confidence", "overall_confidence", "confidence_score"])
+  );
+
+  const dataQualityRecord = asRecord(pickUnknown(candidates, ["data_quality", "quality", "input_quality"]));
+  const dataQualityScore = parseNumber(
+    dataQualityRecord?.score ?? dataQualityRecord?.quality_score ?? pickUnknown(candidates, ["data_quality_score"])
+  );
+
+  const uncertaintyNotes = parseTextList(
+    pickUnknown(candidates, ["uncertainty_notes", "uncertainties", "uncertain_points"])
+  );
+
+  const missingInfoQuestions = parseTextList(
+    pickUnknown(candidates, [
+      "follow_up_questions",
+      "missing_information_questions",
+      "needs_more_info_questions",
+      "missing_info_questions"
+    ])
+  );
+
+  const citations = parseCitationList(
+    pickUnknown(candidates, ["citations", "evidence_citations", "references", "sources"])
+  );
+
+  const analysisSectionsRecord = asRecord(
+    pickUnknown(candidates, ["analysis_sections", "sections", "workspace_sections"])
+  );
+  const analysisSections = {
+    analyze: parseAnalysisSection(analysisSectionsRecord?.analyze),
+    details: parseAnalysisSection(analysisSectionsRecord?.details),
+    research: parseAnalysisSection(analysisSectionsRecord?.research),
+    deepdive: parseAnalysisSection(analysisSectionsRecord?.deepdive),
+    citations: parseAnalysisSection(analysisSectionsRecord?.citations)
+  };
+
   return {
     specialistReasoningLogs,
     conflicts,
@@ -289,6 +680,206 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     divergence,
     finalRecommendation,
     isEmergency,
-    escalationReason
+    escalationReason,
+    confidenceScore,
+    dataQualityScore,
+    missingInfoQuestions,
+    uncertaintyNotes,
+    citations,
+    consensusMetadata,
+    escalationMetadata,
+    citationQuality,
+    reasoningTimeline,
+    neuralRisk,
+    analysisSections
+  };
+}
+
+function cloneSnapshot<T>(value: T): T {
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    return value;
+  }
+}
+
+export function loadCouncilDraft(): CouncilCaseDraft | null {
+  return councilDraftMemory ? cloneSnapshot(councilDraftMemory) : null;
+}
+
+export function saveCouncilDraft(draft: CouncilCaseDraft): void {
+  councilDraftMemory = cloneSnapshot(draft);
+}
+
+export function clearCouncilDraft(): void {
+  councilDraftMemory = null;
+}
+
+export function loadCouncilSnapshot(): CouncilRunSnapshot | null {
+  return councilSnapshotMemory ? cloneSnapshot(councilSnapshotMemory) : null;
+}
+
+export function saveCouncilSnapshot(snapshot: CouncilRunSnapshot): void {
+  councilSnapshotMemory = cloneSnapshot(snapshot);
+}
+
+export function clearCouncilSnapshot(): void {
+  councilSnapshotMemory = null;
+}
+
+export function setActiveCouncilCaseId(caseId: number): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ACTIVE_COUNCIL_CASE_KEY, String(caseId));
+}
+
+export function getActiveCouncilCaseId(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(ACTIVE_COUNCIL_CASE_KEY);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
+export function clearActiveCouncilCaseId(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ACTIVE_COUNCIL_CASE_KEY);
+}
+
+export type CouncilCaseRecord = {
+  id: number;
+  title: string;
+  status: string;
+  intake_mode: string;
+  transcript: string;
+  intake?: Record<string, unknown> | null;
+  request?: Record<string, unknown> | null;
+  result?: CouncilRunRawResponse | null;
+  raw_result?: CouncilRunRawResponse | null;
+  last_run_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CouncilCaseListResponse = {
+  items: CouncilCaseRecord[];
+  total: number;
+};
+
+export type CouncilCaseCreatePayload = {
+  title?: string;
+  intake_mode?: string;
+  transcript?: string;
+  request?: Record<string, unknown>;
+};
+
+export type CouncilCaseUpdatePayload = {
+  title?: string;
+  status?: string;
+  intake_mode?: string;
+  transcript?: string;
+  intake?: Record<string, unknown>;
+  request?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  raw_result?: Record<string, unknown>;
+};
+
+export async function listCouncilCases(limit = 20, offset = 0): Promise<CouncilCaseListResponse> {
+  const response = await api.get<CouncilCaseListResponse>("/council/cases", {
+    params: { limit, offset },
+  });
+  return response.data;
+}
+
+export async function getLatestCouncilCase(): Promise<CouncilCaseRecord> {
+  const response = await api.get<CouncilCaseRecord>("/council/cases/latest");
+  return response.data;
+}
+
+export async function getCouncilCase(caseId: number): Promise<CouncilCaseRecord> {
+  const response = await api.get<CouncilCaseRecord>(`/council/cases/${caseId}`);
+  return response.data;
+}
+
+export async function createCouncilCase(payload: CouncilCaseCreatePayload): Promise<CouncilCaseRecord> {
+  const response = await api.post<CouncilCaseRecord>("/council/cases", payload);
+  return response.data;
+}
+
+export async function updateCouncilCase(
+  caseId: number,
+  payload: CouncilCaseUpdatePayload
+): Promise<CouncilCaseRecord> {
+  const response = await api.patch<CouncilCaseRecord>(`/council/cases/${caseId}`, payload);
+  return response.data;
+}
+
+export async function runCouncilCaseIntake(
+  caseId: number,
+  payload: CouncilIntakeRequest
+): Promise<CouncilCaseRecord> {
+  const formData = new FormData();
+  const transcript = (payload.transcript ?? "").trim();
+  if (transcript) {
+    formData.append("transcript", transcript);
+  }
+  if (payload.audioFile) {
+    formData.append("audio_file", payload.audioFile);
+  }
+  const response = await api.post<CouncilCaseRecord>(`/council/cases/${caseId}/intake`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
+export async function runCouncilCaseById(
+  caseId: number,
+  payload: { request?: Record<string, unknown>; specialist_count?: number; specialists?: string[] } = {}
+): Promise<CouncilCaseRecord> {
+  const response = await api.post<CouncilCaseRecord>(`/council/cases/${caseId}/run`, payload);
+  return response.data;
+}
+
+export function buildSnapshotFromCouncilCase(caseItem: CouncilCaseRecord): CouncilRunSnapshot | null {
+  const raw = (caseItem.raw_result ?? caseItem.result) as CouncilRunRawResponse | null;
+  const requestRaw = (caseItem.request ?? {}) as Record<string, unknown>;
+  if (!raw) return null;
+
+  const historyValue = requestRaw.history;
+  const history =
+    typeof historyValue === "string"
+      ? historyValue
+      : Array.isArray(historyValue)
+        ? historyValue.map((item) => String(item).trim()).filter(Boolean).join("\n")
+        : asRecord(historyValue)
+          ? objectToText(asRecord(historyValue) as Record<string, unknown>)
+          : "";
+  const specialistCount =
+    typeof requestRaw.specialist_count === "number" && Number.isFinite(requestRaw.specialist_count)
+      ? Math.min(5, Math.max(2, Math.trunc(requestRaw.specialist_count)))
+      : 3;
+  const request: CouncilRunRequest = {
+    symptoms: Array.isArray(requestRaw.symptoms) ? parseStringArray(requestRaw.symptoms) : [],
+    labs:
+      typeof requestRaw.labs === "object" && requestRaw.labs && !Array.isArray(requestRaw.labs)
+        ? (requestRaw.labs as Record<string, number | string>)
+        : {},
+    medications: Array.isArray(requestRaw.medications) ? parseStringArray(requestRaw.medications) : [],
+    history,
+    specialistCount,
+    specialists: Array.isArray(requestRaw.specialists) ? parseStringArray(requestRaw.specialists) : [],
+  };
+
+  return {
+    request: {
+      symptoms: request.symptoms,
+      labs: request.labs,
+      medications: request.medications,
+      history: request.history,
+      specialistCount: request.specialistCount,
+      specialists: request.specialists,
+    },
+    result: normalizeCouncilRunResult(raw),
+    raw,
+    createdAt: caseItem.last_run_at ?? caseItem.updated_at ?? caseItem.created_at,
   };
 }

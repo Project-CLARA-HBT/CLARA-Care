@@ -1,0 +1,318 @@
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (vX.Y.Z or sha-<shortsha>)"
+        required: true
+        type: string
+      promote_to_production:
+        description: "Promote to production after staging smoke passes"
+        required: true
+        default: true
+        type: boolean
+      deployment_reason:
+        description: "Release note or incident ticket id"
+        required: false
+        default: "manual-release"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: cd-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  preflight:
+    name: preflight image checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      image_tag: ${{ steps.ctx.outputs.image_tag }}
+      registry_repo: ${{ steps.ctx.outputs.registry_repo }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve deploy context
+        id: ctx
+        run: |
+          set -euo pipefail
+          image_tag="${{ github.event.inputs.image_tag }}"
+          registry_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+          echo "registry_repo=$registry_repo" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### CD Preflight"
+            echo "- image_tag: \`$image_tag\`"
+            echo "- registry_repo: \`$registry_repo\`"
+            echo "- reason: \`${{ github.event.inputs.deployment_reason }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Login GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release images exist
+        run: |
+          set -euo pipefail
+          image_tag="${{ steps.ctx.outputs.image_tag }}"
+          repo="${{ steps.ctx.outputs.registry_repo }}"
+          for svc in api ml web; do
+            image="${repo}/clara-${svc}:${image_tag}"
+            echo "Checking image: ${image}"
+            docker manifest inspect "${image}" >/dev/null
+          done
+
+  deploy-staging:
+    name: deploy staging + smoke
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: staging
+    env:
+      IMAGE_TAG: ${{ needs.preflight.outputs.image_tag }}
+      REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Login GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare env
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
+            echo "[error] DEPLOY_ENV_FILE secret is required for staging deployments"
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
+          {
+            echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
+            echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
+            echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
+            echo "DATABASE_FALLBACK_ENABLED=true"
+            echo "DATABASE_FALLBACK_URL=sqlite+pysqlite:////data/clara.db"
+          } >> .env
+
+      - name: Pull and deploy staging stack
+        run: |
+          set -euo pipefail
+          retry_cmd() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "[error] command failed after ${max_attempts} attempts: $*"
+                return 1
+              fi
+              echo "[warn] command failed (attempt ${attempt}/${max_attempts}): $*"
+              sleep $((attempt * 5))
+              attempt=$((attempt + 1))
+            done
+            return 0
+          }
+
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml config >/dev/null
+          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
+          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
+
+      - name: Run staging smoke checks
+        run: |
+          set -euo pipefail
+
+          wait_http() {
+            local url="$1"
+            local name="$2"
+            local attempts=20
+            local i=1
+            while [ "$i" -le "$attempts" ]; do
+              if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
+                echo "[ok] ${name} ready at ${url}"
+                return 0
+              fi
+              echo "[wait] ${name} not ready (${i}/${attempts})"
+              sleep 3
+              i=$((i + 1))
+            done
+            echo "[error] ${name} did not become ready: ${url}"
+            return 1
+          }
+
+          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "api-root-health"
+          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "api-v1-health"
+          wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "ml-health"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "web-home"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "web-research"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "web-research-deepdive"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/analyze" "web-research-analyze"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/citations" "web-research-citations"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/details" "web-research-details"
+
+      - name: Capture staging compose status
+        if: always()
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-staging-ps.txt || true
+
+      - name: Upload staging smoke responses
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-smoke-${{ github.run_id }}
+          path: |
+            /tmp/*health*.json
+            /tmp/web-*.json
+            /tmp/cd-staging-ps.txt
+          if-no-files-found: ignore
+
+      - name: Upload staging logs on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml logs --no-color > /tmp/cd-staging.log || true
+
+      - name: Upload staging log artifact
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cd-staging-logs-${{ github.run_id }}
+          path: /tmp/cd-staging.log
+          if-no-files-found: ignore
+
+  promote-production:
+    name: manual promote production + smoke
+    needs: [preflight, deploy-staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event.inputs.promote_to_production == 'true' }}
+    environment:
+      name: production
+    env:
+      IMAGE_TAG: ${{ needs.preflight.outputs.image_tag }}
+      REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Login GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare env
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
+            echo "[error] DEPLOY_ENV_FILE secret is required for production deployments"
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
+          {
+            echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
+            echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
+            echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
+            echo "DATABASE_FALLBACK_ENABLED=true"
+            echo "DATABASE_FALLBACK_URL=sqlite+pysqlite:////data/clara.db"
+          } >> .env
+
+      - name: Pull and deploy production stack
+        run: |
+          set -euo pipefail
+          retry_cmd() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "[error] command failed after ${max_attempts} attempts: $*"
+                return 1
+              fi
+              echo "[warn] command failed (attempt ${attempt}/${max_attempts}): $*"
+              sleep $((attempt * 5))
+              attempt=$((attempt + 1))
+            done
+            return 0
+          }
+
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml config >/dev/null
+          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
+          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
+
+      - name: Run production smoke checks
+        run: |
+          set -euo pipefail
+
+          wait_http() {
+            local url="$1"
+            local name="$2"
+            local attempts=20
+            local i=1
+            while [ "$i" -le "$attempts" ]; do
+              if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
+                echo "[ok] ${name} ready at ${url}"
+                return 0
+              fi
+              echo "[wait] ${name} not ready (${i}/${attempts})"
+              sleep 3
+              i=$((i + 1))
+            done
+            echo "[error] ${name} did not become ready: ${url}"
+            return 1
+          }
+
+          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "prod-api-root-health"
+          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "prod-api-v1-health"
+          wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "prod-ml-health"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "prod-web-home"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "prod-web-research"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "prod-web-research-deepdive"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/analyze" "prod-web-research-analyze"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/citations" "prod-web-research-citations"
+          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/details" "prod-web-research-details"
+
+      - name: Capture production compose status
+        if: always()
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-production-ps.txt || true
+
+      - name: Upload production smoke responses
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-smoke-${{ github.run_id }}
+          path: |
+            /tmp/prod-*.json
+            /tmp/cd-production-ps.txt
+          if-no-files-found: ignore
+
+      - name: Upload production logs on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml logs --no-color > /tmp/cd-production.log || true
+
+      - name: Upload production log artifact
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cd-production-logs-${{ github.run_id }}
+          path: /tmp/cd-production.log
+          if-no-files-found: ignore

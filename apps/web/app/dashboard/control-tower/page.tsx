@@ -9,8 +9,19 @@ import {
   updateControlTowerConfig
 } from "@/lib/system";
 
-type FlowFlagKey = Exclude<keyof ControlTowerConfig["rag_flow"], "low_context_threshold">;
+type FlowFlagKey = Exclude<
+  keyof ControlTowerConfig["rag_flow"],
+  | "low_context_threshold"
+  | "precision_at_k"
+  | "recall_at_k"
+  | "ndcg_at_k"
+  | "llm_provider"
+  | "llm_base_url"
+  | "llm_model"
+  | "llm_api_key"
+>;
 type FlowGroupKey = "routing" | "verification" | "retrieval";
+type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
 
 const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: FlowGroupKey }> = [
   {
@@ -26,9 +37,21 @@ const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: 
     group: "routing"
   },
   {
-    key: "verification_enabled",
-    label: "FIDES Verification",
-    hint: "Bật lớp kiểm chứng trước khi phát hành câu trả lời.",
+    key: "rule_verification_enabled",
+    label: "Rule Verification",
+    hint: "Bật lớp kiểm chứng theo policy/rule trước khi phát hành câu trả lời.",
+    group: "verification"
+  },
+  {
+    key: "nli_model_enabled",
+    label: "NLI Model",
+    hint: "Bật mô hình NLI phục vụ chấm quan hệ claim-evidence.",
+    group: "verification"
+  },
+  {
+    key: "rag_nli_enabled",
+    label: "RAG NLI",
+    hint: "Bật bước NLI trong pipeline RAG để verify claim-level.",
     group: "verification"
   },
   {
@@ -54,6 +77,18 @@ const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: 
     label: "File Retrieval",
     hint: "Sử dụng nội dung file người dùng upload trong bước retrieval.",
     group: "retrieval"
+  },
+  {
+    key: "rag_reranker_enabled",
+    label: "Neural Reranker",
+    hint: "Bật reranker neural để ưu tiên bằng chứng chất lượng cao.",
+    group: "retrieval"
+  },
+  {
+    key: "rag_graphrag_enabled",
+    label: "GraphRAG",
+    hint: "Bật nhánh GraphRAG cho truy xuất theo quan hệ/đồ thị tri thức.",
+    group: "retrieval"
   }
 ];
 
@@ -72,12 +107,69 @@ const FLOW_GROUP_META: Record<FlowGroupKey, { label: string; description: string
   }
 };
 
+const MANDATORY_ON_FLOW_FLAGS = new Set<FlowFlagKey>(["rag_reranker_enabled", "rag_graphrag_enabled"]);
+
+const RETRIEVAL_METRIC_K_MIN = 1;
+const RETRIEVAL_METRIC_K_MAX = 50;
+const DEFAULT_RETRIEVAL_METRIC_K = 10;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
 function sortSources(sources: ControlTowerRagSource[]): ControlTowerRagSource[] {
   return [...sources].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
+}
+
+function normalizeFlow(flow?: Partial<ControlTowerConfig["rag_flow"]> | null): ControlTowerConfig["rag_flow"] {
+  const precisionRaw = flow?.precision_at_k;
+  const recallRaw = flow?.recall_at_k;
+  const ndcgRaw = flow?.ndcg_at_k;
+  const precisionAtK = Math.trunc(
+    typeof precisionRaw === "number" && Number.isFinite(precisionRaw) ? precisionRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+  const recallAtK = Math.trunc(
+    typeof recallRaw === "number" && Number.isFinite(recallRaw) ? recallRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+  const ndcgAtK = Math.trunc(
+    typeof ndcgRaw === "number" && Number.isFinite(ndcgRaw) ? ndcgRaw : DEFAULT_RETRIEVAL_METRIC_K
+  );
+
+  const ruleVerificationEnabled = flow?.rule_verification_enabled ?? flow?.verification_enabled ?? true;
+  const nliModelEnabled = flow?.nli_model_enabled ?? ruleVerificationEnabled;
+  const ragNliEnabled = flow?.rag_nli_enabled ?? nliModelEnabled;
+
+  return {
+    role_router_enabled: flow?.role_router_enabled ?? true,
+    intent_router_enabled: flow?.intent_router_enabled ?? true,
+    rule_verification_enabled: ruleVerificationEnabled,
+    nli_model_enabled: nliModelEnabled,
+    rag_reranker_enabled: flow?.rag_reranker_enabled ?? true,
+    rag_nli_enabled: ragNliEnabled,
+    rag_graphrag_enabled: flow?.rag_graphrag_enabled ?? true,
+    verification_enabled: flow?.verification_enabled ?? ruleVerificationEnabled,
+    deepseek_fallback_enabled: flow?.deepseek_fallback_enabled ?? true,
+    low_context_threshold: clamp(Number(flow?.low_context_threshold ?? 0.2), 0, 1),
+    precision_at_k: clamp(precisionAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    recall_at_k: clamp(recallAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    ndcg_at_k: clamp(ndcgAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
+    scientific_retrieval_enabled: flow?.scientific_retrieval_enabled ?? true,
+    web_retrieval_enabled: flow?.web_retrieval_enabled ?? true,
+    file_retrieval_enabled: flow?.file_retrieval_enabled ?? true,
+    llm_provider:
+      flow?.llm_provider === "hitechcloud_gpt53_codex_high"
+        ? "hitechcloud_gpt53_codex_high"
+        : "deepseek",
+    llm_base_url:
+      typeof flow?.llm_base_url === "string" && flow.llm_base_url.trim()
+        ? flow.llm_base_url.trim()
+        : "https://platform.hitechcloud.one/v1",
+    llm_model:
+      typeof flow?.llm_model === "string" && flow.llm_model.trim()
+        ? flow.llm_model.trim()
+        : "gpt-5.3-codex-high",
+    llm_api_key: typeof flow?.llm_api_key === "string" ? flow.llm_api_key.trim() : ""
+  };
 }
 
 export default function ControlTowerPage() {
@@ -95,7 +187,10 @@ export default function ControlTowerPage() {
         const response = await getControlTowerConfig();
         setConfig({
           rag_sources: sortSources(response.rag_sources ?? []),
-          rag_flow: response.rag_flow
+          rag_flow: normalizeFlow(response.rag_flow),
+          careguard_runtime: {
+            external_ddi_enabled: Boolean(response.careguard_runtime?.external_ddi_enabled)
+          }
         });
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Không thể tải cấu hình control tower.");
@@ -130,6 +225,7 @@ export default function ControlTowerPage() {
 
   const onToggleFlow = (key: FlowFlagKey) => {
     if (!config) return;
+    if (MANDATORY_ON_FLOW_FLAGS.has(key)) return;
     setConfig({
       ...config,
       rag_flow: {
@@ -155,6 +251,88 @@ export default function ControlTowerPage() {
     });
   };
 
+  const onRetrievalMetricChange = (key: RetrievalMetricKey, value: string) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          [key]: clamp(Math.trunc(parsed), RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX)
+        }
+      };
+    });
+  };
+
+  const onLlmProviderChange = (provider: "deepseek" | "hitechcloud_gpt53_codex_high") => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev.rag_flow, llm_provider: provider };
+      if (provider === "hitechcloud_gpt53_codex_high") {
+        if (!next.llm_base_url) next.llm_base_url = "https://platform.hitechcloud.one/v1";
+        if (!next.llm_model) next.llm_model = "gpt-5.3-codex-high";
+      }
+      return {
+        ...prev,
+        rag_flow: next,
+      };
+    });
+  };
+
+  const onLlmBaseUrlChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_base_url: value.trim(),
+        },
+      };
+    });
+  };
+
+  const onLlmModelChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_model: value.trim(),
+        },
+      };
+    });
+  };
+
+  const onLlmApiKeyChange = (value: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rag_flow: {
+          ...prev.rag_flow,
+          llm_api_key: value.trim(),
+        },
+      };
+    });
+  };
+
+  const onToggleExternalDdi = () => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        careguard_runtime: {
+          external_ddi_enabled: !prev.careguard_runtime.external_ddi_enabled
+        }
+      };
+    });
+  };
+
   const onSave = async () => {
     if (!config) return;
     setIsSaving(true);
@@ -164,7 +342,10 @@ export default function ControlTowerPage() {
       const updated = await updateControlTowerConfig(config);
       setConfig({
         rag_sources: sortSources(updated.rag_sources ?? []),
-        rag_flow: updated.rag_flow
+        rag_flow: normalizeFlow(updated.rag_flow),
+        careguard_runtime: {
+          external_ddi_enabled: Boolean(updated.careguard_runtime?.external_ddi_enabled)
+        }
       });
       setMessage("Đã lưu cấu hình nguồn RAG và flow trả lời.");
     } catch (cause) {
@@ -387,6 +568,152 @@ export default function ControlTowerPage() {
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
               <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Retrieval Metrics</p>
+                <h3 className="text-sm font-semibold text-slate-900">Evaluation @K</h3>
+                <p className="text-xs text-slate-500">
+                  Cấu hình K cho precision/recall/nDCG khi đánh giá chất lượng retrieval (1 - 50).
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Precision@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.precision_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("precision_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Recall@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.recall_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("recall_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">nDCG@K</span>
+                  <input
+                    type="number"
+                    min={RETRIEVAL_METRIC_K_MIN}
+                    max={RETRIEVAL_METRIC_K_MAX}
+                    step={1}
+                    value={config?.rag_flow.ndcg_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
+                    onChange={(event) => onRetrievalMetricChange("ndcg_at_k", event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">LLM Runtime</p>
+                <h3 className="text-sm font-semibold text-slate-900">Provider & model switching</h3>
+                <p className="text-xs text-slate-500">
+                  Cấu hình provider chính cho chat/research ngay trong control tower.
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-600">Provider</span>
+                  <select
+                    value={config?.rag_flow.llm_provider ?? "hitechcloud_gpt53_codex_high"}
+                    onChange={(event) =>
+                      onLlmProviderChange(
+                        event.target.value === "hitechcloud_gpt53_codex_high"
+                          ? "hitechcloud_gpt53_codex_high"
+                          : "deepseek"
+                      )
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  >
+                    <option value="hitechcloud_gpt53_codex_high">hitechcloud + gpt-5.3-codex-high</option>
+                    <option value="deepseek">deepseek (installed)</option>
+                  </select>
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Model</span>
+                  <input
+                    type="text"
+                    value={config?.rag_flow.llm_model ?? ""}
+                    onChange={(event) => onLlmModelChange(event.target.value)}
+                    placeholder={
+                      config?.rag_flow.llm_provider === "deepseek" ? "deepseek-v3.2" : "gpt-5.3-codex-high"
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Base URL</span>
+                  <input
+                    type="url"
+                    value={config?.rag_flow.llm_base_url ?? ""}
+                    onChange={(event) => onLlmBaseUrlChange(event.target.value)}
+                    placeholder={
+                      config?.rag_flow.llm_provider === "deepseek"
+                        ? "https://api.yescale.vip/v1"
+                        : "https://platform.hitechcloud.one/v1"
+                    }
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-600">API Key</span>
+                  <input
+                    type="password"
+                    value={config?.rag_flow.llm_api_key ?? ""}
+                    onChange={(event) => onLlmApiKeyChange(event.target.value)}
+                    placeholder="sk-..."
+                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">CareGuard Runtime</p>
+                <h3 className="text-sm font-semibold text-slate-900">External DDI Source</h3>
+                <p className="text-xs text-slate-500">Bật/tắt gọi RxNav + openFDA ngay tại runtime, không cần restart service.</p>
+              </div>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="text-sm font-medium text-slate-900">External DDI enabled</span>
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className={`text-[11px] font-semibold uppercase tracking-wide ${
+                      config?.careguard_runtime.external_ddi_enabled ? "text-emerald-700" : "text-slate-500"
+                    }`}
+                  >
+                    {config?.careguard_runtime.external_ddi_enabled ? "On" : "Off"}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(config?.careguard_runtime.external_ddi_enabled)}
+                    onChange={onToggleExternalDdi}
+                    className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                  />
+                </span>
+              </label>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="space-y-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Flow Orchestration</p>
                 <h3 className="text-sm font-semibold text-slate-900">Toggle runtime features</h3>
               </div>
@@ -403,15 +730,22 @@ export default function ControlTowerPage() {
 
                     <div className="space-y-2">
                       {groupedFlags[groupKey].map((flag) => {
-                        const checked = Boolean(config?.rag_flow[flag.key]);
+                        const forcedOn = MANDATORY_ON_FLOW_FLAGS.has(flag.key);
+                        const checked = forcedOn ? true : Boolean(config?.rag_flow[flag.key]);
                         return (
                           <label
                             key={flag.key}
-                            className="flex min-h-11 cursor-pointer items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+                            className={[
+                              "flex min-h-11 items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5",
+                              forcedOn ? "cursor-not-allowed border-cyan-200 bg-cyan-50/30" : "cursor-pointer",
+                            ].join(" ")}
                           >
                             <span>
                               <span className="block text-sm font-medium text-slate-900">{flag.label}</span>
-                              <span className="mt-0.5 block text-xs text-slate-500">{flag.hint}</span>
+                              <span className="mt-0.5 block text-xs text-slate-500">
+                                {flag.hint}
+                                {forcedOn ? " (Bắt buộc bật)" : ""}
+                              </span>
                             </span>
                             <span className="inline-flex items-center gap-2 pt-0.5">
                               <span
@@ -419,11 +753,12 @@ export default function ControlTowerPage() {
                                   checked ? "text-emerald-700" : "text-slate-500"
                                 }`}
                               >
-                                {checked ? "On" : "Off"}
+                                {forcedOn ? "Locked On" : checked ? "On" : "Off"}
                               </span>
                               <input
                                 type="checkbox"
                                 checked={checked}
+                                disabled={forcedOn}
                                 onChange={() => onToggleFlow(flag.key)}
                                 className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                               />

@@ -1,63 +1,559 @@
+# ruff: noqa: E501
 from __future__ import annotations
 
 import base64
 import re
+import unicodedata
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
+from time import perf_counter
 from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.core.attribution import (
+    attach_attribution,
+    build_attribution,
+    normalize_source_errors,
+    normalize_source_used,
+)
 from clara_api.core.config import get_settings
+from clara_api.core.consent import ensure_medical_disclaimer_consent
+from clara_api.core.control_tower import get_control_tower_config_service
+from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import MedicineCabinet, MedicineItem, User
+from clara_api.db.models import (
+    MedicineCabinet,
+    MedicineItem,
+    User,
+    VnDrugMapping,
+    VnDrugMappingAlias,
+    VnDrugMappingAudit,
+)
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
+    CabinetImportResponse,
     CabinetImportRequest,
+    CabinetPrioritizedField,
     CabinetScanDetection,
     CabinetScanTextRequest,
     CabinetScanTextResponse,
     MedicineCabinetItemCreate,
     MedicineCabinetItemResponse,
+    MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
+    VnDrugMappingAuditListResponse,
+    VnDrugMappingAuditResponse,
+    VnDrugMappingCreateRequest,
+    VnDrugMappingCurationRequest,
+    VnDrugMappingListResponse,
+    VnDrugMappingResponse,
+    VnDrugMappingUpdateRequest,
+    VnDrugResolveRequest,
+    VnDrugResolveResponse,
 )
 
 router = APIRouter()
 
 DRUG_ALIAS_MAP: dict[str, list[str]] = {
-    "paracetamol": ["paracetamol", "acetaminophen", "panadol", "hapacol", "efferalgan"],
-    "ibuprofen": ["ibuprofen", "advil", "brufen"],
-    "aspirin": ["aspirin"],
-    "warfarin": ["warfarin", "coumadin"],
-    "lisinopril": ["lisinopril"],
-    "metformin": ["metformin", "glucophage"],
-    "amoxicillin": ["amoxicillin", "augmentin"],
-    "omeprazole": ["omeprazole"],
-    "simvastatin": ["simvastatin"],
-    "loratadine": ["loratadine", "claritin"],
-    "cetirizine": ["cetirizine", "zyrtec"],
-    "vitamin c": ["vitamin c", "ascorbic acid", "vitamin-c"],
+    "paracetamol": [
+        "paracetamol",
+        "acetaminophen",
+        "panadol",
+        "panadol xanh",
+        "hapacol",
+        "efferalgan",
+        "paracetamol stada",
+        "paracetamol dhg",
+        "paracetamol mekophar",
+        "acetamin",
+        "tylenol",
+        "pamol",
+        "adol",
+        "pamin",
+    ],
+    "paracetamol caffeine": [
+        "panadol extra",
+        "paracetamol caffeine",
+        "paracetamol + caffeine",
+        "cafetin",
+        "efferalgan codein",
+        "decolgen",
+        "tiffy",
+        "cảm xuyên hương",
+    ],
+    "ibuprofen": ["ibuprofen", "advil", "brufen", "motrin", "ibuprofen stella", "ibuprofen dhg"],
+    "diclofenac": ["diclofenac", "voltaren", "cataflam", "diclofenac stada", "diclofenac dhg"],
+    "naproxen": ["naproxen", "naprosyn", "nalgesin", "naproxen stada"],
+    "aspirin": ["aspirin", "aspirin cardio", "aspirin protect", "aspilet", "baby aspirin"],
+    "warfarin": ["warfarin", "coumadin", "warfarex"],
+    "rivaroxaban": ["rivaroxaban", "xarelto"],
+    "apixaban": ["apixaban", "eliquis"],
+    "clopidogrel": ["clopidogrel", "plavix", "clopidogrel stada", "clopidogrel dhg"],
+    "lisinopril": ["lisinopril", "zestril", "lisinopril stada"],
+    "losartan": ["losartan", "cozaar", "losartan stada", "losartan dhg"],
+    "amlodipine": ["amlodipine", "norvasc", "amlodipin stada", "amlodipin dhg"],
+    "bisoprolol": ["bisoprolol", "concor", "bisoprolol stada", "bisoprolol hasan"],
+    "metoprolol": ["metoprolol", "betaloc", "metoprolol stella"],
+    "spironolactone": ["spironolactone", "aldactone", "spironolacton stada"],
+    "furosemide": ["furosemide", "lasix", "furosemid stada", "furosemid dhg"],
+    "digoxin": ["digoxin", "lanoxin"],
+    "amiodarone": ["amiodarone", "cordarone", "amiodaron stella"],
+    "verapamil": ["verapamil", "isoptin"],
+    "metformin": ["metformin", "glucophage", "metformin stada", "metformin dhg", "metformin hasan"],
+    "gliclazide": ["gliclazide", "diamicron", "gliclazid stada"],
+    "glimepiride": ["glimepiride", "amaryl", "glimepirid stada"],
+    "insulin": ["insulin", "insulatard", "novorapid", "humalog", "mixtard", "lantus", "levemir"],
+    "atorvastatin": ["atorvastatin", "lipitor", "atorvastatin stada", "atorvastatin dhg"],
+    "simvastatin": ["simvastatin", "zocor", "simvastatin stada", "simvastatin dhg"],
+    "rosuvastatin": ["rosuvastatin", "crestor", "rosuvastatin stada", "rosuvastatin dhg"],
+    "omeprazole": ["omeprazole", "losec", "omeprazol stada", "omeprazol dhg"],
+    "esomeprazole": ["esomeprazole", "nexium", "esomeprazol stada"],
+    "pantoprazole": ["pantoprazole", "pantoloc", "pantozol", "pantoprazol stada"],
+    "amoxicillin": ["amoxicillin", "amox", "amoxicillin stada", "amoxicillin dhg", "amoxil"],
+    "amoxicillin clavulanate": [
+        "amoxicillin clavulanate",
+        "augmentin",
+        "klamentin",
+        "bidiclav",
+        "amoclav",
+        "clavam",
+    ],
+    "clarithromycin": ["clarithromycin", "klacid", "clarithromycin stada"],
+    "erythromycin": ["erythromycin", "erythrocin", "erythromycin stella"],
+    "ciprofloxacin": ["ciprofloxacin", "cipro", "ciprobay", "ciprofloxacin stada"],
+    "trimethoprim": ["trimethoprim", "cotrimoxazole", "bactrim", "septrin"],
+    "fluconazole": ["fluconazole", "diflucan", "fluconazole stada", "fluconazole dhg"],
+    "ketoconazole": ["ketoconazole", "nizoral", "ketoconazol stada"],
+    "linezolid": ["linezolid", "zyvox"],
+    "methotrexate": ["methotrexate", "methotrexat ebewe", "methotrexat"],
+    "allopurinol": ["allopurinol", "zyloric", "allopurinol stada"],
+    "azathioprine": ["azathioprine", "imuran"],
+    "tacrolimus": ["tacrolimus", "prograf"],
+    "sertraline": ["sertraline", "zoloft", "sertralin stada"],
+    "fluoxetine": ["fluoxetine", "prozac", "fluoxetin stada"],
+    "diazepam": ["diazepam", "valium", "seduxen", "diazepam stella"],
+    "tramadol": ["tramadol", "ultram", "tramadol stada", "tramadol dhg"],
+    "tizanidine": ["tizanidine", "sirdalud"],
+    "sildenafil": ["sildenafil", "viagra", "sildenafil stada"],
+    "nitroglycerin": ["nitroglycerin", "nitromint", "nitrostat"],
+    "loratadine": ["loratadine", "claritin", "loratadin stada", "loratadin dhg", "allerclear"],
+    "cetirizine": ["cetirizine", "zyrtec", "cetirizin stada", "cetirizin dhg"],
+    "prednisone": ["prednisone", "prednisolon", "medrol", "methylprednisolone"],
+    "cimetidine": ["cimetidine", "tagamet"],
+    "potassium chloride": ["potassium chloride", "kali clorid", "kcl", "kaliorid"],
+    "vitamin c": ["vitamin c", "ascorbic acid", "vitamin-c", "ceelin", "upsavit c", "redoxon"],
 }
+
+DRUG_RXCUI_MAP: dict[str, str] = {
+    "paracetamol": "161",
+    "ibuprofen": "5640",
+    "aspirin": "1191",
+    "warfarin": "11289",
+    "metformin": "6809",
+    "amoxicillin": "723",
+    "simvastatin": "36567",
+    "loratadine": "28889",
+    "cetirizine": "20610",
+    "omeprazole": "7646",
+    "lisinopril": "29046",
+    "losartan": "52175",
+    "amlodipine": "17767",
+    "clopidogrel": "32968",
+    "rivaroxaban": "1114195",
+    "apixaban": "1364430",
+    "spironolactone": "9997",
+    "furosemide": "4603",
+    "digoxin": "3407",
+    "amiodarone": "703",
+    "verapamil": "11170",
+    "atorvastatin": "83367",
+    "rosuvastatin": "301542",
+    "gliclazide": "4815",
+    "glimepiride": "25789",
+    "clarithromycin": "21212",
+    "ciprofloxacin": "2551",
+    "fluconazole": "4450",
+    "diazepam": "3322",
+    "tramadol": "10689",
+    "sildenafil": "136411",
+    "nitroglycerin": "4917",
+    "diclofenac": "3355",
+    "naproxen": "7258",
+}
+
+LOW_CONFIDENCE_OCR_THRESHOLD = 0.9
+OCR_CORRECTION_CUTOFF = 0.86
+OCR_CORRECTION_MAX_CHARS = 12000
+_CANDIDATE_DB_LIMIT = 120
+_CANDIDATE_MIN_SCORE = 0.78
+_CANDIDATE_MIN_MARGIN = 0.05
+_CANDIDATE_MAX_INPUT_LENGTH = 255
+_ITEM_NOTE_META_PREFIX = "[meta]"
+_OCR_NOISY_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("paracetarnol", "paracetamol"),
+    ("1buprofen", "ibuprofen"),
+    ("arnoxicillin", "amoxicillin"),
+    ("metforrnin", "metformin"),
+    ("warfarrn", "warfarin"),
+)
+_OCR_NOISY_CHAR_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("0", "o"),
+    ("1", "i"),
+    ("5", "s"),
+    ("8", "b"),
+)
+_OCR_FUZZY_STOPWORDS: set[str] = {
+    "toa",
+    "thuoc",
+    "uong",
+    "sang",
+    "trua",
+    "chieu",
+    "toi",
+    "ngay",
+    "lan",
+    "vien",
+    "sau",
+    "an",
+    "truoc",
+    "hop",
+    "sieu",
+    "am",
+}
+_MANUFACTURER_HINTS: tuple[str, ...] = (
+    "stada",
+    "dhg",
+    "hasan",
+    "stella",
+    "mekophar",
+    "pymepharco",
+    "traphaco",
+    "imexpharm",
+    "sanofi",
+    "gsk",
+    "bayer",
+    "pfizer",
+)
+
+_CAREGUARD_SOURCE_CATALOG: dict[str, dict[str, str]] = {
+    "local_rules": {
+        "id": "local_rules",
+        "name": "CLARA Local DDI Rules",
+        "type": "deterministic",
+    },
+    "rxnav": {
+        "id": "rxnav",
+        "name": "RxNav / RxNorm (NLM)",
+        "type": "knowledge_base",
+    },
+    "rxnorm": {
+        "id": "rxnav",
+        "name": "RxNav / RxNorm (NLM)",
+        "type": "knowledge_base",
+    },
+    "openfda": {
+        "id": "openfda",
+        "name": "openFDA Drug Label",
+        "type": "safety_signal",
+    },
+}
+
+
+def _build_alias_lookup() -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for canonical, aliases in DRUG_ALIAS_MAP.items():
+        lookup[_normalize_text(canonical)] = canonical
+        for alias in aliases:
+            lookup[_normalize_text(alias)] = canonical
+    return lookup
 
 
 def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+DRUG_ALIAS_LOOKUP = _build_alias_lookup()
+OCR_DRUG_VOCABULARY: tuple[str, ...] = tuple(
+    sorted({alias for aliases in DRUG_ALIAS_MAP.values() for alias in aliases})
+)
+
+
+def _ascii_fold(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value)
+    return "".join(char for char in decomposed if not unicodedata.combining(char))
+
+
+def _tokenize_terms(value: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", value.lower()))
+
+
+def _normalize_aliases(raw_aliases: list[str], brand_name: str) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for candidate in [brand_name, *raw_aliases]:
+        cleaned = " ".join(str(candidate or "").split()).strip()
+        if not cleaned:
+            continue
+        key = _normalize_text(cleaned)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(cleaned)
+    return normalized
+
+
+def _find_db_mapping_by_alias(db: Session, normalized_input: str) -> VnDrugMapping | None:
+    mapping = (
+        db.execute(
+            select(VnDrugMapping)
+            .join(VnDrugMappingAlias, VnDrugMappingAlias.mapping_id == VnDrugMapping.id)
+            .where(
+                VnDrugMapping.is_active.is_(True),
+                VnDrugMappingAlias.normalized_alias == normalized_input,
+            )
+            .order_by(VnDrugMappingAlias.is_primary.desc(), VnDrugMapping.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    if mapping is not None:
+        return mapping
+
+    return db.execute(
+        select(VnDrugMapping).where(
+            VnDrugMapping.is_active.is_(True),
+            VnDrugMapping.normalized_brand == normalized_input,
+        )
+    ).scalar_one_or_none()
+
+
+def _compute_candidate_similarity(query: str, candidate: str) -> float:
+    query_fold = _ascii_fold(query)[:_CANDIDATE_MAX_INPUT_LENGTH]
+    candidate_fold = _ascii_fold(candidate)[:_CANDIDATE_MAX_INPUT_LENGTH]
+    sequence_ratio = SequenceMatcher(a=query_fold, b=candidate_fold).ratio()
+    query_terms = _tokenize_terms(query_fold)
+    candidate_terms = _tokenize_terms(candidate_fold)
+    if not query_terms:
+        return sequence_ratio
+
+    overlap = len(query_terms & candidate_terms) / len(query_terms)
+    union = query_terms | candidate_terms
+    jaccard = len(query_terms & candidate_terms) / len(union) if union else 0.0
+    contains_bonus = 0.08 if query_fold in candidate_fold or candidate_fold in query_fold else 0.0
+    score = (sequence_ratio * 0.55) + (overlap * 0.35) + (jaccard * 0.10) + contains_bonus
+    return min(score, 1.0)
+
+
+def _collect_db_candidate_mappings(db: Session, normalized_input: str) -> list[VnDrugMapping]:
+    terms = [term for term in normalized_input.split(" ") if term]
+    first_term = terms[0] if terms else normalized_input
+    second_term = terms[1] if len(terms) > 1 else ""
+    like_conditions = [
+        VnDrugMapping.normalized_brand.like(f"{normalized_input}%"),
+        VnDrugMappingAlias.normalized_alias.like(f"{normalized_input}%"),
+        VnDrugMapping.normalized_brand.like(f"%{first_term}%"),
+        VnDrugMappingAlias.normalized_alias.like(f"%{first_term}%"),
+    ]
+    if second_term:
+        like_conditions.extend(
+            [
+                VnDrugMapping.normalized_brand.like(f"%{second_term}%"),
+                VnDrugMappingAlias.normalized_alias.like(f"%{second_term}%"),
+            ]
+        )
+
+    return (
+        db.execute(
+            select(VnDrugMapping)
+            .options(selectinload(VnDrugMapping.aliases))
+            .outerjoin(VnDrugMappingAlias, VnDrugMappingAlias.mapping_id == VnDrugMapping.id)
+            .where(
+                VnDrugMapping.is_active.is_(True),
+                or_(*like_conditions),
+            )
+            .order_by(VnDrugMapping.id.desc())
+            .limit(_CANDIDATE_DB_LIMIT)
+        )
+        .unique()
+        .scalars()
+        .all()
+    )
+
+
+def _find_db_mapping_candidate(
+    db: Session,
+    normalized_input: str,
+) -> tuple[VnDrugMapping | None, float, int, int]:
+    started_at = perf_counter()
+    bounded_input = normalized_input[:_CANDIDATE_MAX_INPUT_LENGTH].strip()
+    if not bounded_input:
+        elapsed = int((perf_counter() - started_at) * 1000)
+        return None, 0.0, 0, elapsed
+
+    candidates = _collect_db_candidate_mappings(db, bounded_input)
+    if not candidates:
+        elapsed = int((perf_counter() - started_at) * 1000)
+        return None, 0.0, 0, elapsed
+
+    ranked: list[tuple[float, VnDrugMapping]] = []
+    for mapping in candidates:
+        names = [mapping.normalized_brand, *(alias.normalized_alias for alias in mapping.aliases)]
+        best_score = 0.0
+        for name in names:
+            if not name:
+                continue
+            best_score = max(best_score, _compute_candidate_similarity(bounded_input, name))
+        ranked.append((best_score, mapping))
+
+    ranked.sort(key=lambda entry: entry[0], reverse=True)
+    best_score, best_mapping = ranked[0]
+    second_score = ranked[1][0] if len(ranked) > 1 else 0.0
+    elapsed_ms = int((perf_counter() - started_at) * 1000)
+
+    if best_score < _CANDIDATE_MIN_SCORE:
+        return None, best_score, len(candidates), elapsed_ms
+    if best_score < 0.9 and (best_score - second_score) < _CANDIDATE_MIN_MARGIN:
+        return None, best_score, len(candidates), elapsed_ms
+
+    return best_mapping, best_score, len(candidates), elapsed_ms
+
+
+def _resolve_dictionary_mapping_with_source(
+    drug_name: str,
+    db: Session | None = None,
+) -> tuple[str, str, str, str, float]:
+    normalized_input = _normalize_text(drug_name)
+    if db is not None:
+        db_mapping = _find_db_mapping_by_alias(db, normalized_input)
+        if db_mapping is not None:
+            display_name = db_mapping.brand_name.strip() or _to_title_case(db_mapping.normalized_name)
+            normalized_name = db_mapping.normalized_name.strip() or normalized_input
+            rx_cui = db_mapping.rx_cui.strip()
+            if not rx_cui:
+                rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
+            return display_name, normalized_name, rx_cui, "db", 1.0
+
+        candidate_mapping, candidate_score, _, _ = _find_db_mapping_candidate(db, normalized_input)
+        if candidate_mapping is not None:
+            display_name = candidate_mapping.brand_name.strip() or _to_title_case(candidate_mapping.normalized_name)
+            normalized_name = candidate_mapping.normalized_name.strip() or normalized_input
+            rx_cui = candidate_mapping.rx_cui.strip()
+            if not rx_cui:
+                rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
+            return display_name, normalized_name, rx_cui, "candidate", max(min(candidate_score, 1.0), 0.0)
+
+    canonical = DRUG_ALIAS_LOOKUP.get(normalized_input, normalized_input)
+    display_name = _to_title_case(canonical)
+    rx_cui = DRUG_RXCUI_MAP.get(canonical, "")
+    if canonical != normalized_input:
+        fallback_confidence = 0.72
+    else:
+        fallback_confidence = 0.35
+    return display_name, canonical, rx_cui, "fallback", fallback_confidence
+
+
+def _resolve_dictionary_mapping(
+    drug_name: str,
+    db: Session | None = None,
+) -> tuple[str, str, str]:
+    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
+        drug_name=drug_name,
+        db=db,
+    )
+    return display_name, normalized_name, rx_cui
+
+
 def _to_title_case(value: str) -> str:
     return " ".join(token.capitalize() for token in value.split(" ") if token)
 
 
-def _to_item_response(item: MedicineItem) -> MedicineCabinetItemResponse:
+def _sanitize_meta_value(value: str) -> str:
+    return " ".join(str(value or "").replace("|", " ").replace("\n", " ").split()).strip()
+
+
+def _encode_item_note(note: str, *, brand_name: str = "", manufacturer: str = "") -> str:
+    clean_note = (note or "").strip()
+    clean_brand = _sanitize_meta_value(brand_name)
+    clean_manufacturer = _sanitize_meta_value(manufacturer)
+    if not clean_brand and not clean_manufacturer:
+        return clean_note
+    meta = f"{_ITEM_NOTE_META_PREFIX}brand={clean_brand}|manufacturer={clean_manufacturer}".strip()
+    if clean_note:
+        return f"{meta}\n{clean_note}".strip()
+    return meta
+
+
+def _decode_item_note(note: str) -> tuple[str, str | None, str | None]:
+    raw = str(note or "").strip()
+    if not raw:
+        return "", None, None
+    first_line, _, remaining = raw.partition("\n")
+    first = first_line.strip().lower()
+    if not first.startswith(_ITEM_NOTE_META_PREFIX):
+        return raw, None, None
+    payload = first_line[len(_ITEM_NOTE_META_PREFIX) :].strip()
+    if not payload or "=" not in payload:
+        return raw, None, None
+    brand_name: str | None = None
+    manufacturer: str | None = None
+    for part in payload.split("|"):
+        key, _, value = part.partition("=")
+        key_norm = key.strip().lower()
+        val_norm = _sanitize_meta_value(value)
+        if key_norm == "brand" and val_norm:
+            brand_name = val_norm
+        elif key_norm == "manufacturer" and val_norm:
+            manufacturer = val_norm
+    return remaining.strip(), brand_name, manufacturer
+
+
+def _infer_manufacturer_from_text(text: str) -> str:
+    lowered = text.lower()
+    for name in _MANUFACTURER_HINTS:
+        pattern = rf"(^|[^a-z0-9]){re.escape(name)}([^a-z0-9]|$)"
+        if re.search(pattern, lowered):
+            return name.upper()
+    return ""
+
+
+def _infer_brand_name(
+    *,
+    alias: str,
+    canonical: str,
+    display_name: str,
+) -> str:
+    alias_clean = _sanitize_meta_value(alias)
+    canonical_clean = _sanitize_meta_value(canonical)
+    display_clean = _sanitize_meta_value(display_name)
+    if alias_clean and alias_clean.lower() != canonical_clean.lower():
+        return _to_title_case(alias_clean)
+    if display_clean and display_clean.lower() != canonical_clean.lower():
+        return display_clean
+    return ""
+
+
+def _to_item_response(
+    item: MedicineItem,
+    *,
+    normalization_source: str | None = None,
+    normalization_confidence: float | None = None,
+) -> MedicineCabinetItemResponse:
+    clean_note, brand_name, manufacturer = _decode_item_note(item.note)
     return MedicineCabinetItemResponse(
         id=item.id,
         drug_name=item.drug_name,
+        brand_name=brand_name,
+        manufacturer=manufacturer,
         normalized_name=item.normalized_name,
+        normalization_source=normalization_source,
+        normalization_confidence=normalization_confidence,
         dosage=item.dosage,
         dosage_form=item.dosage_form,
         quantity=item.quantity,
@@ -65,10 +561,208 @@ def _to_item_response(item: MedicineItem) -> MedicineCabinetItemResponse:
         rx_cui=item.rx_cui,
         ocr_confidence=item.ocr_confidence,
         expires_on=item.expires_on,
-        note=item.note,
+        note=clean_note,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
+
+
+def _to_mapping_response(mapping: VnDrugMapping) -> VnDrugMappingResponse:
+    aliases_sorted = sorted(
+        mapping.aliases,
+        key=lambda alias: (not alias.is_primary, alias.alias_name.lower()),
+    )
+    return VnDrugMappingResponse(
+        id=mapping.id,
+        brand_name=mapping.brand_name,
+        aliases=[alias.alias_name for alias in aliases_sorted],
+        active_ingredients=mapping.active_ingredients,
+        normalized_name=mapping.normalized_name,
+        rx_cui=mapping.rx_cui,
+        mapping_source=mapping.mapping_source,
+        notes=mapping.notes,
+        is_active=mapping.is_active,
+        created_by_user_id=mapping.created_by_user_id,
+        created_at=mapping.created_at,
+        updated_at=mapping.updated_at,
+    )
+
+
+def _mapping_snapshot(mapping: VnDrugMapping) -> dict[str, Any]:
+    aliases_sorted = sorted(
+        [alias.alias_name for alias in mapping.aliases],
+        key=lambda alias_name: alias_name.lower(),
+    )
+    return {
+        "id": mapping.id,
+        "brand_name": mapping.brand_name,
+        "aliases": aliases_sorted,
+        "active_ingredients": mapping.active_ingredients,
+        "normalized_name": mapping.normalized_name,
+        "rx_cui": mapping.rx_cui,
+        "mapping_source": mapping.mapping_source,
+        "notes": mapping.notes,
+        "is_active": mapping.is_active,
+        "created_by_user_id": mapping.created_by_user_id,
+        "updated_at": mapping.updated_at.isoformat() if mapping.updated_at else None,
+    }
+
+
+def _to_mapping_audit_response(audit: VnDrugMappingAudit) -> VnDrugMappingAuditResponse:
+    return VnDrugMappingAuditResponse(
+        id=audit.id,
+        mapping_id=audit.mapping_id,
+        actor_user_id=audit.actor_user_id,
+        actor_email=audit.actor.email if audit.actor else None,
+        action=audit.action,
+        reason=audit.reason,
+        before_json=audit.before_json,
+        after_json=audit.after_json,
+        metadata_json=audit.metadata_json,
+        created_at=audit.created_at,
+    )
+
+
+def _create_mapping_audit(
+    db: Session,
+    *,
+    mapping: VnDrugMapping,
+    action: str,
+    actor_user_id: int | None,
+    reason: str = "",
+    before_snapshot: dict[str, Any] | None = None,
+    after_snapshot: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> VnDrugMappingAudit:
+    audit = VnDrugMappingAudit(
+        mapping_id=mapping.id,
+        action=action,
+        reason=reason.strip(),
+        before_json=before_snapshot,
+        after_json=after_snapshot,
+        actor_user_id=actor_user_id,
+        metadata_json=metadata,
+    )
+    db.add(audit)
+    return audit
+
+
+def _get_mapping_or_404(db: Session, mapping_id: int) -> VnDrugMapping:
+    mapping = db.execute(select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)).scalar_one_or_none()
+    if mapping is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mapping")
+    return mapping
+
+
+def _validate_alias_conflicts(
+    db: Session,
+    aliases: list[str],
+    *,
+    exclude_mapping_id: int | None = None,
+) -> None:
+    normalized_aliases = [_normalize_text(alias) for alias in aliases]
+    if not normalized_aliases:
+        return
+    existing_aliases = (
+        db.execute(
+            select(VnDrugMappingAlias)
+            .join(VnDrugMapping, VnDrugMapping.id == VnDrugMappingAlias.mapping_id)
+            .where(
+                VnDrugMappingAlias.normalized_alias.in_(normalized_aliases),
+                VnDrugMapping.is_active.is_(True),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for alias in existing_aliases:
+        if exclude_mapping_id is not None and alias.mapping_id == exclude_mapping_id:
+            continue
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Alias đã tồn tại trong mapping khác: {alias.alias_name}",
+        )
+
+
+def _replace_mapping_aliases(db: Session, mapping: VnDrugMapping, aliases: list[str]) -> None:
+    mapping.aliases.clear()
+    db.flush()
+    for index, alias in enumerate(aliases):
+        mapping.aliases.append(
+            VnDrugMappingAlias(
+                alias_name=alias,
+                normalized_alias=_normalize_text(alias),
+                is_primary=index == 0,
+            ),
+        )
+
+
+def _default_careguard_sources(external_ddi_enabled: bool) -> list[dict[str, str]]:
+    sources = [dict(_CAREGUARD_SOURCE_CATALOG["local_rules"])]
+    if external_ddi_enabled:
+        sources.extend(
+            [
+                dict(_CAREGUARD_SOURCE_CATALOG["rxnav"]),
+                dict(_CAREGUARD_SOURCE_CATALOG["openfda"]),
+            ]
+        )
+    return sources
+
+
+def _resolve_careguard_sources(
+    *,
+    source_used: list[str],
+    external_ddi_enabled: bool,
+) -> list[dict[str, str]]:
+    if not source_used:
+        return _default_careguard_sources(external_ddi_enabled)
+
+    sources: list[dict[str, str]] = []
+    seen_ids: set[str] = set()
+    for source_name in source_used:
+        source = _CAREGUARD_SOURCE_CATALOG.get(source_name)
+        if source is None:
+            source = {
+                "id": source_name,
+                "name": source_name.replace("_", " ").title(),
+                "type": "external",
+            }
+        source_id = source.get("id", source_name)
+        if source_id in seen_ids:
+            continue
+        seen_ids.add(source_id)
+        sources.append(dict(source))
+    return sources
+
+
+def _attach_careguard_attribution(
+    payload: dict[str, Any],
+    *,
+    external_ddi_enabled: bool,
+) -> dict[str, Any]:
+    response = dict(payload)
+    metadata = response.get("metadata")
+    metadata_obj = metadata if isinstance(metadata, dict) else {}
+    source_used = normalize_source_used(metadata_obj.get("source_used"))
+    source_errors = normalize_source_errors(metadata_obj.get("source_errors"))
+    sources = _resolve_careguard_sources(
+        source_used=source_used,
+        external_ddi_enabled=external_ddi_enabled,
+    )
+    has_external_source = any(source.get("id") not in {"local_rules"} for source in sources)
+    mode = "external_plus_local" if has_external_source else "local_only"
+    fallback_used = bool(response.get("fallback_used") or metadata_obj.get("fallback_used"))
+
+    attribution = build_attribution(
+        channel="careguard",
+        mode=mode,
+        sources=sources,
+        citations_payload=response.get("citations"),
+        source_used=source_used,
+        source_errors=source_errors,
+        fallback_used=fallback_used,
+    )
+    return attach_attribution(response, attribution=attribution)
 
 
 def _require_user(
@@ -77,7 +771,24 @@ def _require_user(
 ) -> User:
     user = db.execute(select(User).where(User.email == token.sub)).scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Không tìm thấy người dùng")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Không tìm thấy người dùng",
+        )
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
+    return user
+
+
+def _require_admin_user(
+    token: TokenPayload,
+    db: Session,
+) -> User:
+    user = _require_user(token, db)
+    if token.role != "admin" and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ admin mới được thực hiện thao tác này",
+        )
     return user
 
 
@@ -95,9 +806,87 @@ def _get_or_create_cabinet(db: Session, user_id: int) -> MedicineCabinet:
     return cabinet
 
 
-def _detect_drugs_from_text(text: str) -> list[CabinetScanDetection]:
-    normalized_text = text.lower()
+def _apply_ocr_correction(text: str) -> OcrCorrectionResult:
+    bounded_text = str(text or "")[:OCR_CORRECTION_MAX_CHARS]
+    return correct_ocr_text(
+        bounded_text,
+        vocabulary=OCR_DRUG_VOCABULARY,
+        cutoff=OCR_CORRECTION_CUTOFF,
+        max_events=24,
+    )
+
+
+def _normalize_prescription_ocr_text(text: str) -> str:
+    normalized = " ".join(str(text or "").split())
+    lowered = normalized.lower()
+    for raw, replacement in _OCR_NOISY_REPLACEMENTS:
+        lowered = lowered.replace(raw, replacement)
+    lowered = lowered.replace("μg", "mcg")
+    return lowered
+
+
+def _extract_dosage_near_alias(text: str, alias: str) -> str:
+    lowered = str(text or "").lower()
+    alias_norm = str(alias or "").strip().lower()
+    if not lowered or not alias_norm:
+        return ""
+    match = re.search(re.escape(alias_norm), lowered)
+    if not match:
+        return ""
+    start = max(0, match.start() - 28)
+    end = min(len(lowered), match.end() + 42)
+    window = lowered[start:end]
+    dosage_match = re.search(r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|ml|iu|%)\b", window)
+    if dosage_match:
+        return dosage_match.group(0).strip()
+    return ""
+
+
+def _build_prioritized_fields(
+    detections: list[CabinetScanDetection],
+) -> list[CabinetPrioritizedField]:
+    rows: list[CabinetPrioritizedField] = []
+    for detection in detections:
+        rows.append(
+            CabinetPrioritizedField(
+                drug_name=detection.drug_name,
+                brand_name=detection.brand_name or "",
+                manufacturer=detection.manufacturer or "",
+                dosage=detection.dosage or "",
+            )
+        )
+    return rows
+
+
+def _normalize_ocr_token_for_fuzzy_match(token: str) -> str:
+    normalized = _ascii_fold(_normalize_text(token))
+    normalized = normalized.replace("rn", "m").replace("vv", "w")
+    for src, dst in _OCR_NOISY_CHAR_REPLACEMENTS:
+        normalized = normalized.replace(src, dst)
+    return re.sub(r"[^a-z0-9]+", "", normalized)
+
+
+def _compute_ocr_fuzzy_score(token: str, alias: str) -> float:
+    raw_score = SequenceMatcher(None, token, alias.lower()).ratio()
+    normalized_token = _normalize_ocr_token_for_fuzzy_match(token)
+    normalized_alias = _normalize_ocr_token_for_fuzzy_match(alias)
+    if not normalized_token or not normalized_alias:
+        return raw_score
+    normalized_score = SequenceMatcher(None, normalized_token, normalized_alias).ratio()
+    return max(raw_score, normalized_score)
+
+
+def _detect_drugs_from_text(
+    text: str,
+    db: Session | None = None,
+    *,
+    skip_ocr_correction: bool = False,
+) -> list[CabinetScanDetection]:
+    candidate_text = text if skip_ocr_correction else _apply_ocr_correction(text).corrected_text
+    normalized_text = _normalize_prescription_ocr_text(candidate_text)
     detections: list[CabinetScanDetection] = []
+    detected_normalized_names: set[str] = set()
+    manufacturer_hint = _infer_manufacturer_from_text(normalized_text)
 
     for canonical, aliases in DRUG_ALIAS_MAP.items():
         for alias in aliases:
@@ -106,18 +895,124 @@ def _detect_drugs_from_text(text: str) -> list[CabinetScanDetection]:
             if not re.search(pattern, normalized_text, flags=re.IGNORECASE):
                 continue
 
+            display_name, normalized_name, _rx_cui, mapping_source, mapping_confidence = (
+                _resolve_dictionary_mapping_with_source(canonical, db=db)
+            )
+            if normalized_name in detected_normalized_names:
+                break
+            confidence = 0.94 if alias == canonical else 0.82
+            dosage = _extract_dosage_near_alias(normalized_text, alias)
+            if dosage:
+                confidence = min(0.97, confidence + 0.04)
+            requires_manual_confirm = confidence < LOW_CONFIDENCE_OCR_THRESHOLD
             detections.append(
                 CabinetScanDetection(
-                    drug_name=_to_title_case(canonical),
-                    normalized_name=_normalize_text(canonical),
-                    confidence=0.94 if alias == canonical else 0.82,
+                    drug_name=display_name,
+                    normalized_name=normalized_name,
+                    dosage=dosage or None,
+                    brand_name=_infer_brand_name(
+                        alias=alias,
+                        canonical=canonical,
+                        display_name=display_name,
+                    )
+                    or None,
+                    manufacturer=manufacturer_hint or None,
+                    confidence=confidence,
                     evidence=alias,
+                    mapping_source=mapping_source,
+                    mapping_confidence=mapping_confidence,
+                    requires_manual_confirm=requires_manual_confirm,
+                    confirmed=not requires_manual_confirm,
                 )
             )
+            detected_normalized_names.add(normalized_name)
             break
+
+    # Handwriting/noisy fallback: attempt fuzzy single-token matching.
+    token_candidates = [
+        token
+        for token in re.split(r"[^a-z0-9+]+", normalized_text)
+        if len(token) >= 4 and token not in _OCR_FUZZY_STOPWORDS and sum(char.isalpha() for char in token) >= 3
+    ]
+    fuzzy_threshold = 0.9 if detections else 0.86
+    fuzzy_limit = 2 if detections else 4
+    fuzzy_added = 0
+    for token in token_candidates[:120]:
+        if fuzzy_added >= fuzzy_limit:
+            break
+        best_canonical = ""
+        best_alias = ""
+        best_score = 0.0
+        for canonical, aliases in DRUG_ALIAS_MAP.items():
+            for alias in aliases:
+                score = _compute_ocr_fuzzy_score(token, alias)
+                if score > best_score:
+                    best_score = score
+                    best_canonical = canonical
+                    best_alias = alias
+        if best_score < fuzzy_threshold or not best_canonical:
+            continue
+        display_name, normalized_name, _rx_cui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(best_canonical, db=db)
+        )
+        if normalized_name in detected_normalized_names:
+            continue
+        detection_confidence = max(0.58, min(0.78, best_score))
+        detections.append(
+            CabinetScanDetection(
+                drug_name=display_name,
+                normalized_name=normalized_name,
+                dosage=_extract_dosage_near_alias(normalized_text, best_alias) or None,
+                brand_name=_infer_brand_name(
+                    alias=best_alias,
+                    canonical=best_canonical,
+                    display_name=display_name,
+                )
+                or None,
+                manufacturer=manufacturer_hint or None,
+                confidence=detection_confidence,
+                evidence=f"fuzzy:{token}->{best_alias}",
+                mapping_source=mapping_source,
+                mapping_confidence=mapping_confidence,
+                requires_manual_confirm=True,
+                confirmed=False,
+            )
+        )
+        detected_normalized_names.add(normalized_name)
+        fuzzy_added += 1
 
     detections.sort(key=lambda item: (-item.confidence, item.drug_name))
     return detections
+
+
+def _enforce_low_confidence_manual_confirm(
+    detections: list[CabinetScanDetection],
+) -> list[CabinetScanDetection]:
+    enforced: list[CabinetScanDetection] = []
+    for detection in detections:
+        requires_manual_confirm = (
+            detection.requires_manual_confirm
+            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+        )
+        if requires_manual_confirm:
+            enforced.append(
+                detection.model_copy(
+                    update={
+                        "requires_manual_confirm": True,
+                        "confirmed": False,
+                    }
+                )
+            )
+            continue
+        enforced.append(
+            detection.model_copy(
+                update={
+                    "requires_manual_confirm": False,
+                    "confirmed": True,
+                }
+            )
+        )
+    return enforced
 
 
 def _parse_ocr_endpoints(raw: str) -> list[str]:
@@ -145,7 +1040,14 @@ def _collect_text_candidates(payload: Any) -> list[str]:
 
         for key, nested in value.items():
             lowered = key.lower()
-            if lowered in {"text", "ocr_text", "full_text", "plain_text", "combined_ocr", "content"}:
+            if lowered in {
+                "text",
+                "ocr_text",
+                "full_text",
+                "plain_text",
+                "combined_ocr",
+                "content",
+            }:
                 walk(nested)
                 continue
             if lowered == "lines" and isinstance(nested, list):
@@ -195,23 +1097,41 @@ def _post_tgc_ocr_multipart(
     content_type: str,
     timeout_seconds: float,
     headers: dict[str, str],
+    field_name: str = "file",
 ) -> httpx.Response:
-    files = {"file": (file_name, file_bytes, content_type)}
+    files = {field_name: (file_name, file_bytes, content_type)}
     return httpx.post(url, files=files, headers=headers, timeout=timeout_seconds)
 
 
 def _post_tgc_ocr_json(
     url: str,
-    file_bytes: bytes,
+    payload: dict[str, Any],
     timeout_seconds: float,
     headers: dict[str, str],
 ) -> httpx.Response:
-    encoded = base64.b64encode(file_bytes).decode("utf-8")
-    payload = {"image": encoded, "lang": "vi"}
     return httpx.post(url, json=payload, headers=headers, timeout=timeout_seconds)
 
 
-def _scan_with_tgc_ocr(file_bytes: bytes, file_name: str, content_type: str) -> tuple[str, str, str]:
+def _build_tgc_ocr_json_payloads(
+    file_bytes: bytes,
+    file_name: str,
+    content_type: str,
+) -> list[dict[str, Any]]:
+    encoded = base64.b64encode(file_bytes).decode("utf-8")
+    return [
+        {"image": encoded, "lang": "vi"},
+        {"image_base64": encoded, "lang": "vi"},
+        {"file": encoded, "lang": "vi"},
+        {"base64": encoded, "mime_type": content_type, "filename": file_name, "lang": "vi"},
+        {"content": encoded, "content_type": content_type, "filename": file_name, "lang": "vi"},
+    ]
+
+
+def _scan_with_tgc_ocr(
+    file_bytes: bytes,
+    file_name: str,
+    content_type: str,
+) -> tuple[str, str, str]:
     settings = get_settings()
     endpoints = _parse_ocr_endpoints(settings.tgc_ocr_endpoints)
     if not endpoints:
@@ -222,49 +1142,87 @@ def _scan_with_tgc_ocr(file_bytes: bytes, file_name: str, content_type: str) -> 
 
     base_url = settings.tgc_ocr_base_url.rstrip("/")
     headers: dict[str, str] = {}
-    if settings.tgc_ocr_api_key.strip():
-        headers["x-api-key"] = settings.tgc_ocr_api_key.strip()
+    api_key = settings.tgc_ocr_api_key.strip()
+    if api_key:
+        # Shared TGC OCR service may accept either x-api-key or Bearer auth.
+        headers["x-api-key"] = api_key
+        headers["authorization"] = f"Bearer {api_key}"
 
     last_error = "Không lấy được văn bản OCR từ TGC service"
     for endpoint in endpoints:
         url = f"{base_url}{endpoint}"
-        try:
-            response = _post_tgc_ocr_multipart(
-                url=url,
-                file_bytes=file_bytes,
-                file_name=file_name,
-                content_type=content_type,
-                timeout_seconds=settings.tgc_ocr_timeout_seconds,
-                headers=headers,
-            )
-        except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-            last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
-            continue
-        except httpx.HTTPError as exc:
-            last_error = f"OCR request lỗi: {exc}"
-            continue
+        response: httpx.Response | None = None
+        request_succeeded = False
 
-        # Some OCR services expose `/ocr` with JSON (base64 image), not multipart.
-        if response.status_code in {400, 415, 422} and endpoint.endswith("/ocr"):
+        # Try common multipart field names used by OCR providers.
+        for field_name in ("file", "image", "document", "upload_file"):
             try:
-                response = _post_tgc_ocr_json(
+                response = _post_tgc_ocr_multipart(
                     url=url,
                     file_bytes=file_bytes,
+                    file_name=file_name,
+                    content_type=content_type,
                     timeout_seconds=settings.tgc_ocr_timeout_seconds,
                     headers=headers,
+                    field_name=field_name,
                 )
             except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
                 last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
-                continue
+                response = None
+                break
             except httpx.HTTPError as exc:
                 last_error = f"OCR request lỗi: {exc}"
-                continue
+                response = None
+                break
 
-        if response.status_code >= 500:
-            last_error = f"OCR upstream error: status={response.status_code}"
-            continue
-        if response.status_code >= 400:
-            last_error = f"OCR endpoint từ chối request: status={response.status_code}"
+            if response.status_code < 400:
+                request_succeeded = True
+                break
+            if response.status_code >= 500:
+                last_error = f"OCR upstream error: status={response.status_code}"
+                response = None
+                break
+            if response.status_code not in {400, 405, 415, 422}:
+                last_error = f"OCR endpoint từ chối request: status={response.status_code}"
+                response = None
+                break
+
+        # Some deployments expose /ocr as JSON(base64) instead of multipart.
+        if (not request_succeeded) and endpoint.endswith("/ocr"):
+            for payload in _build_tgc_ocr_json_payloads(
+                file_bytes=file_bytes,
+                file_name=file_name,
+                content_type=content_type,
+            ):
+                try:
+                    response = _post_tgc_ocr_json(
+                        url=url,
+                        payload=payload,
+                        timeout_seconds=settings.tgc_ocr_timeout_seconds,
+                        headers=headers,
+                    )
+                except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
+                    last_error = f"Không kết nối được OCR service: {exc.__class__.__name__}"
+                    response = None
+                    break
+                except httpx.HTTPError as exc:
+                    last_error = f"OCR request lỗi: {exc}"
+                    response = None
+                    break
+
+                if response.status_code < 400:
+                    request_succeeded = True
+                    break
+                if response.status_code >= 500:
+                    last_error = f"OCR upstream error: status={response.status_code}"
+                    response = None
+                    break
+                if response.status_code not in {400, 405, 415, 422}:
+                    last_error = f"OCR endpoint từ chối request: status={response.status_code}"
+                    response = None
+                    break
+
+        if response is None or not request_succeeded:
             continue
 
         try:
@@ -290,15 +1248,32 @@ def get_cabinet(
 ) -> MedicineCabinetResponse:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
-    items = db.execute(
-        select(MedicineItem)
-        .where(MedicineItem.cabinet_id == cabinet.id)
-        .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
-    ).scalars().all()
+    items = (
+        db.execute(
+            select(MedicineItem)
+            .where(MedicineItem.cabinet_id == cabinet.id)
+            .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+    resolved_items = []
+    for item in items:
+        _, _, _, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
+            item.drug_name,
+            db=db,
+        )
+        resolved_items.append(
+            _to_item_response(
+                item,
+                normalization_source=mapping_source,
+                normalization_confidence=mapping_confidence,
+            )
+        )
     return MedicineCabinetResponse(
         cabinet_id=cabinet.id,
         label=cabinet.label,
-        items=[_to_item_response(item) for item in items],
+        items=resolved_items,
     )
 
 
@@ -311,7 +1286,10 @@ def add_cabinet_item(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
-    normalized = _normalize_text(payload.drug_name)
+    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
+        payload.drug_name,
+        db=db,
+    )
     existing = db.execute(
         select(MedicineItem).where(
             MedicineItem.cabinet_id == cabinet.id,
@@ -319,7 +1297,10 @@ def add_cabinet_item(
         )
     ).scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Thuốc đã tồn tại trong tủ thuốc")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Thuốc đã tồn tại trong tủ thuốc",
+        )
 
     item = MedicineItem(
         cabinet_id=cabinet.id,
@@ -329,16 +1310,142 @@ def add_cabinet_item(
         dosage_form=payload.dosage_form.strip(),
         quantity=payload.quantity,
         source=payload.source,
-        rx_cui=payload.rx_cui.strip(),
+        rx_cui=payload.rx_cui.strip() or mapped_rxcui,
         ocr_confidence=payload.ocr_confidence,
         expires_on=payload.expires_on,
-        note=payload.note.strip(),
+        note=_encode_item_note(
+            payload.note.strip(),
+            brand_name=payload.brand_name,
+            manufacturer=payload.manufacturer,
+        ),
         updated_at=datetime.now(tz=UTC),
     )
     db.add(item)
     db.commit()
     db.refresh(item)
-    return _to_item_response(item)
+    return _to_item_response(
+        item,
+        normalization_source=mapping_source,
+        normalization_confidence=mapping_confidence,
+    )
+
+
+@router.patch("/cabinet/items/{item_id}", response_model=MedicineCabinetItemResponse)
+@router.put("/cabinet/items/{item_id}", response_model=MedicineCabinetItemResponse)
+def update_cabinet_item(
+    item_id: int,
+    payload: MedicineCabinetItemUpdate,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> MedicineCabinetItemResponse:
+    user = _require_user(token, db)
+    cabinet = _get_or_create_cabinet(db, user.id)
+    item = db.execute(
+        select(MedicineItem).where(
+            MedicineItem.id == item_id,
+            MedicineItem.cabinet_id == cabinet.id,
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thuốc")
+
+    provided = set(payload.model_fields_set)
+    if not provided:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload cập nhật rỗng",
+        )
+
+    response_mapping_source: str | None = None
+    response_mapping_confidence: float | None = None
+    note_value, brand_value, manufacturer_value = _decode_item_note(item.note)
+
+    if "drug_name" in provided:
+        if payload.drug_name is None or not payload.drug_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tên thuốc không hợp lệ",
+            )
+        updated_name = payload.drug_name.strip()
+        _, normalized_name, mapped_rxcui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(updated_name, db=db)
+        )
+        duplicate = db.execute(
+            select(MedicineItem).where(
+                MedicineItem.cabinet_id == cabinet.id,
+                MedicineItem.normalized_name == normalized_name,
+                MedicineItem.id != item.id,
+            )
+        ).scalar_one_or_none()
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Thuốc đã tồn tại trong tủ thuốc",
+            )
+        item.drug_name = updated_name
+        item.normalized_name = normalized_name
+        response_mapping_source = mapping_source
+        response_mapping_confidence = mapping_confidence
+        if "rx_cui" not in provided:
+            item.rx_cui = mapped_rxcui
+
+    if "dosage" in provided:
+        item.dosage = (payload.dosage or "").strip()
+    if "dosage_form" in provided:
+        item.dosage_form = (payload.dosage_form or "").strip()
+    if "quantity" in provided:
+        if payload.quantity is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Số lượng không hợp lệ",
+            )
+        item.quantity = payload.quantity
+    if "source" in provided:
+        if payload.source is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Nguồn nhập thuốc không hợp lệ",
+            )
+        item.source = payload.source
+    if "rx_cui" in provided:
+        rx_cui = (payload.rx_cui or "").strip()
+        if rx_cui:
+            item.rx_cui = rx_cui
+        elif "drug_name" in provided:
+            _, _, mapped_rxcui = _resolve_dictionary_mapping(item.drug_name, db=db)
+            item.rx_cui = mapped_rxcui
+        else:
+            item.rx_cui = ""
+    if "ocr_confidence" in provided:
+        item.ocr_confidence = payload.ocr_confidence
+    if "expires_on" in provided:
+        item.expires_on = payload.expires_on
+    if "note" in provided:
+        note_value = (payload.note or "").strip()
+    if "brand_name" in provided:
+        brand_value = _sanitize_meta_value(payload.brand_name or "") or None
+    if "manufacturer" in provided:
+        manufacturer_value = _sanitize_meta_value(payload.manufacturer or "") or None
+    item.note = _encode_item_note(
+        note_value,
+        brand_name=brand_value or "",
+        manufacturer=manufacturer_value or "",
+    )
+
+    item.updated_at = datetime.now(tz=UTC)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    if response_mapping_source is None or response_mapping_confidence is None:
+        _, _, _, response_mapping_source, response_mapping_confidence = _resolve_dictionary_mapping_with_source(
+            item.drug_name,
+            db=db,
+        )
+    return _to_item_response(
+        item,
+        normalization_source=response_mapping_source,
+        normalization_confidence=response_mapping_confidence,
+    )
 
 
 @router.delete("/cabinet/items/{item_id}")
@@ -366,16 +1473,34 @@ def delete_cabinet_item(
 @router.post("/cabinet/scan-text", response_model=CabinetScanTextResponse)
 def scan_cabinet_text(
     payload: CabinetScanTextRequest,
-    _token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
 ) -> CabinetScanTextResponse:
-    return CabinetScanTextResponse(detections=_detect_drugs_from_text(payload.text), extracted_text=payload.text)
+    _require_user(token, db)
+    correction = _apply_ocr_correction(payload.text)
+    detections = _enforce_low_confidence_manual_confirm(
+        _detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        )
+    )
+    return CabinetScanTextResponse(
+        detections=detections,
+        extracted_text=correction.corrected_text[:4000],
+        ocr_provider="ocr-postprocess",
+        ocr_endpoint="local-ocr-correction",
+        prioritized_fields=_build_prioritized_fields(detections),
+    )
 
 
 @router.post("/cabinet/scan-file", response_model=CabinetScanTextResponse)
 async def scan_cabinet_file(
     file: UploadFile = File(...),
-    _token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
 ) -> CabinetScanTextResponse:
+    _require_user(token, db)
     file_name = file.filename or "uploaded-receipt"
     content_type = file.content_type or "application/octet-stream"
     file_bytes = await file.read()
@@ -392,50 +1517,117 @@ async def scan_cabinet_file(
         file_name=file_name,
         content_type=content_type,
     )
-    detections = _detect_drugs_from_text(extracted_text)
+    correction = _apply_ocr_correction(extracted_text)
+    detections = _enforce_low_confidence_manual_confirm(
+        _detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        )
+    )
     return CabinetScanTextResponse(
         detections=detections,
-        extracted_text=extracted_text[:4000],
+        extracted_text=correction.corrected_text[:4000],
         ocr_provider=ocr_provider,
         ocr_endpoint=used_endpoint,
+        prioritized_fields=_build_prioritized_fields(detections),
     )
 
 
-@router.post("/cabinet/import-detections")
+@router.post("/cabinet/import-detections", response_model=CabinetImportResponse)
 def import_detections(
     payload: CabinetImportRequest,
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
-) -> dict[str, int]:
+) -> CabinetImportResponse:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
     existing_names = set(
         db.execute(
             select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
+    blocked_unconfirmed: list[dict[str, Any]] = []
+    for index, detection in enumerate(payload.detections):
+        needs_manual_confirm = (
+            detection.requires_manual_confirm
+            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+        )
+        if needs_manual_confirm and not detection.confirmed:
+            blocked_unconfirmed.append(
+                {
+                    "index": index,
+                    "drug_name": detection.drug_name,
+                    "normalized_name": detection.normalized_name,
+                    "confidence": detection.confidence,
+                    "evidence": detection.evidence,
+                    "reason": "manual_confirm_required_for_low_confidence_detection",
+                }
+            )
+
+    if blocked_unconfirmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "manual_confirmation_required",
+                "message": (
+                    "Có phát hiện OCR độ tin cậy thấp chưa được xác nhận thủ công. "
+                    "Vui lòng đánh dấu confirmed=true cho các mục này trước khi import."
+                ),
+                "threshold": LOW_CONFIDENCE_OCR_THRESHOLD,
+                "blocked_detections": blocked_unconfirmed,
+            },
+        )
+
     inserted = 0
+    prioritized_fields: list[CabinetPrioritizedField] = []
     for detection in payload.detections:
-        normalized = _normalize_text(detection.normalized_name or detection.drug_name)
+        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
+            detection.normalized_name or detection.drug_name,
+            db=db,
+        )
         if not normalized or normalized in existing_names:
             continue
         item = MedicineItem(
             cabinet_id=cabinet.id,
             drug_name=detection.drug_name.strip(),
             normalized_name=normalized,
+            dosage=(detection.dosage or "").strip(),
             source="ocr",
+            rx_cui=mapped_rxcui,
             ocr_confidence=detection.confidence,
-            note=f"Phát hiện OCR: {detection.evidence}",
+            note=_encode_item_note(
+                (
+                    f"Phát hiện OCR: {detection.evidence}"
+                    + (
+                        " (manual confirmed)"
+                        if detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+                        else ""
+                    )
+                ),
+                brand_name=detection.brand_name or "",
+                manufacturer=detection.manufacturer or "",
+            ),
             updated_at=datetime.now(tz=UTC),
         )
         db.add(item)
         existing_names.add(normalized)
         inserted += 1
+        prioritized_fields.append(
+            CabinetPrioritizedField(
+                drug_name=detection.drug_name.strip(),
+                brand_name=(detection.brand_name or "").strip(),
+                manufacturer=(detection.manufacturer or "").strip(),
+                dosage=(detection.dosage or "").strip(),
+            )
+        )
 
     db.commit()
-    return {"inserted": inserted}
+    return CabinetImportResponse(inserted=inserted, prioritized_fields=prioritized_fields)
 
 
 @router.post("/cabinet/auto-ddi-check")
@@ -446,22 +1638,401 @@ def run_auto_ddi_check(
 ) -> dict[str, Any]:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
-    medication_names = db.execute(
-        select(MedicineItem.normalized_name).where(MedicineItem.cabinet_id == cabinet.id)
-    ).scalars().all()
+    control_tower = get_control_tower_config_service().load(db)
+    medication_items = (
+        db.execute(
+            select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
+        )
+        .scalars()
+        .all()
+    )
+    medication_names = [item.normalized_name for item in medication_items if item.normalized_name]
+    medications_with_meta = []
+    for item in medication_items:
+        display_name, normalized_name, rx_cui, mapping_source, mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(item.drug_name, db=db)
+        )
+        medications_with_meta.append(
+            {
+                "drug_name": item.drug_name,
+                "display_name": display_name,
+                "normalized_name": normalized_name or item.normalized_name,
+                "rx_cui": item.rx_cui or rx_cui,
+                "mapping_source": mapping_source,
+                "mapping_confidence": mapping_confidence,
+            }
+        )
 
     request_payload: dict[str, Any] = {
         "symptoms": payload.symptoms,
         "labs": payload.labs,
         "medications": sorted(set(medication_names)),
+        "medications_with_meta": medications_with_meta,
         "allergies": payload.allergies,
+        "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
-    return proxy_ml_post("/v1/careguard/analyze", request_payload)
+    result = proxy_ml_post("/v1/careguard/analyze", request_payload)
+    return _attach_careguard_attribution(
+        result,
+        external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
+    )
+
+
+@router.get("/dictionary", response_model=VnDrugMappingListResponse)
+def list_vn_drug_mappings(
+    q: str = "",
+    limit: int = 100,
+    offset: int = 0,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingListResponse:
+    _require_user(token, db)
+    safe_limit = min(max(limit, 1), 200)
+    safe_offset = max(offset, 0)
+    query = select(VnDrugMapping)
+    count_query = select(func.count(VnDrugMapping.id))
+
+    keyword = " ".join(q.split()).strip()
+    if keyword:
+        pattern = f"%{keyword.lower()}%"
+        filters = or_(
+            func.lower(VnDrugMapping.brand_name).like(pattern),
+            func.lower(VnDrugMapping.normalized_name).like(pattern),
+            func.lower(VnDrugMapping.active_ingredients).like(pattern),
+        )
+        query = query.where(filters)
+        count_query = count_query.where(filters)
+
+    total = int(db.execute(count_query).scalar_one() or 0)
+    mappings = (
+        db.execute(
+            query.order_by(VnDrugMapping.updated_at.desc(), VnDrugMapping.id.desc())
+            .limit(safe_limit)
+            .offset(safe_offset)
+        )
+        .scalars()
+        .all()
+    )
+    return VnDrugMappingListResponse(
+        total=total,
+        items=[_to_mapping_response(mapping) for mapping in mappings],
+    )
+
+
+@router.post("/dictionary", response_model=VnDrugMappingResponse)
+def create_vn_drug_mapping(
+    payload: VnDrugMappingCreateRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingResponse:
+    user = _require_user(token, db)
+    brand_name = " ".join(payload.brand_name.split()).strip()
+    normalized_brand = _normalize_text(brand_name)
+    normalized_name = _normalize_text(payload.normalized_name)
+    aliases = _normalize_aliases(payload.aliases, brand_name)
+
+    existing_brand = db.execute(
+        select(VnDrugMapping).where(VnDrugMapping.normalized_brand == normalized_brand)
+    ).scalar_one_or_none()
+    if existing_brand is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Brand đã tồn tại trong dictionary",
+        )
+
+    _validate_alias_conflicts(db, aliases)
+
+    mapping = VnDrugMapping(
+        brand_name=brand_name,
+        normalized_brand=normalized_brand,
+        active_ingredients=payload.active_ingredients.strip(),
+        normalized_name=normalized_name,
+        rx_cui=payload.rx_cui.strip(),
+        mapping_source=payload.mapping_source,
+        notes=payload.notes.strip(),
+        is_active=payload.is_active,
+        created_by_user_id=user.id,
+        updated_at=datetime.now(tz=UTC),
+    )
+    db.add(mapping)
+    db.flush()
+    _replace_mapping_aliases(db, mapping, aliases)
+    _create_mapping_audit(
+        db,
+        mapping=mapping,
+        action="create",
+        actor_user_id=user.id,
+        reason=payload.notes,
+        before_snapshot=None,
+        after_snapshot=_mapping_snapshot(mapping),
+    )
+    db.commit()
+    db.refresh(mapping)
+    return _to_mapping_response(mapping)
+
+
+@router.patch("/dictionary/{mapping_id}", response_model=VnDrugMappingResponse)
+@router.put("/dictionary/{mapping_id}", response_model=VnDrugMappingResponse)
+def update_vn_drug_mapping(
+    mapping_id: int,
+    payload: VnDrugMappingUpdateRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingResponse:
+    user = _require_user(token, db)
+    mapping = _get_mapping_or_404(db, mapping_id)
+    before_snapshot = _mapping_snapshot(mapping)
+    provided = set(payload.model_fields_set)
+    if not provided:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload cập nhật rỗng",
+        )
+
+    if "brand_name" in provided:
+        brand_name = " ".join((payload.brand_name or "").split()).strip()
+        if not brand_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="brand_name không hợp lệ",
+            )
+        normalized_brand = _normalize_text(brand_name)
+        existing_brand = db.execute(
+            select(VnDrugMapping).where(
+                VnDrugMapping.normalized_brand == normalized_brand,
+                VnDrugMapping.id != mapping.id,
+            )
+        ).scalar_one_or_none()
+        if existing_brand is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Brand đã tồn tại trong dictionary",
+            )
+        mapping.brand_name = brand_name
+        mapping.normalized_brand = normalized_brand
+
+    if "active_ingredients" in provided:
+        mapping.active_ingredients = (payload.active_ingredients or "").strip()
+    if "normalized_name" in provided:
+        normalized_name = _normalize_text(payload.normalized_name or "")
+        if not normalized_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="normalized_name không hợp lệ",
+            )
+        mapping.normalized_name = normalized_name
+    if "rx_cui" in provided:
+        mapping.rx_cui = (payload.rx_cui or "").strip()
+    if "mapping_source" in provided and payload.mapping_source is not None:
+        mapping.mapping_source = payload.mapping_source
+    if "notes" in provided:
+        mapping.notes = (payload.notes or "").strip()
+    if "is_active" in provided and payload.is_active is not None:
+        mapping.is_active = payload.is_active
+
+    if "aliases" in provided:
+        aliases = _normalize_aliases(payload.aliases or [], mapping.brand_name)
+        _validate_alias_conflicts(db, aliases, exclude_mapping_id=mapping.id)
+        _replace_mapping_aliases(db, mapping, aliases)
+
+    mapping.updated_at = datetime.now(tz=UTC)
+    db.add(mapping)
+    _create_mapping_audit(
+        db,
+        mapping=mapping,
+        action="update",
+        actor_user_id=user.id,
+        reason=payload.notes or "",
+        before_snapshot=before_snapshot,
+        after_snapshot=_mapping_snapshot(mapping),
+    )
+    db.commit()
+    db.refresh(mapping)
+    return _to_mapping_response(mapping)
+
+
+@router.delete("/dictionary/{mapping_id}")
+def deactivate_vn_drug_mapping(
+    mapping_id: int,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    user = _require_user(token, db)
+    mapping = _get_mapping_or_404(db, mapping_id)
+    before_snapshot = _mapping_snapshot(mapping)
+    mapping.is_active = False
+    mapping.updated_at = datetime.now(tz=UTC)
+    db.add(mapping)
+    _create_mapping_audit(
+        db,
+        mapping=mapping,
+        action="deactivate",
+        actor_user_id=user.id,
+        reason="Deactivate mapping",
+        before_snapshot=before_snapshot,
+        after_snapshot=_mapping_snapshot(mapping),
+    )
+    db.commit()
+    return {"deleted": True}
+
+
+@router.post("/dictionary/{mapping_id}/curation", response_model=VnDrugMappingResponse)
+def curate_vn_drug_mapping(
+    mapping_id: int,
+    payload: VnDrugMappingCurationRequest,
+    token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingResponse:
+    admin_user = _require_admin_user(token, db)
+    mapping = _get_mapping_or_404(db, mapping_id)
+    before_snapshot = _mapping_snapshot(mapping)
+    provided = set(payload.model_fields_set)
+    mutable_fields = {
+        "brand_name",
+        "aliases",
+        "active_ingredients",
+        "normalized_name",
+        "rx_cui",
+        "notes",
+        "is_active",
+    }
+    if not provided.intersection(mutable_fields):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload curation rỗng",
+        )
+
+    if "brand_name" in provided:
+        brand_name = " ".join((payload.brand_name or "").split()).strip()
+        if not brand_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="brand_name không hợp lệ",
+            )
+        normalized_brand = _normalize_text(brand_name)
+        existing_brand = db.execute(
+            select(VnDrugMapping).where(
+                VnDrugMapping.normalized_brand == normalized_brand,
+                VnDrugMapping.id != mapping.id,
+            )
+        ).scalar_one_or_none()
+        if existing_brand is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Brand đã tồn tại trong dictionary",
+            )
+        mapping.brand_name = brand_name
+        mapping.normalized_brand = normalized_brand
+
+    if "active_ingredients" in provided:
+        mapping.active_ingredients = (payload.active_ingredients or "").strip()
+    if "normalized_name" in provided:
+        normalized_name = _normalize_text(payload.normalized_name or "")
+        if not normalized_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="normalized_name không hợp lệ",
+            )
+        mapping.normalized_name = normalized_name
+    if "rx_cui" in provided:
+        mapping.rx_cui = (payload.rx_cui or "").strip()
+    if "notes" in provided:
+        mapping.notes = (payload.notes or "").strip()
+    if "is_active" in provided and payload.is_active is not None:
+        mapping.is_active = payload.is_active
+    if "aliases" in provided:
+        aliases = _normalize_aliases(payload.aliases or [], mapping.brand_name)
+        _validate_alias_conflicts(db, aliases, exclude_mapping_id=mapping.id)
+        _replace_mapping_aliases(db, mapping, aliases)
+
+    mapping.mapping_source = "curated"
+    mapping.updated_at = datetime.now(tz=UTC)
+    db.add(mapping)
+    _create_mapping_audit(
+        db,
+        mapping=mapping,
+        action="curate",
+        actor_user_id=admin_user.id,
+        reason=payload.reason,
+        before_snapshot=before_snapshot,
+        after_snapshot=_mapping_snapshot(mapping),
+        metadata={"fields_updated": sorted(provided.intersection(mutable_fields))},
+    )
+    db.commit()
+    db.refresh(mapping)
+    return _to_mapping_response(mapping)
+
+
+@router.get("/dictionary/{mapping_id}/audit", response_model=VnDrugMappingAuditListResponse)
+def list_vn_drug_mapping_audits(
+    mapping_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> VnDrugMappingAuditListResponse:
+    _require_admin_user(token, db)
+    _get_mapping_or_404(db, mapping_id)
+    safe_limit = min(max(limit, 1), 200)
+    safe_offset = max(offset, 0)
+
+    total = int(
+        db.execute(
+            select(func.count(VnDrugMappingAudit.id)).where(VnDrugMappingAudit.mapping_id == mapping_id)
+        ).scalar_one()
+        or 0
+    )
+    audits = (
+        db.execute(
+            select(VnDrugMappingAudit)
+            .options(selectinload(VnDrugMappingAudit.actor))
+            .where(VnDrugMappingAudit.mapping_id == mapping_id)
+            .order_by(VnDrugMappingAudit.id.desc())
+            .limit(safe_limit)
+            .offset(safe_offset)
+        )
+        .scalars()
+        .all()
+    )
+    return VnDrugMappingAuditListResponse(
+        total=total,
+        items=[_to_mapping_audit_response(audit) for audit in audits],
+    )
+
+
+@router.post("/dictionary/resolve", response_model=VnDrugResolveResponse)
+def resolve_vn_drug_mapping(
+    payload: VnDrugResolveRequest,
+    token: TokenPayload = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> VnDrugResolveResponse:
+    _require_user(token, db)
+    display_name, normalized_name, rx_cui, source, mapping_confidence = _resolve_dictionary_mapping_with_source(
+        payload.drug_name,
+        db=db,
+    )
+    return VnDrugResolveResponse(
+        input_name=payload.drug_name.strip(),
+        display_name=display_name,
+        normalized_name=normalized_name,
+        rx_cui=rx_cui,
+        mapping_source=source,
+        mapping_confidence=mapping_confidence,
+    )
 
 
 @router.post("/analyze")
 def careguard_analyze(
     payload: dict[str, Any],
-    _token: TokenPayload = Depends(require_roles("normal", "doctor")),
+    token: TokenPayload = Depends(require_roles("normal", "doctor")),
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    return proxy_ml_post("/v1/careguard/analyze", payload)
+    _require_user(token, db)
+    control_tower = get_control_tower_config_service().load(db)
+    request_payload = dict(payload)
+    request_payload["external_ddi_enabled"] = control_tower.careguard_runtime.external_ddi_enabled
+    result = proxy_ml_post("/v1/careguard/analyze", request_payload)
+    return _attach_careguard_attribution(
+        result,
+        external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
+    )

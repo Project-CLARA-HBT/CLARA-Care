@@ -1,70 +1,748 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
-  quality:
-    name: docs-check + ruff + mypy + pytest
+  changes:
+    name: detect changed files
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      ml: ${{ steps.filter.outputs.ml }}
+      web: ${{ steps.filter.outputs.web }}
+      docs: ${{ steps.filter.outputs.docs }}
+      docker: ${{ steps.filter.outputs.docker }}
+      ci: ${{ steps.filter.outputs.ci }}
+      scripts: ${{ steps.filter.outputs.scripts }}
+      hackathon: ${{ steps.filter.outputs.hackathon }}
+      python: ${{ steps.filter.outputs.python }}
+      python_changed_files: ${{ steps.filter.outputs.python_changed_files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          list-files: json
+          filters: |
+            api:
+              - 'services/api/**'
+            ml:
+              - 'services/ml/**'
+            web:
+              - 'apps/web/**'
+            docs:
+              - 'docs/**'
+            scripts:
+              - 'scripts/**'
+            hackathon:
+              - 'scripts/demo/**'
+              - 'data/demo/**'
+              - 'docs/hackathon/**'
+            docker:
+              - 'deploy/docker/**'
+              - 'services/**/Dockerfile'
+              - 'apps/web/Dockerfile'
+              - '.env.example'
+            ci:
+              - '.github/workflows/**'
+              - 'Makefile'
+              - 'README.md'
+            python:
+              - 'services/**/*.py'
+              - 'scripts/**/*.py'
+              - 'services/**/pyproject.toml'
+            python_changed:
+              - 'services/**/*.py'
+              - 'scripts/**/*.py'
+
+  quality:
+    name: docs-check + ruff + mypy
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 15
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.docs == 'true' ||
+      needs.changes.outputs.ci == 'true' ||
+      needs.changes.outputs.python == 'true' ||
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.ml == 'true'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/requirements-quality.txt
 
       - name: Install quality tools
         run: |
           python -m pip install --upgrade pip
-          pip install "ruff==0.6.9" "mypy==1.11.2" "pytest==8.3.2"
+          pip install -r .github/requirements-quality.txt
+
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
 
       - name: Run docs-check
         run: |
           bash scripts/docs/check-docs-links.sh
 
       - name: Run Ruff
+        env:
+          PY_CHANGED_FILES: ${{ needs.changes.outputs.python_changed_files }}
         run: |
-          targets=()
-          for d in services/api/src services/api/tests services/ml/src services/ml/tests scripts; do
-            if [ -d "$d" ]; then
-              targets+=("$d")
-            fi
-          done
-          if [ "${#targets[@]}" -gt 0 ]; then
-            ruff check "${targets[@]}"
-          else
-            echo "No Python source directories found. Skip Ruff."
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Skip incremental Ruff."
+            exit 0
           fi
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          raw = os.getenv("PY_CHANGED_FILES", "").strip()
+          files: list[str] = []
+          if raw:
+              try:
+                  parsed = json.loads(raw)
+              except json.JSONDecodeError as exc:
+                  print(f"Unable to parse PY_CHANGED_FILES: {exc}")
+                  sys.exit(1)
+              if isinstance(parsed, list):
+                  files = [str(item) for item in parsed if str(item).endswith(".py")]
+
+          if not files:
+              print("No changed Python files. Skip Ruff.")
+              sys.exit(0)
+
+          print("Running Ruff for files:")
+          for file in files:
+              print(f"- {file}")
+
+          subprocess.run(["ruff", "check", "--extend-ignore", "B008", *files], check=True)
+          PY
 
       - name: Run mypy
+        env:
+          PY_CHANGED_FILES: ${{ needs.changes.outputs.python_changed_files }}
         run: |
-          targets=()
-          for d in services/api/src services/ml/src; do
-            if [ -d "$d" ]; then
-              targets+=("$d")
-            fi
-          done
-          if [ "${#targets[@]}" -gt 0 ]; then
-            mypy "${targets[@]}" --ignore-missing-imports
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Skip incremental mypy."
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          raw = os.getenv("PY_CHANGED_FILES", "").strip()
+          files: list[str] = []
+          if raw:
+              try:
+                  parsed = json.loads(raw)
+              except json.JSONDecodeError as exc:
+                  print(f"Unable to parse PY_CHANGED_FILES: {exc}")
+                  sys.exit(1)
+              if isinstance(parsed, list):
+                  files = [str(item) for item in parsed if str(item).endswith(".py")]
+
+          if not files:
+              print("No changed Python files. Skip mypy.")
+              sys.exit(0)
+
+          print("Running mypy for files:")
+          for file in files:
+              print(f"- {file}")
+
+          subprocess.run(
+              [
+                  "mypy",
+                  "--python-version",
+                  "3.11",
+                  "--ignore-missing-imports",
+                  "--follow-imports=skip",
+                  *files,
+              ],
+              check=True,
+          )
+          PY
+
+  scripts-syntax:
+    name: scripts syntax check
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 10
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.scripts == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate shell script syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r script_file; do
+            echo "bash -n ${script_file}"
+            bash -n "${script_file}"
+          done < <(find scripts -type f -name '*.sh' | sort)
+
+  hackathon-artifacts-smoke:
+    name: hackathon artifacts smoke
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.hackathon == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run artifact + KPI static smoke
+        id: smoke
+        run: |
+          set -euo pipefail
+          run_id="ci-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "run_id=${run_id}" >> "$GITHUB_OUTPUT"
+
+          python3 scripts/demo/generate_demo_artifacts.py --run-id "${run_id}"
+          python3 scripts/demo/run_hackathon_kpis.py --mode static --run-id "${run_id}"
+
+          test -f "artifacts/round2/${run_id}/kpi-report/kpi-report.json"
+          test -f "artifacts/round2/${run_id}/test-report/test-report.json"
+          test -f "artifacts/round2/${run_id}/fallback-proof/fallback-proof.json"
+
+      - name: Upload hackathon smoke outputs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hackathon-artifacts-${{ github.run_id }}
+          path: |
+            artifacts/round2/${{ steps.smoke.outputs.run_id }}
+            docs/hackathon/data-manifest.json
+            docs/hackathon/kpi-snapshot.md
+          if-no-files-found: ignore
+
+  api-tests:
+    name: pytest api
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    env:
+      DATABASE_URL: sqlite+pysqlite:////tmp/clara_api_ci.db
+      AUTH_AUTO_PROVISION_USERS: "true"
+      AUTH_REQUIRE_EMAIL_VERIFICATION: "false"
+      AUTH_BOOTSTRAP_ADMIN_ENABLED: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            services/api/pyproject.toml
+            services/api/uv.lock
+
+      - name: Install pytest
+        run: |
+          cd services/api
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run API pytest
+        run: |
+          if [ -d "services/api/tests" ]; then
+            cd services/api
+            pytest -q tests --junitxml=/tmp/pytest-api.xml
           else
-            echo "No mypy targets found. Skip mypy."
+            echo "No services/api/tests directory found. Skip API pytest."
           fi
 
-      - name: Run pytest
+      - name: Upload API pytest artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-api-${{ github.run_id }}
+          path: /tmp/pytest-api.xml
+          if-no-files-found: ignore
+
+  ml-tests:
+    name: pytest ml
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.ml == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            services/ml/pyproject.toml
+            services/ml/uv.lock
+
+      - name: Install pytest
         run: |
-          targets=()
-          for d in services/api/tests services/ml/tests; do
-            if [ -d "$d" ]; then
-              targets+=("$d")
+          cd services/ml
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run ML pytest
+        run: |
+          if [ -d "services/ml/tests" ]; then
+            cd services/ml
+            pytest -q tests --junitxml=/tmp/pytest-ml.xml
+          else
+            echo "No services/ml/tests directory found. Skip ML pytest."
+          fi
+
+      - name: Upload ML pytest artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-ml-${{ github.run_id }}
+          path: /tmp/pytest-ml.xml
+          if-no-files-found: ignore
+
+  web-lint-build:
+    name: web lint + build
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.web == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web deps
+        run: |
+          cd apps/web
+          npm ci
+
+      - name: Run web lint
+        env:
+          CI: "true"
+        run: |
+          cd apps/web
+          npm run lint
+
+      - name: Run web build
+        run: |
+          cd apps/web
+          npm run build
+
+  security-audit:
+    name: security audit
+    runs-on: ubuntu-latest
+    needs: changes
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.ml == 'true' ||
+      needs.changes.outputs.web == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            .github/requirements-security-audit.txt
+            services/api/pyproject.toml
+            services/api/uv.lock
+            services/ml/pyproject.toml
+            services/ml/uv.lock
+
+      - name: Run pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/requirements-security-audit.txt
+          pip install -e services/api -e services/ml
+          pip-audit --progress-spinner=off
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Run npm audit
+        run: |
+          cd apps/web
+          npm ci
+          npm audit --omit=dev --audit-level=critical
+
+  docker-compose-smoke:
+    name: docker compose smoke build
+    runs-on: ubuntu-latest
+    needs: changes
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 25
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      needs.changes.outputs.docker == 'true' ||
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.ml == 'true' ||
+      needs.changes.outputs.web == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare env file
+        run: |
+          if [ ! -f ".env" ]; then
+            cp .env.example .env
+          fi
+
+      - name: Docker compose build smoke
+        run: |
+          attempt=1
+          max_attempts=3
+          until docker compose --env-file .env -f deploy/docker/docker-compose.app.yml build api ml web; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Docker compose smoke build failed after ${max_attempts} attempts."
+              exit 1
+            fi
+            sleep_seconds=$((attempt * 15))
+            echo "Retry docker compose build in ${sleep_seconds}s (attempt $((attempt + 1))/${max_attempts})..."
+            sleep "${sleep_seconds}"
+            attempt=$((attempt + 1))
+          done
+
+      - name: Docker compose config validate
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.app.yml config >/dev/null
+
+      - name: Collect docker smoke logs on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env -f deploy/docker/docker-compose.app.yml logs --no-color > /tmp/docker-smoke.log || true
+
+      - name: Upload docker smoke logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-smoke-${{ github.run_id }}
+          path: /tmp/docker-smoke.log
+          if-no-files-found: ignore
+
+  container-scan:
+    name: container scan (trivy)
+    runs-on: ubuntu-latest
+    needs: changes
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 30
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      needs.changes.outputs.docker == 'true' ||
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.ml == 'true' ||
+      needs.changes.outputs.web == 'true' ||
+      needs.changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare env file
+        run: |
+          if [ ! -f ".env" ]; then
+            cp .env.example .env
+          fi
+
+      - name: Build images for scan
+        env:
+          COMPOSE_PROJECT_NAME: clara-scan
+        run: |
+          attempt=1
+          max_attempts=3
+          until docker compose --env-file .env -f deploy/docker/docker-compose.app.yml build api ml web; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Docker image build for container scan failed after ${max_attempts} attempts."
+              exit 1
+            fi
+            sleep_seconds=$((attempt * 15))
+            echo "Retry docker image build in ${sleep_seconds}s (attempt $((attempt + 1))/${max_attempts})..."
+            sleep "${sleep_seconds}"
+            attempt=$((attempt + 1))
+          done
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+            sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | \
+            sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Run Trivy container scan
+        env:
+          COMPOSE_PROJECT_NAME: clara-scan
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/trivy-reports
+          images=("${COMPOSE_PROJECT_NAME}-api" "${COMPOSE_PROJECT_NAME}-ml" "${COMPOSE_PROJECT_NAME}-web")
+          high_or_critical_exit=0
+          critical_exit=0
+          for image in "${images[@]}"; do
+            echo "Scanning ${image}..."
+            trivy image \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --format table \
+              --output "/tmp/trivy-reports/${image}.txt" \
+              "${image}" || true
+
+            if ! trivy image \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --quiet \
+              "${image}"; then
+              echo "::warning::High/Critical vulnerabilities found in ${image}."
+              high_or_critical_exit=1
+            fi
+
+            if ! trivy image \
+              --severity CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --quiet \
+              "${image}"; then
+              echo "::error::Critical vulnerabilities found in ${image}."
+              critical_exit=1
             fi
           done
-          if [ "${#targets[@]}" -gt 0 ]; then
-            pytest -q "${targets[@]}"
-          else
-            echo "No pytest targets found. Skip pytest."
+
+          {
+            echo "### Container Scan Summary"
+            echo "- High/Critical detected: \`${high_or_critical_exit}\`"
+            echo "- Critical detected: \`${critical_exit}\`"
+            if [ "$critical_exit" -eq 1 ]; then
+              echo "- Gate: **FAIL** (critical vulnerabilities present)"
+            elif [ "$high_or_critical_exit" -eq 1 ]; then
+              echo "- Gate: **PASS with warnings** (no critical vulnerabilities)"
+            else
+              echo "- Gate: **PASS**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$critical_exit" -eq 1 ]; then
+            exit 1
           fi
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-reports-${{ github.run_id }}
+          path: /tmp/trivy-reports
+          if-no-files-found: ignore
+
+  required-ci-gates:
+    name: required-ci-gates
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - quality
+      - scripts-syntax
+      - hackathon-artifacts-smoke
+      - api-tests
+      - ml-tests
+      - web-lint-build
+      - security-audit
+      - docker-compose-smoke
+      - container-scan
+    steps:
+      - name: Evaluate required checks
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_BASE_REF: ${{ github.base_ref }}
+          STRICT_PR_HARDENING: ${{ vars.CI_STRICT_PR_HARDENING || 'false' }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          SCRIPTS_SYNTAX_RESULT: ${{ needs.scripts-syntax.result }}
+          HACKATHON_ARTIFACTS_RESULT: ${{ needs.hackathon-artifacts-smoke.result }}
+          API_TESTS_RESULT: ${{ needs.api-tests.result }}
+          ML_TESTS_RESULT: ${{ needs.ml-tests.result }}
+          WEB_RESULT: ${{ needs.web-lint-build.result }}
+          SECURITY_RESULT: ${{ needs.security-audit.result }}
+          DOCKER_SMOKE_RESULT: ${{ needs.docker-compose-smoke.result }}
+          CONTAINER_SCAN_RESULT: ${{ needs.container-scan.result }}
+        run: |
+          set -euo pipefail
+
+          is_ok() {
+            case "$1" in
+              success|skipped)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          check_required_job() {
+            job_name="$1"
+            job_result="$2"
+            if ! is_ok "$job_result"; then
+              echo "::error::Blocking check failed: ${job_name} (result=${job_result})"
+              return 1
+            fi
+            echo "Blocking check passed: ${job_name} (result=${job_result})"
+            return 0
+          }
+
+          status=0
+          advisory_notes=()
+          policy_mode="core-only"
+
+          strict_pr_hardening="false"
+          case "$(echo "${STRICT_PR_HARDENING:-false}" | tr '[:upper:]' '[:lower:]')" in
+            1|true|yes|y|on)
+              strict_pr_hardening="true"
+              ;;
+          esac
+
+          is_pr_to_main="false"
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "${EVENT_BASE_REF:-}" = "main" ]; then
+            is_pr_to_main="true"
+          fi
+
+          check_required_job "quality" "$QUALITY_RESULT" || status=1
+          check_required_job "scripts-syntax" "$SCRIPTS_SYNTAX_RESULT" || status=1
+          check_required_job "hackathon-artifacts-smoke" "$HACKATHON_ARTIFACTS_RESULT" || status=1
+          check_required_job "api-tests" "$API_TESTS_RESULT" || status=1
+          check_required_job "ml-tests" "$ML_TESTS_RESULT" || status=1
+          check_required_job "web-lint-build" "$WEB_RESULT" || status=1
+
+          should_block_hardening="false"
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            should_block_hardening="true"
+            policy_mode="production-blocking"
+          elif [ "$is_pr_to_main" = "true" ] && [ "$strict_pr_hardening" = "true" ]; then
+            should_block_hardening="true"
+            policy_mode="strict-pr-blocking"
+          else
+            policy_mode="advisory-pr"
+          fi
+
+          if [ "$should_block_hardening" = "true" ]; then
+            check_required_job "security-audit" "$SECURITY_RESULT" || status=1
+            check_required_job "docker-compose-smoke" "$DOCKER_SMOKE_RESULT" || status=1
+            check_required_job "container-scan" "$CONTAINER_SCAN_RESULT" || status=1
+          else
+            echo "Advisory mode: security-audit, docker-compose-smoke, container-scan are advisory."
+            for advisory in \
+              "security-audit:$SECURITY_RESULT" \
+              "docker-compose-smoke:$DOCKER_SMOKE_RESULT" \
+              "container-scan:$CONTAINER_SCAN_RESULT"; do
+              name="${advisory%%:*}"
+              result="${advisory##*:}"
+              if ! is_ok "$result"; then
+                advisory_notes+=("${name}=${result}")
+                echo "::warning::Advisory check failed on PR: ${name} (result=${result})"
+              fi
+            done
+          fi
+
+          {
+            echo "### CI Gate Summary"
+            echo ""
+            echo "- Event: \`${EVENT_NAME}\`"
+            echo "- Ref: \`${EVENT_REF}\`"
+            echo "- Base ref: \`${EVENT_BASE_REF}\`"
+            echo "- Policy mode: \`${policy_mode}\`"
+            echo "- Strict PR hardening: \`${strict_pr_hardening}\`"
+            echo "- quality: \`${QUALITY_RESULT}\`"
+            echo "- scripts-syntax: \`${SCRIPTS_SYNTAX_RESULT}\`"
+            echo "- hackathon-artifacts-smoke: \`${HACKATHON_ARTIFACTS_RESULT}\`"
+            echo "- api-tests: \`${API_TESTS_RESULT}\`"
+            echo "- ml-tests: \`${ML_TESTS_RESULT}\`"
+            echo "- web-lint-build: \`${WEB_RESULT}\`"
+            echo "- security-audit: \`${SECURITY_RESULT}\`"
+            echo "- docker-compose-smoke: \`${DOCKER_SMOKE_RESULT}\`"
+            echo "- container-scan: \`${CONTAINER_SCAN_RESULT}\`"
+            if [ "${#advisory_notes[@]}" -gt 0 ]; then
+              echo ""
+              echo "#### Advisory Failures (PR only)"
+              for note in "${advisory_notes[@]}"; do
+                echo "- ${note}"
+              done
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit $status

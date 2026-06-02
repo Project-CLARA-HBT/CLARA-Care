@@ -1,140 +1,238 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
-import { CareguardAnalyzeResult } from "@/lib/careguard";
-import {
-  addCabinetItem,
-  deleteCabinetItem,
-  getCabinet,
-  importDetections,
-  runCabinetAutoDdi,
-  scanReceiptFile,
-  scanReceiptText,
-  ScanDetection,
-  CabinetItem
-} from "@/lib/selfmed";
+import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
+import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 
-function parseLineList(value: string): string[] {
-  return value
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+type TimelineEntry = {
+  id: number;
+  time: string;
+  title: string;
+  note: string;
+};
 
-type RiskLevel = "high" | "medium" | "low" | "unknown";
-
-function riskLevel(value: string | null | undefined): RiskLevel {
-  const normalized = (value ?? "").toLowerCase();
-  if (/critical|severe|contra|major|high|red|danger/.test(normalized)) return "high";
-  if (/moderate|medium|amber|intermediate/.test(normalized)) return "medium";
-  if (/minor|low|green|safe|none/.test(normalized)) return "low";
-  return "unknown";
-}
-
-function riskPillClass(value: string | null | undefined): string {
-  const level = riskLevel(value);
-  if (level === "high") return "border-red-200 bg-red-50 text-red-700";
-  if (level === "medium") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (level === "low") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  return "border-slate-200 bg-slate-50 text-slate-700";
-}
-
-function riskPanelClass(value: string | null | undefined): string {
-  const level = riskLevel(value);
-  if (level === "high") return "border-red-200 bg-red-50 text-red-900";
-  if (level === "medium") return "border-amber-200 bg-amber-50 text-amber-900";
-  if (level === "low") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  return "border-slate-200 bg-slate-50 text-slate-900";
-}
-
-function confidencePillClass(confidence: number): string {
-  if (confidence >= 0.85) return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (confidence >= 0.6) return "border-amber-200 bg-amber-50 text-amber-700";
-  return "border-red-200 bg-red-50 text-red-700";
-}
+type MedicationAlert = {
+  id: string;
+  title: string;
+  detail: string;
+};
 
 function sourceLabel(source: string): string {
   if (source === "ocr") return "OCR";
-  if (source === "manual") return "Nhập tay";
+  if (source === "manual") return "Thủ công";
   if (source === "barcode") return "Barcode";
   if (source === "imported") return "Import";
   return source;
 }
 
 function sourceClass(source: string): string {
-  if (source === "ocr") return "border-sky-200 bg-sky-50 text-sky-700";
-  if (source === "manual") return "border-slate-200 bg-slate-100 text-slate-700";
-  if (source === "barcode") return "border-violet-200 bg-violet-50 text-violet-700";
-  if (source === "imported") return "border-indigo-200 bg-indigo-50 text-indigo-700";
-  return "border-slate-200 bg-slate-50 text-slate-700";
+  if (source === "ocr") return "border-cyan-300/60 bg-cyan-500/15 text-cyan-100";
+  if (source === "manual") return "border-slate-400/40 bg-slate-500/20 text-slate-100";
+  if (source === "barcode") return "border-indigo-300/55 bg-indigo-500/20 text-indigo-100";
+  if (source === "imported") return "border-sky-300/55 bg-sky-500/20 text-sky-100";
+  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
 }
 
-function noticeClass(message: string): string {
-  const value = message.toLowerCase();
-  if (value.includes("không thể") || value.includes("lỗi")) return "text-red-700";
-  if (value.includes("vui lòng")) return "text-amber-700";
-  return "text-slate-700";
+function normalizationLabel(source: string | null | undefined): string {
+  if (source === "db") return "Khớp chuẩn";
+  if (source === "candidate") return "Cần kiểm tra lại";
+  if (source === "fallback") return "Nhập thủ công";
+  return "Chưa rõ";
+}
+
+function normalizationClass(source: string | null | undefined): string {
+  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
+  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
+  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
+  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "Chưa có";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có";
+  return date.toLocaleDateString("vi-VN");
+}
+
+function riskTone(score: number): "low" | "moderate" | "high" {
+  if (score >= 70) return "high";
+  if (score >= 35) return "moderate";
+  return "low";
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function buildMedicineText(item: CabinetItem): string {
+  return [item.drug_name, item.normalized_name, item.brand_name, item.note].map((value) => normalizeText(value)).join(" ");
+}
+
+function includesAny(text: string, tokens: string[]): boolean {
+  return tokens.some((token) => text.includes(token));
+}
+
+function timelineLabelForItem(item: CabinetItem): string {
+  const dosageText = normalizeText(item.dosage);
+  const noteText = normalizeText(item.note);
+  const fullText = `${dosageText} ${noteText}`;
+
+  if (includesAny(fullText, ["sáng", "morning", "breakfast"])) return "Buổi sáng";
+  if (includesAny(fullText, ["trưa", "noon", "lunch"])) return "Buổi trưa";
+  if (includesAny(fullText, ["chiều", "afternoon"])) return "Buổi chiều";
+  if (includesAny(fullText, ["tối", "đêm", "night", "evening", "bedtime"])) return "Buổi tối";
+  return "Theo dõi";
 }
 
 export default function SelfMedPage() {
   const [cabinetLabel, setCabinetLabel] = useState("Tủ thuốc cá nhân");
   const [items, setItems] = useState<CabinetItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState("");
-  const [cabinetNotice, setCabinetNotice] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const [manualDrugName, setManualDrugName] = useState("");
-  const [manualDosage, setManualDosage] = useState("");
-  const [manualQuantity, setManualQuantity] = useState("1");
-  const [manualNotice, setManualNotice] = useState("");
-
-  const [scanInput, setScanInput] = useState("");
-  const [scanDetections, setScanDetections] = useState<ScanDetection[]>([]);
-  const [scanNotice, setScanNotice] = useState("");
-  const [scanFile, setScanFile] = useState<File | null>(null);
-  const [isScanningFile, setIsScanningFile] = useState(false);
-
-  const [allergiesInput, setAllergiesInput] = useState("");
-  const [ddiResult, setDdiResult] = useState<CareguardAnalyzeResult | null>(null);
-  const [ddiError, setDdiError] = useState("");
-  const [isCheckingDdi, setIsCheckingDdi] = useState(false);
-
-  const cabinetStats = useMemo(() => {
+  const stats = useMemo(() => {
     const fromOcr = items.filter((item) => item.source === "ocr").length;
-    return { total: items.length, fromOcr };
+    const manual = items.filter((item) => item.source === "manual").length;
+
+    const now = Date.now();
+    const in30Days = now + 30 * 24 * 60 * 60 * 1000;
+
+    let expiringSoon = 0;
+    let expired = 0;
+    let missingDosage = 0;
+
+    items.forEach((item) => {
+      if (!String(item.dosage ?? "").trim()) {
+        missingDosage += 1;
+      }
+      if (!item.expires_on) return;
+      const expiresAt = Date.parse(item.expires_on);
+      if (!Number.isFinite(expiresAt)) return;
+      if (expiresAt < now) {
+        expired += 1;
+      } else if (expiresAt <= in30Days) {
+        expiringSoon += 1;
+      }
+    });
+
+    const computedRisk = Math.min(96, items.length * 12 + expired * 22 + expiringSoon * 10 + missingDosage * 8);
+
+    return {
+      total: items.length,
+      fromOcr,
+      manual,
+      expiringSoon,
+      expired,
+      missingDosage,
+      riskScore: computedRisk,
+      riskTone: riskTone(computedRisk),
+    };
   }, [items]);
 
-  const stepStatus = useMemo(
-    () => [
-      {
-        id: 1,
-        title: "Scan đơn thuốc",
-        detail: scanDetections.length ? `${scanDetections.length} thuốc đã nhận diện` : "Chưa quét dữ liệu"
-      },
-      {
-        id: 2,
-        title: "Thêm vào tủ thuốc",
-        detail: items.length ? `${items.length} thuốc trong tủ` : "Chưa có thuốc trong tủ"
-      },
-      {
-        id: 3,
-        title: "Auto DDI",
-        detail: ddiResult ? "Đã có kết quả phân tích" : "Chưa chạy DDI"
-      }
-    ],
-    [ddiResult, items.length, scanDetections.length]
+  const topItems = useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => Date.parse(b.updated_at || b.created_at) - Date.parse(a.updated_at || a.created_at))
+        .slice(0, 6),
+    [items]
   );
 
+  const timelineItems = useMemo(
+    (): TimelineEntry[] =>
+      topItems.slice(0, 3).map((item, idx) => ({
+        id: item.id,
+        time: idx === 0 ? "Tiếp theo" : timelineLabelForItem(item),
+        title: item.drug_name,
+        note: item.dosage || "Cần bổ sung liều dùng",
+      })),
+    [topItems]
+  );
+
+  const medicationAlerts = useMemo((): MedicationAlert[] => {
+    const alerts: MedicationAlert[] = [];
+    if (items.length === 0) return alerts;
+
+    const medicineTexts = items.map((item) => buildMedicineText(item));
+    const hasMedicine = (tokens: string[]) => medicineTexts.some((text) => includesAny(text, tokens));
+
+    const hasWarfarin = hasMedicine(["warfarin"]);
+    const hasStatin = hasMedicine([
+      "atorvastatin",
+      "simvastatin",
+      "rosuvastatin",
+      "pravastatin",
+      "lovastatin",
+      "fluvastatin",
+      "pitavastatin",
+      "statin",
+    ]);
+    const hasNsaid = hasMedicine([
+      "ibuprofen",
+      "diclofenac",
+      "naproxen",
+      "ketoprofen",
+      "meloxicam",
+      "piroxicam",
+      "celecoxib",
+      "etoricoxib",
+      "nsaid",
+    ]);
+
+    if (hasWarfarin) {
+      alerts.push({
+        id: "warfarin-bleeding",
+        title: "Chảy máu bất thường",
+        detail: "Phát hiện Warfarin trong tủ thuốc. Nếu có chảy máu bất thường, liên hệ bác sĩ ngay.",
+      });
+    }
+
+    if (hasStatin) {
+      alerts.push({
+        id: "statin-myalgia",
+        title: "Đau cơ dữ dội",
+        detail: "Phát hiện thuốc nhóm statin. Theo dõi đau cơ, yếu cơ hoặc nước tiểu sậm màu.",
+      });
+    }
+
+    if (hasWarfarin && hasNsaid) {
+      alerts.push({
+        id: "warfarin-nsaid",
+        title: "Tăng nguy cơ xuất huyết",
+        detail: "Warfarin dùng cùng NSAID có thể làm tăng nguy cơ chảy máu. Cần đánh giá DDI sớm.",
+      });
+    }
+
+    if (stats.expired > 0) {
+      alerts.push({
+        id: "expired-medication",
+        title: `Có ${stats.expired} thuốc đã hết hạn`,
+        detail: "Rà soát và loại bỏ thuốc hết hạn trước khi tiếp tục sử dụng.",
+      });
+    }
+
+    if (stats.missingDosage > 0) {
+      alerts.push({
+        id: "missing-dosage",
+        title: `Thiếu liều dùng ở ${stats.missingDosage} thuốc`,
+        detail: "Bổ sung liều dùng để hệ thống đánh giá tương tác và lịch dùng chính xác hơn.",
+      });
+    }
+
+    return alerts.slice(0, 4);
+  }, [items, stats.expired, stats.missingDosage]);
+
   const refreshCabinet = async () => {
+    setError("");
     setIsLoading(true);
-    setLoadingError("");
     try {
       const response = await getCabinet();
-      setCabinetLabel(response.label);
-      setItems(response.items);
-    } catch (error) {
-      setLoadingError(error instanceof Error ? error.message : "Không thể tải tủ thuốc.");
+      setCabinetLabel(response.label || "Tủ thuốc cá nhân");
+      setItems(response.items ?? []);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tải tủ thuốc.");
     } finally {
       setIsLoading(false);
     }
@@ -144,452 +242,277 @@ export default function SelfMedPage() {
     void refreshCabinet();
   }, []);
 
-  const onAddManual = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setManualNotice("");
-    setCabinetNotice("");
-    try {
-      const quantity = Number(manualQuantity);
-      await addCabinetItem({
-        drug_name: manualDrugName.trim(),
-        dosage: manualDosage.trim(),
-        quantity: Number.isFinite(quantity) ? quantity : 1,
-        source: "manual"
-      });
-      setManualDrugName("");
-      setManualDosage("");
-      setManualQuantity("1");
-      setManualNotice("Đã thêm thuốc vào tủ thuốc.");
-      await refreshCabinet();
-    } catch (error) {
-      setManualNotice(error instanceof Error ? error.message : "Không thể thêm thuốc.");
-    }
-  };
-
-  const onScanText = async () => {
-    setScanNotice("");
-    setScanDetections([]);
-    try {
-      const detections = await scanReceiptText(scanInput.trim());
-      setScanDetections(detections);
-      if (!detections.length) {
-        setScanNotice("Không nhận diện được thuốc từ nội dung OCR.");
-      } else {
-        setScanNotice(`Nhận diện được ${detections.length} thuốc từ nội dung dán.`);
-      }
-    } catch (error) {
-      setScanNotice(error instanceof Error ? error.message : "Không thể quét nội dung.");
-    }
-  };
-
-  const onScanFile = async () => {
-    if (!scanFile) {
-      setScanNotice("Vui lòng chọn file hóa đơn/đơn thuốc trước khi quét.");
-      return;
-    }
-    setScanNotice("");
-    setScanDetections([]);
-    setIsScanningFile(true);
-    try {
-      const detections = await scanReceiptFile(scanFile);
-      setScanDetections(detections);
-      if (!detections.length) {
-        setScanNotice("Không nhận diện được thuốc từ file OCR.");
-      } else {
-        setScanNotice(`Nhận diện được ${detections.length} thuốc từ file OCR.`);
-      }
-    } catch (error) {
-      setScanNotice(error instanceof Error ? error.message : "Không thể quét file OCR.");
-    } finally {
-      setIsScanningFile(false);
-    }
-  };
-
-  const onImportDetections = async () => {
-    if (!scanDetections.length) return;
-    setScanNotice("");
-    setCabinetNotice("");
-    try {
-      const inserted = await importDetections(scanDetections);
-      setCabinetNotice(`Đã thêm ${inserted} thuốc vào tủ thuốc từ kết quả scan.`);
-      await refreshCabinet();
-    } catch (error) {
-      setCabinetNotice(error instanceof Error ? error.message : "Không thể nhập dữ liệu OCR.");
-    }
-  };
-
-  const onDeleteItem = async (itemId: number) => {
-    setCabinetNotice("");
+  const onDelete = async (itemId: number) => {
+    setNotice("");
+    setError("");
     try {
       await deleteCabinetItem(itemId);
-      setCabinetNotice("Đã xóa thuốc khỏi tủ.");
+      setNotice("Đã xóa thuốc khỏi tủ.");
       await refreshCabinet();
-    } catch (error) {
-      setCabinetNotice(error instanceof Error ? error.message : "Không thể xóa thuốc.");
-    }
-  };
-
-  const onAutoDdiCheck = async () => {
-    setIsCheckingDdi(true);
-    setDdiError("");
-    setDdiResult(null);
-    try {
-      const result = await runCabinetAutoDdi({
-        allergies: parseLineList(allergiesInput)
-      });
-      setDdiResult(result);
-    } catch (error) {
-      setDdiError(error instanceof Error ? error.message : "Không thể kiểm tra DDI.");
-    } finally {
-      setIsCheckingDdi(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể xóa thuốc.");
     }
   };
 
   return (
-    <PageShell title="CLARA Self-Med">
-      <div className="space-y-5">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Module Self-Med</p>
-              <h2 className="text-xl font-semibold text-slate-900">Quản lý thuốc cá nhân theo 3 bước</h2>
-              <p className="mt-1 text-sm text-slate-600">Luồng chuẩn: Scan đơn thuốc, thêm vào tủ, sau đó auto kiểm tra tương tác DDI.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
-                Tổng thuốc: {cabinetStats.total}
-              </span>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                Từ OCR: {cabinetStats.fromOcr}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {stepStatus.map((step) => {
-              const done = !step.detail.startsWith("Chưa");
-              return (
-                <article
-                  key={step.id}
-                  className={`rounded-2xl border px-4 py-3 ${done ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước {step.id}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{step.title}</p>
-                  <p className="mt-1 text-xs text-slate-600">{step.detail}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <div className="space-y-5">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 1</p>
-                  <h3 className="text-lg font-semibold text-slate-900">Scan đơn thuốc hoặc hóa đơn</h3>
-                  <p className="text-sm text-slate-600">Quét file ảnh/PDF hoặc dán text OCR để nhận diện tên thuốc.</p>
-                </div>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                  Thuốc nhận diện: {scanDetections.length}
-                </span>
-              </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <label className="text-sm font-medium text-slate-800" htmlFor="scan-file">
-                    Tải file đơn thuốc/hóa đơn
-                  </label>
-                  <input
-                    id="scan-file"
-                    className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(event) => setScanFile(event.target.files?.[0] ?? null)}
-                  />
-                  <button
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                    type="button"
-                    onClick={onScanFile}
-                    disabled={isScanningFile}
-                  >
-                    {isScanningFile ? "Đang quét file..." : "Quét file OCR"}
-                  </button>
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <label className="text-sm font-medium text-slate-800" htmlFor="scan-text">
-                    Hoặc dán nội dung OCR
-                  </label>
-                  <textarea
-                    id="scan-text"
-                    className="min-h-[120px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Dán nội dung OCR hóa đơn/đơn thuốc..."
-                    value={scanInput}
-                    onChange={(event) => setScanInput(event.target.value)}
-                  />
-                  <button
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                    type="button"
-                    onClick={onScanText}
-                  >
-                    Quét nội dung dán tay
-                  </button>
-                </div>
-              </div>
-
-              {scanNotice ? <p className={`mt-3 text-sm ${noticeClass(scanNotice)}`}>{scanNotice}</p> : null}
-
-              {scanDetections.length ? (
-                <ul className="mt-3 grid gap-2 md:grid-cols-2">
-                  {scanDetections.map((detection) => (
-                    <li key={`${detection.normalized_name}-${detection.evidence}`} className="rounded-xl border border-slate-200 bg-white p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{detection.drug_name}</p>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${confidencePillClass(detection.confidence)}`}
-                        >
-                          {Math.round(detection.confidence * 100)}%
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-600">Bằng chứng OCR: {detection.evidence}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <PageShell
+      title="Tủ Thuốc Cá Nhân CLARA"
+      description="Lưu danh sách thuốc đang dùng, bổ sung liều nếu có, rồi kiểm tra tương tác khi dùng nhiều thuốc cùng lúc."
+      variant="plain"
+    >
+      <SelfMedConsentGate>
+        <div className="space-y-6">
+          <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 2</p>
-                <h3 className="text-lg font-semibold text-slate-900">Thêm vào tủ thuốc {cabinetLabel}</h3>
-                <p className="text-sm text-slate-600">
-                  Nhập nhanh từ kết quả scan hoặc thêm thủ công trước khi chạy kiểm tra tương tác.
+                <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Thêm thuốc đang dùng vào đây. Khi có từ 2 thuốc trở lên, CLARA có thể kiểm tra cặp thuốc nào cần lưu ý.
                 </p>
               </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Nhập từ kết quả scan</p>
-                  <p className="mt-1 text-xs text-slate-600">Hệ thống sẽ thêm toàn bộ thuốc đã nhận diện ở Bước 1 vào tủ thuốc.</p>
-                  <button
-                    className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                    type="button"
-                    disabled={!scanDetections.length}
-                    onClick={onImportDetections}
-                  >
-                    Thêm {scanDetections.length} thuốc từ scan
-                  </button>
-                </article>
-
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Thêm thủ công</p>
-                  <form className="mt-3 space-y-3" onSubmit={onAddManual}>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-drug">
-                        Tên thuốc
-                      </label>
-                      <input
-                        id="manual-drug"
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                        placeholder="Ví dụ: metformin"
-                        value={manualDrugName}
-                        onChange={(event) => setManualDrugName(event.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-dose">
-                          Liều dùng
-                        </label>
-                        <input
-                          id="manual-dose"
-                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                          placeholder="Ví dụ: 500mg"
-                          value={manualDosage}
-                          onChange={(event) => setManualDosage(event.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor="manual-qty">
-                          Số lượng
-                        </label>
-                        <input
-                          id="manual-qty"
-                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                          placeholder="1"
-                          value={manualQuantity}
-                          onChange={(event) => setManualQuantity(event.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <button className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700" type="submit">
-                      Thêm thủ công vào tủ
-                    </button>
-                    {manualNotice ? <p className={`text-sm ${noticeClass(manualNotice)}`}>{manualNotice}</p> : null}
-                  </form>
-                </article>
-              </div>
-            </section>
-          </div>
-
-          <div className="space-y-5">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tủ thuốc</p>
-                  <h3 className="text-lg font-semibold text-slate-900">Danh mục thuốc hiện tại</h3>
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/selfmed/add"
+                  className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
+                >
+                  + Thêm thuốc
+                </Link>
+                <Link
+                  href="/selfmed/ddi"
+                  className="inline-flex min-h-11 items-center rounded-lg border border-cyan-300/50 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-100"
+                >
+                  Kiểm tra tương tác thuốc
+                </Link>
                 <button
                   type="button"
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  onClick={refreshCabinet}
+                  onClick={() => void refreshCabinet()}
+                  className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
                 >
                   Làm mới
                 </button>
               </div>
+            </div>
 
-              {isLoading ? <p className="mt-3 text-sm text-slate-600">Đang tải tủ thuốc...</p> : null}
-              {loadingError ? <p className="mt-3 text-sm text-red-700">{loadingError}</p> : null}
-              {!isLoading && !items.length ? <p className="mt-3 text-sm text-slate-600">Chưa có thuốc nào trong tủ thuốc.</p> : null}
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Có cảnh báo an toàn y tế</span>
+              <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Dữ liệu lưu trên tài khoản</span>
+              <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Có thể cập nhật bất cứ lúc nào</span>
+            </div>
+          </section>
 
-              {items.length ? (
-                <ul className="mt-3 space-y-2">
-                  {items.map((item) => (
-                    <li key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{item.drug_name}</p>
-                          <p className="text-xs text-slate-600">
-                            {item.dosage || "Chưa có liều"} | Số lượng: {item.quantity}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${sourceClass(item.source)}`}>
-                              {sourceLabel(item.source)}
+          <section className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-8 space-y-6">
+              <article className="clara-glass-panel rounded-xl border border-[color:var(--shell-border)] p-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
+                  <span
+                    className={[
+                      "rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
+                      stats.riskTone === "high"
+                        ? "border-red-300/40 bg-red-500/15 text-red-200"
+                        : stats.riskTone === "moderate"
+                          ? "border-amber-300/40 bg-amber-500/15 text-amber-200"
+                          : "border-emerald-300/40 bg-emerald-500/15 text-emerald-200",
+                    ].join(" ")}
+                  >
+                    {stats.riskTone === "high" ? "CẢNH BÁO CAO" : stats.riskTone === "moderate" ? "TRUNG BÌNH" : "ỔN ĐỊNH"}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-8 md:flex-row md:items-center">
+                  <div className="relative h-28 w-56">
+                    <svg viewBox="0 0 220 120" className="h-full w-full" aria-hidden="true">
+                      <path
+                        d="M20 100 A90 90 0 0 1 200 100"
+                        fill="none"
+                        stroke="var(--shell-border)"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        pathLength={100}
+                      />
+                      <path
+                        d="M20 100 A90 90 0 0 1 200 100"
+                        fill="none"
+                        stroke="rgb(34 211 238)"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        pathLength={100}
+                        strokeDasharray={`${Math.max(0, Math.min(100, stats.riskScore))} 100`}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+                      <span className="text-3xl font-extrabold text-cyan-300">{stats.riskScore}%</span>
+                      <span className="text-[10px] uppercase text-[var(--text-muted)]">Điểm cần rà soát</span>
+                    </div>
+                  </div>
+
+                  <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Dữ liệu để kiểm tra tương tác</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
+                      </p>
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
+                        <div className="h-full rounded-full bg-red-300" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Độ đầy đủ dữ liệu</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
+                      </p>
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
+                        <div
+                          className="h-full rounded-full bg-cyan-300"
+                          style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg font-bold text-[var(--text-primary)]">Danh Sách Thuốc Hiện Tại</h3>
+                  <span className="text-xs text-[var(--text-muted)]">{stats.total} hoạt chất đang sử dụng</span>
+                </div>
+
+                {isLoading ? <p className="text-sm text-[var(--text-secondary)]">Đang tải tủ thuốc...</p> : null}
+                {error ? <p className="text-sm text-red-300">{error}</p> : null}
+                {notice ? <p className="text-sm text-emerald-300">{notice}</p> : null}
+
+                {!isLoading && topItems.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
+                    <p className="text-base font-medium text-[var(--text-primary)]">Tủ thuốc đang trống.</p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">Bắt đầu bằng &quot;Thêm Thuốc Mới&quot; để nhập tay hoặc quét OCR.</p>
+                  </div>
+                ) : null}
+
+                {topItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="group overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition hover:border-cyan-400/30"
+                  >
+                    <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-6">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                        <span className="material-symbols-outlined text-cyan-300 text-3xl">medication_liquid</span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <h4 className="truncate text-lg font-bold text-[var(--text-primary)]">{item.drug_name}</h4>
+                          <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${sourceClass(item.source)}`}>
+                            {sourceLabel(item.source)}
+                          </span>
+                          {item.normalization_source ? (
+                            <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${normalizationClass(item.normalization_source)}`}>
+                              {normalizationLabel(item.normalization_source)}
                             </span>
-                            {item.ocr_confidence !== null ? (
-                              <span
-                                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${confidencePillClass(item.ocr_confidence)}`}
-                              >
-                                OCR {Math.round(item.ocr_confidence * 100)}%
-                              </span>
-                            ) : null}
-                          </div>
+                          ) : null}
                         </div>
+
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          Liều dùng: {item.dosage || "Chưa có"} · Số lượng: {item.quantity}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Tên thương mại: {item.brand_name || "Chưa có"} · Hãng: {item.manufacturer || "Chưa có"}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[var(--text-muted)]">
+                          <span className="inline-flex items-center gap-1">
+                            <i className="fa fa-calendar" aria-hidden="true" /> HSD: {formatDate(item.expires_on)}
+                          </span>
+                          {item.ocr_confidence !== null ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-200">
+                              <i className="fa fa-check-circle" aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Số lượng</p>
+                        <p className="text-xl font-extrabold text-[var(--text-primary)]">{item.quantity}</p>
                         <button
                           type="button"
-                          className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                          onClick={() => onDeleteItem(item.id)}
+                          onClick={() => void onDelete(item.id)}
+                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300/50 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/25"
                         >
                           Xóa
                         </button>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {cabinetNotice ? <p className={`mt-3 text-sm ${noticeClass(cabinetNotice)}`}>{cabinetNotice}</p> : null}
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bước 3</p>
-                <h3 className="text-lg font-semibold text-slate-900">Auto DDI theo toàn bộ tủ thuốc</h3>
-                <p className="text-sm text-slate-600">
-                  Tự động kiểm tra tương tác thuốc hiện có, hiển thị mức rủi ro theo màu để dễ quyết định.
-                </p>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                  Nguy cơ cao
-                </span>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                  Nguy cơ trung bình
-                </span>
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Nguy cơ thấp
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <label className="mb-1 block text-sm font-medium text-slate-800" htmlFor="allergy-input">
-                  Dị ứng (không bắt buộc)
-                </label>
-                <textarea
-                  id="allergy-input"
-                  className="min-h-[92px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
-                  value={allergiesInput}
-                  onChange={(event) => setAllergiesInput(event.target.value)}
-                />
-              </div>
-
-              <button
-                className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-                type="button"
-                onClick={onAutoDdiCheck}
-                disabled={isCheckingDdi || items.length === 0}
-              >
-                {isCheckingDdi ? "Đang phân tích..." : "Chạy auto DDI"}
-              </button>
-
-              {items.length === 0 ? <p className="mt-2 text-xs text-amber-700">Cần ít nhất 1 thuốc trong tủ để phân tích DDI.</p> : null}
-              {ddiError ? <p className="mt-3 text-sm text-red-700">{ddiError}</p> : null}
-
-              {ddiResult ? (
-                <div className="mt-4 space-y-3">
-                  <article className={`rounded-2xl border p-4 ${riskPanelClass(ddiResult.riskTier)}`}>
-                    <p className="text-xs font-semibold uppercase tracking-wide">Kết quả tổng quan</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(ddiResult.riskTier)}`}>
-                        Mức rủi ro: {ddiResult.riskTier ?? "Chưa xác định"}
-                      </span>
                     </div>
-                    <p className="mt-2 text-sm">
-                      {ddiResult.ddiAlerts.length
-                        ? `Phát hiện ${ddiResult.ddiAlerts.length} cảnh báo tương tác cần lưu ý.`
-                        : "Chưa ghi nhận cảnh báo tương tác rõ ràng."}
-                    </p>
-                  </article>
 
-                  {ddiResult.ddiAlerts.length ? (
-                    <ul className="space-y-2">
-                      {ddiResult.ddiAlerts.map((alert, index) => (
-                        <li key={`${alert.title}-${index}`} className={`rounded-xl border p-3 ${riskPanelClass(alert.severity ?? ddiResult.riskTier)}`}>
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-semibold">{alert.title}</p>
-                            {alert.severity ? (
-                              <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
-                                {alert.severity}
-                              </span>
-                            ) : null}
-                          </div>
-                          {alert.details ? <p className="mt-1 text-xs opacity-90">{alert.details}</p> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                    <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-3">
+                      <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--text-muted)]">
+                        <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> Đã lưu vào tủ thuốc</span>
+                        <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> Cập nhật: {formatDate(item.updated_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </article>
+            </div>
 
-                  {ddiResult.recommendations.length ? (
-                    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-semibold text-slate-900">Khuyến nghị</p>
-                      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                        {ddiResult.recommendations.map((item, index) => (
-                          <li key={`${item}-${index}`}>{item}</li>
-                        ))}
-                      </ul>
-                    </article>
-                  ) : null}
+            <div className="col-span-12 lg:col-span-4 space-y-6">
+              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+                <h3 className="mb-6 text-sm uppercase tracking-widest text-[var(--text-secondary)]">Lịch Trình Dùng Thuốc</h3>
+                {timelineItems.length > 0 ? (
+                  <div className="relative space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-[color:var(--shell-border)]">
+                    {timelineItems.map((entry, idx) => (
+                      <div className="relative pl-8" key={entry.id}>
+                        <div
+                          className={[
+                            "absolute top-1 z-10 rounded-full border-2 border-[var(--bg-canvas)]",
+                            idx === 0 ? "left-0 w-6 h-6 bg-cyan-400" : "left-[5px] w-[14px] h-[14px] bg-[var(--surface-muted)]",
+                          ].join(" ")}
+                        />
+                        <p className={`mb-1 text-[10px] font-bold uppercase ${idx === 0 ? "text-cyan-300" : "text-[var(--text-muted)]"}`}>{entry.time}</p>
+                        <p className="text-sm font-bold text-[var(--text-primary)]">{entry.title}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">{entry.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Chưa có dữ liệu lịch trình từ tủ thuốc. Hãy thêm thuốc hoặc cập nhật liều dùng để hệ thống tạo timeline.
+                  </p>
+                )}
+              </article>
+
+              <article className="rounded-xl border border-red-300/30 bg-red-500/10 p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-red-300">emergency</span>
+                  <h3 className="text-sm uppercase tracking-widest text-red-200">Phản Ứng Cần Lưu Ý</h3>
                 </div>
-              ) : null}
-            </section>
-          </div>
+                {medicationAlerts.length > 0 ? (
+                  <ul className="space-y-3">
+                    {medicationAlerts.map((alert) => (
+                      <li className="flex items-start gap-2" key={alert.id}>
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-300" />
+                        <div>
+                          <p className="text-xs font-bold text-[var(--text-primary)]">{alert.title}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)]">{alert.detail}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-[var(--text-secondary)]">Chưa phát hiện cảnh báo tự động từ dữ liệu tủ thuốc hiện tại.</p>
+                )}
+                <Link
+                  href="/careguard"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-300/40 py-2 text-[10px] font-bold uppercase tracking-widest text-red-100 hover:bg-red-500/10"
+                >
+                  Mở kiểm tra tương tác
+                </Link>
+              </article>
+
+            </div>
+          </section>
         </div>
-      </div>
+      </SelfMedConsentGate>
     </PageShell>
   );
 }

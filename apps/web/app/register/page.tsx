@@ -10,27 +10,55 @@ import AuthFeedback from "@/components/auth/auth-feedback";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
+function getPasswordValidationError(password: string): string | null {
+  if (password.length < 8) {
+    return "Mật khẩu phải có ít nhất 8 ký tự.";
+  }
+  if (password !== password.trim()) {
+    return "Mật khẩu không được chứa khoảng trắng ở đầu/cuối.";
+  }
+  const hasAlpha = /[A-Za-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  if (!hasAlpha || !hasDigit) {
+    return "Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số.";
+  }
+  return null;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("normal");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordValidationError = getPasswordValidationError(password);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
     setNotice("");
+    if (!acceptedLegal) {
+      setError("Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.");
+      return;
+    }
+    if (passwordValidationError) {
+      setError(passwordValidationError);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const response = await api.post("/auth/register", {
         full_name: fullName,
         email,
         password,
-        role
+        role,
+        accepted_terms: true,
+        accepted_privacy: true,
+        accepted_medical_consent: true,
       });
       const tokenPreview = response.data?.verification_token_preview as string | undefined;
       const isVerified = Boolean(response.data?.is_email_verified);
@@ -79,6 +107,7 @@ export default function RegisterPage() {
           type="password"
           value={password}
           onChange={setPassword}
+          helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối."
           placeholder="Tối thiểu 8 ký tự"
           minLength={8}
           required
@@ -99,6 +128,30 @@ export default function RegisterPage() {
             <option value="doctor">Bác sĩ</option>
           </select>
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 bg-slate-50 p-3">
+          <input
+            type="checkbox"
+            checked={acceptedLegal}
+            onChange={(event) => setAcceptedLegal(event.target.checked)}
+            className="mt-1 h-5 w-5 rounded border-slate-300"
+          />
+          <span className="text-sm leading-6 text-slate-700">
+            Tôi đồng ý với{" "}
+            <Link href="/legal/terms" className="font-semibold text-blue-700 hover:underline">
+              Điều khoản sử dụng
+            </Link>
+            ,{" "}
+            <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline">
+              Chính sách quyền riêng tư
+            </Link>{" "}
+            và{" "}
+            <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline">
+              Đồng thuận sử dụng y tế
+            </Link>
+            .
+          </span>
+        </label>
 
         <AuthFeedback notice={notice} error={error} />
 

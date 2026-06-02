@@ -1,21 +1,36 @@
 "use client";
 
 import { DragEvent, FormEvent, useMemo, useState } from "react";
-import { KnowledgeSource, ResearchFlowEvent, ResearchFlowStage, Tier2Citation, UploadedResearchFile } from "@/lib/research";
+import {
+  KnowledgeSource,
+  ResearchFlowEvent,
+  ResearchFlowStage,
+  ResearchTier2PolicyAction,
+  ResearchTier2Telemetry,
+  Tier2Citation,
+  UploadedResearchFile
+} from "@/lib/research";
 import DebugHintsPanel from "@/components/research/debug-hints-panel";
 import EvidencePanel from "@/components/research/evidence-panel";
 import FlowTimelinePanel from "@/components/research/flow-timeline-panel";
 import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel";
+import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
 import UploadedFilesPanel from "@/components/research/uploaded-files-panel";
 
-type FlowTimelineMode = "idle" | "flow-events" | "metadata-stages" | "local-fallback";
-type MobileTab = "flow" | "evidence" | "sources" | "uploads" | "debug";
+type FlowTimelineMode =
+  | "idle"
+  | "flow-events"
+  | "metadata-stages"
+  | "local-fallback"
+  | "server-await";
+type MobileTab = "flow" | "telemetry" | "evidence" | "sources" | "uploads" | "debug";
 
 type ResearchRightRailProps = {
   citations: Tier2Citation[];
   flowStages: ResearchFlowStage[];
   flowEvents: ResearchFlowEvent[];
   flowMode: FlowTimelineMode;
+  telemetry: ResearchTier2Telemetry;
   isSubmitting: boolean;
 
   knowledgeSources: KnowledgeSource[];
@@ -47,7 +62,7 @@ type ResearchRightRailProps = {
     selectedSourceCount: number;
     uploadedFileCount: number;
     flowMode: FlowTimelineMode;
-    policyAction?: "allow" | "warn";
+    policyAction?: ResearchTier2PolicyAction;
     fallbackUsed?: boolean;
     verificationVerdict?: string;
     verificationConfidence?: number;
@@ -55,11 +70,18 @@ type ResearchRightRailProps = {
     routingIntent?: string;
     routingConfidence?: number;
     pipeline?: string;
+    telemetryKeywordCount?: number;
+    telemetryDocCount?: number;
+    telemetrySourceAttemptCount?: number;
+    telemetryErrorCount?: number;
+    telemetryTopError?: string;
+    crawlDomainCount?: number;
   };
 };
 
 const TAB_LABELS: Record<MobileTab, string> = {
   flow: "Flow",
+  telemetry: "Telemetry",
   evidence: "Evidence",
   sources: "Sources",
   uploads: "Uploads",
@@ -71,6 +93,7 @@ export default function ResearchRightRail({
   flowStages,
   flowEvents,
   flowMode,
+  telemetry,
   isSubmitting,
   knowledgeSources,
   selectedSourceIds,
@@ -97,7 +120,7 @@ export default function ResearchRightRail({
   const [mobileTab, setMobileTab] = useState<MobileTab>("flow");
 
   const tabs = useMemo(() => {
-    const base: MobileTab[] = ["flow", "evidence", "sources", "uploads"];
+    const base: MobileTab[] = ["flow", "telemetry", "evidence", "sources", "uploads"];
     if (showDebugHints) base.push("debug");
     return base;
   }, [showDebugHints]);
@@ -108,6 +131,12 @@ export default function ResearchRightRail({
         stages={flowStages}
         events={flowEvents}
         mode={flowMode}
+        isProcessing={isSubmitting}
+      />
+    ),
+    telemetry: (
+      <TelemetryDetailsPanel
+        telemetry={telemetry}
         isProcessing={isSubmitting}
       />
     ),
@@ -172,6 +201,10 @@ export default function ResearchRightRail({
           stages={flowStages}
           events={flowEvents}
           mode={flowMode}
+          isProcessing={isSubmitting}
+        />
+        <TelemetryDetailsPanel
+          telemetry={telemetry}
           isProcessing={isSubmitting}
         />
         <EvidencePanel citations={citations} />
