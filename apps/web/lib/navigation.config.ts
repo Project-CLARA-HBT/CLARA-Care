@@ -1,5 +1,5 @@
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
-export type NavGroupKey = "core" | "clinical" | "medication" | "admin" | "support";
+export type NavGroupKey = "core" | "research" | "clinical" | "medication" | "admin" | "support";
 
 export type PageMeta = {
   title: string;
@@ -104,12 +104,24 @@ const NAV_ITEMS: NavigationItem[] = [
     }
   },
   {
+    href: "/research/source-hub",
+    label: "Nguồn nghiên cứu",
+    icon: "database_search",
+    desc: "PubMed, thuốc và nguồn y khoa",
+    group: "research",
+    roles: ["researcher", "doctor", "admin"],
+    page: {
+      title: "Nguồn nghiên cứu",
+      subtitle: "Đồng bộ và tra cứu các nguồn y khoa phục vụ phân tích bằng chứng."
+    }
+  },
+  {
     href: "/careguard",
     label: "Kiểm tra tương tác",
     icon: "security",
     desc: "DDI và cảnh báo an toàn",
     group: "medication",
-    roles: ["normal", "doctor", "admin"],
+    roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
       title: "Kiểm tra tương tác thuốc",
@@ -202,10 +214,11 @@ const NAV_ITEMS: NavigationItem[] = [
   }
 ];
 
-const GROUP_ORDER: NavGroupKey[] = ["core", "clinical", "medication", "admin", "support"];
+const GROUP_ORDER: NavGroupKey[] = ["core", "research", "clinical", "medication", "admin", "support"];
 
 export const GROUP_LABELS: Record<NavGroupKey, string> = {
   core: "Không gian làm việc",
+  research: "Nghiên cứu",
   clinical: "Lâm sàng",
   medication: "Thuốc và an toàn",
   admin: "Quản trị hệ thống",
@@ -214,6 +227,7 @@ export const GROUP_LABELS: Record<NavGroupKey, string> = {
 
 const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
   core: { label: "Không gian làm việc", shortLabel: "Không gian", icon: "workspaces" },
+  research: { label: "Nghiên cứu", shortLabel: "Nghiên cứu", icon: "science" },
   clinical: { label: "Lâm sàng", shortLabel: "Lâm sàng", icon: "stethoscope" },
   medication: { label: "Thuốc và an toàn", shortLabel: "An toàn", icon: "shield" },
   admin: { label: "Quản trị hệ thống", shortLabel: "Quản trị", icon: "settings_input_component" },

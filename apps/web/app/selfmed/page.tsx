@@ -28,11 +28,11 @@ function sourceLabel(source: string): string {
 }
 
 function sourceClass(source: string): string {
-  if (source === "ocr") return "border-cyan-300/60 bg-cyan-500/15 text-cyan-100";
-  if (source === "manual") return "border-slate-400/40 bg-slate-500/20 text-slate-100";
-  if (source === "barcode") return "border-indigo-300/55 bg-indigo-500/20 text-indigo-100";
-  if (source === "imported") return "border-sky-300/55 bg-sky-500/20 text-sky-100";
-  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+  if (source === "ocr") return "border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-300/60 dark:bg-cyan-500/15 dark:text-cyan-100";
+  if (source === "manual") return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/40 dark:bg-slate-500/20 dark:text-slate-100";
+  if (source === "barcode") return "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-300/55 dark:bg-indigo-500/20 dark:text-indigo-100";
+  if (source === "imported") return "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-300/55 dark:bg-sky-500/20 dark:text-sky-100";
+  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
 }
 
 function normalizationLabel(source: string | null | undefined): string {
@@ -43,10 +43,10 @@ function normalizationLabel(source: string | null | undefined): string {
 }
 
 function normalizationClass(source: string | null | undefined): string {
-  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
-  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
-  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
-  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+  if (source === "db") return "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-300/60 dark:bg-emerald-500/15 dark:text-emerald-100";
+  if (source === "candidate") return "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-100";
+  if (source === "fallback") return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-300/60 dark:bg-rose-500/15 dark:text-rose-100";
+  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
 }
 
 function formatDate(value: string | null): string {
@@ -450,7 +450,7 @@ export default function SelfMedPage() {
                             <i className="fa fa-calendar" aria-hidden="true" /> HSD: {formatDate(item.expires_on)}
                           </span>
                           {item.ocr_confidence !== null ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-200">
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-200">
                               <i className="fa fa-check-circle" aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
                             </span>
                           ) : null}
@@ -463,7 +463,7 @@ export default function SelfMedPage() {
                         <button
                           type="button"
                           onClick={() => void onDelete(item.id)}
-                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300/50 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/25"
+                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-300/50 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/25"
                         >
                           Xóa
                         </button>
@@ -507,16 +507,16 @@ export default function SelfMedPage() {
                 )}
               </article>
 
-              <article className="rounded-xl border border-red-300/30 bg-red-500/10 p-6">
+              <article className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-300/30 dark:bg-red-500/10">
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-red-300">emergency</span>
-                  <h3 className="text-sm uppercase tracking-widest text-red-200">Phản Ứng Cần Lưu Ý</h3>
+                  <span className="material-symbols-outlined text-red-500 dark:text-red-300">emergency</span>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-red-700 dark:text-red-200">Phản Ứng Cần Lưu Ý</h3>
                 </div>
                 {medicationAlerts.length > 0 ? (
                   <ul className="space-y-3">
                     {medicationAlerts.map((alert) => (
                       <li className="flex items-start gap-2" key={alert.id}>
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-300" />
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 dark:bg-red-300" />
                         <div>
                           <p className="text-xs font-bold text-[var(--text-primary)]">{alert.title}</p>
                           <p className="text-[10px] text-[var(--text-secondary)]">{alert.detail}</p>
@@ -529,7 +529,7 @@ export default function SelfMedPage() {
                 )}
                 <Link
                   href="/careguard"
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-300/40 py-2 text-[10px] font-bold uppercase tracking-widest text-red-100 hover:bg-red-500/10"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-600 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-red-700 dark:border-red-300/40 dark:bg-transparent dark:text-red-100 dark:hover:bg-red-500/10"
                 >
                   Mở kiểm tra tương tác
                 </Link>

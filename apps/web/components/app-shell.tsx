@@ -67,6 +67,7 @@ export default function AppShell({ children }: Props) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isRoleHydrated, setIsRoleHydrated] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
@@ -79,6 +80,7 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     setRole(getRole());
+    setIsRoleHydrated(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -161,10 +163,11 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
+    if (!isRoleHydrated) return;
     const allowed = roleNavItems.some((item) => isActiveRoute(pathname, item.href));
     if (allowed) return;
     router.replace(getRoleHomePath(role));
-  }, [pathname, role, roleNavItems, router]);
+  }, [isRoleHydrated, pathname, role, roleNavItems, router]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);

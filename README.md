@@ -139,6 +139,7 @@ Stack dev local chạy **native** (uvicorn + npm), chỉ dùng Docker cho Postgr
 | PostgreSQL | 5432 | container `clara-postgres` |
 | Redis | 6379 | container `clara-redis` |
 | Ollama (bge-m3) | 11434 | embedding + reranker local |
+| OCR adapter (Vision) | 8080 | quét ảnh toa thuốc — xem `services/ocr/README.md` (tùy chọn) |
 
 ### 6.0 Chuẩn bị một lần
 ```bash
@@ -197,6 +198,13 @@ services/api/.venv/bin/uvicorn clara_api.main:app --app-dir services/api/src --h
 **Bước 4 — Web:**
 ```bash
 cd apps/web && npm run dev
+```
+
+**Bước 5 — OCR adapter (tùy chọn, để quét ảnh toa thuốc):**
+```bash
+# cần GCP_VISION_API_KEY trong .env — chi tiết ở services/ocr/README.md
+set -a; . ./.env; set +a
+services/ml/.venv/bin/uvicorn server:app --app-dir services/ocr --host 0.0.0.0 --port 8080
 ```
 
 ### 6.2 Kiểm tra health
