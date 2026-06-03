@@ -320,7 +320,7 @@ export default function SelfMedPage() {
 
           <section className="grid grid-cols-12 gap-6">
             <div className="col-span-12 lg:col-span-8 space-y-6">
-              <article className="clara-glass-panel rounded-xl border border-[color:var(--shell-border)] p-6">
+              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[0_18px_42px_-32px_rgba(37,99,235,0.45)]">
                 <div className="mb-6 flex items-center justify-between">
                   <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
                   <span
@@ -359,7 +359,7 @@ export default function SelfMedPage() {
                       <path
                         d="M20 100 A90 90 0 0 1 200 100"
                         fill="none"
-                        stroke="rgb(34 211 238)"
+                        stroke="var(--brand-500)"
                         strokeWidth="12"
                         strokeLinecap="round"
                         pathLength={100}
@@ -367,7 +367,7 @@ export default function SelfMedPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                      <span className="text-3xl font-extrabold text-cyan-300">{stats.riskScore}%</span>
+                      <span className="text-3xl font-extrabold text-[var(--text-brand)]">{stats.riskScore}%</span>
                       <span className="text-[10px] uppercase text-[var(--text-muted)]">Điểm cần rà soát</span>
                     </div>
                   </div>
@@ -379,7 +379,7 @@ export default function SelfMedPage() {
                         {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                       </p>
                       <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
-                        <div className="h-full rounded-full bg-cyan-500 dark:bg-cyan-300" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
+                        <div className="h-full rounded-full bg-[var(--brand-500)]" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
                       </div>
                     </div>
                     <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -389,7 +389,7 @@ export default function SelfMedPage() {
                       </p>
                       <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
                         <div
-                          className="h-full rounded-full bg-cyan-500 dark:bg-cyan-300"
+                          className="h-full rounded-full bg-[var(--brand-500)]"
                           style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
                         />
                       </div>

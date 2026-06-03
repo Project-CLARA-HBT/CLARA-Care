@@ -10,6 +10,24 @@ import AuthFeedback from "@/components/auth/auth-feedback";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
+function normalizeRegisterErrorMessage(message: string): string {
+  const normalized = message.trim();
+  const lowered = normalized.toLowerCase();
+  if (!normalized) {
+    return "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút.";
+  }
+  if (
+    lowered.includes("internal server error") ||
+    lowered.includes("request failed with status code 500") ||
+    lowered.includes("status code: 500") ||
+    lowered.includes("gateway") ||
+    lowered.includes("timeout")
+  ) {
+    return "Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút hoặc kiểm tra kết nối.";
+  }
+  return normalized;
+}
+
 function getPasswordValidationError(password: string): string | null {
   if (password.length < 8) {
     return "Mật khẩu phải có ít nhất 8 ký tự.";
@@ -75,7 +93,11 @@ export default function RegisterPage() {
         setNotice("Đăng ký thành công. Vui lòng xác thực email trước khi đăng nhập.");
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo tài khoản.");
+      setError(
+        cause instanceof Error
+          ? normalizeRegisterErrorMessage(cause.message)
+          : "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút."
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,8 @@
-const proxyTarget = (process.env.NEXT_SERVER_API_PROXY || "http://api:8000/api/v1").replace(/\/+$/, "");
+const defaultProxyTarget =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:8000/api/v1"
+    : "http://api:8000/api/v1";
+const proxyTarget = (process.env.NEXT_SERVER_API_PROXY || defaultProxyTarget).replace(/\/+$/, "");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
