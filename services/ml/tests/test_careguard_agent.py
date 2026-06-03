@@ -5,7 +5,7 @@ from clara_ml.agents.careguard import (
     _load_vn_drug_dictionary,
     run_careguard_analyze,
 )
-from clara_ml.clients.drug_sources import ExternalDDIResult
+from clara_ml.clients.drug_sources import DrugSourceClient, ExternalDDIResult
 
 
 def test_high_risk_pair_escalates_to_high() -> None:
@@ -243,3 +243,142 @@ def test_openfda_http_400_kept_when_no_other_signal(
     metadata = result["metadata"]
     assert metadata["source_errors"].get("openfda") == ["http_400:bad_request"]
     assert metadata["fallback_used"] is True
+
+
+# ---- OpenFDA label-derived alerts (tầng 3 nâng cấp) ----
+
+
+def test_label_match_word_boundary() -> None:
+    text = "Concomitant use with ibuprofen may increase bleeding risk."
+    assert DrugSourceClient._match_in_label(text, "ibuprofen") is not None
+    # "asa" KHÔNG được match substring trong "asacol"
+    assert DrugSourceClient._match_in_label("Avoid asacol therapy.", "asa") is None
+    # không có text / không có tên → None
+    assert DrugSourceClient._match_in_label("", "warfarin") is None
+
+
+def test_label_severity_inference_conservative() -> None:
+    assert DrugSourceClient._infer_label_severity("this combination is contraindicated") == "high"
+    assert DrugSourceClient._infer_label_severity("monitor closely for bleeding") == "medium"
+    assert DrugSourceClient._infer_label_severity("may be used together") == "medium"
+    # KHÔNG bao giờ critical từ free text (cap ở high)
+    assert DrugSourceClient._infer_label_severity("severe fatal contraindicated") != "critical"
+
+
+def test_clone_result_preserves_openfda_alerts_and_rxnav_status() -> None:
+    original = ExternalDDIResult(
+        openfda_alerts=[
+            {
+                "type": "drug_drug",
+                "severity": "high",
+                "medications": ["warfarin", "ibuprofen"],
+                "message": "label snippet",
+                "source": "openfda",
+            }
+        ],
+        rxnav_status="endpoint_retired",
+    )
+    cloned = DrugSourceClient._clone_result(original)
+    assert cloned.openfda_alerts == original.openfda_alerts
+    assert cloned.openfda_alerts is not original.openfda_alerts  # deep copy
+    assert cloned.rxnav_status == "endpoint_retired"
+
+
+def test_openfda_label_alert_flows_to_merge(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        return ExternalDDIResult(
+            openfda_alerts=[
+                {
+                    "type": "drug_drug",
+                    "severity": "high",
+                    "medications": ["alphaone", "betatwo"],
+                    "message": "…avoid concomitant use of alphaone and betatwo…",
+                    "source": "openfda",
+                }
+            ],
+            openfda_pairs_checked=1,
+            source_used=["openfda"],
+            rxnav_status="endpoint_retired",
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {"medications": ["alphaone", "betatwo"], "external_ddi_enabled": True}
+    )
+
+    alerts = result["ddi_alerts"]
+    assert len(alerts) == 1
+    assert "openfda" in alerts[0].get("source", "")
+    assert alerts[0].get("severity") == "high"
+    assert result["metadata"]["openfda_alert_count"] == 1
+
+
+def test_openfda_alert_does_not_clobber_local_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    # clopidogrel+omeprazole là local rule severity "medium"; openfda alert "high"
+    # cho cùng cặp → severity được nâng lên high NHƯNG message vẫn là câu VN của local.
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        return ExternalDDIResult(
+            openfda_alerts=[
+                {
+                    "type": "drug_drug",
+                    "severity": "high",
+                    "medications": ["clopidogrel", "omeprazole"],
+                    "message": "english label snippet should not override curated vi",
+                    "source": "openfda",
+                }
+            ],
+            source_used=["openfda"],
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {"medications": ["clopidogrel", "omeprazole"], "external_ddi_enabled": True}
+    )
+
+    pair_alert = next(
+        a for a in result["ddi_alerts"] if {"clopidogrel", "omeprazole"}.issubset(a["medications"])
+    )
+    assert pair_alert["severity"] == "high"  # severity được nâng
+    assert set(pair_alert["source"].split(",")) == {"local_rules", "openfda"}
+    # message KHÔNG bị snippet tiếng Anh ghi đè
+    assert "english label snippet" not in pair_alert["message"].lower()
+
+
+def test_rxnav_status_surfaced_not_in_source_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        return ExternalDDIResult(
+            openfda_alerts=[
+                {
+                    "type": "drug_drug",
+                    "severity": "medium",
+                    "medications": ["alphaone", "betatwo"],
+                    "message": "snippet",
+                    "source": "openfda",
+                }
+            ],
+            source_used=["openfda"],
+            rxnav_status="endpoint_retired",
+        )
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {"medications": ["alphaone", "betatwo"], "external_ddi_enabled": True}
+    )
+
+    metadata = result["metadata"]
+    assert metadata["rxnav_status"] == "endpoint_retired"
+    assert "rxnav" not in metadata["source_errors"]
+    # rxnav chết KHÔNG được làm flip fallback_used khi openfda đã có tín hiệu
+    assert metadata["fallback_used"] is False

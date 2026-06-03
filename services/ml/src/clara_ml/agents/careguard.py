@@ -496,7 +496,10 @@ def _merge_drug_alerts(
         existing_rank = _SEVERITY_RANK[existing_severity]
         if incoming_rank > existing_rank:
             existing["severity"] = incoming_severity
-            existing["message"] = incoming_message
+            # INV-2: alert openfda-only (severity suy luận từ free-text) KHÔNG được
+            # ghi đè message tiếng Việt đã biên tập của local rule.
+            if incoming_sources != {"openfda"}:
+                existing["message"] = incoming_message
 
         existing_sources = existing.setdefault("_sources", set())
         if isinstance(existing_sources, set):
@@ -697,8 +700,10 @@ def run_careguard_analyze(payload: dict) -> dict:
     source_used = ["local_rules"]
     source_errors: dict[str, list[str]] = {}
     external_ddi_alerts: list[dict[str, Any]] = []
+    openfda_alerts: list[dict[str, Any]] = []
     openfda_evidence: dict[tuple[str, str], dict[str, int]] = {}
     openfda_pairs_checked = 0
+    rxnav_status = ""
     needs_external_lookup = len(set(medications)) >= 2
     external_ddi_flag_source = "runtime" if "external_ddi_enabled" in payload else "env"
     external_ddi_enabled = _as_bool(
@@ -714,8 +719,10 @@ def run_careguard_analyze(payload: dict) -> dict:
                 max_retries=0,
             ).fetch_ddi_context(medications)
             external_ddi_alerts = external.rxnav_alerts
+            openfda_alerts = external.openfda_alerts
             openfda_evidence = external.openfda_evidence
             openfda_pairs_checked = int(getattr(external, "openfda_pairs_checked", 0))
+            rxnav_status = getattr(external, "rxnav_status", "")
             source_errors = external.source_errors
             for source_name in external.source_used:
                 if source_name not in source_used:
@@ -729,6 +736,7 @@ def run_careguard_analyze(payload: dict) -> dict:
     if normalization_pair_coverage_low:
         source_errors.setdefault("normalization", []).append("low_pair_coverage")
 
+    # INV-3: chỉ tính local + rxnav (KHÔNG tính openfda) cho cờ suppress http_400.
     has_non_openfda_signal = bool(local_ddi_alerts or external_ddi_alerts) or (
         "rxnav" in source_used
     )
@@ -737,7 +745,11 @@ def run_careguard_analyze(payload: dict) -> dict:
         has_non_openfda_signal=has_non_openfda_signal,
     )
 
-    ddi_alerts = _merge_drug_alerts(local_ddi_alerts, external_ddi_alerts, openfda_evidence)
+    # openfda_alerts (sinh từ nhãn FDA) nhập merge cùng external; openfda_evidence
+    # vẫn chỉ enrich cặp đã có alert.
+    ddi_alerts = _merge_drug_alerts(
+        local_ddi_alerts, external_ddi_alerts + openfda_alerts, openfda_evidence
+    )
     allergy_alerts = _detect_allergy_conflicts(medications, allergies)
     all_alerts = ddi_alerts + allergy_alerts
 
@@ -784,5 +796,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             "source_used": source_used,
             "source_errors": source_errors,
             "openfda_pairs_checked": openfda_pairs_checked,
+            "openfda_alert_count": len(openfda_alerts),
+            "rxnav_status": rxnav_status,
         },
     }

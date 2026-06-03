@@ -258,6 +258,12 @@ class Settings(BaseSettings):
             "EXTERNAL_DDI_TIMEOUT_SECONDS", "CAREGUARD_EXTERNAL_DDI_TIMEOUT_SECONDS"
         ),
     )
+    openfda_label_alerts_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "OPENFDA_LABEL_ALERTS_ENABLED", "CAREGUARD_OPENFDA_LABEL_ALERTS_ENABLED"
+        ),
+    )
     pubmed_connector_timeout_seconds: float = Field(
         default=4.0,
         validation_alias=AliasChoices(
