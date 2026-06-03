@@ -19,6 +19,9 @@ const nextConfig = {
   experimental: {
     // Next.js documents this as a low-risk way to lower peak webpack memory.
     webpackMemoryOptimizations: true,
+    // Dev rewrite proxy defaults to 30s; chat with deepseek-v4-pro can take 30-58s
+    // (API gateway timeout is ML_SERVICE_TIMEOUT_SECONDS=150). Keep above that.
+    proxyTimeout: 180_000,
   },
   images: {
     remotePatterns: [

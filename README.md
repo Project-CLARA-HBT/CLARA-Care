@@ -164,6 +164,16 @@ RAG_RERANKER_ENABLED=true
 RAG_RERANKER_TIMEOUT_MS=10000     # default 250ms quá ngắn cho ollama
 ```
 
+Và cho LLM qua yescale:
+```bash
+DEEPSEEK_BASE_URL=https://api.yescale.io/v1   # host .vip trả 401
+DEEPSEEK_MODEL=deepseek-v4-flash              # v4-pro chậm 30-137s/câu; flash ~8-20s
+DEEPSEEK_TIMEOUT_SECONDS=120
+LLM_DEEPSEEK_ONLY=true   # BẮT BUỘC: nếu thiếu, pipeline tạo runtime client
+                         # với timeout bị kẹp 18s (pipeline.py) -> chat fail
+                         # ngẫu nhiên "chế độ an toàn" khi model trả lời >18s
+```
+
 ### 6.1 Thứ tự khởi động
 
 **Bước 1 — Hạ tầng (Docker chỉ cần Postgres + Redis):**

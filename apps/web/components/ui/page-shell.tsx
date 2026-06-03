@@ -12,7 +12,7 @@ export default function PageShell({
   const hasHeading = Boolean(title?.trim()) || Boolean(description?.trim());
   const heading = (
     <div className="space-y-2">
-      <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-[2.2rem] lg:text-[2.4rem]">{title}</h1>
+      <h1 className="text-3xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-[2.2rem] lg:text-[2.4rem]">{title}</h1>
       {description ? <p className="max-w-[74ch] text-base leading-relaxed text-[var(--text-secondary)]">{description}</p> : null}
     </div>
   );

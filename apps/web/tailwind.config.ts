@@ -36,6 +36,10 @@ const config: Config = {
         soft: "var(--shadow-soft)",
         float: "var(--shadow-float)",
         hero: "var(--shadow-hero)"
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)"],
+        display: ["var(--font-display)"]
       }
     }
   },

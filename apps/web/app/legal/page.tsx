@@ -60,7 +60,7 @@ export default function LegalHubPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · User Agreement</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-[2rem]">Thỏa thuận người dùng</h1>
+              <h1 className="mt-2 text-2xl font-bold tracking-[-0.02em] sm:text-[2rem]">Thỏa thuận người dùng</h1>
               <p className="mt-3 max-w-[84ch] text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
                 Không gian tập trung toàn bộ chính sách pháp lý của The Clara Care. Đây là nguồn tham chiếu chính thức cho người dùng,
                 quản trị viên và đội vận hành khi cần xác định quyền, nghĩa vụ và phạm vi sử dụng hệ thống.

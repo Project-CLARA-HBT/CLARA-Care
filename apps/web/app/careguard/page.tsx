@@ -533,7 +533,7 @@ export default function CareguardPage() {
         <section className="rounded-3xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="max-w-2xl">
-              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">Kiểm tra tương tác thuốc</h1>
+              <h1 className="text-3xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">Kiểm tra tương tác thuốc</h1>
               <p className="mt-3 text-base leading-7 text-[var(--text-secondary)]">
                 Nhập ít nhất 2 thuốc để CLARA kiểm tra tương tác và gợi ý lưu ý an toàn.
               </p>

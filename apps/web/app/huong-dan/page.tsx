@@ -73,7 +73,7 @@ export default function GuidePage() {
     <main className="mx-auto max-w-6xl space-y-6 px-5 py-8 sm:px-6 lg:px-8">
       <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Bắt đầu tại đây</p>
-        <h1 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">Hướng dẫn sử dụng CLARA</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">Hướng dẫn sử dụng CLARA</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
           Chọn việc bạn muốn làm, làm theo 3 bước ngắn, rồi mở thẳng đúng màn hình. CLARA chỉ hỗ trợ tham khảo; khi có dấu hiệu nguy hiểm, hãy liên hệ cơ sở y tế.
         </p>

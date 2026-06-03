@@ -922,7 +922,27 @@ export default function ChatWorkspacePage() {
     useState<ResearchExecutionMode>("fast");
   const [selectedRetrievalStackMode, setSelectedRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
-  const [isPersonalMode, setIsPersonalMode] = useState(true);
+  // Personal mode (PHR + tủ thuốc) chỉ có tác dụng ở tier2 ("deep"/"deep_beta").
+  // Mặc định false để giữ invariant "không bao giờ (fast && personal)".
+  const [isPersonalMode, setIsPersonalMode] = useState(false);
+
+  // Giữ invariant hai chiều: chọn "Nhanh" thì tắt Cá nhân; bật Cá nhân thì tối thiểu "Tư duy".
+  const applyResearchMode = useCallback((mode: ResearchExecutionMode) => {
+    setSelectedResearchMode(mode);
+    if (mode === "fast") {
+      setIsPersonalMode(false);
+    }
+  }, []);
+
+  const togglePersonalMode = useCallback(() => {
+    setIsPersonalMode((prev) => {
+      const next = !prev;
+      if (next) {
+        setSelectedResearchMode((mode) => (mode === "fast" ? "deep" : mode));
+      }
+      return next;
+    });
+  }, []);
   const [workspaceLeftView, setWorkspaceLeftView] = useState<WorkspaceLeftView>("chat");
   const [liveStatusNote, setLiveStatusNote] = useState("");
   const [liveJobId, setLiveJobId] = useState<string | null>(null);
@@ -1075,7 +1095,7 @@ export default function ChatWorkspacePage() {
     );
     const storedTelemetryPanel = window.localStorage.getItem(CHAT_TELEMETRY_PANEL_STORAGE_KEY);
     if (storedMode === "fast" || storedMode === "deep" || storedMode === "deep_beta") {
-      setSelectedResearchMode(storedMode);
+      applyResearchMode(storedMode);
     }
     if (storedStack === "auto" || storedStack === "full") {
       setSelectedRetrievalStackMode(storedStack);
@@ -2462,7 +2482,7 @@ export default function ChatWorkspacePage() {
         label: "Đổi chế độ: Nhanh",
         keywords: ["mode", "fast", "research"],
         run: () => {
-          setSelectedResearchMode("fast");
+          applyResearchMode("fast");
           setSelectedRetrievalStackMode("auto");
         },
       },
@@ -2470,13 +2490,13 @@ export default function ChatWorkspacePage() {
         id: "mode-deep",
         label: "Đổi chế độ: Tư duy",
         keywords: ["mode", "deep", "research"],
-        run: () => setSelectedResearchMode("deep"),
+        run: () => applyResearchMode("deep"),
       },
       {
         id: "mode-deep-beta",
         label: "Đổi chế độ: Pro",
         keywords: ["mode", "deep", "beta", "research"],
-        run: () => setSelectedResearchMode("deep_beta"),
+        run: () => applyResearchMode("deep_beta"),
       },
       {
         id: "stack-auto",
@@ -3695,14 +3715,14 @@ export default function ChatWorkspacePage() {
             selectedRetrievalStackMode={selectedRetrievalStackMode}
             isFastResearchMode={isFastResearchMode}
             onChangeResearchMode={(mode) => {
-              setSelectedResearchMode(mode);
+              applyResearchMode(mode);
               if (mode === "fast") {
                 setSelectedRetrievalStackMode("auto");
               }
             }}
             onChangeRetrievalStackMode={setSelectedRetrievalStackMode}
             personalMode={isPersonalMode}
-            onTogglePersonalMode={() => setIsPersonalMode((prev) => !prev)}
+            onTogglePersonalMode={togglePersonalMode}
             liveJobId={liveJobId}
             liveStatusNote={liveStatusNote}
             error={error}

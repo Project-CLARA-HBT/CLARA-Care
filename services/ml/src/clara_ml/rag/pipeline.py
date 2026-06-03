@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,6 +15,8 @@ from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.rag.retriever import Document, InMemoryRetriever
 from clara_ml.rag.seed_documents import base_documents, load_seed_documents
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -1288,6 +1291,10 @@ class RagPipelineP1:
             "connection",
             "temporarily unavailable",
             "deepseek_request_failed",
+            # yescale load-balances across heterogeneous backends; reasoning models
+            # occasionally return all tokens in reasoning_content with empty content.
+            # A compact retry usually lands on a backend that populates content.
+            "content is empty",
         )
         return any(signal in message for signal in retryable_signals)
 
@@ -2619,6 +2626,12 @@ class RagPipelineP1:
             except Exception as exc:
                 recovered_from_retry = False
                 llm_failure_reason = self._summarize_llm_exception(exc)
+                logger.warning(
+                    "LLM primary generation failed (%s -> %s): %s",
+                    exc.__class__.__name__,
+                    llm_failure_reason,
+                    exc,
+                )
                 if self._is_retryable_llm_exception(exc):
                     flow_events.append(
                         self._flow_event(
@@ -2675,6 +2688,12 @@ class RagPipelineP1:
                         )
                     except Exception as retry_exc:
                         llm_failure_reason = self._summarize_llm_exception(retry_exc)
+                        logger.warning(
+                            "LLM compact retry failed (%s -> %s): %s",
+                            retry_exc.__class__.__name__,
+                            llm_failure_reason,
+                            retry_exc,
+                        )
                         flow_events.append(
                             self._flow_event(
                                 stage="llm_generation_retry",
