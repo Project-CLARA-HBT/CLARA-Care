@@ -17,6 +17,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
+    cpus: 1,
+    // Keep build artifacts in the main process; the build worker can leave an
+    // incomplete .next directory on this environment before prerender starts.
+    webpackBuildWorker: false,
     // Next.js documents this as a low-risk way to lower peak webpack memory.
     webpackMemoryOptimizations: true,
     // Dev rewrite proxy defaults to 30s; chat with deepseek-v4-pro can take 30-58s

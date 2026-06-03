@@ -123,6 +123,19 @@ services:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
     logging: *default-logging
 
+  ocr:
+    build:
+      context: ../..
+      dockerfile: services/ocr/Dockerfile
+    restart: unless-stopped
+    # Chỉ env_file, KHÔNG khai báo environment để tránh compose env-masking —
+    # GCP_VISION_API_KEY đọc thẳng từ .env gốc.
+    env_file:
+      - ../../.env
+    ports:
+      - "127.0.0.1:${APP_OCR_PORT:-8080}:8080"
+    logging: *default-logging
+
   searxng:
     image: searxng/searxng:latest
     restart: unless-stopped
