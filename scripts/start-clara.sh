@@ -50,6 +50,10 @@ cd "$COMPOSE_DIR"
 # Chỉ up postgres + redis — docker-compose.yml còn chứa milvus/elasticsearch/neo4j
 # (nặng, app hiện chưa dùng); KHÔNG up cả file kẻo nghẹt máy 7.6GB RAM.
 docker compose -f docker-compose.yml up -d postgres redis
+# Docker Desktop WSL2 bug: `up -d` trên container đang chạy = restart nhưng
+# KHÔNG reset port forwarding → curl "Connection reset by peer".
+# Fix: stop hết rồi start lại để Docker Desktop tạo lại forwarding rules.
+docker compose -f docker-compose.app.yml stop 2>/dev/null || true
 docker compose -f docker-compose.app.yml up -d --remove-orphans
 cd "$ROOT"
 
@@ -60,6 +64,7 @@ wait_http "api (docker)" "http://127.0.0.1:8100/health" || FAIL=1
 wait_http "ml  (docker)" "http://127.0.0.1:8111/health" || FAIL=1
 wait_http "web (docker)" "http://127.0.0.1:3100/" || FAIL=1
 wait_http "ocr (docker)" "http://127.0.0.1:8080/health" || FAIL=1
+wait_http "asr (docker)" "http://127.0.0.1:8090/health" || FAIL=1
 
 # ------------------------------------------------------------- 4. Native dev --
 if $DEV_MODE; then
@@ -118,6 +123,7 @@ echo "  Web (docker) : http://localhost:3100"
 echo "  API (docker) : http://localhost:8100/health"
 echo "  ML  (docker) : http://localhost:8111/health"
 echo "  OCR (docker) : http://localhost:8080/health"
+echo "  ASR (docker) : http://localhost:8090/health"
 if $DEV_MODE; then
   echo "  Web (dev)    : http://localhost:3000"
   echo "  API (dev)    : http://localhost:8000/health"

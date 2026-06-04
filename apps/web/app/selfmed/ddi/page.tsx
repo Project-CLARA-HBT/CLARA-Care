@@ -24,17 +24,17 @@ function riskLevel(value: string | null | undefined): "high" | "medium" | "low" 
 
 function riskPillClass(value: string | null | undefined): string {
   const level = riskLevel(value);
-  if (level === "high") return "border-red-300/60 bg-red-500/20 text-red-100";
-  if (level === "medium") return "border-amber-300/60 bg-amber-500/20 text-amber-100";
-  if (level === "low") return "border-emerald-300/60 bg-emerald-500/20 text-emerald-100";
-  return "border-slate-300/50 bg-slate-500/20 text-slate-100";
+  if (level === "high") return "border-red-300 bg-red-100 text-red-800 dark:border-red-500/60 dark:bg-red-500/20 dark:text-red-100";
+  if (level === "medium") return "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-100";
+  if (level === "low") return "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-400/60 dark:bg-emerald-500/20 dark:text-emerald-100";
+  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-500/60 dark:bg-slate-500/20 dark:text-slate-100";
 }
 
 function riskPanelClass(value: string | null | undefined): string {
   const level = riskLevel(value);
-  if (level === "high") return "border-red-300/55 bg-red-500/10";
-  if (level === "medium") return "border-amber-300/55 bg-amber-500/10";
-  if (level === "low") return "border-emerald-300/55 bg-emerald-500/10";
+  if (level === "high") return "border-red-300 bg-red-50/85 dark:border-red-500/55 dark:bg-red-500/10";
+  if (level === "medium") return "border-amber-300 bg-amber-50/90 dark:border-amber-400/55 dark:bg-amber-500/10";
+  if (level === "low") return "border-emerald-300 bg-emerald-50/90 dark:border-emerald-400/55 dark:bg-emerald-500/10";
   return "border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
 }
 
@@ -97,13 +97,13 @@ export default function SelfMedDdiPage() {
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/selfmed"
-                  className="inline-flex min-h-12 items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border-strong)]"
+                  className="inline-flex min-h-12 items-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
                 >
                   Về tủ thuốc
                 </Link>
                 <Link
                   href="/selfmed/add"
-                  className="inline-flex min-h-12 items-center rounded-xl border border-cyan-300/55 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/30"
+                  className="inline-flex min-h-12 items-center rounded-xl border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
                 >
                   Thêm thuốc
                 </Link>
@@ -162,7 +162,7 @@ export default function SelfMedDdiPage() {
                 type="button"
                 onClick={() => void onRunDdi()}
                 disabled={isChecking || items.length < 2}
-                className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-indigo-300/55 bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-500/30 disabled:opacity-60"
+                className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
               >
                 {isChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
               </button>

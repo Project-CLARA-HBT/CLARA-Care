@@ -283,7 +283,7 @@ export default function SelfMedPage() {
                   {canCheckInteractions ? (
                     <Link
                       href="/selfmed/ddi"
-                      className="inline-flex min-h-11 items-center rounded-lg border border-cyan-400/60 bg-cyan-500/15 px-4 text-sm font-semibold text-cyan-700 dark:text-cyan-100"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-blue-700 bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
                     >
                       Kiểm tra tương tác thuốc
                     </Link>
@@ -292,7 +292,7 @@ export default function SelfMedPage() {
                       type="button"
                       disabled
                       title="Cần thêm ít nhất 2 thuốc để kiểm tra tương tác."
-                      className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-muted)]"
+                      className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg border border-slate-300 bg-slate-200 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                     >
                       Kiểm tra tương tác thuốc
                     </button>
@@ -300,7 +300,7 @@ export default function SelfMedPage() {
                   <button
                     type="button"
                     onClick={() => void refreshCabinet()}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
+                    className="inline-flex min-h-11 items-center rounded-lg border border-blue-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
                   >
                     Làm mới
                   </button>

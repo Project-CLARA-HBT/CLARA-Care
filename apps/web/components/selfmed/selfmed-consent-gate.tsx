@@ -94,11 +94,11 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Xem đầy đủ tại{" "}
-          <Link href="/legal/consent" className="font-semibold text-cyan-300 hover:underline">
+          <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
             Đồng thuận sử dụng y tế
           </Link>
           {" "}và{" "}
-          <Link href="/legal/privacy" className="font-semibold text-cyan-300 hover:underline">
+          <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
             Chính sách quyền riêng tư
           </Link>
           .
@@ -123,7 +123,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
           type="button"
           onClick={onAccept}
           disabled={isSaving || !checked}
-          className="mt-4 min-h-12 rounded-xl border border-cyan-400/60 bg-cyan-500/20 px-5 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 min-h-12 rounded-xl border border-blue-700 bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
         >
           {isSaving ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
         </button>

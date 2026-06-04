@@ -172,8 +172,19 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
 }
 
 function InputLabel({ children }: { children: string }) {
-  return <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">{children}</span>;
+  return <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">{children}</span>;
 }
+
+const phrPanelClass =
+  "rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90 sm:p-6";
+const phrColumnClass =
+  "rounded-2xl border border-[#B6D4FE] bg-white p-4 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+const phrItemClass =
+  "rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-3 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+const addButtonClass =
+  "inline-flex min-h-9 items-center rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-3 text-sm font-bold text-[#1D4ED8] transition hover:bg-[#DBEAFE] hover:text-[#1E40AF] focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100 dark:hover:bg-sky-500/28";
+const removeButtonClass =
+  "justify-self-start rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100";
 
 export default function PhrPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
@@ -297,7 +308,7 @@ export default function PhrPage() {
   return (
     <PageShell variant="plain" title={text.title} description={text.description}>
       <div className="space-y-5">
-        <section className="chrome-panel rounded-2xl p-5 sm:p-6">
+        <section className={phrPanelClass}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-[var(--text-secondary)]">
               {text.updatedAt}: {record.updated_at ? new Date(record.updated_at).toLocaleString() : text.unknown}
@@ -316,7 +327,7 @@ export default function PhrPage() {
           {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
         </section>
 
-        <section className="chrome-panel rounded-2xl p-5 sm:p-6">
+        <section className={phrPanelClass}>
           <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">{text.profile}</p>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1.5">
@@ -398,22 +409,22 @@ export default function PhrPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className="chrome-panel rounded-2xl p-4">
+          <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{text.allergies}</p>
-              <button type="button" onClick={addAllergy} className="rounded-md border border-cyan-300/50 px-2 py-1 text-xs text-cyan-200">
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.allergies}</p>
+              <button type="button" onClick={addAllergy} className={addButtonClass}>
                 + {text.add}
               </button>
             </div>
             <div className="space-y-3">
               {record.allergies.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <input className="input" placeholder={text.allergyName} value={item.name} onChange={(e) => updateAllergy(item.id, { name: e.target.value })} />
                     <input className="input" placeholder={text.reaction} value={item.reaction} onChange={(e) => updateAllergy(item.id, { reaction: e.target.value })} />
                     <input className="input" placeholder={text.severity} value={item.severity} onChange={(e) => updateAllergy(item.id, { severity: (e.target.value || "unknown") as PhrAllergyItem["severity"] })} />
                     <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateAllergy(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, allergies: prev.allergies.filter((row) => row.id !== item.id) }))} className="justify-self-start rounded-md border border-rose-300/50 px-2 py-1 text-xs text-rose-200">
+                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, allergies: prev.allergies.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
                       {text.remove}
                     </button>
                   </div>
@@ -422,22 +433,22 @@ export default function PhrPage() {
             </div>
           </article>
 
-          <article className="chrome-panel rounded-2xl p-4">
+          <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{text.conditions}</p>
-              <button type="button" onClick={addCondition} className="rounded-md border border-cyan-300/50 px-2 py-1 text-xs text-cyan-200">
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.conditions}</p>
+              <button type="button" onClick={addCondition} className={addButtonClass}>
                 + {text.add}
               </button>
             </div>
             <div className="space-y-3">
               {record.conditions.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <input className="input" placeholder={text.conditionName} value={item.name} onChange={(e) => updateCondition(item.id, { name: e.target.value })} />
                     <input className="input" placeholder={text.status} value={item.status} onChange={(e) => updateCondition(item.id, { status: (e.target.value || "unknown") as PhrConditionItem["status"] })} />
                     <input type="date" className="input" placeholder={text.diagnosedOn} value={toInputDate(item.diagnosed_on)} onChange={(e) => updateCondition(item.id, { diagnosed_on: e.target.value || null })} />
                     <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateCondition(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, conditions: prev.conditions.filter((row) => row.id !== item.id) }))} className="justify-self-start rounded-md border border-rose-300/50 px-2 py-1 text-xs text-rose-200">
+                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, conditions: prev.conditions.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
                       {text.remove}
                     </button>
                   </div>
@@ -446,27 +457,27 @@ export default function PhrPage() {
             </div>
           </article>
 
-          <article className="chrome-panel rounded-2xl p-4">
+          <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{text.medications}</p>
-              <button type="button" onClick={addMedication} className="rounded-md border border-cyan-300/50 px-2 py-1 text-xs text-cyan-200">
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.medications}</p>
+              <button type="button" onClick={addMedication} className={addButtonClass}>
                 + {text.add}
               </button>
             </div>
             <div className="space-y-3">
               {record.medications.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <input className="input" placeholder={text.medicationName} value={item.name} onChange={(e) => updateMedication(item.id, { name: e.target.value })} />
                     <input className="input" placeholder={text.dose} value={item.dose} onChange={(e) => updateMedication(item.id, { dose: e.target.value })} />
                     <input className="input" placeholder={text.frequency} value={item.frequency} onChange={(e) => updateMedication(item.id, { frequency: e.target.value })} />
                     <input type="date" className="input" placeholder={text.startedOn} value={toInputDate(item.started_on)} onChange={(e) => updateMedication(item.id, { started_on: e.target.value || null })} />
-                    <label className="inline-flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                    <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-[#374151] dark:text-slate-200">
                       <input type="checkbox" checked={item.is_current} onChange={(e) => updateMedication(item.id, { is_current: e.target.checked })} />
                       {text.current}
                     </label>
                     <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateMedication(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, medications: prev.medications.filter((row) => row.id !== item.id) }))} className="justify-self-start rounded-md border border-rose-300/50 px-2 py-1 text-xs text-rose-200">
+                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, medications: prev.medications.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
                       {text.remove}
                     </button>
                   </div>
