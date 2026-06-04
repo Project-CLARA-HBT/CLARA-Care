@@ -81,6 +81,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-clara_internal_key_default_2026}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.vip/v1}
+      # Audio (Whisper) đi qua adapter local — yescale group `deepseek` không có model audio.
+      DEEPSEEK_AUDIO_BASE_URL: ${DEEPSEEK_AUDIO_BASE_URL_DOCKER:-http://asr:8090/v1}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v3.2}
       DEEPSEEK_TIMEOUT_SECONDS: ${DEEPSEEK_TIMEOUT_SECONDS:-30}
       DEEPSEEK_RETRIES_PER_BASE: ${DEEPSEEK_RETRIES_PER_BASE:-2}
@@ -136,6 +138,22 @@ services:
       - "127.0.0.1:${APP_OCR_PORT:-8080}:8080"
     logging: *default-logging
 
+  asr:
+    build:
+      context: ../..
+      dockerfile: services/asr/Dockerfile
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE: ${WHISPER_COMPUTE:-int8}
+    volumes:
+      # cache model HuggingFace — chỉ download lần đầu
+      - clara_asr_models:/root/.cache/huggingface
+    ports:
+      - "127.0.0.1:${APP_ASR_PORT:-8090}:8090"
+    logging: *default-logging
+
   searxng:
     image: searxng/searxng:latest
     restart: unless-stopped
@@ -169,6 +187,7 @@ services:
 
 volumes:
   clara_api_data:
+  clara_asr_models:
 
 networks:
   clara-local:

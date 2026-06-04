@@ -35,9 +35,14 @@ class DeepSeekClient:
         max_concurrency: int = 2,
         min_interval_seconds: float = 0.4,
         request_jitter_seconds: float = 0.15,
+        audio_base_url: str = "",
     ) -> None:
         self._api_key = api_key
         self._base_urls = self._parse_base_urls(base_url)
+        # Base riêng cho audio/transcriptions (vd Whisper local); rỗng → dùng _base_urls.
+        self._audio_base_urls = (
+            self._parse_base_urls(audio_base_url) if audio_base_url.strip() else []
+        )
         self._model = model
         self._timeout_seconds = timeout_seconds
         self._retries_per_base = max(0, int(retries_per_base))
@@ -350,7 +355,9 @@ class DeepSeekClient:
         errors: list[str] = []
         attempts = self._retries_per_base + 1
         payload: dict[str, object] | None = None
-        for base in self._base_urls:
+        # Dùng audio_base_urls nếu được cấu hình (vd Whisper local), fallback sang base_urls.
+        audio_bases = self._audio_base_urls if self._audio_base_urls else self._base_urls
+        for base in audio_bases:
             url = self._audio_transcriptions_url(base)
             for attempt in range(attempts):
                 try:
