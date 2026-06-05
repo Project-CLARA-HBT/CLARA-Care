@@ -927,7 +927,7 @@ const TONE_META: Record<
   }
 > = {
   sky: {
-    glow: "shadow-[0_0_0_1px_rgba(14,165,233,0.2),0_18px_42px_rgba(14,165,233,0.16)] dark:shadow-[0_0_0_1px_rgba(34,211,238,0.36),0_22px_46px_rgba(8,47,73,0.72)]",
+    glow: "shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_18px_42px_rgba(59,130,246,0.16)] dark:shadow-[0_0_0_1px_rgba(96,165,250,0.36),0_22px_46px_rgba(8,47,73,0.72)]",
     stripe: "from-cyan-400 via-sky-500 to-blue-500 dark:from-cyan-300 dark:via-sky-400 dark:to-blue-400",
     chip: "border border-cyan-300/70 bg-cyan-100/85 text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-950/50 dark:text-cyan-200",
   },
@@ -1054,13 +1054,13 @@ export default function AdminFlowVisualizer({
     () =>
       isDarkMode
         ? {
-            live: "#22d3ee",
+            live: "#60a5fa",
             muted: "#64748b",
             fallback: "#fb923c",
             label: "#a5b4fc",
           }
         : {
-            live: "#0891b2",
+            live: "#2563eb",
             muted: "#94a3b8",
             fallback: "#f97316",
             label: "#334155",
@@ -1112,7 +1112,7 @@ export default function AdminFlowVisualizer({
   const lowContextThreshold = typeof ragFlow?.low_context_threshold === "number" ? ragFlow.low_context_threshold : 0;
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] border border-cyan-200/45 bg-[radial-gradient(circle_at_8%_4%,rgba(56,189,248,0.28),transparent_33%),radial-gradient(circle_at_86%_18%,rgba(34,211,238,0.18),transparent_36%),radial-gradient(circle_at_88%_92%,rgba(14,165,233,0.24),transparent_42%),linear-gradient(158deg,rgba(255,255,255,0.95),rgba(236,254,255,0.9)_42%,rgba(224,242,254,0.92))] p-5 shadow-[0_34px_96px_rgba(8,47,73,0.2)] dark:border-cyan-500/30 dark:bg-[radial-gradient(circle_at_12%_6%,rgba(34,211,238,0.22),transparent_36%),radial-gradient(circle_at_88%_12%,rgba(56,189,248,0.16),transparent_40%),radial-gradient(circle_at_88%_90%,rgba(59,130,246,0.2),transparent_44%),linear-gradient(160deg,rgba(2,6,23,0.96),rgba(8,47,73,0.86)_46%,rgba(15,23,42,0.94))] dark:shadow-[0_40px_110px_rgba(2,6,23,0.84)]">
+    <section className="relative overflow-hidden rounded-[32px] border border-cyan-200/45 bg-[radial-gradient(circle_at_8%_4%,rgba(96,165,250,0.28),transparent_33%),radial-gradient(circle_at_86%_18%,rgba(96,165,250,0.18),transparent_36%),radial-gradient(circle_at_88%_92%,rgba(59,130,246,0.24),transparent_42%),linear-gradient(158deg,rgba(255,255,255,0.95),rgba(236,254,255,0.9)_42%,rgba(224,242,254,0.92))] p-5 shadow-[0_34px_96px_rgba(8,47,73,0.2)] dark:border-cyan-500/30 dark:bg-[radial-gradient(circle_at_12%_6%,rgba(96,165,250,0.22),transparent_36%),radial-gradient(circle_at_88%_12%,rgba(96,165,250,0.16),transparent_40%),radial-gradient(circle_at_88%_90%,rgba(59,130,246,0.2),transparent_44%),linear-gradient(160deg,rgba(2,6,23,0.96),rgba(8,47,73,0.86)_46%,rgba(15,23,42,0.94))] dark:shadow-[0_40px_110px_rgba(2,6,23,0.84)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(8,145,178,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(8,145,178,0.14)_1px,transparent_1px)] bg-[size:26px_26px] dark:bg-[linear-gradient(to_right,rgba(8,145,178,0.26)_1px,transparent_1px),linear-gradient(to_bottom,rgba(8,145,178,0.26)_1px,transparent_1px)]" />
       <div className="pointer-events-none absolute inset-x-8 top-0 h-36 rounded-b-[40px] bg-gradient-to-b from-cyan-300/30 to-transparent blur-2xl dark:from-cyan-400/25" />
 
@@ -1195,7 +1195,7 @@ export default function AdminFlowVisualizer({
       <div className="relative mt-5 overflow-auto rounded-[24px] border border-cyan-200/50 bg-slate-950/[0.04] p-3 dark:border-cyan-700/30 dark:bg-slate-950/30">
         <div
           ref={sceneRef}
-          className="relative overflow-hidden rounded-[22px] border border-cyan-200/50 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.22),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.15),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.78),_rgba(241,245,249,0.88))] dark:border-cyan-700/30 dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.2),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.16),_transparent_42%),linear-gradient(180deg,_rgba(2,6,23,0.74),_rgba(15,23,42,0.9))]"
+          className="relative overflow-hidden rounded-[22px] border border-cyan-200/50 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.22),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.15),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.78),_rgba(241,245,249,0.88))] dark:border-cyan-700/30 dark:bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.2),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.16),_transparent_42%),linear-gradient(180deg,_rgba(2,6,23,0.74),_rgba(15,23,42,0.9))]"
           style={{ width: SCENE_WIDTH, height: SCENE_HEIGHT }}
         >
           <svg

@@ -244,6 +244,12 @@ class Settings(BaseSettings):
         default="vi",
         validation_alias=AliasChoices("DEEPSEEK_AUDIO_LANGUAGE", "DEEPSEEK_TRANSCRIBE_LANGUAGE"),
     )
+    deepseek_audio_base_url: str = Field(
+        # Base URL riêng cho audio/transcriptions (vd Whisper local adapter);
+        # rỗng → dùng chung DEEPSEEK_BASE_URL như trước.
+        default="",
+        validation_alias=AliasChoices("DEEPSEEK_AUDIO_BASE_URL", "WHISPER_BASE_URL"),
+    )
     ml_internal_api_key: str = Field(
         default="",
         validation_alias="ML_INTERNAL_API_KEY",
@@ -256,6 +262,12 @@ class Settings(BaseSettings):
         default=1.5,
         validation_alias=AliasChoices(
             "EXTERNAL_DDI_TIMEOUT_SECONDS", "CAREGUARD_EXTERNAL_DDI_TIMEOUT_SECONDS"
+        ),
+    )
+    openfda_label_alerts_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "OPENFDA_LABEL_ALERTS_ENABLED", "CAREGUARD_OPENFDA_LABEL_ALERTS_ENABLED"
         ),
     )
     pubmed_connector_timeout_seconds: float = Field(

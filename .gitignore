@@ -15,3 +15,4 @@ apps/web/tsconfig.tsbuildinfo
 artifacts/
 context
 context2
+.devlogs/

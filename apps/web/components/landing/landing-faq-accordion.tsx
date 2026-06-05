@@ -20,7 +20,7 @@ export default function LandingFaqAccordion({ items }: Props) {
             className={[
               "overflow-hidden rounded-2xl border transition-all duration-200",
               opened
-                ? "border-cyan-300 bg-cyan-50/80 shadow-[0_10px_30px_-25px_rgba(34,211,238,0.9)] dark:border-cyan-700 dark:bg-cyan-950/30"
+                ? "border-cyan-300 bg-cyan-50/80 shadow-[0_10px_30px_-25px_rgba(96,165,250,0.9)] dark:border-cyan-700 dark:bg-cyan-950/30"
                 : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900",
             ].join(" ")}
           >

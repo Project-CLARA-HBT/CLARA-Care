@@ -1,4 +1,8 @@
-const proxyTarget = (process.env.NEXT_SERVER_API_PROXY || "http://api:8000/api/v1").replace(/\/+$/, "");
+const defaultProxyTarget =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:8000/api/v1"
+    : "http://api:8000/api/v1";
+const proxyTarget = (process.env.NEXT_SERVER_API_PROXY || defaultProxyTarget).replace(/\/+$/, "");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -13,8 +17,15 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
+    cpus: 1,
+    // Keep build artifacts in the main process; the build worker can leave an
+    // incomplete .next directory on this environment before prerender starts.
+    webpackBuildWorker: false,
     // Next.js documents this as a low-risk way to lower peak webpack memory.
     webpackMemoryOptimizations: true,
+    // Dev rewrite proxy defaults to 30s; chat with deepseek-v4-pro can take 30-58s
+    // (API gateway timeout is ML_SERVICE_TIMEOUT_SECONDS=150). Keep above that.
+    proxyTimeout: 180_000,
   },
   images: {
     remotePatterns: [

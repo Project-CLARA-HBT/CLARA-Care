@@ -51,7 +51,7 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
             <span>{formatHistoryTime(turn.createdAt)}</span>
           </div>
 
-          <section className="rounded-[0.68rem] border border-[color:var(--shell-border)] bg-white/98 p-3.5 shadow-[0_10px_24px_-30px_rgba(15,23,42,0.18)] dark:bg-[var(--surface-panel)]/98 sm:p-4">
+          <section className="rounded-[0.68rem] border border-[color:var(--shell-border-strong)] bg-[var(--surface-panel)] p-3.5 shadow-[0_12px_28px_-26px_rgba(15,23,42,0.28)] sm:p-4">
             <MarkdownAnswer
               answer={answer}
               citations={citations}

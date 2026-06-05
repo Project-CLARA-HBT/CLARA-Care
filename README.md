@@ -127,30 +127,101 @@ curl -sS http://127.0.0.1:8110/health/details
 curl -sS http://127.0.0.1:3100/
 ```
 
-## 6) Chạy local từng service
+## 6) Chạy local (native dev stack — đã verify)
 
-### API
+Stack dev local chạy **native** (uvicorn + npm), chỉ dùng Docker cho Postgres/Redis. Cổng local:
+
+| Service | Cổng | Ghi chú |
+|---|---|---|
+| Web (Next.js) | 3000 | `npm run dev` |
+| API (FastAPI) | 8000 | uvicorn `--reload` |
+| ML (FastAPI) | 8110 | **phải là 8110** — `ML_SERVICE_URL` trong `.env` trỏ tới đây |
+| PostgreSQL | 5432 | container `clara-postgres` |
+| Redis | 6379 | container `clara-redis` |
+| Ollama (bge-m3) | 11434 | embedding + reranker local |
+| OCR adapter (Vision) | 8080 | quét ảnh toa thuốc — xem `services/ocr/README.md` (tùy chọn) |
+
+### 6.0 Chuẩn bị một lần
 ```bash
-cd services/api
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port 8000 --reload
+cp .env.example .env                # rồi điền key (DEEPSEEK_*, JWT_SECRET_KEY, ...)
+
+# venv cho từng service Python
+cd services/api && python -m venv .venv && .venv/bin/pip install -e ".[dev]" && cd ../..
+cd services/ml  && python -m venv .venv && .venv/bin/pip install -e ".[dev]" && cd ../..
+
+# web
+cd apps/web && npm ci && cd ../..
+
+# ollama + model embedding (cho RAG dense + reranker)
+ollama pull bge-m3
 ```
 
-### ML
+`.env` local cần các giá trị sau cho embedding qua ollama:
 ```bash
-cd services/ml
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn clara_ml.main:app --app-dir src --host 0.0.0.0 --port 8010 --reload
+EMBEDDING_BASE_URL=http://localhost:11434/v1
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_API_KEY=ollama          # dummy, ollama không cần key thật
+RAG_RERANKER_ENABLED=true
+RAG_RERANKER_TIMEOUT_MS=10000     # default 250ms quá ngắn cho ollama
 ```
 
-### Web
+Và cho LLM qua yescale:
 ```bash
-cd apps/web
-npm ci
-npm run dev
+DEEPSEEK_BASE_URL=https://api.yescale.io/v1   # host .vip trả 401
+DEEPSEEK_MODEL=deepseek-v4-flash              # v4-pro chậm 30-137s/câu; flash ~8-20s
+DEEPSEEK_TIMEOUT_SECONDS=120
+LLM_DEEPSEEK_ONLY=true   # BẮT BUỘC: nếu thiếu, pipeline tạo runtime client
+                         # với timeout bị kẹp 18s (pipeline.py) -> chat fail
+                         # ngẫu nhiên "chế độ an toàn" khi model trả lời >18s
 ```
+
+### 6.1 Thứ tự khởi động
+
+**Bước 1 — Hạ tầng (Docker chỉ cần Postgres + Redis):**
+```bash
+# WSL: bật Docker Desktop trước (Settings -> Resources -> WSL Integration bật cho distro này)
+docker compose --env-file .env -f deploy/docker/docker-compose.yml up -d postgres redis
+```
+> Không cần `make docker-up` (kéo cả Milvus/Elasticsearch/MinIO — rất nặng, dev local không dùng).
+
+**Bước 2 — Ollama:**
+```bash
+ollama serve &        # nếu chưa chạy sẵn
+```
+
+**Bước 3 — ML rồi API (chạy từ REPO ROOT, không `cd` vào service):**
+```bash
+services/ml/.venv/bin/uvicorn clara_ml.main:app  --app-dir services/ml/src  --host 0.0.0.0 --port 8110 --reload
+services/api/.venv/bin/uvicorn clara_api.main:app --app-dir services/api/src --host 0.0.0.0 --port 8000 --reload
+```
+
+**Bước 4 — Web:**
+```bash
+cd apps/web && npm run dev
+```
+
+**Bước 5 — OCR adapter (tùy chọn, để quét ảnh toa thuốc):**
+```bash
+# cần GCP_VISION_API_KEY trong .env — chi tiết ở services/ocr/README.md
+set -a; . ./.env; set +a
+services/ml/.venv/bin/uvicorn server:app --app-dir services/ocr --host 0.0.0.0 --port 8080
+```
+
+### 6.2 Kiểm tra health
+```bash
+curl -sS http://127.0.0.1:8110/health           # {"status":"ok","service":"clara-ml"}
+curl -sS http://127.0.0.1:8110/health/details   # deepseek_configured/router_ready/rag_ready phải true
+curl -sS http://127.0.0.1:8000/health           # {"status":"ok","service":"clara-api"}
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/   # 200
+```
+
+### 6.3 Bẫy thường gặp (footguns)
+
+- **Phải chạy uvicorn từ repo root.** Settings của cả 2 service đọc `env_file=".env"` theo *thư mục hiện tại*; `cd services/api` rồi chạy sẽ không thấy `.env` (service dir không có `.env` riêng) → config rơi về default. Vì lý do này `make dev-api` / `make dev-ml` hiện là footgun — dùng lệnh ở Bước 3.
+- **ML phải bind cổng 8110.** `.env` có `ML_PORT=8010` nhưng `ML_SERVICE_URL=http://localhost:8110`; `make dev-ml` mặc định bind 8010 → API gọi 8110 sẽ không thấy ML. Luôn truyền `--port 8110` tường minh.
+- **Chat trả về dòng "Hệ thống đang ưu tiên chế độ an toàn..."** = ML fallback `local-synth` do gọi DeepSeek lỗi/timeout, không phải build hỏng. `deepseek-v4-pro` là model reasoning chậm (~30–58s/câu) — cần `DEEPSEEK_TIMEOUT_SECONDS=120`; muốn nhanh thì dùng `deepseek-v4-flash` (~8s). Base URL phải là `https://api.yescale.io/v1` (host `.vip` trả 401).
+- **Đổi `.env` không ăn với `--reload`:** uvicorn reload không nhận thay đổi `.env`. Touch một file `.py` (vd `touch services/ml/src/clara_ml/main.py`), đợi ~10s rồi check lại `/health` — đừng kill worker con.
+- **Ollama tắt thì không crash:** reranker/embedding degrade mềm, RAG rơi về lexical-only.
 
 ## 7) CI/CD và quality gates
 

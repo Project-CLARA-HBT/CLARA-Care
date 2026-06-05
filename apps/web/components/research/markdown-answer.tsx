@@ -1014,7 +1014,7 @@ export default function MarkdownAnswer({
   let pendingLeadSummary = false;
 
   return (
-    <div className="medical-markdown prose prose-slate max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
+    <div className="medical-markdown prose prose-slate max-w-none text-slate-950 dark:prose-invert dark:text-slate-100 prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
       <div className="mb-1 flex items-center justify-end gap-1">
         <details className="group relative">
           <summary className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300">
@@ -1079,7 +1079,7 @@ export default function MarkdownAnswer({
             pendingLeadSummary = false;
             if (isLeadSummary) {
               return (
-                <p className="mt-2.5 rounded-[0.85rem] border border-slate-200/80 bg-slate-50/96 px-4 py-3 text-[15px] font-medium leading-7 text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-slate-800 dark:bg-slate-900/42 dark:text-slate-100">
+                <p className="mt-2.5 rounded-[0.85rem] border border-slate-300/90 bg-slate-50 px-4 py-3 text-[15px] font-semibold leading-7 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-slate-700 dark:bg-slate-900/68 dark:text-slate-50">
                   {children}
                 </p>
               );
@@ -1087,7 +1087,7 @@ export default function MarkdownAnswer({
             return (
               <p
                 className={[
-                  "mt-2.5 text-[14.2px] leading-7 text-slate-700 dark:text-slate-200",
+                  "mt-2.5 text-[14.5px] leading-7 text-slate-900 dark:text-slate-100",
                   tone === "safety" ? "text-emerald-900 dark:text-emerald-100" : "",
                   tone === "warning" ? "text-amber-950 dark:text-amber-50" : "",
                 ].join(" ").trim()}
@@ -1169,27 +1169,27 @@ export default function MarkdownAnswer({
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-slate-300 px-3 py-2 align-top text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200">
+            <td className="border border-slate-300 px-3 py-2 align-top text-sm text-slate-900 dark:border-slate-700 dark:text-slate-100">
               {children}
             </td>
           ),
           ul: ({ children }) => (
-            <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[14.1px] text-slate-700 dark:text-slate-200">
+            <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[14.4px] text-slate-900 dark:text-slate-100">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mt-2.5 list-decimal space-y-1.5 pl-5 text-[14.1px] text-slate-700 dark:text-slate-200">
+            <ol className="mt-2.5 list-decimal space-y-1.5 pl-5 text-[14.4px] text-slate-900 dark:text-slate-100">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="ml-2 text-[14.1px] leading-7 text-slate-700 marker:text-slate-400 dark:text-slate-200">
+            <li className="ml-2 text-[14.4px] leading-7 text-slate-900 marker:text-slate-500 dark:text-slate-100">
               {children}
             </li>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="mt-3 rounded-r-xl border-l-4 border-sky-400 bg-sky-50/70 px-3 py-2 text-[14px] leading-7 text-slate-700 dark:bg-sky-950/20 dark:text-slate-200">
+            <blockquote className="mt-3 rounded-r-xl border-l-4 border-sky-400 bg-sky-50/80 px-3 py-2 text-[14px] leading-7 text-slate-900 dark:bg-sky-950/35 dark:text-slate-100">
               {children}
             </blockquote>
           ),

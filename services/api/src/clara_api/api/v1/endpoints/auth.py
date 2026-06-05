@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from threading import Lock
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
@@ -419,27 +420,38 @@ def register(
         is_email_verified=is_verified,
         status="active",
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút.",
+        ) from exc
 
     verification_token_preview: str | None = None
     email_delivery_status: str | None = None
     if not user.is_email_verified:
-        verification_token = _issue_action_token(
-            db,
-            user_id=user.id,
-            token_type="verify_email",
-            ttl_minutes=settings.auth_action_token_ttl_minutes,
-        )
-        email_delivery_status = dispatch_action_email(
-            settings,
-            action="verify_email",
-            recipient=user.email,
-            token=verification_token,
-        )
-        if should_expose_action_token_preview(settings):
-            verification_token_preview = verification_token
+        try:
+            verification_token = _issue_action_token(
+                db,
+                user_id=user.id,
+                token_type="verify_email",
+                ttl_minutes=settings.auth_action_token_ttl_minutes,
+            )
+            email_delivery_status = dispatch_action_email(
+                settings,
+                action="verify_email",
+                recipient=user.email,
+                token=verification_token,
+            )
+            if should_expose_action_token_preview(settings):
+                verification_token_preview = verification_token
+        except Exception:  # noqa: BLE001
+            db.rollback()
+            email_delivery_status = "failed"
 
     return RegisterResponse(
         user_id=user.id,

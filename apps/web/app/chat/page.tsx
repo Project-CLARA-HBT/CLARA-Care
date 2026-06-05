@@ -79,16 +79,18 @@ import {
 
 const QUICK_PROMPTS_BY_LANGUAGE: Record<UILanguage, string[]> = {
   vi: [
-    "Tóm tắt tương tác thuốc chính của metformin",
-    "So sánh ưu nhược điểm DASH và Địa Trung Hải",
-    "Lập checklist theo dõi khi dùng warfarin",
-    "Gợi ý câu hỏi cần hỏi bác sĩ cho bệnh nhân tăng huyết áp",
+    "Tôi đang uống metformin, cần lưu ý gì?",
+    "Thuốc này có tương tác với thuốc nào?",
+    "Giải thích kết quả xét nghiệm này giúp tôi.",
+    "Khi nào tôi nên đi khám bác sĩ?",
+    "Tác dụng phụ thường gặp của thuốc này là gì?",
   ],
   en: [
-    "Summarize the key interaction risks of metformin",
-    "Compare DASH versus Mediterranean diet for hypertension",
-    "Create a monitoring checklist for patients taking warfarin",
-    "Suggest useful questions to ask a doctor about hypertension",
+    "I take metformin. What should I watch for?",
+    "Which medicines can this interact with?",
+    "Help me understand this lab result.",
+    "When should I see a doctor?",
+    "What common side effects can this medicine cause?",
   ],
 };
 
@@ -121,6 +123,9 @@ const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
   { id: "discover", label: "DS", title: { vi: "Khám phá", en: "Discover" } },
   { id: "shares", label: "SH", title: { vi: "Chia sẻ", en: "Shares" } },
 ];
+const WORKSPACE_ADVANCED_VIEW_OPTIONS = WORKSPACE_LEFT_VIEW_OPTIONS.filter(
+  (option) => option.id !== "chat"
+);
 
 const CHAT_WORKSPACE_PANEL_STORAGE_KEY = "clara_chat_workspace_panel_collapsed";
 const CHAT_WORKSPACE_PANEL_WIDTH_STORAGE_KEY = "clara_chat_workspace_panel_width";
@@ -917,7 +922,27 @@ export default function ChatWorkspacePage() {
     useState<ResearchExecutionMode>("fast");
   const [selectedRetrievalStackMode, setSelectedRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
-  const [isPersonalMode, setIsPersonalMode] = useState(true);
+  // Personal mode (PHR + tủ thuốc) chỉ có tác dụng ở tier2 ("deep"/"deep_beta").
+  // Mặc định false để giữ invariant "không bao giờ (fast && personal)".
+  const [isPersonalMode, setIsPersonalMode] = useState(false);
+
+  // Giữ invariant hai chiều: chọn "Nhanh" thì tắt Cá nhân; bật Cá nhân thì tối thiểu "Tư duy".
+  const applyResearchMode = useCallback((mode: ResearchExecutionMode) => {
+    setSelectedResearchMode(mode);
+    if (mode === "fast") {
+      setIsPersonalMode(false);
+    }
+  }, []);
+
+  const togglePersonalMode = useCallback(() => {
+    setIsPersonalMode((prev) => {
+      const next = !prev;
+      if (next) {
+        setSelectedResearchMode((mode) => (mode === "fast" ? "deep" : mode));
+      }
+      return next;
+    });
+  }, []);
   const [workspaceLeftView, setWorkspaceLeftView] = useState<WorkspaceLeftView>("chat");
   const [liveStatusNote, setLiveStatusNote] = useState("");
   const [liveJobId, setLiveJobId] = useState<string | null>(null);
@@ -1070,7 +1095,7 @@ export default function ChatWorkspacePage() {
     );
     const storedTelemetryPanel = window.localStorage.getItem(CHAT_TELEMETRY_PANEL_STORAGE_KEY);
     if (storedMode === "fast" || storedMode === "deep" || storedMode === "deep_beta") {
-      setSelectedResearchMode(storedMode);
+      applyResearchMode(storedMode);
     }
     if (storedStack === "auto" || storedStack === "full") {
       setSelectedRetrievalStackMode(storedStack);
@@ -2457,7 +2482,7 @@ export default function ChatWorkspacePage() {
         label: "Đổi chế độ: Nhanh",
         keywords: ["mode", "fast", "research"],
         run: () => {
-          setSelectedResearchMode("fast");
+          applyResearchMode("fast");
           setSelectedRetrievalStackMode("auto");
         },
       },
@@ -2465,13 +2490,13 @@ export default function ChatWorkspacePage() {
         id: "mode-deep",
         label: "Đổi chế độ: Tư duy",
         keywords: ["mode", "deep", "research"],
-        run: () => setSelectedResearchMode("deep"),
+        run: () => applyResearchMode("deep"),
       },
       {
         id: "mode-deep-beta",
         label: "Đổi chế độ: Pro",
         keywords: ["mode", "deep", "beta", "research"],
-        run: () => setSelectedResearchMode("deep_beta"),
+        run: () => applyResearchMode("deep_beta"),
       },
       {
         id: "stack-auto",
@@ -2738,20 +2763,6 @@ export default function ChatWorkspacePage() {
       }) as CSSProperties,
     [workspacePanelWidth]
   );
-  const chatSurfaceStyle = useMemo(
-    () =>
-      ({
-        "--bg-canvas": "#051126",
-        "--surface-panel": "rgba(11, 23, 42, 0.95)",
-        "--surface-muted": "rgba(37, 53, 84, 0.78)",
-        "--shell-border": "rgba(73, 97, 142, 0.56)",
-        "--shell-border-strong": "rgba(56, 189, 248, 0.62)",
-        "--text-primary": "#d7e3fb",
-        "--text-secondary": "#b2c2e2",
-        "--text-muted": "#8096bf",
-      }) as CSSProperties,
-    []
-  );
   const desktopGridClass = isWorkspacePanelCollapsed
     ? "lg:grid-cols-[2.7rem_minmax(0,1fr)]"
     : "lg:grid-cols-[var(--chat-workspace-panel-width)_minmax(0,1fr)]";
@@ -2762,8 +2773,7 @@ export default function ChatWorkspacePage() {
       title=""
     >
       <div
-        className="relative h-[100dvh] min-h-[680px] overflow-hidden rounded-none bg-[radial-gradient(120%_130%_at_100%_-10%,rgba(34,211,238,0.09)_0%,rgba(5,17,38,0.99)_45%,rgba(4,13,29,1)_100%)] shadow-none"
-        style={chatSurfaceStyle}
+        className="clara-chat-workspace relative h-[100dvh] min-h-[680px] overflow-hidden rounded-none shadow-none"
       >
         {isMobileSidebarOpen ? (
           <button
@@ -2865,19 +2875,19 @@ export default function ChatWorkspacePage() {
             </div>
           </div>
 
-          <div className="mt-2.5 overflow-hidden rounded-full border border-cyan-400/70 bg-[linear-gradient(90deg,rgba(2,88,136,0.96),rgba(2,66,108,0.92))] shadow-[0_10px_24px_-20px_rgba(3,78,122,0.98)]">
+          <div className="mt-2.5 overflow-hidden rounded-full border border-blue-300/70 bg-[linear-gradient(90deg,rgba(59,130,246,0.95),rgba(37,99,235,0.92))] shadow-[0_10px_24px_-20px_rgba(37,99,235,0.6)]">
             <div className="flex items-stretch">
               <button
                 type="button"
                 onClick={createNewConversation}
-                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-slate-100 transition hover:brightness-105"
+                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-white transition hover:brightness-105"
               >
                 + {isEnglishUI ? "New chat" : "Chat mới"}
               </button>
               <button
                 type="button"
                 onClick={() => setIsSelectionMode((prev) => !prev)}
-                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-cyan-200/45 bg-sky-950/35 text-slate-100 transition hover:bg-sky-950/45"
+                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-blue-200/50 bg-blue-700/25 text-white transition hover:bg-blue-700/35"
                 aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
                 title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
               >
@@ -2887,7 +2897,7 @@ export default function ChatWorkspacePage() {
           </div>
 
           <div className="mt-2.5 rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-2">
-            <div className="grid grid-cols-3">
+            <div className="grid grid-cols-2">
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
                 <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">chat_bubble</span>
                 <div>
@@ -2910,41 +2920,50 @@ export default function ChatWorkspacePage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 px-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">description</span>
-                <div>
-                  <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
-                    {effectiveSummary.notes}
-                  </p>
-                  <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Notes" : "Ghi chú"}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 
-          <div className="mt-2.5 flex flex-wrap gap-1">
-            {WORKSPACE_LEFT_VIEW_OPTIONS.map((option) => {
-              const active = workspaceLeftView === option.id;
-              return (
+          <div className="mt-2.5">
+            <details className="group">
+              <summary className="inline-flex min-h-[28px] cursor-pointer list-none items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
+                <span className="material-symbols-outlined text-[14px]">more_horiz</span>
+                {isEnglishUI ? "Advanced" : "Nâng cao"}
+              </summary>
+              <div className="mt-1.5 flex flex-wrap gap-1">
                 <button
-                  key={`workspace-view-chip-${option.id}`}
                   type="button"
-                  onClick={() => setWorkspaceLeftView(option.id)}
+                  onClick={() => setWorkspaceLeftView("chat")}
                   className={[
                     "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
-                    active
+                    workspaceLeftView === "chat"
                       ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   ].join(" ")}
-                  title={option.title[uiLanguage]}
-                  aria-label={option.title[uiLanguage]}
                 >
-                  {option.title[uiLanguage]}
+                  Chat
                 </button>
-              );
-            })}
+                {WORKSPACE_ADVANCED_VIEW_OPTIONS.map((option) => {
+                  const active = workspaceLeftView === option.id;
+                  return (
+                    <button
+                      key={`workspace-view-chip-${option.id}`}
+                      type="button"
+                      onClick={() => setWorkspaceLeftView(option.id)}
+                      className={[
+                        "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
+                        active
+                          ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                      ].join(" ")}
+                      title={option.title[uiLanguage]}
+                      aria-label={option.title[uiLanguage]}
+                    >
+                      {option.title[uiLanguage]}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
           </div>
 
           <div className="mt-2.5">
@@ -2953,7 +2972,7 @@ export default function ChatWorkspacePage() {
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder={isEnglishUI ? "Search conversation, note..." : "Tìm conversation, note..."}
+                placeholder={isEnglishUI ? "Search chats..." : "Tìm cuộc trò chuyện..."}
                 className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
@@ -2962,6 +2981,7 @@ export default function ChatWorkspacePage() {
             </div>
           </div>
 
+          {workspaceLeftView !== "chat" ? (
           <div className="mt-2.5 flex items-center justify-between px-1">
             <button
               type="button"
@@ -2979,6 +2999,7 @@ export default function ChatWorkspacePage() {
               <span className="material-symbols-outlined text-[16px]">expand_more</span>
             </button>
           </div>
+          ) : null}
 
           <div className="mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
             {(workspaceLeftView === "all" || workspaceLeftView === "chat") ? (
@@ -3000,6 +3021,7 @@ export default function ChatWorkspacePage() {
                     {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
                   </button>
                 </div>
+                {workspaceLeftView !== "chat" ? (
                 <details className="group">
                   <summary className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]">
                     <span>
@@ -3040,6 +3062,7 @@ export default function ChatWorkspacePage() {
                     ) : null}
                   </div>
                 </details>
+                ) : null}
               </div>
               {isSelectionMode && selectedConversationIds.length ? (
                 <div className="mb-2 space-y-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
@@ -3180,7 +3203,7 @@ export default function ChatWorkspacePage() {
                             className={[
                               "w-full cursor-pointer rounded-[0.95rem] border px-2.5 py-2 text-left",
                               isActive
-                                ? "border-cyan-300/70 bg-cyan-500/10 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.9)]"
+                                ? "border-cyan-300/70 bg-cyan-500/10 shadow-[inset_3px_0_0_0_rgba(96,165,250,0.9)]"
                                 : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
                               draggingConversationId === item.conversation_id
                                 ? "opacity-70"
@@ -3441,7 +3464,7 @@ export default function ChatWorkspacePage() {
               className={[
                 "h-16 w-1 rounded-full transition",
                 isWorkspacePanelResizing
-                  ? "bg-cyan-400 shadow-[0_0_0_4px_rgba(34,211,238,0.18)]"
+                  ? "bg-cyan-400 shadow-[0_0_0_4px_rgba(96,165,250,0.18)]"
                   : "bg-[color:var(--shell-border)]/70 hover:bg-cyan-300/70",
               ].join(" ")}
               aria-hidden="true"
@@ -3474,54 +3497,30 @@ export default function ChatWorkspacePage() {
                 </span>
               </div>
 
-              <div className="hidden items-center gap-1.5 whitespace-nowrap lg:flex">
+              <div className="hidden items-center gap-2 whitespace-nowrap lg:flex">
                 <button
                   type="button"
                   onClick={createNewConversation}
-                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+                  className="inline-flex min-h-[34px] items-center gap-1 rounded-full bg-blue-600 px-3.5 text-[11px] font-semibold text-white shadow-[0_10px_22px_-14px_rgba(37,99,235,0.8)] transition hover:bg-blue-700"
                 >
-                  + {isEnglishUI ? "New chat" : "New chat"}
-                </button>
-                <button
-                  type="button"
-                  disabled={!activeConversationId}
-                  onClick={() => void onUpdateActiveConversationMeta({ isFavorite: !activeConversationMeta?.is_favorite })}
-                  className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  ★ {isEnglishUI ? "Favorite" : "Favorite"}
+                  + {isEnglishUI ? "New chat" : "Chat mới"}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
-                  className="inline-flex min-h-[28px] items-center rounded-full border border-emerald-300/75 bg-emerald-500/15 px-2 text-[10px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                  className="inline-flex min-h-[34px] items-center rounded-full border border-medical/35 bg-medical/10 px-3 text-[11px] font-semibold text-medical transition hover:bg-medical/15 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Xuất Word (.docx)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onExportActiveConversation("markdown")}
-                  disabled={!activeConversationId}
-                  className="inline-flex min-h-[28px] items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Export .md
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onShareActiveConversation()}
-                  disabled={!activeConversationId || workspaceApiUnavailable}
-                  className="inline-flex min-h-[28px] items-center rounded-full border border-cyan-300/70 bg-cyan-500/10 px-2 text-[10px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
-                >
-                  Share public
                 </button>
 
                 <details className="group relative">
                   <summary
-                    className="inline-flex min-h-[28px] cursor-pointer list-none items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)]"
+                    className="inline-flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:text-[var(--text-brand)]"
                     aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
                     title={isEnglishUI ? "More actions" : "Thao tác khác"}
                   >
-                    {isEnglishUI ? "More actions" : "More actions"}
+                    <span className="material-symbols-outlined text-[18px]">more_horiz</span>
                   </summary>
                   <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
                     <button
@@ -3639,19 +3638,70 @@ export default function ChatWorkspacePage() {
                 </article>
               ) : null}
 
-              {!conversationTurns.length && !isLoadingTurns ? (
-                <article className="rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-3.5">
-                  <p className="text-[0.92rem] text-[var(--text-secondary)]">
-                    {isEnglishUI
-                      ? "No chat turns yet. Start with a question in the input below."
-                      : "Chưa có lượt chat nào. Bắt đầu bằng câu hỏi ở phần input phía dưới."}
-                  </p>
+              {error && !isSubmitting ? (
+                <article className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-800 shadow-[0_10px_24px_-28px_rgba(190,18,60,0.35)] dark:border-rose-700/70 dark:bg-rose-950/35 dark:text-rose-100">
+                  <div className="flex items-start gap-2">
+                    <span className="material-symbols-outlined mt-0.5 text-[18px]">error</span>
+                    <div>
+                      <p>{isEnglishUI ? "CLARA could not complete the answer." : "CLARA chưa thể hoàn tất câu trả lời."}</p>
+                      <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
+                    </div>
+                  </div>
                 </article>
+              ) : null}
+
+              {!conversationTurns.length && !isLoadingTurns && !isSubmitting ? (
+                <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-10 text-center sm:py-16">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_18px_40px_-22px_rgba(37,99,235,0.7)]">
+                    <span className="material-symbols-outlined text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      stethoscope
+                    </span>
+                  </div>
+                  <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
+                    {isEnglishUI ? "How can CLARA help you today?" : "CLARA có thể giúp gì cho bạn?"}
+                  </h2>
+                  <p className="mt-2 max-w-md text-sm text-[var(--text-muted)]">
+                    {isEnglishUI
+                      ? "Ask about medicine, symptoms, lab results, or pick a suggestion below to get started."
+                      : "Hỏi về thuốc, triệu chứng, kết quả xét nghiệm, hoặc chọn một gợi ý bên dưới để bắt đầu."}
+                  </p>
+                  <p className="mt-2 max-w-lg text-xs font-medium leading-5 text-[var(--text-muted)]">
+                    {isEnglishUI
+                      ? "CLARA is an AI health information assistant, not a replacement for a clinician."
+                      : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
+                  </p>
+                  <div className="mt-7 grid w-full gap-2.5 sm:grid-cols-2">
+                    {quickPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setQuery(prompt)}
+                        className="group flex items-start gap-2.5 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3.5 py-3 text-left transition hover:border-blue-400 hover:bg-blue-50 hover:shadow-[0_12px_28px_-22px_rgba(37,99,235,0.6)] dark:hover:bg-[var(--surface-muted)]"
+                      >
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-medical/10 text-medical transition group-hover:bg-medical/15">
+                          <span className="material-symbols-outlined text-[15px]">prompt_suggestion</span>
+                        </span>
+                        <span className="text-[13px] font-medium leading-5 text-[var(--text-secondary)] group-hover:text-[var(--text-brand)]">
+                          {prompt}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 conversationTurns.map((turn) => (
                   <ChatTurn key={turn.id} turn={turn} uiLanguage={uiLanguage} />
                 ))
               )}
+
+              {isSubmitting ? (
+                <article className="rounded-[0.8rem] border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.42)] dark:border-cyan-600/55 dark:bg-cyan-950/35 dark:text-cyan-100">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-600 dark:bg-cyan-300" />
+                    <span>{isEnglishUI ? "CLARA is analyzing your question..." : "CLARA đang phân tích câu hỏi..."}</span>
+                  </div>
+                </article>
+              ) : null}
             </div>
           </div>
 
@@ -3665,14 +3715,14 @@ export default function ChatWorkspacePage() {
             selectedRetrievalStackMode={selectedRetrievalStackMode}
             isFastResearchMode={isFastResearchMode}
             onChangeResearchMode={(mode) => {
-              setSelectedResearchMode(mode);
+              applyResearchMode(mode);
               if (mode === "fast") {
                 setSelectedRetrievalStackMode("auto");
               }
             }}
             onChangeRetrievalStackMode={setSelectedRetrievalStackMode}
             personalMode={isPersonalMode}
-            onTogglePersonalMode={() => setIsPersonalMode((prev) => !prev)}
+            onTogglePersonalMode={togglePersonalMode}
             liveJobId={liveJobId}
             liveStatusNote={liveStatusNote}
             error={error}

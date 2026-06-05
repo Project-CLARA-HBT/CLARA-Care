@@ -174,7 +174,7 @@ export default function AdminNeuralNetworkVisualizer({
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200/80 bg-[radial-gradient(circle_at_15%_18%,rgba(34,211,238,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(255,255,255,0.98),rgba(240,249,255,0.9))] p-2 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_15%_18%,rgba(34,211,238,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(2,6,23,0.98),rgba(15,23,42,0.9))]">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200/80 bg-[radial-gradient(circle_at_15%_18%,rgba(96,165,250,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(255,255,255,0.98),rgba(240,249,255,0.9))] p-2 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_15%_18%,rgba(96,165,250,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(2,6,23,0.98),rgba(15,23,42,0.9))]">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
@@ -184,8 +184,8 @@ export default function AdminNeuralNetworkVisualizer({
         >
           <defs>
             <linearGradient id="edgeOn" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
-              <stop offset="100%" stopColor="#0ea5e9" />
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#3b82f6" />
             </linearGradient>
             <linearGradient id="edgeOff" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#64748b" />
@@ -217,8 +217,8 @@ export default function AdminNeuralNetworkVisualizer({
             const pos = nodePosition(node);
             const status = statusMap.get(node.id) ?? "off";
             const active = status !== "off";
-            const fill = status === "required" ? "#0f172a" : active ? "#082f49" : "#1e293b";
-            const border = status === "required" ? "#22d3ee" : active ? "#38bdf8" : "#64748b";
+            const fill = status === "required" ? "#0f172a" : active ? "#172554" : "#1e293b";
+            const border = status === "required" ? "#60a5fa" : active ? "#60a5fa" : "#64748b";
             const label = status === "required" ? "CORE" : active ? "LIVE" : "OFF";
             return (
               <g key={node.id}>

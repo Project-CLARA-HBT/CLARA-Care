@@ -37,6 +37,23 @@ type LiveInsight = {
 };
 
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
+const panelClass = "rounded-xl border border-[#B6D4FE] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+const panelPaddedClass = `${panelClass} p-4`;
+const panelPaddedLgClass = `${panelClass} p-5`;
+const softPanelClass = "rounded-lg border border-[#93C5FD] bg-[#EEF6FF] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+const sectionTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[#4B5563] dark:text-slate-200";
+const accentTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[#2563EB] dark:text-sky-100";
+const bodyTextClass = "text-[#1F2937] dark:text-slate-100";
+const secondaryTextClass = "text-[#4B5563] dark:text-slate-300";
+const mutedTextClass = "text-[#64748B] dark:text-slate-400";
+const primaryButtonClass =
+  "rounded-lg border border-[#2563EB] bg-[#2563EB] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:border-[#93C5FD] disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
+const secondaryButtonClass =
+  "rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
+const dangerButtonClass =
+  "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
+const transcriptInputClass =
+  "min-h-[120px] w-full rounded-xl border border-[#93C5FD] bg-[#F8FBFF] px-4 py-3 text-sm leading-6 text-[#1F2937] placeholder:text-[#6B7280] outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -86,14 +103,14 @@ function parseTranscriptRows(transcript: string): TranscriptRow[] {
     const doctorMatch = /^(dr\.?|doctor|bác sĩ)\s*[:|-]\s*/i;
     const patientMatch = /^(patient|bệnh nhân)\s*[:|-]\s*/i;
 
-    let speaker = "Live Audio";
+    let speaker = "Âm thanh";
     let text = payload;
 
     if (doctorMatch.test(payload)) {
-      speaker = "Doctor";
+      speaker = "Bác sĩ";
       text = payload.replace(doctorMatch, "").trim();
     } else if (patientMatch.test(payload)) {
-      speaker = "Patient";
+      speaker = "Người bệnh";
       text = payload.replace(patientMatch, "").trim();
     }
 
@@ -115,21 +132,21 @@ function deriveClinicalCodes(transcript: string): ClinicalCode[] {
   };
 
   if (/gallbladder|chole|sỏi mật|ruq/.test(lowered)) {
-    add("K80.20", "Calculus of gallbladder");
-    add("47562", "Laparoscopy, cholecystectomy");
+    add("K80.20", "Sỏi túi mật");
+    add("47562", "Nội soi cắt túi mật");
   }
   if (/hypertension|tăng huyết áp|blood pressure|bp/.test(lowered)) {
-    add("I10", "Essential (primary) hypertension");
+    add("I10", "Tăng huyết áp nguyên phát");
   }
   if (/diabetes|đái tháo đường|metformin|insulin/.test(lowered)) {
-    add("E11.9", "Type 2 diabetes mellitus");
+    add("E11.9", "Đái tháo đường type 2");
   }
   if (/warfarin|bleeding|xuất huyết/.test(lowered)) {
-    add("Z79.01", "Long term use of anticoagulants");
+    add("Z79.01", "Dùng thuốc chống đông dài hạn");
   }
 
   if (rows.length === 0) {
-    add("R69", "Illness, unspecified");
+    add("R69", "Bệnh hoặc triệu chứng chưa xác định");
   }
 
   return rows.slice(0, 4);
@@ -148,21 +165,21 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
   if (safeText(soap.assessment)) {
     insights.push({
       id: "assessment",
-      title: "Assessment Signal",
+      title: "Tín hiệu đánh giá",
       detail: safeText(soap.assessment).slice(0, 220),
     });
   }
   if (safeText(soap.plan)) {
     insights.push({
       id: "plan",
-      title: "Plan Draft",
+      title: "Kế hoạch nháp",
       detail: safeText(soap.plan).slice(0, 220),
     });
   }
   warnings.slice(0, 2).forEach((warning, index) => {
     insights.push({
       id: `warning-${index}`,
-      title: "Safety Warning",
+      title: "Cảnh báo an toàn",
       detail: warning,
     });
   });
@@ -170,8 +187,8 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
   if (insights.length === 0 && transcript.trim()) {
     insights.push({
       id: "transcript",
-      title: "Transcript Captured",
-      detail: `Đã ghi nhận ${transcript.trim().split(/\s+/).length} tokens để phân tích tiếp.`,
+      title: "Đã ghi nhận bản ghi",
+      detail: `Đã ghi nhận ${transcript.trim().split(/\s+/).length} từ để phân tích tiếp.`,
     });
   }
 
@@ -192,6 +209,22 @@ function confidenceFromSoap(analytics: ScribeAnalyticsSummary | null, session: S
 
   return Math.max(5, Math.min(99, Math.round(soapScore + completedRatio * 0.2 + 15)));
 }
+
+function scribeStatusLabel(status: string | undefined): string {
+  const normalized = (status ?? "").trim().toLowerCase();
+  if (normalized === "finalized" || normalized === "completed") return "Hoàn tất";
+  if (normalized === "ready") return "Sẵn sàng";
+  if (normalized === "processing") return "Đang xử lý";
+  if (normalized === "error" || normalized === "failed") return "Lỗi";
+  return "Bản nháp";
+}
+
+const SOAP_SECTION_LABELS = [
+  { key: "subjective", title: "Chủ quan", valueKey: "subjective" },
+  { key: "objective", title: "Khách quan", valueKey: "objective" },
+  { key: "assessment", title: "Đánh giá", valueKey: "assessment" },
+  { key: "plan", title: "Kế hoạch", valueKey: "plan" },
+] as const;
 
 export default function ScribePage() {
   const [mode, setMode] = useState<WorkspaceMode>("workspace");
@@ -222,6 +255,10 @@ export default function ScribePage() {
   const recordingTickTimerRef = useRef<number | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  // Timer xoay vòng recorder: stop()/start() recorder mới mỗi chu kỳ để mỗi blob
+  // là một file webm hoàn chỉnh (start(timeslice) chỉ chunk đầu có header EBML,
+  // các chunk sau không decode độc lập được → backend 422).
+  const recorderCycleTimerRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -292,6 +329,11 @@ export default function ScribePage() {
 
   const teardownAudioPipeline = useCallback(() => {
     stopWaveformLoop();
+
+    if (recorderCycleTimerRef.current !== null) {
+      window.clearInterval(recorderCycleTimerRef.current);
+      recorderCycleTimerRef.current = null;
+    }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
@@ -371,7 +413,7 @@ export default function ScribePage() {
         setSelectedSession(updated);
         upsertSession(updated);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể lưu transcript.");
+        setError(cause instanceof Error ? cause.message : "Không thể lưu bản ghi.");
       }
     },
     [selectedSession, upsertSession]
@@ -405,7 +447,7 @@ export default function ScribePage() {
         const summary = await getScribeAnalyticsSummary();
         setAnalytics(summary);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Live analyze thất bại.");
+        setError(cause instanceof Error ? cause.message : "Phân tích trực tiếp thất bại.");
       } finally {
         analyzingInFlightRef.current = false;
         setIsLiveAnalyzing(false);
@@ -462,8 +504,8 @@ export default function ScribePage() {
         });
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể transcribe audio realtime.");
-      pushNotice("error", "Transcribe realtime thất bại.");
+      setError(cause instanceof Error ? cause.message : "Không thể chuyển âm thanh trực tiếp thành chữ.");
+      pushNotice("error", "Chuyển âm thanh thành chữ thất bại.");
     } finally {
       processingChunksRef.current = false;
       setIsTranscribing(false);
@@ -474,7 +516,7 @@ export default function ScribePage() {
     if (selectedSessionIdRef.current) return selectedSessionIdRef.current;
 
     const created = await createScribeSession({
-      title: `Live Session ${new Date().toLocaleString("vi-VN")}`,
+      title: `Phiên ghi âm ${new Date().toLocaleString("vi-VN")}`,
       transcript: "",
       auto_generate_soap: false,
     });
@@ -517,7 +559,7 @@ export default function ScribePage() {
     try {
       const sessionId = await ensureSessionReady();
       if (!sessionId) {
-        setError("Không thể tạo session để ghi âm.");
+        setError("Không thể tạo phiên để ghi âm.");
         return;
       }
 
@@ -542,18 +584,31 @@ export default function ScribePage() {
         return MediaRecorder.isTypeSupported(item);
       });
 
-      const recorder = selectedMime
-        ? new MediaRecorder(stream, { mimeType: selectedMime })
-        : new MediaRecorder(stream);
-
-      recorder.ondataavailable = (event: BlobEvent) => {
-        if (event.data.size <= 0) return;
-        chunkQueueRef.current.push(event.data);
-        void processChunkQueue();
+      // Mỗi đoạn 2.8s là MỘT MediaRecorder riêng: stop() nhả ra blob webm hoàn
+      // chỉnh (đủ header) để backend decode độc lập từng chunk.
+      const startRecorderSegment = () => {
+        const activeStream = mediaStreamRef.current;
+        if (!activeStream || !activeStream.active) return;
+        const recorder = selectedMime
+          ? new MediaRecorder(activeStream, { mimeType: selectedMime })
+          : new MediaRecorder(activeStream);
+        recorder.ondataavailable = (event: BlobEvent) => {
+          if (event.data.size <= 0) return;
+          chunkQueueRef.current.push(event.data);
+          void processChunkQueue();
+        };
+        recorder.start(); // không timeslice — blob duy nhất khi stop()
+        mediaRecorderRef.current = recorder;
       };
 
-      recorder.start(2800);
-      mediaRecorderRef.current = recorder;
+      startRecorderSegment();
+      recorderCycleTimerRef.current = window.setInterval(() => {
+        const current = mediaRecorderRef.current;
+        if (current && current.state === "recording") {
+          current.stop(); // nhả blob hoàn chỉnh của đoạn vừa rồi
+        }
+        startRecorderSegment();
+      }, 2800);
 
       chunkCounterRef.current = 0;
       setElapsedSeconds(0);
@@ -565,11 +620,11 @@ export default function ScribePage() {
       }, 1000);
 
       setIsRecording(true);
-      pushNotice("success", "Đã bắt đầu ghi âm realtime.");
+      pushNotice("success", "Đã bắt đầu ghi âm trực tiếp.");
     } catch (cause) {
       teardownAudioPipeline();
       setIsRecording(false);
-      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi âm realtime.");
+      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi âm trực tiếp.");
     }
   }, [ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
 
@@ -596,7 +651,7 @@ export default function ScribePage() {
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể mở session.");
+      setError(cause instanceof Error ? cause.message : "Không thể mở phiên.");
     }
   }, []);
 
@@ -605,7 +660,7 @@ export default function ScribePage() {
     setError("");
     try {
       const created = await createScribeSession({
-        title: `Session ${new Date().toLocaleString("vi-VN")}`,
+        title: `Phiên ${new Date().toLocaleString("vi-VN")}`,
         transcript: "",
         auto_generate_soap: false,
       });
@@ -614,11 +669,11 @@ export default function ScribePage() {
       setSelectedSession(created);
       setTranscriptDraft(created.transcript ?? "");
       upsertSession(created);
-      pushNotice("success", "Đã tạo session mới.");
+      pushNotice("success", "Đã tạo phiên mới.");
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo session.");
+      setError(cause instanceof Error ? cause.message : "Không thể tạo phiên.");
     } finally {
       setIsCreating(false);
     }
@@ -637,9 +692,9 @@ export default function ScribePage() {
       });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", "Đã lưu transcript.");
+      pushNotice("success", "Đã lưu bản ghi.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu transcript.");
+      setError(cause instanceof Error ? cause.message : "Không thể lưu bản ghi.");
     } finally {
       setIsSaving(false);
     }
@@ -648,7 +703,7 @@ export default function ScribePage() {
   const onRegenerateSoap = useCallback(async () => {
     if (!selectedSession) return;
     if (!transcriptDraft.trim()) {
-      pushNotice("error", "Transcript đang trống.");
+      pushNotice("error", "Bản ghi đang trống.");
       return;
     }
 
@@ -663,9 +718,9 @@ export default function ScribePage() {
       upsertSession(updated);
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
-      pushNotice("success", "Đã regenerate SOAP.");
+      pushNotice("success", "Đã tạo lại ghi chú SOAP.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể regenerate SOAP.");
+      setError(cause instanceof Error ? cause.message : "Không thể tạo lại ghi chú SOAP.");
     } finally {
       setIsRegenerating(false);
     }
@@ -679,11 +734,11 @@ export default function ScribePage() {
       const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", "Đã finalize note.");
+      pushNotice("success", "Đã hoàn tất ghi chú.");
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể finalize note.");
+      setError(cause instanceof Error ? cause.message : "Không thể hoàn tất ghi chú.");
     } finally {
       setIsSaving(false);
     }
@@ -703,29 +758,29 @@ export default function ScribePage() {
   return (
     <PageShell title="" description="" variant="plain">
       <section className="space-y-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#B6D4FE] bg-white px-4 py-3 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
           <div className="flex items-center gap-6">
-            <span className="text-lg font-black tracking-tight text-cyan-300">ScribeOS v2.4</span>
-            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1">
+            <span className="text-lg font-black tracking-tight text-[#2563EB] dark:text-sky-100">ScribeOS v2.4</span>
+            <nav className="inline-flex items-center gap-1 rounded-xl border border-[#93C5FD] bg-[#EFF6FF] p-1 dark:border-sky-700/70 dark:bg-slate-800/90">
               <button
                 type="button"
                 onClick={() => setMode("workspace")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
                   mode === "workspace"
-                    ? "bg-cyan-500/20 text-cyan-200"
-                    : "text-[var(--text-secondary)]"
+                    ? "bg-[#2563EB] text-white shadow-sm"
+                    : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                Live Audio
+                Ghi âm trực tiếp
               </button>
               <button
                 type="button"
                 onClick={() => setMode("review")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-cyan-500/20 text-cyan-200" : "text-[var(--text-secondary)]"
+                  mode === "review" ? "bg-[#2563EB] text-white shadow-sm" : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                Review
+                Rà soát
               </button>
             </nav>
           </div>
@@ -735,17 +790,17 @@ export default function ScribePage() {
               <button
                 type="button"
                 onClick={onStopRecording}
-                className="rounded-lg border border-red-300/45 bg-red-500/15 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-200"
+                className={dangerButtonClass}
               >
-                Stop Recording
+                Dừng ghi âm
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => void onStartRecording()}
-                className="rounded-lg border border-cyan-400/40 bg-gradient-to-r from-cyan-400 to-cyan-600 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-950"
+                className={primaryButtonClass}
               >
-                Start Recording
+                Bắt đầu ghi âm
               </button>
             )}
 
@@ -753,38 +808,38 @@ export default function ScribePage() {
               type="button"
               onClick={() => void onRegenerateSoap()}
               disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
-              className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-cyan-200 disabled:opacity-60"
+              className={secondaryButtonClass}
             >
-              {isRegenerating || isLiveAnalyzing ? "Analyzing..." : "Regenerate"}
+              {isRegenerating || isLiveAnalyzing ? "Đang phân tích..." : "Tạo lại ghi chú"}
             </button>
 
             <button
               type="button"
               onClick={() => void onFinalize()}
               disabled={!selectedSession || isSaving}
-              className="rounded-lg bg-cyan-400 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-950 disabled:opacity-60"
+              className={primaryButtonClass}
             >
-              Finalize
+              Hoàn tất
             </button>
           </div>
         </header>
 
         <section className="grid grid-cols-12 gap-5">
           <aside className="col-span-12 xl:col-span-3 space-y-3">
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <div className={panelPaddedClass}>
               <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Session Queue</h2>
-                <span className="rounded-full bg-cyan-500/12 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
-                  {sessions.length} drafts
+                <h2 className={sectionTitleClass}>Danh sách phiên</h2>
+                <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
+                  {sessions.length} bản nháp
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => void onCreateSession()}
                 disabled={isCreating}
-                className="mt-3 inline-flex min-h-[42px] w-full items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-400/10 px-3 text-xs font-bold uppercase tracking-widest text-cyan-200 disabled:opacity-60"
+                className={`mt-3 inline-flex min-h-[42px] w-full items-center justify-center ${secondaryButtonClass}`}
               >
-                {isCreating ? "Đang tạo..." : "New Consultation"}
+                {isCreating ? "Đang tạo..." : "Tạo phiên khám mới"}
               </button>
             </div>
 
@@ -798,27 +853,27 @@ export default function ScribePage() {
                     onClick={() => void onSelectSession(item.id)}
                     className={`w-full rounded-xl border p-3 text-left transition ${
                       active
-                        ? "border-cyan-400/45 bg-cyan-500/10"
-                        : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-cyan-300/35"
+                        ? "border-[#2563EB] bg-[#DBEAFE] shadow-sm dark:border-sky-400 dark:bg-sky-500/20"
+                        : "border-[#B6D4FE] bg-white hover:border-[#2563EB] hover:bg-[#F8FBFF] dark:border-sky-800 dark:bg-slate-900/90 dark:hover:border-sky-500"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">
-                        {item.title || `Session #${item.id}`}
+                      <p className={`line-clamp-1 text-sm font-bold ${bodyTextClass}`}>
+                        {item.title || `Phiên #${item.id}`}
                       </p>
-                      <span className="text-[10px] uppercase text-[var(--text-muted)]">{item.status}</span>
+                      <span className={`text-[10px] font-bold uppercase ${mutedTextClass}`}>{scribeStatusLabel(item.status)}</span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-[var(--text-secondary)]">
-                      {item.transcript?.trim() || "Chưa có transcript."}
+                    <p className={`mt-1 line-clamp-2 text-xs ${secondaryTextClass}`}>
+                      {item.transcript?.trim() || "Chưa có bản ghi."}
                     </p>
-                    <p className="mt-2 text-[10px] text-[var(--text-muted)]">{formatDate(item.updated_at)}</p>
+                    <p className={`mt-2 text-[10px] font-semibold ${mutedTextClass}`}>{formatDate(item.updated_at)}</p>
                   </button>
                 );
               })}
 
               {!isLoading && sessions.length === 0 ? (
-                <p className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-sm text-[var(--text-secondary)]">
-                  Chưa có session nào.
+                <p className={`rounded-xl border border-[#B6D4FE] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
+                  Chưa có phiên nào.
                 </p>
               ) : null}
             </div>
@@ -827,18 +882,18 @@ export default function ScribePage() {
           {mode === "workspace" ? (
             <>
               <article className="col-span-12 2xl:col-span-6 space-y-4">
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+                <div className={panelPaddedLgClass}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Acoustic Input Matrix</h3>
-                      <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
-                        {isRecording ? "Microphone live" : "Recorder idle"} · {formatDuration(elapsedSeconds)}
+                      <h3 className={accentTitleClass}>Tín hiệu âm thanh</h3>
+                      <p className={`mt-1 text-[11px] font-medium ${secondaryTextClass}`}>
+                        {isRecording ? "Micro đang ghi" : "Bộ ghi đang chờ"} · {formatDuration(elapsedSeconds)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">Realtime</p>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        {isTranscribing ? "Transcribing" : "Standby"}
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>Thời gian thực</p>
+                      <p className={`text-sm font-bold ${bodyTextClass}`}>
+                        {isTranscribing ? "Đang chuyển thành chữ" : "Chờ xử lý"}
                       </p>
                     </div>
                   </div>
@@ -847,64 +902,64 @@ export default function ScribePage() {
                     {waveBars.map((height, index) => (
                       <div
                         key={`wave-${index}`}
-                        className={`w-[3px] rounded-[1px] ${isRecording ? "bg-cyan-300" : "bg-cyan-400/45"}`}
+                        className={`w-[3px] rounded-[1px] ${isRecording ? "bg-[#2563EB]" : "bg-[#93C5FD]"}`}
                         style={{ height: `${height}%` }}
                       />
                     ))}
                   </div>
 
-                  <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  <p className={`mt-3 text-[10px] font-bold uppercase tracking-[0.18em] ${mutedTextClass}`}>
                     {selectedSession?.last_processed_at
-                      ? `Last processed ${formatDate(selectedSession.last_processed_at)}`
-                      : "Waiting for processing"}
+                      ? `Xử lý lần cuối ${formatDate(selectedSession.last_processed_at)}`
+                      : "Chờ xử lý"}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
-                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Real-Time Transcript</h3>
-                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-cyan-200">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-cyan-400 animate-pulse" : "bg-slate-500"}`} />
-                      {isRecording ? "Streaming" : "Stopped"}
+                <div className={panelClass}>
+                  <div className="flex items-center justify-between border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
+                    <h3 className={sectionTitleClass}>Bản ghi thời gian thực</h3>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1D4ED8] dark:text-sky-100">
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[#2563EB] animate-pulse" : "bg-slate-500"}`} />
+                      {isRecording ? "Đang ghi" : "Đã dừng"}
                     </div>
                   </div>
 
                   <div className="max-h-[420px] space-y-4 overflow-y-auto p-5 clara-scrollbar">
                     {transcriptPreviewRows.length === 0 ? (
-                      <p className="text-sm text-[var(--text-secondary)]">Chưa có transcript realtime.</p>
+                      <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có bản ghi thời gian thực.</p>
                     ) : (
                       transcriptPreviewRows.map((row) => (
                         <div key={row.id} className="flex gap-3">
-                          <span className="w-16 shrink-0 pt-1 text-[10px] font-semibold text-[var(--text-muted)]">
+                          <span className={`w-16 shrink-0 pt-1 text-[10px] font-bold ${mutedTextClass}`}>
                             {row.timestamp}
                           </span>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-cyan-300">{row.speaker}</p>
-                            <p className="text-sm leading-6 text-[var(--text-secondary)]">{row.text}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[#2563EB] dark:text-sky-100">{row.speaker}</p>
+                            <p className={`text-sm leading-6 ${secondaryTextClass}`}>{row.text}</p>
                           </div>
                         </div>
                       ))
                     )}
                   </div>
 
-                  <div className="border-t border-[color:var(--shell-border)] p-4">
+                  <div className="border-t border-[#B6D4FE] p-4 dark:border-sky-800">
                     <textarea
                       value={transcriptDraft}
                       onChange={(event) => setTranscriptDraft(event.target.value)}
-                      placeholder="Transcript raw để chỉnh sửa thủ công..."
-                      className="min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-cyan-300/45"
+                      placeholder="Nhập hoặc chỉnh sửa nội dung đã ghi..."
+                      className={transcriptInputClass}
                     />
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                        {(transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0)} tokens captured
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
+                        {(transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0)} từ đã ghi nhận
                       </p>
                       <button
                         type="button"
                         onClick={() => void onSaveTranscript()}
                         disabled={!selectedSession || isSaving}
-                        className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-primary)] disabled:opacity-60"
+                        className={secondaryButtonClass}
                       >
-                        {isSaving ? "Saving..." : "Save Draft"}
+                        {isSaving ? "Đang lưu..." : "Lưu bản nháp"}
                       </button>
                     </div>
                   </div>
@@ -912,54 +967,49 @@ export default function ScribePage() {
               </article>
 
               <aside className="col-span-12 2xl:col-span-3 space-y-4">
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+                <div className={panelPaddedLgClass}>
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">SOAP Draft</h3>
+                    <h3 className={sectionTitleClass}>Bản nháp SOAP</h3>
                     <button
                       type="button"
                       onClick={() => void onRegenerateSoap()}
                       disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
-                      className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200 disabled:opacity-60"
+                      className={secondaryButtonClass}
                     >
-                      {isRegenerating || isLiveAnalyzing ? "Running..." : "Regenerate"}
+                      {isRegenerating || isLiveAnalyzing ? "Đang chạy..." : "Tạo lại"}
                     </button>
                   </div>
 
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
-                    {[
-                      { key: "subjective", title: "Subjective", value: selectedSoap.subjective },
-                      { key: "objective", title: "Objective", value: selectedSoap.objective },
-                      { key: "assessment", title: "Assessment", value: selectedSoap.assessment },
-                      { key: "plan", title: "Plan", value: selectedSoap.plan },
-                    ].map((item) => (
-                      <article key={item.key} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300">{item.title}</p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">
-                          {safeText(item.value) || "Chưa có dữ liệu."}
+                    {SOAP_SECTION_LABELS.map((item) => (
+                      <article key={item.key} className={`${softPanelClass} p-3`}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2563EB] dark:text-sky-100">{item.title}</p>
+                        <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
+                          {safeText(selectedSoap[item.valueKey]) || "Chưa có dữ liệu."}
                         </p>
                       </article>
                     ))}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Live Analyze</h3>
+                <div className={panelPaddedLgClass}>
+                  <h3 className={sectionTitleClass}>Phân tích trực tiếp</h3>
                   <div className="mt-3 space-y-2">
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {isLiveAnalyzing ? "Đang phân tích realtime..." : "Live analyze sẵn sàng."}
+                    <p className={`text-sm font-medium ${secondaryTextClass}`}>
+                      {isLiveAnalyzing ? "Đang phân tích trực tiếp..." : "Sẵn sàng phân tích trực tiếp."}
                     </p>
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      Processing speed: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/chunk` : "--"}
+                    <p className={`text-[11px] font-medium ${mutedTextClass}`}>
+                      Tốc độ xử lý: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/đoạn` : "--"}
                     </p>
                   </div>
                   <div className="mt-4 space-y-2">
                     {liveInsights.length === 0 ? (
-                      <p className="text-xs text-[var(--text-secondary)]">Chưa có insight.</p>
+                      <p className={`text-xs font-medium ${secondaryTextClass}`}>Chưa có gợi ý.</p>
                     ) : (
                       liveInsights.map((item) => (
-                        <article key={item.id} className="rounded-lg border border-cyan-400/20 bg-cyan-500/8 p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-200">{item.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-cyan-100/90">{item.detail}</p>
+                        <article key={item.id} className={`${softPanelClass} p-3`}>
+                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#2563EB] dark:text-sky-100">{item.title}</p>
+                          <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>{item.detail}</p>
                         </article>
                       ))
                     )}
@@ -971,37 +1021,37 @@ export default function ScribePage() {
             <>
               <article className="col-span-12 2xl:col-span-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">AI Confidence</p>
+                  <div className={`col-span-1 ${panelPaddedClass}`}>
+                    <p className={sectionTitleClass}>Độ tin cậy AI</p>
                     <div className="mt-4 flex items-center justify-center">
                       <div className="relative h-28 w-28">
                         <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-                          <circle cx="60" cy="60" r="50" stroke="rgba(56,189,248,0.12)" strokeWidth="8" fill="none" />
+                          <circle cx="60" cy="60" r="50" stroke="rgba(96, 165, 250,0.12)" strokeWidth="8" fill="none" />
                           <circle
                             cx="60"
                             cy="60"
                             r="50"
-                            stroke="#22d3ee"
+                            stroke="#60a5fa"
                             strokeWidth="8"
                             fill="none"
                             strokeDasharray={314}
                             strokeDashoffset={314 - (314 * confidenceScore) / 100}
                           />
                         </svg>
-                        <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-cyan-200">
+                        <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-[#1D4ED8] dark:text-sky-100">
                           {confidenceScore}%
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="col-span-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Evidence Map: Signal Fidelity</p>
+                  <div className={`col-span-2 ${panelPaddedClass}`}>
+                    <p className={sectionTitleClass}>Độ ổn định tín hiệu</p>
                     <div className="mt-4 flex h-28 items-end gap-1">
                       {waveBars.slice(0, 16).map((value, index) => (
                         <div
                           key={`review-wave-${index}`}
-                          className="flex-1 rounded-sm bg-cyan-400/70"
+                          className="flex-1 rounded-sm bg-[#2563EB]"
                           style={{ height: `${Math.max(10, Math.round((value / 100) * 100))}%` }}
                         />
                       ))}
@@ -1009,31 +1059,26 @@ export default function ScribePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
+                <div className="rounded-xl border border-[#93C5FD] bg-[#EEF6FF] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
                   <div className="mb-5 flex items-center justify-between">
                     <div>
-                      <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">Clinical Note Synthesis</h2>
-                      <p className="text-sm text-[var(--text-secondary)]">
-                        Session ID: {selectedSession ? `#SYN-${selectedSession.id}` : "--"}
+                      <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>Tổng hợp ghi chú lâm sàng</h2>
+                      <p className={`text-sm font-medium ${secondaryTextClass}`}>
+                        Mã phiên: {selectedSession ? `#PHIEN-${selectedSession.id}` : "--"}
                       </p>
                     </div>
-                    <span className="rounded-full bg-cyan-500/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200">
-                      {selectedSession?.status ?? "draft"}
+                    <span className="rounded-full border border-[#93C5FD] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#1D4ED8] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
+                      {scribeStatusLabel(selectedSession?.status)}
                     </span>
                   </div>
 
                   <div className="space-y-5">
-                    {[
-                      { key: "subjective", title: "Subjective", value: selectedSoap.subjective },
-                      { key: "objective", title: "Objective", value: selectedSoap.objective },
-                      { key: "assessment", title: "Assessment", value: selectedSoap.assessment },
-                      { key: "plan", title: "Plan", value: selectedSoap.plan },
-                    ].map((item) => (
+                    {SOAP_SECTION_LABELS.map((item) => (
                       <section key={item.key}>
-                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">{item.title}</h5>
-                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">
-                            {safeText(item.value) || "Chưa có dữ liệu."}
+                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2563EB] dark:text-sky-100">{item.title}</h5>
+                        <div className="mt-2 rounded-lg border border-[#B6D4FE] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
+                          <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
+                            {safeText(selectedSoap[item.valueKey]) || "Chưa có dữ liệu."}
                           </p>
                         </div>
                       </section>
@@ -1043,52 +1088,52 @@ export default function ScribePage() {
               </article>
 
               <aside className="col-span-12 2xl:col-span-3 space-y-4">
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Clinical Coding</h3>
+                <div className={panelPaddedClass}>
+                  <h3 className={sectionTitleClass}>Mã hóa lâm sàng</h3>
                   <div className="mt-3 space-y-2">
                     {clinicalCodes.map((code) => (
-                      <article key={code.code} className="flex items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                      <article key={code.code} className={`flex items-center justify-between ${softPanelClass} p-3`}>
                         <div>
-                          <p className="text-xs font-black text-cyan-200">{code.code}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)]">{code.label}</p>
+                          <p className="text-xs font-black text-[#1D4ED8] dark:text-sky-100">{code.code}</p>
+                          <p className={`text-[10px] font-medium ${secondaryTextClass}`}>{code.label}</p>
                         </div>
-                        <span className="material-symbols-outlined text-cyan-200">add_circle</span>
+                        <span className="material-symbols-outlined text-[#2563EB] dark:text-sky-100">add_circle</span>
                       </article>
                     ))}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-cyan-400/20 bg-[var(--surface-panel)] p-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200">AI Council Handoff</h3>
-                  <div className="mt-3 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <p className="text-[10px] font-bold uppercase text-cyan-300">Executive Summary</p>
-                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                      {liveInsights[0]?.detail || "Chưa có dữ liệu tổng hợp để handoff."}
+                <div className={panelPaddedClass}>
+                  <h3 className={accentTitleClass}>Chuyển hội chẩn AI</h3>
+                  <div className={`mt-3 ${softPanelClass} p-3`}>
+                    <p className="text-[10px] font-black uppercase text-[#2563EB] dark:text-sky-100">Tóm tắt chính</p>
+                    <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
+                      {liveInsights[0]?.detail || "Chưa có dữ liệu tổng hợp để chuyển hội chẩn."}
                     </p>
-                    <p className="mt-3 text-[10px] text-[var(--text-muted)]">
-                      Transcript tokens: {transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0}
+                    <p className={`mt-3 text-[10px] font-medium ${mutedTextClass}`}>
+                      Số từ bản ghi: {transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0}
                     </p>
                   </div>
                   <button
                     type="button"
-                    className="mt-3 w-full rounded-lg bg-cyan-400/15 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200"
+                    className={`mt-3 w-full ${secondaryButtonClass}`}
                   >
-                    Commit to Registry
+                    Lưu vào hồ sơ
                   </button>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+                <div className={panelPaddedClass}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[8px] uppercase tracking-[0.15em] text-[var(--text-muted)]">Processing Speed</p>
-                      <p className="text-sm font-bold text-cyan-200">
+                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>Tốc độ xử lý</p>
+                      <p className="text-sm font-black text-[#1D4ED8] dark:text-sky-100">
                         {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
-                        <span className="text-[10px] text-[var(--text-secondary)]"> / chunk</span>
+                        <span className={`text-[10px] ${secondaryTextClass}`}> / đoạn</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-                      <span className="text-[10px] font-bold uppercase text-emerald-300">{isRecording ? "Live" : "Idle"}</span>
+                      <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? "Đang ghi" : "Chờ"}</span>
                     </div>
                   </div>
                 </div>
@@ -1097,22 +1142,22 @@ export default function ScribePage() {
           )}
         </section>
 
-        <section className="grid grid-cols-2 gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 md:grid-cols-4">
-          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Total Sessions</p>
-            <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{analytics?.total_sessions ?? 0}</p>
+        <section className={`grid grid-cols-2 gap-3 md:grid-cols-4 ${panelPaddedClass}`}>
+          <div className={`${softPanelClass} p-3`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Tổng số phiên</p>
+            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.total_sessions ?? 0}</p>
           </div>
-          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Completed</p>
-            <p className="mt-2 text-xl font-black text-cyan-300">{analytics?.completed_sessions ?? 0}</p>
+          <div className={`${softPanelClass} p-3`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Đã hoàn tất</p>
+            <p className="mt-2 text-xl font-black text-[#1D4ED8] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
           </div>
-          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Today</p>
-            <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{analytics?.sessions_today ?? 0}</p>
+          <div className={`${softPanelClass} p-3`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Hôm nay</p>
+            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.sessions_today ?? 0}</p>
           </div>
-          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Avg Chars</p>
-            <p className="mt-2 text-xl font-black text-[var(--text-primary)]">
+          <div className={`${softPanelClass} p-3`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Ký tự trung bình</p>
+            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>
               {Math.round(analytics?.avg_transcript_chars ?? 0)}
             </p>
           </div>
@@ -1120,14 +1165,14 @@ export default function ScribePage() {
       </section>
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-red-300/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">{error}</p>
+        <p className="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">{error}</p>
       ) : null}
       {notice ? (
         <p
-          className={`mt-4 rounded-lg border px-4 py-2 text-sm ${
+          className={`mt-4 rounded-lg border px-4 py-2 text-sm font-semibold ${
             notice.tone === "success"
-              ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-200"
-              : "border-red-300/40 bg-red-500/10 text-red-200"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100"
+              : "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100"
           }`}
         >
           {notice.message}

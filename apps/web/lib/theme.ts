@@ -27,11 +27,11 @@ export const getSystemTheme = (): ResolvedTheme => {
 
 export const getStoredThemePreference = (): ThemePreference => {
   if (typeof window === "undefined") {
-    return "dark";
+    return "light";
   }
 
   const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return isThemePreference(raw) ? raw : "dark";
+  return isThemePreference(raw) ? raw : "light";
 };
 
 export const saveThemePreference = (preference: ThemePreference): void => {
@@ -58,7 +58,7 @@ export const getThemeInitScript = (): string =>
     try {
       const key = "${THEME_STORAGE_KEY}";
       const raw = window.localStorage.getItem(key);
-      const preference = raw === "light" || raw === "dark" || raw === "system" ? raw : "dark";
+      const preference = raw === "light" || raw === "dark" || raw === "system" ? raw : "light";
       const prefersDark = window.matchMedia("${THEME_QUERY}").matches;
       const resolved = preference === "system" ? (prefersDark ? "dark" : "light") : preference;
       const root = document.documentElement;

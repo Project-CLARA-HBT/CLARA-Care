@@ -28,11 +28,11 @@ function sourceLabel(source: string): string {
 }
 
 function sourceClass(source: string): string {
-  if (source === "ocr") return "border-cyan-300/60 bg-cyan-500/15 text-cyan-100";
-  if (source === "manual") return "border-slate-400/40 bg-slate-500/20 text-slate-100";
-  if (source === "barcode") return "border-indigo-300/55 bg-indigo-500/20 text-indigo-100";
-  if (source === "imported") return "border-sky-300/55 bg-sky-500/20 text-sky-100";
-  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+  if (source === "ocr") return "border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-300/60 dark:bg-cyan-500/15 dark:text-cyan-100";
+  if (source === "manual") return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/40 dark:bg-slate-500/20 dark:text-slate-100";
+  if (source === "barcode") return "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-300/55 dark:bg-indigo-500/20 dark:text-indigo-100";
+  if (source === "imported") return "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-300/55 dark:bg-sky-500/20 dark:text-sky-100";
+  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
 }
 
 function normalizationLabel(source: string | null | undefined): string {
@@ -43,10 +43,10 @@ function normalizationLabel(source: string | null | undefined): string {
 }
 
 function normalizationClass(source: string | null | undefined): string {
-  if (source === "db") return "border-emerald-300/60 bg-emerald-500/15 text-emerald-100";
-  if (source === "candidate") return "border-amber-300/60 bg-amber-500/15 text-amber-100";
-  if (source === "fallback") return "border-rose-300/60 bg-rose-500/15 text-rose-100";
-  return "border-slate-400/35 bg-slate-500/20 text-slate-100";
+  if (source === "db") return "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-300/60 dark:bg-emerald-500/15 dark:text-emerald-100";
+  if (source === "candidate") return "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-100";
+  if (source === "fallback") return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-300/60 dark:bg-rose-500/15 dark:text-rose-100";
+  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
 }
 
 function formatDate(value: string | null): string {
@@ -131,6 +131,8 @@ export default function SelfMedPage() {
       riskTone: riskTone(computedRisk),
     };
   }, [items]);
+
+  const canCheckInteractions = stats.total >= 2;
 
   const topItems = useMemo(
     () =>
@@ -267,29 +269,45 @@ export default function SelfMedPage() {
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Thêm thuốc đang dùng vào đây. Khi có từ 2 thuốc trở lên, CLARA có thể kiểm tra cặp thuốc nào cần lưu ý.
+                  Thêm các thuốc bạn đang dùng để CLARA kiểm tra tương tác và nhắc lịch dùng thuốc.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/selfmed/add"
-                  className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
-                >
-                  + Thêm thuốc
-                </Link>
-                <Link
-                  href="/selfmed/ddi"
-                  className="inline-flex min-h-11 items-center rounded-lg border border-cyan-300/50 bg-cyan-500/10 px-4 text-sm font-semibold text-cyan-100"
-                >
-                  Kiểm tra tương tác thuốc
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void refreshCabinet()}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
-                >
-                  Làm mới
-                </button>
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/selfmed/add"
+                    className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
+                  >
+                    + Thêm thuốc
+                  </Link>
+                  {canCheckInteractions ? (
+                    <Link
+                      href="/selfmed/ddi"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-blue-700 bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
+                    >
+                      Kiểm tra tương tác thuốc
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Cần thêm ít nhất 2 thuốc để kiểm tra tương tác."
+                      className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg border border-slate-300 bg-slate-200 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                      Kiểm tra tương tác thuốc
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void refreshCabinet()}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-blue-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
+                  >
+                    Làm mới
+                  </button>
+                </div>
+                {!canCheckInteractions ? (
+                  <p className="text-xs text-[var(--text-muted)]">Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.</p>
+                ) : null}
               </div>
             </div>
 
@@ -302,20 +320,28 @@ export default function SelfMedPage() {
 
           <section className="grid grid-cols-12 gap-6">
             <div className="col-span-12 lg:col-span-8 space-y-6">
-              <article className="clara-glass-panel rounded-xl border border-[color:var(--shell-border)] p-6">
+              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[0_18px_42px_-32px_rgba(37,99,235,0.45)]">
                 <div className="mb-6 flex items-center justify-between">
                   <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
                   <span
                     className={[
                       "rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
-                      stats.riskTone === "high"
-                        ? "border-red-300/40 bg-red-500/15 text-red-200"
-                        : stats.riskTone === "moderate"
-                          ? "border-amber-300/40 bg-amber-500/15 text-amber-200"
-                          : "border-emerald-300/40 bg-emerald-500/15 text-emerald-200",
+                      stats.total === 0
+                        ? "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                        : stats.riskTone === "high"
+                          ? "border-red-300/40 bg-red-500/15 text-red-700 dark:text-red-200"
+                          : stats.riskTone === "moderate"
+                            ? "border-amber-300/40 bg-amber-500/15 text-amber-700 dark:text-amber-200"
+                            : "border-emerald-300/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
                     ].join(" ")}
                   >
-                    {stats.riskTone === "high" ? "CẢNH BÁO CAO" : stats.riskTone === "moderate" ? "TRUNG BÌNH" : "ỔN ĐỊNH"}
+                    {stats.total === 0
+                      ? "CHƯA CÓ THUỐC"
+                      : stats.riskTone === "high"
+                        ? "CẢNH BÁO CAO"
+                        : stats.riskTone === "moderate"
+                          ? "TRUNG BÌNH"
+                          : "ỔN ĐỊNH"}
                   </span>
                 </div>
 
@@ -333,7 +359,7 @@ export default function SelfMedPage() {
                       <path
                         d="M20 100 A90 90 0 0 1 200 100"
                         fill="none"
-                        stroke="rgb(34 211 238)"
+                        stroke="var(--brand-500)"
                         strokeWidth="12"
                         strokeLinecap="round"
                         pathLength={100}
@@ -341,7 +367,7 @@ export default function SelfMedPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                      <span className="text-3xl font-extrabold text-cyan-300">{stats.riskScore}%</span>
+                      <span className="text-3xl font-extrabold text-[var(--text-brand)]">{stats.riskScore}%</span>
                       <span className="text-[10px] uppercase text-[var(--text-muted)]">Điểm cần rà soát</span>
                     </div>
                   </div>
@@ -352,8 +378,8 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
-                        <div className="h-full rounded-full bg-red-300" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
+                        <div className="h-full rounded-full bg-[var(--brand-500)]" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
                       </div>
                     </div>
                     <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -361,9 +387,9 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-900/40">
+                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
                         <div
-                          className="h-full rounded-full bg-cyan-300"
+                          className="h-full rounded-full bg-[var(--brand-500)]"
                           style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
                         />
                       </div>
@@ -424,7 +450,7 @@ export default function SelfMedPage() {
                             <i className="fa fa-calendar" aria-hidden="true" /> HSD: {formatDate(item.expires_on)}
                           </span>
                           {item.ocr_confidence !== null ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-200">
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-200">
                               <i className="fa fa-check-circle" aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
                             </span>
                           ) : null}
@@ -437,7 +463,7 @@ export default function SelfMedPage() {
                         <button
                           type="button"
                           onClick={() => void onDelete(item.id)}
-                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300/50 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/25"
+                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-300/50 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/25"
                         >
                           Xóa
                         </button>
@@ -481,16 +507,16 @@ export default function SelfMedPage() {
                 )}
               </article>
 
-              <article className="rounded-xl border border-red-300/30 bg-red-500/10 p-6">
+              <article className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-300/30 dark:bg-red-500/10">
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-red-300">emergency</span>
-                  <h3 className="text-sm uppercase tracking-widest text-red-200">Phản Ứng Cần Lưu Ý</h3>
+                  <span className="material-symbols-outlined text-red-500 dark:text-red-300">emergency</span>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-red-700 dark:text-red-200">Phản Ứng Cần Lưu Ý</h3>
                 </div>
                 {medicationAlerts.length > 0 ? (
                   <ul className="space-y-3">
                     {medicationAlerts.map((alert) => (
                       <li className="flex items-start gap-2" key={alert.id}>
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-300" />
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 dark:bg-red-300" />
                         <div>
                           <p className="text-xs font-bold text-[var(--text-primary)]">{alert.title}</p>
                           <p className="text-[10px] text-[var(--text-secondary)]">{alert.detail}</p>
@@ -503,7 +529,7 @@ export default function SelfMedPage() {
                 )}
                 <Link
                   href="/careguard"
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-300/40 py-2 text-[10px] font-bold uppercase tracking-widest text-red-100 hover:bg-red-500/10"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-600 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-red-700 dark:border-red-300/40 dark:bg-transparent dark:text-red-100 dark:hover:bg-red-500/10"
                 >
                   Mở kiểm tra tương tác
                 </Link>

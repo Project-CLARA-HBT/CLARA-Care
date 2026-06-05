@@ -12,9 +12,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
   const [isLoading, setIsLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
   const [requiredVersion, setRequiredVersion] = useState("");
-  const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
   const [acceptedAt, setAcceptedAt] = useState<string | null>(null);
-  const [consentUserId, setConsentUserId] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -29,9 +27,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
       const status = await getConsentStatus();
       setRequiredVersion(status.required_version);
       setAccepted(status.accepted);
-      setAcceptedVersion(status.accepted_version ?? null);
       setAcceptedAt(status.accepted_at ?? null);
-      setConsentUserId(typeof status.user_id === "number" ? status.user_id : null);
       return status.accepted;
     } catch (cause) {
       setAccepted(false);
@@ -98,11 +94,11 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Xem đầy đủ tại{" "}
-          <Link href="/legal/consent" className="font-semibold text-cyan-300 hover:underline">
+          <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
             Đồng thuận sử dụng y tế
           </Link>
           {" "}và{" "}
-          <Link href="/legal/privacy" className="font-semibold text-cyan-300 hover:underline">
+          <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
             Chính sách quyền riêng tư
           </Link>
           .
@@ -127,7 +123,7 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
           type="button"
           onClick={onAccept}
           disabled={isSaving || !checked}
-          className="mt-4 min-h-12 rounded-xl border border-cyan-400/60 bg-cyan-500/20 px-5 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 min-h-12 rounded-xl border border-blue-700 bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
         >
           {isSaving ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
         </button>
@@ -151,18 +147,19 @@ export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps
 
   return (
     <div className="space-y-4">
-      <section className="chrome-panel rounded-2xl border border-emerald-300/50 bg-emerald-500/10 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">Consent đã được mở khóa</p>
-        <div className="mt-2 grid gap-2 text-sm text-emerald-100/95 md:grid-cols-3">
-          <p>
-            Phiên bản đã chấp thuận: <span className="font-semibold">{acceptedVersion ?? requiredVersion ?? "-"}</span>
-          </p>
-          <p>
-            Thời điểm chấp thuận: <span className="font-semibold">{acceptedAtDisplay ?? "Chưa có dữ liệu"}</span>
-          </p>
-          <p>
-            User context: <span className="font-semibold">{consentUserId ? `user_id=${consentUserId}` : "Ẩn danh/không có"}</span>
-          </p>
+      <section className="chrome-panel rounded-2xl border border-emerald-400/60 bg-emerald-500/10 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-300" aria-hidden="true">
+            verified_user
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
+              Bạn đã đồng ý điều khoản sử dụng y tế của CLARA
+            </p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-100/85">
+              {acceptedAtDisplay ? `Đã xác nhận lúc ${acceptedAtDisplay}` : "Có thể bắt đầu sử dụng tủ thuốc."}
+            </p>
+          </div>
         </div>
       </section>
       {children}

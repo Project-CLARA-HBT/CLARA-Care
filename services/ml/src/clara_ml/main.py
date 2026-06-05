@@ -109,6 +109,7 @@ def _build_deepseek_client() -> DeepSeekClient:
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
         request_jitter_seconds=settings.llm_global_jitter_seconds,
+        audio_base_url=settings.deepseek_audio_base_url,
     )
 
 

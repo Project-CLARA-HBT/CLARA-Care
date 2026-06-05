@@ -42,13 +42,30 @@ const QUICK_ACCESS: QuickAccess[] = [
   { href: "/chat", title: "Hỏi CLARA", detail: "Nhận gợi ý chăm sóc có dẫn nguồn", icon: "chat" },
   { href: "/council", title: "Hội chẩn ca bệnh", detail: "Xin thêm góc nhìn cho ca cần cân nhắc", icon: "groups" },
   { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Xem lại thuốc đang theo dõi và ngày hết hạn", icon: "medication" },
-  { href: "/careguard", title: "Lưu ý an toàn", detail: "Kiểm tra tương tác và cảnh báo trước khi tiếp tục", icon: "health_and_safety" },
+  { href: "/careguard", title: "Kiểm tra tương tác", detail: "Đối chiếu thuốc khi cần kiểm tra thêm", icon: "health_and_safety" },
   { href: "/scribe", title: "Ghi nhận buổi khám", detail: "Lưu lại diễn tiến và ghi chú chăm sóc", icon: "edit_note" },
 ];
 
 function formatCount(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "--";
   return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatOptionalCount(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "Chưa có dữ liệu";
+  return formatCount(value);
+}
+
+function formatLastUpdated(value: string | null): string {
+  if (!value) return "Chưa có dữ liệu";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "Chưa có dữ liệu";
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(timestamp));
 }
 
 function formatRelative(value: number): string {
@@ -96,6 +113,8 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<string[]>([]);
   const [serverTasks, setServerTasks] = useState<TodayTask[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [dashboardUnavailable, setDashboardUnavailable] = useState(false);
 
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
@@ -103,6 +122,8 @@ export default function DashboardPage() {
       const rawDashboard = await getSystemDashboard();
       const dashboard = normalizeSystemDashboard(rawDashboard);
 
+      setDashboardUnavailable(false);
+      setGeneratedAt(dashboard.generatedAt);
       setRole((dashboard.user.role as UserRole) ?? getRole());
       setHealthStatus(dashboard.runtime.apiStatus);
       setMlStatus(dashboard.runtime.mlStatus);
@@ -118,7 +139,7 @@ export default function DashboardPage() {
       setFlowEnabledCount(dashboard.sources.flowEnabledCount);
 
       setRecentQueries(dashboard.research.recentQueries);
-      setAlerts(dashboard.alerts);
+      setAlerts(dashboard.alerts.filter((item) => item.trim().length > 0));
       setServerTasks(
         dashboard.tasks.map((task) => ({
           id: task.id,
@@ -129,7 +150,17 @@ export default function DashboardPage() {
         }))
       );
     } catch {
-      setAlerts(["Không thể tải dữ liệu dashboard tổng hợp."]);
+      setDashboardUnavailable(true);
+      setGeneratedAt(null);
+      setCabinetCount(null);
+      setExpiringSoonCount(null);
+      setExpiredCount(null);
+      setEnabledSources(0);
+      setTotalSources(0);
+      setFlowEnabledCount(0);
+      setRecentQueries([]);
+      setServerTasks([]);
+      setAlerts(["Chưa thể tải dữ liệu tổng quan. Vui lòng thử làm mới hoặc kiểm tra kết nối."]);
     } finally {
       setIsRefreshing(false);
     }
@@ -141,6 +172,7 @@ export default function DashboardPage() {
   }, [refreshDashboard]);
 
   const greeting = ROLE_GREETINGS[role] ?? ROLE_GREETINGS.normal;
+  const lastUpdatedLabel = formatLastUpdated(generatedAt);
 
   const activeCases = useMemo(() => {
     const inferred = Math.max(recentQueries.length, Math.max(0, Math.trunc((requestCount ?? 0) / 2)));
@@ -148,11 +180,15 @@ export default function DashboardPage() {
   }, [recentQueries.length, requestCount]);
 
   const cautionCases = useMemo(() => {
+    if (dashboardUnavailable) return 0;
     const risk = (alerts.length > 0 ? 1 : 0) + ((expiredCount ?? 0) > 0 ? 1 : 0);
     return Math.max(0, Math.min(8, risk));
-  }, [alerts.length, expiredCount]);
+  }, [alerts.length, dashboardUnavailable, expiredCount]);
 
-  const needsSafetyReview = alerts.length > 0 || (expiredCount ?? 0) > 0;
+  const needsSafetyReview = !dashboardUnavailable && (alerts.length > 0 || (expiredCount ?? 0) > 0);
+  const hasMedicationData =
+    cabinetCount !== null || expiringSoonCount !== null || expiredCount !== null;
+  const hasConnectedSources = totalSources > 0 || enabledSources > 0;
 
   const councilTotal = 12;
   const councilDone = useMemo(() => Math.max(0, Math.min(councilTotal, recentQueries.length)), [recentQueries.length]);
@@ -198,6 +234,9 @@ export default function DashboardPage() {
   }, [recentQueries]);
 
   const assistantInsight = useMemo(() => {
+    if (dashboardUnavailable) {
+      return "Chưa thể tải dữ liệu tổng quan. Vui lòng thử làm mới hoặc kiểm tra kết nối.";
+    }
     if (alerts.length > 0) return alerts[0];
     if ((expiredCount ?? 0) > 0) {
       return `Có ${formatCount(expiredCount)} thuốc đã quá hạn. Nên kiểm tra lại trước khi tiếp tục tư vấn hoặc sử dụng.`;
@@ -207,75 +246,100 @@ export default function DashboardPage() {
       return "Một vài phiên gần đây cần xem kỹ thêm. Hãy đối chiếu cảnh báo và nguồn tham khảo trước khi chốt khuyến nghị.";
     }
     return "Hôm nay chưa có tín hiệu khẩn cấp nổi bật. Bạn có thể bắt đầu từ tủ thuốc hoặc tiếp tục phiên hỗ trợ gần nhất.";
-  }, [alerts, errorCount, expiredCount]);
+  }, [alerts, dashboardUnavailable, errorCount, expiredCount]);
 
   const safetySummary = useMemo(() => {
+    if (dashboardUnavailable) {
+      return {
+        eyebrow: "Chưa có dữ liệu",
+        title: "Chưa thể tải dữ liệu tổng quan",
+        detail: "Vui lòng thử làm mới hoặc kiểm tra kết nối.",
+      };
+    }
+
+    const tracked = cabinetCount ?? 0;
+    const expired = expiredCount ?? 0;
+    const expiring = expiringSoonCount ?? 0;
+    const importantNotes = (tracked > 0 ? 1 : 0) + (expiring > 0 ? 1 : 0) + (expired > 0 ? 1 : 0);
     if ((expiredCount ?? 0) > 0) {
       return {
-        eyebrow: "Cần xem ngay",
-        title: `${formatCount(expiredCount)} thuốc cần thay hoặc kiểm tra lại`,
-        detail: "Một vài thuốc đã quá hạn. Nên rà soát trước khi tiếp tục tư vấn hoặc dùng lại.",
+        eyebrow: "Cảnh báo an toàn",
+        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
+        detail: "Có thuốc cần kiểm tra lại sớm. Hãy rà soát trước khi tiếp tục.",
       };
     }
 
     if (alerts.length > 0) {
       return {
-        eyebrow: "Lưu ý an toàn",
-        title: "Có nhắc nhở cần đọc trước khi tiếp tục",
-        detail: alerts[0],
+        eyebrow: "Cảnh báo an toàn",
+        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
+        detail: "Có thông tin cần kiểm tra lại trước khi tiếp tục.",
       };
     }
 
     if ((expiringSoonCount ?? 0) > 0) {
       return {
-        eyebrow: "Sắp đến hạn",
-        title: `${formatCount(expiringSoonCount)} thuốc nên được chuẩn bị thay mới`,
+        eyebrow: "Cảnh báo an toàn",
+        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
         detail: "Kiểm tra sớm để tránh gián đoạn theo dõi hoặc sử dụng.",
       };
     }
 
     return {
-      eyebrow: "Tủ thuốc đang ổn",
-      title: `${formatCount(cabinetCount)} thuốc đang được theo dõi`,
+      eyebrow: "Tình trạng an toàn",
+      title: "Chưa thấy cảnh báo nghiêm trọng",
       detail: "Chưa thấy tín hiệu khẩn cấp. Bạn có thể tiếp tục hỏi CLARA hoặc rà soát ca gần nhất.",
     };
-  }, [alerts, cabinetCount, expiredCount, expiringSoonCount]);
+  }, [alerts.length, cabinetCount, dashboardUnavailable, expiredCount, expiringSoonCount]);
 
-  const heroActions = useMemo<QuickAccess[]>(() => {
-    const firstAction = needsSafetyReview
-      ? {
-          href: "/careguard",
-          title: "Xem lưu ý an toàn",
-          detail:
-            (expiredCount ?? 0) > 0
-              ? `${formatCount(expiredCount)} thuốc cần kiểm tra lại ngay`
-              : "Đọc cảnh báo trước khi tiếp tục tư vấn",
-          icon: "health_and_safety",
-        }
-      : {
-          href: "/selfmed",
-          title: "Rà soát tủ thuốc",
-          detail: `${formatCount(cabinetCount)} thuốc đang được theo dõi`,
-          icon: "medication",
-        };
+  const primaryAction = useMemo(() => {
+    if (dashboardUnavailable) {
+      return {
+        kind: "button" as const,
+        title: "Tải lại dữ liệu",
+        detail: "Thử kết nối lại dữ liệu tổng quan",
+        icon: "refresh",
+      };
+    }
+    if (needsSafetyReview) {
+      const safetyCount =
+        (cabinetCount !== null ? 1 : 0) +
+        ((expiringSoonCount ?? 0) > 0 ? 1 : 0) +
+        ((expiredCount ?? 0) > 0 ? 1 : 0);
+      return {
+        kind: "link" as const,
+        href: "/careguard",
+        title: `Xem ${formatCount(Math.max(1, safetyCount))} lưu ý cần xử lý`,
+        detail: "Rà soát cảnh báo trước khi tiếp tục",
+        icon: "health_and_safety",
+      };
+    }
+    return {
+      kind: "link" as const,
+      href: "/selfmed",
+      title: "Bắt đầu rà soát hôm nay",
+      detail: "Mở tủ thuốc và kiểm tra các bước cần làm",
+      icon: "checklist",
+    };
+  }, [cabinetCount, dashboardUnavailable, expiredCount, expiringSoonCount, needsSafetyReview]);
 
-    const secondAction =
+  const secondaryAction = useMemo<QuickAccess>(
+    () =>
       recentQueries.length > 0
         ? {
             href: "/chat",
             title: "Tiếp tục cùng CLARA",
-            detail: "Mở lại hỗ trợ gần đây để làm rõ thêm cho ca đang theo dõi",
+            detail: "Mở lại hỗ trợ gần đây",
             icon: "chat",
           }
         : {
             href: "/council",
             title: "Bắt đầu hội chẩn",
-            detail: "Xin thêm góc nhìn cho trường hợp cần cân nhắc",
+            detail: "Xin thêm góc nhìn khi cần",
             icon: "groups",
-          };
-
-    return [firstAction, secondAction];
-  }, [cabinetCount, expiredCount, needsSafetyReview, recentQueries.length]);
+          },
+    [recentQueries.length]
+  );
 
   const todayTasks = useMemo<TodayTask[]>(() => {
     if (serverTasks.length > 0) return serverTasks.slice(0, 4);
@@ -289,14 +353,14 @@ export default function DashboardPage() {
       },
       {
         id: "check-ddi",
-        title: "Kiểm tra DDI",
+        title: "Kiểm tra tương tác",
         detail: "Đối chiếu tương tác đa thuốc",
         tone: "warn",
         href: "/careguard",
       },
       {
         id: "conduct-council",
-        title: "Chạy hội chẩn",
+        title: "Hội chẩn AI",
         detail: "Hội chẩn các ca cần quyết định",
         tone: "normal",
         href: "/council",
@@ -318,8 +382,8 @@ export default function DashboardPage() {
         : [
             ...todayTasks,
             { id: "fallback-1", title: "Rà soát thuốc", detail: "", tone: "normal" as TodayTask["tone"], href: "/selfmed" },
-            { id: "fallback-2", title: "Kiểm tra DDI", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
-            { id: "fallback-3", title: "Chạy hội chẩn", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
+            { id: "fallback-2", title: "Kiểm tra tương tác", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
+            { id: "fallback-3", title: "Hội chẩn AI", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
             { id: "fallback-4", title: "Ghi nhận kết quả", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
           ]).slice(0, 4),
     [todayTasks]
@@ -340,10 +404,11 @@ export default function DashboardPage() {
     ];
   }, [cabinetCount, councilDone, recentQueries.length, requestCount]);
 
-  const workflowProgress = useMemo(() => {
-    const completed = workflowStates.filter((state) => state === "done").length;
-    return Math.round((completed / 4) * 100);
-  }, [workflowStates]);
+  const completedWorkflowSteps = useMemo(
+    () => workflowStates.filter((state) => state === "done").length,
+    [workflowStates]
+  );
+  const workflowProgress = Math.round((completedWorkflowSteps / 4) * 100);
 
   return (
     <PageShell title="" description="" variant="plain">
@@ -357,39 +422,57 @@ export default function DashboardPage() {
               <div>
                 <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-[var(--text-brand)] sm:text-4xl">{greeting}</h2>
                 <p className="max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-lg">
-                  Hôm nay bạn đang theo dõi <span className="font-bold text-[var(--text-brand)]">{activeCases} hồ sơ chăm sóc</span>.
-                  {cautionCases > 0
-                    ? ` Có ${cautionCases} nhóm việc cần xem kỹ hơn trước khi chốt khuyến nghị.`
-                    : " Chưa thấy tín hiệu cần can thiệp gấp, bạn có thể tiếp tục các bước quen thuộc một cách nhẹ nhàng hơn."}
+                  Hôm nay có <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-0.5 font-bold text-[var(--text-brand)]">{activeCases} hồ sơ</span> cần theo dõi.
+                  <br />
+                  Trong đó có <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-0.5 font-bold text-[var(--text-brand)]">{cautionCases} nhóm việc</span> cần xem lại trước khi tiếp tục.
+                </p>
+                <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">
+                  Cập nhật lần cuối: {lastUpdatedLabel}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                {heroActions.map((action, index) => (
-                  <Link
-                    key={action.href}
-                    href={action.href}
-                    className={[
-                      "group flex min-h-16 flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition",
-                      index === 0
-                        ? "border-transparent bg-[var(--text-brand)] text-white shadow-[var(--shadow-soft)] hover:opacity-95"
-                        : "border-[color:var(--shell-border)] bg-white/80 text-[var(--text-primary)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] dark:bg-slate-900/50",
-                    ].join(" ")}
+                {primaryAction.kind === "button" ? (
+                  <button
+                    type="button"
+                    onClick={refreshDashboard}
+                    disabled={isRefreshing}
+                    className="group flex min-h-16 flex-1 items-center gap-3 rounded-xl border border-transparent bg-[var(--text-brand)] px-4 py-3 text-left text-white shadow-[var(--shadow-soft)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    <span
-                      className={[
-                        "flex h-10 w-10 items-center justify-center rounded-full",
-                        index === 0 ? "bg-white/20 text-white" : "bg-[var(--surface-muted)] text-[var(--text-brand)]",
-                      ].join(" ")}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">{action.icon}</span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white">
+                      <span className="material-symbols-outlined text-[20px]">{primaryAction.icon}</span>
                     </span>
                     <div>
-                      <p className={`text-sm font-bold ${index === 0 ? "text-white" : "text-[var(--text-brand)]"}`}>{action.title}</p>
-                      <p className={`text-xs ${index === 0 ? "text-white/80" : "text-[var(--text-secondary)]"}`}>{action.detail}</p>
+                      <p className="text-sm font-bold text-white">{isRefreshing ? "Đang tải lại..." : primaryAction.title}</p>
+                      <p className="text-xs text-white/80">{primaryAction.detail}</p>
+                    </div>
+                  </button>
+                ) : (
+                  <Link
+                    href={primaryAction.href}
+                    className="group flex min-h-16 flex-1 items-center gap-3 rounded-xl border border-transparent bg-[var(--text-brand)] px-4 py-3 text-left text-white shadow-[var(--shadow-soft)] transition hover:opacity-95"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white">
+                      <span className="material-symbols-outlined text-[20px]">{primaryAction.icon}</span>
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-white">{primaryAction.title}</p>
+                      <p className="text-xs text-white/80">{primaryAction.detail}</p>
                     </div>
                   </Link>
-                ))}
+                )}
+                <Link
+                  href={secondaryAction.href}
+                  className="group flex min-h-16 flex-1 items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-white/80 px-4 py-3 text-left text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] dark:bg-slate-900/50"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-brand)]">
+                    <span className="material-symbols-outlined text-[20px]">{secondaryAction.icon}</span>
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--text-brand)]">{secondaryAction.title}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{secondaryAction.detail}</p>
+                  </div>
+                </Link>
                 <button
                   type="button"
                   onClick={refreshDashboard}
@@ -409,12 +492,15 @@ export default function DashboardPage() {
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <div className="rounded-xl bg-[var(--surface-muted)] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Thuốc đang theo dõi</p>
-                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)}</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatOptionalCount(cabinetCount)}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--surface-muted)] p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cần lưu ý hôm nay</p>
-                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatCount(expiredCount)}</p>
-                  <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCount(expiringSoonCount)} thuốc sắp đến hạn</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Thuốc sắp đến hạn</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">{formatOptionalCount(expiringSoonCount)}</p>
+                </div>
+                <div className="rounded-xl bg-[var(--surface-muted)] p-4 sm:col-span-2 lg:col-span-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Tương tác nghiêm trọng</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">0</p>
                 </div>
               </div>
             </div>
@@ -424,7 +510,9 @@ export default function DashboardPage() {
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Luồng công việc hàng ngày</h3>
-            <span className="text-xs text-[var(--text-secondary)]">Tiến độ: {workflowProgress}% hoàn thành</span>
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+              Đã hoàn thành: {completedWorkflowSteps}/4 bước
+            </span>
           </div>
 
           <div className="relative grid gap-4 md:grid-cols-4">
@@ -462,6 +550,17 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <p className="text-xs font-bold text-[var(--text-primary)]">{task.title}</p>
+                  <p className="mt-1 text-[10px] leading-4 text-[var(--text-secondary)]">
+                    {task.detail || (
+                      index === 0
+                        ? "Kiểm tra danh mục thuốc"
+                        : index === 1
+                          ? "Đối chiếu tương tác"
+                          : index === 2
+                            ? "Xin thêm góc nhìn AI"
+                            : "Lưu lại kết quả"
+                    )}
+                  </p>
                 </Link>
               );
             })}
@@ -501,29 +600,54 @@ export default function DashboardPage() {
                 {needsSafetyReview ? "Cần xem lại" : "Đang ổn"}
               </span>
             </div>
-            <h4 className="text-2xl font-bold leading-tight text-[var(--text-brand)]">{safetySummary.title}</h4>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{safetySummary.detail}</p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Đang theo dõi</p>
-                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)} thuốc</p>
+            <h4 className="text-2xl font-bold leading-tight text-[var(--text-brand)]">Tủ thuốc</h4>
+            {!hasMedicationData ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Chưa có dữ liệu thuốc để hiển thị.</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">Hãy thêm thuốc hoặc làm mới dữ liệu.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    href="/selfmed/add"
+                    className="inline-flex min-h-[34px] items-center rounded-lg bg-[var(--text-brand)] px-3 text-xs font-semibold text-white"
+                  >
+                    Thêm thuốc
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={refreshDashboard}
+                    disabled={isRefreshing}
+                    className="inline-flex min-h-[34px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isRefreshing ? "Đang làm mới..." : "Làm mới"}
+                  </button>
+                </div>
               </div>
-              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cần kiểm tra sớm</p>
-                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiredCount)} thuốc</p>
-              </div>
-              <div className="rounded-lg bg-[var(--surface-muted)] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Sắp đến hạn</p>
-                <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiringSoonCount)} thuốc</p>
-              </div>
-            </div>
-            <Link
-              href={needsSafetyReview ? "/careguard" : "/selfmed"}
-              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-brand)] transition hover:opacity-80"
-            >
-              {needsSafetyReview ? "Mở lưu ý an toàn" : "Mở tủ thuốc"}
-              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-            </Link>
+            ) : (
+              <>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Tóm tắt thuốc đang được theo dõi trong hôm nay.</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                  <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Thuốc đang theo dõi</p>
+                    <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(cabinetCount)}</p>
+                  </div>
+                  <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Cần kiểm tra sớm</p>
+                    <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiredCount)}</p>
+                  </div>
+                  <div className="rounded-lg bg-[var(--surface-muted)] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Sắp đến hạn</p>
+                    <p className="mt-1 text-lg font-bold text-[var(--text-brand)]">{formatCount(expiringSoonCount)}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/selfmed"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-brand)] transition hover:opacity-80"
+                >
+                  Mở tủ thuốc
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </Link>
+              </>
+            )}
           </article>
 
           <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
@@ -533,17 +657,23 @@ export default function DashboardPage() {
               </div>
               <span className="rounded bg-cyan-500/15 px-2 py-1 text-[10px] font-bold text-cyan-700 dark:text-cyan-300">Tín hiệu</span>
             </div>
-            <h4 className="text-2xl font-bold text-[var(--text-brand)]">{formatCount(enabledSources)} nguồn đang bật</h4>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Tổng nguồn: {formatCount(totalSources)} • API: {healthStatus.toUpperCase()} • ML: {mlStatus.toUpperCase()}
+            <h4 className="text-2xl font-bold text-[var(--text-brand)]">
+              {hasConnectedSources ? `${formatCount(enabledSources)} nguồn đang bật` : "Chưa có nguồn dữ liệu nào được kết nối"}
+            </h4>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              {hasConnectedSources
+                ? `Tổng nguồn hiện có: ${formatCount(totalSources)}.`
+                : "Khi có nguồn dữ liệu, CLARA sẽ hiển thị thông tin tổng quan tại đây."}
             </p>
-            <div className="mt-4 flex -space-x-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blue-100 text-[10px] font-bold text-blue-700">NE</div>
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-cyan-100 text-[10px] font-bold text-cyan-700">BM</div>
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-[var(--surface-muted)] text-[10px] font-bold text-[var(--text-secondary)]">
-                +{Math.max(0, enabledSources - 2)}
+            {hasConnectedSources ? (
+              <div className="mt-4 flex -space-x-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blue-100 text-[10px] font-bold text-blue-700">NE</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-cyan-100 text-[10px] font-bold text-cyan-700">BM</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white bg-[var(--surface-muted)] text-[10px] font-bold text-[var(--text-secondary)]">
+                  +{Math.max(0, enabledSources - 2)}
+                </div>
               </div>
-            </div>
+            ) : null}
           </article>
         </section>
 

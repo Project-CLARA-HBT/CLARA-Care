@@ -50,21 +50,21 @@ const COMPOSER_COPY: Record<
     mode: "Cách trả lời",
     stack: "Nguồn",
     promptTray: "Gợi ý",
-    placeholder: "Nhập câu hỏi, ca bệnh hoặc yêu cầu nghiên cứu...",
+    placeholder: "Nhập câu hỏi sức khỏe của bạn, ví dụ: \"Metformin có tác dụng phụ gì?\"",
     mic: "Ghi âm",
     submit: "Gửi",
     personal: "Cá nhân",
-    liveStatusFallback: "Đang xử lý...",
+    liveStatusFallback: "CLARA đang phân tích câu hỏi...",
   },
   en: {
     mode: "Mode",
     stack: "Sources",
     promptTray: "Prompts",
-    placeholder: "Ask a question, clinical case, or research request...",
+    placeholder: "Ask a health question, for example: \"What side effects can metformin cause?\"",
     mic: "Voice input",
     submit: "Send",
     personal: "Personal",
-    liveStatusFallback: "Working...",
+    liveStatusFallback: "CLARA is analyzing your question...",
   },
 };
 
@@ -98,6 +98,7 @@ export default function ChatComposer(props: ChatComposerProps) {
     RESEARCH_RETRIEVAL_STACK_OPTIONS.find((mode) => mode.id === selectedRetrievalStackMode)?.label[uiLanguage] ??
     "Tự chọn";
   const controlsSummary = `${activeModeLabel} · ${activeStackLabel}`;
+  const advancedLabel = uiLanguage === "en" ? "Options" : "Tùy chọn";
   const showRawError =
     error &&
     !/(internal server error|upstream request failed|gateway|status code: 5\d\d|^5\d\d\b)/i.test(error);
@@ -127,10 +128,10 @@ export default function ChatComposer(props: ChatComposerProps) {
                       ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   ].join(" ")}
-                >
-                  <span className="material-symbols-outlined text-[13px]">tune</span>
-                  <span className="truncate">{controlsSummary}</span>
-                </button>
+                  >
+                    <span className="material-symbols-outlined text-[13px]">tune</span>
+                  <span className="truncate">{isControlsOpen ? controlsSummary : advancedLabel}</span>
+                  </button>
 
                 {quickPrompts.length ? (
                   <button
@@ -149,8 +150,8 @@ export default function ChatComposer(props: ChatComposerProps) {
                 ) : null}
               </div>
 
-              {liveJobId || liveStatusNote ? (
-                <span className="inline-flex min-h-[24px] max-w-[12rem] shrink-0 items-center rounded-full border border-cyan-300/55 bg-cyan-500/10 px-2 text-[8px] font-medium text-cyan-700 dark:text-cyan-300">
+              {isSubmitting || liveJobId || liveStatusNote ? (
+                <span className="inline-flex min-h-[24px] max-w-[16rem] shrink-0 items-center rounded-full border border-cyan-300/65 bg-cyan-500/12 px-2 text-[9px] font-semibold text-cyan-800 dark:text-cyan-200">
                   <span className="truncate">{liveStatusNote || copy.liveStatusFallback}</span>
                 </span>
               ) : null}
@@ -223,19 +224,11 @@ export default function ChatComposer(props: ChatComposerProps) {
                   aria-label="Chat composer input"
                   placeholder={copy.placeholder}
                   rows={1}
-                  className="min-h-[34px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-1 text-[13px] leading-5 text-[var(--text-primary)] outline-none"
+                  className="min-h-[34px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-1 text-[13px] leading-5 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
                 />
               </div>
 
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                  aria-label={copy.mic}
-                  title={copy.mic}
-                >
-                  <span className="material-symbols-outlined text-[16px]">mic</span>
-                </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !query.trim()}
@@ -270,6 +263,11 @@ export default function ChatComposer(props: ChatComposerProps) {
 
         {liveJobId || liveStatusNote || showRawError || notice ? (
           <div className="mt-0.5 text-[10px]">
+            {isSubmitting && !liveJobId && !liveStatusNote ? (
+              <p className="font-semibold text-cyan-800 dark:text-cyan-200">
+                {copy.liveStatusFallback}
+              </p>
+            ) : null}
             {liveJobId && !liveStatusNote ? (
               <p className="text-cyan-700 dark:text-cyan-300">
                 {copy.liveStatusFallback} ({liveJobId})

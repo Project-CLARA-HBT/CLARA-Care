@@ -35,7 +35,7 @@ export default function RoleSelectionPage() {
 
   return (
     <div className="mx-auto max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[0_16px_44px_-24px_rgba(15,23,42,0.35)]">
-      <h1 className="text-2xl font-bold text-[var(--text-primary)]">Chọn vai trò người dùng</h1>
+      <h1 className="text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">Chọn vai trò người dùng</h1>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
         Vai trò sẽ quyết định menu và workflow của bạn trong hệ thống.
       </p>

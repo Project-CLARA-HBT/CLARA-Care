@@ -10,6 +10,24 @@ import AuthFeedback from "@/components/auth/auth-feedback";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
+function normalizeRegisterErrorMessage(message: string): string {
+  const normalized = message.trim();
+  const lowered = normalized.toLowerCase();
+  if (!normalized) {
+    return "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút.";
+  }
+  if (
+    lowered.includes("internal server error") ||
+    lowered.includes("request failed with status code 500") ||
+    lowered.includes("status code: 500") ||
+    lowered.includes("gateway") ||
+    lowered.includes("timeout")
+  ) {
+    return "Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút hoặc kiểm tra kết nối.";
+  }
+  return normalized;
+}
+
 function getPasswordValidationError(password: string): string | null {
   if (password.length < 8) {
     return "Mật khẩu phải có ít nhất 8 ký tự.";
@@ -30,12 +48,15 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("normal");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const passwordValidationError = getPasswordValidationError(password);
+  const confirmPasswordError =
+    confirmPassword && password !== confirmPassword ? "Mật khẩu xác nhận không khớp." : "";
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -47,6 +68,10 @@ export default function RegisterPage() {
     }
     if (passwordValidationError) {
       setError(passwordValidationError);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp.");
       return;
     }
     setIsSubmitting(true);
@@ -75,7 +100,11 @@ export default function RegisterPage() {
         setNotice("Đăng ký thành công. Vui lòng xác thực email trước khi đăng nhập.");
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo tài khoản.");
+      setError(
+        cause instanceof Error
+          ? normalizeRegisterErrorMessage(cause.message)
+          : "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -109,6 +138,20 @@ export default function RegisterPage() {
           onChange={setPassword}
           helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối."
           placeholder="Tối thiểu 8 ký tự"
+          autoComplete="new-password"
+          minLength={8}
+          required
+        />
+        <AuthField
+          id="register-confirm-password"
+          label="Xác nhận mật khẩu"
+          type="password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          helperText="Nhập lại mật khẩu để tránh gõ nhầm."
+          error={confirmPasswordError}
+          placeholder="Nhập lại mật khẩu"
+          autoComplete="new-password"
           minLength={8}
           required
         />

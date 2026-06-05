@@ -33,7 +33,11 @@ function isPublicPath(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/research" || pathname.startsWith("/research/")) {
+  if (
+    pathname !== "/research/source-hub" &&
+    !pathname.startsWith("/research/source-hub/") &&
+    (pathname === "/research" || pathname.startsWith("/research/"))
+  ) {
     const chatUrl = new URL("/chat", request.url);
     chatUrl.search = search;
     return NextResponse.redirect(chatUrl);

@@ -5,7 +5,7 @@ type SparklineProps = {
   stroke?: string;
 };
 
-export function Sparkline({ points, stroke = "#0284c7" }: SparklineProps) {
+export function Sparkline({ points, stroke = "#2563eb" }: SparklineProps) {
   if (points.length === 0) {
     return <div className="h-14 rounded-xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800" />;
   }
@@ -59,7 +59,7 @@ type BarBlocksProps = {
 export function BarBlocks({
   values,
   maxHeight = 62,
-  activeColor = "#0ea5e9",
+  activeColor = "#3b82f6",
   mutedColor = "#cbd5e1"
 }: BarBlocksProps) {
   if (values.length === 0) {
@@ -76,7 +76,7 @@ export function BarBlocks({
         const style: CSSProperties = {
           height: `${Math.round(maxHeight * ratio)}px`,
           background: isPeak
-            ? `linear-gradient(180deg, ${activeColor} 0%, #0369a1 100%)`
+            ? `linear-gradient(180deg, ${activeColor} 0%, #1d4ed8 100%)`
             : `linear-gradient(180deg, ${mutedColor} 0%, #94a3b8 100%)`
         };
         return (
@@ -85,7 +85,7 @@ export function BarBlocks({
             style={style}
             className={[
               "w-3 rounded-t-md border border-slate-200/60 dark:border-slate-700/80",
-              isPeak ? "shadow-[0_2px_8px_rgba(14,165,233,0.35)]" : ""
+              isPeak ? "shadow-[0_2px_8px_rgba(59,130,246,0.35)]" : ""
             ].join(" ")}
           />
         );

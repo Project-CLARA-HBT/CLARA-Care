@@ -88,18 +88,18 @@ export default function ClaraKp3Landing() {
 
         .dark .glass-panel {
           background: rgba(15, 23, 42, 0.45);
-          border: 1px solid rgba(56, 189, 248, 0.24);
+          border: 1px solid rgba(96, 165, 250, 0.24);
         }
 
         .cyber-grid {
-          background-image: linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+          background-image: linear-gradient(rgba(96, 165, 250, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(96, 165, 250, 0.05) 1px, transparent 1px);
           background-size: 40px 40px;
         }
 
         .data-stream {
           position: absolute;
-          background: linear-gradient(to bottom, transparent, #22d3ee, transparent);
+          background: linear-gradient(to bottom, transparent, #60a5fa, transparent);
           width: 1px;
           height: 100px;
           animation: flow 3s linear infinite;

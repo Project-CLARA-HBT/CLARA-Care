@@ -97,7 +97,7 @@ export default function LegalPageShell({
           </div>
 
           <div className="mt-6 space-y-3">
-            <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)] sm:text-[2rem]">{title}</h1>
+            <h1 className="text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-[2rem]">{title}</h1>
             <p className="max-w-[86ch] text-sm leading-7 text-[var(--text-secondary)] sm:text-base">{summary}</p>
           </div>
 

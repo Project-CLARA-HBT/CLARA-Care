@@ -296,7 +296,7 @@ export default function AdminObservabilityPanel() {
       {
         id: "requests",
         label: "Request",
-        color: "#22d3ee",
+        color: "#60a5fa",
         values: effectiveTimeline.map((item) => item.requests)
       },
       {

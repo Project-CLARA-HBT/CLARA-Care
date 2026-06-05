@@ -103,7 +103,7 @@ function colorForHeat(value: number): string {
   const alpha = clamp(value, 0, 100) / 100;
   if (alpha > 0.75) return `rgba(244,63,94,${0.24 + alpha * 0.54})`;
   if (alpha > 0.45) return `rgba(245,158,11,${0.2 + alpha * 0.46})`;
-  return `rgba(34,211,238,${0.18 + alpha * 0.4})`;
+  return `rgba(96, 165, 250,${0.18 + alpha * 0.4})`;
 }
 
 function toneToColor(tone: TelemetryBarItem["tone"]): string {
@@ -251,7 +251,7 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
         </div>
       }
       >
-        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.16),transparent_52%),linear-gradient(180deg,rgba(148,163,184,0.08),transparent)] p-2">
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_52%),linear-gradient(180deg,rgba(148,163,184,0.08),transparent)] p-2">
         <svg
           viewBox={`0 0 ${prepared.width} ${prepared.chartHeight}`}
           className="w-full"
@@ -379,11 +379,11 @@ export function SegmentRingGauge({
           ? "#a78bfa"
           : tone === "rose"
             ? "#fb7185"
-            : "#22d3ee");
+            : "#60a5fa");
 
   return (
     <div
-      className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_30%_10%,rgba(56,189,248,0.15),transparent_58%),var(--surface-muted)] p-2.5"
+      className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_30%_10%,rgba(96,165,250,0.15),transparent_58%),var(--surface-muted)] p-2.5"
       role="meter"
       aria-label={`${label} gauge`}
       aria-valuemin={0}
@@ -454,7 +454,7 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
 
   return (
     <ChartFrame title={title} description={description}>
-      <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.12),transparent_62%),var(--surface-muted)] p-2">
+      <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_center,rgba(96,165,250,0.12),transparent_62%),var(--surface-muted)] p-2">
         <svg viewBox={`0 0 ${canvas} ${canvas}`} className="h-[260px] w-full" role="img" aria-label={title || "radar chart"}>
           <defs>
             <filter id={`${radarId}-glow`} x="-30%" y="-30%" width="160%" height="160%">
@@ -481,10 +481,10 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
             <line key={`axis-${index}`} x1={center} y1={center} x2={point.labelX} y2={point.labelY} stroke="rgba(100,116,139,0.24)" />
           ))}
 
-          <polygon points={polygon} fill="rgba(34,211,238,0.24)" stroke="#22d3ee" strokeWidth="2.1" filter={`url(#${radarId}-glow)`} />
+          <polygon points={polygon} fill="rgba(96, 165, 250,0.24)" stroke="#60a5fa" strokeWidth="2.1" filter={`url(#${radarId}-glow)`} />
           {points.map((point, index) => (
             <g key={`point-${index}`}>
-              <circle cx={point.x} cy={point.y} r="4.2" fill="#22d3ee" />
+              <circle cx={point.x} cy={point.y} r="4.2" fill="#60a5fa" />
               <text x={point.labelX} y={point.labelY} textAnchor="middle" fontSize="11" fill="var(--text-secondary)">
                 {point.label.length > 11 ? `${point.label.slice(0, 10)}...` : point.label}
                 <title>{`${point.label}: ${Math.round(point.value)}`}</title>
@@ -492,7 +492,7 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
             </g>
           ))}
 
-          <circle cx={center} cy={center} r="5" fill="#22d3ee" className="animate-pulse" />
+          <circle cx={center} cy={center} r="5" fill="#60a5fa" className="animate-pulse" />
         </svg>
       </div>
     </ChartFrame>
@@ -615,7 +615,7 @@ export function TelemetryBars({ title, description, items }: TelemetryBarsProps)
                   />
                 ) : null}
                 <div
-                  className="h-full rounded-full shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+                  className="h-full rounded-full shadow-[0_0_12px_rgba(96,165,250,0.25)]"
                   style={{
                     width: `${ratio * 100}%`,
                     background: toneTexture(item.tone, color)

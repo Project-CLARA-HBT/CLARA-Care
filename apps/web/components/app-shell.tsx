@@ -62,11 +62,12 @@ export default function AppShell({ children }: Props) {
   const router = useRouter();
 
   const [role, setRole] = useState<UserRole>("normal");
-  const [themePreference, setThemePreference] = useState<ThemePreference>("dark");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("light");
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isRoleHydrated, setIsRoleHydrated] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
@@ -79,6 +80,7 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     setRole(getRole());
+    setIsRoleHydrated(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -161,10 +163,11 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
+    if (!isRoleHydrated) return;
     const allowed = roleNavItems.some((item) => isActiveRoute(pathname, item.href));
     if (allowed) return;
     router.replace(getRoleHomePath(role));
-  }, [pathname, role, roleNavItems, router]);
+  }, [isRoleHydrated, pathname, role, roleNavItems, router]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);
@@ -282,7 +285,7 @@ export default function AppShell({ children }: Props) {
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
         />
         <aside
-          className={`absolute left-0 top-0 h-full w-[min(88vw,380px)] border-r border-[color:var(--shell-border)] bg-[#eceef0] px-4 pb-5 pt-4 transition duration-250 dark:bg-slate-900 ${
+          className={`absolute left-0 top-0 h-full w-[min(88vw,380px)] border-r border-[color:var(--shell-border)] bg-blue-50 px-4 pb-5 pt-4 transition duration-250 dark:bg-slate-900 ${
             isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

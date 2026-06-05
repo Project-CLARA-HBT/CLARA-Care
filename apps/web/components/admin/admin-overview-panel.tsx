@@ -268,7 +268,7 @@ export default function AdminOverviewPanel() {
             {isLoading ? (
               <div className="h-14 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
             ) : (
-              <Sparkline points={prioritySeries} stroke="#0284c7" />
+              <Sparkline points={prioritySeries} stroke="#2563eb" />
             )}
           </div>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Điểm cao hơn thể hiện ưu tiên cao hơn (priority gần 1).</p>
