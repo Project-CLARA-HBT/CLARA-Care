@@ -11,6 +11,7 @@ import AdminFlowVisualizer, {
 import AdminNeuralNetworkVisualizer from "@/components/admin/admin-neural-network-visualizer";
 import CouncilFlowCanvas from "@/components/council/council-flow-canvas";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
+import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
 
 function toNumber(value: string): number {
   const parsed = Number(value);
@@ -47,6 +48,12 @@ export default function AdminAnswerFlowPanel() {
       setSelectedNode(DEFAULT_SELECTED_NODE);
     }
   }, [selectedNode]);
+
+  // Emit a single named product event when the Answer Flow surface is opened
+  // (Req 9.1). No PII — only the coarse Admin view label.
+  useEffect(() => {
+    trackAdminSurfaceViewed({ view: "answer_flow" });
+  }, []);
 
   const selectedNodeInfo = FLOW_NODE_INFOS[selectedNode];
   const selectedToggleKey = selectedNodeInfo.toggleKey;

@@ -98,6 +98,17 @@ class _RecordingRuntimeClient:
         self._kwargs = dict(kwargs)
         type(self).calls.append(self._kwargs)
 
+    @classmethod
+    def from_runtime(cls, llm_runtime, *, timeout_seconds, **kwargs):
+        runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
+        return cls(
+            api_key=str(runtime.get("api_key") or "").strip(),
+            base_url=str(runtime.get("base_url") or "").strip(),
+            model=str(runtime.get("model") or "").strip(),
+            timeout_seconds=timeout_seconds,
+            **kwargs,
+        )
+
     @property
     def model(self) -> str:
         return str(self._kwargs.get("model") or "deepseek-v3.2")

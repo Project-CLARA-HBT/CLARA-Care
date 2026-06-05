@@ -36,6 +36,7 @@ from clara_api.core.control_tower.defaults import get_default_control_tower_conf
 from clara_api.core.flow_event_store import get_flow_event_store
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.core.timeouts import resolve_sync_research_timeout
 from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
@@ -184,7 +185,6 @@ _research_job_lock = Lock()
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
 _ANSWER_LANGUAGE_ALLOWED = {"vi", "en"}
-_SYNC_RESEARCH_TIMEOUT_FLOOR_SECONDS = 600.0
 
 
 async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -3034,13 +3034,28 @@ def _fetch_vn_html_source_records(
     return records[:safe_limit], warnings
 
 
+def _ncbi_eutils_params(params: dict[str, Any]) -> dict[str, Any]:
+    """Augment NCBI E-utilities params with the API key when configured.
+
+    A configured ``NCBI_API_KEY`` raises the per-IP rate limit from 3 to 10
+    requests/second. When unset, requests are sent unauthenticated (the source
+    hub still works, just at the lower anonymous rate limit).
+    """
+    api_key = _research_settings.ncbi_api_key.strip()
+    if not api_key:
+        return params
+    return {**params, "api_key": api_key}
+
+
 def _fetch_pubmed_records(
     query: str, limit: int, synced_at: str
 ) -> tuple[list[SourceHubRecord], list[str]]:
     warnings: list[str] = []
     search = _http_get_json(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-        params={"db": "pubmed", "term": query, "retmax": limit, "retmode": "json"},
+        params=_ncbi_eutils_params(
+            {"db": "pubmed", "term": query, "retmax": limit, "retmode": "json"}
+        ),
     )
     search_result = search.get("esearchresult")
     if not isinstance(search_result, dict):
@@ -3057,7 +3072,9 @@ def _fetch_pubmed_records(
 
     summary = _http_get_json(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
-        params={"db": "pubmed", "id": ",".join(id_list[:limit]), "retmode": "json"},
+        params=_ncbi_eutils_params(
+            {"db": "pubmed", "id": ",".join(id_list[:limit]), "retmode": "json"}
+        ),
     )
     result = summary.get("result")
     if not isinstance(result, dict):
@@ -3975,9 +3992,8 @@ def research_tier2(
             if settings.deepseek_strict_mode
             else _research_tier2_fallback_payload(upstream_payload)
         ),
-        timeout_seconds=max(
-            float(settings.ml_research_timeout_seconds),
-            _SYNC_RESEARCH_TIMEOUT_FLOOR_SECONDS,
+        timeout_seconds=resolve_sync_research_timeout(
+            settings.ml_research_timeout_seconds
         ),
     )
     normalized = _normalize_tier2_response(response)

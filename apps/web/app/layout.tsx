@@ -1,5 +1,6 @@
 import "@/styles/globals.css";
 import AppShell from "@/components/app-shell";
+import AnalyticsConsentBootstrap from "@/components/analytics/analytics-consent-bootstrap";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
       </head>
       <body>
+        <AnalyticsConsentBootstrap />
         <AppShell>{children}</AppShell>
       </body>
     </html>

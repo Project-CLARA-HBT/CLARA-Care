@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
+import logging
 import random
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -24,6 +25,8 @@ from clara_ml.rag.retrieval.source_router import (
 )
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.routing import P1RoleIntentRouter
+
+logger = logging.getLogger(__name__)
 
 router = P1RoleIntentRouter()
 
@@ -5110,9 +5113,6 @@ def _ensure_markdown_structure(
     key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
     practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"
     caveat_heading = f"## {_resolve_section_title('safety_notes', answer_language)}"
-    detailed_analysis_heading = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
-    safety_heading = f"## {_resolve_section_title('safety_guidance', answer_language)}"
-    monitoring_heading = f"## {_resolve_section_title('monitoring_red_flags', answer_language)}"
 
     required_headings = (
         (quick_conclusion_heading, key_points_heading, practical_heading, caveat_heading)
@@ -5142,7 +5142,6 @@ def _ensure_markdown_structure(
     if "\n" not in analysis_block:
         analysis_block = f"- {analysis_block}"
 
-    topic_snippet = _compact_snippet(topic, max_len=210)
     risk_level, risk_signal, risk_note = _estimate_medical_risk_band(
         f"{topic} {cleaned}",
         answer_language=answer_language,

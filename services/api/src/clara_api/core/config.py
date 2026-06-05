@@ -184,6 +184,14 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=120, validation_alias="GLOBAL_RATE_LIMIT_PER_MIN")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
     pubmed_rate_limit_per_sec: int = Field(default=10, validation_alias="PUBMED_RATE_LIMIT_PER_SEC")
+    # NCBI E-utilities API key. When set, PubMed esearch/esummary/efetch requests
+    # include it, raising the per-IP rate limit from 3 to 10 req/s. Optional; the
+    # source hub works without it (just at the lower anonymous rate limit).
+    ncbi_api_key: str = Field(default="", validation_alias="NCBI_API_KEY")
+    # UMLS UTS API key (NLM licensed). Reserved for UMLS/RxNorm-authenticated
+    # endpoints (e.g. RxClass, value sets). RxNorm normalization via the public
+    # RxNav API does not require this key.
+    umls_api_key: str = Field(default="", validation_alias="UMLS_API_KEY")
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
     ml_internal_api_key: str = Field(default="", validation_alias="ML_INTERNAL_API_KEY")
     ml_service_timeout_seconds: float = Field(
@@ -194,6 +202,13 @@ class Settings(BaseSettings):
     ml_research_timeout_seconds: float = Field(
         default=300.0,
         validation_alias="ML_RESEARCH_TIMEOUT_SECONDS",
+        gt=0,
+    )
+    # Mirrors the CLARA_ML DeepSeek synthesis timeout so the API can guarantee its
+    # ML request timeout never drops below the downstream synthesis floor (2.4).
+    deepseek_timeout_seconds: float = Field(
+        default=45.0,
+        validation_alias=AliasChoices("DEEPSEEK_TIMEOUT_SECONDS", "DEEPSEEK_TIMEOUT"),
         gt=0,
     )
     research_job_max_workers: int = Field(
@@ -233,6 +248,61 @@ class Settings(BaseSettings):
         gt=0,
     )
     tgc_ocr_api_key: str = Field(default="", validation_alias="TGC_OCR_API_KEY")
+
+    # Google Cloud Vision OCR
+    google_vision_enabled: bool = Field(
+        default=False,
+        validation_alias="GOOGLE_VISION_ENABLED",
+    )
+    google_vision_service_account_json: str = Field(
+        default="",
+        validation_alias="GOOGLE_VISION_SERVICE_ACCOUNT_JSON",
+    )
+    google_vision_timeout_seconds: float = Field(
+        default=30.0,
+        validation_alias="GOOGLE_VISION_TIMEOUT_SECONDS",
+        gt=0,
+    )
+    google_vision_language_hints: str = Field(
+        default="vi,en",
+        validation_alias="GOOGLE_VISION_LANGUAGE_HINTS",
+    )
+
+    # Local Tesseract OCR (fallback)
+    tesseract_ocr_enabled: bool = Field(
+        default=True,
+        validation_alias="TESSERACT_OCR_ENABLED",
+    )
+    tesseract_ocr_languages: str = Field(
+        default="vie+eng",
+        validation_alias="TESSERACT_OCR_LANGUAGES",
+    )
+    tesseract_ocr_psm: int = Field(
+        default=6,
+        validation_alias="TESSERACT_OCR_PSM",
+        ge=0,
+        le=13,
+    )
+
+    # Internal analytics dashboards (Requirement 12.4).
+    # The Product_Analytics and Clinical_Analytics admin surfaces honor these
+    # flags so a disabled surface returns 404, and an omitted date range
+    # defaults to the trailing ``analytics_default_range_days`` window.
+    product_analytics_enabled: bool = Field(
+        default=True,
+        validation_alias="PRODUCT_ANALYTICS_ENABLED",
+    )
+    clinical_analytics_enabled: bool = Field(
+        default=True,
+        validation_alias="CLINICAL_ANALYTICS_ENABLED",
+    )
+    analytics_default_range_days: int = Field(
+        default=30,
+        validation_alias="ANALYTICS_DEFAULT_RANGE_DAYS",
+        gt=0,
+        le=365,
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

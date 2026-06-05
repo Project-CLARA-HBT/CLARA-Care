@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { BarBlocks, Sparkline } from "@/components/admin/admin-visuals";
 import { FLOW_FLAG_META } from "@/components/admin/admin-config-meta";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
+import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
   KnowledgeSource,
   SourceHubCatalogEntry,
@@ -40,9 +42,11 @@ export default function AdminOverviewPanel() {
       } catch (cause) {
         if (!active) return;
         setInventoryError(
-          cause instanceof Error
-            ? cause.message
-            : "Không thể tải danh mục nguồn tổng hợp cho admin dashboard."
+          sanitizeUpstreamError(
+            cause instanceof Error
+              ? cause.message
+              : "Không thể tải danh mục nguồn tổng hợp cho admin dashboard."
+          )
         );
       } finally {
         if (active) setIsInventoryLoading(false);
@@ -54,6 +58,12 @@ export default function AdminOverviewPanel() {
       active = false;
     };
   }, [inventoryReloadTick]);
+
+  // Emit a single named product event when the Admin overview is opened
+  // (Req 9.1). No PII — only the coarse Admin view label.
+  useEffect(() => {
+    trackAdminSurfaceViewed({ view: "overview" });
+  }, []);
 
   const totalSources = config?.rag_sources.length ?? 0;
   const enabledSources = config?.rag_sources.filter((source) => source.enabled).length ?? 0;

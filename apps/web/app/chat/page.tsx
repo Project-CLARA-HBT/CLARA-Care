@@ -22,9 +22,16 @@ import {
 import { ConversationItem, ResearchResult } from "@/components/research/lib/research-page-types";
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import PageShell from "@/components/ui/page-shell";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import { getChatIntentDebug, getChatReply, sendChatMessage } from "@/lib/chat";
+import { trackChatMessageSent } from "@/lib/analytics/events";
+import {
+  sanitizeUpstreamError,
+  stripTelemetryLabels,
+  toModeLabel,
+} from "@/lib/user-facing-text";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
@@ -42,6 +49,7 @@ import {
   listResearchConversationMessages,
   normalizeResearchTier2,
   normalizeResearchTier2JobProgress,
+  resolveChatTransport,
 } from "@/lib/research";
 import { executeResearchTier2Job } from "@/lib/research-tier2-job-runner";
 import {
@@ -960,8 +968,13 @@ export default function ChatWorkspacePage() {
   );
   const [isWorkspacePanelResizing, setIsWorkspacePanelResizing] = useState(false);
   const [isTelemetryPanelOpen, setIsTelemetryPanelOpen] = useState(false);
+  const [role, setRole] = useState<UserRole>("normal");
 
   const isFastResearchMode = selectedResearchMode === "fast";
+  // Detailed telemetry panels/controls are Admin-only (Req 4.3). The
+  // user-facing mode label (Req 4.4) never exposes the internal mode string.
+  const canViewTelemetry = role === "admin";
+  const activeModeLabel = toModeLabel(selectedResearchMode);
   const conversationScrollRef = useRef<HTMLDivElement | null>(null);
   const conversationListViewportRef = useRef<HTMLDivElement | null>(null);
   const workspaceGridRef = useRef<HTMLDivElement | null>(null);
@@ -1116,6 +1129,7 @@ export default function ChatWorkspacePage() {
     if (storedTelemetryPanel === "1" && window.matchMedia("(min-width: 1600px)").matches) {
       setIsTelemetryPanelOpen(true);
     }
+    setRole(getRole());
     setIsHydrated(true);
   }, []);
 
@@ -1975,9 +1989,15 @@ export default function ChatWorkspacePage() {
     setIsSubmitting(true);
     setError("");
 
+    const transport = resolveChatTransport(selectedResearchMode);
+    // Emit a named Chat product event through the consent/PII-guarded analytics
+    // client. Only coarse, non-PII signals are sent (mode + resolved transport);
+    // the free-text query is never included (Req 9.1, 9.4).
+    trackChatMessageSent({ mode: selectedResearchMode, transport });
+
     try {
       let nextResult: ResearchResult;
-      if (selectedResearchMode === "fast") {
+      if (transport === "tier1_chat") {
         const chatPayload = await sendChatMessage(message);
         const reply = getChatReply(chatPayload);
         if (!reply) {
@@ -1999,10 +2019,12 @@ export default function ChatWorkspacePage() {
           },
           onSnapshot: (snapshot) => {
             const progress = normalizeResearchTier2JobProgress(snapshot.progress);
-            setLiveStatusNote(progress.statusNote ?? "");
+            setLiveStatusNote(stripTelemetryLabels(progress.statusNote ?? ""));
           },
           onStreamingFallback: (streamMessage) => {
-            setLiveStatusNote(`${streamMessage} Đang fallback sang polling.`);
+            setLiveStatusNote(
+              stripTelemetryLabels(`${streamMessage} Đang fallback sang polling.`)
+            );
           },
         });
 
@@ -2090,7 +2112,9 @@ export default function ChatWorkspacePage() {
         didPersistLocally = true;
         setError(
           persistError instanceof Error
-            ? `Đã trả lời nhưng lưu hội thoại thất bại: ${persistError.message}`
+            ? `Đã trả lời nhưng lưu hội thoại thất bại: ${sanitizeUpstreamError(
+                persistError.message
+              )}`
             : "Đã trả lời nhưng lưu hội thoại thất bại."
         );
         setNotice(
@@ -2122,7 +2146,11 @@ export default function ChatWorkspacePage() {
         if (found) setActiveConversationMeta(found);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xử lý câu hỏi.");
+      setError(
+        cause instanceof Error
+          ? sanitizeUpstreamError(cause.message)
+          : "Không thể xử lý câu hỏi."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -2817,6 +2845,7 @@ export default function ChatWorkspacePage() {
               >
                 <span className="material-symbols-outlined text-[18px]">add</span>
               </button>
+              {canViewTelemetry ? (
               <button
                 type="button"
                 onClick={() => setIsTelemetryPanelOpen((prev) => !prev)}
@@ -2833,6 +2862,7 @@ export default function ChatWorkspacePage() {
               >
                 <span className="material-symbols-outlined text-[18px]">monitoring</span>
               </button>
+              ) : null}
             </div>
 
             <div className="h-8 w-8" aria-hidden="true" />
@@ -3488,6 +3518,9 @@ export default function ChatWorkspacePage() {
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
                   </p>
+                  <span className="inline-flex items-center rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-700 dark:text-cyan-300">
+                    {activeModeLabel}
+                  </span>
                 </div>
                 <h2 className="mt-0.5 truncate text-[1.3rem] leading-none font-semibold text-[var(--text-primary)]">
                   {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
@@ -3523,6 +3556,7 @@ export default function ChatWorkspacePage() {
                     <span className="material-symbols-outlined text-[18px]">more_horiz</span>
                   </summary>
                   <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
+                    {canViewTelemetry ? (
                     <button
                       type="button"
                       onClick={() => setIsTelemetryPanelOpen((prev) => !prev)}
@@ -3537,6 +3571,7 @@ export default function ChatWorkspacePage() {
                         ? isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"
                         : isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
                     </button>
+                    ) : null}
                     <div className="space-y-1.5">
                       <input
                         type="text"
@@ -3731,7 +3766,10 @@ export default function ChatWorkspacePage() {
           />
         </section>
 
-        <div className="pointer-events-none absolute bottom-[3.85rem] right-1.5 z-20 hidden items-end gap-1 lg:flex">
+        <TelemetryPanel
+          role={role}
+          className="pointer-events-none absolute bottom-[3.85rem] right-1.5 z-20 hidden items-end gap-1 lg:flex"
+        >
           {!isTelemetryPanelOpen ? (
             <button
               type="button"
@@ -3856,7 +3894,7 @@ export default function ChatWorkspacePage() {
               </div>
             </aside>
           ) : null}
-        </div>
+        </TelemetryPanel>
       </div>
         {isScopeManagerOpen ? (
           <div className="fixed inset-0 z-[68] flex items-start justify-center bg-slate-950/40 px-4 pt-[8vh] backdrop-blur-sm">

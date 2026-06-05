@@ -16,6 +16,8 @@ import FlowTimelinePanel from "@/components/research/flow-timeline-panel";
 import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel";
 import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
 import UploadedFilesPanel from "@/components/research/uploaded-files-panel";
+import TelemetryPanel, { isTelemetryVisible } from "@/components/telemetry/telemetry-panel";
+import { getRole, type UserRole } from "@/lib/auth-store";
 
 type FlowTimelineMode =
   | "idle"
@@ -32,6 +34,14 @@ type ResearchRightRailProps = {
   flowMode: FlowTimelineMode;
   telemetry: ResearchTier2Telemetry;
   isSubmitting: boolean;
+
+  /**
+   * Requesting user's role. The detailed Flow Timeline, Telemetry Detail, and
+   * Admin Runtime Hints panels are rendered for Admin_Users only; non-admin
+   * roles never see them (Requirement 4.3). Defaults to the current stored
+   * role when omitted.
+   */
+  role?: UserRole;
 
   knowledgeSources: KnowledgeSource[];
   selectedSourceIds: number[];
@@ -95,6 +105,7 @@ export default function ResearchRightRail({
   flowMode,
   telemetry,
   isSubmitting,
+  role,
   knowledgeSources,
   selectedSourceIds,
   isLoadingSources,
@@ -117,13 +128,19 @@ export default function ResearchRightRail({
   showDebugHints,
   debugHints
 }: ResearchRightRailProps) {
-  const [mobileTab, setMobileTab] = useState<MobileTab>("flow");
+  // Detailed telemetry (flow timeline, telemetry detail, debug hints) is
+  // Admin_User-only; non-admin roles only get evidence/sources/uploads.
+  const viewerRole = role ?? getRole();
+  const showTelemetry = isTelemetryVisible(viewerRole);
+  const [mobileTab, setMobileTab] = useState<MobileTab>(showTelemetry ? "flow" : "evidence");
 
   const tabs = useMemo(() => {
-    const base: MobileTab[] = ["flow", "telemetry", "evidence", "sources", "uploads"];
-    if (showDebugHints) base.push("debug");
+    const base: MobileTab[] = showTelemetry
+      ? ["flow", "telemetry", "evidence", "sources", "uploads"]
+      : ["evidence", "sources", "uploads"];
+    if (showTelemetry && showDebugHints) base.push("debug");
     return base;
-  }, [showDebugHints]);
+  }, [showDebugHints, showTelemetry]);
 
   const panelByTab: Record<MobileTab, JSX.Element | null> = {
     flow: (
@@ -197,16 +214,18 @@ export default function ResearchRightRail({
       </div>
 
       <div className="hidden space-y-4 xl:block">
-        <FlowTimelinePanel
-          stages={flowStages}
-          events={flowEvents}
-          mode={flowMode}
-          isProcessing={isSubmitting}
-        />
-        <TelemetryDetailsPanel
-          telemetry={telemetry}
-          isProcessing={isSubmitting}
-        />
+        <TelemetryPanel role={viewerRole} className="space-y-4">
+          <FlowTimelinePanel
+            stages={flowStages}
+            events={flowEvents}
+            mode={flowMode}
+            isProcessing={isSubmitting}
+          />
+          <TelemetryDetailsPanel
+            telemetry={telemetry}
+            isProcessing={isSubmitting}
+          />
+        </TelemetryPanel>
         <EvidencePanel citations={citations} />
         <KnowledgeSourcesPanel
           sources={knowledgeSources}
@@ -231,7 +250,9 @@ export default function ResearchRightRail({
           onDragEnter={onDragEnterUpload}
           onDragLeave={onDragLeaveUpload}
         />
-        <DebugHintsPanel enabled={showDebugHints} {...debugHints} />
+        <TelemetryPanel role={viewerRole}>
+          <DebugHintsPanel enabled={showDebugHints} {...debugHints} />
+        </TelemetryPanel>
       </div>
     </aside>
   );
