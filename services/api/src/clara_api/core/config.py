@@ -184,6 +184,14 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=120, validation_alias="GLOBAL_RATE_LIMIT_PER_MIN")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
     pubmed_rate_limit_per_sec: int = Field(default=10, validation_alias="PUBMED_RATE_LIMIT_PER_SEC")
+    # NCBI E-utilities API key. When set, PubMed esearch/esummary/efetch requests
+    # include it, raising the per-IP rate limit from 3 to 10 req/s. Optional; the
+    # source hub works without it (just at the lower anonymous rate limit).
+    ncbi_api_key: str = Field(default="", validation_alias="NCBI_API_KEY")
+    # UMLS UTS API key (NLM licensed). Reserved for UMLS/RxNorm-authenticated
+    # endpoints (e.g. RxClass, value sets). RxNorm normalization via the public
+    # RxNav API does not require this key.
+    umls_api_key: str = Field(default="", validation_alias="UMLS_API_KEY")
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
     ml_internal_api_key: str = Field(default="", validation_alias="ML_INTERNAL_API_KEY")
     ml_service_timeout_seconds: float = Field(

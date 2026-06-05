@@ -3034,13 +3034,28 @@ def _fetch_vn_html_source_records(
     return records[:safe_limit], warnings
 
 
+def _ncbi_eutils_params(params: dict[str, Any]) -> dict[str, Any]:
+    """Augment NCBI E-utilities params with the API key when configured.
+
+    A configured ``NCBI_API_KEY`` raises the per-IP rate limit from 3 to 10
+    requests/second. When unset, requests are sent unauthenticated (the source
+    hub still works, just at the lower anonymous rate limit).
+    """
+    api_key = _research_settings.ncbi_api_key.strip()
+    if not api_key:
+        return params
+    return {**params, "api_key": api_key}
+
+
 def _fetch_pubmed_records(
     query: str, limit: int, synced_at: str
 ) -> tuple[list[SourceHubRecord], list[str]]:
     warnings: list[str] = []
     search = _http_get_json(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-        params={"db": "pubmed", "term": query, "retmax": limit, "retmode": "json"},
+        params=_ncbi_eutils_params(
+            {"db": "pubmed", "term": query, "retmax": limit, "retmode": "json"}
+        ),
     )
     search_result = search.get("esearchresult")
     if not isinstance(search_result, dict):
@@ -3057,7 +3072,9 @@ def _fetch_pubmed_records(
 
     summary = _http_get_json(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
-        params={"db": "pubmed", "id": ",".join(id_list[:limit]), "retmode": "json"},
+        params=_ncbi_eutils_params(
+            {"db": "pubmed", "id": ",".join(id_list[:limit]), "retmode": "json"}
+        ),
     )
     result = summary.get("result")
     if not isinstance(result, dict):
