@@ -19,7 +19,7 @@ dependencies = [
   "PyYAML>=6.0.2",
   "langchain>=0.3.0",
   "langgraph>=0.2.0",
-  "numpy>=2.1.0"
+  "numpy>=2.4.4"
 ]
 
 [project.optional-dependencies]
