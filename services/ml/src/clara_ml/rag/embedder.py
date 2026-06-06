@@ -185,7 +185,17 @@ class HttpEmbeddingClient:
         return vectors
 
     def _request_remote_embeddings(self, texts: Sequence[str]) -> list[list[float]]:
-        payload = json.dumps({"model": self._model, "input": list(texts)}).encode("utf-8")
+        body: dict[str, Any] = {"model": self._model, "input": list(texts)}
+        # Request a specific output dimensionality when configured. text-embedding-3-*
+        # supports native (normalized) dimension reduction, letting the corpus stay
+        # within pgvector's 2000-dim HNSW/IVFFlat index limit (e.g. 1536). Only sent
+        # when a positive RAG_EMBEDDING_DIM is configured; omitted otherwise so the
+        # model's native dimensionality is used (and providers that ignore the field
+        # are unaffected).
+        expected_dim = int(getattr(settings, "rag_embedding_dim", 0) or 0)
+        if expected_dim > 0:
+            body["dimensions"] = expected_dim
+        payload = json.dumps(body).encode("utf-8")
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
