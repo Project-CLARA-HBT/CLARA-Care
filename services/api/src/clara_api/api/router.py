@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from clara_api.api.v1.endpoints import (
+    admin_rag,
     auth,
     careguard,
     chat,
@@ -28,3 +29,4 @@ api_router.include_router(council.router, prefix="/council", tags=["council"])
 api_router.include_router(scribe.router, prefix="/scribe", tags=["scribe"])
 api_router.include_router(system.router, prefix="/system", tags=["system"])
 api_router.include_router(workspace.router, prefix="/workspace", tags=["workspace"])
+api_router.include_router(admin_rag.router, prefix="/admin/rag", tags=["admin-rag"])

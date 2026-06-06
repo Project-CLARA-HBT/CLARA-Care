@@ -23,6 +23,7 @@ from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
+from clara_ml.rag.store.health import run_startup_self_check
 from clara_ml.routing import P1RoleIntentRouter
 from clara_ml.streaming.ws import token_stream
 
@@ -32,6 +33,23 @@ logger = logging.getLogger(__name__)
 prompt_loader = PromptLoader(Path(__file__).resolve().parent / "prompts" / "templates")
 rag_pipeline = RagPipelineP1()
 router = P1RoleIntentRouter()
+
+
+@app.on_event("startup")
+def _rag_persistent_store_self_check() -> None:
+    """Resolve effective persistent-RAG flags via the store self-check (task 1.10).
+
+    When a persistent RAG flag is enabled, validate that the pgvector extension
+    and ``kb_*`` tables exist; otherwise force the legacy in-memory path. The
+    resolved state is stored on ``app.state`` (and a module-level holder in
+    ``rag.store.health``) so the pipeline (task 5.11) can consult it. The
+    self-check is defensive and never crashes startup. Requirement 3.4.
+    """
+
+    try:
+        app.state.rag_persistent_flags = run_startup_self_check(settings)
+    except Exception:  # noqa: BLE001 - startup must never crash on the self-check
+        logger.exception("RAG persistent store self-check failed; using legacy path")
 
 _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (

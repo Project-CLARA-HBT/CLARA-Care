@@ -7,7 +7,8 @@ import json
 import math
 from threading import Lock
 from time import perf_counter
-from typing import Any, Sequence
+from typing import Any, Callable, Mapping, Sequence
+from urllib.request import Request, urlopen
 import re
 
 from clara_ml.config import settings
@@ -15,6 +16,12 @@ from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.rag.embedder import HttpEmbeddingClient
 
 from .domain import Document
+
+# Seam for the cross-encoder rerank strategy: a callable that scores candidate
+# documents for a query and returns a mapping of ``doc_id -> raw relevance``.
+# Injectable for tests / custom clients; the default implementation calls a
+# configurable HTTP reranker endpoint (see ``_cross_encoder_scores``).
+CrossEncoderScorer = Callable[[str, Sequence["Document"]], Mapping[str, float]]
 
 
 @dataclass
@@ -45,6 +52,7 @@ class NeuralReranker:
         cache_max_entries: int | None = None,
         embedder: HttpEmbeddingClient | None = None,
         llm_client: DeepSeekClient | None = None,
+        cross_encoder_scorer: CrossEncoderScorer | None = None,
     ) -> None:
         self.enabled = bool(settings.rag_reranker_enabled if enabled is None else enabled)
         self.strategy = str(
@@ -93,6 +101,7 @@ class NeuralReranker:
             timeout_seconds=min(float(settings.embedding_timeout_seconds), timeout_seconds),
         )
         self._llm_client = llm_client
+        self._cross_encoder_scorer = cross_encoder_scorer
 
     def rerank(
         self,
@@ -160,31 +169,39 @@ class NeuralReranker:
         error_name = ""
 
         try:
-            scored_pool = self._score_documents(
-                query=query,
-                documents=rerank_pool,
-                started=started,
-                timeout_seconds=timeout_seconds,
-            )
             llm_info: dict[str, Any] | None = None
             llm_scores: dict[str, float] = {}
-            if self._should_use_llm():
-                llm_scores, llm_info = self._llm_score_documents(
+            if self.strategy == "cross_encoder":
+                scored_pool = self._score_documents_cross_encoder(
                     query=query,
                     documents=rerank_pool,
+                    started=started,
+                    timeout_seconds=timeout_seconds,
                 )
-                if llm_scores:
-                    scored_pool = [
-                        (
-                            self._combine_scores(
-                                base_score=float(score),
-                                llm_score=llm_scores.get(doc.id),
-                            ),
-                            original_index,
-                            doc,
-                        )
-                        for score, original_index, doc in scored_pool
-                    ]
+            else:
+                scored_pool = self._score_documents(
+                    query=query,
+                    documents=rerank_pool,
+                    started=started,
+                    timeout_seconds=timeout_seconds,
+                )
+                if self._should_use_llm():
+                    llm_scores, llm_info = self._llm_score_documents(
+                        query=query,
+                        documents=rerank_pool,
+                    )
+                    if llm_scores:
+                        scored_pool = [
+                            (
+                                self._combine_scores(
+                                    base_score=float(score),
+                                    llm_score=llm_scores.get(doc.id),
+                                ),
+                                original_index,
+                                doc,
+                            )
+                            for score, original_index, doc in scored_pool
+                        ]
             scored_pool.sort(key=lambda row: (float(row[0]), -int(row[1])), reverse=True)
 
             reranked: list[Document] = []
@@ -382,6 +399,142 @@ class NeuralReranker:
             )
             scored.append((float(score), original_index, doc))
         return scored
+
+    def _score_documents_cross_encoder(
+        self,
+        *,
+        query: str,
+        documents: Sequence[Document],
+        started: float,
+        timeout_seconds: float,
+    ) -> list[tuple[float, int, Document]]:
+        """Score the rerank pool with the ``cross_encoder`` strategy.
+
+        Derives relevance from a ``bge-reranker-v2-m3`` cross-encoder via the
+        :meth:`_cross_encoder_scores` client seam. If the model is unavailable
+        (no endpoint configured / empty result), this raises so the caller falls
+        back to the original input order, preserving the permutation contract
+        (Requirements 8.1, 8.2, 8.3).
+        """
+
+        self._ensure_not_timed_out(started=started, timeout_seconds=timeout_seconds)
+        raw_scores = self._cross_encoder_scores(query, documents)
+        self._ensure_not_timed_out(started=started, timeout_seconds=timeout_seconds)
+        scores = self._coerce_scores(raw_scores)
+        if not scores:
+            # Unavailable model / empty result -> fall back to original order.
+            raise RuntimeError("cross_encoder_unavailable")
+        scored: list[tuple[float, int, Document]] = []
+        for original_index, doc in enumerate(documents):
+            # Missing per-doc scores default to 0.0: keeps the output a
+            # permutation (no doc dropped) and deterministic via the stable
+            # original-index tiebreak applied by the caller's sort.
+            value = scores.get(doc.id, 0.0)
+            scored.append((float(value), original_index, doc))
+        return scored
+
+    def _cross_encoder_scores(
+        self,
+        query: str,
+        documents: Sequence[Document],
+    ) -> Mapping[str, float]:
+        """Client seam returning ``{doc_id: relevance}`` for the cross-encoder.
+
+        Resolution order:
+        1. An injected ``cross_encoder_scorer`` callable (used by tests and
+           custom clients).
+        2. A configurable HTTP reranker endpoint mirroring the embedder's HTTP
+           client pattern, using ``settings.rag_reranker_model`` as the model id.
+
+        When no endpoint/key is configured the model is treated as unavailable
+        and an empty mapping is returned (caller then preserves original order).
+        This method never invents documents; it only maps known ``doc.id`` keys.
+        """
+
+        if self._cross_encoder_scorer is not None:
+            return self._cross_encoder_scorer(query, list(documents))
+        return self._remote_cross_encoder_scores(query, documents)
+
+    def _remote_cross_encoder_scores(
+        self,
+        query: str,
+        documents: Sequence[Document],
+    ) -> Mapping[str, float]:
+        """Call a configurable HTTP reranker endpoint (bge-reranker-v2-m3).
+
+        Reuses the embedder's lightweight ``urllib`` request pattern. The
+        endpoint/key are read leniently from settings; when absent the model is
+        unavailable and an empty mapping is returned (no live call is made).
+        """
+
+        endpoint = str(getattr(settings, "rag_reranker_base_url", "") or "").strip()
+        api_key = str(getattr(settings, "rag_reranker_api_key", "") or "").strip()
+        if not endpoint or not api_key:
+            return {}
+
+        docs = list(documents)
+        if not docs:
+            return {}
+
+        payload = json.dumps(
+            {
+                "model": self.model_name,
+                "query": str(query or ""),
+                "documents": [str(doc.text or "") for doc in docs],
+                "return_documents": False,
+            }
+        ).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "CLARA-ML/0.1",
+            "Authorization": f"Bearer {api_key}",
+        }
+        url = f"{endpoint.rstrip('/')}/rerank"
+        timeout_seconds = max(float(self.timeout_ms) / 1000.0, 0.05)
+        req = Request(url, data=payload, headers=headers, method="POST")
+        with urlopen(req, timeout=timeout_seconds) as response:
+            raw = response.read().decode("utf-8", errors="ignore")
+        parsed = json.loads(raw)
+        return self._parse_remote_rerank_payload(parsed, docs)
+
+    @staticmethod
+    def _parse_remote_rerank_payload(
+        payload: Any,
+        documents: Sequence[Document],
+    ) -> dict[str, float]:
+        """Map a standard ``{"results": [{index, relevance_score}]}`` payload to doc scores."""
+
+        if not isinstance(payload, dict):
+            raise ValueError("invalid_rerank_payload")
+        rows = payload.get("results")
+        if not isinstance(rows, list):
+            raise ValueError("rerank_payload_missing_results")
+        scores: dict[str, float] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            index = row.get("index")
+            if not isinstance(index, int) or not (0 <= index < len(documents)):
+                continue
+            raw_value = row.get("relevance_score", row.get("score"))
+            scores[documents[index].id] = float(raw_value)
+        return scores
+
+    @staticmethod
+    def _coerce_scores(raw_scores: Mapping[str, float] | None) -> dict[str, float]:
+        """Coerce an arbitrary scorer mapping into a clean ``{str: float}`` dict."""
+
+        if not raw_scores:
+            return {}
+        coerced: dict[str, float] = {}
+        for key, value in dict(raw_scores).items():
+            doc_id = str(key)
+            try:
+                coerced[doc_id] = float(value)
+            except (TypeError, ValueError):
+                continue
+        return coerced
 
     def _should_use_llm(self) -> bool:
         if not self.llm_enabled:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Sequence
+from typing import Any, Sequence, TypeVar
 import unicodedata
 
 from clara_ml.config import settings
@@ -583,3 +583,91 @@ class DocumentScorer:
             + (0.1 * min(source_signal, 1.0))
         )
         return max(0.0, min(1.0, combined))
+
+
+# ---------------------------------------------------------------------------
+# Standalone Reciprocal Rank Fusion (P2 hybrid retrieval).
+#
+# These module-level names re-export the RRF tuning constants that already live
+# on ``DocumentScorer`` so there is a single source of truth (no duplicated
+# literals). ``DocumentScorer`` keeps using ``self._RRF_K`` / ``self._RRF_BLEND``
+# exactly as before; nothing about its scoring output changes.
+RRF_K = DocumentScorer._RRF_K
+RRF_BLEND = DocumentScorer._RRF_BLEND
+
+_Candidate = TypeVar("_Candidate")
+
+
+def _candidate_id(candidate: Any) -> str:
+    """Extract the stable identity of a fusion candidate.
+
+    Accepts either a :class:`Document` (its ``id`` is the identity) or an
+    ``(id, score)`` tuple/sequence (its first element is the identity). The id
+    is normalized to ``str`` so that the same chunk surfaced by the dense and
+    sparse lists is treated as one item in the fused union.
+    """
+    candidate_id = getattr(candidate, "id", None)
+    if candidate_id is not None:
+        return str(candidate_id)
+    if isinstance(candidate, (tuple, list)) and candidate:
+        return str(candidate[0])
+    raise TypeError(
+        "rrf_fuse candidates must be Document objects (with a stable `.id`) "
+        "or (id, score) tuples"
+    )
+
+
+def rrf_fuse(
+    dense: Sequence[_Candidate],
+    sparse: Sequence[_Candidate],
+    *,
+    k: int = RRF_K,
+) -> list[_Candidate]:
+    """Fuse two ranked candidate lists with Reciprocal Rank Fusion.
+
+    Reuses the existing ``_RRF_K=60`` fusion constant (exposed here as
+    :data:`RRF_K`). This is a pure function: it does not mutate the inputs and
+    has no side effects. ``hybrid_retriever`` (task 5.8) imports it to fuse the
+    dense ANN list with the sparse/BM25 list.
+
+    Input contract
+    --------------
+    ``dense`` and ``sparse`` are each an ordered (best-first) list of
+    candidates. A candidate is either a :class:`Document` (whose ``.id`` is its
+    stable identity) or an ``(id, score)`` tuple (whose first element is the
+    stable id). Rank is 1-based by position within each list.
+
+    Scoring
+    -------
+    ``score(c) = sum over each list L containing c of 1 / (k + rank_L(c))``.
+
+    Postconditions
+    --------------
+    - Set conservation (Property 14): the output is exactly a permutation of the
+      union (by id) of the two inputs — no fabricated items, none dropped. A
+      chunk present in both lists appears once, represented by its first-seen
+      candidate (dense list wins when ids collide).
+    - Monotonicity / corroboration (Property 13): if a chunk ranks no worse than
+      another in BOTH lists its fused score is ``>=`` the other's, and a chunk
+      corroborated by both lists never scores below the same chunk appearing in
+      only one list at equal rank (every reciprocal term is positive, so
+      corroboration can only add score, never subtract).
+    """
+    if k <= 0:
+        raise ValueError("rrf_fuse requires k > 0")
+
+    scores: dict[str, float] = {}
+    representative: dict[str, _Candidate] = {}
+    order_seen: list[str] = []
+
+    for ranked_list in (dense, sparse):
+        for rank, candidate in enumerate(ranked_list, start=1):
+            cid = _candidate_id(candidate)
+            if cid not in representative:
+                representative[cid] = candidate
+                order_seen.append(cid)
+            scores[cid] = scores.get(cid, 0.0) + (1.0 / float(k + rank))
+
+    # Stable sort by descending fused score; ties preserve first-seen order.
+    fused_ids = sorted(order_seen, key=lambda cid: scores[cid], reverse=True)
+    return [representative[cid] for cid in fused_ids]
