@@ -149,10 +149,10 @@ _DENSE_SQL = text(
            c.text          AS text
     FROM kb_chunk_embeddings e
     JOIN kb_chunks c ON c.id = e.chunk_id
-    WHERE (:tier_floor IS NULL OR c.trust_tier <= :tier_floor)
-      AND (:lang_filter IS NULL OR c.lang = :lang_filter)
-      AND (:section_type IS NULL OR c.section_type = :section_type)
-      AND (:document_id IS NULL OR c.document_id = :document_id)
+    WHERE (CAST(:tier_floor AS integer) IS NULL OR c.trust_tier <= CAST(:tier_floor AS integer))
+      AND (CAST(:lang_filter AS text) IS NULL OR c.lang = CAST(:lang_filter AS text))
+      AND (CAST(:section_type AS text) IS NULL OR c.section_type = CAST(:section_type AS text))
+      AND (CAST(:document_id AS bigint) IS NULL OR c.document_id = CAST(:document_id AS bigint))
     ORDER BY e.embedding <=> CAST(:qvec AS vector)
     LIMIT :n
     """
