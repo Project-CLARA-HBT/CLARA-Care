@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from clara_ml.config import settings
 from clara_ml.rag.retriever import Document
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, no runtime import cost
+    from sqlalchemy.engine import Engine
+
+    from clara_ml.rag.store.graph_store import GraphStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -68,7 +76,22 @@ class GraphRagSidecar:
         relation: str
         weight: float
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        engine: "Engine | None" = None,
+        graph_store: "GraphStore | None" = None,
+    ) -> None:
+        # DB-backed graph wiring (task 8.2, Requirement 10.1). Both are optional
+        # and injectable for DI/tests; when neither is supplied the engine is
+        # lazily resolved via ``rag.store.health.resolve_default_engine`` at load
+        # time. When no engine/store is available (or any DB error occurs) the
+        # sidecar falls back to the static-JSON domain graph unchanged.
+        self._engine = engine
+        self._graph_store = graph_store
+        # Provenance of the currently loaded domain graph: "database",
+        # "static_json", or "none". Useful for diagnostics / regression tests.
+        self._graph_source = "none"
         self._domain_graph_loaded = False
         self._domain_entities: dict[str, GraphRagSidecar._DomainEntity] = {}
         self._domain_edges: list[GraphRagSidecar._DomainEdge] = []
@@ -91,7 +114,186 @@ class GraphRagSidecar:
     def _normalize_phrase(text: str) -> str:
         return " ".join(re.findall(r"[0-9a-zA-ZÀ-ỹ]+", str(text or "").lower()))
 
+    def _reset_graph_state(self) -> None:
+        """Clear all in-memory domain-graph state (entities, edges, aliases)."""
+
+        self._domain_graph_loaded = False
+        self._domain_entities.clear()
+        self._domain_edges.clear()
+        self._alias_index.clear()
+
     def _load_domain_graph(self) -> None:
+        """Load the biomedical domain graph (DB-first, static-JSON fallback).
+
+        Requirement 10.1: the GraphRAG engine SHALL load drug-interaction and
+        contraindication edges from ``kb_entity_edges`` rather than from a static
+        JSON file. When ``settings.rag_biomed_graph_enabled`` is on AND a database
+        engine/``GraphStore`` is available, edges are hydrated from the database
+        via :meth:`GraphStore.get_edges`. Any failure — no engine, missing tables,
+        an empty edge set, or any DB hiccup — falls back to the existing
+        static-JSON behavior UNCHANGED so graph loading can never crash the
+        request path.
+        """
+
+        self._reset_graph_state()
+        self._graph_source = "none"
+
+        if settings.rag_biomed_graph_enabled:
+            try:
+                if self._load_domain_graph_from_db():
+                    self._graph_source = "database"
+                    return
+            except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
+                logger.warning(
+                    "graphrag DB edge-load failed (%s); falling back to static JSON",
+                    exc.__class__.__name__,
+                )
+                self._reset_graph_state()
+
+        self._load_domain_graph_from_json()
+        if self._domain_graph_loaded:
+            self._graph_source = "static_json"
+
+    # -- DB-backed edge load (task 8.2) --------------------------------------
+
+    def _resolve_db_access(self) -> tuple["GraphStore | None", Any]:
+        """Resolve a ``(GraphStore, session_factory)`` pair for the DB load path.
+
+        An explicitly injected ``GraphStore`` wins (DI/tests). Otherwise an engine
+        is used — the injected one when present, else lazily resolved via
+        ``rag.store.health.resolve_default_engine`` (which returns ``None`` when no
+        database URL is configured). Returns ``(None, None)`` when no database
+        access is available, signalling the caller to fall back to static JSON.
+        """
+
+        if self._graph_store is not None:
+            return self._graph_store, getattr(self._graph_store, "_session_factory", None)
+
+        engine = self._engine
+        if engine is None:
+            from clara_ml.rag.store.health import resolve_default_engine
+
+            engine = resolve_default_engine(settings)
+        if engine is None:
+            return None, None
+
+        from sqlalchemy.orm import sessionmaker
+
+        from clara_ml.rag.store.graph_store import GraphStore
+
+        store = GraphStore.from_engine(engine)
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+        return store, session_factory
+
+    def _load_entity_rows(self, session_factory: Any, entity_ids: set[int]) -> dict[int, dict[str, Any]]:
+        """Read the ``kb_entities`` rows referenced by graph edges.
+
+        Returns a mapping ``entity_id -> {canonical_name, entity_type,
+        synonyms_json}`` used to build the alias index that matches query/document
+        text against graph nodes. Returns an empty mapping when no session factory
+        is available (e.g. an injected store without one).
+        """
+
+        if session_factory is None or not entity_ids:
+            return {}
+
+        from sqlalchemy import select
+
+        from clara_ml.rag.store.schema import KbEntity
+
+        session = session_factory()
+        try:
+            rows = (
+                session.execute(select(KbEntity).where(KbEntity.id.in_(sorted(entity_ids))))
+                .scalars()
+                .all()
+            )
+            return {
+                int(row.id): {
+                    "canonical_name": str(row.canonical_name or ""),
+                    "entity_type": str(row.entity_type or "concept"),
+                    "synonyms_json": (
+                        row.synonyms_json if isinstance(row.synonyms_json, list) else []
+                    ),
+                }
+                for row in rows
+            }
+        finally:
+            session.close()
+
+    def _load_domain_graph_from_db(self) -> bool:
+        """Hydrate the domain graph from ``kb_entity_edges`` (and ``kb_entities``).
+
+        Returns ``True`` only when the database yielded a usable graph (at least
+        one entity and one edge); ``False`` otherwise so the caller falls back to
+        the static JSON. Never mutates partial state on a ``False`` return path in
+        a way that survives (the dispatcher resets state on fallback).
+        """
+
+        store, session_factory = self._resolve_db_access()
+        if store is None:
+            return False
+
+        edges = store.get_edges()
+        if not edges:
+            return False
+
+        referenced_ids: set[int] = set()
+        for edge in edges:
+            referenced_ids.add(int(edge.source_entity))
+            referenced_ids.add(int(edge.target_entity))
+
+        entity_rows = self._load_entity_rows(session_factory, referenced_ids)
+        if not entity_rows:
+            return False
+
+        for entity_id, row in entity_rows.items():
+            node_id = str(entity_id)
+            label = str(row.get("canonical_name") or node_id).strip() or node_id
+            entity_type = str(row.get("entity_type") or "concept").strip().lower()
+            aliases: list[str] = []
+            synonyms = row.get("synonyms_json")
+            if isinstance(synonyms, list):
+                for synonym in synonyms:
+                    name = synonym.get("name") if isinstance(synonym, dict) else synonym
+                    normalized = self._normalize_phrase(name) if name else ""
+                    if normalized:
+                        aliases.append(normalized)
+            aliases.append(self._normalize_phrase(label))
+            aliases = sorted({alias for alias in aliases if alias})
+            entity = self._DomainEntity(
+                entity_id=node_id,
+                label=label,
+                entity_type=entity_type,
+                aliases=aliases,
+            )
+            self._domain_entities[node_id] = entity
+            for alias in aliases:
+                self._alias_index[alias].add(node_id)
+
+        for edge in edges:
+            source = str(int(edge.source_entity))
+            target = str(int(edge.target_entity))
+            if source not in self._domain_entities or target not in self._domain_entities:
+                continue
+            relation = str(edge.relation or "related_to").strip().lower()
+            try:
+                weight = float(edge.weight)
+            except (TypeError, ValueError):
+                weight = 0.5
+            self._domain_edges.append(
+                self._DomainEdge(
+                    source=source,
+                    target=target,
+                    relation=relation,
+                    weight=max(0.0, min(weight, 1.0)),
+                )
+            )
+
+        self._domain_graph_loaded = bool(self._domain_entities and self._domain_edges)
+        return self._domain_graph_loaded
+
+    def _load_domain_graph_from_json(self) -> None:
         self._domain_graph_loaded = False
         self._domain_entities.clear()
         self._domain_edges.clear()

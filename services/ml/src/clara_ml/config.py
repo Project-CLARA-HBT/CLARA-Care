@@ -599,6 +599,78 @@ class Settings(BaseSettings):
         le=1.0,
     )
 
+    # --- RAG Knowledge Pipeline (P0 foundations) -----------------------------
+    # Additive feature flags. Every flag defaults to legacy behavior so the
+    # existing in-memory pipeline keeps serving traffic until cutover.
+    # NOTE: RAG_BIOMED_GRAPH_ENABLED and RAG_RERANKER_TIMEOUT_MS already exist
+    # above (rag_biomed_graph_enabled / rag_reranker_timeout_ms) and are reused
+    # as-is rather than redefined here.
+    rag_persistent_store_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_PERSISTENT_STORE_ENABLED",
+    )
+    rag_persistent_retrieval_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_PERSISTENT_RETRIEVAL_ENABLED",
+    )
+    rag_ingestion_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_INGESTION_ENABLED",
+    )
+    rag_entity_normalization_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_ENTITY_NORMALIZATION_ENABLED",
+    )
+    rag_trust_tier_ranking_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_TRUST_TIER_RANKING_ENABLED",
+    )
+    rag_semantic_cache_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_SEMANTIC_CACHE_ENABLED",
+    )
+    rag_eval_ci_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_EVAL_CI_ENABLED",
+    )
+    # Embedding fail-loud / degraded-mode tuning (replaces silent hash fallback).
+    rag_embedding_fail_loud: bool = Field(
+        default=True,
+        validation_alias="RAG_EMBEDDING_FAIL_LOUD",
+    )
+    rag_embedding_allow_degraded: bool = Field(
+        default=False,
+        validation_alias="RAG_EMBEDDING_ALLOW_DEGRADED",
+    )
+    # Dense embedding dimension; default matches text-embedding-3-large (3072),
+    # labeled "bge-m3" in product copy. Asserted at write time by the store.
+    rag_embedding_dim: int = Field(
+        default=3072,
+        validation_alias="RAG_EMBEDDING_DIM",
+        ge=1,
+        le=8192,
+    )
+    # ANN index kind for pgvector (hnsw | ivfflat); HNSW preferred for recall.
+    rag_ann_index_kind: str = Field(
+        default="hnsw",
+        validation_alias="RAG_ANN_INDEX_KIND",
+    )
+    # Persistent-retrieval gap-fill knobs (unused on the legacy in-memory path).
+    rag_min_results: int = Field(
+        default=3,
+        validation_alias=AliasChoices("RAG_MIN_RESULTS", "MIN_RESULTS"),
+        ge=1,
+        le=100,
+    )
+    # Trust floor: lowest acceptable authority tier number (1 = highest
+    # authority, 4 = lowest). Default 4 accepts all tiers (no filtering today).
+    rag_trust_floor: int = Field(
+        default=4,
+        validation_alias="RAG_TRUST_FLOOR",
+        ge=1,
+        le=4,
+    )
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

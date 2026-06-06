@@ -2,15 +2,27 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from time import perf_counter
-from typing import Any, List, Protocol
+from typing import TYPE_CHECKING, Any, List, Protocol
 import unicodedata
 from uuid import uuid4
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
+
+# Import-ordering fix (task 5.11): eagerly initialize the ``rag.store`` package
+# before the ``graphrag``/``retriever`` chain below pulls in ``rag.embedder``.
+# ``embedder`` imports ``rag.store.schema``, which triggers ``rag.store``'s
+# package ``__init__`` (it eagerly imports ``hybrid_retriever`` ->
+# ``retrieval.score_engine`` -> ``rag.embedder``). When ``embedder`` is the
+# entry point that initialization re-enters a half-initialized ``embedder`` and
+# raises a circular ImportError. Importing ``rag.store`` first lets that package
+# finish cleanly (``embedder`` then initializes fully), after which the rest of
+# this module's imports simply reuse the cached modules. This only reorders
+# initialization of modules that are loaded transitively regardless.
+import clara_ml.rag.store  # noqa: E402,F401  (side-effect import; see note above)
 from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.rag.retriever import Document, InMemoryRetriever
@@ -19,10 +31,256 @@ from clara_ml.rag.seed_documents import base_documents, load_seed_documents
 logger = logging.getLogger(__name__)
 
 
+if TYPE_CHECKING:  # pragma: no cover - typing-only import (no runtime cost)
+    from clara_ml.factcheck import FactCheckResult
+
+
 # Module-level settings alias so ``resolve_llm_client`` can default to the
 # process settings while still accepting an explicit ``settings`` argument
 # (Requirement 2.3 wiring; mirrors the design's ``resolve_llm_client(..., settings)``).
 _module_settings = settings
+
+
+# ---------------------------------------------------------------------------
+# Trust-tier / recency → FIDES "tighten-only" combiner (task 8.6 / Req 10.3)
+# ---------------------------------------------------------------------------
+#
+# WHERE ``RAG_TRUST_TIER_RANKING_ENABLED`` is true, the knowledge pipeline must
+# provide the retrieved chunks' ``trust_tier`` and recency (``effective_date``)
+# to the FIDES claim-verification step as inputs that can ONLY TIGHTEN and
+# NEVER LOOSEN a blocking verdict (Requirement 10.3; preserves Property 28 /
+# Req 14.5 — a CRITICAL / contradiction verdict must still block identically).
+#
+# Design / seam note
+# ------------------
+# ``RagPipelineP1`` itself does NOT call FIDES. ``run_fides_lite`` runs *after*
+# the pipeline returns, at two call sites that already hold both the verdict and
+# the pipeline's ``retrieved_context`` (which now carries provenance):
+#
+#   * ``clara_ml/main.py``            — ``factcheck = run_fides_lite(...)``
+#   * ``clara_ml/agents/research_tier2.py`` — ``factcheck_result = run_fides_lite(...)``
+#
+# The tighten-only combiner is therefore implemented here as a pure helper (so
+# it lives next to the provenance serializer that produces its inputs) and the
+# call sites can wire it in a single line, e.g.::
+#
+#     factcheck = run_fides_lite(answer=..., retrieved_context=ctx)
+#     factcheck = RagPipelineP1.tighten_fides_verdict_with_trust(factcheck, ctx)
+#
+# ``_serialize_context`` (below) carries ``trust_tier`` + ``effective_date`` on
+# every context item so that metadata is available verbatim at those seams.
+#
+# Safety contract
+# ---------------
+# * Flag OFF  → returns the verdict unchanged (no behavioral drift; default).
+# * Monotone  → output blocking-strength >= input for BOTH verdict and severity,
+#               so a blocking ("fail" / "high") verdict can never be loosened.
+# * Tightens  → only a *borderline* ("warn") verdict is escalated, and only on
+#               *known* weak evidence (low authority and/or stale). Missing
+#               metadata is treated as "unknown" and never tightens.
+# * Defensive → any error returns the original verdict unchanged; never raises.
+
+# Blocking-strength ranks (higher = closer to blocking). "fail" is the
+# CRITICAL / contradiction blocking verdict; "warn" is borderline; "pass" clears.
+_FIDES_VERDICT_RANK: dict[str, int] = {"pass": 0, "warn": 1, "fail": 2}
+_FIDES_VERDICT_BY_RANK: dict[int, str] = {0: "pass", 1: "warn", 2: "fail"}
+_FIDES_SEVERITY_RANK: dict[str, int] = {"low": 0, "medium": 1, "high": 2}
+_FIDES_SEVERITY_BY_RANK: dict[int, str] = {0: "low", 1: "medium", 2: "high"}
+
+# A document whose best available authority is tier >= 3 ({3,4}) is "low
+# authority"; tiers {1,2} are regulator/label/guideline-grade and never trigger
+# authority-based tightening.
+_FIDES_LOW_AUTHORITY_TIER_FLOOR = 3
+# Evidence older than this many years (by ``effective_date``) is treated as
+# stale for recency-based tightening.
+_FIDES_RECENCY_STALE_YEARS = 5
+
+
+def _coerce_trust_tier(value: Any) -> int | None:
+    """Parse a ``trust_tier`` into ``{1,2,3,4}`` or ``None`` (defensive)."""
+
+    try:
+        tier = int(value)
+    except (TypeError, ValueError):
+        return None
+    if tier < 1 or tier > 4:
+        return None
+    return tier
+
+
+def _coerce_effective_year(value: Any) -> int | None:
+    """Extract a 4-digit year from a date / datetime / ISO string (defensive)."""
+
+    if value is None:
+        return None
+    year = getattr(value, "year", None)
+    if isinstance(year, int) and 1000 <= year <= 9999:
+        return year
+    match = re.search(r"(\d{4})", str(value))
+    if not match:
+        return None
+    parsed = int(match.group(1))
+    if parsed < 1000 or parsed > 9999:
+        return None
+    return parsed
+
+
+def _context_metadata_value(item: Any, key: str) -> Any:
+    """Read ``key`` from a context item shaped as a dict (top-level or nested
+    ``metadata``) or as a Document-like object exposing ``.metadata``.
+
+    Returns ``None`` when the key is absent or the item shape is unexpected.
+    """
+
+    if isinstance(item, dict):
+        if item.get(key) is not None:
+            return item.get(key)
+        nested = item.get("metadata")
+        if isinstance(nested, dict):
+            return nested.get(key)
+        return None
+    meta = getattr(item, "metadata", None)
+    if isinstance(meta, dict):
+        return meta.get(key)
+    return getattr(item, key, None)
+
+
+def _trust_recency_tighten_signal(
+    retrieved_context: Any,
+    *,
+    recency_stale_years: int = _FIDES_RECENCY_STALE_YEARS,
+    now_year: int | None = None,
+) -> dict[str, Any]:
+    """Summarize the trust-tier / recency tightening signal for evidence.
+
+    Returns a dict with ``best_tier`` (lowest tier number = highest authority,
+    or ``None`` when unknown), ``newest_year`` (most recent ``effective_date``
+    year, or ``None``), and two *known-weak* booleans. A signal is only "weak"
+    when the metadata is present and positively indicates weakness; missing
+    metadata is "unknown" and never marked weak (so it cannot tighten).
+    """
+
+    tiers: list[int] = []
+    years: list[int] = []
+    for item in retrieved_context or []:
+        tier = _coerce_trust_tier(_context_metadata_value(item, "trust_tier"))
+        if tier is not None:
+            tiers.append(tier)
+        year = _coerce_effective_year(_context_metadata_value(item, "effective_date"))
+        if year is not None:
+            years.append(year)
+
+    best_tier = min(tiers) if tiers else None
+    newest_year = max(years) if years else None
+    current_year = int(now_year) if now_year is not None else datetime.now(timezone.utc).year
+
+    weak_authority = best_tier is not None and best_tier >= _FIDES_LOW_AUTHORITY_TIER_FLOOR
+    weak_recency = newest_year is not None and (current_year - newest_year) > max(
+        int(recency_stale_years), 0
+    )
+    return {
+        "best_tier": best_tier,
+        "newest_year": newest_year,
+        "weak_authority": weak_authority,
+        "weak_recency": weak_recency,
+    }
+
+
+def tighten_fides_verdict_with_trust(
+    factcheck: "FactCheckResult | None",
+    retrieved_context: Any,
+    *,
+    settings: Any = None,
+    recency_stale_years: int = _FIDES_RECENCY_STALE_YEARS,
+    now_year: int | None = None,
+) -> "FactCheckResult | None":
+    """Apply trust-tier + recency as a *tighten-only* input to a FIDES verdict.
+
+    Pure function (no I/O). Gated behind ``RAG_TRUST_TIER_RANKING_ENABLED``:
+
+    * When the flag is off, the input ``factcheck`` is returned unchanged so the
+      default FIDES behavior is byte-for-byte preserved (Requirement 10.3 /
+      Property 28).
+    * When on, low-authority and/or stale evidence may escalate a *borderline*
+      ("warn") verdict toward blocking ("fail") and may raise its severity. The
+      result is monotone: neither verdict nor severity is ever lowered, so a
+      CRITICAL / contradiction ("fail" / "high") verdict always still blocks.
+
+    Any unexpected input or error results in the original ``factcheck`` being
+    returned unchanged (defensive; never raises).
+    """
+
+    cfg = settings if settings is not None else _module_settings
+    try:
+        if not bool(getattr(cfg, "rag_trust_tier_ranking_enabled", False)):
+            return factcheck
+        if factcheck is None:
+            return factcheck
+
+        verdict = str(getattr(factcheck, "verdict", "") or "").strip().lower()
+        severity = str(getattr(factcheck, "severity", "") or "").strip().lower()
+        v_rank = _FIDES_VERDICT_RANK.get(verdict)
+        s_rank = _FIDES_SEVERITY_RANK.get(severity)
+        if v_rank is None or s_rank is None:
+            # Unknown verdict/severity vocabulary — do not touch (defensive).
+            return factcheck
+
+        signal = _trust_recency_tighten_signal(
+            retrieved_context,
+            recency_stale_years=recency_stale_years,
+            now_year=now_year,
+        )
+        weak_authority = bool(signal["weak_authority"])
+        weak_recency = bool(signal["weak_recency"])
+
+        # Proposed tightening *floor* from the (known) weak-evidence signal.
+        # Strong/unknown evidence proposes the lowest floor → no escalation.
+        if weak_authority and weak_recency:
+            floor_v, floor_s = _FIDES_VERDICT_RANK["fail"], _FIDES_SEVERITY_RANK["high"]
+        elif weak_authority or weak_recency:
+            floor_v, floor_s = _FIDES_VERDICT_RANK["warn"], _FIDES_SEVERITY_RANK["medium"]
+        else:
+            floor_v, floor_s = _FIDES_VERDICT_RANK["pass"], _FIDES_SEVERITY_RANK["low"]
+
+        # Tighten-only: only escalate a *borderline* ("warn") verdict. A "pass"
+        # (confident clear) and a "fail" (already blocking) are left untouched
+        # except by the monotone clamp below, which can never loosen them.
+        if verdict == "warn":
+            new_v_rank = max(v_rank, floor_v)
+            new_s_rank = max(s_rank, floor_s)
+        else:
+            new_v_rank = v_rank
+            new_s_rank = s_rank
+
+        # Monotone guarantee: never below the input (never loosen).
+        new_v_rank = max(new_v_rank, v_rank)
+        new_s_rank = max(new_s_rank, s_rank)
+
+        if new_v_rank == v_rank and new_s_rank == s_rank:
+            return factcheck
+
+        new_verdict = _FIDES_VERDICT_BY_RANK[new_v_rank]
+        new_severity = _FIDES_SEVERITY_BY_RANK[new_s_rank]
+        tighten_note = (
+            " [trust-tier/recency tightening: bằng chứng truy xuất có thẩm quyền thấp"
+            " và/hoặc đã cũ, siết chặt phán quyết kiểm chứng.]"
+        )
+        existing_note = str(getattr(factcheck, "note", "") or "")
+        try:
+            return replace(
+                factcheck,
+                verdict=new_verdict,
+                severity=new_severity,
+                note=f"{existing_note}{tighten_note}".strip(),
+            )
+        except TypeError:
+            # ``factcheck`` is not a dataclass instance — mutate defensively.
+            setattr(factcheck, "verdict", new_verdict)
+            setattr(factcheck, "severity", new_severity)
+            return factcheck
+    except Exception:  # pragma: no cover - never let tightening crash the path
+        logger.debug("trust-tier FIDES tightening skipped due to error", exc_info=True)
+        return factcheck
 
 
 @dataclass
@@ -81,6 +339,8 @@ class RagPipelineP1:
         deepseek_base_url: str | None = None,
         deepseek_model: str | None = None,
         deepseek_timeout_seconds: float | None = None,
+        hybrid_retriever: Any | None = None,
+        semantic_cache: Any | None = None,
     ) -> None:
         seed_documents = load_seed_documents()
         seed_by_id: dict[str, Document] = {doc.id: doc for doc in base_documents()}
@@ -109,6 +369,30 @@ class RagPipelineP1:
                 request_jitter_seconds=settings.llm_global_jitter_seconds,
             )
         self._graphrag = GraphRagSidecar()
+        # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
+        # When ``RAG_PERSISTENT_RETRIEVAL_ENABLED`` is effectively on, the
+        # request path routes to the persistent ``HybridRetriever`` (embed the
+        # query only) instead of the legacy in-memory retriever (embed every
+        # document). The retriever is lazily constructed from the configured
+        # database URL on first use; an explicitly injected one wins (DI/tests).
+        # When it cannot be built (no DB URL, missing infra, any error) the
+        # pipeline defensively keeps using the legacy in-memory path so the
+        # request never crashes (Requirement 3.4).
+        self._hybrid_retriever = hybrid_retriever
+        self._hybrid_retriever_unavailable = False
+        # --- Semantic query cache seam (task 9.9, Req 12.2) ------------------
+        # Gated by ``RAG_SEMANTIC_CACHE_ENABLED`` (default false). An explicitly
+        # injected cache (DI / tests) always wins; otherwise an auto-built
+        # ``SemanticQueryCache`` is constructed lazily ONLY when the flag is on.
+        # When the flag is off no cache is consulted, so the retrieval path is
+        # byte-identical to the legacy behaviour. The query ``embed_fn`` used by
+        # the cache's cosine-similarity seam is built lazily + defensively so it
+        # never crashes the request path.
+        self._semantic_cache = semantic_cache
+        self._semantic_cache_auto: Any | None = None
+        self._semantic_cache_unavailable = False
+        self._semantic_cache_embedder: Any | None = None
+        self._semantic_cache_embedder_unavailable = False
 
     @staticmethod
     def _local_synthesis(query: str, docs: List[Document], *, answer_language: str = "vi") -> str:
@@ -1593,9 +1877,43 @@ class RagPipelineP1:
                     "source": str(metadata.get("source") or "unknown"),
                     "url": str(metadata.get("url") or ""),
                     "score": metadata.get("score"),
+                    # Provenance carried verbatim for the trust-tier/recency
+                    # FIDES-tightening seam (task 8.6 / Req 10.3). Additive and
+                    # defensive: the FIDES verdict step ignores these keys, so
+                    # flag-off behavior is unchanged. ``trust_tier`` is the
+                    # {1,2,3,4} authority rank and ``effective_date`` the recency
+                    # signal attached by the hybrid retriever's provenance.
+                    "trust_tier": metadata.get("trust_tier"),
+                    "effective_date": metadata.get("effective_date"),
                 }
             )
         return serialized
+
+    @staticmethod
+    def tighten_fides_verdict_with_trust(
+        factcheck: "FactCheckResult | None",
+        retrieved_context: Any,
+        *,
+        settings: Any = None,
+        recency_stale_years: int = _FIDES_RECENCY_STALE_YEARS,
+        now_year: int | None = None,
+    ) -> "FactCheckResult | None":
+        """Tighten-only trust-tier/recency → FIDES combiner (task 8.6 / Req 10.3).
+
+        Thin static wrapper over :func:`tighten_fides_verdict_with_trust` so the
+        FIDES call sites (``clara_ml/main.py`` and
+        ``clara_ml/agents/research_tier2.py``) can wire the tightening seam off
+        the pipeline class. See the module-level helper for the full safety
+        contract (flag-gated, monotone tighten-only, defensive).
+        """
+
+        return tighten_fides_verdict_with_trust(
+            factcheck,
+            retrieved_context,
+            settings=settings,
+            recency_stale_years=recency_stale_years,
+            now_year=now_year,
+        )
 
     @staticmethod
     def _merge_documents_by_id(docs: List[Document]) -> List[Document]:
@@ -1608,6 +1926,389 @@ class RagPipelineP1:
             seen.add(doc_id)
             merged.append(doc)
         return merged
+
+    # ------------------------------------------------------------------
+    # Persistent (P2) retrieval routing + gap-fill (task 5.11)
+    # ------------------------------------------------------------------
+
+    def _persistent_retrieval_active(self) -> bool:
+        """Deterministically decide whether to use the persistent path.
+
+        Implements the flag-routing contract of Requirements 3.1/3.4. The
+        startup self-check (``rag.store.health``) resolves *effective* flags and
+        stashes them; we consult those first:
+
+        * A ``forced_legacy`` result (the self-check found the ``vector``
+          extension or ``kb_*`` tables missing) ALWAYS forces the legacy path.
+        * Otherwise the resolved ``persistent_retrieval_enabled`` value is used.
+        * When the self-check has not run yet (``None``), fall back to the raw
+          ``settings.rag_persistent_retrieval_enabled`` flag.
+
+        Never raises — any error resolves to the legacy path.
+        """
+
+        try:
+            from clara_ml.rag.store.health import get_resolved_persistent_flags
+
+            resolved = get_resolved_persistent_flags()
+        except Exception:  # pragma: no cover - defensive import guard
+            resolved = None
+
+        if resolved is not None:
+            # A forced-legacy self-check outcome wins unconditionally.
+            if getattr(resolved, "forced_legacy", False):
+                return False
+            return bool(getattr(resolved, "persistent_retrieval_enabled", False))
+
+        # Self-check not resolved yet: fall back to the raw configured flag.
+        return bool(getattr(settings, "rag_persistent_retrieval_enabled", False))
+
+    def _get_hybrid_retriever(self) -> Any | None:
+        """Lazily build (and cache) the persistent ``HybridRetriever`` or None.
+
+        Constructs the retriever from the configured database URL via
+        ``rag.store.health.resolve_default_engine``. Returns ``None`` (→ legacy
+        fallback) when no database URL is configured or any construction step
+        fails. Importing/constructing here never crashes the request path; the
+        result is memoized so a missing/broken store is probed at most once.
+        """
+
+        # An explicitly injected retriever (DI / tests) always wins.
+        if self._hybrid_retriever is not None:
+            return self._hybrid_retriever
+        if self._hybrid_retriever_unavailable:
+            return None
+
+        try:
+            from clara_ml.rag.store.health import resolve_default_engine
+
+            engine = resolve_default_engine(settings)
+            if engine is None:
+                # No DB URL configured: persistent retrieval is unavailable.
+                self._hybrid_retriever_unavailable = True
+                return None
+
+            from clara_ml.rag.embedder import HttpEmbeddingClient
+            from clara_ml.rag.retrieval.reranker import NeuralReranker
+            from clara_ml.rag.store.hybrid_retriever import HybridRetriever
+
+            retriever = HybridRetriever.from_engine(
+                engine,
+                embedder=HttpEmbeddingClient(),
+                reranker=NeuralReranker(),
+                query_expander=self._build_query_expander(),
+            )
+            self._hybrid_retriever = retriever
+            return retriever
+        except Exception as exc:  # pragma: no cover - defensive: never crash
+            logger.warning(
+                "Persistent HybridRetriever unavailable (%s); using legacy in-memory path",
+                exc.__class__.__name__,
+            )
+            self._hybrid_retriever_unavailable = True
+            return None
+
+    @staticmethod
+    def _build_query_expander() -> Any | None:
+        """Build the P3 ``QueryExpander`` for the persistent retriever, or None.
+
+        Entity-normalization wiring (task 7.6): a recall-only
+        :class:`~clara_ml.rag.normalize.query_expander.QueryExpander` (backed by
+        an :class:`~clara_ml.rag.normalize.entity_linker.EntityLinker` +
+        :class:`~clara_ml.rag.normalize.umls_client.UmlsClient`) is injected ONLY
+        when ``settings.rag_entity_normalization_enabled`` is true. When the flag
+        is off this returns ``None`` so the ``HybridRetriever`` keeps its P2
+        no-op expansion (legacy behaviour, unchanged).
+
+        The expander is purely additive and never alters the single
+        embed-query-only guarantee (the retriever still embeds exactly the one
+        canonical query). Construction is defensive: any import/build failure
+        degrades to ``None`` (legacy behaviour) rather than crashing the request.
+        """
+
+        if not bool(getattr(settings, "rag_entity_normalization_enabled", False)):
+            return None
+        try:
+            from clara_ml.rag.normalize.entity_linker import EntityLinker
+            from clara_ml.rag.normalize.query_expander import QueryExpander
+            from clara_ml.rag.normalize.umls_client import UmlsClient
+
+            return QueryExpander(EntityLinker(UmlsClient()))
+        except Exception as exc:  # pragma: no cover - defensive: never crash
+            logger.warning(
+                "Query expander unavailable (%s); persistent retrieval uses no-op expansion",
+                exc.__class__.__name__,
+            )
+            return None
+
+    @staticmethod
+    def _meets_trust_floor(doc: Document, trust_floor: int) -> bool:
+        """Return ``True`` when ``doc`` meets the configured authority floor.
+
+        ``trust_tier`` is a ``{1,2,3,4}`` authority rank where a *lower* number
+        is *higher* authority; ``trust_floor`` is the lowest acceptable tier
+        number. A document meets the floor when its tier is ``<= trust_floor``.
+        A missing/unparseable tier is treated as meeting the floor (we do not
+        force gap-fill solely on absent provenance metadata).
+        """
+
+        tier = (doc.metadata or {}).get("trust_tier")
+        try:
+            return int(tier) <= int(trust_floor)
+        except (TypeError, ValueError):
+            return True
+
+    def _persistent_needs_gap_fill(self, docs: List[Document]) -> bool:
+        """Req 3.5 coverage check for the persistent path.
+
+        Gap-fill is needed when the persistent path returns fewer than
+        ``settings.rag_min_results`` documents OR when every returned document
+        falls below the configured trust floor (``settings.rag_trust_floor``).
+        """
+
+        min_results = max(int(getattr(settings, "rag_min_results", 1) or 1), 1)
+        if len(docs) < min_results:
+            return True
+        trust_floor = int(getattr(settings, "rag_trust_floor", 4) or 4)
+        return bool(docs) and all(
+            not self._meets_trust_floor(doc, trust_floor) for doc in docs
+        )
+
+    def _gap_fill_live_connectors(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        rag_sources: object,
+        scientific_provider_query_overrides: dict[str, Any] | None,
+        rag_reranker_enabled: bool | None,
+    ) -> List[Document]:
+        """Fetch a bounded set of live-connector docs to fill a persistent gap.
+
+        Reuses the EXISTING live connectors via the in-memory retriever's
+        scientific connector entry point. This fetches *new* external documents
+        only; it does not re-embed the persistent corpus, so the persistent
+        path keeps its embed-query-only semantics (Requirement 3.3). Defensive:
+        returns ``[]`` on any error rather than failing the request.
+        """
+
+        try:
+            return list(
+                self.retriever.retrieve_external_scientific(
+                    query,
+                    top_k=max(int(top_k), 1),
+                    rag_sources=rag_sources,
+                    provider_query_overrides=scientific_provider_query_overrides or None,
+                    rag_reranker_enabled=rag_reranker_enabled,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Persistent gap-fill live-connector fetch failed (%s)",
+                exc.__class__.__name__,
+            )
+            return []
+
+    def _schedule_async_persist(self, query: str, docs: List[Document]) -> None:
+        """Best-effort, non-blocking seam to persist gap-fill content (Req 3.5).
+
+        Requirement 3.5 calls for asynchronously persisting content discovered
+        via live-connector gap-fill so the persistent index converges over
+        time. Full async ingestion infrastructure is out of scope for P2; this
+        is the integration seam. It is intentionally a logged no-op for now and
+        MUST NOT block or fail the request path.
+
+        TODO(P1/P5): hand ``docs`` to the offline ingestion orchestrator
+        (``clara_ml.ingestion.orchestrator``) via a background task / queue so
+        the gap-fill content is cleaned, chunked, embedded once and UPSERTed
+        into the persistent corpus.
+        """
+
+        try:
+            if not docs:
+                return
+            logger.info(
+                "RAG gap-fill: %d live-connector doc(s) queued for async "
+                "persistence (seam: offline ingestion not yet wired)",
+                len(docs),
+            )
+        except Exception:  # pragma: no cover - a hook must never break a request
+            pass
+
+    def _persistent_retrieve(
+        self,
+        query: str,
+        *,
+        top_k: int,
+        rag_sources: object,
+        scientific_query: str,
+        scientific_provider_query_overrides: dict[str, Any] | None,
+        rag_reranker_enabled: bool | None,
+    ) -> List[Document] | None:
+        """Persistent (embed-query-only) retrieval with live-connector gap-fill.
+
+        Returns the retrieved documents, or ``None`` to signal the caller should
+        fall back to the legacy in-memory path (no persistent retriever could be
+        built, or retrieval errored). This is the ONLY embed-query-only path and
+        it never invokes the legacy embed-every-document retriever for primary
+        retrieval, satisfying Requirement 3.3 (exactly one path, no mixed
+        embedding semantics). When the persistent result is short on coverage,
+        live-connector gap-fill (Requirement 3.5) tops it up and a best-effort
+        async-persist seam is triggered.
+        """
+
+        retriever = self._get_hybrid_retriever()
+        if retriever is None:
+            return None
+
+        try:
+            from clara_ml.rag.store.hybrid_retriever import RetrievalFilters
+
+            filters = RetrievalFilters(trust_tier_max=int(settings.rag_trust_floor))
+            docs = list(
+                retriever.retrieve(query, top_k=max(int(top_k), 1), filters=filters)
+            )
+        except Exception as exc:
+            # Never crash the request path: degrade to the legacy retriever.
+            logger.warning(
+                "Persistent retrieval failed (%s); falling back to legacy in-memory path",
+                exc.__class__.__name__,
+            )
+            return None
+
+        # Gap-fill (Req 3.5): top up via live connectors when coverage is short.
+        if self._persistent_needs_gap_fill(docs):
+            gap_docs = self._gap_fill_live_connectors(
+                scientific_query,
+                top_k,
+                rag_sources=rag_sources,
+                scientific_provider_query_overrides=scientific_provider_query_overrides,
+                rag_reranker_enabled=rag_reranker_enabled,
+            )
+            if gap_docs:
+                docs = self._merge_documents_by_id([*docs, *gap_docs])
+                self._schedule_async_persist(scientific_query, gap_docs)
+
+        return docs
+
+    # ------------------------------------------------------------------
+    # Semantic query cache (task 9.9, Req 12.2) — RAG_SEMANTIC_CACHE_ENABLED
+    # ------------------------------------------------------------------
+
+    def _resolve_semantic_cache(self) -> Any | None:
+        """Return the semantic query cache to consult, or ``None`` when disabled.
+
+        Gated by ``settings.rag_semantic_cache_enabled`` (default false):
+
+        * An explicitly injected cache (DI / tests) always wins and is returned
+          verbatim — its own ``_is_enabled()`` decides whether it serves hits.
+        * Otherwise, when the flag is OFF this returns ``None`` so NO cache is
+          constructed or consulted and the retrieval path is byte-identical to
+          the legacy behaviour (Requirement 12.2 flag-off contract).
+        * When the flag is ON an auto-built :class:`SemanticQueryCache` is
+          constructed lazily (and memoized). It is wired with a defensive query
+          ``embed_fn`` so a query that is *semantically equivalent* to a
+          previously cached one can be served via the Cache_Layer's
+          cosine-similarity seam; without it only byte-equal (whitespace
+          normalized) queries hit.
+
+        Construction never raises — any failure resolves to ``None`` (legacy).
+        """
+
+        if self._semantic_cache is not None:
+            return self._semantic_cache
+        if not bool(getattr(settings, "rag_semantic_cache_enabled", False)):
+            return None
+        if self._semantic_cache_auto is not None:
+            return self._semantic_cache_auto
+        if self._semantic_cache_unavailable:
+            return None
+        try:
+            from clara_ml.rag.store.cache import SemanticQueryCache
+
+            self._semantic_cache_auto = SemanticQueryCache(embed_fn=self._semantic_cache_embed)
+            return self._semantic_cache_auto
+        except Exception as exc:  # pragma: no cover - defensive: never crash
+            logger.warning(
+                "Semantic query cache unavailable (%s); using uncached retrieval",
+                exc.__class__.__name__,
+            )
+            self._semantic_cache_unavailable = True
+            return None
+
+    def _get_semantic_cache_embedder(self) -> Any | None:
+        """Lazily build (and memoize) the query embedder for the semantic seam.
+
+        Returns an ``HttpEmbeddingClient`` (which reuses the persistent embedding
+        cache, so repeated query embeds are cheap and byte-identical) or ``None``
+        when one cannot be built. Construction never crashes the request path.
+        """
+
+        if self._semantic_cache_embedder is not None:
+            return self._semantic_cache_embedder
+        if self._semantic_cache_embedder_unavailable:
+            return None
+        try:
+            from clara_ml.rag.embedder import HttpEmbeddingClient
+
+            self._semantic_cache_embedder = HttpEmbeddingClient()
+            return self._semantic_cache_embedder
+        except Exception as exc:  # pragma: no cover - defensive: never crash
+            logger.warning(
+                "Semantic cache embedder unavailable (%s); cache uses exact-key path only",
+                exc.__class__.__name__,
+            )
+            self._semantic_cache_embedder_unavailable = True
+            return None
+
+    def _semantic_cache_embed(self, query: str) -> list[float]:
+        """Embed ``query`` for the semantic cache's cosine-similarity seam.
+
+        Raises when no embedder is available so the Cache_Layer falls back to its
+        exact-key path / a cache miss (it catches embed errors internally and
+        degrades safely).
+        """
+
+        client = self._get_semantic_cache_embedder()
+        if client is None:
+            raise RuntimeError("semantic cache embedder unavailable")
+        return list(client.embed_query(query))
+
+    @staticmethod
+    def _semantic_cache_lookup(cache: Any, query: str) -> List[Document] | None:
+        """Return cached retrieval docs for ``query`` or ``None`` (defensive).
+
+        A non-list / empty cached value is treated as a miss so an empty result
+        is never served as a hit. Returns a *shallow copy* of the cached list so
+        downstream list mutation can never corrupt the cached entry.
+        """
+
+        try:
+            cached = cache.get(query)
+        except Exception:  # pragma: no cover - cache lookup must never crash run()
+            return None
+        if not cached:
+            return None
+        try:
+            return list(cached)
+        except TypeError:  # pragma: no cover - unexpected stored shape
+            return None
+
+    @staticmethod
+    def _semantic_cache_store(cache: Any, query: str, docs: List[Document]) -> None:
+        """Populate the semantic cache with a retrieval result (best-effort).
+
+        A *shallow copy* of ``docs`` is stored so a later request cannot mutate
+        the cached list. Empty results are not cached (so they never short-circuit
+        a future retrieval). Never raises.
+        """
+
+        if not docs:
+            return
+        try:
+            cache.put(query, list(docs))
+        except Exception:  # pragma: no cover - cache write must never crash run()
+            pass
 
     def run(
         self,
@@ -1854,26 +2555,68 @@ class RagPipelineP1:
             )
         )
         docs: List[Document] = []
+        persistent_used = False
+        # Semantic query cache (task 9.9, Req 12.2). ``None`` when disabled, in
+        # which case the block below is byte-identical to the legacy path.
+        semantic_cache = self._resolve_semantic_cache()
+        semantic_cache_hit = False
         try:
-            try:
-                docs = self.retriever.retrieve_internal(
-                    internal_query,
-                    top_k=internal_top_k,
-                    file_retrieval_enabled=file_retrieval_enabled,
-                    rag_sources=rag_sources,
-                    uploaded_documents=uploaded_documents,
-                    rag_reranker_enabled=rag_reranker_enabled,
-                )
-            except TypeError as type_exc:
-                if "unexpected keyword argument" not in str(type_exc):
-                    raise
-                docs = self.retriever.retrieve_internal(
-                    internal_query,
-                    top_k=internal_top_k,
-                    file_retrieval_enabled=file_retrieval_enabled,
-                    rag_sources=rag_sources,
-                    uploaded_documents=uploaded_documents,
-                )
+            cached_docs = (
+                self._semantic_cache_lookup(semantic_cache, internal_query)
+                if semantic_cache is not None
+                else None
+            )
+            if cached_docs is not None:
+                # Semantic query cache HIT (Req 12.2): serve the cached retrieval
+                # result without re-running retrieval. Only reachable when
+                # RAG_SEMANTIC_CACHE_ENABLED is true; with the flag off
+                # ``semantic_cache`` is None so this branch is never taken.
+                semantic_cache_hit = True
+                docs = cached_docs
+            else:
+                persistent_docs: List[Document] | None = None
+                if self._persistent_retrieval_active():
+                    persistent_docs = self._persistent_retrieve(
+                        internal_query,
+                        top_k=internal_top_k,
+                        rag_sources=rag_sources,
+                        scientific_query=scientific_query,
+                        scientific_provider_query_overrides=scientific_provider_query_overrides,
+                        rag_reranker_enabled=rag_reranker_enabled,
+                    )
+                if persistent_docs is not None:
+                    # Persistent embed-query-only path (Req 3.1/3.2): exactly one
+                    # deterministic path is selected for this query; the legacy
+                    # embed-every-document retriever is NOT consulted as a primary
+                    # path, so embedding semantics are never mixed (Req 3.3).
+                    persistent_used = True
+                    docs = persistent_docs
+                else:
+                    # Legacy in-memory retrieval path — UNCHANGED (flags default off).
+                    try:
+                        docs = self.retriever.retrieve_internal(
+                            internal_query,
+                            top_k=internal_top_k,
+                            file_retrieval_enabled=file_retrieval_enabled,
+                            rag_sources=rag_sources,
+                            uploaded_documents=uploaded_documents,
+                            rag_reranker_enabled=rag_reranker_enabled,
+                        )
+                    except TypeError as type_exc:
+                        if "unexpected keyword argument" not in str(type_exc):
+                            raise
+                        docs = self.retriever.retrieve_internal(
+                            internal_query,
+                            top_k=internal_top_k,
+                            file_retrieval_enabled=file_retrieval_enabled,
+                            rag_sources=rag_sources,
+                            uploaded_documents=uploaded_documents,
+                        )
+                # Populate the semantic cache on a MISS so a later semantically
+                # equivalent query can be served from cache (Req 12.2). No-op when
+                # the cache is disabled (``semantic_cache`` is None).
+                if semantic_cache is not None:
+                    self._semantic_cache_store(semantic_cache, internal_query, docs)
         except Exception as exc:
             retrieval_trace["internal_error"] = exc.__class__.__name__
             retrieval_trace["source_errors"] = {"internal_retrieval": [exc.__class__.__name__]}
@@ -1908,6 +2651,12 @@ class RagPipelineP1:
                 )
             )
         retrieval_trace["internal"] = self._extract_retriever_trace(self.retriever)
+        retrieval_trace["semantic_cache_hit"] = semantic_cache_hit
+        retrieval_trace["retrieval_path"] = (
+            "semantic_cache"
+            if semantic_cache_hit
+            else ("persistent" if persistent_used else "legacy_in_memory")
+        )
         internal_trace = (
             retrieval_trace["internal"] if isinstance(retrieval_trace["internal"], dict) else {}
         )
@@ -2000,14 +2749,16 @@ class RagPipelineP1:
         low_context_before_external = relevance_score < threshold
         retrieval_trace["low_context_before_external"] = low_context_before_external
         should_force_external = (
-            scientific_retrieval_enabled
+            not persistent_used
+            and scientific_retrieval_enabled
             and external_connectors_runtime_enabled
             and self._should_force_external_retrieval(query, docs)
         )
         retrieval_trace["should_force_external"] = should_force_external
 
         if (
-            (low_context_before_external or should_force_external)
+            not persistent_used
+            and (low_context_before_external or should_force_external)
             and scientific_retrieval_enabled
             and external_connectors_runtime_enabled
         ):
