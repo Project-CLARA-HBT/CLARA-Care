@@ -161,7 +161,8 @@ DEFAULT_SOURCES: list[SourceSpec] = [
             "certified by the FDA."
         ),
         fetch_mode="api",
-        base_url="https://api.fda.gov",
+        base_url="https://api.fda.gov/drug",
+        config_json={"default_query": "ibuprofen"},
         interval_seconds=_DAILY,
     ),
     SourceSpec(
@@ -174,7 +175,8 @@ DEFAULT_SOURCES: list[SourceSpec] = [
             "National Institutes of Health."
         ),
         fetch_mode="api",
-        base_url="https://dailymed.nlm.nih.gov/dailymed/services",
+        base_url="https://dailymed.nlm.nih.gov/dailymed/services/v2",
+        config_json={"default_query": "ibuprofen"},
         interval_seconds=_WEEKLY,
     ),
     SourceSpec(
