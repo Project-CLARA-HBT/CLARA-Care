@@ -11,6 +11,7 @@ import unicodedata
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse
 
+from clara_ml import admin_rag_handlers
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
 from clara_ml.agents.council_intake import run_council_intake
@@ -1043,6 +1044,47 @@ def council_consult(payload: dict) -> dict:
 @app.get("/v1/prompts/{role}/{intent}")
 def get_prompt(role: str, intent: str) -> dict:
     return prompt_loader.load(role, intent)
+
+
+# ---------------------------------------------------------------------------
+# Admin RAG control surface (Requirement 13) — proxied from services/api.
+# Every /v1/* path is already gated by the internal-API-key middleware above.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/v1/admin/rag/stats")
+def admin_rag_stats() -> dict:
+    return admin_rag_handlers.corpus_stats()
+
+
+@app.get("/v1/admin/rag/sources")
+def admin_rag_sources() -> dict:
+    return admin_rag_handlers.list_sources()
+
+
+@app.patch("/v1/admin/rag/sources/{source_id}")
+def admin_rag_update_source(source_id: int, payload: dict) -> dict:
+    return admin_rag_handlers.update_source(source_id, payload or {})
+
+
+@app.post("/v1/admin/rag/ingestion/run")
+def admin_rag_ingestion_run(payload: dict) -> dict:
+    return admin_rag_handlers.run_ingestion(payload or {})
+
+
+@app.get("/v1/admin/rag/ingestion/status/{job_id}")
+def admin_rag_ingestion_status(job_id: str) -> dict:
+    return admin_rag_handlers.ingestion_status(job_id)
+
+
+@app.post("/v1/admin/rag/eval/run")
+def admin_rag_eval_run(payload: dict) -> dict:
+    return admin_rag_handlers.run_eval(payload or {})
+
+
+@app.get("/v1/admin/rag/eval/results/{run_id}")
+def admin_rag_eval_results(run_id: str) -> dict:
+    return admin_rag_handlers.eval_results(run_id)
 
 
 @app.websocket("/ws/stream")

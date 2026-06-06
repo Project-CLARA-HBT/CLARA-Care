@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     # hangs until the read timeout. Retrying a hung/failed request with a short
     # per-attempt timeout recovers the vast majority of these without persisting
     # a degraded vector. 0 disables retries (single attempt).
+    # Hard upper bound on records the admin-triggered ingestion may process in a
+    # single run, so the manual control surface can never run away and exhaust
+    # disk on the shared host (the scheduler/orchestrator loop is otherwise
+    # unbounded). Applies per source per admin trigger.
+    rag_admin_ingest_max_records: int = Field(
+        default=200,
+        validation_alias=AliasChoices(
+            "RAG_ADMIN_INGEST_MAX_RECORDS",
+            "RAG_ADMIN_INGEST_CAP",
+        ),
+    )
     embedding_max_retries: int = Field(
         default=3,
         validation_alias=AliasChoices(
