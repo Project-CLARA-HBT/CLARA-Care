@@ -43,6 +43,10 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI's dependency-injection idiom calls Depends()/Query()/etc. in
+# argument defaults on purpose; bugbear's "do not call in defaults" rule is a
+# false positive for this framework, so ignore it project-wide.
+ignore = ["B008"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
