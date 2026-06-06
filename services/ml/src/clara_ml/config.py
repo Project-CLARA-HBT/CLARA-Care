@@ -29,6 +29,18 @@ class Settings(BaseSettings):
             "RAG_EMBEDDING_TIMEOUT_SECONDS",
         ),
     )
+    # Bounded retries for a single embedding HTTP request. The upstream provider
+    # (yescale) exhibits bimodal latency: a request either returns in ~1-2s or
+    # hangs until the read timeout. Retrying a hung/failed request with a short
+    # per-attempt timeout recovers the vast majority of these without persisting
+    # a degraded vector. 0 disables retries (single attempt).
+    embedding_max_retries: int = Field(
+        default=3,
+        validation_alias=AliasChoices(
+            "EMBEDDING_MAX_RETRIES",
+            "RAG_EMBEDDING_MAX_RETRIES",
+        ),
+    )
     deepseek_api_key: str = Field(
         default="",
         validation_alias=AliasChoices(

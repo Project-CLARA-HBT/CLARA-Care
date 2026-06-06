@@ -273,14 +273,41 @@ class HttpEmbeddingClient:
             return EmbedBatchResult(vectors=[], degraded=[])
 
         if self._api_key:
-            try:
-                vectors = self._request_remote_embeddings(texts)
-                return EmbedBatchResult(vectors=vectors, degraded=[False] * len(vectors))
-            except Exception as exc:  # remote failure (network, payload, dim mismatch)
-                return self._handle_unavailable(len(texts), reason=exc, lenient=lenient)
+            last_exc: Exception | None = None
+            # Bounded retry: the provider's latency is bimodal (fast success or a
+            # request that hangs to the read timeout). A fresh attempt usually
+            # succeeds, so retrying recovers most transient failures WITHOUT ever
+            # persisting a degraded vector (each attempt still fully validates the
+            # response dimension). ``max(0, ...)`` => at least one attempt.
+            attempts = max(0, self._max_retries()) + 1
+            for attempt in range(attempts):
+                try:
+                    vectors = self._request_remote_embeddings(texts)
+                    return EmbedBatchResult(vectors=vectors, degraded=[False] * len(vectors))
+                except Exception as exc:  # remote failure (network, payload, dim mismatch)
+                    last_exc = exc
+                    if attempt + 1 < attempts:
+                        logger.warning(
+                            "embedding_retry",
+                            extra={
+                                "attempt": attempt + 1,
+                                "attempts": attempts,
+                                "reason": type(exc).__name__,
+                            },
+                        )
+            return self._handle_unavailable(len(texts), reason=last_exc, lenient=lenient)
 
         # No API key configured: cannot produce real embeddings.
         return self._handle_unavailable(len(texts), reason=None, lenient=lenient)
+
+    @staticmethod
+    def _max_retries() -> int:
+        """Configured bounded retry count for a single embedding request (>= 0)."""
+
+        try:
+            return max(0, int(getattr(settings, "embedding_max_retries", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
 
     # ------------------------------------------------------------------
     # Canonical fail-loud API (offline + online paths)
