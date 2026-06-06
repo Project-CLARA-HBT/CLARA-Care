@@ -74,6 +74,9 @@ services:
       context: ../..
       dockerfile: services/ml/Dockerfile
     restart: unless-stopped
+    networks:
+      - default
+      - clara-local
     env_file:
       - ../../.env
     environment:
