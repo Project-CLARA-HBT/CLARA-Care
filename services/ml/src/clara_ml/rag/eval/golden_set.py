@@ -41,6 +41,7 @@ __all__ = [
     "GoldenItem",
     "DEFAULT_GOLDEN_SET",
     "load_golden_set",
+    "load_golden_set_from_db",
     "seed_eval_set",
 ]
 
@@ -325,6 +326,68 @@ def load_golden_set() -> list[GoldenItem]:
     """
 
     return list(DEFAULT_GOLDEN_SET)
+
+
+def load_golden_set_from_db(store_or_session: Any) -> list[GoldenItem]:
+    """Load golden items from the ``eval_set`` table (grounded set).
+
+    The in-code :data:`DEFAULT_GOLDEN_SET` carries *symbolic* ``relevant_doc_ids``
+    (e.g. ``"dailymed:warfarin-spl"``) authored before any corpus existed. Once
+    the offline ingestion plane has populated the corpus, those references are
+    *grounded* to the real, durable ``source:external_id`` ``doc_ref`` values of
+    the ingested documents and persisted back into ``eval_set`` (so grounding
+    lives in data, not code). This loader returns that grounded set, letting the
+    eval harness score recall against ids the persistent retriever actually
+    surfaces.
+
+    Accepts the same handle shapes as :func:`seed_eval_set` (a DocumentStore, a
+    live ``Session``, or a zero-arg session factory). Rows are returned ordered
+    by ``qid`` for determinism. Raises :class:`TypeError` for unsupported
+    handles.
+    """
+
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+
+    from clara_ml.rag.store.schema import EvalSet
+
+    def _read(session: Session) -> list[GoldenItem]:
+        rows = (
+            session.execute(select(EvalSet).order_by(EvalSet.qid)).scalars().all()
+        )
+        items: list[GoldenItem] = []
+        for row in rows:
+            items.append(
+                GoldenItem(
+                    qid=row.qid,
+                    question_vi=row.question_vi,
+                    question_en=row.question_en or "",
+                    category=row.category,
+                    expected_rxcui=list(row.expected_rxcui or []),
+                    relevant_doc_ids=list(row.relevant_doc_ids or []),
+                    gold_answer_vi=row.gold_answer_vi or "",
+                    must_cite=list(row.must_cite or []),
+                )
+            )
+        return items
+
+    transaction = getattr(store_or_session, "transaction", None)
+    if callable(transaction) and not isinstance(store_or_session, Session):
+        with transaction() as session:
+            return _read(session)
+    if isinstance(store_or_session, Session):
+        return _read(store_or_session)
+    if callable(store_or_session):
+        session = store_or_session()
+        try:
+            return _read(session)
+        finally:
+            session.close()
+
+    raise TypeError(
+        "load_golden_set_from_db expects a DocumentStore, a SQLAlchemy Session, "
+        f"or a zero-argument session factory; got {type(store_or_session)!r}"
+    )
 
 
 def seed_eval_set(

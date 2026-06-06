@@ -676,6 +676,16 @@ class HybridRetriever:
         metadata.update(provenance)
         metadata["chunk_id"] = chunk.chunk_id
         metadata["document_id"] = chunk.document_id
+        # Stable, human-meaningful document-level reference ``source:external_id``
+        # (the provider's permanent document identity, e.g. a DailyMed setid).
+        # Unlike ``Document.id`` (the chunk id), ``doc_ref`` is durable across
+        # re-ingestion and is the natural identity for citation/eval grounding
+        # (the eval harness matches recall on it). Only emitted when both parts
+        # are present so the task 5.8 provenance contract is unchanged.
+        source_key = str(meta.get("source", "") or "")
+        external_id = str(meta.get("external_id", "") or "")
+        if source_key and external_id:
+            metadata["doc_ref"] = f"{source_key}:{external_id}"
         metadata["section_path"] = chunk.section_path
         metadata["section_type"] = chunk.section_type
         metadata["retriever"] = chunk.retriever

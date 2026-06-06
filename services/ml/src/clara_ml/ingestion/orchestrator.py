@@ -816,6 +816,7 @@ class IngestionOrchestrator:
             lang=chunk.lang,
             meta={
                 "source": resolution.context.source_key,
+                "external_id": record.external_id,
                 "url": record.url,
                 "effective_date": record.effective_date,
                 "lang": record.lang,

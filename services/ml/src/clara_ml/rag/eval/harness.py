@@ -347,7 +347,22 @@ def _coerce_writer(writer: Any | None) -> ResultWriter:
 
 
 def _doc_id(doc: Any) -> str:
-    """Best-effort stable id for a retrieved document (``.id`` / ``["id"]``)."""
+    """Best-effort stable id for a retrieved document.
+
+    Prefers a document-level ``metadata["doc_ref"]`` (the durable
+    ``source:external_id`` reference the persistent retriever now surfaces) so
+    recall is scored at the *document* level against the golden
+    ``relevant_doc_ids``. Falls back to ``.id`` / ``["id"]`` (e.g. the chunk id
+    for legacy in-memory documents) when no ``doc_ref`` is present.
+    """
+
+    meta = getattr(doc, "metadata", None)
+    if meta is None and isinstance(doc, dict):
+        meta = doc.get("metadata")
+    if isinstance(meta, dict):
+        ref = meta.get("doc_ref")
+        if ref:
+            return str(ref)
 
     rid = getattr(doc, "id", None)
     if rid is None and isinstance(doc, dict):
