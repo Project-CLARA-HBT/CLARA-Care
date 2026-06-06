@@ -130,7 +130,13 @@ class P1RoleIntentRouter:
         lowered = text.lower().strip()
         folded = unicodedata.normalize("NFD", lowered)
         without_marks = "".join(ch for ch in folded if unicodedata.category(ch) != "Mn")
-        collapsed = re.sub(r"\s+", " ", without_marks)
+        # NFD does not decompose 'đ' (U+0111) / 'Đ' (U+0110): the stroke is part
+        # of the base letter, not a combining mark, so it survives mark removal.
+        # Map it explicitly to ASCII 'd' so Vietnamese words like 'đột quỵ'
+        # ('đot quy' after mark removal) fold to their ASCII form ('dot quy')
+        # and match the ASCII keyword tables (emergency fast-path, role/intent).
+        deascii = without_marks.replace("đ", "d").replace("Đ", "d")
+        collapsed = re.sub(r"\s+", " ", deascii)
         return collapsed
 
     @staticmethod
