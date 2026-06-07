@@ -19,6 +19,7 @@ from clara_ml.scribe.asr.base import (
     AsrProvider,
     AsrResult,
     AsrSegment,
+    relabel_speakers,
 )
 from clara_ml.scribe.asr.composite import CompositeAsr, build_asr_provider
 from clara_ml.scribe.asr.google_stt import GoogleSttV2Asr
@@ -33,4 +34,5 @@ __all__ = [
     "GoogleSttV2Asr",
     "WhisperDeepSeekAsr",
     "build_asr_provider",
+    "relabel_speakers",
 ]

@@ -6,10 +6,10 @@ Pure data + a structural protocol. Importing this opens no socket.
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol, runtime_checkable
 
-__all__ = ["AsrSegment", "AsrResult", "AsrEvent", "AsrProvider"]
+__all__ = ["AsrSegment", "AsrResult", "AsrEvent", "AsrProvider", "relabel_speakers"]
 
 # Bounded speaker label set for diarization (Requirement 3.1).
 SPEAKERS = ("clinician", "patient", "other", "unknown")
@@ -79,3 +79,25 @@ class AsrProvider(Protocol):
         self, audio_iter: Iterable[bytes], *, language: str
     ) -> Iterator[AsrEvent]:  # pragma: no cover - protocol
         ...
+
+
+def relabel_speakers(
+    segments: list[AsrSegment], labels: dict[int, str]
+) -> list[AsrSegment]:
+    """Return ``segments`` with diarization speaker labels reassigned by index.
+
+    Additive-metadata only (Requirement 3.4, Property 2): the returned segments
+    preserve each segment's ``text`` and the overall order EXACTLY; only the
+    ``speaker`` field changes (and only to a valid :data:`SPEAKERS` label —
+    unknown labels are ignored, leaving the original speaker). Pure: the input
+    list is not mutated.
+    """
+
+    out: list[AsrSegment] = []
+    for index, seg in enumerate(segments):
+        new_speaker = labels.get(index)
+        if new_speaker in SPEAKERS and new_speaker != seg.speaker:
+            out.append(replace(seg, speaker=new_speaker))
+        else:
+            out.append(seg)
+    return out
