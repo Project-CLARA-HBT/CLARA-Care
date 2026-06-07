@@ -454,7 +454,7 @@ class IngestionOrchestrator:
             from clara_ml.rag.normalize.entity_linker import EntityLinker as _RealEntityLinker
             from clara_ml.rag.normalize.umls_client import UmlsClient
 
-            return _RealEntityLinker(UmlsClient())
+            return _RealEntityLinker(UmlsClient(), max_network_lookups=0)
         except Exception as exc:  # pragma: no cover - defensive import guard
             logger.warning(
                 "default entity linker unavailable (%s); ingestion runs without entity linking",

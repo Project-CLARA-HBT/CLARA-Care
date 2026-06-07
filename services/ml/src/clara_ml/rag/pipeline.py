@@ -2033,7 +2033,7 @@ class RagPipelineP1:
             from clara_ml.rag.normalize.query_expander import QueryExpander
             from clara_ml.rag.normalize.umls_client import UmlsClient
 
-            return QueryExpander(EntityLinker(UmlsClient()))
+            return QueryExpander(EntityLinker(UmlsClient(), max_network_lookups=0))
         except Exception as exc:  # pragma: no cover - defensive: never crash
             logger.warning(
                 "Query expander unavailable (%s); persistent retrieval uses no-op expansion",

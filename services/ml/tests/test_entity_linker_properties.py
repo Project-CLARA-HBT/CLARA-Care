@@ -295,14 +295,18 @@ def test_uninformative_client_returns_empty_and_never_raises(
     text: str, seed: list[str]
 ) -> None:
     # Mix arbitrary text with known surfaces so the client is *given* something
-    # to (not) resolve; an uninformative client must still return [].
+    # to (not) resolve; an uninformative network client must still return [].
+    # The local drug lexicon is disabled here (lexicon_lookup -> None) so this
+    # isolates the *network-degradation* property: with no lexicon fallback and
+    # an uninformative/raising client, link() degrades to [] (recall-only).
     blended = " ".join([text, *seed])
+    no_lexicon = lambda _s: None  # noqa: E731 - tiny test stub
 
-    empty_linker = EntityLinker(EmptyUmlsClient())
+    empty_linker = EntityLinker(EmptyUmlsClient(), lexicon_lookup=no_lexicon)
     assert empty_linker.link(blended) == []
 
     # A misbehaving (raising) client must never make link() raise (totality).
-    raising_linker = EntityLinker(RaisingUmlsClient())
+    raising_linker = EntityLinker(RaisingUmlsClient(), lexicon_lookup=no_lexicon)
     assert raising_linker.link(blended) == []
 
 

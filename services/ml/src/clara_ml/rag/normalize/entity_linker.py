@@ -75,6 +75,10 @@ class LinkedEntity:
 _DEFAULT_MAX_NGRAM = 3
 # Single tokens shorter than this are not worth a lookup on their own.
 _MIN_SINGLE_TOKEN_LEN = 3
+# Default hard cap on RxNorm/UMLS REST lookups per link() call (lexicon hits are
+# free and excluded). Keeps both ingestion throughput and online query-expansion
+# latency bounded even on long, drug-dense text.
+_DEFAULT_MAX_NETWORK_LOOKUPS = 6
 
 # Confidence by match quality (deterministic).
 _CONF_EXACT_RXCUI = 1.0
@@ -157,12 +161,26 @@ class EntityLinker:
         *,
         max_ngram: int = _DEFAULT_MAX_NGRAM,
         cache: MutableMapping[tuple[str, str], tuple[LinkedEntity, ...]] | None = None,
+        max_network_lookups: int = _DEFAULT_MAX_NETWORK_LOOKUPS,
+        lexicon_lookup: Callable[[str], Any] | None = None,
     ) -> None:
         self._client = umls_client
         self._max_ngram = max(1, int(max_ngram))
         self._cache: MutableMapping[tuple[str, str], tuple[LinkedEntity, ...]] = (
             cache if cache is not None else {}
         )
+        # Hard cap on RxNorm/UMLS REST lookups per ``link()`` call. Surfaces
+        # resolved by the local lexicon are free and do NOT count against this
+        # budget, so a query/document full of known drugs makes zero network
+        # calls. ``<= 0`` disables the network fallback entirely (lexicon-only).
+        self._max_network_lookups = int(max_network_lookups)
+        # Local, network-free drug lexicon resolver (injectable for tests).
+        if lexicon_lookup is not None:
+            self._lexicon_lookup = lexicon_lookup
+        else:
+            from clara_ml.rag.normalize.drug_lexicon import lookup as _lex_lookup
+
+            self._lexicon_lookup = _lex_lookup
 
     # ------------------------------------------------------------------
     # Public API
@@ -211,9 +229,12 @@ class EntityLinker:
     ) -> tuple[LinkedEntity, ...]:
         results: list[tuple[int, LinkedEntity]] = []
         seen: set[tuple[str, str]] = set()
+        # Per-call network budget (mutable, shared across mentions). Lexicon hits
+        # never decrement it; only RxNorm/UMLS REST fallbacks do.
+        budget = [max(0, self._max_network_lookups)]
 
         for surface, position in self._candidate_mentions(raw):
-            entity = self._link_mention(surface, lang, text_tokens)
+            entity = self._link_mention(surface, lang, text_tokens, budget)
             if entity is None:
                 continue
             dedupe_key = (entity.rxcui, entity.cui)
@@ -270,9 +291,25 @@ class EntityLinker:
         return False
 
     def _link_mention(
-        self, surface: str, lang: str, text_tokens: list[str]
+        self, surface: str, lang: str, text_tokens: list[str], budget: list[int]
     ) -> LinkedEntity | None:
-        """Resolve a single surface mention to a sound :class:`LinkedEntity`."""
+        """Resolve a single surface mention to a sound :class:`LinkedEntity`.
+
+        Resolution order: (1) the local, network-free drug lexicon — instant and
+        unbounded; (2) the RxNorm/UMLS REST fallback — only while the per-call
+        network ``budget`` remains, so long/drug-dense text never fans out into
+        hundreds of HTTP calls.
+        """
+
+        # (1) Local lexicon first — zero network, no budget cost.
+        lex_entity = self._link_from_lexicon(surface, lang, text_tokens)
+        if lex_entity is not None:
+            return lex_entity
+
+        # (2) Bounded network fallback. Skip entirely when the budget is spent.
+        if budget[0] <= 0:
+            return None
+        budget[0] -= 1
 
         rxcui = self._coerce_str(self._call(self._client.rxcui_for, surface, default=None))
         cui = ""
@@ -319,6 +356,43 @@ class EntityLinker:
         # token-aligned in the text. Guards against any client misbehavior.
         if not self._is_sound(entity, text_tokens):
             logger.debug("entity_link_dropped_unsound surface=%s", surface)
+            return None
+        return entity
+
+    def _link_from_lexicon(
+        self, surface: str, lang: str, text_tokens: list[str]
+    ) -> LinkedEntity | None:
+        """Resolve ``surface`` via the local drug lexicon (network-free), or None."""
+
+        try:
+            entry = self._lexicon_lookup(surface)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("entity_link_lexicon_failed err=%s", type(exc).__name__)
+            return None
+        if entry is None:
+            return None
+
+        rxcui = self._coerce_str(getattr(entry, "rxcui", ""))
+        if not rxcui:
+            return None
+        canonical = self._coerce_str(getattr(entry, "canonical_name", "")) or surface
+        raw_syns = getattr(entry, "synonyms", []) or []
+        synonyms: list[dict] = []
+        for item in raw_syns:
+            coerced = _coerce_synonym(item)
+            if coerced is not None:
+                synonyms.append(coerced)
+        synonyms = self._ensure_mention_synonym(synonyms, surface, lang)
+
+        entity = LinkedEntity(
+            cui="",
+            rxcui=rxcui,
+            canonical_name=canonical,
+            entity_type="drug",
+            synonyms=synonyms,
+            confidence=_CONF_EXACT_RXCUI,
+        )
+        if not self._is_sound(entity, text_tokens):
             return None
         return entity
 
