@@ -25,7 +25,7 @@ import ChatTurn from "@/components/chat-workspace/chat-turn";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import PageShell from "@/components/ui/page-shell";
 import { getRole, type UserRole } from "@/lib/auth-store";
-import { getChatIntentDebug, getChatReply, sendChatMessage } from "@/lib/chat";
+import { getChatIntentDebug, getChatReply, sendChatMessage, streamChatMessage } from "@/lib/chat";
 import { trackChatMessageSent } from "@/lib/analytics/events";
 import {
   sanitizeUpstreamError,
@@ -1998,8 +1998,42 @@ export default function ChatWorkspacePage() {
     try {
       let nextResult: ResearchResult;
       if (transport === "tier1_chat") {
-        const chatPayload = await sendChatMessage(message);
-        const reply = getChatReply(chatPayload);
+        // Streamed plain chat: live pipeline steps + token-by-token answer.
+        // Steps and the growing answer are surfaced through the live status
+        // area; the final structured result is built from the terminal `done`
+        // frame. Any stream failure falls back to the non-streaming endpoint.
+        let streamedAnswer = "";
+        let donePayload: (Awaited<ReturnType<typeof sendChatMessage>> & Record<string, unknown>) | null = null;
+        let lastStep = "";
+        try {
+          setLiveJobId("chat-stream");
+          await streamChatMessage(message, {
+            onStart: () => setLiveStatusNote(""),
+            onStep: (step) => {
+              const label = String(step.stage ?? "").trim();
+              const status = String(step.status ?? "").trim();
+              if (label) {
+                lastStep = status ? `${label} · ${status}` : label;
+                setLiveStatusNote(stripTelemetryLabels(lastStep));
+              }
+            },
+            onToken: (text) => {
+              streamedAnswer += text;
+              setLiveStatusNote(streamedAnswer);
+            },
+            onDone: (result) => {
+              donePayload = result;
+            },
+            onError: (msg) => {
+              throw new Error(msg || "chat stream error");
+            },
+          });
+        } catch {
+          donePayload = null; // force non-streaming fallback below
+        }
+
+        const chatPayload = donePayload ?? (await sendChatMessage(message));
+        const reply = getChatReply(chatPayload) ?? (streamedAnswer.trim() || null);
         if (!reply) {
           throw new Error("Chưa có phản hồi chat hợp lệ.");
         }
