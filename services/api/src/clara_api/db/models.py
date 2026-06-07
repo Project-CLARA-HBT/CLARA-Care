@@ -81,6 +81,65 @@ class ScribeSession(Base):
     user: Mapped[User] = relationship("User")
 
 
+class ScribeNoteVersion(Base):
+    """Versioned clinical note for a scribe session (Requirement 8.2/8.5).
+
+    A signed version is immutable; any later edit inserts a new row with an
+    incremented ``version_no``. Append-only by convention (no UPDATE of signed rows).
+    """
+
+    __tablename__ = "scribe_note_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("scribe_sessions.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer, default=1)
+    template_id: Mapped[str] = mapped_column(String(64), default="soap")
+    sections_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    coding_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    signed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    signed_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ScribeConsent(Base):
+    """Immutable patient-consent record for a scribe session (Requirement 4)."""
+
+    __tablename__ = "scribe_consents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("scribe_sessions.id", ondelete="CASCADE"), index=True
+    )
+    method: Mapped[str] = mapped_column(String(32), default="verbal")
+    scope: Mapped[str] = mapped_column(String(64), default="encounter")
+    captured_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ScribeAudit(Base):
+    """Append-only audit trail for a scribe session (Requirement 8.3/8.4)."""
+
+    __tablename__ = "scribe_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("scribe_sessions.id", ondelete="CASCADE"), index=True
+    )
+    actor: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    action: Mapped[str] = mapped_column(String(64))
+    from_status: Mapped[str] = mapped_column(String(32), default="")
+    to_status: Mapped[str] = mapped_column(String(32), default="")
+    detail_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CouncilCase(Base):
     __tablename__ = "council_cases"
 

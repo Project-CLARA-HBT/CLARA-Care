@@ -194,6 +194,25 @@ class Settings(BaseSettings):
     umls_api_key: str = Field(default="", validation_alias="UMLS_API_KEY")
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
     ml_internal_api_key: str = Field(default="", validation_alias="ML_INTERNAL_API_KEY")
+    # --- Clara Scribe (enterprise) feature flags (additive; default off/legacy) ---
+    rag_scribe_streaming_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_STREAMING_ENABLED"
+    )
+    rag_scribe_consent_required: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_CONSENT_REQUIRED"
+    )
+    rag_scribe_templates_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_TEMPLATES_ENABLED"
+    )
+    rag_scribe_sign_workflow_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_SIGN_WORKFLOW_ENABLED"
+    )
+    rag_scribe_export_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EXPORT_ENABLED"
+    )
+    rag_scribe_fhir_export_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
+    )
     ml_service_timeout_seconds: float = Field(
         default=60.0,
         validation_alias="ML_SERVICE_TIMEOUT_SECONDS",
