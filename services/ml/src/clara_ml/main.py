@@ -986,6 +986,55 @@ async def scribe_transcribe(
     }
 
 
+@app.post("/v1/scribe/stream")
+async def scribe_stream(
+    audio_file: UploadFile = File(...),
+    language: str | None = Form(default=None),
+    template_id: str | None = Form(default=None),
+    session_id: int | None = Form(default=None),
+) -> StreamingResponse:
+    """SSE: stream transcription segments + a note draft for an uploaded encounter.
+
+    Flag-gated by ``RAG_SCRIBE_STREAMING_ENABLED`` (404 when off so clients fall
+    back to the batch ``/v1/scribe/transcribe`` + ``/v1/scribe/soap`` path).
+    """
+
+    if not settings.rag_scribe_streaming_enabled:
+        raise HTTPException(status_code=404, detail="Scribe streaming is disabled.")
+    if not audio_file.filename:
+        raise HTTPException(status_code=400, detail="Missing audio file name.")
+    audio_bytes = await audio_file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Audio payload is empty.")
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 15MB.")
+    audio_content_type = audio_file.content_type or "application/octet-stream"
+    if audio_content_type not in _ALLOWED_AUDIO_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported audio content type: {audio_content_type}")
+
+    from clara_ml.scribe.asr import build_asr_provider
+    from clara_ml.scribe.generator import NoteGenerator
+    from clara_ml.streaming.scribe_stream import stream_scribe_sse
+
+    resolved_language = (language or settings.scribe_asr_language).strip() or "vi"
+    asr = build_asr_provider(settings)
+    generator = NoteGenerator() if settings.rag_scribe_templates_enabled else None
+    _ = session_id  # reserved for persistence wiring (API layer)
+
+    return StreamingResponse(
+        stream_scribe_sse(
+            audio_bytes,
+            language=resolved_language,
+            content_type=audio_content_type,
+            template_id=template_id,
+            asr=asr,
+            generator=generator,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )
+
+
 @app.post("/v1/council/run")
 def council_run(payload: dict) -> dict:
     return run_council(payload)
