@@ -1,0 +1,7 @@
+{
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "featureName": "clara-scribe-enterprise",
+  "createdBy": "clara-orchestration",
+  "notes": "Enterprise Clara Scribe: ambient streaming ASR (VN code-switching), diarization, consent, multi-template notes, ICD+drug coding, review/sign/export workflow with audit. Additive + flag-gated over the current batch scribe."
+}
