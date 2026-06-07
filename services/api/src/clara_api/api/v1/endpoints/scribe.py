@@ -622,12 +622,9 @@ def sign_note(
 
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
-    target = "amended" if item.status == "amended" else "signed"
-    # in_review -> signed, or amended -> signed.
-    if item.status == "amended":
-        if not can_transition("amended", "signed"):
-            raise HTTPException(status_code=409, detail="Không thể ký ở trạng thái hiện tại.")
-    elif not can_transition(item.status, "signed"):
+    # Legal source states for signing are exactly those with a `-> signed` edge
+    # (in_review and amended); can_transition encodes that single rule.
+    if not can_transition(item.status, "signed"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Không thể ký từ trạng thái '{item.status}'.",
@@ -650,7 +647,6 @@ def sign_note(
                   from_status=prev, to_status="signed", detail={"version_no": latest.version_no})
     db.commit()
     db.refresh(item)
-    _ = target
     return _serialize_session(item)
 
 

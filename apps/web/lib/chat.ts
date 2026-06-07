@@ -67,10 +67,7 @@ export type ChatStreamHandlers = {
 
 function chatStreamUrl(): string {
   // Mirror http-client base resolution so we hit the same /api/v1 origin.
-  const base =
-    (typeof window === "undefined"
-      ? process.env.NEXT_PUBLIC_API_URL
-      : process.env.NEXT_PUBLIC_API_URL) ?? "/api/v1";
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
   return `${base.replace(/\/$/, "")}/chat/stream`;
 }
 
