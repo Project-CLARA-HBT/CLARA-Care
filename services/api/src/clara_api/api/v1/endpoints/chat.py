@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from clara_api.core.attribution import (
@@ -506,3 +507,65 @@ def chat_completion(
             response_payload["fallback_reason"] = fallback_reason.strip()
         attribution = _build_chat_attribution(fallback_ml, rag_sources)
         return attach_attribution(response_payload, attribution=attribution)
+
+
+@router.post("/stream")
+def chat_completion_stream(
+    payload: ChatRequest,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """SSE variant of the chat turn: live pipeline ``step`` events + ``token`` stream.
+
+    Proxies the ML ``/v1/chat/stream`` SSE through to the browser (mirroring the
+    research job stream pattern). The non-streaming ``POST /api/v1/chat`` is
+    unchanged; clients opt into streaming by calling this route. On any upstream
+    failure a terminal ``error`` SSE frame is emitted so the client degrades
+    gracefully (it can then retry the non-streaming endpoint).
+    """
+
+    settings = get_settings()
+    rag_flow, rag_sources = _load_rag_runtime(db)
+    url = f"{settings.ml_service_url.rstrip('/')}/v1/chat/stream"
+    request_payload = {
+        "query": payload.message,
+        "role": token.role,
+        "rag_flow": rag_flow.model_dump(),
+        "rag_sources": rag_sources,
+    }
+    headers: dict[str, str] = {"Accept": "text/event-stream"}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
+    # Generous read timeout: the upstream holds the connection open while it
+    # synthesizes + streams tokens (no per-chunk write timeout).
+    timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
+
+    def relay():  # noqa: ANN202 - generator of SSE byte chunks
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                with client.stream("POST", url, json=request_payload, headers=headers) as upstream:
+                    if upstream.status_code >= 400:
+                        upstream.read()
+                        yield (
+                            'event: error\ndata: {"message":"chat stream upstream error",'
+                            f'"status":{upstream.status_code}}}\n\n'
+                        ).encode()
+                        return
+                    for chunk in upstream.iter_raw():
+                        if chunk:
+                            yield chunk
+        except Exception as exc:  # noqa: BLE001 - terminal SSE error frame
+            yield (
+                'event: error\ndata: {"message":"chat stream proxy failed",'
+                f'"error":"{exc.__class__.__name__}"}}\n\n'
+            ).encode()
+
+    return StreamingResponse(
+        relay(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )

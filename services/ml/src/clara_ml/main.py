@@ -9,7 +9,7 @@ from time import perf_counter
 import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from clara_ml import admin_rag_handlers
 from clara_ml.agents.careguard import run_careguard_analyze
@@ -26,6 +26,7 @@ from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.store.health import run_startup_self_check
 from clara_ml.routing import P1RoleIntentRouter
+from clara_ml.streaming.chat_stream import stream_chat_sse as chat_stream_sse
 from clara_ml.streaming.ws import token_stream
 
 app = FastAPI(title="CLARA ML Service", version="0.1.0")
@@ -1085,6 +1086,27 @@ def admin_rag_eval_run(payload: dict) -> dict:
 @app.get("/v1/admin/rag/eval/results/{run_id}")
 def admin_rag_eval_results(run_id: str) -> dict:
     return admin_rag_handlers.eval_results(run_id)
+
+
+@app.post("/v1/chat/stream")
+def chat_stream(payload: dict) -> StreamingResponse:
+    """SSE stream of a plain-chat turn: live pipeline steps + token-by-token answer.
+
+    Reuses the unchanged ``routed_chat_infer`` result and forwards each
+    ``flow_event`` as a ``step`` event then the answer as ``token`` events
+    (see ``streaming.chat_stream``). Additive: ``POST /v1/chat`` is untouched.
+    """
+
+    generator = chat_stream_sse(payload or {}, infer=routed_chat_infer)
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.websocket("/ws/stream")
