@@ -656,6 +656,44 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RAG_EVAL_CI_ENABLED",
     )
+    # --- Clara Scribe (enterprise) feature flags + ASR config ---------------
+    # All additive + default off/legacy: with these off, Scribe behaves exactly
+    # as the current batch transcribe + SOAP flow.
+    rag_scribe_streaming_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_STREAMING_ENABLED"
+    )
+    rag_scribe_diarization_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_DIARIZATION_ENABLED"
+    )
+    rag_scribe_consent_required: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_CONSENT_REQUIRED"
+    )
+    rag_scribe_templates_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_TEMPLATES_ENABLED"
+    )
+    rag_scribe_coding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_CODING_ENABLED"
+    )
+    rag_scribe_sign_workflow_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_SIGN_WORKFLOW_ENABLED"
+    )
+    rag_scribe_export_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EXPORT_ENABLED"
+    )
+    rag_scribe_fhir_export_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
+    )
+    # ASR provider selection seam. "whisper" = existing DeepSeek/Whisper audio
+    # client (the only fully-wired provider today); other names degrade to it.
+    scribe_asr_primary: str = Field(
+        default="whisper", validation_alias="SCRIBE_ASR_PRIMARY"
+    )
+    scribe_asr_fallback: str = Field(
+        default="whisper", validation_alias="SCRIBE_ASR_FALLBACK"
+    )
+    scribe_asr_language: str = Field(
+        default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
+    )
     # Embedding fail-loud / degraded-mode tuning (replaces silent hash fallback).
     rag_embedding_fail_loud: bool = Field(
         default=True,
