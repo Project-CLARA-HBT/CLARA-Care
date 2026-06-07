@@ -1,4 +1,5 @@
 import api from "@/lib/http-client";
+import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
 
 export type ScribeSoapRequest = {
   transcript: string;
@@ -203,4 +204,178 @@ export async function transcribeScribeAudio(
   }
   const response = await api.post<ScribeTranscribeResponse>("/scribe/transcribe", formData);
   return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Enterprise workflow clients (consent, sign/amend, audit, export) + SSE stream.
+// ---------------------------------------------------------------------------
+
+export type ScribeAuditEntry = {
+  id: number;
+  actor: number | null;
+  action: string;
+  from_status: string;
+  to_status: string;
+  detail: Record<string, unknown>;
+  created_at: string | null;
+};
+
+export async function captureScribeConsent(
+  sessionId: number,
+  payload: { method?: string; scope?: string } = {}
+): Promise<{ session_id: number; consent_id: number; captured: boolean }> {
+  const response = await api.post(`/scribe/sessions/${sessionId}/consent`, payload);
+  return response.data;
+}
+
+export async function generateScribeNote(
+  sessionId: number,
+  payload: { template_id?: string; transcript?: string } = {}
+): Promise<ScribeSession> {
+  const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/notes`, payload);
+  return response.data;
+}
+
+export async function signScribeNote(sessionId: number): Promise<ScribeSession> {
+  const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/sign`, {});
+  return response.data;
+}
+
+export async function amendScribeNote(
+  sessionId: number,
+  payload: { template_id?: string; transcript?: string } = {}
+): Promise<ScribeSession> {
+  const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/amend`, payload);
+  return response.data;
+}
+
+export async function getScribeAudit(
+  sessionId: number
+): Promise<{ session_id: number; entries: ScribeAuditEntry[] }> {
+  const response = await api.get(`/scribe/sessions/${sessionId}/audit`);
+  return response.data;
+}
+
+export async function exportScribeNote(
+  sessionId: number,
+  format: "md" | "fhir" = "md"
+): Promise<Record<string, unknown>> {
+  const response = await api.get(`/scribe/sessions/${sessionId}/export`, { params: { format } });
+  return response.data;
+}
+
+export type ScribeStreamSegment = {
+  index: number;
+  text: string;
+  speaker: string;
+  start_ms: number;
+  end_ms: number;
+  degraded: boolean;
+};
+
+export type ScribeStreamHandlers = {
+  onStart?: () => void;
+  onSegment?: (segment: ScribeStreamSegment) => void;
+  onToken?: (text: string) => void;
+  onDone?: (result: Record<string, unknown>) => void;
+  onError?: (message: string) => void;
+  signal?: AbortSignal;
+};
+
+function scribeStreamUrl(sessionId: number): string {
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? "/api/v1").replace(/\/$/, "");
+  return `${base}/scribe/sessions/${sessionId}/stream`;
+}
+
+function parseScribeSseFrame(block: string): { event: string; data: string } | null {
+  const lines = block.split("\n");
+  let event = "message";
+  const dataLines: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (!dataLines.length) return null;
+  return { event, data: dataLines.join("\n") };
+}
+
+/**
+ * Open an SSE scribe transcription stream for a session and dispatch
+ * segment/token/done/error callbacks. Caller should fall back to the batch
+ * transcribe path on error.
+ */
+export async function streamScribe(
+  sessionId: number,
+  audio: Blob,
+  options: { filename?: string; language?: string; templateId?: string } & ScribeStreamHandlers
+): Promise<void> {
+  const form = new FormData();
+  form.append("audio_file", audio, options.filename ?? "scribe-live.webm");
+  if (options.language) form.append("language", options.language);
+  if (options.templateId) form.append("template_id", options.templateId);
+
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
+  const accessToken = getAccessToken();
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const csrfToken = getCsrfToken();
+  if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+  const response = await fetch(scribeStreamUrl(sessionId), {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: form,
+    signal: options.signal,
+  });
+  if (!response.ok || !response.body) {
+    throw new Error(`scribe stream failed (status=${response.status})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let sawTerminal = false;
+
+  const dispatch = (event: string, data: string) => {
+    let parsed: unknown = data;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      parsed = data;
+    }
+    if (event === "start") options.onStart?.();
+    else if (event === "segment") options.onSegment?.(parsed as ScribeStreamSegment);
+    else if (event === "token") {
+      const text = (parsed as { text?: string })?.text;
+      if (typeof text === "string") options.onToken?.(text);
+    } else if (event === "done") {
+      sawTerminal = true;
+      options.onDone?.((parsed ?? {}) as Record<string, unknown>);
+    } else if (event === "error") {
+      sawTerminal = true;
+      options.onError?.((parsed as { message?: string })?.message ?? "scribe stream error");
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx = buffer.indexOf("\n\n");
+      while (idx !== -1) {
+        const block = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const frame = parseScribeSseFrame(block);
+        if (frame) dispatch(frame.event, frame.data);
+        idx = buffer.indexOf("\n\n");
+      }
+    }
+    const tail = parseScribeSseFrame(buffer);
+    if (tail) dispatch(tail.event, tail.data);
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!sawTerminal) throw new Error("scribe stream ended without a terminal event");
 }
