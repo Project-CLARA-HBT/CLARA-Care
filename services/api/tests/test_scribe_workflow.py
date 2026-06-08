@@ -144,3 +144,47 @@ def test_owner_scoping_blocks_other_users(monkeypatch) -> None:
     token_b = _login("drb@doctor.clara")
     r = client.get(f"/api/v1/scribe/sessions/{sid}/audit", headers=_auth(token_b))
     assert r.status_code == 404
+
+
+def test_generate_note_honors_template_when_templates_enabled(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_templates_enabled", True, raising=False)
+
+    def path_aware_proxy(path: str, _payload: dict[str, Any], **_kw: Any) -> dict[str, Any]:
+        if path == "/v1/scribe/note":
+            return {
+                "template_id": "vn_benh_an",
+                "sections": {"Lý do khám": "ho", "Chẩn đoán": "viêm họng"},
+                "insufficient_input": False,
+            }
+        return {"subjective": "s", "objective": "o", "assessment": "a", "plan": "p"}
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.scribe.proxy_ml_post", path_aware_proxy)
+    token = _login("dr.tpl@doctor.clara")
+    sid = _create_session(token)
+    g = client.post(
+        f"/api/v1/scribe/sessions/{sid}/notes",
+        headers=_auth(token),
+        json={"template_id": "vn_benh_an"},
+    )
+    assert g.status_code == 200
+    body = g.json()
+    # The persisted note used the VN template's sections (not SOAP).
+    assert body["soap"] is not None
+    assert "Chẩn đoán" in body["soap"]
+
+
+def test_generate_note_defaults_to_soap_when_templates_disabled(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_templates_enabled", False, raising=False)
+    _mock_soap(monkeypatch)
+    token = _login("dr.soap@doctor.clara")
+    sid = _create_session(token)
+    g = client.post(
+        f"/api/v1/scribe/sessions/{sid}/notes",
+        headers=_auth(token),
+        json={"template_id": "vn_benh_an"},
+    )
+    assert g.status_code == 200
+    # Flag off -> SOAP shape regardless of requested template.
+    assert set(g.json()["soap"].keys()) >= {"subjective", "objective", "assessment", "plan"}

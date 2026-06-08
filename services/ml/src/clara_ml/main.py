@@ -931,6 +931,27 @@ def scribe_soap(payload: dict) -> dict:
     return run_scribe_soap(transcript)
 
 
+@app.post("/v1/scribe/note")
+def scribe_note(payload: dict) -> dict:
+    """Generate a structured note for a requested template (Requirement 6).
+
+    Returns exactly the template's section keys (structure-guaranteed by the
+    NoteGenerator). Falls back to the SOAP keys for the default template so the
+    legacy ``/v1/scribe/soap`` consumers keep working unchanged.
+    """
+
+    transcript = str(payload.get("transcript", "")).strip()
+    template_id = str(payload.get("template_id", "") or "soap").strip() or "soap"
+    from clara_ml.scribe.generator import NoteGenerator
+
+    note = NoteGenerator().generate(transcript, template_id)
+    return {
+        "template_id": note.template_id,
+        "sections": dict(note.sections),
+        "insufficient_input": bool(note.insufficient_input),
+    }
+
+
 @app.post("/v1/scribe/transcribe")
 async def scribe_transcribe(
     audio_file: UploadFile = File(...),

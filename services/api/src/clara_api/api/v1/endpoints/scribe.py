@@ -152,6 +152,26 @@ def _generate_soap(transcript: str) -> dict[str, Any]:
     return _normalize_soap_payload(payload)
 
 
+def _generate_note_sections(transcript: str, template_id: str) -> dict[str, Any]:
+    """Generate template-aware note sections via ML (honors template_id).
+
+    For the default SOAP template this is equivalent to the legacy path; for any
+    other template the ML NoteGenerator returns that template's section keys
+    (Requirement 6). Falls back to the SOAP shape if the ML note endpoint is
+    unavailable so note generation never hard-fails.
+    """
+
+    tpl = (template_id or "soap").strip() or "soap"
+    if tpl == "soap":
+        return _generate_soap(transcript)
+    payload = proxy_ml_post("/v1/scribe/note", {"transcript": transcript, "template_id": tpl})
+    sections = payload.get("sections")
+    if isinstance(sections, dict) and sections:
+        return sections
+    # Defensive fallback: ML note unavailable / unexpected shape.
+    return _generate_soap(transcript)
+
+
 def _normalize_audio_content_type(value: str | None) -> str:
     raw = (value or "").strip().lower()
     if not raw:
@@ -583,7 +603,12 @@ def generate_note_version(
     _require_consent(db, settings, item.id)
 
     transcript = (request.transcript or item.transcript or "").strip()
-    soap = _generate_soap(transcript) if transcript else {}
+    template_id = (request.template_id or "soap").strip() or "soap"
+    soap = (
+        _generate_note_sections(transcript, template_id)
+        if transcript and settings.rag_scribe_templates_enabled
+        else (_generate_soap(transcript) if transcript else {})
+    )
     next_version = (
         db.execute(
             select(func.count(ScribeNoteVersion.id)).where(
@@ -595,7 +620,7 @@ def generate_note_version(
     version = ScribeNoteVersion(
         session_id=item.id,
         version_no=int(next_version),
-        template_id=request.template_id.strip()[:64] or "soap",
+        template_id=template_id[:64],
         sections_json=soap,
         created_by=user.id,
     )
