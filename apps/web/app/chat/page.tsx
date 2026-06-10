@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import {
@@ -2575,7 +2575,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "export-docx",
-        label: "Xuất hội thoại ra DOCX",
+        label: "Xuất báo cáo (DOCX)",
         disabled: !canExport,
         keywords: ["export", "docx", "word"],
         run: () => {
@@ -2933,6 +2933,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
                 className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-semibold text-[var(--text-secondary)] lg:hidden"
+                aria-label={isEnglishUI ? "Close panel" : "Đóng panel"}
+                title={isEnglishUI ? "Close panel" : "Đóng panel"}
               >
                 <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
@@ -2960,6 +2962,7 @@ export default function ChatWorkspacePage() {
             </div>
           </div>
 
+          {effectiveSummary.conversations > 0 ? (
           <div className="mt-2.5 rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-2">
             <div className="grid grid-cols-2">
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
@@ -2986,6 +2989,7 @@ export default function ChatWorkspacePage() {
               </div>
             </div>
           </div>
+          ) : null}
 
           <div className="mt-2.5">
             <details className="group">
@@ -3059,6 +3063,7 @@ export default function ChatWorkspacePage() {
               onClick={() => setIsScopeManagerOpen(true)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
               aria-label={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
+              title={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
             >
               <span className="material-symbols-outlined text-[16px]">expand_more</span>
             </button>
@@ -3087,7 +3092,11 @@ export default function ChatWorkspacePage() {
                 </div>
                 {workspaceLeftView !== "chat" ? (
                 <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]">
+                  <summary 
+                    className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]"
+                    aria-label={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
+                    title={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
+                  >
                     <span>
                       {selectedFolderFilterId !== null
                         ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
@@ -3315,11 +3324,19 @@ export default function ChatWorkspacePage() {
                   ) : null}
                 </div>
               ) : (
-                <p className="text-xs text-[var(--text-muted)]">
-                  {isEnglishUI
-                    ? "No conversations match the current filters."
-                    : "Không có cuộc trò chuyện nào khớp bộ lọc hiện tại."}
-                </p>
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <span className="material-symbols-outlined mb-2 text-[24px] text-[var(--text-muted)]">chat_bubble_outline</span>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {isEnglishUI ? "No conversations match the current filters." : "Không có cuộc trò chuyện nào khớp bộ lọc hiện tại."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={createNewConversation}
+                    className="mt-3 inline-flex min-h-[28px] items-center rounded-lg border border-blue-200/50 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300"
+                  >
+                    + {isEnglishUI ? "Start a new chat" : "Bắt đầu chat mới"}
+                  </button>
+                </div>
               )}
             </section>
             ) : null}
@@ -3546,6 +3563,7 @@ export default function ChatWorkspacePage() {
                     onClick={() => setIsMobileSidebarOpen(true)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
                     aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                    title={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
                   >
                     <span className="material-symbols-outlined text-[16px]">menu</span>
                   </button>
@@ -3577,8 +3595,9 @@ export default function ChatWorkspacePage() {
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
                   className="inline-flex min-h-[34px] items-center rounded-full border border-medical/35 bg-medical/10 px-3 text-[11px] font-semibold text-medical transition hover:bg-medical/15 disabled:cursor-not-allowed disabled:opacity-60"
+                  title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
                 >
-                  Xuất Word (.docx)
+                  {isEnglishUI ? "Export report" : "Xuất báo cáo"}
                 </button>
 
                 <details className="group relative">
@@ -3644,8 +3663,9 @@ export default function ChatWorkspacePage() {
                       onClick={() => void onExportActiveConversation("docx")}
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-500/15 px-3 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                      title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
                     >
-                      Xuất Word (.docx)
+                      {isEnglishUI ? "Export report" : "Xuất báo cáo"}
                     </button>
                     <button
                       type="button"
@@ -3720,7 +3740,7 @@ export default function ChatWorkspacePage() {
               ) : null}
 
               {!conversationTurns.length && !isLoadingTurns && !isSubmitting ? (
-                <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-10 text-center sm:py-16">
+                <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-6 text-center sm:py-10">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_18px_40px_-22px_rgba(37,99,235,0.7)]">
                     <span className="material-symbols-outlined text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                       stethoscope
@@ -3729,32 +3749,52 @@ export default function ChatWorkspacePage() {
                   <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
                     {isEnglishUI ? "How can CLARA help you today?" : "CLARA có thể giúp gì cho bạn?"}
                   </h2>
-                  <p className="mt-2 max-w-md text-sm text-[var(--text-muted)]">
-                    {isEnglishUI
-                      ? "Ask about medicine, symptoms, lab results, or pick a suggestion below to get started."
-                      : "Hỏi về thuốc, triệu chứng, kết quả xét nghiệm, hoặc chọn một gợi ý bên dưới để bắt đầu."}
-                  </p>
-                  <p className="mt-2 max-w-lg text-xs font-medium leading-5 text-[var(--text-muted)]">
+                  <div className="mt-3 max-w-md space-y-1.5 text-sm text-[var(--text-secondary)]">
+                    <p>
+                      {isEnglishUI ? (
+                        <>Ask about <strong>medicine, symptoms, lab results</strong> or <strong>check drug interactions</strong>.</>
+                      ) : (
+                        <>Bạn có thể hỏi về <strong>thuốc, triệu chứng, kết quả xét nghiệm</strong> hoặc <strong>kiểm tra tương tác</strong>.</>
+                      )}
+                    </p>
+                    <p>
+                      {isEnglishUI ? (
+                        <>CLARA answers with <strong>warnings</strong> and <strong>references</strong> when available.</>
+                      ) : (
+                        <>CLARA trả lời kèm <strong>cảnh báo</strong> và <strong>nguồn tham khảo</strong> khi có.</>
+                      )}
+                    </p>
+                  </div>
+                  <p className="mt-4 max-w-lg rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium leading-5 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
                     {isEnglishUI
                       ? "CLARA is an AI health information assistant, not a replacement for a clinician."
                       : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
                   </p>
-                  <div className="mt-7 grid w-full gap-2.5 sm:grid-cols-2">
-                    {quickPrompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        onClick={() => setQuery(prompt)}
-                        className="group flex items-start gap-2.5 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3.5 py-3 text-left transition hover:border-blue-400 hover:bg-blue-50 hover:shadow-[0_12px_28px_-22px_rgba(37,99,235,0.6)] dark:hover:bg-[var(--surface-muted)]"
-                      >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-medical/10 text-medical transition group-hover:bg-medical/15">
-                          <span className="material-symbols-outlined text-[15px]">prompt_suggestion</span>
-                        </span>
-                        <span className="text-[13px] font-medium leading-5 text-[var(--text-secondary)] group-hover:text-[var(--text-brand)]">
-                          {prompt}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="mt-8 w-full">
+                    <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {isEnglishUI ? "Medication" : "Thuốc"}</span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {isEnglishUI ? "Symptoms" : "Triệu chứng"}</span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {isEnglishUI ? "Lab tests" : "Xét nghiệm"}</span>
+                    </div>
+                    <div className="grid w-full gap-3 sm:grid-cols-2">
+                      {quickPrompts.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => setQuery(prompt)}
+                          className="group flex items-start gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3.5 text-left transition hover:border-blue-400 hover:bg-blue-50 hover:shadow-[0_12px_28px_-22px_rgba(37,99,235,0.6)] dark:hover:bg-[var(--surface-muted)]"
+                        >
+                          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-medical/10 text-medical transition group-hover:scale-105 group-hover:bg-medical/15">
+                            <span className="material-symbols-outlined text-[18px]">prompt_suggestion</span>
+                          </span>
+                          <span className="text-sm font-medium leading-relaxed text-[var(--text-secondary)] group-hover:text-[var(--text-brand)]">
+                            {prompt}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -3762,6 +3802,29 @@ export default function ChatWorkspacePage() {
                   <ChatTurn key={turn.id} turn={turn} uiLanguage={uiLanguage} />
                 ))
               )}
+
+              {conversationTurns.length >= 1 && conversationTurns.length <= 2 && !isSubmitting && !isLoadingTurns ? (
+                <div className="mx-auto mt-3 flex w-full max-w-3xl flex-col items-start gap-2 px-1">
+                  <p className="text-xs font-semibold text-[var(--text-muted)]">
+                    {isEnglishUI ? "Continue with?" : "Bạn muốn tiếp tục với?"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(isEnglishUI
+                      ? ["Check drug interactions", "Ask about side effects", "Enter my medication list", "Create a consult report"]
+                      : ["Kiểm tra tương tác thuốc", "Hỏi về tác dụng phụ", "Nhập danh sách thuốc của tôi", "Tạo báo cáo tư vấn"]
+                    ).map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => setQuery(suggestion)}
+                        className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:border-blue-400 hover:bg-blue-50 hover:text-[var(--text-brand)] dark:hover:bg-[var(--surface-muted)]"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {isSubmitting ? (
                 <article className="rounded-[0.8rem] border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.42)] dark:border-cyan-600/55 dark:bg-cyan-950/35 dark:text-cyan-100">
@@ -3810,6 +3873,7 @@ export default function ChatWorkspacePage() {
               onClick={() => setIsTelemetryPanelOpen(true)}
               className="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/96 px-2 text-left shadow-[0_12px_24px_-24px_rgba(15,23,42,0.36)] backdrop-blur-lg transition hover:border-cyan-300/70"
               aria-label={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
+              title={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
             >
               <span className="material-symbols-outlined text-[14px] text-[var(--text-secondary)]">monitoring</span>
               <span className="text-[9px] font-semibold text-[var(--text-primary)]">
@@ -3840,6 +3904,7 @@ export default function ChatWorkspacePage() {
                     onClick={() => setIsTelemetryPanelOpen(false)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
                     aria-label={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
+                    title={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
                   >
                     <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
                   </button>

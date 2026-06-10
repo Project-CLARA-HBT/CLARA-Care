@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -56,7 +56,7 @@ const LEGACY_ACTIONS: Array<{ id: string; iconClass: string; ariaLabel: Record<U
 ];
 
 const GROUP_LABEL_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
-  core: { vi: "Kh\u00F4ng gian l\u00E0m vi\u1EC7c", en: "Workspace" },
+  core: { vi: "Không gian chăm sóc", en: "Workspace" },
   clinical: { vi: "L\u00E2m s\u00E0ng", en: "Clinical" },
   medication: { vi: "Thu\u1ED1c v\u00E0 an to\u00E0n", en: "Medication & Safety" },
   admin: { vi: "Qu\u1EA3n tr\u1ECB h\u1EC7 th\u1ED1ng", en: "System Admin" },
@@ -127,11 +127,11 @@ export default function SidebarNav({
     <aside
       className={[
         "sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] py-4 backdrop-blur-xl transition-[width,padding] lg:flex lg:flex-col",
-        collapsed ? "w-[5.5rem] px-2" : "w-64 px-4",
+        collapsed ? "w-[4.5rem] px-2" : "w-64 px-4",
       ].join(" ")}
     >
-      <div className={["mb-8 flex items-center", collapsed ? "justify-center" : "gap-3 px-2"].join(" ")}>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_10px_28px_-18px_rgba(37,99,235,0.7)]">
+      <div className={["mb-5 flex items-center", collapsed ? "justify-center" : "gap-3 px-2"].join(" ")}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_10px_28px_-18px_rgba(37,99,235,0.7)]">
           <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             clinical_notes
           </span>
@@ -144,7 +144,7 @@ export default function SidebarNav({
         ) : null}
       </div>
 
-      <div className={["mb-4 px-2", collapsed ? "flex justify-center" : "flex items-center justify-between gap-2"].join(" ")}>
+      <div className={["mb-2 px-2", collapsed ? "flex justify-center" : "flex items-center justify-between gap-2"].join(" ")}>
         {!collapsed ? (
           <div className="inline-flex items-center gap-1.5">
             <div className="inline-flex items-center gap-0.5 rounded-xl border border-[color:var(--shell-border)] bg-white/80 p-0.5" role="group" aria-label={themeGroupLabel}>
@@ -199,7 +199,7 @@ export default function SidebarNav({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-white/80 text-[var(--text-secondary)] transition hover:border-blue-400 hover:bg-blue-50 hover:text-[var(--text-brand)]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:bg-blue-50 hover:text-[var(--text-brand)]"
           aria-label={collapsed ? expandLabel : collapseLabel}
           title={collapsed ? expandLabel : collapseLabel}
         >
@@ -292,7 +292,7 @@ export default function SidebarNav({
 
       <div className={["mt-4 border-t border-[color:var(--shell-border)] pt-4", collapsed ? "px-0" : "px-2"].join(" ")}>
         <div className={["flex items-center", collapsed ? "justify-center" : "gap-3"].join(" ")}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
             {roleLabel.slice(0, 1)}
           </div>
           {!collapsed ? (

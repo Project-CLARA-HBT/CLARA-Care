@@ -37,14 +37,14 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-end">
-        <article className="max-w-[95%] rounded-[0.78rem] rounded-tr-sm border border-cyan-200/70 bg-cyan-50/96 px-3.5 py-2 text-[13px] leading-6 text-slate-800 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.34)] dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-slate-100 sm:max-w-[78%]">
+      <div className="flex justify-end pr-2 sm:pr-6">
+        <article className="max-w-[88%] rounded-[0.78rem] rounded-tr-sm border border-cyan-200/70 bg-cyan-50/96 px-3.5 py-2 text-[13px] leading-6 text-slate-800 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.34)] dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-slate-100 sm:max-w-[58%]">
           <p className="whitespace-pre-wrap">{turn.query}</p>
         </article>
       </div>
 
       <div className="flex justify-start">
-        <article className="min-w-0 flex-1">
+        <article className="min-w-0 w-full max-w-[85%] lg:max-w-[75%]">
           <div className="mb-1 flex flex-wrap items-center gap-2 text-[9px] text-[var(--text-muted)]">
             <span className="text-[10px] font-semibold text-[var(--text-primary)]">CLARA</span>
             <span className="h-1 w-1 rounded-full bg-[var(--text-muted)]/70" />

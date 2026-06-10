@@ -50,7 +50,7 @@ const COMPOSER_COPY: Record<
     mode: "Cách trả lời",
     stack: "Nguồn",
     promptTray: "Gợi ý",
-    placeholder: "Nhập câu hỏi sức khỏe của bạn, ví dụ: \"Metformin có tác dụng phụ gì?\"",
+    placeholder: "Nhập câu hỏi y tế của bạn...",
     mic: "Ghi âm",
     submit: "Gửi",
     personal: "Cá nhân",
@@ -60,7 +60,7 @@ const COMPOSER_COPY: Record<
     mode: "Mode",
     stack: "Sources",
     promptTray: "Prompts",
-    placeholder: "Ask a health question, for example: \"What side effects can metformin cause?\"",
+    placeholder: "Enter your medical question...",
     mic: "Voice input",
     submit: "Send",
     personal: "Personal",
@@ -115,7 +115,7 @@ export default function ChatComposer(props: ChatComposerProps) {
   return (
     <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)]/60 bg-[var(--bg-canvas)]/92 px-0.5 pb-0.5 pt-0.5 backdrop-blur-xl sm:px-1">
       <div className="mx-auto w-full max-w-none">
-        <div className="rounded-[0.65rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/98 px-1.5 py-1 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.35)]">
+        <div className="rounded-2xl border-2 border-[color:var(--shell-border)] bg-[var(--surface-panel)]/98 px-1.5 py-1 shadow-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20">
           <form onSubmit={onSubmit} className="space-y-0.5">
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex min-w-0 items-center gap-1">
@@ -123,7 +123,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                   type="button"
                   onClick={() => setIsControlsOpen((current) => !current)}
                   className={[
-                    "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold transition",
+                    "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition",
                     isControlsOpen
                       ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
@@ -138,7 +138,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                     type="button"
                     onClick={() => setIsPromptTrayOpen((current) => !current)}
                     className={[
-                      "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold transition",
+                      "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition",
                       isPromptTrayOpen
                         ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                         : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
@@ -160,7 +160,7 @@ export default function ChatComposer(props: ChatComposerProps) {
             {isControlsOpen ? (
               <div className="space-y-1 rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/86 px-1.5 py-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {copy.mode}
                   </span>
                   <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
@@ -180,7 +180,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {copy.stack}
                   </span>
                   <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
@@ -215,7 +215,7 @@ export default function ChatComposer(props: ChatComposerProps) {
             ) : null}
 
             <div className="flex items-end gap-1">
-              <div className="flex min-w-0 flex-1 flex-col rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5">
+              <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1">
                 <textarea
                   id="chat-composer-input"
                   value={query}
@@ -224,7 +224,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                   aria-label="Chat composer input"
                   placeholder={copy.placeholder}
                   rows={1}
-                  className="min-h-[34px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-1 text-[13px] leading-5 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+                  className="min-h-[44px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-2 text-sm leading-5 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
                 />
               </div>
 
@@ -232,11 +232,11 @@ export default function ChatComposer(props: ChatComposerProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting || !query.trim()}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--text-primary)] text-[var(--bg-canvas)] transition hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:scale-[1.02] hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                   aria-label={copy.submit}
                   title={copy.submit}
                 >
-                  <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                  <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                 </button>
               </div>
             </div>
