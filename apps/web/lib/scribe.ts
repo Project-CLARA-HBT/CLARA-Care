@@ -450,6 +450,77 @@ export async function getScribeCoding(
   return response.data;
 }
 
+// ---------------------------------------------------------------------------
+// Addendum workflow (Requirement 18.2) — append-only, time-stamped notes
+// attached to a SIGNED note version. An addendum is DISTINCT from amend: it
+// leaves the signed version byte-for-byte unchanged and creates no new note
+// version (amend creates a new `amended` version). Both clients are gated
+// server-side by `RAG_SCRIBE_ADDENDUM_ENABLED`; when the flag is off the
+// endpoints answer 404, so callers MUST treat a rejection as "addendum
+// unavailable" and render the editor exactly as before (amend-only, Req 18.1).
+// ---------------------------------------------------------------------------
+
+/** A single append-only addendum attached to a signed note version (Req 18.2). */
+export type ScribeAddendum = {
+  session_id: number;
+  version_no: number;
+  addendum_id: number;
+  /** The authoring clinician's user id (server-derived, never client-supplied). */
+  author: number | null;
+  text: string;
+  /** Server-clock timestamp (ISO string) — never client-supplied. */
+  created_at: string | null;
+};
+
+/** Read response for `GET /scribe/sessions/{id}/notes/{ver}/addenda`. */
+export type ScribeAddendaListResponse = {
+  session_id: number;
+  version_no: number;
+  addenda: ScribeAddendum[];
+};
+
+/**
+ * Attach a time-stamped addendum to a SIGNED note version (Requirement 18.2),
+ * mirroring the other workflow clients. Only the free text is sent; the author
+ * and timestamp are derived server-side from the authenticated clinician and
+ * the server clock. The signed version is left unchanged (Req 18.3) and no new
+ * note version is created (Req 18.5).
+ *
+ * The server gates this on `RAG_SCRIBE_ADDENDUM_ENABLED` and answers 404 when
+ * the flag is off; callers should catch the rejection and keep the legacy
+ * amend-only surface.
+ */
+export async function addScribeAddendum(
+  sessionId: number,
+  versionNo: number,
+  text: string
+): Promise<ScribeAddendum> {
+  const response = await api.post<ScribeAddendum>(
+    `/scribe/sessions/${sessionId}/notes/${versionNo}/addendum`,
+    { text }
+  );
+  return response.data;
+}
+
+/**
+ * List a signed note version's addenda in append (chronological) order
+ * (Requirement 18.6), mirroring `getScribeAudit`. Returns an empty `addenda`
+ * list when the version exists but has no addenda yet.
+ *
+ * The server gates this on `RAG_SCRIBE_ADDENDUM_ENABLED` and answers 404 when
+ * the flag is off; callers should catch the rejection and render the editor
+ * exactly as before (no addendum panel).
+ */
+export async function listScribeAddenda(
+  sessionId: number,
+  versionNo: number
+): Promise<ScribeAddendaListResponse> {
+  const response = await api.get<ScribeAddendaListResponse>(
+    `/scribe/sessions/${sessionId}/notes/${versionNo}/addenda`
+  );
+  return response.data;
+}
+
 /** Interim transcript text for a chunk, emitted before the chunk is finalized. */
 export type ScribeStreamPartial = {
   index: number;

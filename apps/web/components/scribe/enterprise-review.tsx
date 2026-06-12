@@ -17,17 +17,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ScribeSession,
   ScribeStreamSegment,
+  addScribeAddendum,
   amendScribeNote,
   captureScribeConsent,
   exportScribeNote,
   generateScribeNote,
   getScribeCoding,
   getScribeGrounding,
+  listScribeAddenda,
   regenerateScribeSession,
   signScribeNote,
   streamScribe,
   transcribeScribeAudio,
   updateScribeSession,
+  type ScribeAddendum,
   type ScribeExportFormat,
   type ScribeEmCptSuggestion,
   type ScribeGroundingReport,
@@ -37,15 +40,19 @@ import {
   NoteSectionEntry,
   SCRIBE_REVIEW_TEMPLATES,
   ScribeFlowState,
+  addendaHaveData,
+  addendumAuthorLabel,
   computePipelineStages,
   concatSegmentsText,
   countConfirmedEmCpt,
   emCptCodeKey,
+  formatAddendumTimestamp,
   formatGroundedClaimRate,
   groundingChip,
   groundingHasData,
   initialEmCptSelections,
   isEmCptSelected,
+  normalizeAddendaList,
   normalizeEmCptSuggestions,
   normalizeGroundingReport,
   orderedNoteSections,
@@ -219,6 +226,17 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     initialEmCptSelections()
   );
 
+  // Addendum workflow (Req 18.2). Additive + best-effort + DISTINCT from amend:
+  // an addendum is a time-stamped note appended to the SIGNED version without
+  // creating a new version. `addendumAvailable` stays false when the flag is off
+  // / the version has no addendum endpoint (the read 404s), so the editor keeps
+  // the legacy amend-only surface (Req 18.1). Addenda are keyed to the signed
+  // `noteVersionNo` tracked above.
+  const [addenda, setAddenda] = useState<ScribeAddendum[]>([]);
+  const [addendumAvailable, setAddendumAvailable] = useState(false);
+  const [addendumDraft, setAddendumDraft] = useState("");
+  const [addendumSubmitting, setAddendumSubmitting] = useState(false);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -250,6 +268,12 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     // sessions and nothing starts pre-selected (Req 14.5).
     setEmCptSuggestions([]);
     setEmCptSelections(initialEmCptSelections());
+    // Addenda re-load per signed version; clear on session switch so a prior
+    // session's addenda never leak and the panel stays retracted until a known
+    // signed version's addenda load successfully.
+    setAddenda([]);
+    setAddendumAvailable(false);
+    setAddendumDraft("");
     // Consent re-gates per session; a signed/exported session has clearly
     // already passed consent so we don't block review of it.
     const signedAlready = SIGNED_STATUSES.has((session?.status ?? "").trim().toLowerCase());
@@ -517,6 +541,70 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     [sessionId]
   );
 
+  // Best-effort load of a signed version's append-only addenda (Req 18.2/18.6).
+  // Silently retracts the surface (`addendumAvailable=false`) when the workflow
+  // is unavailable (flag off / 404 / transport error) so the editor keeps the
+  // legacy amend-only behavior. A successful load marks the surface available
+  // even when the list is empty (so the compose box shows for a fresh signed
+  // note).
+  const loadAddenda = useCallback(
+    async (versionNo: number) => {
+      if (!sessionId || !Number.isFinite(versionNo) || versionNo < 1) {
+        setAddenda([]);
+        setAddendumAvailable(false);
+        return;
+      }
+      try {
+        const response = await listScribeAddenda(sessionId, versionNo);
+        setAddenda(normalizeAddendaList(response));
+        setAddendumAvailable(true);
+      } catch {
+        // Addendum workflow is flag-gated server-side; absence is expected.
+        setAddenda([]);
+        setAddendumAvailable(false);
+      }
+    },
+    [sessionId]
+  );
+
+  // Load the signed version's addenda once the note is signed/exported and we
+  // know its version number; retract the surface otherwise.
+  useEffect(() => {
+    if ((signed || exported) && noteVersionNo != null) {
+      void loadAddenda(noteVersionNo);
+    } else {
+      setAddenda([]);
+      setAddendumAvailable(false);
+      setAddendumDraft("");
+    }
+  }, [signed, exported, noteVersionNo, loadAddenda]);
+
+  const onAddAddendum = useCallback(async () => {
+    if (!sessionId || noteVersionNo == null) return;
+    const text = addendumDraft.trim();
+    if (!text) {
+      pushNotice("error", "Nội dung phụ lục đang trống.");
+      return;
+    }
+    setAddendumSubmitting(true);
+    try {
+      await addScribeAddendum(sessionId, noteVersionNo, text);
+      setAddendumDraft("");
+      // Refresh the list so the new addendum appears (Req 18.6 — append order).
+      await loadAddenda(noteVersionNo);
+      pushNotice("success", "Đã thêm phụ lục vào ghi chú đã ký.");
+    } catch (error) {
+      if (isMissingCapability(error)) {
+        setAddendumAvailable(false);
+        pushNotice("error", "Tính năng phụ lục chưa được bật cho phiên này.");
+      } else {
+        pushNotice("error", error instanceof Error ? error.message : "Không thể thêm phụ lục.");
+      }
+    } finally {
+      setAddendumSubmitting(false);
+    }
+  }, [sessionId, noteVersionNo, addendumDraft, loadAddenda, pushNotice]);
+
   const onGenerateNote = useCallback(async () => {
     if (!sessionId) return;
     if (!transcriptReady) {
@@ -744,6 +832,13 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         emCptSelections,
         onToggleEmCpt: (suggestion) =>
           setEmCptSelections((prev) => toggleEmCptSelection(prev, suggestion)),
+        addendumAvailable,
+        addenda,
+        addendumDraft,
+        addendumSubmitting,
+        addendumVersionKnown: noteVersionNo != null,
+        onAddendumDraftChange: setAddendumDraft,
+        onAddAddendum,
         onGenerateNote,
         onSectionChange: (key, value) =>
           setNoteSections((prev) => prev.map((entry) => (entry.key === key ? { ...entry, value } : entry))),
@@ -966,6 +1061,13 @@ function renderNoteColumn(props: {
   emCptSuggestions: ScribeEmCptSuggestion[];
   emCptSelections: Record<string, boolean>;
   onToggleEmCpt: (suggestion: ScribeEmCptSuggestion) => void;
+  addendumAvailable: boolean;
+  addenda: ScribeAddendum[];
+  addendumDraft: string;
+  addendumSubmitting: boolean;
+  addendumVersionKnown: boolean;
+  onAddendumDraftChange: (value: string) => void;
+  onAddAddendum: () => void;
   onGenerateNote: () => void;
   onSectionChange: (key: string, value: string) => void;
   onSaveNoteEdits: () => void;
@@ -1087,6 +1189,15 @@ function renderNoteColumn(props: {
             <button type="button" onClick={props.onAmend} className={`w-full ${secondaryButtonClass}`}>
               Tạo bản sửa đổi (amend)
             </button>
+            {renderAddendumPanel({
+              available: props.addendumAvailable,
+              versionKnown: props.addendumVersionKnown,
+              addenda: props.addenda,
+              draft: props.addendumDraft,
+              submitting: props.addendumSubmitting,
+              onDraftChange: props.onAddendumDraftChange,
+              onSubmit: props.onAddAddendum,
+            })}
           </div>
         ) : null}
       </div>
@@ -1372,6 +1483,96 @@ function renderCodingPanel({
           </ul>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Addendum panel (Requirement 18.2 / 18.6) — compose + view time-stamped
+// addenda on a SIGNED note. Clearly DISTINCT from the amend action above: an
+// addendum appends a time-stamped note WITHOUT changing the signed version and
+// WITHOUT creating a new version (amend creates a new `amended` version). The
+// whole surface is additive: when the addendum workflow is unavailable (flag
+// off / 404 / unknown signed version) nothing renders, so the editor keeps the
+// legacy amend-only behavior (Req 18.1).
+// ---------------------------------------------------------------------------
+
+function renderAddendumPanel({
+  available,
+  versionKnown,
+  addenda,
+  draft,
+  submitting,
+  onDraftChange,
+  onSubmit,
+}: {
+  available: boolean;
+  versionKnown: boolean;
+  addenda: ScribeAddendum[];
+  draft: string;
+  submitting: boolean;
+  onDraftChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  if (!available || !versionKnown) return null;
+
+  const hasAddenda = addendaHaveData(addenda);
+  return (
+    <div
+      className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800"
+      data-testid="scribe-addendum"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h4 className={sectionTitleClass}>Phụ lục (addendum)</h4>
+        <span
+          className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
+          data-testid="scribe-addendum-count"
+        >
+          {addenda.length} phụ lục
+        </span>
+      </div>
+      <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
+        Phụ lục được gắn thời gian, KHÔNG thay đổi nội dung đã ký và không tạo bản sửa đổi mới
+        (khác với “bản sửa đổi / amend”).
+      </p>
+
+      {hasAddenda ? (
+        <ul className="space-y-2" data-testid="scribe-addendum-list">
+          {addenda.map((entry) => (
+            <li
+              key={entry.addendum_id}
+              className="rounded-lg border border-[#B6D4FE] bg-[#F8FBFF] px-3 py-2 dark:border-sky-800 dark:bg-slate-950/50"
+              data-testid="scribe-addendum-item"
+            >
+              <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
+                {formatAddendumTimestamp(entry.created_at)} · {addendumAuthorLabel(entry.author)}
+              </p>
+              <p className={`mt-0.5 whitespace-pre-wrap text-sm leading-5 ${bodyTextClass}`}>{entry.text}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có phụ lục nào.</p>
+      )}
+
+      <div className="space-y-2">
+        <textarea
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          placeholder="Thêm thông tin bổ sung sau khi ký (không thay đổi nội dung đã ký)..."
+          className={sectionTextareaClass}
+          data-testid="scribe-addendum-input"
+        />
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={submitting || draft.trim().length === 0}
+          className={`w-full ${primaryButtonClass}`}
+          data-testid="scribe-addendum-submit"
+        >
+          {submitting ? "Đang lưu..." : "Thêm phụ lục"}
+        </button>
+      </div>
     </div>
   );
 }

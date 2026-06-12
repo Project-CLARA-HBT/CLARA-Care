@@ -4,18 +4,23 @@ import fc from "fast-check";
 import {
   DEFAULT_SCRIBE_TEMPLATE_ID,
   SCRIBE_REVIEW_TEMPLATES,
+  addendaHaveData,
+  addendumAuthorLabel,
   codingHasData,
   computePipelineStages,
   concatSegmentsText,
   confirmedEmCptSuggestions,
   countConfirmedEmCpt,
   emCptCodeKey,
+  formatAddendumTimestamp,
   formatGroundedClaimRate,
   getReviewTemplate,
   groundingChip,
   groundingHasData,
   initialEmCptSelections,
   isEmCptSelected,
+  normalizeAddendaList,
+  normalizeAddendum,
   normalizeEmCptSuggestion,
   normalizeEmCptSuggestions,
   normalizeGroundingReport,
@@ -622,5 +627,109 @@ describe("E/M+CPT selection state (Req 14.3/14.5 — nothing auto-selected)", ()
         expect(isEmCptSelected(selections, s)).toBe(toggles % 2 === 1);
       })
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Addendum workflow (Requirement 18.2 / 18.6). Pure helpers backing the
+// addendum compose/view surface. The key invariants: a malformed/absent payload
+// degrades to an empty list (never throws), empty-text entries are dropped, the
+// timestamp formatter is deterministic + locale-independent, and the author
+// label exposes only the clinician id (no PII).
+// ---------------------------------------------------------------------------
+
+function makeAddendum(overrides: Record<string, unknown> = {}) {
+  return {
+    session_id: 7,
+    version_no: 2,
+    addendum_id: 5,
+    author: 42,
+    text: "Theo dõi huyết áp sau 1 tuần.",
+    created_at: "2026-04-12T03:04:00Z",
+    ...overrides,
+  };
+}
+
+describe("normalizeAddendum (Req 18.2 — defensive coercion)", () => {
+  it("passes a well-formed addendum through", () => {
+    const a = normalizeAddendum(makeAddendum());
+    expect(a.addendum_id).toBe(5);
+    expect(a.author).toBe(42);
+    expect(a.text).toBe("Theo dõi huyết áp sau 1 tuần.");
+    expect(a.created_at).toBe("2026-04-12T03:04:00Z");
+  });
+
+  it("fills safe defaults for a malformed/partial payload (never throws)", () => {
+    const a = normalizeAddendum({ text: "chỉ có nội dung" });
+    expect(a.session_id).toBe(0);
+    expect(a.version_no).toBe(0);
+    expect(a.addendum_id).toBe(0);
+    expect(a.author).toBeNull();
+    expect(a.created_at).toBeNull();
+    expect(a.text).toBe("chỉ có nội dung");
+  });
+
+  it("coerces a non-object payload to an empty-text addendum", () => {
+    expect(normalizeAddendum(null).text).toBe("");
+    expect(normalizeAddendum(undefined).author).toBeNull();
+  });
+});
+
+describe("normalizeAddendaList (Req 18.6 — append order + defensive)", () => {
+  it("normalizes the server list response, preserving append order", () => {
+    const list = normalizeAddendaList({
+      session_id: 7,
+      version_no: 2,
+      addenda: [makeAddendum({ addendum_id: 5 }), makeAddendum({ addendum_id: 6, created_at: "2026-04-12T04:00:00Z" })],
+    });
+    expect(list.map((a) => a.addendum_id)).toEqual([5, 6]);
+  });
+
+  it("accepts a bare array as well as the list-response object", () => {
+    const list = normalizeAddendaList([makeAddendum({ addendum_id: 9 })]);
+    expect(list).toHaveLength(1);
+    expect(list[0].addendum_id).toBe(9);
+  });
+
+  it("drops empty-text entries and returns [] for malformed input (never throws)", () => {
+    expect(normalizeAddendaList(null)).toEqual([]);
+    expect(normalizeAddendaList({ addenda: "nope" })).toEqual([]);
+    const list = normalizeAddendaList({
+      addenda: [makeAddendum({ text: "   " }), makeAddendum({ addendum_id: 6, text: "ok" })],
+    });
+    expect(list.map((a) => a.addendum_id)).toEqual([6]);
+  });
+});
+
+describe("addendaHaveData (Req 18.1 — empty ⇒ no list)", () => {
+  it("is false for an absent/empty/blank-only list", () => {
+    expect(addendaHaveData(null)).toBe(false);
+    expect(addendaHaveData([])).toBe(false);
+    expect(addendaHaveData(normalizeAddendaList({ addenda: [makeAddendum({ text: "  " })] }))).toBe(false);
+  });
+
+  it("is true when at least one addendum carries text", () => {
+    expect(addendaHaveData(normalizeAddendaList({ addenda: [makeAddendum()] }))).toBe(true);
+  });
+});
+
+describe("formatAddendumTimestamp (Req 18.2 — deterministic time-stamp)", () => {
+  it("formats an ISO timestamp as a stable UTC string", () => {
+    expect(formatAddendumTimestamp("2026-04-12T03:04:00Z")).toBe("2026-04-12 03:04 UTC");
+  });
+
+  it("returns the raw value for an unparseable date and '' for an absent one", () => {
+    expect(formatAddendumTimestamp("not-a-date")).toBe("not-a-date");
+    expect(formatAddendumTimestamp(null)).toBe("");
+    expect(formatAddendumTimestamp(undefined)).toBe("");
+    expect(formatAddendumTimestamp("   ")).toBe("");
+  });
+});
+
+describe("addendumAuthorLabel (Req 18.2 — author, no PII)", () => {
+  it("labels a known clinician id and falls back generically", () => {
+    expect(addendumAuthorLabel(42)).toBe("Bác sĩ #42");
+    expect(addendumAuthorLabel(null)).toBe("Bác sĩ");
+    expect(addendumAuthorLabel(undefined)).toBe("Bác sĩ");
   });
 });

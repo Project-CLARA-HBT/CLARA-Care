@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  addScribeAddendum,
   amendScribeNote,
   captureScribeConsent,
   exportScribeNote,
@@ -8,6 +9,7 @@ import {
   getScribeAudit,
   getScribeCoding,
   getScribeGrounding,
+  listScribeAddenda,
   signScribeNote,
 } from "@/lib/scribe";
 
@@ -204,6 +206,65 @@ describe("getScribeCoding (Req 14.3/14.5)", () => {
     get.mockRejectedValueOnce(new Error("Scribe E/M+CPT coding is disabled."));
     await expect(getScribeCoding(7, 1)).rejects.toThrow("disabled");
     expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/1/coding");
+  });
+});
+
+describe("addScribeAddendum / listScribeAddenda (Req 18.2)", () => {
+  it("addScribeAddendum POSTs the text to the note-version addendum URL", async () => {
+    post.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        version_no: 2,
+        addendum_id: 5,
+        author: 42,
+        text: "Theo dõi huyết áp sau 1 tuần.",
+        created_at: "2026-04-12T03:04:00Z",
+      },
+    });
+    const result = await addScribeAddendum(7, 2, "Theo dõi huyết áp sau 1 tuần.");
+    expect(post).toHaveBeenCalledWith("/scribe/sessions/7/notes/2/addendum", {
+      text: "Theo dõi huyết áp sau 1 tuần.",
+    });
+    expect(result.addendum_id).toBe(5);
+    expect(result.version_no).toBe(2);
+    expect(result.author).toBe(42);
+  });
+
+  it("listScribeAddenda GETs the note-version addenda URL in append order", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        version_no: 2,
+        addenda: [
+          {
+            session_id: 7,
+            version_no: 2,
+            addendum_id: 5,
+            author: 42,
+            text: "Phụ lục 1",
+            created_at: "2026-04-12T03:04:00Z",
+          },
+          {
+            session_id: 7,
+            version_no: 2,
+            addendum_id: 6,
+            author: 42,
+            text: "Phụ lục 2",
+            created_at: "2026-04-12T04:00:00Z",
+          },
+        ],
+      },
+    });
+    const result = await listScribeAddenda(7, 2);
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/2/addenda");
+    expect(result.addenda).toHaveLength(2);
+    expect(result.addenda.map((a) => a.addendum_id)).toEqual([5, 6]);
+  });
+
+  it("propagates a rejection so the caller keeps the amend-only surface (flag off / 404)", async () => {
+    get.mockRejectedValueOnce(new Error("Scribe addendum workflow is disabled."));
+    await expect(listScribeAddenda(7, 1)).rejects.toThrow("disabled");
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/1/addenda");
   });
 });
 

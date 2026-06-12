@@ -8,6 +8,7 @@
  */
 
 import type {
+  ScribeAddendum,
   ScribeCodingReport,
   ScribeEmCptSuggestion,
   ScribeGroundedStatement,
@@ -731,4 +732,83 @@ export function confirmedEmCptSuggestions(
   return list
     .filter((s) => isEmCptSelected(selections, s))
     .map((s) => ({ ...s, selected: true }));
+}
+
+// ---------------------------------------------------------------------------
+// Addendum workflow (Requirement 18.2 / 18.6). Pure helpers backing the
+// addendum compose/view surface on a SIGNED note. An addendum is append-only
+// and DISTINCT from amend: it never mutates the signed note text or creates a
+// new note version. These helpers defensively normalize the server payloads and
+// format the display fields (timestamp + author) so the UI never throws on
+// partial data and renders nothing extra when the workflow is unavailable.
+// ---------------------------------------------------------------------------
+
+/**
+ * Coerce one raw addendum (from the server response / list) into a well-formed
+ * {@link ScribeAddendum}, defending against missing/malformed fields. Author is
+ * an optional clinician id; timestamp is an optional ISO string.
+ */
+export function normalizeAddendum(raw: unknown): ScribeAddendum {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const num = (value: unknown): number =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return {
+    session_id: num(obj.session_id),
+    version_no: num(obj.version_no),
+    addendum_id: num(obj.addendum_id),
+    author: typeof obj.author === "number" && Number.isFinite(obj.author) ? obj.author : null,
+    text: typeof obj.text === "string" ? obj.text : "",
+    created_at: typeof obj.created_at === "string" ? obj.created_at : null,
+  };
+}
+
+/**
+ * Coerce a list-addenda payload (the server `{ addenda: [...] }` response, or a
+ * bare array) into a normalized {@link ScribeAddendum} list in append order.
+ * Empty-text entries are dropped (the server never stores them) so the UI never
+ * renders a blank addendum. Always returns an array (never throws).
+ */
+export function normalizeAddendaList(raw: unknown): ScribeAddendum[] {
+  const list = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).addenda)
+      ? ((raw as Record<string, unknown>).addenda as unknown[])
+      : [];
+  return list.map(normalizeAddendum).filter((entry) => entry.text.trim().length > 0);
+}
+
+/**
+ * Whether there is at least one addendum worth rendering in the view list. The
+ * compose box is shown whenever the workflow is available regardless of this;
+ * this just gates the "existing addenda" list vs an empty-state line.
+ */
+export function addendaHaveData(addenda: ScribeAddendum[] | null | undefined): boolean {
+  return Array.isArray(addenda) && addenda.some((entry) => entry.text.trim().length > 0);
+}
+
+/**
+ * Format an addendum's ISO timestamp into a stable, locale-independent display
+ * string (`YYYY-MM-DD HH:MM UTC`). Returns the raw value when it is not a
+ * parseable date, and an empty string when absent — so the view list always has
+ * a deterministic, time-stamped label (Req 18.2).
+ */
+export function formatAddendumTimestamp(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
+    ` ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`
+  );
+}
+
+/**
+ * A Vietnamese display label for an addendum's authoring clinician. The server
+ * exposes only the clinician's user id (never PII), so the label is the id when
+ * present and a generic "Bác sĩ" fallback otherwise.
+ */
+export function addendumAuthorLabel(author: number | null | undefined): string {
+  return typeof author === "number" && Number.isFinite(author) ? `Bác sĩ #${author}` : "Bác sĩ";
 }
