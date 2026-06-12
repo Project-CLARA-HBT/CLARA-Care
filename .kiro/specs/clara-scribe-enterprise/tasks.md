@@ -91,7 +91,7 @@ Wave-2 subagent assignment: **SA-ML** (grounding, extraction, E/M+CPT, specialty
 - [x] 3.2 Analytics: derive time-saved / edit-rate / degraded-rate from non-PII session metadata; assert PII-free telemetry. _Req 10.1, 10.4_
 - [x] 3.3 **Property tests P1–P6** (template completeness, transcript preservation, no-fabrication, audit/sign immutability, transition legality, PII-free telemetry). _Verification_
 - [x] 3.4 Integration tests: ML (ASR seam + generator + coding), API (routes + RBAC + audit + export), Web (streaming + sign). Existing scribe suite stays green. _Verification_
-- [~] 3.5 Regression gate: all flags off ⇒ behavior byte-for-byte current; then staged flag enablement + deploy (ml→api→web) with disk monitoring + instant rollback.
+- [x] 3.5 Regression gate: all flags off ⇒ behavior byte-for-byte current; then staged flag enablement + deploy (ml→api→web) with disk monitoring + instant rollback.
 
 ---
 
