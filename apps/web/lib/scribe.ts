@@ -307,6 +307,75 @@ export async function exportScribeNote(
   return { format: "md", markdown, data };
 }
 
+// ---------------------------------------------------------------------------
+// Transcript grounding / claim traceability (Requirement 12.7). Read-only
+// client for the additive grounding report persisted on a note version. The
+// server gates this behind `RAG_SCRIBE_GROUNDING_ENABLED` and answers 404 both
+// when the flag is off and when a version has no grounding metadata, so callers
+// MUST treat a rejection as "no grounding available" and render unchanged.
+// ---------------------------------------------------------------------------
+
+/** A single note statement with its grounding verdict + transcript provenance. */
+export type ScribeGroundedStatement = {
+  statement: string;
+  /** The note section key the statement was enumerated from. */
+  section: string;
+  /** Clinically significant assertion (vs boilerplate/heading). */
+  significant: boolean;
+  /** Critical-safety statement (medication, dose, allergy, vital, diagnosis). */
+  critical_safety: boolean;
+  /** True iff at least one transcript span entails the statement. */
+  grounded: boolean;
+  /** Transcript span ids that entail the statement (empty when ungrounded). */
+  supporting_span_ids: string[];
+  /** Verification method label. */
+  method: string;
+  /** "grounded" | "unverified". */
+  status: string;
+  /** Whether the statement is asserted in the note clinical text. */
+  asserted: boolean;
+  /** Corroborating FIDES fact-check verdict ("n/a" when unavailable). */
+  fact_check: string;
+};
+
+/** Additive grounding metadata for a note version (server `GroundingReport`). */
+export type ScribeGroundingReport = {
+  version?: string;
+  enabled: boolean;
+  statements: ScribeGroundedStatement[];
+  /** grounded_significant / total_significant. */
+  grounded_claim_rate: number;
+  /** Critical ungrounded statements surfaced for clinician confirmation. */
+  unverified_candidates: string[];
+  total_significant: number;
+  grounded_significant: number;
+};
+
+/** Read response for `GET /scribe/sessions/{id}/notes/{ver}/grounding`. */
+export type ScribeGroundingResponse = {
+  session_id: number;
+  version_no: number;
+  grounding: ScribeGroundingReport;
+};
+
+/**
+ * Fetch the additive grounding report for a note version (Requirement 12.7),
+ * mirroring the other read clients (`getScribeAudit` / `exportScribeNote`).
+ *
+ * The server gates this on `RAG_SCRIBE_GROUNDING_ENABLED` and returns 404 when
+ * the flag is off or the version carries no grounding metadata; callers should
+ * catch the rejection and render the editor exactly as before (no chips/panel).
+ */
+export async function getScribeGrounding(
+  sessionId: number,
+  versionNo: number
+): Promise<ScribeGroundingResponse> {
+  const response = await api.get<ScribeGroundingResponse>(
+    `/scribe/sessions/${sessionId}/notes/${versionNo}/grounding`
+  );
+  return response.data;
+}
+
 /** Interim transcript text for a chunk, emitted before the chunk is finalized. */
 export type ScribeStreamPartial = {
   index: number;

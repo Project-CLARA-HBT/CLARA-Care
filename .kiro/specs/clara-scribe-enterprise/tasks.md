@@ -102,7 +102,7 @@ Wave-2 subagent assignment: **SA-ML** (grounding, extraction, E/M+CPT, specialty
 - [x] 4.3 ML: `StructuredExtractor` (gated `RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`) — problems/medications/allergies/vitals with span+method provenance; RxCUI via `rag.normalize.drug_lexicon`/`EntityLinker`; empty list when absent (no fabrication); shares span registry with 4.1; write to `extraction_json`. _Req 13.1–13.7_
 - [x] 4.4 API: additive Alembic migration — nullable `grounding_json`, `extraction_json`, `wer_json`, `quality_json` on `ScribeNoteVersion`; `metrics_json` on `ScribeSession`; new append-only `ScribeAddendum` table. No destructive change. _Req 12.6, 13.5, 15, 16, 18_
 - [x] 4.5 API: `POST /scribe/sessions/{id}/notes` runs grounding (4.2) + extraction (4.3) as additive passes when flags on; add `GET .../notes/{ver}/grounding` and `.../notes/{ver}/extraction` read endpoints (clinician RBAC). _Req 12.7, 13_
-- [~] 4.6 Web: per-statement grounded/unverified chips with transcript-span drill-down + unverified-candidate review panel in the note editor. _Req 12.7_
+- [x] 4.6 Web: per-statement grounded/unverified chips with transcript-span drill-down + unverified-candidate review panel in the note editor. _Req 12.7_
 - [~] 4.7 **Property test P7** — additive metadata never mutates note `sections_json` text or transcript (grounding+extraction+coding combined). _Req 12.6, 13.5, 14.7_
 - [~] 4.8 **Property test P8** — grounding soundness + critical-safety suppression (grounded iff a span entails; no ungrounded critical statement asserted). _Req 12.2, 12.3, 12.4, 12.5_
 - [~] 4.9 **Property test P9** — structured-extraction provenance integrity + no-fabrication + RxCUI mapping. _Req 13.2, 13.3, 13.4, 13.6, 13.7_

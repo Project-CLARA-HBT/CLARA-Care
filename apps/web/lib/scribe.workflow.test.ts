@@ -6,6 +6,7 @@ import {
   exportScribeNote,
   generateScribeNote,
   getScribeAudit,
+  getScribeGrounding,
   signScribeNote,
 } from "@/lib/scribe";
 
@@ -115,6 +116,50 @@ describe("getScribeAudit (Req 8.4)", () => {
     expect(get).toHaveBeenCalledWith("/scribe/sessions/7/audit");
     expect(audit.entries).toHaveLength(1);
     expect(audit.entries[0].action).toBe("note_signed");
+  });
+});
+
+describe("getScribeGrounding (Req 12.7)", () => {
+  it("GETs the note-version grounding URL and returns the report shape", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        version_no: 2,
+        grounding: {
+          version: "scribe-grounding-v1",
+          enabled: true,
+          statements: [
+            {
+              statement: "BP 120/80",
+              section: "objective",
+              significant: true,
+              critical_safety: true,
+              grounded: true,
+              supporting_span_ids: ["seg-0003"],
+              method: "nli",
+              status: "grounded",
+              asserted: true,
+              fact_check: "supported",
+            },
+          ],
+          grounded_claim_rate: 1,
+          unverified_candidates: [],
+          total_significant: 1,
+          grounded_significant: 1,
+        },
+      },
+    });
+    const result = await getScribeGrounding(7, 2);
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/2/grounding");
+    expect(result.version_no).toBe(2);
+    expect(result.grounding.enabled).toBe(true);
+    expect(result.grounding.statements[0].supporting_span_ids).toEqual(["seg-0003"]);
+  });
+
+  it("propagates a rejection so the caller can render the editor unchanged (flag off / 404)", async () => {
+    get.mockRejectedValueOnce(new Error("Scribe grounding is disabled."));
+    await expect(getScribeGrounding(7, 1)).rejects.toThrow("disabled");
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/1/grounding");
   });
 });
 

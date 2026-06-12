@@ -21,12 +21,14 @@ import {
   captureScribeConsent,
   exportScribeNote,
   generateScribeNote,
+  getScribeGrounding,
   regenerateScribeSession,
   signScribeNote,
   streamScribe,
   transcribeScribeAudio,
   updateScribeSession,
   type ScribeExportFormat,
+  type ScribeGroundingReport,
 } from "@/lib/scribe";
 import {
   DEFAULT_SCRIBE_TEMPLATE_ID,
@@ -35,8 +37,15 @@ import {
   ScribeFlowState,
   computePipelineStages,
   concatSegmentsText,
+  formatGroundedClaimRate,
+  groundingChip,
+  groundingHasData,
+  normalizeGroundingReport,
   orderedNoteSections,
+  partitionGroundingStatements,
+  resolveTranscriptSpan,
   speakerChip,
+  type GroundingStatus,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
 
@@ -93,6 +102,16 @@ const STAGE_STATUS_LABELS: Record<ScribeStageStatus, string> = {
   completed: "hoàn tất",
   failed: "lỗi",
   warning: "cảnh báo",
+};
+
+// Grounding chip tones (Req 12.7): grounded statements are evidenced, unverified
+// statements need clinician confirmation. Kept in the same palette family as the
+// speaker chips so the editor reads consistently.
+const GROUNDING_CHIP_CLASSES: Record<GroundingStatus, string> = {
+  grounded:
+    "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100",
+  unverified:
+    "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-100",
 };
 
 const SIGNED_STATUSES = new Set(["signed", "exported"]);
@@ -164,6 +183,15 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const [exported, setExported] = useState(false);
   const [exportingFormat, setExportingFormat] = useState<ScribeExportFormat | null>(null);
 
+  // Grounding / claim-traceability surface (Req 12.7). Additive + best-effort:
+  // `grounding` stays null when the flag is off / the version has no metadata
+  // (the read 404s), so the editor renders exactly as before. `noteVersionNo`
+  // tracks the version generated in this session so we can fetch its report;
+  // it increments per generate/amend (the server increments the same way).
+  const [grounding, setGrounding] = useState<ScribeGroundingReport | null>(null);
+  const [noteVersionNo, setNoteVersionNo] = useState<number | null>(null);
+  const [expandedStatement, setExpandedStatement] = useState<string | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -185,6 +213,11 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     setNoteSections(existing);
     setNoteReady(hasContent);
     setNoteTemplateId(DEFAULT_SCRIBE_TEMPLATE_ID);
+    // Grounding is re-fetched per generated version; reset it on session switch
+    // so a prior session's report never leaks onto another note.
+    setGrounding(null);
+    setNoteVersionNo(null);
+    setExpandedStatement(null);
     // Consent re-gates per session; a signed/exported session has clearly
     // already passed consent so we don't block review of it.
     const signedAlready = SIGNED_STATUSES.has((session?.status ?? "").trim().toLowerCase());
@@ -409,6 +442,25 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   );
 
   // --- note generation -----------------------------------------------------
+  // Best-effort fetch of the additive grounding report for a generated version
+  // (Req 12.7). Silently no-ops when grounding is unavailable (flag off / 404 /
+  // transport error) so the editor degrades to the prior chip-less behavior.
+  const loadGrounding = useCallback(
+    async (versionNo: number) => {
+      if (!sessionId || !Number.isFinite(versionNo) || versionNo < 1) return;
+      try {
+        const response = await getScribeGrounding(sessionId, versionNo);
+        const report = normalizeGroundingReport(response.grounding);
+        setGrounding(groundingHasData(report) ? report : null);
+      } catch {
+        // Grounding is flag-gated server-side; absence is expected, not an error.
+        setGrounding(null);
+      }
+      setExpandedStatement(null);
+    },
+    [sessionId]
+  );
+
   const onGenerateNote = useCallback(async () => {
     if (!sessionId) return;
     if (!transcriptReady) {
@@ -426,6 +478,11 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setNoteSections(entries);
       setNoteTemplateId(templateId);
       setNoteReady(true);
+      // Each generate inserts the next note version server-side; mirror that
+      // count locally so we can fetch the matching grounding report (Req 12.7).
+      const nextVersion = (noteVersionNo ?? 0) + 1;
+      setNoteVersionNo(nextVersion);
+      void loadGrounding(nextVersion);
       pushNotice("success", "Đã soạn ghi chú theo mẫu.");
     } catch (error) {
       if (isMissingCapability(error)) {
@@ -440,6 +497,8 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           setNoteSections(entries);
           setNoteTemplateId(DEFAULT_SCRIBE_TEMPLATE_ID);
           setNoteReady(true);
+          // Legacy SOAP path produces no grounding metadata; clear any prior report.
+          setGrounding(null);
           pushNotice("success", "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).");
         } catch (fallbackError) {
           pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể soạn ghi chú.");
@@ -450,7 +509,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     } finally {
       setGenerating(false);
     }
-  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady]);
+  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, noteVersionNo]);
 
   const onSaveNoteEdits = useCallback(async () => {
     if (!sessionId) return;
@@ -503,11 +562,15 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       onSessionChange(updated);
       setSigned(false);
       setExported(false);
+      // Amend inserts a fresh note version; refresh grounding for it (Req 12.7).
+      const nextVersion = (noteVersionNo ?? 0) + 1;
+      setNoteVersionNo(nextVersion);
+      void loadGrounding(nextVersion);
       pushNotice("success", "Đã tạo bản sửa đổi mới (amended).");
     } catch (error) {
       pushNotice("error", error instanceof Error ? error.message : "Không thể tạo bản sửa đổi.");
     }
-  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft]);
+  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, noteVersionNo]);
 
   // --- export --------------------------------------------------------------
   const onExport = useCallback(
@@ -612,6 +675,10 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         exported,
         signing,
         exportingFormat,
+        grounding,
+        transcriptSegments: transcriptRows,
+        expandedStatement,
+        onToggleStatement: (key) => setExpandedStatement((prev) => (prev === key ? null : key)),
         onGenerateNote,
         onSectionChange: (key, value) =>
           setNoteSections((prev) => prev.map((entry) => (entry.key === key ? { ...entry, value } : entry))),
@@ -827,6 +894,10 @@ function renderNoteColumn(props: {
   exported: boolean;
   signing: boolean;
   exportingFormat: ScribeExportFormat | null;
+  grounding: ScribeGroundingReport | null;
+  transcriptSegments: ScribeStreamSegment[];
+  expandedStatement: string | null;
+  onToggleStatement: (key: string) => void;
   onGenerateNote: () => void;
   onSectionChange: (key: string, value: string) => void;
   onSaveNoteEdits: () => void;
@@ -915,6 +986,13 @@ function renderNoteColumn(props: {
           </div>
         ) : null}
 
+        {renderGroundingPanel({
+          grounding: props.grounding,
+          segments: props.transcriptSegments,
+          expandedStatement: props.expandedStatement,
+          onToggleStatement: props.onToggleStatement,
+        })}
+
         {editorLocked ? (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap gap-2" data-testid="scribe-export-actions">
@@ -938,5 +1016,145 @@ function renderNoteColumn(props: {
         ) : null}
       </div>
     </aside>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Grounding panel (Requirement 12.7) — per-statement grounded/unverified chips
+// with transcript-span drill-down + an unverified-candidate review panel. The
+// whole surface is additive: when grounding is absent (flag off / no metadata)
+// `groundingHasData` is false and nothing renders, so the editor is unchanged.
+// ---------------------------------------------------------------------------
+
+function renderGroundingPanel({
+  grounding,
+  segments,
+  expandedStatement,
+  onToggleStatement,
+}: {
+  grounding: ScribeGroundingReport | null;
+  segments: ScribeStreamSegment[];
+  expandedStatement: string | null;
+  onToggleStatement: (key: string) => void;
+}) {
+  if (!groundingHasData(grounding) || !grounding) return null;
+
+  const { grounded, unverified } = partitionGroundingStatements(grounding);
+  const significant = [...grounded, ...unverified];
+  const candidates = grounding.unverified_candidates;
+
+  return (
+    <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-grounding">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className={sectionTitleClass}>Đối chiếu bản ghi</h4>
+        <span
+          className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
+          data-testid="scribe-grounding-rate"
+        >
+          {formatGroundedClaimRate(grounding.grounded_claim_rate)} có dẫn chứng
+        </span>
+      </div>
+      <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
+        {grounded.length} câu có dẫn chứng · {unverified.length} câu chưa xác minh
+      </p>
+
+      {significant.length > 0 ? (
+        <ul className="space-y-2" data-testid="scribe-grounding-statements">
+          {significant.map((statement, index) => {
+            const chip = groundingChip(statement);
+            const key = `${statement.section}:${index}:${statement.statement}`;
+            const open = expandedStatement === key;
+            const spans = statement.supporting_span_ids.map((spanId) =>
+              resolveTranscriptSpan(spanId, segments)
+            );
+            return (
+              <li
+                key={key}
+                className={`rounded-lg border px-3 py-2 ${GROUNDING_CHIP_CLASSES[chip.tone]}`}
+                data-testid={`scribe-grounding-statement-${chip.status}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onToggleStatement(key)}
+                  className="flex w-full items-start gap-2 text-left"
+                  aria-expanded={open}
+                >
+                  <span className="mt-0.5 shrink-0 rounded-full border border-current px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]">
+                    {chip.label}
+                  </span>
+                  <span className={`flex-1 text-sm leading-5 ${bodyTextClass}`}>
+                    {statement.statement}
+                    {chip.critical ? (
+                      <span className="ml-1 text-[10px] font-black uppercase text-rose-600 dark:text-rose-300">
+                        · an toàn
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={`mt-0.5 text-[10px] font-bold ${mutedTextClass}`}>
+                    {statement.supporting_span_ids.length > 0
+                      ? `${statement.supporting_span_ids.length} đoạn`
+                      : open
+                        ? "▲"
+                        : "▾"}
+                  </span>
+                </button>
+                {open ? (
+                  <div className="mt-2 space-y-1" data-testid="scribe-grounding-spans">
+                    {spans.length === 0 ? (
+                      <p className={`text-[11px] italic ${mutedTextClass}`}>
+                        Không có đoạn bản ghi nào hỗ trợ câu này.
+                      </p>
+                    ) : (
+                      spans.map((span, spanIndex) => (
+                        <div
+                          key={`${span.spanId}-${spanIndex}`}
+                          className="rounded-md border border-[#B6D4FE] bg-white/70 px-2 py-1 dark:border-sky-800 dark:bg-slate-950/50"
+                        >
+                          <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
+                            {span.spanId}
+                            {span.resolved ? ` · ${speakerChip(span.speaker).label}` : " · chưa khớp"}
+                          </p>
+                          <p className={`text-sm leading-5 ${secondaryTextClass}`}>
+                            {span.text || "(không tìm thấy nội dung)"}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {candidates.length > 0 ? (
+        <div
+          className="rounded-lg border border-rose-300 bg-rose-50 p-3 dark:border-rose-500/70 dark:bg-rose-500/15"
+          data-testid="scribe-unverified-candidates"
+        >
+          <h5 className="text-[11px] font-black uppercase tracking-[0.14em] text-rose-700 dark:text-rose-200">
+            Cần bác sĩ xác nhận ({candidates.length})
+          </h5>
+          <p className={`mt-1 text-[11px] leading-4 ${secondaryTextClass}`}>
+            Các phát biểu an toàn quan trọng dưới đây không có dẫn chứng trong bản ghi nên không được
+            khẳng định trong ghi chú.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {candidates.map((candidate, index) => (
+              <li
+                key={`${index}-${candidate}`}
+                className="flex gap-2 text-sm leading-5 text-rose-800 dark:text-rose-100"
+              >
+                <span aria-hidden className="mt-0.5 text-rose-500">
+                  ⚠
+                </span>
+                <span>{candidate}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }

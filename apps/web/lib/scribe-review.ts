@@ -7,7 +7,7 @@
  * in `components/scribe/enterprise-review.tsx` and consumes these helpers.
  */
 
-import type { ScribeStreamSegment } from "@/lib/scribe";
+import type { ScribeGroundedStatement, ScribeGroundingReport, ScribeStreamSegment } from "@/lib/scribe";
 
 // ---------------------------------------------------------------------------
 // Templates (mirrors the ML pure-data registry in
@@ -342,4 +342,235 @@ export function parseContentDispositionFilename(header: string | null | undefine
   const basic = /filename="?([^";]+)"?/i.exec(header);
   if (basic?.[1]) return basic[1].trim();
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Transcript grounding / claim traceability (Requirement 12.7). Pure helpers
+// backing the per-statement grounded/unverified chips, the transcript-span
+// drill-down, and the unverified-candidate review panel. The grounding report
+// is additive metadata: nothing here mutates the note text or transcript.
+// ---------------------------------------------------------------------------
+
+/**
+ * A parsed transcript span identifier. The server emits span ids as either a
+ * whole-segment reference (`seg-0003`) or a sub-range with character offsets
+ * (`seg-0003:6-16`). `segmentIndex` is the numeric segment ordinal; `start`/
+ * `end` are the optional half-open character offsets within that segment.
+ */
+export type ParsedSpanId = {
+  raw: string;
+  segmentIndex: number | null;
+  start: number | null;
+  end: number | null;
+};
+
+const SPAN_ID_RE = /^seg-(\d+)(?::(\d+)-(\d+))?$/i;
+
+/**
+ * Parse a transcript span id (`seg-0003` or `seg-0003:6-16`) into its segment
+ * ordinal + optional character offsets. Returns null fields for any value that
+ * is not a recognized span id (never throws).
+ */
+export function parseSpanId(spanId: string | null | undefined): ParsedSpanId {
+  const raw = String(spanId ?? "").trim();
+  const empty: ParsedSpanId = { raw, segmentIndex: null, start: null, end: null };
+  if (!raw) return empty;
+  const match = SPAN_ID_RE.exec(raw);
+  if (!match) return empty;
+  const segmentIndex = Number.parseInt(match[1], 10);
+  const start = match[2] !== undefined ? Number.parseInt(match[2], 10) : null;
+  const end = match[3] !== undefined ? Number.parseInt(match[3], 10) : null;
+  return {
+    raw,
+    segmentIndex: Number.isNaN(segmentIndex) ? null : segmentIndex,
+    start: start !== null && Number.isNaN(start) ? null : start,
+    end: end !== null && Number.isNaN(end) ? null : end,
+  };
+}
+
+/** A transcript span id resolved against the session's finalized segments. */
+export type ResolvedTranscriptSpan = {
+  /** The original span id. */
+  spanId: string;
+  /** The backing segment ordinal (null when the id was unparseable). */
+  segmentIndex: number | null;
+  /** Bounded speaker tone of the backing segment (`unknown` when unresolved). */
+  speaker: SpeakerTone;
+  /** The supporting text — the sub-range slice when offsets are present. */
+  text: string;
+  /** The full backing segment text. */
+  full: string;
+  start: number | null;
+  end: number | null;
+  /** True when a backing segment was found for the span id. */
+  resolved: boolean;
+};
+
+/**
+ * Resolve a transcript span id to its supporting transcript text + speaker for
+ * the drill-down. The segment is matched by its `index` (falling back to array
+ * position); when the id carries character offsets the slice is returned as the
+ * span text. An unresolved id degrades gracefully (empty text, `unknown`
+ * speaker, `resolved: false`) so the UI can still show the raw id.
+ */
+export function resolveTranscriptSpan(
+  spanId: string | null | undefined,
+  segments: ScribeStreamSegment[]
+): ResolvedTranscriptSpan {
+  const parsed = parseSpanId(spanId);
+  const base: ResolvedTranscriptSpan = {
+    spanId: parsed.raw,
+    segmentIndex: parsed.segmentIndex,
+    speaker: "unknown",
+    text: "",
+    full: "",
+    start: parsed.start,
+    end: parsed.end,
+    resolved: false,
+  };
+  if (parsed.segmentIndex === null || !Array.isArray(segments)) return base;
+  const segment =
+    segments.find((item) => item?.index === parsed.segmentIndex) ?? segments[parsed.segmentIndex];
+  if (!segment) return base;
+  const full = typeof segment.text === "string" ? segment.text : "";
+  let text = full;
+  if (parsed.start !== null && parsed.end !== null && parsed.end > parsed.start) {
+    text = full.slice(parsed.start, parsed.end);
+  }
+  return {
+    spanId: parsed.raw,
+    segmentIndex: parsed.segmentIndex,
+    speaker: speakerChip(segment.speaker).tone,
+    text: text || full,
+    full,
+    start: parsed.start,
+    end: parsed.end,
+    resolved: true,
+  };
+}
+
+/** Bounded grounding status for a statement chip. */
+export type GroundingStatus = "grounded" | "unverified";
+
+export type GroundingChip = {
+  status: GroundingStatus;
+  /** Stable tone token the component maps to colors. */
+  tone: GroundingStatus;
+  /** Vietnamese display label. */
+  label: string;
+  /** True for a critical-safety statement (medication/dose/allergy/vital/diagnosis). */
+  critical: boolean;
+};
+
+/**
+ * Derive the grounded/unverified chip for a statement. The `grounded` boolean
+ * is the source of truth (Req 12.3: grounded iff a span entails it); anything
+ * not grounded is surfaced as `unverified` (Req 12.4).
+ */
+export function groundingChip(
+  statement: Pick<ScribeGroundedStatement, "grounded" | "critical_safety">
+): GroundingChip {
+  const grounded = Boolean(statement?.grounded);
+  const status: GroundingStatus = grounded ? "grounded" : "unverified";
+  return {
+    status,
+    tone: status,
+    label: grounded ? "Có dẫn chứng" : "Chưa xác minh",
+    critical: Boolean(statement?.critical_safety),
+  };
+}
+
+function normalizeStatement(raw: unknown): ScribeGroundedStatement {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const spanIds = Array.isArray(obj.supporting_span_ids)
+    ? obj.supporting_span_ids.filter((id): id is string => typeof id === "string")
+    : [];
+  const grounded = Boolean(obj.grounded);
+  return {
+    statement: typeof obj.statement === "string" ? obj.statement : "",
+    section: typeof obj.section === "string" ? obj.section : "",
+    significant: Boolean(obj.significant),
+    critical_safety: Boolean(obj.critical_safety),
+    grounded,
+    supporting_span_ids: spanIds,
+    method: typeof obj.method === "string" ? obj.method : "",
+    status: typeof obj.status === "string" ? obj.status : grounded ? "grounded" : "unverified",
+    asserted: Boolean(obj.asserted),
+    fact_check: typeof obj.fact_check === "string" ? obj.fact_check : "n/a",
+  };
+}
+
+/**
+ * Coerce an arbitrary grounding payload (e.g. the server `grounding` object)
+ * into a well-formed {@link ScribeGroundingReport}, defending against missing
+ * or malformed fields so the UI never throws on partial data.
+ */
+export function normalizeGroundingReport(raw: unknown): ScribeGroundingReport {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const statements = Array.isArray(obj.statements) ? obj.statements.map(normalizeStatement) : [];
+  const candidates = Array.isArray(obj.unverified_candidates)
+    ? obj.unverified_candidates.filter((c): c is string => typeof c === "string")
+    : [];
+  const rate = typeof obj.grounded_claim_rate === "number" && Number.isFinite(obj.grounded_claim_rate)
+    ? obj.grounded_claim_rate
+    : 0;
+  return {
+    version: typeof obj.version === "string" ? obj.version : undefined,
+    enabled: Boolean(obj.enabled),
+    statements,
+    grounded_claim_rate: rate,
+    unverified_candidates: candidates,
+    total_significant:
+      typeof obj.total_significant === "number" ? obj.total_significant : statements.filter((s) => s.significant).length,
+    grounded_significant:
+      typeof obj.grounded_significant === "number"
+        ? obj.grounded_significant
+        : statements.filter((s) => s.significant && s.grounded).length,
+  };
+}
+
+/**
+ * Whether a grounding report carries anything worth surfacing. False when the
+ * report is absent, disabled, or empty so the editor renders exactly as before
+ * (Req 12.1 — grounding off ⇒ no chips/panel).
+ */
+export function groundingHasData(report: ScribeGroundingReport | null | undefined): boolean {
+  if (!report || !report.enabled) return false;
+  const hasStatements = Array.isArray(report.statements) && report.statements.length > 0;
+  const hasCandidates =
+    Array.isArray(report.unverified_candidates) && report.unverified_candidates.length > 0;
+  return hasStatements || hasCandidates;
+}
+
+export type GroundingPartition = {
+  /** Clinically significant grounded statements. */
+  grounded: ScribeGroundedStatement[];
+  /** Clinically significant ungrounded (unverified) statements. */
+  unverified: ScribeGroundedStatement[];
+};
+
+/**
+ * Split a report's clinically significant statements into grounded vs
+ * unverified buckets (boilerplate/insignificant statements are dropped). The
+ * relative order of statements is preserved within each bucket.
+ */
+export function partitionGroundingStatements(
+  report: ScribeGroundingReport | null | undefined
+): GroundingPartition {
+  const statements = report && Array.isArray(report.statements) ? report.statements : [];
+  const significant = statements.filter((statement) => statement?.significant);
+  return {
+    grounded: significant.filter((statement) => Boolean(statement.grounded)),
+    unverified: significant.filter((statement) => !statement.grounded),
+  };
+}
+
+/**
+ * Format the grounded-claim rate as a whole-percent string for the summary
+ * badge. Clamps to 0–100 and rounds to the nearest percent.
+ */
+export function formatGroundedClaimRate(rate: number | null | undefined): string {
+  const value = typeof rate === "number" && Number.isFinite(rate) ? rate : 0;
+  const clamped = Math.min(1, Math.max(0, value));
+  return `${Math.round(clamped * 100)}%`;
 }

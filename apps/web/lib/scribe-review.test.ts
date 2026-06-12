@@ -6,14 +6,21 @@ import {
   SCRIBE_REVIEW_TEMPLATES,
   computePipelineStages,
   concatSegmentsText,
+  formatGroundedClaimRate,
   getReviewTemplate,
+  groundingChip,
+  groundingHasData,
+  normalizeGroundingReport,
   orderedNoteSections,
   parseContentDispositionFilename,
+  parseSpanId,
+  partitionGroundingStatements,
+  resolveTranscriptSpan,
   speakerChip,
   type ScribeFlowState,
   type ScribeStageId,
 } from "@/lib/scribe-review";
-import type { ScribeStreamSegment } from "@/lib/scribe";
+import type { ScribeGroundedStatement, ScribeStreamSegment } from "@/lib/scribe";
 
 /**
  * Pure helpers backing the Clara Scribe enterprise review/sign/export UI
@@ -248,5 +255,198 @@ describe("parseContentDispositionFilename (Req 9 — export download)", () => {
     expect(parseContentDispositionFilename("attachment")).toBeNull();
     expect(parseContentDispositionFilename(null)).toBeNull();
     expect(parseContentDispositionFilename(undefined)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Transcript grounding / claim traceability (Requirement 12.7).
+// ---------------------------------------------------------------------------
+
+function makeStatement(overrides: Partial<ScribeGroundedStatement> = {}): ScribeGroundedStatement {
+  return {
+    statement: "Bệnh nhân đau bụng",
+    section: "subjective",
+    significant: true,
+    critical_safety: false,
+    grounded: true,
+    supporting_span_ids: ["seg-0001"],
+    method: "nli",
+    status: "grounded",
+    asserted: true,
+    fact_check: "supported",
+    ...overrides,
+  };
+}
+
+describe("parseSpanId (Req 12.7 — span drill-down)", () => {
+  it("parses a whole-segment span id", () => {
+    expect(parseSpanId("seg-0003")).toEqual({ raw: "seg-0003", segmentIndex: 3, start: null, end: null });
+  });
+
+  it("parses a sub-range span id with character offsets", () => {
+    expect(parseSpanId("seg-0003:6-16")).toEqual({ raw: "seg-0003:6-16", segmentIndex: 3, start: 6, end: 16 });
+  });
+
+  it("returns null fields for an unrecognized or empty id (never throws)", () => {
+    expect(parseSpanId("garbage").segmentIndex).toBeNull();
+    expect(parseSpanId("").segmentIndex).toBeNull();
+    expect(parseSpanId(null).segmentIndex).toBeNull();
+    expect(parseSpanId(undefined).segmentIndex).toBeNull();
+  });
+});
+
+describe("resolveTranscriptSpan (Req 12.7 — span drill-down)", () => {
+  const segments = [
+    makeSegment({ index: 0, text: "xin chào bác sĩ", speaker: "patient" }),
+    makeSegment({ index: 3, text: "huyết áp 120/80 mmHg", speaker: "clinician" }),
+  ];
+
+  it("resolves a whole-segment span to the full segment text + speaker tone", () => {
+    const span = resolveTranscriptSpan("seg-0003", segments);
+    expect(span.resolved).toBe(true);
+    expect(span.text).toBe("huyết áp 120/80 mmHg");
+    expect(span.full).toBe("huyết áp 120/80 mmHg");
+    expect(span.speaker).toBe("clinician");
+  });
+
+  it("slices the supporting sub-range when offsets are present", () => {
+    const span = resolveTranscriptSpan("seg-0003:9-15", segments);
+    expect(span.text).toBe("120/80");
+    expect(span.full).toBe("huyết áp 120/80 mmHg");
+  });
+
+  it("degrades to an unresolved span (empty text, unknown speaker) for an unknown segment", () => {
+    const span = resolveTranscriptSpan("seg-0099", segments);
+    expect(span.resolved).toBe(false);
+    expect(span.text).toBe("");
+    expect(span.speaker).toBe("unknown");
+  });
+
+  it("never resolves an unparseable id", () => {
+    expect(resolveTranscriptSpan("nope", segments).resolved).toBe(false);
+  });
+});
+
+describe("groundingChip (Req 12.3 / 12.4 — grounded vs unverified)", () => {
+  it("maps a grounded statement to the grounded tone", () => {
+    const chip = groundingChip(makeStatement({ grounded: true }));
+    expect(chip.status).toBe("grounded");
+    expect(chip.tone).toBe("grounded");
+    expect(chip.label).toBe("Có dẫn chứng");
+  });
+
+  it("maps an ungrounded statement to the unverified tone", () => {
+    const chip = groundingChip(makeStatement({ grounded: false }));
+    expect(chip.status).toBe("unverified");
+    expect(chip.label).toBe("Chưa xác minh");
+  });
+
+  it("carries the critical-safety flag through", () => {
+    expect(groundingChip(makeStatement({ critical_safety: true })).critical).toBe(true);
+  });
+
+  it("only ever yields grounded or unverified for any statement", () => {
+    fc.assert(
+      fc.property(fc.boolean(), fc.boolean(), (grounded, critical) => {
+        const chip = groundingChip(makeStatement({ grounded, critical_safety: critical }));
+        expect(["grounded", "unverified"]).toContain(chip.status);
+        expect(chip.status).toBe(grounded ? "grounded" : "unverified");
+      })
+    );
+  });
+});
+
+describe("partitionGroundingStatements (Req 12.7 — grounded/unverified split)", () => {
+  it("buckets only clinically significant statements and drops boilerplate", () => {
+    const report = normalizeGroundingReport({
+      enabled: true,
+      statements: [
+        makeStatement({ statement: "A grounded", grounded: true, significant: true }),
+        makeStatement({ statement: "B unverified", grounded: false, significant: true }),
+        makeStatement({ statement: "C heading", grounded: false, significant: false }),
+      ],
+    });
+    const { grounded, unverified } = partitionGroundingStatements(report);
+    expect(grounded.map((s) => s.statement)).toEqual(["A grounded"]);
+    expect(unverified.map((s) => s.statement)).toEqual(["B unverified"]);
+  });
+
+  it("every significant statement lands in exactly one bucket", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.record({ grounded: fc.boolean(), significant: fc.boolean() }), { maxLength: 12 }),
+        (rows) => {
+          const report = normalizeGroundingReport({
+            enabled: true,
+            statements: rows.map((row, index) =>
+              makeStatement({ statement: `s${index}`, grounded: row.grounded, significant: row.significant })
+            ),
+          });
+          const { grounded, unverified } = partitionGroundingStatements(report);
+          const significantCount = rows.filter((row) => row.significant).length;
+          expect(grounded.length + unverified.length).toBe(significantCount);
+          // Buckets are disjoint by construction.
+          for (const s of grounded) expect(s.grounded).toBe(true);
+          for (const s of unverified) expect(s.grounded).toBe(false);
+        }
+      )
+    );
+  });
+});
+
+describe("normalizeGroundingReport (Req 12.7 — defensive coercion)", () => {
+  it("fills safe defaults for a malformed/partial payload (never throws)", () => {
+    const report = normalizeGroundingReport({ enabled: true, statements: "nope" });
+    expect(report.statements).toEqual([]);
+    expect(report.unverified_candidates).toEqual([]);
+    expect(report.grounded_claim_rate).toBe(0);
+  });
+
+  it("derives significant counts when the server omits them", () => {
+    const report = normalizeGroundingReport({
+      enabled: true,
+      statements: [
+        makeStatement({ significant: true, grounded: true }),
+        makeStatement({ significant: true, grounded: false }),
+        makeStatement({ significant: false, grounded: false }),
+      ],
+    });
+    expect(report.total_significant).toBe(2);
+    expect(report.grounded_significant).toBe(1);
+  });
+
+  it("coerces a non-object payload to a disabled empty report", () => {
+    expect(normalizeGroundingReport(null).enabled).toBe(false);
+    expect(normalizeGroundingReport(undefined).statements).toEqual([]);
+  });
+});
+
+describe("groundingHasData (Req 12.1 — flag off ⇒ render unchanged)", () => {
+  it("is false for an absent, disabled, or empty report", () => {
+    expect(groundingHasData(null)).toBe(false);
+    expect(groundingHasData(normalizeGroundingReport({ enabled: false, statements: [makeStatement()] }))).toBe(
+      false
+    );
+    expect(groundingHasData(normalizeGroundingReport({ enabled: true }))).toBe(false);
+  });
+
+  it("is true when enabled with at least one statement or unverified candidate", () => {
+    expect(groundingHasData(normalizeGroundingReport({ enabled: true, statements: [makeStatement()] }))).toBe(
+      true
+    );
+    expect(
+      groundingHasData(normalizeGroundingReport({ enabled: true, unverified_candidates: ["penicillin 500mg"] }))
+    ).toBe(true);
+  });
+});
+
+describe("formatGroundedClaimRate (Req 12.8 — summary badge)", () => {
+  it("renders a whole-percent string and clamps to 0–100", () => {
+    expect(formatGroundedClaimRate(1)).toBe("100%");
+    expect(formatGroundedClaimRate(0.5)).toBe("50%");
+    expect(formatGroundedClaimRate(0)).toBe("0%");
+    expect(formatGroundedClaimRate(2)).toBe("100%");
+    expect(formatGroundedClaimRate(-1)).toBe("0%");
+    expect(formatGroundedClaimRate(NaN)).toBe("0%");
   });
 });
