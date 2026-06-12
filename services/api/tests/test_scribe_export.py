@@ -220,3 +220,144 @@ def test_fhir_flag_off_returns_404_even_when_signed(monkeypatch) -> None:
     _progress_to_signed(token, sid)
     r = client.get(f"/api/v1/scribe/sessions/{sid}/export?format=fhir", headers=_auth(token))
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Task 6.1 / Requirement 17: FHIR Composition + Encounter export.
+# ---------------------------------------------------------------------------
+
+
+def test_fhir_composition_export_emits_composition_encounter_and_doc_ref(monkeypatch) -> None:
+    """Req 17.2/17.3/17.4: fhir_composition emits Composition (1:1 sections + signer +
+    timestamp + attribution) + Encounter (from context) alongside DocumentReference."""
+
+    _mock_soap(monkeypatch)
+    _enable(monkeypatch, rag_scribe_fhir_composition_enabled=True)
+    token = _login("dr.fhircomp@doctor.clara")
+    sid = _create_session(token)
+    _set_encounter(sid)
+    _progress_to_signed(token, sid)
+
+    r = client.get(
+        f"/api/v1/scribe/sessions/{sid}/export?format=fhir_composition", headers=_auth(token)
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["format"] == "fhir_composition"
+
+    # Composition.
+    comp = body["composition"]
+    assert comp["resourceType"] == "Composition"
+    assert comp["status"] == "final"
+    # One Composition section per template (SOAP) section, in template order.
+    section_titles = [s["title"] for s in comp["section"]]
+    assert section_titles == ["subjective", "objective", "assessment", "plan"]
+    # Section text round-trips the note section content.
+    sub_div = comp["section"][0]["text"]["div"]
+    assert "s-text" in sub_div
+    assert comp["section"][3]["text"]["div"].find("p-text") != -1
+    # Signing clinician + sign timestamp.
+    assert comp["author"] and comp["author"][0]["display"]
+    assert comp["date"] is not None
+    # Required source/medical attribution travels with the resource.
+    assert "attribution" in comp["meta"]
+
+    # Encounter derived from the (opaque, non-PII) encounter context.
+    enc = body["encounter"]
+    assert enc["resourceType"] == "Encounter"
+    assert enc["class"]["code"] == "follow-up"
+    assert enc["period"]["start"] == "2026-04-10T09:30:00+00:00"
+    assert enc["subject"]["reference"] == "opaque-patient-123"
+
+    # DocumentReference still emitted alongside.
+    doc = body["document_reference"]
+    assert doc["resourceType"] == "DocumentReference"
+    assert "disclaimer" in doc["content"][0]["attachment"]["data"].lower()
+
+
+def test_fhir_composition_section_count_matches_template_sections(monkeypatch) -> None:
+    """Req 17.2: Composition has exactly one section per note template section."""
+
+    def fake_proxy(path: str, _payload: dict[str, Any], **_kw: Any) -> dict[str, Any]:
+        # A non-SOAP template returns its declared ordered sections verbatim via
+        # the ML note endpoint (no SOAP-normalization placeholder keys).
+        if path.endswith("/scribe/note"):
+            return {
+                "sections": {
+                    "chief_complaint": "cc",
+                    "history": "hx",
+                    "exam": "ex",
+                    "assessment": "ax",
+                    "plan": "pl",
+                }
+            }
+        return {"subjective": "s", "objective": "o", "assessment": "a", "plan": "p"}
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.scribe.proxy_ml_post", fake_proxy)
+    _enable(
+        monkeypatch,
+        rag_scribe_fhir_composition_enabled=True,
+        rag_scribe_templates_enabled=True,
+    )
+    token = _login("dr.fhirtpl@doctor.clara")
+    sid = _create_session(token)
+    # Generate + sign with a non-SOAP template so section keys are the template's.
+    g = client.post(
+        f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+        json={"template_id": "hp"},
+    )
+    assert g.status_code == 200, g.text
+    s = client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+    assert s.status_code == 200, s.text
+
+    r = client.get(
+        f"/api/v1/scribe/sessions/{sid}/export?format=fhir_composition", headers=_auth(token)
+    )
+    assert r.status_code == 200, r.text
+    comp = r.json()["composition"]
+    assert [s["title"] for s in comp["section"]] == [
+        "chief_complaint", "history", "exam", "assessment", "plan"
+    ]
+
+
+def test_fhir_composition_flag_off_returns_404_other_formats_work(monkeypatch) -> None:
+    """Req 17.1/11.1: composition flag off ⇒ 404; md + fhir DocumentReference still work."""
+
+    _mock_soap(monkeypatch)
+    _enable(
+        monkeypatch,
+        rag_scribe_fhir_composition_enabled=False,
+        rag_scribe_fhir_export_enabled=True,
+    )
+    token = _login("dr.fhircompoff@doctor.clara")
+    sid = _create_session(token)
+    _set_encounter(sid)
+    _progress_to_signed(token, sid)
+
+    r = client.get(
+        f"/api/v1/scribe/sessions/{sid}/export?format=fhir_composition", headers=_auth(token)
+    )
+    assert r.status_code == 404
+
+    # md still works.
+    rmd = client.get(f"/api/v1/scribe/sessions/{sid}/export?format=md", headers=_auth(token))
+    assert rmd.status_code == 200, rmd.text
+    assert rmd.json()["format"] == "md"
+
+    # fhir DocumentReference still works (independent flag).
+    rfhir = client.get(f"/api/v1/scribe/sessions/{sid}/export?format=fhir", headers=_auth(token))
+    assert rfhir.status_code == 200, rfhir.text
+    assert rfhir.json()["format"] == "fhir"
+
+
+def test_fhir_composition_draft_rejected(monkeypatch) -> None:
+    """Req 17.6: exporting a draft as fhir_composition is rejected (409)."""
+
+    _mock_soap(monkeypatch)
+    _enable(monkeypatch, rag_scribe_fhir_composition_enabled=True)
+    token = _login("dr.fhircompdraft@doctor.clara")
+    sid = _create_session(token)
+    r = client.get(
+        f"/api/v1/scribe/sessions/{sid}/export?format=fhir_composition", headers=_auth(token)
+    )
+    assert r.status_code == 409, r.text

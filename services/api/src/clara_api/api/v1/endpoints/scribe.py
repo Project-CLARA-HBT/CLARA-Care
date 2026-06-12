@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import UTC, date, datetime
 from typing import Any, Literal
+from xml.sax.saxutils import escape
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -1485,6 +1486,100 @@ def _note_to_markdown(
     return "\n".join(lines).strip() or f"# {item.title or 'Clinical note'}"
 
 
+def _fhir_narrative(text: str) -> dict[str, str]:
+    """Build a FHIR ``Narrative`` whose xhtml ``div`` round-trips the section text.
+
+    The raw section text is XML-escaped inside a single ``<div>`` wrapper so the
+    original note text is exactly recoverable (un-escape + strip the wrapper). This
+    keeps the Composition interface-only while satisfying the section round-trip
+    correspondence (Req 17.2).
+    """
+
+    return {
+        "status": "generated",
+        "div": (
+            '<div xmlns="http://www.w3.org/1999/xhtml">'
+            f"{escape(text)}"
+            "</div>"
+        ),
+    }
+
+
+def _fhir_composition(
+    item: ScribeSession,
+    *,
+    sections: dict[str, Any],
+    signed_by_label: str | None,
+    signed_at: datetime | None,
+    encounter: dict[str, str],
+    attribution: str,
+) -> dict[str, Any]:
+    """Build the interface-only FHIR ``Composition`` resource (Req 17.2/17.4).
+
+    Emits exactly one ``section[]`` entry per declared note template section, in
+    template order (``sections`` preserves the generator's ordered keys), each
+    carrying the section's text as an xhtml narrative. ``None``-valued keys (legacy
+    SOAP-normalization placeholders for sections that were never generated) are
+    skipped so the Composition mirrors the template's declared sections; an empty
+    string is a declared section (Req 6.2) and is retained. References the signing
+    clinician + sign timestamp and embeds the required source/medical attribution.
+    No live EHR write (Req 17.5) — this is a JSON shape only.
+    """
+
+    composition_sections = [
+        {
+            "title": str(key),
+            "text": _fhir_narrative("" if value is None else str(value)),
+        }
+        for key, value in sections.items()
+        if value is not None
+    ]
+    composition: dict[str, Any] = {
+        "resourceType": "Composition",
+        "status": "final",
+        "type": {"text": "Clinical note"},
+        "title": item.title or "Clinical note",
+        # Sign timestamp (Req 17.4); null when no signed version is available.
+        "date": signed_at.isoformat() if signed_at is not None else None,
+        # Signing clinician as the document author (Req 17.4).
+        "author": ([{"display": signed_by_label}] if signed_by_label else []),
+        "section": composition_sections,
+        # Encounter linkage so the Composition references its visit context (Req 17.3).
+        "encounter": {"reference": "#scribe-encounter"},
+        # Required source/medical attribution travels with the resource (Req 17.4).
+        "meta": {"attribution": attribution},
+    }
+    return composition
+
+
+def _fhir_encounter(encounter: dict[str, str], *, attribution: str) -> dict[str, Any]:
+    """Build the interface-only FHIR ``Encounter`` resource from encounter context (Req 17.3).
+
+    Maps the session's non-PII encounter context (visit type, encounter datetime,
+    opaque patient reference) onto FHIR ``Encounter`` fields so each context value is
+    recoverable. Only present context keys are emitted (no PII is fabricated for
+    legacy/blank sessions). Interface-only — no live EHR write (Req 17.5).
+    """
+
+    resource: dict[str, Any] = {
+        "resourceType": "Encounter",
+        "id": "scribe-encounter",
+        "status": "finished",
+        "meta": {"attribution": attribution},
+    }
+    visit_type = encounter.get("visit_type")
+    if visit_type:
+        resource["class"] = {"code": visit_type, "display": visit_type}
+    encounter_at = encounter.get("encounter_at")
+    if encounter_at:
+        resource["period"] = {"start": encounter_at}
+    patient_ref = encounter.get("patient_ref")
+    if patient_ref:
+        # Opaque, non-PII patient reference (Req 5.2/17.3).
+        resource["subject"] = {"reference": patient_ref}
+    return resource
+
+
 def _slug_export_name(value: str) -> str:
     """Filesystem-safe slug for the exported DOCX filename."""
 
@@ -1500,12 +1595,18 @@ def export_note(
     token: TokenPayload = DOCTOR_ROLE_DEP,
     db: Session = Depends(get_db),
 ) -> Any:
-    """Export a signed/exported note as Markdown, DOCX, or a FHIR DocumentReference (Req 9).
+    """Export a signed/exported note as Markdown, DOCX, or FHIR resources (Req 9, Req 17).
 
     All formats include the note's template sections, the encounter context, the
     signing clinician + sign timestamp, and the required source/medical attribution
-    (Req 9.2). DOCX reuses the existing workspace DOCX render path (Req 9.1). Export
-    is permitted only for ``signed``/``exported`` notes (Req 9.4) and is flag-gated.
+    (Req 9.2). DOCX reuses the existing workspace DOCX render path (Req 9.1).
+    ``format=fhir`` emits a FHIR ``DocumentReference`` (Req 9.3, flag-gated by
+    ``RAG_SCRIBE_FHIR_EXPORT_ENABLED``); ``format=fhir_composition`` additionally
+    emits a structured FHIR ``Composition`` (one section per template section) plus
+    an ``Encounter`` derived from the encounter context, alongside the
+    ``DocumentReference`` (Req 17, flag-gated by ``RAG_SCRIBE_FHIR_COMPOSITION_ENABLED``;
+    interface-only, no live EHR write). Export is permitted only for
+    ``signed``/``exported`` notes (Req 9.4/17.6) and is flag-gated.
     """
 
     settings = get_settings()
@@ -1539,11 +1640,8 @@ def export_note(
         attribution=attribution,
     )
 
-    response: Any
-    if fmt == "fhir":
-        if not settings.rag_scribe_fhir_export_enabled:
-            raise HTTPException(status_code=404, detail="FHIR export is disabled.")
-        document = {
+    def _document_reference() -> dict[str, Any]:
+        return {
             "resourceType": "DocumentReference",
             "status": "current",
             "type": {"text": "Clinical note"},
@@ -1563,7 +1661,42 @@ def export_note(
             "context": {"encounter_context": encounter} if encounter else {},
             "meta": {"attribution": attribution},
         }
-        response = {"format": "fhir", "document_reference": document}
+
+    response: Any
+    if fmt == "fhir":
+        if not settings.rag_scribe_fhir_export_enabled:
+            raise HTTPException(status_code=404, detail="FHIR export is disabled.")
+        response = {"format": "fhir", "document_reference": _document_reference()}
+    elif fmt == "fhir_composition":
+        # R17: structured FHIR Composition + Encounter, emitted alongside the
+        # existing DocumentReference. Gated by its own independent flag; off ⇒ 404
+        # mirroring the DocumentReference (`fhir`) gating. Signed-gated above.
+        if not settings.rag_scribe_fhir_composition_enabled:
+            raise HTTPException(status_code=404, detail="FHIR Composition export is disabled.")
+        # Source the section set from the signed note version (the canonical signed
+        # content), falling back to the session's current note sections. Section
+        # order is the generator's template order (dict insertion order), giving a
+        # 1:1 Composition section per template section (Req 17.2).
+        section_source = (
+            _as_json_object(signed_version.sections_json) if signed_version is not None else None
+        )
+        if section_source is None:
+            section_source = _as_json_object(item.soap_json) or {}
+        composition = _fhir_composition(
+            item,
+            sections=section_source,
+            signed_by_label=signed_by_label,
+            signed_at=signed_at,
+            encounter=encounter,
+            attribution=attribution,
+        )
+        fhir_encounter = _fhir_encounter(encounter, attribution=attribution)
+        response = {
+            "format": "fhir_composition",
+            "composition": composition,
+            "encounter": fhir_encounter,
+            "document_reference": _document_reference(),
+        }
     elif fmt == "docx":
         # Reuse the existing workspace DOCX render path (Req 9.1); return the binary
         # as an attachment, matching how the workspace DOCX export responds.
