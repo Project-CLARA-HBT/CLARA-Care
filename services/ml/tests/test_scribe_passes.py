@@ -117,3 +117,51 @@ def test_passes_derive_segments_from_transcript_when_segments_absent() -> None:
     assert any(
         m["surface"].lower().startswith("lisinopril") for m in extraction["medications"]
     )
+
+
+def test_passes_coding_enabled_produces_advisory_unselected_em_cpt() -> None:
+    """Req 14.3/14.5: coding pass on ⇒ advisory E/M+CPT suggestions, none selected."""
+
+    sections = copy.deepcopy(_SECTIONS)
+    sections["plan"] = "Start lisinopril 10mg once daily. Performed an ECG in clinic."
+    resp = client.post(
+        "/v1/scribe/passes",
+        json={
+            "sections": sections,
+            "segments": list(_SEGMENTS),
+            "grounding_enabled": False,
+            "extraction_enabled": False,
+            "coding_enabled": True,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "coding" in body
+    em_cpt = body["coding"]["em_cpt"]
+    assert em_cpt, body["coding"]
+    # Every suggestion is advisory and NOT auto-selected (Req 14.3/14.5) and carries
+    # a justifying span (Req 14.2).
+    for s in em_cpt:
+        assert s["selected"] is False
+        assert s["status"] == "advisory"
+        assert s["spans"]
+    # The note sections are returned untouched (additive, Req 14.7).
+    assert sections["subjective"] == _SECTIONS["subjective"]
+
+
+def test_passes_coding_disabled_omits_coding_key() -> None:
+    """Req 14.1: coding flag off ⇒ response shape is byte-for-byte the legacy 2-key shape."""
+
+    resp = client.post(
+        "/v1/scribe/passes",
+        json={
+            "sections": copy.deepcopy(_SECTIONS),
+            "segments": list(_SEGMENTS),
+            "grounding_enabled": True,
+            "extraction_enabled": True,
+            "coding_enabled": False,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert set(body.keys()) == {"grounding", "extraction"}

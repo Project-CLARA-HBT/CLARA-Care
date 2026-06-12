@@ -110,7 +110,7 @@ Wave-2 subagent assignment: **SA-ML** (grounding, extraction, E/M+CPT, specialty
 ## Wave 5 — E/M + CPT coding (R14)
 
 - [x] 5.1 ML: extend `CodingAssistant` (gated `RAG_SCRIBE_EM_CPT_CODING_ENABLED`) with `defensible_em_level(...)` + `suggest_em_cpt(...)` — E/M visit level + CPT with justifying spans; advisory/`selected=False`; never exceed defensible level (anti-upcoding); VN localization; write to `coding_json` (never mutates note text). _Req 14.1–14.7_
-- [~] 5.2 Web: render E/M + CPT suggestions with explicit per-code clinician confirm; nothing auto-selected. _Req 14.3, 14.5_
+- [x] 5.2 Web: render E/M + CPT suggestions with explicit per-code clinician confirm; nothing auto-selected. _Req 14.3, 14.5_
 - [~] 5.3 **Property test P10** — anti-upcoding (suggested E/M ≤ defensible level; every suggestion carries a span; none selected without confirmation). _Req 14.2, 14.3, 14.4, 14.5_
 
 ## Wave 6 — FHIR Composition/Encounter export + addendum (R17, R18)

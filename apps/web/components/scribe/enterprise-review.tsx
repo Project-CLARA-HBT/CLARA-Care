@@ -21,6 +21,7 @@ import {
   captureScribeConsent,
   exportScribeNote,
   generateScribeNote,
+  getScribeCoding,
   getScribeGrounding,
   regenerateScribeSession,
   signScribeNote,
@@ -28,6 +29,7 @@ import {
   transcribeScribeAudio,
   updateScribeSession,
   type ScribeExportFormat,
+  type ScribeEmCptSuggestion,
   type ScribeGroundingReport,
 } from "@/lib/scribe";
 import {
@@ -37,14 +39,21 @@ import {
   ScribeFlowState,
   computePipelineStages,
   concatSegmentsText,
+  countConfirmedEmCpt,
+  emCptCodeKey,
   formatGroundedClaimRate,
   groundingChip,
   groundingHasData,
+  initialEmCptSelections,
+  isEmCptSelected,
+  normalizeEmCptSuggestions,
   normalizeGroundingReport,
   orderedNoteSections,
+  partitionEmCpt,
   partitionGroundingStatements,
   resolveTranscriptSpan,
   speakerChip,
+  toggleEmCptSelection,
   type GroundingStatus,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
@@ -113,6 +122,14 @@ const GROUNDING_CHIP_CLASSES: Record<GroundingStatus, string> = {
   unverified:
     "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-100",
 };
+
+// E/M + CPT coding rows (Req 14.3/14.5). A confirmed (clinician-selected) row is
+// tinted to make the explicit confirmation visible; an unconfirmed suggestion is
+// neutral — nothing is auto-selected.
+const CODING_ROW_CLASS =
+  "border-[#93C5FD] bg-[#F8FBFF] text-[#1F2937] dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100";
+const CODING_ROW_SELECTED_CLASS =
+  "border-emerald-500 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-100";
 
 const SIGNED_STATUSES = new Set(["signed", "exported"]);
 
@@ -192,6 +209,16 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const [noteVersionNo, setNoteVersionNo] = useState<number | null>(null);
   const [expandedStatement, setExpandedStatement] = useState<string | null>(null);
 
+  // E/M + CPT coding suggestions (Req 14.3/14.5). Additive + best-effort, exactly
+  // like grounding: `emCptSuggestions` stays empty when the coding flag is off /
+  // the version has no metadata (the read 404s), so the editor renders unchanged.
+  // `emCptSelections` is the LOCAL per-code confirmation map — it starts empty
+  // (nothing auto-selected) and only an explicit clinician toggle marks a code.
+  const [emCptSuggestions, setEmCptSuggestions] = useState<ScribeEmCptSuggestion[]>([]);
+  const [emCptSelections, setEmCptSelections] = useState<Record<string, boolean>>(() =>
+    initialEmCptSelections()
+  );
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -218,6 +245,11 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     setGrounding(null);
     setNoteVersionNo(null);
     setExpandedStatement(null);
+    // E/M+CPT coding is re-fetched per generated version; clear it (and the
+    // local per-code confirmations) on session switch so nothing leaks across
+    // sessions and nothing starts pre-selected (Req 14.5).
+    setEmCptSuggestions([]);
+    setEmCptSelections(initialEmCptSelections());
     // Consent re-gates per session; a signed/exported session has clearly
     // already passed consent so we don't block review of it.
     const signedAlready = SIGNED_STATUSES.has((session?.status ?? "").trim().toLowerCase());
@@ -461,6 +493,30 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     [sessionId]
   );
 
+  // Best-effort fetch of the additive E/M + CPT coding suggestions for a
+  // generated version (Req 14.3/14.5). Silently no-ops when coding is
+  // unavailable (flag off / 404 / transport error) so the editor degrades to
+  // the prior suggestion-less behavior. Every fetch resets the local per-code
+  // confirmation map so nothing is ever pre-selected (Req 14.5).
+  const loadCoding = useCallback(
+    async (versionNo: number) => {
+      if (!sessionId || !Number.isFinite(versionNo) || versionNo < 1) {
+        setEmCptSuggestions([]);
+        setEmCptSelections(initialEmCptSelections());
+        return;
+      }
+      try {
+        const response = await getScribeCoding(sessionId, versionNo);
+        setEmCptSuggestions(normalizeEmCptSuggestions(response.coding));
+      } catch {
+        // Coding is flag-gated server-side; absence is expected, not an error.
+        setEmCptSuggestions([]);
+      }
+      setEmCptSelections(initialEmCptSelections());
+    },
+    [sessionId]
+  );
+
   const onGenerateNote = useCallback(async () => {
     if (!sessionId) return;
     if (!transcriptReady) {
@@ -483,6 +539,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       const nextVersion = (noteVersionNo ?? 0) + 1;
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
+      void loadCoding(nextVersion);
       pushNotice("success", "Đã soạn ghi chú theo mẫu.");
     } catch (error) {
       if (isMissingCapability(error)) {
@@ -499,6 +556,9 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           setNoteReady(true);
           // Legacy SOAP path produces no grounding metadata; clear any prior report.
           setGrounding(null);
+          // Legacy path also produces no coding suggestions; clear them too.
+          setEmCptSuggestions([]);
+          setEmCptSelections(initialEmCptSelections());
           pushNotice("success", "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).");
         } catch (fallbackError) {
           pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể soạn ghi chú.");
@@ -509,7 +569,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     } finally {
       setGenerating(false);
     }
-  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, noteVersionNo]);
+  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, loadCoding, noteVersionNo]);
 
   const onSaveNoteEdits = useCallback(async () => {
     if (!sessionId) return;
@@ -566,11 +626,12 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       const nextVersion = (noteVersionNo ?? 0) + 1;
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
+      void loadCoding(nextVersion);
       pushNotice("success", "Đã tạo bản sửa đổi mới (amended).");
     } catch (error) {
       pushNotice("error", error instanceof Error ? error.message : "Không thể tạo bản sửa đổi.");
     }
-  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, noteVersionNo]);
+  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo]);
 
   // --- export --------------------------------------------------------------
   const onExport = useCallback(
@@ -679,6 +740,10 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         transcriptSegments: transcriptRows,
         expandedStatement,
         onToggleStatement: (key) => setExpandedStatement((prev) => (prev === key ? null : key)),
+        emCptSuggestions,
+        emCptSelections,
+        onToggleEmCpt: (suggestion) =>
+          setEmCptSelections((prev) => toggleEmCptSelection(prev, suggestion)),
         onGenerateNote,
         onSectionChange: (key, value) =>
           setNoteSections((prev) => prev.map((entry) => (entry.key === key ? { ...entry, value } : entry))),
@@ -898,6 +963,9 @@ function renderNoteColumn(props: {
   transcriptSegments: ScribeStreamSegment[];
   expandedStatement: string | null;
   onToggleStatement: (key: string) => void;
+  emCptSuggestions: ScribeEmCptSuggestion[];
+  emCptSelections: Record<string, boolean>;
+  onToggleEmCpt: (suggestion: ScribeEmCptSuggestion) => void;
   onGenerateNote: () => void;
   onSectionChange: (key: string, value: string) => void;
   onSaveNoteEdits: () => void;
@@ -991,6 +1059,13 @@ function renderNoteColumn(props: {
           segments: props.transcriptSegments,
           expandedStatement: props.expandedStatement,
           onToggleStatement: props.onToggleStatement,
+        })}
+
+        {renderCodingPanel({
+          suggestions: props.emCptSuggestions,
+          selections: props.emCptSelections,
+          segments: props.transcriptSegments,
+          onToggleEmCpt: props.onToggleEmCpt,
         })}
 
         {editorLocked ? (
@@ -1152,6 +1227,148 @@ function renderGroundingPanel({
                 <span>{candidate}</span>
               </li>
             ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// E/M + CPT coding panel (Requirement 14.3 / 14.5) — advisory visit-level (E/M)
+// and procedure (CPT) suggestions with EXPLICIT per-code clinician confirmation.
+// Nothing is auto-selected: every suggestion renders with an unchecked confirm
+// control, and only an explicit clinician toggle marks a code as selected. Each
+// suggestion shows its justifying transcript/note span(s), bilingual display
+// (Vietnamese-first), and a rationale. The whole surface is additive: when no
+// suggestions are present (coding flag off / no metadata) nothing renders, so
+// the editor is unchanged.
+// ---------------------------------------------------------------------------
+
+function renderEmCptRow(
+  suggestion: ScribeEmCptSuggestion,
+  selections: Record<string, boolean>,
+  segments: ScribeStreamSegment[],
+  onToggleEmCpt: (suggestion: ScribeEmCptSuggestion) => void
+) {
+  const key = emCptCodeKey(suggestion);
+  const selected = isEmCptSelected(selections, suggestion);
+  const displayVi = suggestion.display_vi || suggestion.display || suggestion.code;
+  const displayEn = suggestion.display && suggestion.display !== displayVi ? suggestion.display : "";
+  const spans = suggestion.spans
+    .map((span) => resolveTranscriptSpan(span, segments))
+    .map((resolved) => (resolved.resolved ? resolved.text : resolved.spanId))
+    .filter(Boolean);
+  return (
+    <li
+      key={key}
+      className={`rounded-lg border px-3 py-2 ${
+        selected ? CODING_ROW_SELECTED_CLASS : CODING_ROW_CLASS
+      }`}
+      data-testid={`scribe-coding-suggestion${selected ? "-selected" : ""}`}
+    >
+      <label className="flex cursor-pointer items-start gap-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleEmCpt(suggestion)}
+          className="mt-1 h-4 w-4 shrink-0 accent-[#2563EB]"
+          data-testid={`scribe-coding-confirm-${key}`}
+          aria-label={`Xác nhận mã ${suggestion.code}`}
+        />
+        <span className="flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-current px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]">
+              {suggestion.kind === "E/M" ? "E/M" : "CPT"}
+            </span>
+            <span className={`text-sm font-bold ${bodyTextClass}`}>{suggestion.code}</span>
+            {suggestion.kind === "E/M" && suggestion.level != null ? (
+              <span className={`text-[11px] font-bold ${mutedTextClass}`}>· mức {suggestion.level}</span>
+            ) : null}
+            <span
+              className={`text-[10px] font-black uppercase tracking-[0.1em] ${
+                selected ? "text-emerald-700 dark:text-emerald-200" : mutedTextClass
+              }`}
+            >
+              {selected ? "đã xác nhận" : "đề xuất"}
+            </span>
+          </span>
+          <span className={`mt-0.5 block text-sm leading-5 ${secondaryTextClass}`}>{displayVi}</span>
+          {displayEn ? (
+            <span className={`block text-[11px] italic leading-4 ${mutedTextClass}`}>{displayEn}</span>
+          ) : null}
+          {suggestion.rationale ? (
+            <span className={`mt-0.5 block text-[11px] leading-4 ${mutedTextClass}`}>
+              {suggestion.rationale}
+            </span>
+          ) : null}
+          {spans.length > 0 ? (
+            <span
+              className="mt-1 block rounded-md border border-[#B6D4FE] bg-white/70 px-2 py-1 text-[11px] leading-4 text-[#1F2937] dark:border-sky-800 dark:bg-slate-950/50 dark:text-slate-100"
+              data-testid="scribe-coding-spans"
+            >
+              <span className={`block text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
+                Dẫn chứng
+              </span>
+              {spans.join(" · ")}
+            </span>
+          ) : null}
+        </span>
+      </label>
+    </li>
+  );
+}
+
+function renderCodingPanel({
+  suggestions,
+  selections,
+  segments,
+  onToggleEmCpt,
+}: {
+  suggestions: ScribeEmCptSuggestion[];
+  selections: Record<string, boolean>;
+  segments: ScribeStreamSegment[];
+  onToggleEmCpt: (suggestion: ScribeEmCptSuggestion) => void;
+}) {
+  if (!suggestions || suggestions.length === 0) return null;
+
+  const { em, cpt } = partitionEmCpt(suggestions);
+  const confirmed = countConfirmedEmCpt(selections);
+
+  return (
+    <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-coding">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className={sectionTitleClass}>Gợi ý mã E/M · CPT</h4>
+        <span
+          className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
+          data-testid="scribe-coding-confirmed-count"
+        >
+          {confirmed}/{suggestions.length} đã xác nhận
+        </span>
+      </div>
+      <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
+        Các mã dưới đây chỉ mang tính tư vấn. Không mã nào được chọn sẵn — bác sĩ cần tự xác nhận
+        từng mã trước khi sử dụng.
+      </p>
+
+      {em.length > 0 ? (
+        <div className="space-y-2" data-testid="scribe-coding-em">
+          <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
+            Mức khám (E/M)
+          </p>
+          <ul className="space-y-2">
+            {em.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
+          </ul>
+        </div>
+      ) : null}
+
+      {cpt.length > 0 ? (
+        <div className="space-y-2" data-testid="scribe-coding-cpt">
+          <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
+            Thủ thuật (CPT)
+          </p>
+          <ul className="space-y-2">
+            {cpt.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
           </ul>
         </div>
       ) : null}

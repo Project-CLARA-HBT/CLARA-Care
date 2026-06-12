@@ -376,6 +376,80 @@ export async function getScribeGrounding(
   return response.data;
 }
 
+// ---------------------------------------------------------------------------
+// E/M + CPT coding suggestions (Requirement 14.3 / 14.5). Read-only client for
+// the additive coding result persisted on a note version. The server gates this
+// behind `RAG_SCRIBE_EM_CPT_CODING_ENABLED` and answers 404 both when the flag
+// is off and when a version has no coding metadata, so callers MUST treat a
+// rejection as "no coding available" and render the editor unchanged. Every
+// suggestion is advisory and `selected: false` from the server — nothing is
+// auto-selected; confirmation is an explicit local clinician action.
+// ---------------------------------------------------------------------------
+
+/** A single advisory E/M visit-level or CPT/procedure suggestion (Req 14.2/14.6). */
+export type ScribeEmCptSuggestion = {
+  /** The code value (e.g. an E/M level code or a CPT procedure code). */
+  code: string;
+  /** "E/M" | "CPT". */
+  kind: string;
+  /** Coding system label ("E/M" | "CPT"). */
+  system: string;
+  /** English display label. */
+  display: string;
+  /** Vietnamese display label (Vietnamese-first, Req 14.6). */
+  display_vi: string;
+  /** E/M visit level (1..5) for kind "E/M"; null for a CPT procedure. */
+  level: number | null;
+  /** Justifying note/transcript text span(s) (Req 14.2). */
+  spans: string[];
+  /** Short rationale for the suggestion. */
+  rationale: string;
+  /** Always false from the server — never auto-selected (Req 14.3/14.5). */
+  selected: boolean;
+  /** Always "advisory" until a clinician confirms. */
+  status: string;
+};
+
+/**
+ * Additive coding metadata for a note version (server `CodingResult`). Carries
+ * the legacy Req 7 ICD/medication/interaction advisory data plus the additive
+ * `em_cpt` E/M + CPT suggestions (present only when the coding flag is on).
+ */
+export type ScribeCodingReport = {
+  icd?: Array<Record<string, unknown>>;
+  medications?: Array<Record<string, unknown>>;
+  interactions?: string[];
+  advisory?: boolean;
+  /** E/M + CPT suggestions; absent/empty when the E/M+CPT pass produced none. */
+  em_cpt?: ScribeEmCptSuggestion[];
+  [key: string]: unknown;
+};
+
+/** Read response for `GET /scribe/sessions/{id}/notes/{ver}/coding`. */
+export type ScribeCodingResponse = {
+  session_id: number;
+  version_no: number;
+  coding: ScribeCodingReport;
+};
+
+/**
+ * Fetch the additive E/M + CPT coding suggestions for a note version
+ * (Requirement 14.3/14.5), mirroring `getScribeGrounding`.
+ *
+ * The server gates this on `RAG_SCRIBE_EM_CPT_CODING_ENABLED` and returns 404
+ * when the flag is off or the version carries no coding metadata; callers should
+ * catch the rejection and render the editor exactly as before (no suggestions).
+ */
+export async function getScribeCoding(
+  sessionId: number,
+  versionNo: number
+): Promise<ScribeCodingResponse> {
+  const response = await api.get<ScribeCodingResponse>(
+    `/scribe/sessions/${sessionId}/notes/${versionNo}/coding`
+  );
+  return response.data;
+}
+
 /** Interim transcript text for a chunk, emitted before the chunk is finalized. */
 export type ScribeStreamPartial = {
   index: number;

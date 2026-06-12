@@ -30,7 +30,11 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.db.session import SessionLocal, get_db
-from clara_api.schemas import ScribeExtractionResponse, ScribeGroundingResponse
+from clara_api.schemas import (
+    ScribeCodingResponse,
+    ScribeExtractionResponse,
+    ScribeGroundingResponse,
+)
 
 router = APIRouter()
 
@@ -214,24 +218,26 @@ def _run_scribe_additive_passes(
     transcript: str,
     segment_texts: list[str],
     sections: dict[str, Any],
-) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Run the additive grounding (R12) + extraction (R13) passes via ML (task 4.5).
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """Run the additive grounding (R12) + extraction (R13) + coding (R14) passes (task 4.5/5.2).
 
     Flag-gated by the API's own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
-    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` flags (the API mirrors the ML
-    flags so both layers gate the passes). Returns ``(grounding_json, extraction_json)``
-    where each is ``None`` when its flag is off or no result is available.
+    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` / ``RAG_SCRIBE_EM_CPT_CODING_ENABLED``
+    flags (the API mirrors the ML flags so both layers gate the passes). Returns
+    ``(grounding_json, extraction_json, coding_json)`` where each is ``None`` when its
+    flag is off or no result is available.
 
     The passes are additive metadata only — they never mutate the note's section
-    text or the transcript. The ML call is best-effort: if the ML pass endpoint is
-    unavailable the columns are simply left unpopulated and note generation still
-    succeeds (the note text is unaffected either way).
+    text or the transcript (Req 12.6, 13.5, 14.7). The ML call is best-effort: if the
+    ML pass endpoint is unavailable the columns are simply left unpopulated and note
+    generation still succeeds (the note text is unaffected either way).
     """
 
     run_grounding = bool(settings.rag_scribe_grounding_enabled)
     run_extraction = bool(settings.rag_scribe_structured_extraction_enabled)
-    if not (run_grounding or run_extraction):
-        return None, None
+    run_coding = bool(settings.rag_scribe_em_cpt_coding_enabled)
+    if not (run_grounding or run_extraction or run_coding):
+        return None, None, None
 
     payload: dict[str, Any] = {
         "transcript": transcript,
@@ -239,23 +245,28 @@ def _run_scribe_additive_passes(
         "sections": sections if isinstance(sections, dict) else {},
         "grounding_enabled": run_grounding,
         "extraction_enabled": run_extraction,
+        "coding_enabled": run_coding,
     }
     try:
         result = proxy_ml_post("/v1/scribe/passes", payload)
     except HTTPException:
         # Additive pass is non-blocking: leave metadata unpopulated on ML failure.
         logger.warning("scribe additive passes unavailable; metadata not persisted")
-        return None, None
+        return None, None, None
 
     grounding_json: dict[str, Any] | None = None
     extraction_json: dict[str, Any] | None = None
+    coding_json: dict[str, Any] | None = None
     if run_grounding:
         candidate = result.get("grounding")
         grounding_json = candidate if isinstance(candidate, dict) else None
     if run_extraction:
         candidate = result.get("extraction")
         extraction_json = candidate if isinstance(candidate, dict) else None
-    return grounding_json, extraction_json
+    if run_coding:
+        candidate = result.get("coding")
+        coding_json = candidate if isinstance(candidate, dict) else None
+    return grounding_json, extraction_json, coding_json
 
 
 def _normalize_audio_content_type(value: str | None) -> str:
@@ -965,7 +976,7 @@ def generate_note_version(
     # Flag-gated and metadata-only: persisted into the dedicated nullable columns
     # without ever touching the note's section text. When both flags are off this
     # is a no-op and the columns stay null (byte-for-byte legacy behavior).
-    grounding_json, extraction_json = _run_scribe_additive_passes(
+    grounding_json, extraction_json, coding_json = _run_scribe_additive_passes(
         settings=settings,
         transcript=transcript,
         segment_texts=_session_segment_texts(item),
@@ -975,6 +986,8 @@ def generate_note_version(
         version.grounding_json = grounding_json
     if extraction_json is not None:
         version.extraction_json = extraction_json
+    if coding_json is not None:
+        version.coding_json = coding_json
     item.soap_json = soap
     prev_status = item.status
     if item.status == "draft" and can_transition(item.status, "in_review"):
@@ -1073,6 +1086,42 @@ def get_note_extraction(
         )
     return ScribeExtractionResponse(
         session_id=item.id, version_no=version.version_no, extraction=version.extraction_json
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/notes/{version_no}/coding",
+    response_model=ScribeCodingResponse,
+)
+def get_note_coding(
+    session_id: int,
+    version_no: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeCodingResponse:
+    """Read the additive E/M + CPT coding suggestions for a note version (Req 14.3/14.5).
+
+    Clinician RBAC (``DOCTOR_ROLE_DEP``) + owner-scoping (``_get_owned_session``).
+    Flag-gated by ``RAG_SCRIBE_EM_CPT_CODING_ENABLED``: 404 when the flag is off
+    (enterprise surface retracted) and 404 when the version has no persisted coding
+    metadata (no data), so a consumer never sees a fabricated suggestion set. The
+    suggestions are advisory and always ``selected=False`` from the server — nothing
+    is auto-selected; selection is an explicit clinician action in the web client.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_em_cpt_coding_enabled:
+        raise HTTPException(status_code=404, detail="Scribe E/M+CPT coding is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    version = _get_note_version(db, session_id=item.id, version_no=version_no)
+    if version is None or not isinstance(version.coding_json, dict):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không có dữ liệu coding cho note version này.",
+        )
+    return ScribeCodingResponse(
+        session_id=item.id, version_no=version.version_no, coding=version.coding_json
     )
 
 

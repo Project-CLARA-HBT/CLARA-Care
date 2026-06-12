@@ -6,6 +6,7 @@ import {
   exportScribeNote,
   generateScribeNote,
   getScribeAudit,
+  getScribeCoding,
   getScribeGrounding,
   signScribeNote,
 } from "@/lib/scribe";
@@ -160,6 +161,49 @@ describe("getScribeGrounding (Req 12.7)", () => {
     get.mockRejectedValueOnce(new Error("Scribe grounding is disabled."));
     await expect(getScribeGrounding(7, 1)).rejects.toThrow("disabled");
     expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/1/grounding");
+  });
+});
+
+describe("getScribeCoding (Req 14.3/14.5)", () => {
+  it("GETs the note-version coding URL and returns advisory, unselected suggestions", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        version_no: 2,
+        coding: {
+          icd: [],
+          medications: [],
+          interactions: [],
+          advisory: true,
+          em_cpt: [
+            {
+              code: "99214",
+              kind: "E/M",
+              system: "E/M",
+              display: "Office visit, level 4",
+              display_vi: "Khám phòng khám, mức 4",
+              level: 4,
+              spans: ["seg-0001"],
+              rationale: "moderate MDM",
+              selected: false,
+              status: "advisory",
+            },
+          ],
+        },
+      },
+    });
+    const result = await getScribeCoding(7, 2);
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/2/coding");
+    expect(result.version_no).toBe(2);
+    expect(result.coding.em_cpt?.[0].code).toBe("99214");
+    // Nothing is auto-selected from the server (Req 14.3/14.5).
+    expect(result.coding.em_cpt?.[0].selected).toBe(false);
+  });
+
+  it("propagates a rejection so the caller can render the editor unchanged (flag off / 404)", async () => {
+    get.mockRejectedValueOnce(new Error("Scribe E/M+CPT coding is disabled."));
+    await expect(getScribeCoding(7, 1)).rejects.toThrow("disabled");
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/notes/1/coding");
   });
 });
 

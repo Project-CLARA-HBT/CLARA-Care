@@ -7,7 +7,13 @@
  * in `components/scribe/enterprise-review.tsx` and consumes these helpers.
  */
 
-import type { ScribeGroundedStatement, ScribeGroundingReport, ScribeStreamSegment } from "@/lib/scribe";
+import type {
+  ScribeCodingReport,
+  ScribeEmCptSuggestion,
+  ScribeGroundedStatement,
+  ScribeGroundingReport,
+  ScribeStreamSegment,
+} from "@/lib/scribe";
 
 // ---------------------------------------------------------------------------
 // Templates (mirrors the ML pure-data registry in
@@ -573,4 +579,156 @@ export function formatGroundedClaimRate(rate: number | null | undefined): string
   const value = typeof rate === "number" && Number.isFinite(rate) ? rate : 0;
   const clamped = Math.min(1, Math.max(0, value));
   return `${Math.round(clamped * 100)}%`;
+}
+
+// ---------------------------------------------------------------------------
+// E/M + CPT coding suggestions (Requirement 14.3 / 14.5). Pure helpers backing
+// the advisory suggestion list with explicit per-code clinician confirmation.
+// The coding report is additive metadata: nothing here mutates the note text,
+// and nothing is auto-selected — every suggestion starts unselected and only a
+// local clinician toggle marks a code as confirmed/selected.
+// ---------------------------------------------------------------------------
+
+/** Bounded coding-suggestion kind. Anything else degrades to a CPT-style row. */
+export type EmCptKind = "E/M" | "CPT";
+
+/**
+ * Coerce one raw suggestion (from the server `em_cpt` list) into a well-formed
+ * {@link ScribeEmCptSuggestion}, defending against missing/malformed fields so
+ * the UI never throws on partial data. `selected` is forced to `false` on read
+ * — the server never auto-selects (Req 14.3/14.5); selection is local-only.
+ */
+export function normalizeEmCptSuggestion(raw: unknown): ScribeEmCptSuggestion {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const kind = obj.kind === "E/M" ? "E/M" : obj.kind === "CPT" ? "CPT" : String(obj.kind ?? "CPT");
+  const spans = Array.isArray(obj.spans)
+    ? obj.spans.filter((s): s is string => typeof s === "string")
+    : [];
+  const level =
+    typeof obj.level === "number" && Number.isFinite(obj.level) ? obj.level : null;
+  return {
+    code: typeof obj.code === "string" ? obj.code : "",
+    kind,
+    system: typeof obj.system === "string" ? obj.system : kind,
+    display: typeof obj.display === "string" ? obj.display : "",
+    display_vi: typeof obj.display_vi === "string" ? obj.display_vi : "",
+    level,
+    spans,
+    rationale: typeof obj.rationale === "string" ? obj.rationale : "",
+    // Never trust a server-sent `selected: true`; nothing is auto-selected.
+    selected: false,
+    status: typeof obj.status === "string" ? obj.status : "advisory",
+  };
+}
+
+/**
+ * Coerce an arbitrary coding payload (the server `coding` object) into a
+ * normalized list of {@link ScribeEmCptSuggestion}s. Reads only the additive
+ * `em_cpt` list (the ICD/medication advisory data is surfaced elsewhere). Always
+ * returns an array (empty when absent/malformed) so the UI never throws.
+ */
+export function normalizeEmCptSuggestions(
+  coding: ScribeCodingReport | null | undefined
+): ScribeEmCptSuggestion[] {
+  const list = coding && Array.isArray(coding.em_cpt) ? coding.em_cpt : [];
+  return list.map(normalizeEmCptSuggestion).filter((s) => s.code.trim().length > 0);
+}
+
+export type EmCptPartition = {
+  /** E/M visit-level suggestions (kind "E/M"). */
+  em: ScribeEmCptSuggestion[];
+  /** CPT/procedure suggestions (kind "CPT"). */
+  cpt: ScribeEmCptSuggestion[];
+};
+
+/**
+ * Split the suggestions into E/M visit-level vs CPT/procedure buckets,
+ * preserving relative order within each bucket. Any non-"E/M" kind falls into
+ * the CPT bucket so an unexpected kind is still surfaced (never dropped).
+ */
+export function partitionEmCpt(
+  suggestions: ScribeEmCptSuggestion[] | null | undefined
+): EmCptPartition {
+  const list = Array.isArray(suggestions) ? suggestions : [];
+  return {
+    em: list.filter((s) => s.kind === "E/M"),
+    cpt: list.filter((s) => s.kind !== "E/M"),
+  };
+}
+
+/**
+ * Whether a coding report carries any E/M + CPT suggestions worth surfacing.
+ * False for an absent/empty report so the editor renders exactly as before
+ * (Req 14.1 — coding off ⇒ no suggestion panel).
+ */
+export function codingHasData(coding: ScribeCodingReport | null | undefined): boolean {
+  return normalizeEmCptSuggestions(coding).length > 0;
+}
+
+/**
+ * A stable key identifying a suggestion for the local selection map. Combines
+ * kind + code + level so two suggestions never collide on a shared code.
+ */
+export function emCptCodeKey(
+  suggestion: Pick<ScribeEmCptSuggestion, "kind" | "code" | "level">
+): string {
+  const level = suggestion.level === null || suggestion.level === undefined ? "" : String(suggestion.level);
+  return `${suggestion.kind}:${suggestion.code}:${level}`;
+}
+
+/**
+ * The initial local selection state for a fresh suggestion set: an empty map.
+ * Nothing is auto-selected — every suggestion starts unconfirmed (Req 14.5).
+ */
+export function initialEmCptSelections(): Record<string, boolean> {
+  return {};
+}
+
+/** Whether a suggestion is currently confirmed/selected in the local map. */
+export function isEmCptSelected(
+  selections: Record<string, boolean> | null | undefined,
+  suggestion: Pick<ScribeEmCptSuggestion, "kind" | "code" | "level">
+): boolean {
+  if (!selections) return false;
+  return Boolean(selections[emCptCodeKey(suggestion)]);
+}
+
+/**
+ * Toggle a single suggestion's confirmation state, returning a NEW selection
+ * map (pure — never mutates the input). Confirmation is an explicit per-code
+ * clinician action (Req 14.3/14.5).
+ */
+export function toggleEmCptSelection(
+  selections: Record<string, boolean> | null | undefined,
+  suggestion: Pick<ScribeEmCptSuggestion, "kind" | "code" | "level">
+): Record<string, boolean> {
+  const next: Record<string, boolean> = { ...(selections ?? {}) };
+  const key = emCptCodeKey(suggestion);
+  if (next[key]) delete next[key];
+  else next[key] = true;
+  return next;
+}
+
+/** The number of confirmed/selected suggestions in the local map. */
+export function countConfirmedEmCpt(
+  selections: Record<string, boolean> | null | undefined
+): number {
+  if (!selections) return 0;
+  return Object.values(selections).filter(Boolean).length;
+}
+
+/**
+ * The subset of suggestions a clinician has explicitly confirmed, with their
+ * `selected` flag reflecting the local confirmation (the server value is always
+ * `false`). Preserves the input order. This is what a "treat as selected"
+ * consumer (Req 14.3) should read — no code is here without confirmation.
+ */
+export function confirmedEmCptSuggestions(
+  suggestions: ScribeEmCptSuggestion[] | null | undefined,
+  selections: Record<string, boolean> | null | undefined
+): ScribeEmCptSuggestion[] {
+  const list = Array.isArray(suggestions) ? suggestions : [];
+  return list
+    .filter((s) => isEmCptSelected(selections, s))
+    .map((s) => ({ ...s, selected: true }));
 }

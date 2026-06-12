@@ -4,23 +4,38 @@ import fc from "fast-check";
 import {
   DEFAULT_SCRIBE_TEMPLATE_ID,
   SCRIBE_REVIEW_TEMPLATES,
+  codingHasData,
   computePipelineStages,
   concatSegmentsText,
+  confirmedEmCptSuggestions,
+  countConfirmedEmCpt,
+  emCptCodeKey,
   formatGroundedClaimRate,
   getReviewTemplate,
   groundingChip,
   groundingHasData,
+  initialEmCptSelections,
+  isEmCptSelected,
+  normalizeEmCptSuggestion,
+  normalizeEmCptSuggestions,
   normalizeGroundingReport,
   orderedNoteSections,
   parseContentDispositionFilename,
   parseSpanId,
+  partitionEmCpt,
   partitionGroundingStatements,
   resolveTranscriptSpan,
   speakerChip,
+  toggleEmCptSelection,
   type ScribeFlowState,
   type ScribeStageId,
 } from "@/lib/scribe-review";
-import type { ScribeGroundedStatement, ScribeStreamSegment } from "@/lib/scribe";
+import type {
+  ScribeCodingReport,
+  ScribeEmCptSuggestion,
+  ScribeGroundedStatement,
+  ScribeStreamSegment,
+} from "@/lib/scribe";
 
 /**
  * Pure helpers backing the Clara Scribe enterprise review/sign/export UI
@@ -448,5 +463,164 @@ describe("formatGroundedClaimRate (Req 12.8 — summary badge)", () => {
     expect(formatGroundedClaimRate(2)).toBe("100%");
     expect(formatGroundedClaimRate(-1)).toBe("0%");
     expect(formatGroundedClaimRate(NaN)).toBe("0%");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E/M + CPT coding suggestions (Requirement 14.3 / 14.5). Pure helpers backing
+// the advisory suggestion list + explicit per-code clinician confirmation. The
+// key invariants: nothing is auto-selected, selection is local + explicit, and
+// a malformed/absent payload degrades to an empty (no-op) suggestion set.
+// ---------------------------------------------------------------------------
+
+function makeEmCpt(overrides: Partial<ScribeEmCptSuggestion> = {}): ScribeEmCptSuggestion {
+  return {
+    code: "99214",
+    kind: "E/M",
+    system: "E/M",
+    display: "Office visit, level 4",
+    display_vi: "Khám phòng khám, mức 4",
+    level: 4,
+    spans: ["seg-0001"],
+    rationale: "moderate MDM",
+    selected: false,
+    status: "advisory",
+    ...overrides,
+  };
+}
+
+function codingReport(em_cpt: Array<Partial<ScribeEmCptSuggestion>>): ScribeCodingReport {
+  return { icd: [], medications: [], interactions: [], advisory: true, em_cpt: em_cpt.map(makeEmCpt) };
+}
+
+describe("normalizeEmCptSuggestion (Req 14.3/14.5 — never trust server selection)", () => {
+  it("forces selected=false even when the payload claims selected=true", () => {
+    const s = normalizeEmCptSuggestion({ code: "99213", kind: "E/M", selected: true, level: 3 });
+    expect(s.selected).toBe(false);
+    expect(s.status).toBe("advisory");
+  });
+
+  it("fills safe defaults for a malformed/partial payload (never throws)", () => {
+    const s = normalizeEmCptSuggestion({ code: "93000" });
+    expect(s.kind).toBe("CPT"); // unknown kind degrades to CPT
+    expect(s.spans).toEqual([]);
+    expect(s.level).toBeNull();
+  });
+
+  it("keeps a numeric E/M level and a valid kind", () => {
+    const s = normalizeEmCptSuggestion({ code: "99215", kind: "E/M", level: 5 });
+    expect(s.kind).toBe("E/M");
+    expect(s.level).toBe(5);
+  });
+});
+
+describe("normalizeEmCptSuggestions (Req 14.1 — absent ⇒ empty)", () => {
+  it("returns an empty list for an absent / malformed coding report", () => {
+    expect(normalizeEmCptSuggestions(null)).toEqual([]);
+    expect(normalizeEmCptSuggestions(undefined)).toEqual([]);
+    expect(normalizeEmCptSuggestions({ em_cpt: "nope" } as unknown as ScribeCodingReport)).toEqual([]);
+  });
+
+  it("drops suggestions with no code and normalizes the rest", () => {
+    const list = normalizeEmCptSuggestions(codingReport([{ code: "" }, { code: "99214" }]));
+    expect(list).toHaveLength(1);
+    expect(list[0].code).toBe("99214");
+    expect(list[0].selected).toBe(false);
+  });
+});
+
+describe("partitionEmCpt (Req 14.2 — E/M vs CPT split)", () => {
+  it("buckets E/M and CPT suggestions, preserving order", () => {
+    const list = [
+      makeEmCpt({ code: "99214", kind: "E/M" }),
+      makeEmCpt({ code: "93000", kind: "CPT", level: null }),
+      makeEmCpt({ code: "94640", kind: "CPT", level: null }),
+    ];
+    const { em, cpt } = partitionEmCpt(list);
+    expect(em.map((s) => s.code)).toEqual(["99214"]);
+    expect(cpt.map((s) => s.code)).toEqual(["93000", "94640"]);
+  });
+
+  it("every suggestion lands in exactly one bucket (non-E/M ⇒ CPT)", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.record({ kind: fc.constantFrom("E/M", "CPT", "weird") }), { maxLength: 10 }),
+        (rows) => {
+          const list = rows.map((row, index) => makeEmCpt({ code: `c${index}`, kind: row.kind }));
+          const { em, cpt } = partitionEmCpt(list);
+          expect(em.length + cpt.length).toBe(list.length);
+          for (const s of em) expect(s.kind).toBe("E/M");
+          for (const s of cpt) expect(s.kind).not.toBe("E/M");
+        }
+      )
+    );
+  });
+});
+
+describe("codingHasData (Req 14.1 — flag off ⇒ render unchanged)", () => {
+  it("is false for an absent or empty coding report", () => {
+    expect(codingHasData(null)).toBe(false);
+    expect(codingHasData(codingReport([]))).toBe(false);
+    expect(codingHasData(codingReport([{ code: "" }]))).toBe(false);
+  });
+
+  it("is true when at least one valid suggestion is present", () => {
+    expect(codingHasData(codingReport([{ code: "99214" }]))).toBe(true);
+  });
+});
+
+describe("E/M+CPT selection state (Req 14.3/14.5 — nothing auto-selected)", () => {
+  it("starts with an empty selection map (nothing pre-selected)", () => {
+    const selections = initialEmCptSelections();
+    expect(selections).toEqual({});
+    expect(countConfirmedEmCpt(selections)).toBe(0);
+    const suggestions = normalizeEmCptSuggestions(codingReport([{ code: "99214" }, { code: "93000", kind: "CPT" }]));
+    for (const s of suggestions) expect(isEmCptSelected(selections, s)).toBe(false);
+    // No code is "confirmed" without an explicit toggle.
+    expect(confirmedEmCptSuggestions(suggestions, selections)).toEqual([]);
+  });
+
+  it("emCptCodeKey is stable + distinguishes kind/code/level", () => {
+    expect(emCptCodeKey(makeEmCpt({ code: "99214", kind: "E/M", level: 4 }))).toBe("E/M:99214:4");
+    expect(emCptCodeKey(makeEmCpt({ code: "93000", kind: "CPT", level: null }))).toBe("CPT:93000:");
+    // Same code, different kind ⇒ different key (no collision).
+    expect(emCptCodeKey(makeEmCpt({ code: "x", kind: "E/M", level: 2 }))).not.toBe(
+      emCptCodeKey(makeEmCpt({ code: "x", kind: "CPT", level: null }))
+    );
+  });
+
+  it("toggling a code is pure and confirms exactly that code", () => {
+    const s = makeEmCpt({ code: "99214" });
+    const before = initialEmCptSelections();
+    const after = toggleEmCptSelection(before, s);
+    // Input map is never mutated (pure).
+    expect(before).toEqual({});
+    expect(isEmCptSelected(after, s)).toBe(true);
+    expect(countConfirmedEmCpt(after)).toBe(1);
+    // Toggling again clears it.
+    const cleared = toggleEmCptSelection(after, s);
+    expect(isEmCptSelected(cleared, s)).toBe(false);
+    expect(countConfirmedEmCpt(cleared)).toBe(0);
+  });
+
+  it("confirmedEmCptSuggestions returns only toggled codes with selected=true", () => {
+    const suggestions = normalizeEmCptSuggestions(
+      codingReport([{ code: "99214", kind: "E/M" }, { code: "93000", kind: "CPT", level: null }])
+    );
+    const selections = toggleEmCptSelection(initialEmCptSelections(), suggestions[1]);
+    const confirmed = confirmedEmCptSuggestions(suggestions, selections);
+    expect(confirmed.map((s) => s.code)).toEqual(["93000"]);
+    expect(confirmed[0].selected).toBe(true);
+  });
+
+  it("a code is selected iff it was explicitly toggled an odd number of times", () => {
+    fc.assert(
+      fc.property(fc.nat({ max: 6 }), (toggles) => {
+        const s = makeEmCpt({ code: "99214" });
+        let selections = initialEmCptSelections();
+        for (let i = 0; i < toggles; i += 1) selections = toggleEmCptSelection(selections, s);
+        expect(isEmCptSelected(selections, s)).toBe(toggles % 2 === 1);
+      })
+    );
   });
 });

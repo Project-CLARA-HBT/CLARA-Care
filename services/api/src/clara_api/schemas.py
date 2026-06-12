@@ -941,6 +941,23 @@ class ScribeExtractionResponse(BaseModel):
     extraction: dict[str, Any] = Field(default_factory=dict)
 
 
+class ScribeCodingResponse(BaseModel):
+    """Read response for a note version's E/M + CPT coding suggestions (Req 14.3/14.5).
+
+    ``coding`` is the additive :class:`CodingResult` serialized by the ML pass
+    (ICD-10 + medications + interactions per Req 7, plus an ``em_cpt`` list of
+    advisory E/M visit-level and CPT/procedure suggestions per Req 14). Every
+    suggestion carries justifying span(s) and is ``selected=False`` from the server
+    — nothing is auto-selected; clinician confirmation happens in the web client.
+    Metadata only — the note's clinical text is never altered by the coding pass
+    (Req 14.7).
+    """
+
+    session_id: int
+    version_no: int
+    coding: dict[str, Any] = Field(default_factory=dict)
+
+
 class PhrAllergyItem(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=140)

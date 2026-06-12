@@ -992,16 +992,16 @@ def _scribe_section_text(value: object) -> str:
 
 @app.post("/v1/scribe/passes")
 def scribe_passes(payload: dict) -> dict:
-    """Run the additive grounding (R12) + structured-extraction (R13) passes.
+    """Run the additive grounding (R12) + extraction (R13) + E/M+CPT coding (R14) passes.
 
     Additive + flag-gated: each pass runs only when the caller requests it (the API
     mirrors its own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
-    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` flags) AND the corresponding pass is
-    permitted here. The passes are read-only over the transcript spans and the
-    generated note sections — they NEVER mutate the note's clinical text or the
-    transcript (Req 12.6, 13.5). Returns ``{"grounding": ..., "extraction": ...}``
-    where each value is the serialized report (an inert/disabled report when its
-    pass did not run).
+    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` / ``RAG_SCRIBE_EM_CPT_CODING_ENABLED``
+    flags) AND the corresponding pass is permitted here. The passes are read-only over
+    the transcript spans and the generated note sections — they NEVER mutate the note's
+    clinical text or the transcript (Req 12.6, 13.5, 14.7). Returns
+    ``{"grounding": ..., "extraction": ..., "coding": ...}`` where each value is the
+    serialized report (``coding`` is ``None`` when the coding pass did not run).
     """
 
     from clara_ml.scribe.extraction import StructuredExtraction, StructuredExtractor
@@ -1025,6 +1025,7 @@ def scribe_passes(payload: dict) -> dict:
     # to this service's own settings (default off). ``enabled=None`` => ML setting.
     grounding_enabled = payload.get("grounding_enabled")
     extraction_enabled = payload.get("extraction_enabled")
+    coding_enabled = payload.get("coding_enabled")
 
     verifier = GroundingVerifier(
         enabled=bool(grounding_enabled) if grounding_enabled is not None else None
@@ -1035,10 +1036,34 @@ def scribe_passes(payload: dict) -> dict:
 
     grounding: GroundingReport = verifier.verify(sections, registry)
     extraction: StructuredExtraction = extractor.extract(registry)
-    return {
+
+    # R14 additive E/M+CPT coding pass. Inert unless the coding flag is on; the
+    # CodingAssistant suggests ICD/medications/interactions (Req 7) plus the
+    # advisory, never-auto-selected E/M+CPT suggestions (Req 14) over the note
+    # text. Read-only: it never mutates the note sections or transcript (Req 14.7).
+    coding: dict | None = None
+    run_coding = (
+        bool(coding_enabled)
+        if coding_enabled is not None
+        else bool(settings.rag_scribe_em_cpt_coding_enabled)
+    )
+    if run_coding:
+        from clara_ml.scribe.coding import CodingAssistant
+
+        note_text = "\n".join(text for text in sections.values() if str(text).strip())
+        lang = str(payload.get("lang") or "vi").strip() or "vi"
+        coding = CodingAssistant(em_cpt_enabled=True).suggest(note_text, lang=lang).as_dict()
+
+    out: dict = {
         "grounding": grounding.as_dict(),
         "extraction": extraction.as_dict(),
     }
+    # Additive: the ``coding`` key only appears when the coding pass runs, so the
+    # legacy (grounding/extraction-only) response shape is byte-for-byte unchanged
+    # when the E/M+CPT coding flag is off (Req 14.1).
+    if run_coding:
+        out["coding"] = coding
+    return out
 
 
 @app.post("/v1/scribe/transcribe")
