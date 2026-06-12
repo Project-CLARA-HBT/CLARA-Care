@@ -74,6 +74,10 @@ class ScribeSession(Base):
     encounter_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     asr_meta_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     consent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Wave-2 additive column (migration 20260411_0010, Req 15) — non-PII
+    # quality / documentation-efficiency metrics; written only when the
+    # RAG_SCRIBE_QUALITY_METRICS_ENABLED flag is on.
+    metrics_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     last_processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -102,6 +106,13 @@ class ScribeNoteVersion(Base):
     template_id: Mapped[str] = mapped_column(String(64), default="soap")
     sections_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     coding_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    # Wave-2 additive metadata columns (migration 20260411_0010). Each is
+    # written only by its corresponding flag-gated pass and never mutates the
+    # note's clinical text (Req 12.6, 13.5, 15, 16).
+    grounding_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    extraction_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    wer_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    quality_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     signed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     signed_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -141,6 +152,28 @@ class ScribeAudit(Base):
     from_status: Mapped[str] = mapped_column(String(32), default="")
     to_status: Mapped[str] = mapped_column(String(32), default="")
     detail_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ScribeAddendum(Base):
+    """Append-only, time-stamped addendum attached to a signed note version.
+
+    Distinct from amend (Requirement 18): attaching an addendum leaves the
+    signed ``ScribeNoteVersion`` byte-for-byte unchanged and creates no new
+    note version. Rows are append-only by convention.
+    """
+
+    __tablename__ = "scribe_addenda"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("scribe_sessions.id", ondelete="CASCADE"), index=True
+    )
+    note_version_id: Mapped[int] = mapped_column(
+        ForeignKey("scribe_note_versions.id", ondelete="CASCADE"), index=True
+    )
+    author: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    text: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
