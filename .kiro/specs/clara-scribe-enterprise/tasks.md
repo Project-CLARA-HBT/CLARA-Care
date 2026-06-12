@@ -118,7 +118,7 @@ Wave-2 subagent assignment: **SA-ML** (grounding, extraction, E/M+CPT, specialty
 - [x] 6.1 API: extend `GET /scribe/sessions/{id}/export` with `format=fhir_composition` (gated `RAG_SCRIBE_FHIR_COMPOSITION_ENABLED`) — emit FHIR `Composition` (one section per template section, signing clinician + sign timestamp + attribution) and `Encounter` (from encounter context) alongside `DocumentReference`; interface-only; signed-gated. _Req 17.1–17.6_
 - [x] 6.2 API: `POST /scribe/sessions/{id}/notes/{ver}/addendum` (gated `RAG_SCRIBE_ADDENDUM_ENABLED`) — append-only `ScribeAddendum`, leaves signed version byte-for-byte unchanged, one audit entry; export includes addendum as a demarcated time-stamped section. _Req 18.1–18.6_
 - [x] 6.3 Web: addendum compose/view UI on a signed note (distinct from amend). _Req 18.2_
-- [~] 6.4 **Property test P11** — FHIR Composition/Encounter section-correspondence + round-trip + signed-gating. _Req 17.2, 17.3, 17.4, 17.6_
+- [x] 6.4 **Property test P11** — FHIR Composition/Encounter section-correspondence + round-trip + signed-gating. _Req 17.2, 17.3, 17.4, 17.6_
 - [~] 6.5 **Property test P12** — addendum preserves signed note (no new version, one audit entry, signed bytes unchanged, demarcated in export). _Req 18.2, 18.3, 18.4, 18.5, 18.6_
 
 ## Wave 7 — Quality + WER metrics (R15, R16)
