@@ -24,6 +24,7 @@ from clara_api.core.scribe_analytics import (
 from clara_api.core.scribe_lifecycle import can_transition
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    ScribeAddendum,
     ScribeAudit,
     ScribeConsent,
     ScribeNoteVersion,
@@ -32,6 +33,8 @@ from clara_api.db.models import (
 )
 from clara_api.db.session import SessionLocal, get_db
 from clara_api.schemas import (
+    ScribeAddendumListResponse,
+    ScribeAddendumResponse,
     ScribeCodingResponse,
     ScribeExtractionResponse,
     ScribeGroundingResponse,
@@ -711,6 +714,16 @@ class NoteGenerateRequest(BaseModel):
     transcript: str | None = Field(default=None, max_length=100000)
 
 
+class AddendumRequest(BaseModel):
+    """Body for attaching a time-stamped addendum to a signed note (Req 18.2).
+
+    Carries only the addendum free text; author + timestamp are derived from the
+    authenticated clinician and server clock (never client-supplied).
+    """
+
+    text: str = Field(min_length=1, max_length=20000)
+
+
 def _record_audit(
     db: Session,
     *,
@@ -763,6 +776,7 @@ _AUDIT_FLOW_STAGE: dict[str, tuple[str, str]] = {
     "note_coded": ("code", "completed"),
     "note_amended": ("generate", "amended"),
     "note_signed": ("sign", "completed"),
+    "note_addendum_added": ("addendum", "completed"),
     "note_exported": ("export", "completed"),
 }
 
@@ -1223,6 +1237,137 @@ def amend_note(
     return _serialize_session(item)
 
 
+def _addenda_for_version(db: Session, *, note_version_id: int) -> list[ScribeAddendum]:
+    """Return a signed version's addenda in append (chronological) order (Req 18.6)."""
+
+    return list(
+        db.execute(
+            select(ScribeAddendum)
+            .where(ScribeAddendum.note_version_id == note_version_id)
+            .order_by(ScribeAddendum.id.asc())
+        ).scalars().all()
+    )
+
+
+def _serialize_addendum(version_no: int, addendum: ScribeAddendum) -> ScribeAddendumResponse:
+    return ScribeAddendumResponse(
+        session_id=addendum.session_id,
+        version_no=version_no,
+        addendum_id=addendum.id,
+        author=addendum.author,
+        text=addendum.text,
+        created_at=addendum.created_at,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/notes/{version_no}/addendum",
+    response_model=ScribeAddendumResponse,
+)
+def add_note_addendum(
+    session_id: int,
+    version_no: int,
+    request: AddendumRequest,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeAddendumResponse:
+    """Attach an append-only, time-stamped addendum to a SIGNED note (Requirement 18).
+
+    Clinician RBAC (``DOCTOR_ROLE_DEP``) + owner-scoping (``_get_owned_session``).
+    Flag-gated by ``RAG_SCRIBE_ADDENDUM_ENABLED`` (Req 18.1): off ⇒ 404 so only the
+    legacy amend (new-version) workflow is exposed.
+
+    Distinct from amend (Req 18.5): attaching an addendum inserts one append-only
+    :class:`ScribeAddendum` row and leaves the target signed :class:`ScribeNoteVersion`
+    byte-for-byte unchanged (Req 18.3) — no new note version is created and the
+    session status is not transitioned. Exactly one append-only audit entry is
+    recorded (Req 18.4). The target version must be ``signed`` (Req 18.2); attaching
+    to a missing or unsigned version is rejected (404 / 409 respectively).
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_addendum_enabled:
+        raise HTTPException(status_code=404, detail="Scribe addendum workflow is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+
+    version = _get_note_version(db, session_id=item.id, version_no=version_no)
+    if version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note version không tồn tại."
+        )
+    if not version.signed:
+        # An addendum attaches only to a signed note (Req 18.2); an unsigned note is
+        # still editable via regenerate/amend, so an addendum here is rejected.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Chỉ có thể thêm addendum vào note đã ký (signed).",
+        )
+
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Addendum trống.")
+
+    addendum = ScribeAddendum(
+        session_id=item.id,
+        note_version_id=version.id,
+        author=user.id,
+        text=text,
+    )
+    db.add(addendum)
+    db.flush()
+    # Exactly one append-only audit entry (Req 18.4). The session status is NOT
+    # transitioned (from == to): an addendum is not a lifecycle change and creates
+    # no new note version (Req 18.3/18.5).
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="note_addendum_added",
+        from_status=item.status,
+        to_status=item.status,
+        detail={"version_no": version.version_no, "addendum_id": addendum.id},
+    )
+    db.commit()
+    db.refresh(addendum)
+    return _serialize_addendum(version.version_no, addendum)
+
+
+@router.get(
+    "/sessions/{session_id}/notes/{version_no}/addenda",
+    response_model=ScribeAddendumListResponse,
+)
+def list_note_addenda(
+    session_id: int,
+    version_no: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeAddendumListResponse:
+    """List a signed note version's addenda in append order (Requirement 18.6).
+
+    Clinician RBAC + owner-scoping. Flag-gated by ``RAG_SCRIBE_ADDENDUM_ENABLED``:
+    off ⇒ 404 (the addendum surface is fully retracted). Returns an empty list when
+    the version exists but has no addenda yet.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_addendum_enabled:
+        raise HTTPException(status_code=404, detail="Scribe addendum workflow is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    version = _get_note_version(db, session_id=item.id, version_no=version_no)
+    if version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note version không tồn tại."
+        )
+    addenda = _addenda_for_version(db, note_version_id=version.id)
+    return ScribeAddendumListResponse(
+        session_id=item.id,
+        version_no=version.version_no,
+        addenda=[_serialize_addendum(version.version_no, a) for a in addenda],
+    )
+
+
 @router.get("/sessions/{session_id}/audit")
 def get_audit_trail(
     session_id: int,
@@ -1445,12 +1590,18 @@ def _note_to_markdown(
     signed_at: datetime | None = None,
     encounter: dict[str, str] | None = None,
     attribution: str | None = None,
+    addenda: list[dict[str, str]] | None = None,
 ) -> str:
     """Render the note as Markdown including template sections + attribution (Req 9.1/9.2).
 
     Template sections, the encounter context, the signing clinician + sign timestamp,
     and the required source/medical attribution are all included when provided.
     Attribution arguments are optional so legacy callers keep the prior shape.
+
+    When ``addenda`` are supplied they are appended *after* the signed note content as
+    a clearly demarcated, time-stamped "Addenda" section (Req 18.6); the signed
+    section/attribution content above is rendered unchanged, so an addendum never
+    alters the signed note (Req 18.3).
     """
 
     soap = _as_json_object(item.soap_json) or {}
@@ -1483,6 +1634,20 @@ def _note_to_markdown(
             lines.append("")
             lines.append(attribution)
 
+    if addenda:
+        # Clearly demarcated, time-stamped addenda appended after the signed content
+        # (Req 18.6). The signed content above is unchanged byte-for-byte (Req 18.3).
+        lines.append("")
+        lines.append("---")
+        lines.append("## Addenda")
+        for entry in addenda:
+            lines.append("")
+            lines.append(f"### Addendum — {entry.get('created_at', '')}")
+            author_label = entry.get("author_label")
+            if author_label:
+                lines.append(f"**Author:** {author_label}")
+            lines.append(entry.get("text", ""))
+
     return "\n".join(lines).strip() or f"# {item.title or 'Clinical note'}"
 
 
@@ -1513,6 +1678,7 @@ def _fhir_composition(
     signed_at: datetime | None,
     encounter: dict[str, str],
     attribution: str,
+    addenda: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Build the interface-only FHIR ``Composition`` resource (Req 17.2/17.4).
 
@@ -1534,6 +1700,23 @@ def _fhir_composition(
         for key, value in sections.items()
         if value is not None
     ]
+    # Addenda are emitted as additional, clearly demarcated time-stamped sections
+    # AFTER the signed template sections (Req 18.6); the signed sections above are
+    # unchanged (Req 18.3). When no addenda exist this is a no-op so the 1:1
+    # section-per-template correspondence (Req 17.2) is preserved.
+    for entry in addenda or []:
+        created_at = entry.get("created_at", "")
+        author_label = entry.get("author_label", "")
+        prefix = f"[Addendum {created_at}".strip()
+        if author_label:
+            prefix = f"{prefix} by {author_label}"
+        prefix = f"{prefix}] "
+        composition_sections.append(
+            {
+                "title": f"Addendum — {created_at}",
+                "text": _fhir_narrative(f"{prefix}{entry.get('text', '')}"),
+            }
+        )
     composition: dict[str, Any] = {
         "resourceType": "Composition",
         "status": "final",
@@ -1632,12 +1815,28 @@ def export_note(
     encounter = _encounter_context(item)
     attribution = _attribution_text(settings)
 
+    # Addenda (Req 18.6): when the addendum flag is on, gather the signed version's
+    # append-only addenda so every export format includes them as a clearly
+    # demarcated, time-stamped section AFTER the signed content. Off ⇒ empty list ⇒
+    # byte-for-byte legacy export. The signed sections themselves are never mutated.
+    addenda_md: list[dict[str, str]] = []
+    if settings.rag_scribe_addendum_enabled and signed_version is not None:
+        addenda_md = [
+            {
+                "created_at": a.created_at.isoformat() if a.created_at else "",
+                "author_label": _clinician_label(db, a.author),
+                "text": a.text,
+            }
+            for a in _addenda_for_version(db, note_version_id=signed_version.id)
+        ]
+
     markdown = _note_to_markdown(
         item,
         signed_by_label=signed_by_label,
         signed_at=signed_at,
         encounter=encounter,
         attribution=attribution,
+        addenda=addenda_md,
     )
 
     def _document_reference() -> dict[str, Any]:
@@ -1689,6 +1888,7 @@ def export_note(
             signed_at=signed_at,
             encounter=encounter,
             attribution=attribution,
+            addenda=addenda_md,
         )
         fhir_encounter = _fhir_encounter(encounter, attribution=attribution)
         response = {

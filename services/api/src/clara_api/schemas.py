@@ -958,6 +958,32 @@ class ScribeCodingResponse(BaseModel):
     coding: dict[str, Any] = Field(default_factory=dict)
 
 
+class ScribeAddendumResponse(BaseModel):
+    """Response for an append-only addendum attached to a signed note (Req 18).
+
+    An addendum is a time-stamped clinical note (``author``, ``created_at``,
+    ``text``) attached to a ``signed`` :class:`ScribeNoteVersion`. Attaching it
+    leaves the signed version byte-for-byte unchanged and creates no new note
+    version (distinct from amend) — this response simply echoes the appended
+    record so the client can render it without a re-fetch (Req 18.2/18.3/18.5).
+    """
+
+    session_id: int
+    version_no: int
+    addendum_id: int
+    author: int | None = None
+    text: str
+    created_at: datetime | None = None
+
+
+class ScribeAddendumListResponse(BaseModel):
+    """Read response listing a signed note version's addenda in append order (Req 18.6)."""
+
+    session_id: int
+    version_no: int
+    addenda: list[ScribeAddendumResponse] = Field(default_factory=list)
+
+
 class PhrAllergyItem(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=140)
