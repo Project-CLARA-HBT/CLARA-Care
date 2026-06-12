@@ -952,6 +952,95 @@ def scribe_note(payload: dict) -> dict:
     }
 
 
+def _scribe_segments_from_transcript(transcript: str) -> list[str]:
+    """Split a transcript into ordered segment texts for the shared span registry.
+
+    Deterministic + pure: prefers explicit line breaks; for a single line it falls
+    back to sentence boundaries; finally treats the whole transcript as one segment.
+    Empty fragments are dropped. Never mutates the transcript content — the result is
+    only used to derive read-only :class:`SpanRegistry` spans (task 4.1).
+    """
+
+    raw = str(transcript or "")
+    if not raw.strip():
+        return []
+    lines = [part.strip() for part in re.split(r"[\r\n]+", raw) if part.strip()]
+    if len(lines) > 1:
+        return lines
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?。?])\s+", raw) if s.strip()]
+    return sentences or [raw.strip()]
+
+
+def _scribe_section_text(value: object) -> str:
+    """Flatten a note section value to plain text for the grounding pass (read-only).
+
+    Template notes carry string sections; the legacy SOAP shape may nest dict/list
+    values. Flattening keeps the grounding enumeration meaningful without ever
+    mutating the persisted note — this derived text is used only as pass input.
+    """
+
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return ". ".join(_scribe_section_text(v) for v in value.values() if v not in (None, ""))
+    if isinstance(value, (list, tuple)):
+        return ". ".join(_scribe_section_text(v) for v in value if v not in (None, ""))
+    if value in (None, ""):
+        return ""
+    return str(value)
+
+
+@app.post("/v1/scribe/passes")
+def scribe_passes(payload: dict) -> dict:
+    """Run the additive grounding (R12) + structured-extraction (R13) passes.
+
+    Additive + flag-gated: each pass runs only when the caller requests it (the API
+    mirrors its own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
+    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` flags) AND the corresponding pass is
+    permitted here. The passes are read-only over the transcript spans and the
+    generated note sections — they NEVER mutate the note's clinical text or the
+    transcript (Req 12.6, 13.5). Returns ``{"grounding": ..., "extraction": ...}``
+    where each value is the serialized report (an inert/disabled report when its
+    pass did not run).
+    """
+
+    from clara_ml.scribe.extraction import StructuredExtraction, StructuredExtractor
+    from clara_ml.scribe.grounding import GroundingReport, GroundingVerifier
+    from clara_ml.scribe.provenance import SpanRegistry
+
+    raw_sections = payload.get("sections")
+    sections: dict[str, str] = {}
+    if isinstance(raw_sections, dict):
+        sections = {str(k): _scribe_section_text(v) for k, v in raw_sections.items()}
+
+    segments = payload.get("segments")
+    if isinstance(segments, list) and segments:
+        segment_texts = [str(s) for s in segments if str(s).strip()]
+    else:
+        segment_texts = _scribe_segments_from_transcript(str(payload.get("transcript", "") or ""))
+
+    registry = SpanRegistry(segment_texts)
+
+    # The caller's explicit flags are authoritative when present; otherwise fall back
+    # to this service's own settings (default off). ``enabled=None`` => ML setting.
+    grounding_enabled = payload.get("grounding_enabled")
+    extraction_enabled = payload.get("extraction_enabled")
+
+    verifier = GroundingVerifier(
+        enabled=bool(grounding_enabled) if grounding_enabled is not None else None
+    )
+    extractor = StructuredExtractor(
+        enabled=bool(extraction_enabled) if extraction_enabled is not None else None
+    )
+
+    grounding: GroundingReport = verifier.verify(sections, registry)
+    extraction: StructuredExtraction = extractor.extract(registry)
+    return {
+        "grounding": grounding.as_dict(),
+        "extraction": extraction.as_dict(),
+    }
+
+
 @app.post("/v1/scribe/transcribe")
 async def scribe_transcribe(
     audio_file: UploadFile = File(...),

@@ -1,6 +1,6 @@
-from datetime import UTC, date, datetime
 import json
 import logging
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 import httpx
@@ -13,13 +13,13 @@ from sqlalchemy.orm import Session
 from clara_api.api.v1.endpoints.analytics import AnalyticsAggregator
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
+from clara_api.core.consent import required_medical_disclaimer_version
+from clara_api.core.markdown_docx import build_docx_bytes_from_markdown
+from clara_api.core.rbac import require_roles
 from clara_api.core.scribe_analytics import (
     aggregate_encounter_metrics,
     derive_encounter_metrics,
 )
-from clara_api.core.consent import required_medical_disclaimer_version
-from clara_api.core.markdown_docx import build_docx_bytes_from_markdown
-from clara_api.core.rbac import require_roles
 from clara_api.core.scribe_lifecycle import can_transition
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -30,6 +30,7 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.schemas import ScribeExtractionResponse, ScribeGroundingResponse
 
 router = APIRouter()
 
@@ -181,6 +182,80 @@ def _generate_note_sections(transcript: str, template_id: str) -> dict[str, Any]
         return sections
     # Defensive fallback: ML note unavailable / unexpected shape.
     return _generate_soap(transcript)
+
+
+def _session_segment_texts(item: ScribeSession) -> list[str]:
+    """Return ordered transcript segment texts from persisted ASR diarization meta.
+
+    Segments live additively under ``asr_meta_json['segments']`` (each carries its
+    own per-segment ``text``). Returns ``[]`` when no diarized segments are present;
+    the additive passes then derive spans from the raw transcript instead. This only
+    reads metadata — it never rebuilds or mutates the canonical transcript.
+    """
+
+    meta = item.asr_meta_json
+    if not isinstance(meta, dict):
+        return []
+    segments = meta.get("segments")
+    if not isinstance(segments, list):
+        return []
+    texts: list[str] = []
+    for seg in segments:
+        if isinstance(seg, dict):
+            text = str(seg.get("text", "")).strip()
+            if text:
+                texts.append(text)
+    return texts
+
+
+def _run_scribe_additive_passes(
+    *,
+    settings: Any,
+    transcript: str,
+    segment_texts: list[str],
+    sections: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Run the additive grounding (R12) + extraction (R13) passes via ML (task 4.5).
+
+    Flag-gated by the API's own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
+    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` flags (the API mirrors the ML
+    flags so both layers gate the passes). Returns ``(grounding_json, extraction_json)``
+    where each is ``None`` when its flag is off or no result is available.
+
+    The passes are additive metadata only — they never mutate the note's section
+    text or the transcript. The ML call is best-effort: if the ML pass endpoint is
+    unavailable the columns are simply left unpopulated and note generation still
+    succeeds (the note text is unaffected either way).
+    """
+
+    run_grounding = bool(settings.rag_scribe_grounding_enabled)
+    run_extraction = bool(settings.rag_scribe_structured_extraction_enabled)
+    if not (run_grounding or run_extraction):
+        return None, None
+
+    payload: dict[str, Any] = {
+        "transcript": transcript,
+        "segments": segment_texts,
+        "sections": sections if isinstance(sections, dict) else {},
+        "grounding_enabled": run_grounding,
+        "extraction_enabled": run_extraction,
+    }
+    try:
+        result = proxy_ml_post("/v1/scribe/passes", payload)
+    except HTTPException:
+        # Additive pass is non-blocking: leave metadata unpopulated on ML failure.
+        logger.warning("scribe additive passes unavailable; metadata not persisted")
+        return None, None
+
+    grounding_json: dict[str, Any] | None = None
+    extraction_json: dict[str, Any] | None = None
+    if run_grounding:
+        candidate = result.get("grounding")
+        grounding_json = candidate if isinstance(candidate, dict) else None
+    if run_extraction:
+        candidate = result.get("extraction")
+        extraction_json = candidate if isinstance(candidate, dict) else None
+    return grounding_json, extraction_json
 
 
 def _normalize_audio_content_type(value: str | None) -> str:
@@ -886,6 +961,20 @@ def generate_note_version(
         created_by=user.id,
     )
     db.add(version)
+    # Additive grounding (R12) + structured-extraction (R13) passes (task 4.5).
+    # Flag-gated and metadata-only: persisted into the dedicated nullable columns
+    # without ever touching the note's section text. When both flags are off this
+    # is a no-op and the columns stay null (byte-for-byte legacy behavior).
+    grounding_json, extraction_json = _run_scribe_additive_passes(
+        settings=settings,
+        transcript=transcript,
+        segment_texts=_session_segment_texts(item),
+        sections=soap if isinstance(soap, dict) else {},
+    )
+    if grounding_json is not None:
+        version.grounding_json = grounding_json
+    if extraction_json is not None:
+        version.extraction_json = extraction_json
     item.soap_json = soap
     prev_status = item.status
     if item.status == "draft" and can_transition(item.status, "in_review"):
@@ -903,6 +992,88 @@ def generate_note_version(
     db.commit()
     db.refresh(item)
     return _serialize_session(item)
+
+
+def _get_note_version(
+    db: Session, *, session_id: int, version_no: int
+) -> ScribeNoteVersion | None:
+    """Fetch a specific note version for a session (owner-scoping done by caller)."""
+
+    return db.execute(
+        select(ScribeNoteVersion).where(
+            ScribeNoteVersion.session_id == session_id,
+            ScribeNoteVersion.version_no == version_no,
+        )
+    ).scalar_one_or_none()
+
+
+@router.get(
+    "/sessions/{session_id}/notes/{version_no}/grounding",
+    response_model=ScribeGroundingResponse,
+)
+def get_note_grounding(
+    session_id: int,
+    version_no: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeGroundingResponse:
+    """Read the additive grounding report for a note version (Requirement 12.7).
+
+    Clinician RBAC (``DOCTOR_ROLE_DEP``) + owner-scoping (``_get_owned_session``).
+    Flag-gated by ``RAG_SCRIBE_GROUNDING_ENABLED``: 404 when the flag is off so the
+    enterprise grounding surface is fully retracted in the flags-off regression gate.
+    404 also when the version has no persisted grounding metadata (no data), so a
+    consumer never sees a fabricated/empty report.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_grounding_enabled:
+        raise HTTPException(status_code=404, detail="Scribe grounding is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    version = _get_note_version(db, session_id=item.id, version_no=version_no)
+    if version is None or not isinstance(version.grounding_json, dict):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không có dữ liệu grounding cho note version này.",
+        )
+    return ScribeGroundingResponse(
+        session_id=item.id, version_no=version.version_no, grounding=version.grounding_json
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/notes/{version_no}/extraction",
+    response_model=ScribeExtractionResponse,
+)
+def get_note_extraction(
+    session_id: int,
+    version_no: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeExtractionResponse:
+    """Read the additive structured-extraction result for a note version (Req 13).
+
+    Clinician RBAC (``DOCTOR_ROLE_DEP``) + owner-scoping (``_get_owned_session``).
+    Flag-gated by ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED``: 404 when the flag is
+    off (enterprise surface retracted) and 404 when the version has no persisted
+    extraction metadata (no data), so a consumer never sees a fabricated result.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_structured_extraction_enabled:
+        raise HTTPException(status_code=404, detail="Scribe structured extraction is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    version = _get_note_version(db, session_id=item.id, version_no=version_no)
+    if version is None or not isinstance(version.extraction_json, dict):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không có dữ liệu extraction cho note version này.",
+        )
+    return ScribeExtractionResponse(
+        session_id=item.id, version_no=version.version_no, extraction=version.extraction_json
+    )
 
 
 @router.post("/sessions/{session_id}/sign", response_model=ScribeSessionResponse)

@@ -913,6 +913,34 @@ class WorkspaceExportFormatResponse(BaseModel):
     filename: str
 
 
+class ScribeGroundingResponse(BaseModel):
+    """Read response for a note version's grounding report (Req 12.7).
+
+    ``grounding`` is the additive :class:`GroundingReport` serialized by the ML pass
+    (statements + per-statement grounded/unverified indicator + supporting span ids,
+    grounded-claim rate, and critical-safety unverified candidates). It is metadata
+    only — the note's clinical text is never altered by the grounding pass (Req 12.6).
+    """
+
+    session_id: int
+    version_no: int
+    grounding: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScribeExtractionResponse(BaseModel):
+    """Read response for a note version's structured-extraction result (Req 13).
+
+    ``extraction`` is the additive :class:`StructuredExtraction` serialized by the ML
+    pass (problems/medications/allergies/vitals, each with transcript-span provenance
+    and, for medications, ``rxcui`` when known). Metadata only — the note's clinical
+    text is never altered by the extraction pass (Req 13.5).
+    """
+
+    session_id: int
+    version_no: int
+    extraction: dict[str, Any] = Field(default_factory=dict)
+
+
 class PhrAllergyItem(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=140)
