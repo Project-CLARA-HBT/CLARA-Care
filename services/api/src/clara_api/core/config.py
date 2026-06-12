@@ -195,14 +195,21 @@ class Settings(BaseSettings):
     ml_service_url: str = Field(default="http://localhost:8110", validation_alias="ML_SERVICE_URL")
     ml_internal_api_key: str = Field(default="", validation_alias="ML_INTERNAL_API_KEY")
     # --- Clara Scribe (enterprise) feature flags (additive; default off/legacy) ---
+    # Wave 1 (R1–R11). All default off ⇒ legacy batch transcribe + SOAP flow.
     rag_scribe_streaming_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_STREAMING_ENABLED"
+    )
+    rag_scribe_diarization_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_DIARIZATION_ENABLED"
     )
     rag_scribe_consent_required: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_CONSENT_REQUIRED"
     )
     rag_scribe_templates_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_TEMPLATES_ENABLED"
+    )
+    rag_scribe_coding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_CODING_ENABLED"
     )
     rag_scribe_sign_workflow_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_SIGN_WORKFLOW_ENABLED"
@@ -212,6 +219,46 @@ class Settings(BaseSettings):
     )
     rag_scribe_fhir_export_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
+    )
+    # ASR provider selection seam (mirrors CLARA_ML config). "whisper" = the
+    # existing DeepSeek/Whisper audio client; other names degrade to it.
+    scribe_asr_primary: str = Field(
+        default="whisper", validation_alias="SCRIBE_ASR_PRIMARY"
+    )
+    scribe_asr_fallback: str = Field(
+        default="whisper", validation_alias="SCRIBE_ASR_FALLBACK"
+    )
+    scribe_asr_language: str = Field(
+        default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
+    )
+    # --- Clara Scribe (enterprise) wave-2 feature flags -------------------------
+    # R12–R20. All additive + default off ⇒ byte-for-byte current behavior.
+    rag_scribe_grounding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_GROUNDING_ENABLED"
+    )
+    rag_scribe_structured_extraction_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED"
+    )
+    rag_scribe_em_cpt_coding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EM_CPT_CODING_ENABLED"
+    )
+    rag_scribe_quality_metrics_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_QUALITY_METRICS_ENABLED"
+    )
+    rag_scribe_wer_reporting_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_WER_REPORTING_ENABLED"
+    )
+    rag_scribe_fhir_composition_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_FHIR_COMPOSITION_ENABLED"
+    )
+    rag_scribe_addendum_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_ADDENDUM_ENABLED"
+    )
+    rag_scribe_specialty_templates_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED"
+    )
+    rag_scribe_eval_gate_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EVAL_GATE_ENABLED"
     )
     ml_service_timeout_seconds: float = Field(
         default=60.0,

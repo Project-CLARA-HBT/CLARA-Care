@@ -664,21 +664,19 @@ class ResearchTier2JobCreateRequest(BaseModel):
         default="vi",
         validation_alias=AliasChoices("ui_language", "answer_language"),
     )
-    deep_pass_count: int | None = Field(default=None, ge=1, le=20)
+    # deep_pass_count declared EXACTLY ONCE with one bound set 1..6 (clara-research R1.2/R1.3).
+    deep_pass_count: int | None = Field(default=None, ge=1, le=6)
     answer_format: str = "markdown"
     response_format: str = "markdown"
-    render_hints: dict[str, object] = Field(default_factory=dict)
+    render_hints: dict[str, Any] = Field(default_factory=dict)
     source_mode: str | None = None
     uploaded_file_ids: list[str] = Field(default_factory=list)
     source_ids: list[int] = Field(default_factory=list)
     source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)
-    llm_runtime: dict[str, object] = Field(default_factory=dict)
-    deep_pass_count: int | None = Field(default=None, ge=1, le=6)
-    ui_language: Literal["vi", "en"] = Field(
-        default="vi",
-        validation_alias=AliasChoices("ui_language", "answer_language"),
-    )
+    # llm_runtime declared EXACTLY ONCE with a single type (clara-research R1.5).
     llm_runtime: dict[str, Any] = Field(default_factory=dict)
+    # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
+    clarifying_answers: dict[str, str] = Field(default_factory=dict)
 
 
 class ResearchTier2JobResponse(BaseModel):

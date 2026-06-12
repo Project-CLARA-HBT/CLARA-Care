@@ -694,6 +694,65 @@ class Settings(BaseSettings):
     scribe_asr_language: str = Field(
         default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
     )
+    # Code-switching: when true (default) the Vietnamese ASR provider is asked to keep
+    # embedded English drug/procedure tokens verbatim rather than transliterating them
+    # (Requirement 2.2).
+    scribe_asr_code_switching: bool = Field(
+        default=True, validation_alias="SCRIBE_ASR_CODE_SWITCHING"
+    )
+    # PhoWhisper (self-hosted, Vietnamese-capable) HTTP provider config. Defaults keep it
+    # DISABLED/degrading: with no base URL set the provider returns an empty result so the
+    # composite falls back to Whisper. Selected via SCRIBE_ASR_PRIMARY/FALLBACK="phowhisper".
+    scribe_phowhisper_base_url: str = Field(
+        default="", validation_alias="SCRIBE_PHOWHISPER_BASE_URL"
+    )
+    scribe_phowhisper_api_key: str = Field(
+        default="", validation_alias="SCRIBE_PHOWHISPER_API_KEY"
+    )
+    scribe_phowhisper_model: str = Field(
+        default="phowhisper-large", validation_alias="SCRIBE_PHOWHISPER_MODEL"
+    )
+    scribe_phowhisper_timeout_seconds: float = Field(
+        default=30.0, validation_alias="SCRIBE_PHOWHISPER_TIMEOUT_SECONDS"
+    )
+    scribe_phowhisper_retries: int = Field(
+        default=1, validation_alias="SCRIBE_PHOWHISPER_RETRIES"
+    )
+    scribe_phowhisper_retry_backoff_seconds: float = Field(
+        default=0.25, validation_alias="SCRIBE_PHOWHISPER_RETRY_BACKOFF_SECONDS"
+    )
+    # --- Clara Scribe (enterprise) wave-2 feature flags ---------------------
+    # R12–R20. All additive + default off ⇒ byte-for-byte current behavior:
+    # with these off, grounding/extraction/coding/metrics/FHIR-composition/
+    # addendum/specialty-templates/eval-gate passes never run and emit no
+    # metadata.
+    rag_scribe_grounding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_GROUNDING_ENABLED"
+    )
+    rag_scribe_structured_extraction_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED"
+    )
+    rag_scribe_em_cpt_coding_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EM_CPT_CODING_ENABLED"
+    )
+    rag_scribe_quality_metrics_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_QUALITY_METRICS_ENABLED"
+    )
+    rag_scribe_wer_reporting_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_WER_REPORTING_ENABLED"
+    )
+    rag_scribe_fhir_composition_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_FHIR_COMPOSITION_ENABLED"
+    )
+    rag_scribe_addendum_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_ADDENDUM_ENABLED"
+    )
+    rag_scribe_specialty_templates_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED"
+    )
+    rag_scribe_eval_gate_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_EVAL_GATE_ENABLED"
+    )
     # Embedding fail-loud / degraded-mode tuning (replaces silent hash fallback).
     rag_embedding_fail_loud: bool = Field(
         default=True,

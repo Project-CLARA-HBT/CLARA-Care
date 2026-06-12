@@ -6,8 +6,9 @@
 - normalized medications via the existing RAG drug lexicon / entity linker
   (lexicon-only = fast, offline, no network), degrading to surface text when
   unknown (Requirement 7.2);
-- drug-drug interaction advisories via an INJECTABLE seam (defaults to a small
-  curated pair set; production can inject the CareGuard/DDI path).
+- drug-drug interaction advisories via an INJECTABLE seam that, by default,
+  REUSES the existing CareGuard/DDI path (``agents.careguard.run_careguard_analyze``,
+  local rule set, external lookups disabled) — never reinvented (Requirement 7.3).
 
 All output is additive metadata and never modifies the note's clinical text
 (Requirement 7.4); nothing is presented as a confirmed diagnosis/prescription
@@ -18,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,8 @@ class CodingResult:
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "icd": [vars(c) for c in self.icd],
-            "medications": [vars(m) for m in self.medications],
+            "icd": [asdict(c) for c in self.icd],
+            "medications": [asdict(m) for m in self.medications],
             "interactions": list(self.interactions),
             "advisory": self.advisory,
         }
@@ -78,27 +79,41 @@ _ICD_KEYWORDS: list[tuple[str, str, str]] = [
     ("anxiety", "F41.9", "Anxiety disorder, unspecified"),
 ]
 
-# Minimal curated DDI pairs (rxcui-keyed) for the default interactions seam.
-_KNOWN_DDI: dict[frozenset[str], str] = {
-    frozenset({"11289", "1191"}): "Warfarin + aspirin: increased bleeding risk (monitor INR).",
-    frozenset({"32968", "7646"}): "Clopidogrel + omeprazole: omeprazole may reduce clopidogrel efficacy.",
-    frozenset({"136411", "4917"}): "Sildenafil + nitroglycerin: severe hypotension — contraindicated.",
-}
-
-# Seam: given normalized meds (with rxcui), return interaction advisory strings.
+# Seam: given normalized meds, return interaction advisory strings.
 InteractionFn = Callable[[Sequence[MedSuggestion]], list[str]]
 
 
 def _default_interactions(meds: Sequence[MedSuggestion]) -> list[str]:
-    rxcuis = [m.rxcui for m in meds if m.rxcui]
+    """Surface DDI advisories by REUSING the CareGuard/DDI analysis path.
+
+    Delegates to ``agents.careguard.run_careguard_analyze`` (the same local DDI
+    rule set CareGuard uses) rather than reinventing an interaction table. Runs
+    with external DDI lookups disabled so note-time coding stays fast and
+    network-free, and is fully non-blocking: any failure degrades to no
+    advisories — it never raises and never blocks note generation
+    (Requirement 7.3).
+    """
+
+    names = [m.normalized_name or m.surface for m in meds if (m.normalized_name or m.surface)]
+    if len(names) < 2:
+        return []
+    try:
+        from clara_ml.agents.careguard import run_careguard_analyze
+
+        analysis = run_careguard_analyze(
+            {"medications": names, "external_ddi_enabled": False}
+        )
+    except Exception as exc:  # noqa: BLE001 - advisory must never block note gen
+        logger.warning("coding_ddi_unavailable err=%s", exc.__class__.__name__)
+        return []
+
     out: list[str] = []
-    seen: set[frozenset[str]] = set()
-    for i in range(len(rxcuis)):
-        for j in range(i + 1, len(rxcuis)):
-            pair = frozenset({rxcuis[i], rxcuis[j]})
-            if pair in _KNOWN_DDI and pair not in seen:
-                seen.add(pair)
-                out.append(_KNOWN_DDI[pair])
+    for alert in analysis.get("ddi_alerts", []) or []:
+        if not isinstance(alert, dict) or alert.get("type") != "drug_drug":
+            continue
+        message = str(alert.get("message", "")).strip()
+        if message and message not in out:
+            out.append(message)
     return out
 
 

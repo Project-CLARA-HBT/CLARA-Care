@@ -1,15 +1,24 @@
 from datetime import UTC, date, datetime
-from typing import Any
+import json
+import logging
+from typing import Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.analytics import AnalyticsAggregator
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
+from clara_api.core.scribe_analytics import (
+    aggregate_encounter_metrics,
+    derive_encounter_metrics,
+)
+from clara_api.core.consent import required_medical_disclaimer_version
+from clara_api.core.markdown_docx import build_docx_bytes_from_markdown
 from clara_api.core.rbac import require_roles
 from clara_api.core.scribe_lifecycle import can_transition
 from clara_api.core.security import TokenPayload
@@ -20,9 +29,11 @@ from clara_api.db.models import (
     ScribeSession,
     User,
 )
-from clara_api.db.session import get_db
+from clara_api.db.session import SessionLocal, get_db
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 _MAX_AUDIO_BYTES = 15 * 1024 * 1024
 _ALLOWED_AUDIO_TYPES = {
@@ -291,6 +302,13 @@ async def scribe_transcribe(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     user = _get_user_by_token(db, token)
+    # Consent guard (Requirement 4.1): when consent is required, a transcription
+    # request for a session with no active consent is rejected before any ASR work.
+    # Fully flag-gated so the legacy batch path is byte-for-byte unchanged when off.
+    settings = get_settings()
+    if settings.rag_scribe_consent_required and session_id is not None:
+        guarded = _get_owned_session(db, user_id=user.id, session_id=session_id)
+        _require_consent(db, settings, guarded.id)
     payload = await _call_scribe_transcribe_ml(
         audio_file=audio_file,
         language=language,
@@ -501,6 +519,95 @@ def get_scribe_analytics_summary(
     )
 
 
+class ScribeEncounterMetrics(BaseModel):
+    """Coarse, PII-free per-encounter metrics (Requirement 10.4).
+
+    Each metric is a bounded number and is OMITTED (``None``) when its input is
+    unavailable rather than fabricated. ``session_id`` is an opaque identifier;
+    no title/transcript/patient data is included (Requirement 10.1).
+    """
+
+    session_id: int
+    edit_rate: float | None = None
+    time_saved_minutes: float | None = None
+    degraded_rate: float | None = None
+
+
+class ScribeAnalyticsDerivedResponse(BaseModel):
+    """Per-encounter derived analytics + an across-encounter aggregate (Req 10.4)."""
+
+    encounters: list[ScribeEncounterMetrics]
+    # Averages over encounters reporting each metric; a metric absent everywhere
+    # is omitted from the aggregate (omit-on-missing).
+    aggregate: dict[str, float]
+
+
+@router.get("/analytics/derived", response_model=ScribeAnalyticsDerivedResponse)
+def get_scribe_analytics_derived(
+    limit: int = Query(default=100, ge=1, le=500),
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeAnalyticsDerivedResponse:
+    """Derive coarse per-encounter time-saved / edit-rate / degraded-rate (Req 10.1/10.4).
+
+    Additive analytics surface: the legacy ``/analytics/summary`` payload is left
+    byte-for-byte unchanged. Metrics are derived purely from persisted, non-PII
+    session metadata — ``ScribeNoteVersion.sections_json`` (originally generated vs
+    finalized note) and ``ScribeSession.asr_meta_json`` (degraded segments). Each
+    metric is omitted when its input is unavailable (omit-on-missing). The assembled
+    payload is run through the existing analytics redaction projection as a
+    defense-in-depth PII guard (Req 10.1).
+    """
+
+    user = _get_user_by_token(db, token)
+    sessions = db.execute(
+        select(ScribeSession)
+        .where(ScribeSession.user_id == user.id)
+        .order_by(ScribeSession.updated_at.desc())
+        .limit(limit)
+    ).scalars().all()
+
+    encounters: list[ScribeEncounterMetrics] = []
+    per_encounter_metrics: list[dict[str, float]] = []
+    for item in sessions:
+        version_rows = db.execute(
+            select(ScribeNoteVersion)
+            .where(ScribeNoteVersion.session_id == item.id)
+            .order_by(ScribeNoteVersion.version_no.asc())
+        ).scalars().all()
+        note_versions = [{"sections": row.sections_json} for row in version_rows]
+        metrics = derive_encounter_metrics(
+            note_versions=note_versions, asr_meta=item.asr_meta_json
+        )
+        if not metrics:
+            # No derivable signal for this encounter — omit it entirely rather than
+            # emit an all-null row (omit-on-missing, Req 10.4).
+            continue
+        per_encounter_metrics.append(metrics)
+        encounters.append(
+            ScribeEncounterMetrics(
+                session_id=item.id,
+                edit_rate=metrics.get("edit_rate"),
+                time_saved_minutes=metrics.get("time_saved_minutes"),
+                degraded_rate=metrics.get("degraded_rate"),
+            )
+        )
+
+    aggregate = aggregate_encounter_metrics(per_encounter_metrics)
+
+    # Defense-in-depth: reuse the existing analytics PII redaction projection so
+    # the contract is shared with the product/clinical analytics layer. The
+    # payload already contains only opaque ids + bounded numbers, so this is a
+    # no-op today, but it guards the contract if the shape ever grows (Req 10.1).
+    projected = AnalyticsAggregator._project_pii_free(
+        {
+            "encounters": [e.model_dump() for e in encounters],
+            "aggregate": aggregate,
+        }
+    )
+    return ScribeAnalyticsDerivedResponse(**projected)
+
+
 # ---------------------------------------------------------------------------
 # Enterprise: consent, sign/amend workflow, audit, segment relabel, export.
 # All additive + flag-gated; the routes above are unchanged.
@@ -550,6 +657,105 @@ def _active_consent(db: Session, session_id: int) -> ScribeConsent | None:
     return row
 
 
+# ---------------------------------------------------------------------------
+# Audit -> flow/telemetry mapping (task 3.1, Requirement 10.3).
+# ---------------------------------------------------------------------------
+
+# Maps an append-only audit action to a (stage, status) pair so the audit trail
+# can be surfaced in the UI process panel via the EXISTING flow-event mechanism
+# (the same {stage, timestamp, status, source_count, note} shape chat/research
+# emit). This covers the API-side scribe pipeline stages — consent, transcription
+# (segment persistence), diarization (relabel), note generation, coding, sign —
+# without introducing a new contract.
+_AUDIT_FLOW_STAGE: dict[str, tuple[str, str]] = {
+    "consent_captured": ("consent", "completed"),
+    "consent_revoked": ("consent", "revoked"),
+    "segments_persisted": ("transcribe", "completed"),
+    "segment_relabeled": ("diarize", "completed"),
+    "note_generated": ("generate", "completed"),
+    "note_coded": ("code", "completed"),
+    "note_amended": ("generate", "amended"),
+    "note_signed": ("sign", "completed"),
+    "note_exported": ("export", "completed"),
+}
+
+# Whitelisted coarse, non-PII audit-detail keys used to build a flow-event note.
+# Restricting to this set guarantees no transcript text / patient identifier ever
+# enters a telemetry note (Requirement 10.1), even if detail_json grows new keys.
+_FLOW_NOTE_KEYS = (
+    "template_id",
+    "version_no",
+    "method",
+    "scope",
+    "format",
+    "segment_count",
+    "provider",
+    "language",
+    "degraded_count",
+    "to_speaker",
+)
+
+
+def _scribe_flow_event(
+    *, stage: str, status: str, source_count: int, note: str, timestamp: str
+) -> dict[str, Any]:
+    """Build one scribe flow/telemetry event in the established shape (Req 10.3)."""
+
+    return {
+        "stage": stage,
+        "timestamp": timestamp,
+        "status": status,
+        "source_count": max(int(source_count), 0),
+        "note": note,
+    }
+
+
+def _coarse_flow_note(action: str, detail: dict[str, Any]) -> str:
+    """Render a PII-free flow-event note from whitelisted coarse audit detail (Req 10.1)."""
+
+    parts = [
+        f"{key}={detail[key]}"
+        for key in _FLOW_NOTE_KEYS
+        if detail.get(key) not in (None, "")
+    ]
+    return ", ".join(parts) or action
+
+
+def _audit_to_flow_events(rows: list[ScribeAudit]) -> list[dict[str, Any]]:
+    """Project append-only audit entries to scribe pipeline flow events (Req 10.3).
+
+    Reuses the existing flow-event shape so the scribe pipeline (consent ->
+    transcribe -> diarize -> generate -> code -> sign) is observable in the UI
+    process panel via the same mechanism as chat/research. Additive + PII-free:
+    derived purely from the existing audit trail, emitting only coarse
+    stage/status/count metadata (Requirement 10.1). Unmapped actions are skipped.
+    """
+
+    events: list[dict[str, Any]] = []
+    for row in rows:
+        mapped = _AUDIT_FLOW_STAGE.get(row.action)
+        if mapped is None:
+            continue
+        stage, stage_status = mapped
+        detail = row.detail_json if isinstance(row.detail_json, dict) else {}
+        source_count = 0
+        for key in ("segment_count", "version_no"):
+            raw = detail.get(key)
+            if isinstance(raw, (int, float)):
+                source_count = int(raw)
+                break
+        events.append(
+            _scribe_flow_event(
+                stage=stage,
+                status=stage_status,
+                source_count=source_count,
+                note=_coarse_flow_note(row.action, detail),
+                timestamp=row.created_at.isoformat() if row.created_at else "",
+            )
+        )
+    return events
+
+
 def _require_consent(db: Session, settings: Any, session_id: int) -> None:
     """Raise 403 when consent is required but absent/revoked (Requirement 4.1)."""
 
@@ -587,6 +793,42 @@ def capture_consent(
     return {"session_id": item.id, "consent_id": consent.id, "captured": True}
 
 
+@router.post("/sessions/{session_id}/consent/revoke")
+def revoke_consent(
+    session_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Revoke active consent for a session (Requirement 4.3/4.4).
+
+    Revocation is a NEW audit event, never an edit of the original consent
+    record: the captured fields (method, scope, captured_by, captured_at) are
+    left untouched; only ``revoked_at`` is stamped, marking the record inactive.
+    The session is flagged accordingly (``consent_id`` cleared) so that further
+    transcription/streaming is blocked by ``_require_consent`` (a revoked record
+    is treated as no active consent by ``_active_consent``).
+    """
+
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    consent = _active_consent(db, item.id)
+    if consent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không có consent đang hiệu lực để thu hồi.",
+        )
+    # Immutable record: only the revocation timestamp is set; captured fields stay as-is.
+    consent.revoked_at = datetime.now(tz=UTC)
+    # Flag the session: no active consent remains (Requirement 4.4).
+    item.consent_id = None
+    _record_audit(
+        db, session_id=item.id, actor=user.id, action="consent_revoked",
+        detail={"consent_id": consent.id, "method": consent.method, "scope": consent.scope},
+    )
+    db.commit()
+    return {"session_id": item.id, "consent_id": consent.id, "revoked": True}
+
+
 @router.post("/sessions/{session_id}/notes", response_model=ScribeSessionResponse)
 def generate_note_version(
     session_id: int,
@@ -594,13 +836,30 @@ def generate_note_version(
     token: TokenPayload = DOCTOR_ROLE_DEP,
     db: Session = Depends(get_db),
 ) -> ScribeSessionResponse:
-    """Generate + persist a new (draft) note version for a template (Requirement 6/8)."""
+    """Generate + persist a new (draft) note version for a template (Requirement 6/8).
+
+    Flag-gated by ``RAG_SCRIBE_SIGN_WORKFLOW_ENABLED`` (Requirement 11.1): when the
+    sign workflow is off the legacy batch/CRUD path is byte-for-byte unchanged and
+    this enterprise endpoint is not exposed (404).
+    """
 
     settings = get_settings()
+    if not settings.rag_scribe_sign_workflow_enabled:
+        raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
 
     _require_consent(db, settings, item.id)
+
+    # A signed note is immutable (Requirement 8.2): once a session has reached
+    # signed/exported/amended, further changes flow through the amend workflow
+    # (new version) rather than an in-place note regenerate that would silently
+    # supersede the signed content.
+    if item.status not in ("draft", "in_review"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Không thể tạo note version từ trạng thái '{item.status}'; dùng amend.",
+        )
 
     transcript = (request.transcript or item.transcript or "").strip()
     template_id = (request.template_id or "soap").strip() or "soap"
@@ -609,6 +868,8 @@ def generate_note_version(
         if transcript and settings.rag_scribe_templates_enabled
         else (_generate_soap(transcript) if transcript else {})
     )
+    # Versioned + recoverable (Requirement 8.5): never overwrite a prior version;
+    # always insert a new row with the next incremented version_no.
     next_version = (
         db.execute(
             select(func.count(ScribeNoteVersion.id)).where(
@@ -626,11 +887,18 @@ def generate_note_version(
     )
     db.add(version)
     item.soap_json = soap
-    if item.status == "draft":
-        if can_transition(item.status, "in_review"):
-            _record_audit(db, session_id=item.id, actor=user.id, action="note_generated",
-                          from_status="draft", to_status="in_review")
-            item.status = "in_review"
+    prev_status = item.status
+    if item.status == "draft" and can_transition(item.status, "in_review"):
+        item.status = "in_review"
+    # Append-only audit for every note-generation edit event (Requirement 8.3).
+    # On the first draft note this entry doubles as the draft -> in_review status
+    # transition; on a regenerate while already in_review it records the edit with
+    # from_status == to_status (no transition, but the version is preserved).
+    _record_audit(
+        db, session_id=item.id, actor=user.id, action="note_generated",
+        from_status=prev_status, to_status=item.status,
+        detail={"version_no": int(next_version), "template_id": template_id[:64]},
+    )
     item.last_processed_at = datetime.now(tz=UTC)
     db.commit()
     db.refresh(item)
@@ -643,8 +911,15 @@ def sign_note(
     token: TokenPayload = DOCTOR_ROLE_DEP,
     db: Session = Depends(get_db),
 ) -> ScribeSessionResponse:
-    """Sign the latest note version (immutable thereafter) (Requirement 8.1/8.2)."""
+    """Sign the latest note version (immutable thereafter) (Requirement 8.1/8.2).
 
+    Flag-gated by ``RAG_SCRIBE_SIGN_WORKFLOW_ENABLED`` (Requirement 11.1): off ⇒ 404
+    so legacy behavior is preserved.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_sign_workflow_enabled:
+        raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     # Legal source states for signing are exactly those with a `-> signed` edge
@@ -682,8 +957,15 @@ def amend_note(
     token: TokenPayload = DOCTOR_ROLE_DEP,
     db: Session = Depends(get_db),
 ) -> ScribeSessionResponse:
-    """Amend a signed note: create a NEW version, preserving the signed one (Req 8.2)."""
+    """Amend a signed note: create a NEW version, preserving the signed one (Req 8.2).
 
+    Flag-gated by ``RAG_SCRIBE_SIGN_WORKFLOW_ENABLED`` (Requirement 11.1): off ⇒ 404
+    so legacy behavior is preserved.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_sign_workflow_enabled:
+        raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     if not can_transition(item.status, "amended"):
@@ -749,19 +1031,246 @@ def get_audit_trail(
             }
             for r in rows
         ],
+        # Additive pipeline flow/telemetry projection (Requirement 10.3): reuse the
+        # existing flow-event shape so the scribe pipeline stages (consent ->
+        # transcribe -> diarize -> generate -> sign) are observable in the UI
+        # process panel via the same mechanism as chat/research. PII-free.
+        "flow_events": _audit_to_flow_events(list(rows)),
     }
 
 
-def _note_to_markdown(item: ScribeSession) -> str:
+# Bounded diarization speaker label set (Requirement 3.1). Kept in sync with the
+# ML seam's SPEAKERS tuple in ``clara_ml.scribe.asr.base``.
+_SPEAKER_LABELS = ("clinician", "patient", "other", "unknown")
+
+
+class SegmentRelabelRequest(BaseModel):
+    """Re-assign one segment's diarization speaker label (Requirement 3.3).
+
+    ``speaker`` is constrained to the bounded label set; any other value is
+    rejected by request validation (422) before the handler runs.
+    """
+
+    speaker: Literal["clinician", "patient", "other", "unknown"]
+
+
+def _session_segments(item: ScribeSession) -> list[Any] | None:
+    """Return the persisted diarization segments list, or ``None`` when absent.
+
+    Segments live additively under ``asr_meta_json['segments']`` (design §"Data
+    model": ``asr_meta_json`` holds provider/language/degraded_count + segments).
+    The transcript text itself is never derived from or written back to this
+    field — segments carry only per-segment text + diarization metadata.
+    """
+
+    meta = item.asr_meta_json
+    if not isinstance(meta, dict):
+        return None
+    segments = meta.get("segments")
+    if not isinstance(segments, list):
+        return None
+    return segments
+
+
+@router.patch("/sessions/{session_id}/segments/{segment_index}")
+def relabel_segment(
+    session_id: int,
+    segment_index: int,
+    request: SegmentRelabelRequest,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Re-assign a transcript segment's speaker label (Requirement 3.3/3.4).
+
+    Flag-gated by ``RAG_SCRIBE_DIARIZATION_ENABLED`` (Requirement 11.1): off ⇒ 404
+    so legacy behavior (no diarization surface) is byte-for-byte preserved.
+
+    The relabel is *additive metadata only* (Requirement 3.4, Property 2): only
+    the ``speaker`` field of the addressed segment changes; every segment's
+    ``text`` and the overall segment ordering are left byte-for-byte unchanged.
+    An append-only ``segment_relabeled`` audit entry records the override
+    (Requirement 8.3).
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_diarization_enabled:
+        raise HTTPException(status_code=404, detail="Scribe diarization is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+
+    segments = _session_segments(item)
+    if segments is None or segment_index < 0 or segment_index >= len(segments):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Segment không tồn tại."
+        )
+
+    target = segments[segment_index]
+    from_speaker = (
+        str(target.get("speaker", "unknown")) if isinstance(target, dict) else "unknown"
+    )
+    to_speaker = request.speaker
+
+    # Rebuild the segments list preserving text + ordering exactly; mutate ONLY
+    # the speaker of the addressed segment (Requirement 3.4). Reassigning the
+    # JSON column with a fresh object guarantees SQLAlchemy persists the change.
+    new_segments: list[Any] = []
+    for index, seg in enumerate(segments):
+        if index == segment_index and isinstance(seg, dict):
+            updated = dict(seg)
+            updated["speaker"] = to_speaker
+            new_segments.append(updated)
+        else:
+            new_segments.append(seg)
+
+    new_meta = dict(item.asr_meta_json) if isinstance(item.asr_meta_json, dict) else {}
+    new_meta["segments"] = new_segments
+    item.asr_meta_json = new_meta
+    item.updated_at = datetime.now(tz=UTC)
+
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="segment_relabeled",
+        detail={
+            "segment": segment_index,
+            "from_speaker": from_speaker,
+            "to_speaker": to_speaker,
+        },
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {
+        "session_id": item.id,
+        "segment": segment_index,
+        "from_speaker": from_speaker,
+        "to_speaker": to_speaker,
+        "segments": new_segments,
+    }
+
+
+def _signed_note_version(db: Session, session_id: int) -> ScribeNoteVersion | None:
+    """Return the latest signed note version for a session (Req 9.2 attribution).
+
+    The signing clinician + sign timestamp live on the ``ScribeNoteVersion`` row
+    that was signed (``sign_note``), not on the session, so export attribution is
+    sourced here. Prefers the highest ``version_no`` signed row.
+    """
+
+    return db.execute(
+        select(ScribeNoteVersion)
+        .where(
+            ScribeNoteVersion.session_id == session_id,
+            ScribeNoteVersion.signed.is_(True),
+        )
+        .order_by(ScribeNoteVersion.version_no.desc())
+    ).scalars().first()
+
+
+def _clinician_label(db: Session, user_id: int | None) -> str:
+    """Resolve a signing clinician's display label (full name, else email)."""
+
+    if user_id is None:
+        return "Unknown clinician"
+    signer = db.get(User, user_id)
+    if signer is None:
+        return f"Clinician #{user_id}"
+    return (signer.full_name or "").strip() or signer.email
+
+
+def _encounter_context(item: ScribeSession) -> dict[str, str]:
+    """Extract the (non-PII) encounter context for export attribution (Req 9.2/5).
+
+    Reads the additive ``encounter_json`` (visit type, encounter datetime, opaque
+    patient reference). Tolerant of missing/legacy sessions: returns only the keys
+    that are present so no PII is fabricated.
+    """
+
+    enc = _as_json_object(item.encounter_json) or {}
+    context: dict[str, str] = {}
+    visit_type = enc.get("visit_type")
+    if visit_type not in (None, ""):
+        context["visit_type"] = str(visit_type)
+    encounter_at = enc.get("encounter_at") or enc.get("encounter_datetime")
+    if encounter_at not in (None, ""):
+        context["encounter_at"] = str(encounter_at)
+    patient_ref = enc.get("patient_ref") or enc.get("patient_reference")
+    if patient_ref not in (None, ""):
+        context["patient_ref"] = str(patient_ref)
+    return context
+
+
+def _attribution_text(settings: Any) -> str:
+    """Required source/medical attribution line reused across export formats (Req 9.2).
+
+    Mirrors the medical-disclaimer guardrail used by the other CLARA surfaces
+    (``MEDICAL_DISCLAIMER_VERSION``); Scribe is assistive — a licensed clinician is
+    the final author, never an autonomous prescriber/diagnostician.
+    """
+
+    version = required_medical_disclaimer_version()
+    return (
+        "Source/medical attribution: Generated with CLARA Care clinical assistant "
+        f"(medical disclaimer {version}). Assistive documentation only; a licensed "
+        "clinician is the final author and signer. Not autonomous medical advice."
+    )
+
+
+def _note_to_markdown(
+    item: ScribeSession,
+    *,
+    signed_by_label: str | None = None,
+    signed_at: datetime | None = None,
+    encounter: dict[str, str] | None = None,
+    attribution: str | None = None,
+) -> str:
+    """Render the note as Markdown including template sections + attribution (Req 9.1/9.2).
+
+    Template sections, the encounter context, the signing clinician + sign timestamp,
+    and the required source/medical attribution are all included when provided.
+    Attribution arguments are optional so legacy callers keep the prior shape.
+    """
+
     soap = _as_json_object(item.soap_json) or {}
     lines = [f"# {item.title or 'Clinical note'}", ""]
+
+    if encounter:
+        lines.append("## Encounter")
+        if encounter.get("visit_type"):
+            lines.append(f"- Visit type: {encounter['visit_type']}")
+        if encounter.get("encounter_at"):
+            lines.append(f"- Encounter datetime: {encounter['encounter_at']}")
+        if encounter.get("patient_ref"):
+            lines.append(f"- Patient reference: {encounter['patient_ref']}")
+        lines.append("")
+
     for key, value in soap.items():
         if value in (None, "", {}, []):
             continue
         lines.append(f"## {key}")
         lines.append(str(value))
         lines.append("")
+
+    if signed_by_label or signed_at or attribution:
+        lines.append("---")
+        if signed_by_label:
+            lines.append(f"**Signed by:** {signed_by_label}")
+        if signed_at is not None:
+            lines.append(f"**Signed at:** {signed_at.isoformat()}")
+        if attribution:
+            lines.append("")
+            lines.append(attribution)
+
     return "\n".join(lines).strip() or f"# {item.title or 'Clinical note'}"
+
+
+def _slug_export_name(value: str) -> str:
+    """Filesystem-safe slug for the exported DOCX filename."""
+
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in (value or "").strip())
+    cleaned = "-".join(part for part in cleaned.split("-") if part)
+    return cleaned.lower() or "clinical-note"
 
 
 @router.get("/sessions/{session_id}/export")
@@ -770,8 +1279,14 @@ def export_note(
     export_format: str = Query(default="md", alias="format"),
     token: TokenPayload = DOCTOR_ROLE_DEP,
     db: Session = Depends(get_db),
-) -> dict[str, Any]:
-    """Export a signed/exported note as markdown or a FHIR DocumentReference (Req 9)."""
+) -> Any:
+    """Export a signed/exported note as Markdown, DOCX, or a FHIR DocumentReference (Req 9).
+
+    All formats include the note's template sections, the encounter context, the
+    signing clinician + sign timestamp, and the required source/medical attribution
+    (Req 9.2). DOCX reuses the existing workspace DOCX render path (Req 9.1). Export
+    is permitted only for ``signed``/``exported`` notes (Req 9.4) and is flag-gated.
+    """
 
     settings = get_settings()
     if not settings.rag_scribe_export_enabled:
@@ -784,8 +1299,27 @@ def export_note(
             detail="Chỉ export được note đã ký (signed/exported).",
         )
     fmt = (export_format or "md").strip().lower()
-    markdown = _note_to_markdown(item)
 
+    # Attribution sources (Req 9.2): signing clinician + sign timestamp from the
+    # signed note version, encounter context from the session, and the standard
+    # medical-disclaimer attribution shared with the other CLARA surfaces.
+    signed_version = _signed_note_version(db, item.id)
+    signed_by_label = (
+        _clinician_label(db, signed_version.signed_by) if signed_version is not None else None
+    )
+    signed_at = signed_version.signed_at if signed_version is not None else None
+    encounter = _encounter_context(item)
+    attribution = _attribution_text(settings)
+
+    markdown = _note_to_markdown(
+        item,
+        signed_by_label=signed_by_label,
+        signed_at=signed_at,
+        encounter=encounter,
+        attribution=attribution,
+    )
+
+    response: Any
     if fmt == "fhir":
         if not settings.rag_scribe_fhir_export_enabled:
             raise HTTPException(status_code=404, detail="FHIR export is disabled.")
@@ -803,17 +1337,112 @@ def export_note(
                     }
                 }
             ],
+            # Attribution embedded in the resource so it travels with the export (Req 9.2).
+            "author": ([{"display": signed_by_label}] if signed_by_label else []),
+            "date": signed_at.isoformat() if signed_at is not None else None,
+            "context": {"encounter_context": encounter} if encounter else {},
+            "meta": {"attribution": attribution},
         }
-        export_payload: dict[str, Any] = {"format": "fhir", "document_reference": document}
+        response = {"format": "fhir", "document_reference": document}
+    elif fmt == "docx":
+        # Reuse the existing workspace DOCX render path (Req 9.1); return the binary
+        # as an attachment, matching how the workspace DOCX export responds.
+        docx_bytes = build_docx_bytes_from_markdown(markdown)
+        filename = f"{_slug_export_name(item.title or 'clinical-note')}.docx"
+        response = Response(
+            content=docx_bytes,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ),
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
     else:
-        export_payload = {"format": "md", "markdown": markdown}
+        response = {"format": "md", "markdown": markdown}
 
     if can_transition(item.status, "exported"):
         _record_audit(db, session_id=item.id, actor=user.id, action="note_exported",
                       from_status=item.status, to_status="exported", detail={"format": fmt})
         item.status = "exported"
         db.commit()
-    return export_payload
+    return response
+
+
+def _parse_sse_done_payload(buffer: str) -> dict[str, Any] | None:
+    """Extract the ``done`` event's JSON payload from a buffered SSE byte stream.
+
+    The streaming relay is otherwise an opaque byte passthrough; to make streamed
+    diarization segments relabelable (Requirement 3.3/3.4) we additively capture
+    the terminal ``done`` frame's ``{segments, asr_meta, ...}`` payload here. Returns
+    the last ``done`` payload found, or ``None`` when absent/unparseable. Never raises.
+    """
+
+    last_payload: dict[str, Any] | None = None
+    for block in buffer.split("\n\n"):
+        lines = block.splitlines()
+        event_name = ""
+        data_parts: list[str] = []
+        for line in lines:
+            if line.startswith("event:"):
+                event_name = line[len("event:") :].strip()
+            elif line.startswith("data:"):
+                data_parts.append(line[len("data:") :].strip())
+        if event_name != "done" or not data_parts:
+            continue
+        try:
+            parsed = json.loads("".join(data_parts))
+        except (ValueError, TypeError):
+            continue
+        if isinstance(parsed, dict):
+            last_payload = parsed
+    return last_payload
+
+
+def _persist_stream_segments(
+    *, session_id: int, actor_id: int | None, done_payload: dict[str, Any]
+) -> None:
+    """Persist streamed diarization segments under ``asr_meta_json['segments']``.
+
+    Additive only (Requirement 3.4): segments carry their own per-segment text +
+    speaker metadata; the canonical session transcript is NOT rebuilt from or
+    overwritten by this pass. Persisting here makes streamed segments readable by
+    the relabel endpoint (task 2.4). Uses a fresh DB session because the relay runs
+    after the request scope. Never raises into the SSE relay.
+    """
+
+    segments = done_payload.get("segments")
+    if not isinstance(segments, list) or not segments:
+        return
+    asr_meta = done_payload.get("asr_meta")
+    asr_meta = asr_meta if isinstance(asr_meta, dict) else {}
+
+    try:
+        with SessionLocal() as db:
+            item = db.get(ScribeSession, session_id)
+            if item is None:
+                return
+            new_meta = dict(item.asr_meta_json) if isinstance(item.asr_meta_json, dict) else {}
+            for key in ("provider", "language", "degraded_count"):
+                if key in asr_meta:
+                    new_meta[key] = asr_meta[key]
+            new_meta["segments"] = segments
+            item.asr_meta_json = new_meta
+            item.updated_at = datetime.now(tz=UTC)
+            _record_audit(
+                db,
+                session_id=item.id,
+                actor=actor_id,
+                action="segments_persisted",
+                detail={
+                    "segment_count": len(segments),
+                    "provider": str(new_meta.get("provider", "")),
+                    "language": str(new_meta.get("language", "")),
+                    "degraded_count": int(new_meta.get("degraded_count", 0) or 0),
+                },
+            )
+            db.add(item)
+            db.commit()
+    except Exception:  # noqa: BLE001 - persistence is best-effort; never break the relay
+        logger.warning("scribe_stream_persist_failed session_id=%s", session_id)
 
 
 @router.post("/sessions/{session_id}/stream")
@@ -852,7 +1481,14 @@ async def scribe_session_stream(
     files = {"audio_file": (audio_file.filename or "scribe-audio.webm", audio_bytes, content_type)}
     timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
 
+    session_pk = item.id
+    actor_id = user.id
+
     def relay():  # noqa: ANN202 - SSE byte relay
+        # Tee the relayed bytes so we can additively capture the terminal ``done``
+        # frame and persist diarization segments (Requirement 3.3/3.4) without
+        # altering the passthrough behavior the browser observes.
+        buffer_parts: list[str] = []
         try:
             with httpx.Client(timeout=timeout) as client:
                 with client.stream("POST", url, data=data, files=files, headers=headers) as up:
@@ -865,12 +1501,21 @@ async def scribe_session_stream(
                         return
                     for chunk in up.iter_raw():
                         if chunk:
+                            buffer_parts.append(chunk.decode("utf-8", errors="ignore"))
                             yield chunk
         except Exception as exc:  # noqa: BLE001 - terminal error frame
             yield (
                 'event: error\ndata: {"message":"scribe stream proxy failed",'
                 f'"error":"{exc.__class__.__name__}"}}\n\n'
             ).encode()
+            return
+        # Stream completed: persist segments carried by the terminal ``done`` frame
+        # so they become relabelable. Best-effort; never affects the relayed bytes.
+        done_payload = _parse_sse_done_payload("".join(buffer_parts))
+        if done_payload is not None:
+            _persist_stream_segments(
+                session_id=session_pk, actor_id=actor_id, done_payload=done_payload
+            )
 
     return StreamingResponse(
         relay(),

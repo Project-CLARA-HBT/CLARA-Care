@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import EnterpriseReview from "@/components/scribe/enterprise-review";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/scribe";
 
 type NoticeTone = "success" | "error";
-type WorkspaceMode = "workspace" | "review";
+type WorkspaceMode = "workspace" | "review" | "enterprise";
 
 type TranscriptRow = {
   id: string;
@@ -782,6 +783,15 @@ export default function ScribePage() {
               >
                 Rà soát
               </button>
+              <button
+                type="button"
+                onClick={() => setMode("enterprise")}
+                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
+                  mode === "enterprise" ? "bg-[#2563EB] text-white shadow-sm" : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                Ký &amp; xuất bản
+              </button>
             </nav>
           </div>
 
@@ -879,7 +889,17 @@ export default function ScribePage() {
             </div>
           </aside>
 
-          {mode === "workspace" ? (
+          {mode === "enterprise" ? (
+            <EnterpriseReview
+              session={selectedSession}
+              onSessionChange={(updated) => {
+                setSelectedSession(updated);
+                setTranscriptDraft(updated.transcript ?? "");
+                upsertSession(updated);
+              }}
+              pushNotice={pushNotice}
+            />
+          ) : mode === "workspace" ? (
             <>
               <article className="col-span-12 2xl:col-span-6 space-y-4">
                 <div className={panelPaddedLgClass}>

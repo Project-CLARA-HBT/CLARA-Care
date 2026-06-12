@@ -5,6 +5,9 @@ import-safe, total (never-raises) :class:`AsrProvider` protocol. Implementations
 
 * :class:`WhisperDeepSeekAsr` — wraps the existing DeepSeek/Whisper audio client
   (the only fully-wired provider today).
+* :class:`PhoWhisperAsr` — Vietnamese-capable HTTP provider for a self-hosted PhoWhisper
+  (OpenAI-compatible) endpoint, with code-switching (keep English tokens verbatim) and
+  optional per-segment diarization; degrades to empty when unconfigured.
 * :class:`GoogleSttV2Asr` — placeholder Vietnamese-capable provider (Chirp-3 +
   diarization + code-switching); returns an empty/degraded result until wired.
 * :class:`CompositeAsr` — tries a primary provider then a fallback.
@@ -23,6 +26,7 @@ from clara_ml.scribe.asr.base import (
 )
 from clara_ml.scribe.asr.composite import CompositeAsr, build_asr_provider
 from clara_ml.scribe.asr.google_stt import GoogleSttV2Asr
+from clara_ml.scribe.asr.phowhisper import PhoWhisperAsr
 from clara_ml.scribe.asr.whisper import WhisperDeepSeekAsr
 
 __all__ = [
@@ -32,6 +36,7 @@ __all__ = [
     "AsrSegment",
     "CompositeAsr",
     "GoogleSttV2Asr",
+    "PhoWhisperAsr",
     "WhisperDeepSeekAsr",
     "build_asr_provider",
     "relabel_speakers",

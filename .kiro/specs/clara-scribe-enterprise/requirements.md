@@ -22,12 +22,30 @@ ICD-10 + medication coding assistance (reusing the RAG drug lexicon), a review�
 workflow with a full audit trail, PII/safety guardrails, and analytics — all behind
 feature flags defaulting to the current batch behavior, with property-tested correctness.
 
+A second, deep-research-driven wave (informed by Nuance DAX, Abridge, Suki, Nabla,
+Ambience, Heidi, Freed and clinical-documentation science) extends this baseline with
+**transcript grounding / anti-hallucination verification** (every clinically significant
+statement is traceable to a transcript span, ungrounded statements are flagged or
+omitted), **structured clinical data extraction** (problems, medications, allergies,
+vitals as provenance-linked structured metadata), **conservative coding-assist expansion**
+(E/M visit-level and CPT/procedure suggestions with anti-upcoding bias), **note-quality
+and documentation-efficiency metrics**, **ASR fairness / word-error-rate reporting**,
+**structured FHIR `Composition` + `Encounter` export**, a **time-stamped addendum
+workflow** distinct from amend, **specialty/macro template extensibility**, and a
+**golden-set evaluation gate** for note generation. Every item is additive and
+independently feature-flagged (flags off ⇒ byte-for-byte current behavior) and preserves
+all existing guardrails.
+
 ### Goals
 - Reduce clinician documentation time per encounter while keeping the clinician the
   final author (assistive, never autonomous).
 - Vietnamese-first, code-switching-aware transcription and note generation.
 - Verifiable correctness: a signed note is immutable + audit-trailed; no note content
   is silently lost or fabricated.
+- Grounded by construction: clinically significant note statements are traceable to
+  transcript spans; ungrounded statements are flagged or omitted, never presented as fact.
+- Observable quality: structured extraction provenance, note-quality/efficiency metrics,
+  and ASR word-error-rate are derivable from non-PII metadata and gated by evaluation.
 
 ### Non-Goals
 - Autonomous diagnosis or prescribing (Scribe drafts; a licensed clinician signs).
@@ -48,6 +66,41 @@ feature flags defaulting to the current batch behavior, with property-tested cor
 - **Code-switching**: Vietnamese speech containing English tokens (drug/procedure names).
 - **Degraded ASR**: a transcript segment the ASR could not produce with confidence; it
   is flagged, never silently dropped or hallucinated.
+- **Clinically significant statement**: a discrete factual assertion in a generated note
+  that, if wrong, could affect care — a finding, diagnosis, medication, allergy, vital,
+  procedure, or plan item (as opposed to boilerplate/section headings).
+- **Grounding / Claim traceability**: a verifiable link from a note statement to one or
+  more transcript spans that support it; a statement with at least one supporting span is
+  `grounded`, otherwise `ungrounded`.
+- **Transcript span**: a referenceable region of the transcript (segment id plus optional
+  character offsets) used as evidence/provenance for an extracted item or note statement.
+- **Claim verification (NLI)**: the pass that decides whether a transcript span entails,
+  contradicts, or is neutral toward a note statement, reusing the CLARA Research / FIDES
+  NLI-based claim-verification approach.
+- **Ungrounded statement**: a note statement no transcript span supports; it is flagged
+  `unverified` or omitted, and a critical safety statement (medication, allergy, dose,
+  vital, diagnosis) that is ungrounded is never presented as fact.
+- **Structured clinical data**: machine-readable problems, medications, allergies, and
+  vitals extracted as fields (additive metadata), each carrying provenance to a transcript
+  span; never alters the note clinical text.
+- **Provenance**: the recorded source (transcript span id(s) and extraction method) for a
+  structured item or grounded statement.
+- **E/M code**: an Evaluation and Management visit-level code (e.g. office-visit level).
+- **CPT code**: a Current Procedural Terminology procedure code.
+- **Upcoding**: suggesting a higher-reimbursement code than the documented evidence
+  defensibly supports; Scribe is biased against this (anti-upcoding).
+- **PDQI-9**: the Physician Documentation Quality Instrument; here used as a structural
+  completeness proxy (not a clinical-content judgement).
+- **Edit rate**: the proportion of generated note text a clinician changes before signing.
+- **WER**: Word Error Rate, the standard ASR accuracy metric; a confidence-based quality
+  proxy may stand in where reference text is unavailable.
+- **FHIR Composition**: a FHIR structured clinical document resource composed of typed
+  sections (distinct from the existing `DocumentReference` pointer resource).
+- **Addendum**: a time-stamped clinical note appended to a signed note without altering the
+  signed version (distinct from an amend, which creates a new note version).
+- **Macro / snippet**: a clinician-defined reusable text fragment insertable into a note.
+- **Golden set**: a curated transcript→note evaluation dataset with expected structure used
+  to gate note-generation regressions.
 
 ---
 
@@ -157,9 +210,118 @@ feature flags defaulting to the current batch behavior, with property-tested cor
 2. WHEN all Scribe flags are off THE observable behavior SHALL be byte-for-byte the current batch transcribe + SOAP + CRUD behavior.
 3. Flipping any flag off at runtime SHALL restore the prior behavior without data loss (existing sessions remain readable).
 
+## Requirement 12: Transcript-grounded note with claim traceability (anti-hallucination)
+**User Story:** As a clinician, I want every clinically significant statement in a generated note to be traceable to what was actually said, so that I can trust the note and never sign fabricated findings, medications, allergies, or vitals.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_GROUNDING_ENABLED` is false THE Scribe service SHALL generate notes exactly as Requirement 6 defines, with no grounding metadata and no change to note clinical text.
+2. WHERE `RAG_SCRIBE_GROUNDING_ENABLED` is true THE system SHALL run a verification pass that, for each clinically significant statement in a generated note, attaches a `grounded` or `ungrounded` indicator and the transcript span(s) supporting it, reusing the CLARA Research / FIDES NLI-based claim-verification approach.
+3. WHERE `RAG_SCRIBE_GROUNDING_ENABLED` is true THE system SHALL classify a statement as `grounded` only when at least one transcript span entails the statement under the claim-verification pass, and SHALL classify it `ungrounded` otherwise.
+4. IF a clinically significant statement is `ungrounded` THEN THE system SHALL flag the statement as `unverified` or omit it, and SHALL NOT present it as confirmed fact.
+5. IF an `ungrounded` statement is a critical safety statement (medication, dose, allergy, vital, or diagnosis) THEN THE system SHALL NOT include the statement as an asserted fact in the generated note clinical text and SHALL surface it only as an `unverified` candidate requiring clinician confirmation.
+6. THE grounding indicators and supporting transcript spans SHALL be additive metadata on the note version and SHALL never alter, drop, or reorder the note's existing section text or the transcript.
+7. THE system SHALL expose, to the clinician in the review UI, a per-statement grounded/ungrounded indicator with access to the supporting transcript span(s).
+8. THE per-note grounded-claim rate SHALL be recorded as non-PII session metadata for analytics and evaluation.
+
+## Requirement 13: Structured clinical data extraction
+**User Story:** As a clinician, I want problems, medications, allergies, and vitals pulled out as structured fields linked to what was said, so that coding, export, and reconciliation can use them without re-reading the whole note.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED` is false THE system SHALL NOT produce structured-extraction metadata and SHALL behave exactly as the current note flow.
+2. WHERE `RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED` is true THE system SHALL extract structured fields for at least problems, medications, allergies, and vitals from the transcript and/or generated note.
+3. THE structured extraction SHALL attach, to each extracted item, its provenance: the transcript span(s) it derives from and the extraction method.
+4. WHERE a medication is extracted THE system SHALL include its `RxCUI` when known, reusing the existing RAG drug lexicon / entity normalization, and SHALL degrade gracefully to surface text when the identifier is unknown.
+5. THE structured-extraction output SHALL be additive metadata on the note version and SHALL NEVER alter, drop, or reorder the note's clinical text.
+6. WHERE `RAG_SCRIBE_GROUNDING_ENABLED` is also true THE extracted items SHALL reuse the same transcript-span provenance model as the grounding pass (Requirement 12), so an item and its grounding reference the same span identifiers.
+7. WHEN no item of a given type is present in the transcript THE system SHALL return an empty structured list for that type and SHALL NOT fabricate items.
+
+## Requirement 14: Conservative coding-assist expansion (E/M + CPT, anti-upcoding)
+**User Story:** As a clinician, I want suggested visit-level (E/M) and procedure (CPT) codes alongside ICD-10, justified by the note, so that coding is faster without ever over-coding what I actually documented.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_EM_CPT_CODING_ENABLED` is false THE coding assistant SHALL behave exactly as Requirement 7 (ICD-10 + medication safety only).
+2. WHERE `RAG_SCRIBE_EM_CPT_CODING_ENABLED` is true THE system SHALL suggest, in addition to ICD-10, an E/M visit-level code and any applicable CPT/procedure codes, each accompanied by the justifying note and/or transcript span.
+3. THE E/M and CPT suggestions SHALL be advisory and SHALL require explicit clinician confirmation before they are treated as selected.
+4. IF the documented evidence is insufficient to justify a higher E/M level THEN THE system SHALL suggest the lower defensible level and SHALL NOT auto-select a higher level (anti-upcoding).
+5. THE system SHALL NOT finalize, submit, or auto-apply any E/M or CPT code without clinician confirmation.
+6. WHERE the Vietnamese clinical/coding context differs from US ICD/E/M/CPT conventions THE system SHALL localize the suggestion set accordingly (Vietnamese-first, bilingual where applicable).
+7. THE coding suggestions SHALL be additive metadata on the note version and SHALL never modify the note's clinical text.
+
+## Requirement 15: Note-quality and documentation-efficiency metrics
+**User Story:** As a clinical-informatics lead, I want note-quality and efficiency metrics derived from non-PII session metadata, so that I can monitor documentation impact without exposing patient data.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_QUALITY_METRICS_ENABLED` is false THE system SHALL NOT compute or expose the metrics defined in this requirement.
+2. WHERE `RAG_SCRIBE_QUALITY_METRICS_ENABLED` is true THE system SHALL derive, from non-PII session metadata, at least: edit rate (clinician edits vs generated text), time-saved estimate, degraded-ASR rate, grounded-claim rate, and a note-quality proxy based on PDQI-9-style structural completeness.
+3. THE computed metrics SHALL contain no raw PII (no patient identifiers, no free-text transcript), consistent with the existing analytics PII guard.
+4. THE system SHALL expose the metrics to the analytics dashboard via the existing analytics path.
+5. THE note-quality proxy SHALL measure structural completeness only and SHALL NOT be presented as a clinical-accuracy judgement of the note content.
+6. WHERE a metric's required input is unavailable (e.g. grounded-claim rate when grounding is disabled) THE system SHALL omit that metric rather than report a fabricated value.
+
+## Requirement 16: ASR fairness / word-error-rate reporting
+**User Story:** As a quality owner, I want transcription accuracy reported per language and, where available, per accent/speaker, so that quality disparities are observable and can feed evaluation.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_WER_REPORTING_ENABLED` is false THE system SHALL NOT compute or surface word-error-rate reporting.
+2. WHERE `RAG_SCRIBE_WER_REPORTING_ENABLED` is true THE system SHALL record a word-error-rate measurement, or a confidence-based quality proxy where reference text is unavailable, per language for each session.
+3. WHERE per-accent or per-speaker information is available THE system SHALL additionally record the measurement broken down by accent and/or speaker label.
+4. THE word-error-rate measurements SHALL be stored as non-PII session/evaluation metadata and SHALL contain no raw transcript text or patient identifiers.
+5. THE word-error-rate reporting SHALL feed evaluation and analytics only and SHALL NOT block, gate, or alter a clinician's transcription or note workflow.
+
+## Requirement 17: FHIR Composition + Encounter export
+**User Story:** As an integration owner, I want a signed note exportable as a structured FHIR Composition plus an Encounter resource, so that it is interoperable as a structured clinical document, not just a document pointer.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_FHIR_COMPOSITION_ENABLED` is false THE export SHALL behave exactly as Requirement 9 (Markdown/DOCX and, where its own flag is set, `DocumentReference`).
+2. WHERE `RAG_SCRIBE_FHIR_COMPOSITION_ENABLED` is true THE system SHALL export a signed note as a FHIR `Composition` resource whose sections correspond to the note's template sections, in addition to the existing `DocumentReference`.
+3. WHERE `RAG_SCRIBE_FHIR_COMPOSITION_ENABLED` is true THE system SHALL export a FHIR `Encounter` resource derived from the session's encounter context (visit type, encounter datetime, opaque patient reference).
+4. THE exported `Composition` SHALL reference the signing clinician and sign timestamp and SHALL include required source/medical attribution, consistent with Requirement 9.2.
+5. THE FHIR `Composition` and `Encounter` export SHALL be interface-only with no live EHR write in v1.
+6. Exporting the FHIR `Composition`/`Encounter` SHALL be permitted only for `signed`/`exported` notes; exporting a `draft` SHALL be rejected.
+
+## Requirement 18: Addendum workflow (distinct from amend)
+**User Story:** As a clinician, I want to attach a time-stamped addendum to a signed note without changing the signed version, so that I can add later information while preserving the original signed record.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_ADDENDUM_ENABLED` is false THE system SHALL expose only the existing amend (new-version) workflow of Requirement 8.
+2. WHERE `RAG_SCRIBE_ADDENDUM_ENABLED` is true THE system SHALL allow a clinician to attach a time-stamped addendum (author, timestamp, text) to a `signed` note.
+3. WHEN an addendum is attached THE signed note version SHALL remain byte-for-byte unchanged, preserving signed-note immutability (Requirement 8.2).
+4. WHEN an addendum is attached THE system SHALL record an append-only audit entry for the addendum (actor, action, timestamp).
+5. THE addendum workflow SHALL be distinct from amend: an addendum SHALL NOT create a new note version, and the existing amend semantics (new `amended` version) SHALL remain available and unchanged.
+6. WHERE the note is exported THE export SHALL include the addendum(s) as a clearly demarcated, time-stamped section without altering the signed content.
+
+## Requirement 19: Specialty and macro template extensibility
+**User Story:** As a clinician, I want specialty-specific templates and my own text macros added through the templates registry, so that documentation fits my specialty without engineering changes.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED` is false THE note generator SHALL offer exactly the template set of Requirement 6.
+2. WHERE `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED` is true THE system SHALL allow a specialty-specific template to be added via the templates registry without changing the generation call site (extending Requirement 6.1).
+3. WHERE `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED` is true THE system SHALL allow a clinician to define text macros/snippets that can be inserted into a note.
+4. WHEN a specialty template is selected THE generated note SHALL contain exactly the sections that template declares, preserving the structure-completeness guarantee of Requirement 6.2/6.3.
+5. THE addition of a template or macro SHALL NOT alter the structure or output of any existing template.
+6. Specialty templates and macros SHALL be Vietnamese-first and bilingual where applicable.
+
+## Requirement 20: Note-generation evaluation gate
+**User Story:** As a platform owner, I want a golden-set evaluation gate for note generation, so that regressions in structural completeness, grounding, fabrication, or coding precision are caught before release.
+
+#### Acceptance Criteria
+1. WHEN `RAG_SCRIBE_EVAL_GATE_ENABLED` is false THE evaluation gate SHALL NOT run and SHALL NOT affect runtime behavior.
+2. WHERE `RAG_SCRIBE_EVAL_GATE_ENABLED` is true THE system SHALL provide an evaluation harness that runs note generation over a golden set and computes at least: structural completeness, grounded-claim rate, a no-fabrication check, and a coding-precision proxy.
+3. WHEN the evaluation harness runs THE harness SHALL produce a pass/fail result against declared thresholds for each computed metric.
+4. IF any declared threshold is not met THEN THE evaluation gate SHALL report failure so the regression can block release, mirroring the existing research quality-gate pattern.
+5. THE evaluation harness SHALL use only non-PII golden-set data and SHALL emit no raw patient identifiers in its reports.
+6. THE evaluation gate SHALL be an offline/CI quality gate and SHALL NOT alter the runtime note-generation behavior experienced by clinicians.
+
 ---
 
 ## Verification expectations (enterprise-grade)
 - Property-based tests for the correctness invariants: template section-completeness (R6.2/6.3), transcript-preservation under diarization (R3.4), audit append-only + signed-immutability (R8.2/8.3), no-fabricated-text on degraded ASR (R1.4/2/6.4), and status-transition legality (R8.1).
-- Unit + integration tests for ML (ASR seam, generator, coding), API (routes, RBAC, persistence, audit), and Web (streaming client, review/sign UI).
-- All existing scribe tests SHALL continue to pass; the legacy path SHALL stay green with flags off.
+- **Grounding / traceability (R12)**: for any generated note with grounding on, every clinically significant statement carries a grounded/ungrounded indicator; a statement is `grounded` only if a supporting transcript span entails it; no `ungrounded` critical safety statement (medication/dose/allergy/vital/diagnosis) appears as asserted fact; grounding metadata never mutates note text or transcript.
+- **Structured-extraction provenance integrity (R13)**: every extracted item references a valid transcript span and method; extraction is additive (note clinical text byte-for-byte unchanged); absent item types yield empty lists (no fabricated items); medication items carry RxCUI when known and degrade to surface text otherwise.
+- **Anti-upcoding (R14)**: when documented evidence supports only a lower E/M level, the suggested level is never higher than the defensible level; no E/M/CPT code is auto-selected/finalized without clinician confirmation; coding metadata never mutates note text.
+- **FHIR Composition shape (R17)**: an exported `Composition` has exactly one section per template section and round-trips its section text; an `Encounter` resource is derived from encounter context; export is gated to `signed`/`exported` notes.
+- **Addendum preserves signed (R18)**: attaching an addendum leaves the signed note version byte-for-byte unchanged, creates no new note version, and appends exactly one audit entry; export includes the addendum as a demarcated section.
+- **Metrics/WER are PII-free (R15/R16)**: quality metrics and WER reports assert clean against the redaction projection (no transcript/patient identifiers); a metric with unavailable input is omitted, not fabricated.
+- **Evaluation gate (R20)**: the harness computes structural completeness, grounded-claim rate, no-fabrication, and coding-precision proxy over the golden set and returns failure when any declared threshold is unmet; uses non-PII golden data; runtime behavior is unaffected by the gate.
+- Unit + integration tests for ML (ASR seam, generator, coding, grounding/claim-verification pass, structured extraction, WER reporting), API (routes, RBAC, persistence, audit, addendum, FHIR Composition/Encounter export), and Web (streaming client, review/sign UI, per-statement grounded/ungrounded indicators).
+- All existing scribe tests SHALL continue to pass; the legacy path SHALL stay green with flags off (including all new R12–R20 flags defaulting off ⇒ byte-for-byte current behavior).

@@ -42,6 +42,13 @@ def _mock_soap(monkeypatch) -> None:
     monkeypatch.setattr("clara_api.api.v1.endpoints.scribe.proxy_ml_post", fake_proxy)
 
 
+def _enable_sign_workflow(monkeypatch) -> None:
+    """Enable the flag-gated enterprise sign workflow (Requirement 11.1)."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_sign_workflow_enabled", True, raising=False)
+
+
 def _create_session(token: str, transcript: str = "patient has cough") -> int:
     r = client.post(
         "/api/v1/scribe/sessions",
@@ -54,6 +61,7 @@ def _create_session(token: str, transcript: str = "patient has cough") -> int:
 
 def test_full_sign_amend_audit_workflow(monkeypatch) -> None:
     _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
     token = _login()
     sid = _create_session(token)
 
@@ -93,6 +101,7 @@ def test_full_sign_amend_audit_workflow(monkeypatch) -> None:
 
 def test_cannot_sign_from_draft(monkeypatch) -> None:
     _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
     token = _login()
     sid = _create_session(token)
     # No note generated yet -> still draft -> sign must be rejected (illegal transition).
@@ -102,6 +111,7 @@ def test_cannot_sign_from_draft(monkeypatch) -> None:
 
 def test_consent_required_blocks_note_when_flag_on(monkeypatch) -> None:
     _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
     token = _login()
@@ -115,6 +125,7 @@ def test_consent_required_blocks_note_when_flag_on(monkeypatch) -> None:
 
 def test_export_requires_signed_and_flag(monkeypatch) -> None:
     _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_export_enabled", True, raising=False)
     token = _login()
@@ -149,6 +160,7 @@ def test_owner_scoping_blocks_other_users(monkeypatch) -> None:
 def test_generate_note_honors_template_when_templates_enabled(monkeypatch) -> None:
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_templates_enabled", True, raising=False)
+    _enable_sign_workflow(monkeypatch)
 
     def path_aware_proxy(path: str, _payload: dict[str, Any], **_kw: Any) -> dict[str, Any]:
         if path == "/v1/scribe/note":
@@ -178,6 +190,7 @@ def test_generate_note_defaults_to_soap_when_templates_disabled(monkeypatch) -> 
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_templates_enabled", False, raising=False)
     _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
     token = _login("dr.soap@doctor.clara")
     sid = _create_session(token)
     g = client.post(
@@ -188,3 +201,182 @@ def test_generate_note_defaults_to_soap_when_templates_disabled(monkeypatch) -> 
     assert g.status_code == 200
     # Flag off -> SOAP shape regardless of requested template.
     assert set(g.json()["soap"].keys()) >= {"subjective", "objective", "assessment", "plan"}
+
+
+# ---------------------------------------------------------------------------
+# Task 2.2 focused coverage: version_no increments, signed-row immutability,
+# from/to audit on every transition, prior-version queryability, flag gating.
+# ---------------------------------------------------------------------------
+
+
+def _versions_for(sid: int) -> list[Any]:
+    """Read all persisted note versions for a session, oldest first."""
+
+    from sqlalchemy import select
+
+    from clara_api.db.models import ScribeNoteVersion
+    from clara_api.db.session import SessionLocal
+
+    with SessionLocal() as db:
+        return list(
+            db.execute(
+                select(ScribeNoteVersion)
+                .where(ScribeNoteVersion.session_id == sid)
+                .order_by(ScribeNoteVersion.version_no.asc())
+            ).scalars().all()
+        )
+
+
+def test_signed_version_is_immutable_after_amend(monkeypatch) -> None:
+    """Req 8.2/8.5: amend preserves the signed version byte-for-byte + bumps version_no."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.imm@doctor.clara")
+    sid = _create_session(token)
+
+    client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                json={"template_id": "soap"})
+    client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+
+    # Snapshot the signed (v1) row before amend.
+    before = _versions_for(sid)
+    assert len(before) == 1
+    v1 = before[0]
+    assert v1.version_no == 1
+    assert v1.signed is True and v1.signed_at is not None and v1.signed_by is not None
+    v1_sections = dict(v1.sections_json or {})
+    v1_signed_at = v1.signed_at
+    v1_signed_by = v1.signed_by
+
+    # Amend -> new version, signed one preserved.
+    a = client.post(f"/api/v1/scribe/sessions/{sid}/amend", headers=_auth(token),
+                    json={"template_id": "soap", "transcript": "updated transcript"})
+    assert a.status_code == 200 and a.json()["status"] == "amended"
+
+    after = _versions_for(sid)
+    assert [v.version_no for v in after] == [1, 2]  # version_no incremented, v1 still present
+    v1_after = after[0]
+    # The signed v1 row is byte-for-byte unchanged (immutable).
+    assert v1_after.signed is True
+    assert v1_after.sections_json == v1_sections
+    assert v1_after.signed_at == v1_signed_at
+    assert v1_after.signed_by == v1_signed_by
+    # The new amended v2 row is unsigned.
+    assert after[1].signed is False
+
+
+def test_every_transition_writes_from_to_audit(monkeypatch) -> None:
+    """Req 8.3: each status transition records actor + from_status/to_status."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    monkeypatch.setattr(get_settings(), "rag_scribe_export_enabled", True, raising=False)
+    token = _login("dr.audit@doctor.clara")
+    sid = _create_session(token)
+
+    client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                json={"template_id": "soap"})
+    client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+    client.post(f"/api/v1/scribe/sessions/{sid}/amend", headers=_auth(token),
+                json={"template_id": "soap"})
+    client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))  # re-sign amendment
+    client.get(f"/api/v1/scribe/sessions/{sid}/export?format=md", headers=_auth(token))
+
+    entries = client.get(f"/api/v1/scribe/sessions/{sid}/audit", headers=_auth(token)).json()[
+        "entries"
+    ]
+    # The note_signed action appears twice (initial sign + re-sign of the amendment),
+    # so assert on the full (action, from, to) tuple set rather than keying by action.
+    transitions = {(e["action"], e["from_status"], e["to_status"]) for e in entries}
+    assert ("note_generated", "draft", "in_review") in transitions
+    assert ("note_signed", "in_review", "signed") in transitions
+    assert ("note_amended", "signed", "amended") in transitions
+    assert ("note_signed", "amended", "signed") in transitions
+    assert ("note_exported", "signed", "exported") in transitions
+    # Every transition carries an actor.
+    assert all(e["actor"] is not None for e in entries)
+
+
+def test_amend_from_draft_rejected(monkeypatch) -> None:
+    """Req 8.1: amend is only legal from 'signed'."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.amenddraft@doctor.clara")
+    sid = _create_session(token)
+    a = client.post(f"/api/v1/scribe/sessions/{sid}/amend", headers=_auth(token),
+                    json={"template_id": "soap"})
+    assert a.status_code == 409
+
+
+def test_resign_signed_version_rejected(monkeypatch) -> None:
+    """Req 8.2: a signed version cannot be re-signed in place."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.resign@doctor.clara")
+    sid = _create_session(token)
+    client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                json={"template_id": "soap"})
+    assert client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token)).status_code == 200
+    # Status is now 'signed'; signing again is an illegal transition (409).
+    assert client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token)).status_code == 409
+
+
+def test_regenerate_in_review_versions_and_audits_without_transition(monkeypatch) -> None:
+    """Req 8.3/8.5: regenerating while in_review keeps prior versions + audits the edit."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.regen@doctor.clara")
+    sid = _create_session(token)
+
+    client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                json={"template_id": "soap"})
+    second = client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                         json={"template_id": "soap"})
+    assert second.status_code == 200 and second.json()["status"] == "in_review"
+
+    # Both versions persisted (prior content recoverable, Req 8.5).
+    assert [v.version_no for v in _versions_for(sid)] == [1, 2]
+
+    # Two note_generated audit entries; the second is an edit with no transition.
+    entries = client.get(f"/api/v1/scribe/sessions/{sid}/audit", headers=_auth(token)).json()[
+        "entries"
+    ]
+    gens = [e for e in entries if e["action"] == "note_generated"]
+    assert len(gens) == 2
+    assert gens[0]["from_status"] == "draft" and gens[0]["to_status"] == "in_review"
+    assert gens[1]["from_status"] == "in_review" and gens[1]["to_status"] == "in_review"
+
+
+def test_generate_on_signed_rejected_use_amend(monkeypatch) -> None:
+    """Req 8.2: once signed, in-place note regeneration is rejected (use amend)."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.gensigned@doctor.clara")
+    sid = _create_session(token)
+    client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                json={"template_id": "soap"})
+    client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+    g = client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                    json={"template_id": "soap"})
+    assert g.status_code == 409
+
+
+def test_sign_workflow_disabled_returns_404(monkeypatch) -> None:
+    """Req 11.1/11.2: flag off ⇒ enterprise note lifecycle endpoints not exposed."""
+
+    _mock_soap(monkeypatch)
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_sign_workflow_enabled", False, raising=False)
+    token = _login("dr.flagoff@doctor.clara")
+    sid = _create_session(token)
+    assert client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
+                       json={"template_id": "soap"}).status_code == 404
+    assert client.post(f"/api/v1/scribe/sessions/{sid}/sign",
+                       headers=_auth(token)).status_code == 404
+    assert client.post(f"/api/v1/scribe/sessions/{sid}/amend", headers=_auth(token),
+                       json={"template_id": "soap"}).status_code == 404

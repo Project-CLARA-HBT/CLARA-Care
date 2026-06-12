@@ -70,6 +70,10 @@ class ScribeSession(Base):
     soap_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     insights_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     metadata_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    # Enterprise scribe additive columns (migration 20260410_0009, Req 5/8).
+    encounter_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    asr_meta_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    consent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

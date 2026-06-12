@@ -1050,6 +1050,7 @@ async def scribe_stream(
             template_id=template_id,
             asr=asr,
             generator=generator,
+            diarization_enabled=settings.rag_scribe_diarization_enabled,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},

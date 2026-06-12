@@ -1,5 +1,6 @@
 import api from "@/lib/http-client";
 import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import { parseContentDispositionFilename } from "@/lib/scribe-review";
 
 export type ScribeSoapRequest = {
   transcript: string;
@@ -256,28 +257,110 @@ export async function getScribeAudit(
   return response.data;
 }
 
+/** Supported export formats (Requirement 9): Markdown, DOCX, FHIR DocumentReference. */
+export type ScribeExportFormat = "md" | "docx" | "fhir";
+
+/**
+ * Normalized export result. `md` carries the rendered markdown (+ the raw
+ * payload), `fhir` the DocumentReference-shaped JSON, and `docx` the binary
+ * blob plus a filename ready to download.
+ */
+export type ScribeExportResult =
+  | { format: "md"; markdown: string; data: Record<string, unknown> }
+  | { format: "fhir"; document: Record<string, unknown> }
+  | { format: "docx"; blob: Blob; filename: string };
+
+/**
+ * Export a signed/exported note (Requirement 9). `md`/`fhir` return JSON; `docx`
+ * is fetched as a binary blob (reusing the workspace DOCX render path on the
+ * server) with the filename taken from the `Content-Disposition` header.
+ *
+ * The server gates export on enterprise flags + signed status; callers should
+ * surface a friendly message when the request is rejected (4xx) rather than
+ * assuming the capability is available.
+ */
 export async function exportScribeNote(
   sessionId: number,
-  format: "md" | "fhir" = "md"
-): Promise<Record<string, unknown>> {
-  const response = await api.get(`/scribe/sessions/${sessionId}/export`, { params: { format } });
-  return response.data;
+  format: ScribeExportFormat = "md"
+): Promise<ScribeExportResult> {
+  if (format === "docx") {
+    const response = await api.get(`/scribe/sessions/${sessionId}/export`, {
+      params: { format },
+      responseType: "blob",
+    });
+    const blob = response.data as Blob;
+    const headers = (response.headers ?? {}) as Record<string, string>;
+    const filename =
+      parseContentDispositionFilename(headers["content-disposition"]) ??
+      `clinical-note-${sessionId}.docx`;
+    return { format: "docx", blob, filename };
+  }
+
+  const response = await api.get<Record<string, unknown>>(`/scribe/sessions/${sessionId}/export`, {
+    params: { format },
+  });
+  const data = response.data ?? {};
+  if (format === "fhir") {
+    return { format: "fhir", document: data };
+  }
+  const markdown = typeof data.markdown === "string" ? data.markdown : "";
+  return { format: "md", markdown, data };
 }
 
+/** Interim transcript text for a chunk, emitted before the chunk is finalized. */
+export type ScribeStreamPartial = {
+  index: number;
+  text: string;
+  /** True when the underlying chunk is a degraded ASR result (no fabricated text). */
+  degraded?: boolean;
+};
+
+/** A finalized transcript segment (additive metadata: speaker + degraded flag). */
 export type ScribeStreamSegment = {
   index: number;
   text: string;
   speaker: string;
   start_ms: number;
   end_ms: number;
+  confidence?: number;
   degraded: boolean;
 };
 
+/** ASR observability metadata carried on the terminal ``done`` frame. */
+export type ScribeStreamAsrMeta = {
+  provider?: string;
+  language?: string;
+  degraded_count?: number;
+};
+
+/** Generated note draft carried on the terminal ``done`` frame (may be null). */
+export type ScribeStreamNote = {
+  template_id?: string;
+  sections?: Record<string, string>;
+  insufficient_input?: boolean;
+} | null;
+
+/** Terminal ``done`` payload: full transcript + segments + optional note draft. */
+export type ScribeStreamDone = {
+  transcript?: string;
+  segments?: ScribeStreamSegment[];
+  note?: ScribeStreamNote;
+  asr_meta?: ScribeStreamAsrMeta;
+  [key: string]: unknown;
+};
+
 export type ScribeStreamHandlers = {
+  /** Fired once before any partial/segment/token (open the live transcript panel). */
   onStart?: () => void;
+  /** Fired per interim transcript chunk before it is finalized as a segment. */
+  onPartial?: (partial: ScribeStreamPartial) => void;
+  /** Fired per finalized transcript segment (speaker + degraded flag preserved). */
   onSegment?: (segment: ScribeStreamSegment) => void;
+  /** Fired per note-draft chunk; concatenating all chunks yields the note section. */
   onToken?: (text: string) => void;
-  onDone?: (result: Record<string, unknown>) => void;
+  /** Fired once with the terminal structured result (transcript/segments/note/asr_meta). */
+  onDone?: (result: ScribeStreamDone) => void;
+  /** Fired on a terminal error; ``message`` names the failure class (no raw internals). */
   onError?: (message: string) => void;
   signal?: AbortSignal;
 };
@@ -301,8 +384,13 @@ function parseScribeSseFrame(block: string): { event: string; data: string } | n
 
 /**
  * Open an SSE scribe transcription stream for a session and dispatch
- * segment/token/done/error callbacks. Caller should fall back to the batch
- * transcribe path on error.
+ * start/partial/segment/token/done/error callbacks, mirroring the
+ * `streamChatMessage` conventions (same auth/credentials + SSE frame parsing).
+ *
+ * POSTs the audio as multipart form-data (`audio_file`, optional `language` and
+ * `template_id`) to `/scribe/sessions/{id}/stream`. Degraded segments are passed
+ * through verbatim (no fabricated text). Caller should fall back to the batch
+ * transcribe path on a terminal `error` or a thrown transport failure.
  */
 export async function streamScribe(
   sessionId: number,
@@ -344,13 +432,14 @@ export async function streamScribe(
       parsed = data;
     }
     if (event === "start") options.onStart?.();
+    else if (event === "partial") options.onPartial?.((parsed ?? {}) as ScribeStreamPartial);
     else if (event === "segment") options.onSegment?.(parsed as ScribeStreamSegment);
     else if (event === "token") {
       const text = (parsed as { text?: string })?.text;
       if (typeof text === "string") options.onToken?.(text);
     } else if (event === "done") {
       sawTerminal = true;
-      options.onDone?.((parsed ?? {}) as Record<string, unknown>);
+      options.onDone?.((parsed ?? {}) as ScribeStreamDone);
     } else if (event === "error") {
       sawTerminal = true;
       options.onError?.((parsed as { message?: string })?.message ?? "scribe stream error");

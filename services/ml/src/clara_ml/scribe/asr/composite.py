@@ -14,6 +14,7 @@ from typing import Any
 
 from clara_ml.scribe.asr.base import AsrEvent, AsrProvider, AsrResult
 from clara_ml.scribe.asr.google_stt import GoogleSttV2Asr
+from clara_ml.scribe.asr.phowhisper import PhoWhisperAsr
 from clara_ml.scribe.asr.whisper import WhisperDeepSeekAsr
 
 logger = logging.getLogger(__name__)
@@ -70,14 +71,19 @@ class CompositeAsr:
         if not result.segments:
             yield AsrEvent(type="error", detail={"reason": "asr_unavailable"})
             return
+        # Carry provider/language on each event so the SSE layer can record
+        # accurate ASR metadata (provider, language, degraded count — Req 2.5).
+        meta = {"provider": result.provider, "language": result.language}
         for seg in result.segments:
-            yield AsrEvent(type="segment", segment=seg, text=seg.text)
+            yield AsrEvent(type="segment", segment=seg, text=seg.text, detail=dict(meta))
 
 
 def _provider_by_name(name: str) -> AsrProvider:
     key = (name or "").strip().lower()
     if key in ("google", "google_stt", "google_stt_v2", "chirp", "chirp3"):
         return GoogleSttV2Asr()
+    if key in ("phowhisper", "pho_whisper", "pho-whisper", "vi_whisper"):
+        return PhoWhisperAsr()
     # Default / unknown -> Whisper (the only fully-wired backend today).
     return WhisperDeepSeekAsr()
 
