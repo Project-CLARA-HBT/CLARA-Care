@@ -150,7 +150,9 @@ def _normalize_run_payload(value: dict[str, Any] | None) -> dict[str, Any]:
 
     specialist_count_raw = payload.get("specialist_count", payload.get("specialistCount", 3))
     specialist_count = 3
-    if isinstance(specialist_count_raw, (int, float)) and not isinstance(specialist_count_raw, bool):
+    if isinstance(specialist_count_raw, (int, float)) and not isinstance(
+        specialist_count_raw, bool
+    ):
         specialist_count = int(specialist_count_raw)
     specialist_count = min(max(specialist_count, 2), 5)
 

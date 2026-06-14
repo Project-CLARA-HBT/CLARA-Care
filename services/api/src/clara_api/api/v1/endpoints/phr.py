@@ -68,7 +68,9 @@ def get_phr_record(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> PhrRecordResponse:
     user = _get_user_by_token(db, token)
-    profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user.id)).scalar_one_or_none()
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
     return _serialize_profile(profile)
 
 
@@ -79,7 +81,9 @@ def upsert_phr_record(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> PhrRecordResponse:
     user = _get_user_by_token(db, token)
-    profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user.id)).scalar_one_or_none()
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
     if profile is None:
         profile = PhrProfile(user_id=user.id)
         db.add(profile)

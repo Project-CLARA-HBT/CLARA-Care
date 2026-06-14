@@ -78,7 +78,9 @@ class ScribeSession(Base):
     # quality / documentation-efficiency metrics; written only when the
     # RAG_SCRIBE_QUALITY_METRICS_ENABLED flag is on.
     metrics_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
-    last_processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

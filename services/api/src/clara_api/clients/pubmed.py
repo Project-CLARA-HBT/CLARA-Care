@@ -59,7 +59,9 @@ class PubMedClient(BaseClient):
     async def efetch(self, ids: list[str], db: str = "pubmed") -> dict[str, Any]:
         return await self._call("efetch.fcgi", {"db": db, "id": ",".join(ids)})
 
-    async def elink(self, ids: list[str], dbfrom: str = "pubmed", db: str = "pubmed") -> dict[str, Any]:
+    async def elink(
+        self, ids: list[str], dbfrom: str = "pubmed", db: str = "pubmed"
+    ) -> dict[str, Any]:
         return await self._call(
             "elink.fcgi",
             {"dbfrom": dbfrom, "db": db, "id": ",".join(ids)},

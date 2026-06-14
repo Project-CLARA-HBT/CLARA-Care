@@ -35,8 +35,10 @@ class CircuitBreaker:
             self.opened_at = time.time()
 
 
-class BaseClient(ABC):
-    def __init__(self, timeout: float = 15.0, max_retries: int = 3, backoff_base: float = 0.5) -> None:
+class BaseClient(ABC):  # noqa: B024 - shared concrete base (no abstract methods by design)
+    def __init__(
+        self, timeout: float = 15.0, max_retries: int = 3, backoff_base: float = 0.5
+    ) -> None:
         self.client = httpx.AsyncClient(timeout=timeout)
         self.max_retries = max_retries
         self.backoff_base = backoff_base

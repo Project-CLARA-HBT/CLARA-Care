@@ -965,11 +965,13 @@ def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "## Quick conclusion\n"
             f"{fallback_answer_text}\n\n"
             "## Detailed analysis\n"
-            "- The deep research path is temporarily unavailable, so this answer stays conservative.\n"
+            "- The deep research path is temporarily unavailable, "
+            "so this answer stays conservative.\n"
             "- Re-check key decisions against primary sources or the treating clinician.\n\n"
             "## Safety recommendations\n"
             "- Do not self-prescribe or change dosing without qualified clinical advice.\n"
-            "- If there is comorbidity or polypharmacy, confirm the next step with a clinician or pharmacist."
+            "- If there is comorbidity or polypharmacy, "
+            "confirm the next step with a clinician or pharmacist."
         )
     else:
         fallback_answer_text = (
@@ -1494,7 +1496,10 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
             normalized["query_plan"] = telemetry.get("query_plan")
         if "search_plan" not in normalized and telemetry.get("search_plan") is not None:
             normalized["search_plan"] = telemetry.get("search_plan")
-        if "verification_matrix" not in normalized and telemetry.get("verification_matrix") is not None:
+        if (
+            "verification_matrix" not in normalized
+            and telemetry.get("verification_matrix") is not None
+        ):
             normalized["verification_matrix"] = telemetry.get("verification_matrix")
         if (
             "contradiction_summary" not in normalized
@@ -1583,7 +1588,9 @@ def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
 
 def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
     normalized = _canonicalize_research_payload_contract(normalized)
-    metadata_obj = normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
+    metadata_obj = (
+        normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
+    )
     telemetry_obj = (
         normalized.get("telemetry")
         if isinstance(normalized.get("telemetry"), dict)
@@ -1682,7 +1689,9 @@ def _build_personal_context_payload(
     user_id: int,
     answer_language: str,
 ) -> dict[str, Any]:
-    profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user_id)).scalar_one_or_none()
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user_id)
+    ).scalar_one_or_none()
     allergies: list[dict[str, Any]] = []
     conditions: list[dict[str, Any]] = []
     profile_medications: list[dict[str, Any]] = []
@@ -1784,9 +1793,11 @@ def _build_personal_context_payload(
     med_names = [str(item.get("name") or "").strip() for item in merged_medications][:16]
     summary_lines = [f"- {header}"]
     if allergy_names:
-        summary_lines.append(f"- {allergies_label}: {', '.join([name for name in allergy_names if name])}.")
+        allergy_str = ", ".join(name for name in allergy_names if name)
+        summary_lines.append(f"- {allergies_label}: {allergy_str}.")
     if condition_names:
-        summary_lines.append(f"- {conditions_label}: {', '.join([name for name in condition_names if name])}.")
+        condition_str = ", ".join(name for name in condition_names if name)
+        summary_lines.append(f"- {conditions_label}: {condition_str}.")
     if med_names:
         summary_lines.append(f"- {meds_label}: {', '.join([name for name in med_names if name])}.")
     summary_markdown = "\n".join(summary_lines)
@@ -2387,7 +2398,11 @@ def _run_research_job(job_id: str) -> None:
 
 def _queue_research_job(job_id: str) -> None:
     with _research_job_lock:
-        stale_job_ids = [future_job_id for future_job_id, future in _research_job_futures.items() if future.done()]
+        stale_job_ids = [
+            future_job_id
+            for future_job_id, future in _research_job_futures.items()
+            if future.done()
+        ]
         for stale_job_id in stale_job_ids:
             _research_job_futures.pop(stale_job_id, None)
         if len(_research_job_futures) >= _RESEARCH_JOB_MAX_PENDING:
@@ -2398,7 +2413,9 @@ def _queue_research_job(job_id: str) -> None:
 
 def _count_pending_research_jobs() -> int:
     with _research_job_lock:
-        stale_job_ids = [job_id for job_id, future in _research_job_futures.items() if future.done()]
+        stale_job_ids = [
+            job_id for job_id, future in _research_job_futures.items() if future.done()
+        ]
         for job_id in stale_job_ids:
             _research_job_futures.pop(job_id, None)
         return len(_research_job_futures)
@@ -2561,9 +2578,11 @@ def _normalize_source_hub_catalog_entries(raw_entries: Any) -> list[SourceHubCat
             item = SourceHubCatalogEntry(
                 key=key,  # type: ignore[arg-type]
                 label=_to_text(row.get("label")) or (fallback.label if fallback else key.upper()),
-                description=_to_text(row.get("description")) or (fallback.description if fallback else ""),
+                description=_to_text(row.get("description"))
+                or (fallback.description if fallback else ""),
                 docs_url=_to_text(row.get("docs_url")) or (fallback.docs_url if fallback else None),
-                default_query=_to_text(row.get("default_query")) or (fallback.default_query if fallback else None),
+                default_query=_to_text(row.get("default_query"))
+                or (fallback.default_query if fallback else None),
                 supports_live_sync=_to_bool(
                     row.get("supports_live_sync"),
                     default=(fallback.supports_live_sync if fallback else True),
@@ -2576,7 +2595,9 @@ def _normalize_source_hub_catalog_entries(raw_entries: Any) -> list[SourceHubCat
     return normalized
 
 
-def _save_source_hub_catalog(db: Session, entries: list[SourceHubCatalogEntry]) -> list[SourceHubCatalogEntry]:
+def _save_source_hub_catalog(
+    db: Session, entries: list[SourceHubCatalogEntry]
+) -> list[SourceHubCatalogEntry]:
     dedup: dict[str, SourceHubCatalogEntry] = {}
     for entry in entries:
         dedup[entry.key] = entry
@@ -2717,7 +2738,9 @@ def _load_source_hub_records(db: Session, owner_user_id: int) -> list[SourceHubR
     return legacy_records
 
 
-def _save_source_hub_records(db: Session, owner_user_id: int, records: list[SourceHubRecord]) -> None:
+def _save_source_hub_records(
+    db: Session, owner_user_id: int, records: list[SourceHubRecord]
+) -> None:
     pruned = records[:_SOURCE_HUB_MAX_RECORDS]
     db.query(FederatedSourceRecord).filter(
         FederatedSourceRecord.owner_user_id == owner_user_id
@@ -3982,7 +4005,9 @@ def research_tier2(
     if query_text:
         normalized_input["query"] = query_text
         normalized_input["message"] = query_text
-    upstream_payload = _build_tier2_upstream_payload(normalized_input, db=db, user=user, token=token)
+    upstream_payload = _build_tier2_upstream_payload(
+        normalized_input, db=db, user=user, token=token
+    )
 
     response = proxy_ml_post(
         "/v1/research/tier2",
