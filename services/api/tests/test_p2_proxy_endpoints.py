@@ -767,7 +767,11 @@ def test_research_job_progress_prefers_ml_event_stage_status(
             "answer": "ok",
             "flow_events": [
                 {"stage": "collect_evidence", "status": "completed", "note": "ML evidence ready"},
-                {"stage": "synthesize_findings", "status": "completed", "note": "ML synthesis done"},
+                {
+                    "stage": "synthesize_findings",
+                    "status": "completed",
+                    "note": "ML synthesis done",
+                },
             ],
             "metadata": {"research_mode": "deep"},
         }
@@ -1321,7 +1325,10 @@ def test_research_tier2_forwards_deep_beta_mode_to_ml(
 
         @staticmethod
         def json() -> dict[str, object]:
-            return {"answer": "ok", "metadata": {"research_mode": "deep_beta", "deep_pass_count": 1}}
+            return {
+                "answer": "ok",
+                "metadata": {"research_mode": "deep_beta", "deep_pass_count": 1},
+            }
 
     def _fake_post(url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
         captured["url"] = url
@@ -2014,5 +2021,6 @@ def test_research_tier2_passes_through_safety_override_contract(
     assert payload["verification_matrix"]["rows"][0]["claim_type"] == "dosage"
 
     telemetry = payload["telemetry"]
-    assert telemetry["verification_matrix"]["safety_override"]["reason"] == "safety_critical_contradicted"
+    safety_override = telemetry["verification_matrix"]["safety_override"]
+    assert safety_override["reason"] == "safety_critical_contradicted"
     assert telemetry["verification_matrix"]["rows"][0]["evidence_ref"] == "pubmed:123"

@@ -18,7 +18,9 @@ def _configure_test_bootstrap_admin() -> Generator[None, None, None]:
         "AUTH_BOOTSTRAP_ADMIN_ENABLED": os.environ.get("AUTH_BOOTSTRAP_ADMIN_ENABLED"),
         "AUTH_BOOTSTRAP_ADMIN_EMAIL": os.environ.get("AUTH_BOOTSTRAP_ADMIN_EMAIL"),
         "AUTH_BOOTSTRAP_ADMIN_PASSWORD": os.environ.get("AUTH_BOOTSTRAP_ADMIN_PASSWORD"),
-        "AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD": os.environ.get("AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD"),
+        "AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD": os.environ.get(
+            "AUTH_BOOTSTRAP_ADMIN_FORCE_RESET_PASSWORD"
+        ),
     }
     os.environ["AUTH_BOOTSTRAP_ADMIN_ENABLED"] = "true"
     os.environ["AUTH_BOOTSTRAP_ADMIN_EMAIL"] = "admin@example.com"

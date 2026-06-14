@@ -124,7 +124,9 @@ def test_register_requires_legal_acceptance_in_production(monkeypatch) -> None:
     _reset_runtime_state()
 
 
-def test_register_allows_normal_role_when_legal_acceptance_present_in_production(monkeypatch) -> None:
+def test_register_allows_normal_role_when_legal_acceptance_present_in_production(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
     _reset_runtime_state()
 

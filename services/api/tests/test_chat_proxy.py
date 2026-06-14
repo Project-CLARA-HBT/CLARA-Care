@@ -151,7 +151,8 @@ def test_chat_uses_safe_fallback_when_reply_blank_after_sanitize(monkeypatch) ->
         @staticmethod
         def json() -> dict[str, object]:
             return {
-                "answer": "Hệ thống tạm thời dùng fallback local để đảm bảo không gián đoạn trả lời.",
+                "answer": "Hệ thống tạm thời dùng fallback local "
+                "để đảm bảo không gián đoạn trả lời.",
                 "role": "doctor",
                 "intent": "general_guidance",
                 "confidence": 0.7,

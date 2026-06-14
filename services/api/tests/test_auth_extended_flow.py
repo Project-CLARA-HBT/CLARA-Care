@@ -129,7 +129,9 @@ def test_refresh_token_rotation_and_reuse_is_blocked() -> None:
     assert access_2
 
     stateless_client = TestClient(app)
-    reused_response = stateless_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_1})
+    reused_response = stateless_client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh_1}
+    )
     assert reused_response.status_code == 401
 
     logout_response = client.post(
@@ -138,5 +140,7 @@ def test_refresh_token_rotation_and_reuse_is_blocked() -> None:
     )
     assert logout_response.status_code == 200
 
-    revoked_response = stateless_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_2})
+    revoked_response = stateless_client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh_2}
+    )
     assert revoked_response.status_code == 401
