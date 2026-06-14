@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-
 """
 Generate reproducible synthetic Council test cases.
 
@@ -10,6 +8,8 @@ Usage examples:
   python3 scripts/demo/generate_council_synthetic_cases.py \
     --output data/demo/council-synthetic-cases-custom.json
 """
+
+from __future__ import annotations
 
 import argparse
 import json

@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-
 """
 Run synthetic Council endpoint tests and emit summary metrics.
 
@@ -20,6 +18,8 @@ Usage examples:
     --bearer-token "$DOCTOR_BEARER_TOKEN" \
     --cases data/demo/council-synthetic-cases-seed20260406-n60.json
 """
+
+from __future__ import annotations
 
 import argparse
 import json
