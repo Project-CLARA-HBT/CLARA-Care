@@ -16,8 +16,21 @@ transcribe + SOAP + CRUD behavior* (Requirement 11.2). Concretely it asserts:
   (consent-required defaults off), so the legacy ASR entry point is unchanged.
 
 The flags are forced OFF explicitly (not relying on process env) so the gate is
-deterministic regardless of how the suite is invoked. Wave-2 (R12–R20) flags are
-folded into the same gate by task 10.1; this file pins the wave-1 baseline.
+deterministic regardless of how the suite is invoked.
+
+Task 10.1 (_Req 11.2, 12.1, 13.1, 14.1, 15.1, 16.1, 17.1, 18.1, 19.1, 20.1_) folds
+the wave-2 (R12–R20) flags into this same gate: with EVERY scribe flag off — all
+wave-1 flags AND all wave-2 flags — the observable behavior is byte-for-byte the
+current batch transcribe + SOAP + CRUD behavior. Concretely the wave-2 extension
+additionally pins that:
+
+* the additive ``ScribeNoteVersion`` metadata columns
+  (``grounding_json`` / ``extraction_json`` / ``wer_json`` / ``quality_json``) are
+  never present/populated — the legacy flow creates no note-version rows at all;
+* the new addendum endpoints (attach + list) are inactive (404);
+* the ``/scribe/analytics/quality`` endpoint is inactive (404);
+* the ``fhir_composition`` export format is unavailable (404);
+* the grounding/extraction read endpoints are retracted (404).
 
 Uses the doctor auto-provision login (``*@doctor.clara``) + a mocked ML SOAP proxy;
 no real ML calls.
@@ -31,7 +44,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from clara_api.core.config import get_settings
-from clara_api.db.models import ScribeAudit, ScribeSession
+from clara_api.db.models import ScribeAudit, ScribeNoteVersion, ScribeSession
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -73,6 +86,26 @@ _WAVE1_FLAGS = (
     "rag_scribe_fhir_export_enabled",
 )
 
+# Every wave-2 (R12–R20) scribe flag (task 10.1). The gate forces all of these OFF
+# too, so the full enterprise surface — grounding, structured extraction, E/M+CPT
+# coding, quality metrics, WER reporting, FHIR Composition, addendum, specialty
+# templates, eval gate — is retracted alongside the wave-1 surface.
+_WAVE2_FLAGS = (
+    "rag_scribe_grounding_enabled",
+    "rag_scribe_structured_extraction_enabled",
+    "rag_scribe_em_cpt_coding_enabled",
+    "rag_scribe_quality_metrics_enabled",
+    "rag_scribe_wer_reporting_enabled",
+    "rag_scribe_fhir_composition_enabled",
+    "rag_scribe_addendum_enabled",
+    "rag_scribe_specialty_templates_enabled",
+    "rag_scribe_eval_gate_enabled",
+)
+
+# The full set the gate pins OFF: byte-for-byte current behavior holds only when
+# EVERY scribe flag (wave-1 + wave-2) is off (Req 11.2).
+_ALL_SCRIBE_FLAGS = _WAVE1_FLAGS + _WAVE2_FLAGS
+
 # The legacy ML SOAP payload the proxy should pass through verbatim.
 _FAKE_SOAP = {
     "subjective": {"chief_complaint": "cough"},
@@ -112,7 +145,7 @@ def _mock_soap(monkeypatch) -> None:
 
 def _all_flags_off(monkeypatch) -> None:
     settings = get_settings()
-    for flag in _WAVE1_FLAGS:
+    for flag in _ALL_SCRIBE_FLAGS:
         monkeypatch.setattr(settings, flag, False, raising=False)
 
 
@@ -224,6 +257,21 @@ def test_enterprise_routes_not_exposed_with_flags_off(monkeypatch) -> None:
             f"/api/v1/scribe/sessions/{sid}/export?format=md", headers=_auth(token))),
         ("stream", client.post(
             f"/api/v1/scribe/sessions/{sid}/stream", headers=_auth(token), files=audio)),
+        # --- wave-2 (R12–R20) enterprise routes (task 10.1) ---
+        ("grounding_read", client.get(
+            f"/api/v1/scribe/sessions/{sid}/notes/1/grounding", headers=_auth(token))),
+        ("extraction_read", client.get(
+            f"/api/v1/scribe/sessions/{sid}/notes/1/extraction", headers=_auth(token))),
+        ("addendum_attach", client.post(
+            f"/api/v1/scribe/sessions/{sid}/notes/1/addendum", headers=_auth(token),
+            json={"text": "late finding"})),
+        ("addenda_list", client.get(
+            f"/api/v1/scribe/sessions/{sid}/notes/1/addenda", headers=_auth(token))),
+        ("analytics_quality", client.get(
+            "/api/v1/scribe/analytics/quality", headers=_auth(token))),
+        ("export_fhir_composition", client.get(
+            f"/api/v1/scribe/sessions/{sid}/export?format=fhir_composition",
+            headers=_auth(token))),
     ]
     for label, resp in gated:
         assert resp.status_code == 404, f"{label}: expected flag-off 404, got {resp.status_code}"
@@ -272,3 +320,52 @@ def test_legacy_crud_writes_no_enterprise_audit_rows(monkeypatch) -> None:
             select(ScribeAudit).where(ScribeAudit.session_id == sid)
         ).scalars().all()
         assert audit_rows == [], "legacy CRUD must not write enterprise audit rows"
+
+
+def test_legacy_flow_creates_no_note_version_rows_or_additive_columns(monkeypatch) -> None:
+    """Req 11.2/12.1/13.1/15.1/16.1: the additive note-version metadata is never present.
+
+    The wave-2 additive metadata (``grounding_json`` / ``extraction_json`` /
+    ``wer_json`` / ``quality_json``) lives on ``ScribeNoteVersion`` rows, which are
+    created only by the flag-gated sign/note workflow. With every flag off the legacy
+    create+regenerate flow persists SOAP onto the session itself and creates NO
+    ``ScribeNoteVersion`` rows — so none of the additive columns are ever present or
+    populated (they cannot leak into the byte-for-byte legacy behavior).
+    """
+
+    _all_flags_off(monkeypatch)
+    _mock_soap(monkeypatch)
+    token = _login("dr.gate.versions@doctor.clara")
+    sid = _create_session(token, auto=True)
+
+    regen = client.post(
+        f"/api/v1/scribe/sessions/{sid}/regenerate", headers=_auth(token), json={}
+    )
+    assert regen.status_code == 200, regen.text
+
+    with SessionLocal() as db:
+        version_rows = db.execute(
+            select(ScribeNoteVersion).where(ScribeNoteVersion.session_id == sid)
+        ).scalars().all()
+        assert version_rows == [], "legacy flow must not create enterprise note-version rows"
+        # Defensive: even if a row somehow existed, every additive column must be null.
+        for row in version_rows:
+            assert row.grounding_json is None
+            assert row.extraction_json is None
+            assert row.wer_json is None
+            assert row.quality_json is None
+
+
+def test_quality_analytics_endpoint_inactive_with_flags_off(monkeypatch) -> None:
+    """Req 15.1/11.2: the enterprise ``/analytics/quality`` surface is retracted (404).
+
+    The legacy ``/analytics/summary`` stays available and unchanged (asserted in
+    ``test_analytics_summary_payload_unchanged``); the wave-7 quality surface is
+    fully retracted with the flags off.
+    """
+
+    _all_flags_off(monkeypatch)
+    token = _login("dr.gate.quality@doctor.clara")
+
+    resp = client.get("/api/v1/scribe/analytics/quality", headers=_auth(token))
+    assert resp.status_code == 404, resp.text
