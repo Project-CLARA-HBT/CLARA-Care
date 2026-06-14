@@ -2,7 +2,7 @@ SHELL := /bin/zsh
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -24,6 +24,8 @@ help:
 	@echo "  test              Run pytest"
 	@echo "  docs-check        Validate docs links and docs path references"
 	@echo "  precommit-install Install git pre-commit hooks"
+	@echo "  scribe-rollout-plan  Print the Clara Scribe staged flag-enablement plan (DRY-RUN, no .env edits, no deploy)"
+	@echo "  scribe-rollback-plan Print the Clara Scribe rollback-all plan (DRY-RUN, no .env edits, no deploy)"
 
 setup-env:
 	@test -f .env || cp .env.example .env
@@ -108,6 +110,18 @@ test:
 
 docs-check:
 	@bash scripts/docs/check-docs-links.sh
+
+# Clara Scribe Enterprise staged rollout — DRY-RUN ONLY (task 10.3).
+# These targets only PRINT the plan + run a read-only disk pre-check; they never
+# edit .env and never redeploy. To actually apply a stage an operator runs the
+# script directly with APPLY=true (see the runbook), which is intentionally NOT
+# wrapped in a Make target to avoid accidental production changes.
+#   docs/hackathon/scribe-enterprise-staged-rollout-runbook-2026-04-20.md
+scribe-rollout-plan:
+	@APPLY=false bash scripts/deploy/scribe_staged_rollout.sh plan
+
+scribe-rollback-plan:
+	@APPLY=false bash scripts/deploy/scribe_staged_rollout.sh rollback-all
 
 precommit-install:
 	pre-commit install

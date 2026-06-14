@@ -123,25 +123,25 @@ Wave-2 subagent assignment: **SA-ML** (grounding, extraction, E/M+CPT, specialty
 
 ## Wave 7 — Quality + WER metrics (R15, R16)
 
-- [~] 7.1 API: `compute_scribe_metrics(session_meta)` (gated `RAG_SCRIBE_QUALITY_METRICS_ENABLED`) — edit-rate, time-saved, degraded-ASR rate, grounded-claim rate, PDQI-9 structural proxy; PII-free projection; omit-on-missing; expose via `GET /scribe/analytics/quality` (existing analytics path). _Req 15.1–15.6_
-- [~] 7.2 ML/API: WER measurement or confidence proxy per language (and per accent/speaker where available), non-PII, non-blocking → `wer_json`. _Req 16.1–16.5_
-- [~] 7.3 **Property test P13** — quality/WER/eval metrics are PII-free and omit-on-missing. _Req 12.8, 15.3, 15.6, 16.4, 20.5_
+- [x] 7.1 API: `compute_scribe_metrics(session_meta)` (gated `RAG_SCRIBE_QUALITY_METRICS_ENABLED`) — edit-rate, time-saved, degraded-ASR rate, grounded-claim rate, PDQI-9 structural proxy; PII-free projection; omit-on-missing; expose via `GET /scribe/analytics/quality` (existing analytics path). _Req 15.1–15.6_
+- [x] 7.2 ML/API: WER measurement or confidence proxy per language (and per accent/speaker where available), non-PII, non-blocking → `wer_json`. _Req 16.1–16.5_
+- [x] 7.3 **Property test P13** — quality/WER/eval metrics are PII-free and omit-on-missing. _Req 12.8, 15.3, 15.6, 16.4, 20.5_
 
 ## Wave 8 — Specialty / macro templates (R19)
 
-- [~] 8.1 ML: extend the pure-data templates registry with specialty templates + clinician macros/snippets (gated `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED`), no change to the generation call site; existing templates' structure/output unchanged. _Req 19.1–19.6_
-- [~] 8.2 **Property test P14** — template/macro addition isolation (adding a template/macro never alters existing templates' output); specialty templates reuse Property 1 for completeness. _Req 19.5_
+- [x] 8.1 ML: extend the pure-data templates registry with specialty templates + clinician macros/snippets (gated `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED`), no change to the generation call site; existing templates' structure/output unchanged. _Req 19.1–19.6_
+- [x] 8.2 **Property test P14** — template/macro addition isolation (adding a template/macro never alters existing templates' output); specialty templates reuse Property 1 for completeness. _Req 19.5_
 
 ## Wave 9 — Note-generation evaluation gate (R20)
 
-- [~] 9.1 ML: `scribe_eval` golden-set harness (gated `RAG_SCRIBE_EVAL_GATE_ENABLED`) mirroring the research quality-gate — compute structural completeness, grounded-claim rate, no-fabrication check, coding-precision proxy; pass/fail vs declared thresholds; non-PII golden data; offline/CI only. _Req 20.1–20.6_
-- [~] 9.2 **Property test P15** — eval-gate threshold enforcement (pass iff every metric meets threshold; names breaching metric). _Req 20.2, 20.3, 20.4_
+- [x] 9.1 ML: `scribe_eval` golden-set harness (gated `RAG_SCRIBE_EVAL_GATE_ENABLED`) mirroring the research quality-gate — compute structural completeness, grounded-claim rate, no-fabrication check, coding-precision proxy; pass/fail vs declared thresholds; non-PII golden data; offline/CI only. _Req 20.1–20.6_
+- [x] 9.2 **Property test P15** — eval-gate threshold enforcement (pass iff every metric meets threshold; names breaching metric). _Req 20.2, 20.3, 20.4_
 
 ## Wave 10 — Wave-2 regression + verification + staged deploy
 
-- [~] 10.1 Extend the flags-off regression gate so ALL wave-1 AND wave-2 flags off ⇒ byte-for-byte current behavior (note output, export output, analytics payloads; no `grounding_json`/`extraction_json`/`wer_json`/`quality_json` present, no addendum endpoints active). _Req 11.2, 12.1, 13.1, 14.1, 15.1, 16.1, 17.1, 18.1, 19.1, 20.1_
-- [~] 10.2 Integration tests for the new endpoints: grounding/extraction reads, addendum attach, `fhir_composition` export, quality/WER analytics; existing scribe suite stays green. _Verification_
-- [~] 10.3 Staged flag-enablement deploy per the design rollout sequence (grounding+extraction → E/M+CPT → quality+WER → FHIR+addendum → specialty templates → eval gate), ml→api→web, with instant rollback. _Req 11_
+- [x] 10.1 Extend the flags-off regression gate so ALL wave-1 AND wave-2 flags off ⇒ byte-for-byte current behavior (note output, export output, analytics payloads; no `grounding_json`/`extraction_json`/`wer_json`/`quality_json` present, no addendum endpoints active). _Req 11.2, 12.1, 13.1, 14.1, 15.1, 16.1, 17.1, 18.1, 19.1, 20.1_
+- [x] 10.2 Integration tests for the new endpoints: grounding/extraction reads, addendum attach, `fhir_composition` export, quality/WER analytics; existing scribe suite stays green. _Verification_
+- [x] 10.3 Staged flag-enablement deploy per the design rollout sequence (grounding+extraction → E/M+CPT → quality+WER → FHIR+addendum → specialty templates → eval gate), ml→api→web, with instant rollback. _Req 11_
 
 ---
 

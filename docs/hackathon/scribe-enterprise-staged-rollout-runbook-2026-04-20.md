@@ -60,6 +60,57 @@ REQUIRE_DEEPSEEK=true scripts/ops/validate_runtime_env.sh /opt/clara-care/.env
 | w2-specialty-templates  | `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED` |
 | w2-eval-gate            | `RAG_SCRIBE_EVAL_GATE_ENABLED` (offline/CI only) |
 
+## Wave 2 — chi tiết từng giai đoạn (task 10.3)
+
+Nguồn chân lý duy nhất cho mọi flag (mặc định OFF + chú thích) là `.env.example`.
+Mỗi giai đoạn áp dụng theo thứ tự service **ml → api → web**. Sau khi bật, chạy
+**verification/smoke** tương ứng; chỉ chuyển sang giai đoạn kế tiếp khi đạt
+**success criteria**. **Rollback tức thì** = bật lại flag về `false` + redeploy ⇒ hành vi
+byte-for-byte như trước (tận dụng regression gate flags-off của task 10.1).
+
+### Giai đoạn 1 — grounding + structured extraction
+- **Flags:** `RAG_SCRIBE_GROUNDING_ENABLED=true`, `RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED=true` (ship cùng nhau — chung span model).
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-grounding-extraction`
+- **Verification/smoke:** tạo note qua `POST /scribe/sessions/{id}/notes`; gọi
+  `GET .../notes/{ver}/grounding` và `.../notes/{ver}/extraction` (clinician RBAC) → 200 + payload có dữ liệu.
+- **Success criteria:** note `sections_json` + transcript **không đổi** (P7); statement có chip grounded/unverified, không có critical-safety ungrounded được khẳng định (P8); extraction có provenance span + RxCUI, type vắng mặt ⇒ list rỗng (P9).
+- **Rollback tức thì:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh disable w2-grounding-extraction` ⇒ `grounding`/`extraction` endpoints trả 404, không còn `grounding_json`/`extraction_json`.
+
+### Giai đoạn 2 — E/M + CPT coding (anti-upcoding)
+- **Flags:** `RAG_SCRIBE_EM_CPT_CODING_ENABLED=true`.
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-em-cpt`
+- **Verification/smoke:** tạo note → `coding_json` chứa gợi ý E/M + CPT, mỗi gợi ý có justifying span, `selected=false`, `status="advisory"`.
+- **Success criteria:** E/M ≤ defensible level (anti-upcoding), không code nào ở trạng thái selected khi chưa clinician confirm (P10); note text không đổi (P7).
+- **Rollback tức thì:** `disable w2-em-cpt` ⇒ coding trở lại R7 (ICD + drug-safety) thuần.
+
+### Giai đoạn 3 — quality metrics + WER reporting (non-blocking)
+- **Flags:** `RAG_SCRIBE_QUALITY_METRICS_ENABLED=true`, `RAG_SCRIBE_WER_REPORTING_ENABLED=true`.
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-quality-wer`
+- **Verification/smoke:** `GET /scribe/analytics/quality` → payload metrics; kiểm tra không có PII (id bệnh nhân / transcript thô).
+- **Success criteria:** metrics PII-free + omit-on-missing (P13); WER không chặn/không đổi workflow ghi chú (R16.5).
+- **Rollback tức thì:** `disable w2-quality-wer` ⇒ không tính/không lộ metrics, không `quality_json`/`wer_json`.
+
+### Giai đoạn 4 — FHIR Composition/Encounter + addendum
+- **Flags:** `RAG_SCRIBE_FHIR_COMPOSITION_ENABLED=true`, `RAG_SCRIBE_ADDENDUM_ENABLED=true`.
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-fhir-addendum`
+- **Verification/smoke:** với note đã `signed`, `GET .../export?format=fhir_composition` → `Composition`+`Encounter` (+ `DocumentReference`); `POST .../notes/{ver}/addendum` → 1 audit entry.
+- **Success criteria:** Composition 1 section/template section + round-trip, chỉ cho note signed/exported (P11); addendum giữ signed version byte-for-byte, không tạo version mới, đúng 1 audit entry, demarcated trong export (P12).
+- **Rollback tức thì:** `disable w2-fhir-addendum` ⇒ `fhir_composition` + addendum endpoints retracted; export quay về md/docx/fhir (DocumentReference).
+
+### Giai đoạn 5 — specialty / macro templates
+- **Flags:** `RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED=true`.
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-specialty-templates`
+- **Verification/smoke:** chọn specialty template → note có đúng section keys của template; template/macro mới không đổi output template hiện hữu.
+- **Success criteria:** template-completeness (P1 tái dùng) + isolation khi thêm template/macro (P14).
+- **Rollback tức thì:** `disable w2-specialty-templates` ⇒ chỉ còn template set của R6.
+
+### Giai đoạn 6 — note-generation eval gate (offline/CI)
+- **Flags:** `RAG_SCRIBE_EVAL_GATE_ENABLED=true` (chỉ chạy offline/CI, không nằm trên đường runtime của clinician).
+- **Enable:** `APPLY=true scripts/deploy/scribe_staged_rollout.sh enable w2-eval-gate`
+- **Verification/smoke:** chạy `scribe_eval` golden-set harness trong CI → pass iff mọi metric đạt threshold; nêu tên metric vi phạm.
+- **Success criteria:** threshold enforcement (P15); golden data + report PII-free (P13); không thay đổi hành vi runtime (R20.1/20.6).
+- **Rollback tức thì:** `disable w2-eval-gate` ⇒ gate không chạy, không ảnh hưởng runtime.
+
 ## Cách dùng
 
 Dry-run mặc định — chỉ in kế hoạch + kiểm tra đĩa, **không** sửa `.env`, **không** redeploy:
