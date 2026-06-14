@@ -1929,7 +1929,9 @@ def _fhir_encounter(encounter: dict[str, str], *, attribution: str) -> dict[str,
 def _slug_export_name(value: str) -> str:
     """Filesystem-safe slug for the exported DOCX filename."""
 
-    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in (value or "").strip())
+    cleaned = "".join(
+        ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in (value or "").strip()
+    )
     cleaned = "-".join(part for part in cleaned.split("-") if part)
     return cleaned.lower() or "clinical-note"
 

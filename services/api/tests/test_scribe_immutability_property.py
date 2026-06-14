@@ -176,7 +176,7 @@ def test_p4_signed_version_immutable_and_audit_append_only(
     ids_after = [e["id"] for e in audit_after]
     assert ids_after == sorted(ids_after)
     assert len(audit_after) > len(audit_before)
-    for old, new in zip(audit_before, audit_after):
+    for old, new in zip(audit_before, audit_after, strict=False):
         assert old["id"] == new["id"]
         assert old["action"] == new["action"]
         assert old["from_status"] == new["from_status"]

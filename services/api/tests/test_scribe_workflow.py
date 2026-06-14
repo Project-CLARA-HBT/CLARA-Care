@@ -319,9 +319,11 @@ def test_resign_signed_version_rejected(monkeypatch) -> None:
     sid = _create_session(token)
     client.post(f"/api/v1/scribe/sessions/{sid}/notes", headers=_auth(token),
                 json={"template_id": "soap"})
-    assert client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token)).status_code == 200
+    sign_resp = client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+    assert sign_resp.status_code == 200
     # Status is now 'signed'; signing again is an illegal transition (409).
-    assert client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token)).status_code == 409
+    resign_resp = client.post(f"/api/v1/scribe/sessions/{sid}/sign", headers=_auth(token))
+    assert resign_resp.status_code == 409
 
 
 def test_regenerate_in_review_versions_and_audits_without_transition(monkeypatch) -> None:
