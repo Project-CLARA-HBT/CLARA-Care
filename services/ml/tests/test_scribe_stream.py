@@ -4,9 +4,16 @@ from __future__ import annotations
 
 import json
 
+import pytest
+from fastapi.testclient import TestClient
+
+from clara_ml.config import settings
+from clara_ml.main import app
 from clara_ml.scribe.asr.base import AsrEvent, AsrResult, AsrSegment
 from clara_ml.scribe.generator import NoteGenerator
 from clara_ml.streaming.scribe_stream import stream_scribe_sse
+
+_client = TestClient(app)
 
 
 def _no_sleep(_s: float) -> None:
@@ -256,14 +263,6 @@ def test_streaming_unavailable_and_batch_empty_emits_terminal_error() -> None:
 
 
 # --- Route-level tests for POST /v1/scribe/stream (flag gating, Requirement 1.1) ---
-
-import pytest
-from fastapi.testclient import TestClient
-
-from clara_ml.config import settings
-from clara_ml.main import app
-
-_client = TestClient(app)
 
 
 def test_route_returns_404_when_streaming_flag_off(monkeypatch: pytest.MonkeyPatch) -> None:
