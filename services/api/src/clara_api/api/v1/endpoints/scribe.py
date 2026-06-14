@@ -19,6 +19,7 @@ from clara_api.core.markdown_docx import build_docx_bytes_from_markdown
 from clara_api.core.rbac import require_roles
 from clara_api.core.scribe_analytics import (
     aggregate_encounter_metrics,
+    compute_scribe_metrics,
     derive_encounter_metrics,
 )
 from clara_api.core.scribe_lifecycle import can_transition
@@ -216,32 +217,70 @@ def _session_segment_texts(item: ScribeSession) -> list[str]:
     return texts
 
 
+def _session_segments_meta(item: ScribeSession) -> list[dict[str, Any]]:
+    """Return the persisted ASR segment metadata dicts (PII-bearing text included).
+
+    Segments live additively under ``asr_meta_json['segments']`` and carry per-segment
+    ``text`` / ``speaker`` / ``confidence`` / ``degraded`` (and, where the provider
+    supplies them, ``language`` / ``accent`` / ``reference``). Used only as transient
+    input to the WER pass (Req 16) — the pass consumes the text to compute numeric
+    accuracy signals and never persists it. Returns ``[]`` when no segments are present.
+    """
+
+    meta = item.asr_meta_json
+    if not isinstance(meta, dict):
+        return []
+    segments = meta.get("segments")
+    if not isinstance(segments, list):
+        return []
+    return [seg for seg in segments if isinstance(seg, dict)]
+
+
+def _session_asr_language(item: ScribeSession) -> str:
+    """Return the session-level ASR language label (``asr_meta_json['language']``)."""
+
+    meta = item.asr_meta_json
+    if not isinstance(meta, dict):
+        return ""
+    return str(meta.get("language", "") or "").strip()
+
+
 def _run_scribe_additive_passes(
     *,
     settings: Any,
     transcript: str,
     segment_texts: list[str],
     sections: dict[str, Any],
-) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
-    """Run the additive grounding (R12) + extraction (R13) + coding (R14) passes (task 4.5/5.2).
+    segments_meta: list[dict[str, Any]] | None = None,
+    language: str = "",
+) -> tuple[
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+]:
+    """Run the additive grounding (R12) + extraction (R13) + coding (R14) + WER (R16) passes.
 
     Flag-gated by the API's own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
-    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` / ``RAG_SCRIBE_EM_CPT_CODING_ENABLED``
-    flags (the API mirrors the ML flags so both layers gate the passes). Returns
-    ``(grounding_json, extraction_json, coding_json)`` where each is ``None`` when its
-    flag is off or no result is available.
+    ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` / ``RAG_SCRIBE_EM_CPT_CODING_ENABLED`` /
+    ``RAG_SCRIBE_WER_REPORTING_ENABLED`` flags (the API mirrors the ML flags so both
+    layers gate the passes). Returns
+    ``(grounding_json, extraction_json, coding_json, wer_json)`` where each is ``None``
+    when its flag is off or no result is available.
 
-    The passes are additive metadata only — they never mutate the note's section
-    text or the transcript (Req 12.6, 13.5, 14.7). The ML call is best-effort: if the
+    The passes are additive metadata only — they never mutate the note's section text
+    or the transcript (Req 12.6, 13.5, 14.7, 16.5). The ML call is best-effort: if the
     ML pass endpoint is unavailable the columns are simply left unpopulated and note
-    generation still succeeds (the note text is unaffected either way).
+    generation still succeeds (the note text is unaffected either way). The WER pass in
+    particular is non-blocking (Req 16.5): a failure never gates transcription/note work.
     """
 
     run_grounding = bool(settings.rag_scribe_grounding_enabled)
     run_extraction = bool(settings.rag_scribe_structured_extraction_enabled)
     run_coding = bool(settings.rag_scribe_em_cpt_coding_enabled)
-    if not (run_grounding or run_extraction or run_coding):
-        return None, None, None
+    run_wer = bool(settings.rag_scribe_wer_reporting_enabled)
+    if not (run_grounding or run_extraction or run_coding or run_wer):
+        return None, None, None, None
 
     payload: dict[str, Any] = {
         "transcript": transcript,
@@ -250,17 +289,23 @@ def _run_scribe_additive_passes(
         "grounding_enabled": run_grounding,
         "extraction_enabled": run_extraction,
         "coding_enabled": run_coding,
+        "wer_enabled": run_wer,
+        # Full per-segment metadata (text/confidence/speaker/...) is the meaningful
+        # WER input; only consumed transiently by the ML pass (never re-persisted).
+        "segments_meta": segments_meta or [],
+        "language": language,
     }
     try:
         result = proxy_ml_post("/v1/scribe/passes", payload)
     except HTTPException:
         # Additive pass is non-blocking: leave metadata unpopulated on ML failure.
         logger.warning("scribe additive passes unavailable; metadata not persisted")
-        return None, None, None
+        return None, None, None, None
 
     grounding_json: dict[str, Any] | None = None
     extraction_json: dict[str, Any] | None = None
     coding_json: dict[str, Any] | None = None
+    wer_json: dict[str, Any] | None = None
     if run_grounding:
         candidate = result.get("grounding")
         grounding_json = candidate if isinstance(candidate, dict) else None
@@ -270,7 +315,10 @@ def _run_scribe_additive_passes(
     if run_coding:
         candidate = result.get("coding")
         coding_json = candidate if isinstance(candidate, dict) else None
-    return grounding_json, extraction_json, coding_json
+    if run_wer:
+        candidate = result.get("wer")
+        wer_json = candidate if isinstance(candidate, dict) else None
+    return grounding_json, extraction_json, coding_json, wer_json
 
 
 def _normalize_audio_content_type(value: str | None) -> str:
@@ -698,6 +746,117 @@ def get_scribe_analytics_derived(
     return ScribeAnalyticsDerivedResponse(**projected)
 
 
+class ScribeQualityMetrics(BaseModel):
+    """PII-free per-encounter note-quality + efficiency metrics (Requirement 15).
+
+    Extends the coarse derived metrics with the wave-7 quality signals. Each value
+    is a bounded number and is OMITTED (``None``) when its input is unavailable
+    (omit-on-missing, Req 15.6) rather than fabricated. ``session_id`` is an opaque
+    identifier; no title/transcript/section text/patient data is included
+    (Req 15.3). The ``pdqi9_structural_proxy`` is a structural-completeness signal
+    only, never a clinical-accuracy judgement of the note (Req 15.5).
+    """
+
+    session_id: int
+    edit_rate: float | None = None
+    time_saved_minutes: float | None = None
+    degraded_rate: float | None = None
+    grounded_claim_rate: float | None = None
+    pdqi9_structural_proxy: float | None = None
+
+
+class ScribeAnalyticsQualityResponse(BaseModel):
+    """Per-encounter quality metrics + an across-encounter aggregate (Req 15.2/15.4)."""
+
+    encounters: list[ScribeQualityMetrics]
+    # Averages over encounters reporting each metric; a metric absent everywhere is
+    # omitted from the aggregate (omit-on-missing, Req 15.6).
+    aggregate: dict[str, float]
+
+
+@router.get("/analytics/quality", response_model=ScribeAnalyticsQualityResponse)
+def get_scribe_analytics_quality(
+    limit: int = Query(default=100, ge=1, le=500),
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeAnalyticsQualityResponse:
+    """Wave-7 note-quality + documentation-efficiency metrics (Requirement 15).
+
+    Exposed via the existing analytics path (Req 15.4) as an additive surface: the
+    legacy ``/analytics/summary`` and the ``/analytics/derived`` payloads are left
+    byte-for-byte unchanged. Derives, from persisted *non-PII* session metadata
+    only — ``ScribeNoteVersion.sections_json`` / ``grounding_json`` and
+    ``ScribeSession.asr_meta_json`` — edit-rate, time-saved, degraded-ASR rate,
+    grounded-claim rate, and a PDQI-9-style structural-completeness proxy
+    (structural only, not a clinical-accuracy judgement; Req 15.5). Each metric is
+    omitted when its input is unavailable (omit-on-missing, Req 15.6).
+
+    Clinician RBAC (``DOCTOR_ROLE_DEP``) + owner-scoping (per-user query).
+    Flag-gated by ``RAG_SCRIBE_QUALITY_METRICS_ENABLED``: 404 when the flag is off
+    (Req 15.1) so the enterprise quality surface is fully retracted in the flags-off
+    regression gate. The assembled payload is run through the existing analytics
+    redaction projection as a defense-in-depth PII guard (Req 15.3).
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_quality_metrics_enabled:
+        raise HTTPException(
+            status_code=404, detail="Scribe quality metrics are disabled."
+        )
+
+    user = _get_user_by_token(db, token)
+    sessions = db.execute(
+        select(ScribeSession)
+        .where(ScribeSession.user_id == user.id)
+        .order_by(ScribeSession.updated_at.desc())
+        .limit(limit)
+    ).scalars().all()
+
+    encounters: list[ScribeQualityMetrics] = []
+    per_encounter_metrics: list[dict[str, float]] = []
+    for item in sessions:
+        version_rows = db.execute(
+            select(ScribeNoteVersion)
+            .where(ScribeNoteVersion.session_id == item.id)
+            .order_by(ScribeNoteVersion.version_no.asc())
+        ).scalars().all()
+        note_versions = [
+            {"sections": row.sections_json, "grounding": row.grounding_json}
+            for row in version_rows
+        ]
+        metrics = compute_scribe_metrics(
+            {"note_versions": note_versions, "asr_meta": item.asr_meta_json}
+        )
+        if not metrics:
+            # No derivable signal for this encounter — omit it entirely rather than
+            # emit an all-null row (omit-on-missing, Req 15.6).
+            continue
+        per_encounter_metrics.append(metrics)
+        encounters.append(
+            ScribeQualityMetrics(
+                session_id=item.id,
+                edit_rate=metrics.get("edit_rate"),
+                time_saved_minutes=metrics.get("time_saved_minutes"),
+                degraded_rate=metrics.get("degraded_rate"),
+                grounded_claim_rate=metrics.get("grounded_claim_rate"),
+                pdqi9_structural_proxy=metrics.get("pdqi9_structural_proxy"),
+            )
+        )
+
+    aggregate = aggregate_encounter_metrics(per_encounter_metrics)
+
+    # Defense-in-depth: reuse the existing analytics PII redaction projection so the
+    # contract is shared with the product/clinical analytics layer (Req 15.3). The
+    # payload already contains only opaque ids + bounded numbers.
+    projected = AnalyticsAggregator._project_pii_free(
+        {
+            "encounters": [e.model_dump() for e in encounters],
+            "aggregate": aggregate,
+        }
+    )
+    return ScribeAnalyticsQualityResponse(**projected)
+
+
 # ---------------------------------------------------------------------------
 # Enterprise: consent, sign/amend workflow, audit, segment relabel, export.
 # All additive + flag-gated; the routes above are unchanged.
@@ -991,11 +1150,13 @@ def generate_note_version(
     # Flag-gated and metadata-only: persisted into the dedicated nullable columns
     # without ever touching the note's section text. When both flags are off this
     # is a no-op and the columns stay null (byte-for-byte legacy behavior).
-    grounding_json, extraction_json, coding_json = _run_scribe_additive_passes(
+    grounding_json, extraction_json, coding_json, wer_json = _run_scribe_additive_passes(
         settings=settings,
         transcript=transcript,
         segment_texts=_session_segment_texts(item),
         sections=soap if isinstance(soap, dict) else {},
+        segments_meta=_session_segments_meta(item),
+        language=_session_asr_language(item),
     )
     if grounding_json is not None:
         version.grounding_json = grounding_json
@@ -1003,6 +1164,8 @@ def generate_note_version(
         version.extraction_json = extraction_json
     if coding_json is not None:
         version.coding_json = coding_json
+    if wer_json is not None:
+        version.wer_json = wer_json
     item.soap_json = soap
     prev_status = item.status
     if item.status == "draft" and can_transition(item.status, "in_review"):

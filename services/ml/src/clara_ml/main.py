@@ -997,11 +997,13 @@ def scribe_passes(payload: dict) -> dict:
     Additive + flag-gated: each pass runs only when the caller requests it (the API
     mirrors its own ``RAG_SCRIBE_GROUNDING_ENABLED`` /
     ``RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED`` / ``RAG_SCRIBE_EM_CPT_CODING_ENABLED``
-    flags) AND the corresponding pass is permitted here. The passes are read-only over
-    the transcript spans and the generated note sections — they NEVER mutate the note's
-    clinical text or the transcript (Req 12.6, 13.5, 14.7). Returns
-    ``{"grounding": ..., "extraction": ..., "coding": ...}`` where each value is the
-    serialized report (``coding`` is ``None`` when the coding pass did not run).
+    / ``RAG_SCRIBE_WER_REPORTING_ENABLED`` flags) AND the corresponding pass is permitted
+    here. The passes are read-only over the transcript spans, the generated note
+    sections, and the ASR segment metadata — they NEVER mutate the note's clinical text
+    or the transcript (Req 12.6, 13.5, 14.7, 16.5). Returns
+    ``{"grounding": ..., "extraction": ..., "coding": ..., "wer": ...}`` where ``coding``
+    and ``wer`` keys appear only when their pass runs (so the legacy shape is unchanged
+    when those flags are off).
     """
 
     from clara_ml.scribe.extraction import StructuredExtraction, StructuredExtractor
@@ -1026,6 +1028,7 @@ def scribe_passes(payload: dict) -> dict:
     grounding_enabled = payload.get("grounding_enabled")
     extraction_enabled = payload.get("extraction_enabled")
     coding_enabled = payload.get("coding_enabled")
+    wer_enabled = payload.get("wer_enabled")
 
     verifier = GroundingVerifier(
         enabled=bool(grounding_enabled) if grounding_enabled is not None else None
@@ -1063,6 +1066,28 @@ def scribe_passes(payload: dict) -> dict:
     # when the E/M+CPT coding flag is off (Req 14.1).
     if run_coding:
         out["coding"] = coding
+
+    # R16 additive ASR WER / fairness reporting pass. Inert unless the WER flag is
+    # on; records a per-language WER (or confidence proxy where reference text is
+    # unavailable), additionally broken down per accent/speaker where available
+    # (Req 16.2/16.3). Read-only over ASR segment metadata: it never mutates the
+    # note text or transcript and never blocks the workflow (Req 16.5). The ``wer``
+    # key only appears when the pass runs, so the response shape is byte-for-byte
+    # unchanged when the flag is off (Req 16.1).
+    run_wer = (
+        bool(wer_enabled)
+        if wer_enabled is not None
+        else bool(settings.rag_scribe_wer_reporting_enabled)
+    )
+    if run_wer:
+        from clara_ml.scribe.wer import WerReporter
+
+        segments_meta = payload.get("segments_meta")
+        wer_segments = segments_meta if isinstance(segments_meta, list) else segment_texts
+        wer_language = str(payload.get("language") or "").strip()
+        out["wer"] = (
+            WerReporter(enabled=True).measure(wer_segments, language=wer_language).as_dict()
+        )
     return out
 
 

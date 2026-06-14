@@ -151,6 +151,122 @@ def derive_encounter_metrics(
     return metrics
 
 
+def extract_grounded_claim_rate(grounding: Any) -> float | None:
+    """Grounded-claim rate from a note version's persisted ``grounding_json``, or ``None``.
+
+    Wave-7 quality metric (Req 15.2). The grounding pass (task 4.2/4.5) records a
+    per-note ``grounded_claim_rate`` (``grounded_significant / total_significant``)
+    plus the ``enabled`` flag and ``total_significant`` count in ``grounding_json``.
+    This reads that already-computed ratio — it does **not** re-run any verification
+    and consumes no transcript/section text (PII-free, Req 15.3).
+
+    Omit-on-missing (Req 15.6): returns ``None`` — never a fabricated zero — when
+    grounding was disabled/never ran (no ``grounding_json`` or ``enabled`` falsy) or
+    when there were no significant claims to ground (``total_significant <= 0``), so
+    a ``0.0`` "no significant claims" case is not misreported as "0% grounded".
+    """
+
+    if not isinstance(grounding, dict):
+        return None
+    if not grounding.get("enabled"):
+        return None
+    total_significant = grounding.get("total_significant")
+    if not isinstance(total_significant, (int, float)) or total_significant <= 0:
+        return None
+    rate = grounding.get("grounded_claim_rate")
+    if not isinstance(rate, (int, float)):
+        return None
+    return round(max(0.0, min(1.0, float(rate))), 4)
+
+
+def compute_structural_completeness(sections: Any) -> float | None:
+    """PDQI-9-style **structural** completeness proxy in ``[0, 1]``, or ``None``.
+
+    A documented, PII-free structural signal (Req 15.2/15.3/15.5): the fraction of
+    the note's sections that are populated (non-empty). It answers "did the note
+    fill in the sections its template defines?" and is explicitly **not** a
+    clinical-accuracy judgement of the section *content* (Req 15.5) — only the
+    presence/absence of each section is inspected, never the text itself, so no PII
+    leaves the module. ``1.0`` means every section carries content; ``0.0`` means
+    none do.
+
+    A section counts as populated when its value is not ``None``/empty
+    (``""``/``{}``/``[]``) and is not a whitespace-only string. Returns ``None``
+    (omit-on-missing, Req 15.6) when the note has no sections to measure.
+    """
+
+    if isinstance(sections, dict):
+        items = list(sections.values())
+    elif isinstance(sections, list):
+        items = list(sections)
+    else:
+        return None
+    total = len(items)
+    if total == 0:
+        return None
+    filled = sum(
+        1
+        for value in items
+        if value not in (None, "", {}, [], ()) and str(value).strip()
+    )
+    return round(filled / total, 4)
+
+
+def compute_scribe_metrics(session_meta: dict[str, Any]) -> dict[str, float]:
+    """Compute the wave-7 note-quality + documentation-efficiency metrics (Req 15.2).
+
+    Pure function over *non-PII session metadata* — no DB, no transcript/patient
+    text. ``session_meta`` is a plain dict assembled by the endpoint from persisted
+    rows:
+
+    - ``note_versions``: the session's note versions ordered by ``version_no``
+      ascending. Each entry needs ``sections`` (``ScribeNoteVersion.sections_json``)
+      and may carry ``grounding`` (``grounding_json``) for the grounded-claim rate.
+      The first entry is the originally generated note and the last is the
+      finalized note.
+    - ``asr_meta``: the session's ``asr_meta_json`` (degraded-segment metadata).
+
+    Returns a flat ``{metric: bounded_number}`` dict containing only the metrics
+    whose inputs are available (omit-on-missing, Req 15.6) — a metric is never
+    fabricated or zero-filled when its input is absent. Metrics:
+
+    - ``edit_rate`` / ``time_saved_minutes`` / ``degraded_rate`` — reuse the wave-1
+      coarse derivation (Req 10.4), unchanged.
+    - ``grounded_claim_rate`` — from the finalized note's grounding metadata
+      (omitted when grounding is off / had no significant claims).
+    - ``pdqi9_structural_proxy`` — structural completeness of the finalized note's
+      sections (structural only, not a clinical-accuracy score; Req 15.5).
+
+    Every value is a bounded ratio in ``[0, 1]`` or a non-negative minute estimate,
+    so the result is PII-free by construction (Req 15.3).
+    """
+
+    if not isinstance(session_meta, dict):
+        return {}
+
+    note_versions = session_meta.get("note_versions") or []
+    asr_meta = session_meta.get("asr_meta")
+
+    # Reuse the wave-1 coarse derivation verbatim (edit-rate / time-saved /
+    # degraded-rate) so those metrics stay identical to ``/analytics/derived``.
+    metrics: dict[str, float] = dict(
+        derive_encounter_metrics(note_versions=note_versions, asr_meta=asr_meta)
+    )
+
+    if note_versions:
+        final = note_versions[-1]
+
+        grounded_rate = extract_grounded_claim_rate(final.get("grounding"))
+        if grounded_rate is not None:
+            metrics["grounded_claim_rate"] = grounded_rate
+
+        structural_proxy = compute_structural_completeness(final.get("sections"))
+        if structural_proxy is not None:
+            metrics["pdqi9_structural_proxy"] = structural_proxy
+
+    return metrics
+
+
 def aggregate_encounter_metrics(
     per_encounter: list[dict[str, float]],
 ) -> dict[str, float]:
