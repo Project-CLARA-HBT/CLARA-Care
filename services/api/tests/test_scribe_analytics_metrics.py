@@ -17,7 +17,6 @@ from clara_api.core.scribe_analytics import (
     derive_encounter_metrics,
 )
 
-
 # --- edit rate ---------------------------------------------------------------
 
 

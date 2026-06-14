@@ -8,8 +8,8 @@ from datetime import UTC, datetime, timedelta
 from threading import Lock
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, delete, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from clara_api.core.auth_email import dispatch_action_email, should_expose_action_token_preview
@@ -37,8 +37,8 @@ from clara_api.schemas import (
     ConsentStatusResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
-    LoginRequest,
     LoginOtpVerifyRequest,
+    LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
     RegisterRequest,

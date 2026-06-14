@@ -38,8 +38,8 @@ from clara_api.db.models import (
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
-    CabinetImportResponse,
     CabinetImportRequest,
+    CabinetImportResponse,
     CabinetPrioritizedField,
     CabinetScanDetection,
     CabinetScanTextRequest,

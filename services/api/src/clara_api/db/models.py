@@ -3,8 +3,8 @@ from datetime import date, datetime
 from sqlalchemy import (
     JSON,
     Boolean,
-    DateTime,
     Date,
+    DateTime,
     Float,
     ForeignKey,
     Integer,

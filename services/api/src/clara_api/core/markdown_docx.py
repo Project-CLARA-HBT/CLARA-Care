@@ -8,7 +8,7 @@ from typing import Any
 from docx import Document
 from docx.document import Document as DocumentObject
 from docx.oxml.ns import qn
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt, RGBColor
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 import os
+from collections.abc import Generator
 
 import pytest
 
