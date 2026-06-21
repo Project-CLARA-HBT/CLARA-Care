@@ -41,7 +41,7 @@ jobs:
       release_sha: ${{ steps.tag.outputs.release_sha }}
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.target_branch }}
           fetch-depth: 0
@@ -83,7 +83,7 @@ jobs:
       registry_repo: ${{ steps.ctx.outputs.registry_repo }}
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'push' && github.ref || needs.create-semver-tag.outputs.release_tag }}
@@ -123,7 +123,7 @@ jobs:
     needs: [prepare-release-context]
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare-release-context.outputs.release_ref }}
@@ -181,7 +181,7 @@ jobs:
     needs: [prepare-release-context, build-push-images]
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare-release-context.outputs.release_ref }}
