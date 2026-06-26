@@ -4,6 +4,7 @@ import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/session_store.dart';
 import 'careguard_screen.dart';
+import 'careguard_cabinet_screen.dart';
 import 'council_screen.dart';
 import 'phr_screen.dart';
 import 'research_screen.dart';
@@ -234,6 +235,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+            // Cabinet CRUD parity (clara-selfmed-careguard-upgrade Req 8.2, 8.3).
+            // Exposed only when CAREGUARD_MOBILE_CABINET_ENABLED is on AND the
+            // role has CareGuard access; default OFF keeps today's behavior.
+            if (kCareguardMobileCabinetEnabled)
+              _FeatureTile(
+                icon: Icons.medical_services_outlined,
+                title: 'Tủ thuốc',
+                subtitle: 'Quản lý danh sách thuốc của bạn',
+                enabled: canCareguard,
+                onTap: () => _openScreen(
+                  CareguardCabinetScreen(
+                    apiClient: widget.apiClient,
+                    sessionStore: widget.sessionStore,
+                  ),
+                ),
+              ),
             _FeatureTile(
               icon: Icons.groups,
               title: 'Hội chẩn AI',

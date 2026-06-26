@@ -53,18 +53,22 @@ function getDetectionKey(item: ScanDetection, index: number): string {
 }
 
 function getNormalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Khớp từ điển";
+  if (source === "db" || source === "matched") return "Khớp từ điển";
   if (source === "candidate") return "Khớp gợi ý";
+  if (source === "needs_review") return "Cần xem lại";
   if (source === "fallback") return "Dự phòng";
   return "Chưa xác định";
 }
 
 function getNormalizationClass(source: string | null | undefined): string {
-  if (source === "db") {
+  if (source === "db" || source === "matched") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
   }
   if (source === "candidate") {
     return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
+  }
+  if (source === "needs_review") {
+    return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-200";
   }
   if (source === "fallback") {
     return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300";
@@ -827,8 +831,8 @@ export default function CareguardPage() {
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
                       <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.dosage || "Liều: Chưa có"}</p>
-                      <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_source)}`}>
-                        {getNormalizationLabel(item.normalization_source)}
+                      <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_status ?? item.normalization_source)}`}>
+                        {getNormalizationLabel(item.normalization_status ?? item.normalization_source)}
                       </span>
                     </div>
                     <button

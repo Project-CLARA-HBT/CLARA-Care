@@ -206,6 +206,82 @@ class ApiClient {
     );
   }
 
+  /// Loads the owner's medicine cabinet (CareGuard_Mobile cabinet parity,
+  /// clara-selfmed-careguard-upgrade Requirement 8.2). Same contract as the web
+  /// client: `GET /api/v1/careguard/cabinet`.
+  Future<Map<String, dynamic>> getCareguardCabinet({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/careguard/cabinet',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Creates a cabinet item (Requirement 8.2). `POST /api/v1/careguard/cabinet/items`.
+  /// A duplicate normalized name is rejected server-side (409) and surfaces as
+  /// an [ApiException] with the Vietnamese message.
+  Future<Map<String, dynamic>> addCareguardCabinetItem({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/careguard/cabinet/items',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Updates a cabinet item (Requirement 8.2).
+  /// `PATCH /api/v1/careguard/cabinet/items/{itemId}`.
+  Future<Map<String, dynamic>> updateCareguardCabinetItem({
+    required String accessToken,
+    required int itemId,
+    required Map<String, dynamic> payload,
+  }) {
+    return _patch(
+      '/api/v1/careguard/cabinet/items/$itemId',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Deletes a cabinet item scoped to the owner (Requirement 8.2, 1.6).
+  /// `DELETE /api/v1/careguard/cabinet/items/{itemId}`.
+  Future<Map<String, dynamic>> deleteCareguardCabinetItem({
+    required String accessToken,
+    required int itemId,
+  }) {
+    return _delete(
+      '/api/v1/careguard/cabinet/items/$itemId',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Reads the caller's medical-disclaimer consent status (same gate as the web
+  /// client, Requirement 8.5). `GET /api/v1/auth/consent-status`.
+  Future<Map<String, dynamic>> getConsentStatus({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/auth/consent-status',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Records acceptance of the medical-disclaimer consent at [consentVersion]
+  /// (Requirement 8.5). `POST /api/v1/auth/consent`.
+  Future<Map<String, dynamic>> acceptConsent({
+    required String accessToken,
+    required String consentVersion,
+  }) {
+    return _post(
+      '/api/v1/auth/consent',
+      body: {'consent_version': consentVersion, 'accepted': true},
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> runCouncil({
     required String accessToken,
     required Map<String, dynamic> payload,
@@ -286,6 +362,32 @@ class ApiClient {
       Uri.parse('$_baseUrl$path'),
       headers: _headers(accessToken: accessToken),
       body: jsonEncode(body),
+    );
+
+    return _decodeResponse(response);
+  }
+
+  Future<Map<String, dynamic>> _patch(
+    String path, {
+    required Map<String, dynamic> body,
+    String? accessToken,
+  }) async {
+    final response = await _httpClient.patch(
+      Uri.parse('$_baseUrl$path'),
+      headers: _headers(accessToken: accessToken),
+      body: jsonEncode(body),
+    );
+
+    return _decodeResponse(response);
+  }
+
+  Future<Map<String, dynamic>> _delete(
+    String path, {
+    String? accessToken,
+  }) async {
+    final response = await _httpClient.delete(
+      Uri.parse('$_baseUrl$path'),
+      headers: _headers(accessToken: accessToken),
     );
 
     return _decodeResponse(response);

@@ -92,6 +92,7 @@ class MobileAnalyticsEvents {
   static const String researchSubmitted = 'mobile_research_submitted';
   static const String careguardViewed = 'mobile_careguard_viewed';
   static const String careguardAnalyzed = 'mobile_careguard_analyzed';
+  static const String careguardCabinetViewed = 'mobile_careguard_cabinet_viewed';
   static const String councilViewed = 'mobile_council_viewed';
   static const String councilRun = 'mobile_council_run';
   static const String phrViewed = 'mobile_phr_viewed';

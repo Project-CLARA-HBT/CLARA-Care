@@ -322,6 +322,15 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_ENABLED"),
     )
+    # Pair-indexed DDI matcher (Self-Med + CareGuard upgrade). Default OFF keeps
+    # the existing linear ``issubset`` scan in ``agents/careguard`` so output is
+    # byte-identical to the pre-upgrade baseline; when on, the matcher uses a
+    # ``dict[frozenset[str], list[InteractionRule]]`` index cached by rule-set
+    # version/mtime (Requirement 5.4, 12.1, 12.2).
+    careguard_ddi_index_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_DDI_INDEX_ENABLED"),
+    )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
         validation_alias=AliasChoices(

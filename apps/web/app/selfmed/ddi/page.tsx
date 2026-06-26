@@ -12,8 +12,25 @@ import {
   toCareguardUserMessage,
   toDdiUserView
 } from "@/lib/careguard";
+import {
+  CAREGUARD_OFFLINE_LABEL,
+  cacheDdiUserView,
+  isCareguardOfflineFallbackEnabled,
+  isLikelyOfflineError,
+  readCachedDdiView
+} from "@/lib/careguard-offline";
 import { CabinetItem, getCabinet, runCabinetAutoDdi } from "@/lib/selfmed";
 import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
+
+function formatOfflineCachedAt(cachedAt: string): string | null {
+  const parsed = new Date(cachedAt);
+  if (Number.isNaN(parsed.getTime())) return null;
+  try {
+    return parsed.toLocaleString("vi-VN");
+  } catch {
+    return parsed.toISOString();
+  }
+}
 
 function parseLineList(value: string): string[] {
   return value
@@ -55,6 +72,10 @@ export default function SelfMedDdiPage() {
   const [result, setResult] = useState<DdiUserView | null>(null);
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
+  // Offline / last-known fallback state (Req 6.3). When the result on screen was
+  // served from the client cache because the API was unreachable, we flag it as
+  // stale and show when it was captured.
+  const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
 
   // Distinct medicine names drive the two-medicine guard (Requirement 3.5).
   // A drug-drug interaction needs two *different* medicines, so the canonical
@@ -83,6 +104,7 @@ export default function SelfMedDdiPage() {
   const onRunDdi = async () => {
     setError("");
     setResult(null);
+    setOfflineCachedAt(null);
     // Guard the analysis call: with fewer than two distinct medicines, prompt
     // the End_User to add at least two and do NOT call the DDI analysis
     // (Requirement 3.5).
@@ -98,6 +120,9 @@ export default function SelfMedDdiPage() {
       // and source_errors are dropped by toDdiUserView (Req 3.1, 3.6, 4.1).
       const view = toDdiUserView(next);
       setResult(view);
+      // Cache the last-known *projection* for offline fallback (Req 6.3). No-op
+      // when CAREGUARD_OFFLINE_FALLBACK_ENABLED is off.
+      cacheDdiUserView(view);
       // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
       trackCareguardDdiChecked({
         riskLevel: view.riskLevel,
@@ -106,6 +131,17 @@ export default function SelfMedDdiPage() {
         source: "selfmed"
       });
     } catch (cause) {
+      // Offline / degraded fallback (Req 6.3): when the flag is on and the API
+      // is unreachable, show the last-known cached projection labeled stale.
+      // We never fabricate an all-clear — only a genuine cached result is shown.
+      if (isCareguardOfflineFallbackEnabled() && isLikelyOfflineError(cause)) {
+        const cached = readCachedDdiView();
+        if (cached) {
+          setResult(cached.view);
+          setOfflineCachedAt(cached.cachedAt);
+          return;
+        }
+      }
       setError(
         toCareguardUserMessage(cause, "Không thể hoàn tất phân tích tương tác thuốc. Vui lòng thử lại.")
       );
@@ -207,6 +243,21 @@ export default function SelfMedDdiPage() {
 
           {result ? (
             <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskLevel)}`}>
+              {offlineCachedAt ? (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-3 py-2 dark:border-amber-400/55 dark:bg-amber-500/10">
+                  <span className="rounded-full border border-amber-400 bg-amber-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-900 dark:border-amber-300/60 dark:bg-amber-500/20 dark:text-amber-100">
+                    {CAREGUARD_OFFLINE_LABEL}
+                  </span>
+                  <span className="text-xs text-amber-900 dark:text-amber-100">
+                    {(() => {
+                      const at = formatOfflineCachedAt(offlineCachedAt);
+                      return at
+                        ? `Đang hiển thị kết quả lưu gần nhất (${at}). Kết quả có thể đã cũ.`
+                        : "Đang hiển thị kết quả lưu gần nhất. Kết quả có thể đã cũ.";
+                    })()}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Kết quả tổng quan</p>
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(result.riskLevel)}`}>

@@ -146,3 +146,224 @@ def test_flag_on_does_not_change_curated_pair_alert(
     # Curated severity (high) preserved; DrugBank's "critical" did not override.
     assert warfarin_alerts[0]["severity"] == "high"
     assert "DRUGBANK ENGLISH" not in warfarin_alerts[0]["message"]
+
+
+# ---------------------------------------------------------------------------
+# Task 7.1: manifest verification + cache-by-mtime + degrade-to-curated.
+# Req 5.3 (degrade to curated-only on missing/unparseable/malformed manifest or
+# any missing/unparseable shard; never raise into analysis; never fabricate an
+# all-clear) and Req 5.5 (surface the active rule-set version label).
+# ---------------------------------------------------------------------------
+
+
+def _point_loader_at(monkeypatch, drugbank_dir: Path) -> None:
+    monkeypatch.setattr(careguard, "_DRUGBANK_DIR", drugbank_dir)
+    monkeypatch.setattr(careguard, "_DRUGBANK_MANIFEST_PATH", drugbank_dir / "manifest.json")
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_enabled", True)
+
+
+def test_missing_manifest_degrades_to_curated(monkeypatch, tmp_path, reset_drugbank_cache) -> None:
+    # Flag on but no DrugBank directory/manifest at all -> curated-only.
+    _point_loader_at(monkeypatch, tmp_path / "drugbank")
+
+    curated_rules, curated_version = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    assert resolved_rules == curated_rules
+    assert resolved_version == curated_version
+    assert "+" not in resolved_version
+
+
+def test_unparseable_manifest_degrades_to_curated(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    drugbank_dir = tmp_path / "drugbank"
+    drugbank_dir.mkdir(parents=True, exist_ok=True)
+    (drugbank_dir / "manifest.json").write_text("{ this is not valid json", encoding="utf-8")
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    curated_rules, curated_version = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    assert resolved_rules == curated_rules
+    assert resolved_version == curated_version
+
+
+def test_manifest_missing_version_degrades_to_curated(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    drugbank_dir = tmp_path / "drugbank"
+    ddi_dir = drugbank_dir / "ddi"
+    ddi_dir.mkdir(parents=True, exist_ok=True)
+    (ddi_dir / "ddi_i_000.json").write_text(
+        json.dumps({"rules": [{"medications": ["a", "b"], "severity": "high", "message": "x"}]}),
+        encoding="utf-8",
+    )
+    # Malformed manifest shape: no version present.
+    (drugbank_dir / "manifest.json").write_text(
+        json.dumps({"ddi_shards": [{"file": "ddi/ddi_i_000.json"}]}), encoding="utf-8"
+    )
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    curated_rules, curated_version = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    assert resolved_rules == curated_rules
+    assert resolved_version == curated_version
+
+
+def test_ddi_shards_not_a_list_degrades_to_curated(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    drugbank_dir = tmp_path / "drugbank"
+    drugbank_dir.mkdir(parents=True, exist_ok=True)
+    (drugbank_dir / "manifest.json").write_text(
+        json.dumps({"version": "drugbank-test", "ddi_shards": "not-a-list"}), encoding="utf-8"
+    )
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    curated_rules, _ = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    assert resolved_rules == curated_rules
+    assert "+" not in resolved_version
+
+
+def test_missing_shard_degrades_to_curated_no_partial(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    # One valid shard + one referenced-but-missing shard. A missing shard must
+    # degrade the WHOLE layer to curated-only (no partial DrugBank rule set).
+    drugbank_dir = tmp_path / "drugbank"
+    ddi_dir = drugbank_dir / "ddi"
+    ddi_dir.mkdir(parents=True, exist_ok=True)
+    good_shard = {
+        "rules": [
+            {"medications": ["drugbankonly_a", "drugbankonly_b"], "severity": "high", "message": "x"}
+        ]
+    }
+    (ddi_dir / "ddi_i_000.json").write_text(json.dumps(good_shard), encoding="utf-8")
+    manifest = {
+        "version": "drugbank-test",
+        "ddi_shards": [
+            {"file": "ddi/ddi_i_000.json", "rule_count": 1},
+            {"file": "ddi/ddi_i_001.json", "rule_count": 1},  # missing on disk
+        ],
+    }
+    (drugbank_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    curated_rules, curated_version = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    # Curated-only: the valid shard's pair is NOT partially merged in.
+    assert resolved_rules == curated_rules
+    assert resolved_version == curated_version
+    assert frozenset({"drugbankonly_a", "drugbankonly_b"}) not in {r.meds for r in resolved_rules}
+
+
+def test_unparseable_shard_degrades_to_curated(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    drugbank_dir = tmp_path / "drugbank"
+    ddi_dir = drugbank_dir / "ddi"
+    ddi_dir.mkdir(parents=True, exist_ok=True)
+    (ddi_dir / "ddi_i_000.json").write_text("{ broken json", encoding="utf-8")
+    manifest = {
+        "version": "drugbank-test",
+        "ddi_shards": [{"file": "ddi/ddi_i_000.json", "rule_count": 1}],
+    }
+    (drugbank_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    curated_rules, curated_version = _load_local_ddi_rules()
+    resolved_rules, resolved_version = _resolve_ddi_rules()
+
+    assert resolved_rules == curated_rules
+    assert resolved_version == curated_version
+
+
+def test_degrade_does_not_raise_into_analysis(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    # A broken DrugBank layer must never propagate into run_careguard_analyze and
+    # must never fabricate an all-clear: a known curated high-risk pair still fires.
+    drugbank_dir = tmp_path / "drugbank"
+    drugbank_dir.mkdir(parents=True, exist_ok=True)
+    (drugbank_dir / "manifest.json").write_text("not json at all", encoding="utf-8")
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    result = run_careguard_analyze(
+        {"medications": ["warfarin", "ibuprofen"], "external_ddi_enabled": False}
+    )
+    assert result["risk"]["level"] in {"high", "critical"}
+    # Degraded to curated-only -> version carries no DrugBank suffix.
+    assert "+" not in result["metadata"]["local_ddi_rules_version"]
+
+
+def test_cache_by_mtime_reparses_on_change_and_caches_on_same_mtime(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    import os
+
+    drugbank_dir = tmp_path / "drugbank"
+    ddi_dir = drugbank_dir / "ddi"
+    ddi_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = drugbank_dir / "manifest.json"
+    shard_path = ddi_dir / "ddi_i_000.json"
+
+    def write_valid(version: str) -> None:
+        shard = {
+            "rules": [
+                {
+                    "medications": ["drugbankonly_a", "drugbankonly_b"],
+                    "severity": "high",
+                    "message": "x",
+                }
+            ]
+        }
+        shard_path.write_text(json.dumps(shard), encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(
+                {"version": version, "ddi_shards": [{"file": "ddi/ddi_i_000.json"}]}
+            ),
+            encoding="utf-8",
+        )
+
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    # t1: valid manifest version v-one.
+    write_valid("drugbank-v-one")
+    os.utime(manifest_path, ns=(1_000_000_000, 1_000_000_000))
+    rules1, version1 = careguard._load_drugbank_ddi_rules()
+    assert version1 == "drugbank-v-one"
+    assert rules1
+
+    # t2 (different mtime): new version -> cache invalidated, re-parsed.
+    write_valid("drugbank-v-two")
+    os.utime(manifest_path, ns=(2_000_000_000, 2_000_000_000))
+    _rules2, version2 = careguard._load_drugbank_ddi_rules()
+    assert version2 == "drugbank-v-two"
+
+    # Corrupt the manifest content but RESTORE the previous mtime (t2). Because
+    # the loader caches by mtime, it must return the cached good result and must
+    # NOT re-read the now-broken file.
+    manifest_path.write_text("broken json", encoding="utf-8")
+    os.utime(manifest_path, ns=(2_000_000_000, 2_000_000_000))
+    _rules3, version3 = careguard._load_drugbank_ddi_rules()
+    assert version3 == "drugbank-v-two"
+
+
+def test_active_rule_set_version_surfaced_in_metadata(
+    monkeypatch, tmp_path, reset_drugbank_cache
+) -> None:
+    # Req 5.5: merged layer surfaces curated+drugbank-<ver> in analysis metadata.
+    drugbank_dir = _write_drugbank_shards(tmp_path)
+    _point_loader_at(monkeypatch, drugbank_dir)
+
+    result = run_careguard_analyze(
+        {"medications": ["warfarin", "ibuprofen"], "external_ddi_enabled": False}
+    )
+    version_label = result["metadata"]["local_ddi_rules_version"]
+    assert "+drugbank-test" in version_label
+    assert version_label.startswith(_load_local_ddi_rules()[1])

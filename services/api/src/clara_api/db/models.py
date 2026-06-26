@@ -327,6 +327,15 @@ class MedicineItem(Base):
     ocr_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     expires_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note: Mapped[str] = mapped_column(Text, default="")
+    # Structured first-class cabinet fields (migration 20260419_0015, Req 1.2,
+    # 10.3). Additive + nullable: when SELFMED_CABINET_STRUCTURED_FIELDS_ENABLED
+    # is on these replace the legacy ``[meta]`` note encoding for brand /
+    # manufacturer; when off they stay null and behavior is unchanged. The
+    # ``expiry_reminder_json`` column persists per-item expiry reminder state
+    # behind SELFMED_EXPIRY_REMINDERS_ENABLED.
+    brand_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    manufacturer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    expiry_reminder_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,6 +1,8 @@
 import api from "@/lib/http-client";
 import { CareguardAnalyzeRawResponse, CareguardAnalyzeResult, normalizeCareguardResult } from "@/lib/careguard";
 
+export type NormalizationStatus = "matched" | "candidate" | "fallback" | "needs_review";
+
 export type CabinetItem = {
   id: number;
   drug_name: string;
@@ -9,6 +11,8 @@ export type CabinetItem = {
   normalized_name: string;
   normalization_source?: "db" | "candidate" | "fallback" | null;
   normalization_confidence?: number | null;
+  normalization_status?: NormalizationStatus | null;
+  needs_review?: boolean;
   dosage: string;
   dosage_form: string;
   quantity: number;
@@ -39,6 +43,15 @@ export type ScanDetection = {
   confirmed?: boolean;
   mapping_source?: "db" | "candidate" | "fallback" | null;
   mapping_confidence?: number | null;
+  normalization_status?: NormalizationStatus | null;
+};
+
+export type OcrConfirmGate = {
+  threshold: number;
+  total_detections: number;
+  requires_confirmation: number;
+  confirmed: number;
+  needs_review: number;
 };
 
 export type PrioritizedCabinetField = {
@@ -60,6 +73,7 @@ type ScanResponse = {
   ocr_provider?: string | null;
   ocr_endpoint?: string | null;
   prioritized_fields?: PrioritizedCabinetField[];
+  confirm_gate?: OcrConfirmGate | null;
 };
 
 export type AddCabinetItemPayload = {

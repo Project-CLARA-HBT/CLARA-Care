@@ -235,6 +235,10 @@ class MedicineCabinetItemCreate(BaseModel):
     ocr_confidence: float | None = None
     expires_on: datetime | None = None
     note: str = ""
+    # Per-item expiry reminder state (Req 10.3). Persisted only when
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` is on; ignored (no persistence) when
+    # off so behavior is byte-equivalent to today (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemUpdate(BaseModel):
@@ -249,6 +253,9 @@ class MedicineCabinetItemUpdate(BaseModel):
     ocr_confidence: float | None = None
     expires_on: datetime | None = None
     note: str | None = None
+    # Per-item expiry reminder state (Req 10.3); persisted only behind
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemResponse(BaseModel):
@@ -259,6 +266,17 @@ class MedicineCabinetItemResponse(BaseModel):
     normalized_name: str
     normalization_source: Literal["db", "candidate", "fallback"] | None = None
     normalization_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Derived normalization status surfaced to clients (Req 2.1, 2.5, 2.6).
+    # ``matched`` (exact dictionary hit) / ``candidate`` (fuzzy dictionary
+    # candidate) / ``fallback`` (alias-map hit) / ``needs_review`` (unmatched or
+    # low-confidence — the user-entered name is retained, never dropped).
+    # Additive + nullable so flags-off byte-equivalence is preserved for the
+    # pre-existing fields (P12); ``needs_review`` is a convenience boolean
+    # equal to ``normalization_status == "needs_review"``.
+    normalization_status: (
+        Literal["matched", "candidate", "fallback", "needs_review"] | None
+    ) = None
+    needs_review: bool = False
     dosage: str
     dosage_form: str
     quantity: float
@@ -266,15 +284,38 @@ class MedicineCabinetItemResponse(BaseModel):
     rx_cui: str
     ocr_confidence: float | None
     expires_on: datetime | None
+    # Derived expiry status from ``expires_on`` (Req 10.1). ``expired`` (in the
+    # past), ``expiring_soon`` (within the configured window), ``ok`` (beyond the
+    # window), or ``None`` when there is no expiry data (Req 10.5). Purely
+    # derived — no persisted state — so the pre-existing fields stay
+    # byte-equivalent (P12).
+    expiry_status: Literal["expired", "expiring_soon", "ok"] | None = None
+    # Persisted per-item reminder state, exposed only when
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` is on (Req 10.3); ``None`` otherwise,
+    # so flags-off behavior matches today (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
     note: str
     created_at: datetime
     updated_at: datetime
+
+
+class CabinetExpirySummary(BaseModel):
+    # Cabinet-level expiry rollup (Req 10.2) computed from each item's
+    # ``expires_on``. Items with no expiry data are excluded from both counts
+    # (Req 10.5).
+    expired_count: int = 0
+    expiring_soon_count: int = 0
+    expiry_window_days: int = 0
 
 
 class MedicineCabinetResponse(BaseModel):
     cabinet_id: int
     label: str
     items: list[MedicineCabinetItemResponse]
+    # Expired / expiring-soon rollup surfaced in the cabinet summary (Req 10.2).
+    # Additive + nullable so legacy clients ignore it and flags-off
+    # byte-equivalence of the pre-existing fields is preserved (P12).
+    expiry_summary: CabinetExpirySummary | None = None
 
 
 class CabinetScanTextRequest(BaseModel):
@@ -291,6 +332,12 @@ class CabinetScanDetection(BaseModel):
     evidence: str
     mapping_source: Literal["db", "candidate", "fallback"] | None = None
     mapping_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Derived normalization status (Req 2.1, 2.5, 2.6) — same vocabulary as the
+    # cabinet item response so the UI can render a consistent badge before
+    # import. Additive + nullable; legacy clients ignore it.
+    normalization_status: (
+        Literal["matched", "candidate", "fallback", "needs_review"] | None
+    ) = None
     requires_manual_confirm: bool = False
     confirmed: bool = False
 
@@ -302,12 +349,28 @@ class CabinetPrioritizedField(BaseModel):
     dosage: str = ""
 
 
+class OcrConfirmGate(BaseModel):
+    """Low-confidence OCR manual-confirm gate state (Req 2.2, 2.6).
+
+    Surfaced on scan responses so clients can render the confirm gate
+    explicitly: any detection below ``threshold`` (or otherwise flagged) must be
+    manually confirmed before it can be imported. Additive + optional.
+    """
+
+    threshold: float
+    total_detections: int = 0
+    requires_confirmation: int = 0
+    confirmed: int = 0
+    needs_review: int = 0
+
+
 class CabinetScanTextResponse(BaseModel):
     detections: list[CabinetScanDetection]
     extracted_text: str | None = None
     ocr_provider: str | None = None
     ocr_endpoint: str | None = None
     prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
+    confirm_gate: OcrConfirmGate | None = None
 
 
 class CabinetImportRequest(BaseModel):

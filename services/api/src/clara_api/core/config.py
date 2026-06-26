@@ -557,6 +557,38 @@ class Settings(BaseSettings):
         validation_alias="HARDENING_CSP_ENABLED",
     )
 
+    # --- Self-Med + DDI + CareGuard upgrade feature flags ----------------------
+    # All additive + default OFF ⇒ byte-for-byte current behavior. With every
+    # flag below off, the cabinet API, the ML analysis payload, and the response
+    # envelope are equivalent to the pre-upgrade baseline (Requirements 12.1,
+    # 12.2). Existing flags (``CAREGUARD_DRUGBANK_ENABLED`` /
+    # ``EXTERNAL_DDI_ENABLED`` in the ML config) remain the source of truth for
+    # their respective behaviors and are intentionally not redefined here.
+    selfmed_cabinet_structured_fields_enabled: bool = Field(
+        default=False,
+        validation_alias="SELFMED_CABINET_STRUCTURED_FIELDS_ENABLED",
+    )
+    selfmed_expiry_reminders_enabled: bool = Field(
+        default=False,
+        validation_alias="SELFMED_EXPIRY_REMINDERS_ENABLED",
+    )
+    careguard_ddi_index_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_DDI_INDEX_ENABLED",
+    )
+    careguard_offline_fallback_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_OFFLINE_FALLBACK_ENABLED",
+    )
+    careguard_mobile_cabinet_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_MOBILE_CABINET_ENABLED",
+    )
+    careguard_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_OBSERVABILITY_ENABLED",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
