@@ -86,7 +86,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 3: API ML timeout is never below the ML synthesis timeout**
     - **Validates: Requirements 2.4**
 
-  - [~] 2.8 Wire sanitized timeout retry message into chat surface (TypeScript)
+  - [x] 2.8 Wire sanitized timeout retry message into chat surface (TypeScript)
     - In `apps/web/app/chat/page.tsx`, render a user-readable Vietnamese retry message via `sanitizeUpstreamError` (Epic 3) when the chat pipeline times out; exclude raw error codes and stack traces.
     - _Requirements: 2.5_
 
@@ -123,7 +123,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 11: Telemetry panel visibility equals admin role**
     - **Validates: Requirements 4.3**
 
-- [ ] 4. DDI output clarity for non-expert users
+- [x] 4. DDI output clarity for non-expert users
   - [x] 4.1 Implement ML CareGuard severity aggregation + synthetic-alert fixes (Python)
     - In `services/ml/src/clara_ml/agents/careguard.py`: openFDA-only co-occurrence must not create a standalone synthetic alert (enrich a pre-existing local/RxNav alert only); any `drug_drug` alert ranked `medium` floors overall `risk.level >= medium` (genuine `low` preserved, `high`/`critical` unchanged).
     - _Requirements: 3.2, 3.3_
@@ -152,7 +152,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 9: Connector errors are hidden while a valid signal remains**
     - **Validates: Requirements 3.6**
 
-  - [~] 4.8 Implement the two-medicine guard (TypeScript)
+  - [x] 4.8 Implement the two-medicine guard (TypeScript)
     - In `apps/web/lib/careguard.ts`, add `requiresTwoMedicines(medicines)` and guard the careguard page (`apps/web/app/selfmed/ddi/page.tsx`) so `< 2` medicines shows a prompt to add at least two and does NOT call `/careguard/analyze`.
     - _Requirements: 3.5_
 
@@ -206,11 +206,11 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - _Requirements: 12.4_
 
 - [ ] 6. Analytics admin dashboards (Next.js/TypeScript)
-  - [-] 6.1 Build the Product_Analytics dashboard page
+  - [x] 6.1 Build the Product_Analytics dashboard page
     - Create `apps/web/app/admin/analytics/page.tsx` with a date-range picker, the four `AsyncSection` states, active-user trends, per-Surface adoption, and retention; render an explicit empty state when `has_data=false`.
     - _Requirements: 7.3, 7.5_
 
-  - [-] 6.2 Build the Clinical_Analytics dashboard page
+  - [x] 6.2 Build the Clinical_Analytics dashboard page
     - Create `apps/web/app/admin/analytics/clinical/page.tsx` rendering verification outcomes, DDI severity distribution, and latency percentiles for a selectable date range, kept separate from the existing scribe `/analytics/summary`.
     - _Requirements: 8.3, 8.5_
 
@@ -256,7 +256,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 21: Async sections render exactly one state**
     - **Validates: Requirements 5.2**
 
-  - [-] 8.3 Adjust token pairs to meet AA contrast
+  - [x] 8.3 Adjust token pairs to meet AA contrast
     - Tune token values (light/dark) in `apps/web/styles/globals.css` so foreground/background pairs used together meet WCAG 2.1 AA ratios.
     - _Requirements: 5.3_
 
@@ -264,36 +264,36 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 22: Used color token pairs meet AA contrast**
     - **Validates: Requirements 5.3**
 
-  - [-] 8.5 Audit surfaces and replace hardcoded styles with design tokens
+  - [x] 8.5 Audit surfaces and replace hardcoded styles with design tokens
     - Replace hardcoded color/spacing/radius/typography values with the existing `--text-*`, `--surface-*`, `--shell-border*`, `--brand-*`, `--radius-*` tokens across Chat, Research, SelfMed, CareGuard, Council, Scribe, Dashboard, and Admin surfaces.
     - _Requirements: 5.1_
 
-  - [-] 8.6 Add visible focus indicators, logical tab order, and Vietnamese labels
+  - [x] 8.6 Add visible focus indicators, logical tab order, and Vietnamese labels
     - Define visible focus styles once via tokens and apply to interactive controls; ensure logical tab order; use Vietnamese task-oriented primary-action labels consistent with `/huong-dan`.
     - _Requirements: 5.4, 5.5_
 
 - [ ] 9. Per-surface telemetry-strip + product-event integration (Next.js/TypeScript)
-  - [-] 9.1 Integrate Chat surface
+  - [x] 9.1 Integrate Chat surface
     - In `apps/web/app/chat/page.tsx`, apply `stripTelemetryLabels`/`toModeLabel`, wrap detailed telemetry in `TelemetryPanel`, and emit named Chat product events via the consent/PII-guarded analytics client.
     - _Requirements: 4.1, 4.4, 9.1_
 
-  - [-] 9.2 Integrate Research surface
+  - [x] 9.2 Integrate Research surface
     - In `apps/web/app/research/`, apply `stripTelemetryLabels`/`toModeLabel`, wrap detailed telemetry in `TelemetryPanel`, and emit named Research product events.
     - _Requirements: 4.1, 4.4, 9.1_
 
-  - [-] 9.3 Integrate SelfMed/CareGuard surface
+  - [x] 9.3 Integrate SelfMed/CareGuard surface
     - In `apps/web/app/selfmed/` (incl. `ddi/page.tsx`) and `apps/web/app/careguard/page.tsx`, render only the `toDdiUserView` projection, wrap detailed telemetry in `TelemetryPanel`, and emit named CareGuard product events.
     - _Requirements: 4.1, 9.1_
 
-  - [-] 9.4 Integrate Council surface
+  - [x] 9.4 Integrate Council surface
     - In `apps/web/app/council/`, apply `stripTelemetryLabels`, wrap detailed telemetry in `TelemetryPanel`, and emit named Council product events.
     - _Requirements: 4.1, 9.1_
 
-  - [-] 9.5 Integrate Scribe surface
+  - [x] 9.5 Integrate Scribe surface
     - In `apps/web/app/scribe/`, apply `stripTelemetryLabels`, wrap detailed telemetry in `TelemetryPanel`, and emit named Scribe product events.
     - _Requirements: 4.1, 9.1_
 
-  - [-] 9.6 Integrate Admin surfaces
+  - [x] 9.6 Integrate Admin surfaces
     - In `apps/web/app/admin/`, ensure detailed telemetry panels remain admin-only via `TelemetryPanel` and emit named Admin product events on the new analytics dashboards.
     - _Requirements: 4.3, 9.1_
 
@@ -322,8 +322,8 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - Verify each parity screen renders its core supported actions.
     - _Requirements: 10.4_
 
-- [ ] 11. Safety guardrail preservation regression suite
-  - [-] 11.1 Set up the safety regression test module and shared fixtures
+- [x] 11. Safety guardrail preservation regression suite
+  - [x] 11.1 Set up the safety regression test module and shared fixtures
     - Create a dedicated safety-regression test module (API/ML) with shared fixtures for roles, consent state, cookie vs bearer auth, emergency keywords, and CRITICAL-claim payloads, so the guardrail invariants below are locked across all tracks.
     - _Requirements: 11.1_
 
@@ -351,11 +351,11 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 13: Outward outputs contain no PII** (system metrics, flow events, aggregation outputs)
     - **Validates: Requirements 11.5**
 
-- [~] 12. Backend checkpoint - CLARA_API & CLARA_ML quality gates
+- [x] 12. Backend checkpoint - CLARA_API & CLARA_ML quality gates
   - Ensure `make lint` and the API and ML service test suites pass after the backend batches (Epics 2, 4, 5, 11). Ask the user if questions arise.
   - _Requirements: 1.4, 1.5_
 
-- [~] 13. Final checkpoint - full quality gates
+- [x] 13. Final checkpoint - full quality gates
   - Ensure `make lint`, the API/ML suites, the web test suite, and the mobile tests all pass; confirm the Audit_Record fix ordering held and each fix has its regression test. Ask the user if questions arise.
   - _Requirements: 1.3, 1.4, 1.5_
 
