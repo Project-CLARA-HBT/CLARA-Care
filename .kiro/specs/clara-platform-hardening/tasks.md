@@ -42,34 +42,34 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
 
 ## Tasks
 
-- [ ] 1. Configuration, feature flags, and rollout scaffolding
-  - [ ] 1.1 Add `HARDENING_*` feature flags to API config
+- [x] 1. Configuration, feature flags, and rollout scaffolding
+  - [x] 1.1 Add `HARDENING_*` feature flags to API config
     - In `services/api/src/clara_api/core/config.py`, add `hardening_refresh_rotation_enabled`, `hardening_token_denylist_enabled`, `hardening_login_fail_closed`, `hardening_rate_limit_fail_closed`, `hardening_request_body_limit_enabled`, `hardening_request_body_max_bytes`, `hardening_readiness_probe_enabled`, `hardening_circuit_breaker_enabled`, `hardening_structured_logging_enabled`, and `hardening_csp_enabled`, all defaulting to off/preserving values.
     - _Requirements: 11.1, 11.2_
-  - [ ] 1.2 Mirror circuit-breaker flag/keys in ML config
+  - [x] 1.2 Mirror circuit-breaker flag/keys in ML config
     - In `services/ml/src/clara_ml/config.py`, add the circuit-breaker enable flag, failure-threshold, and cool-down keys, defaulting to off.
     - _Requirements: 6.5, 11.1_
-  - [ ] 1.3 Document all new flags/keys in `.env.example`
+  - [x] 1.3 Document all new flags/keys in `.env.example`
     - Add every flag from 1.1/1.2 plus the recommended production rate-limit, worker, and pool keys; ensure no duplicate definitions and no secret values.
     - _Requirements: 5.5, 10.1, 11.4_
-  - [ ] 1.4 Author the staged-rollout runbook
+  - [x] 1.4 Author the staged-rollout runbook
     - Create `docs/ops/hardening-rollout.md` with the per-flag enablement order and per-flag rollback.
     - _Requirements: 11.4_
   - [ ]* 1.5 **[PBT]** Write flags-off equivalence property test (hypothesis)
     - **Property 1: Flags-off equivalence**
     - **Validates: Requirements 11.1, 11.2**
 
-- [ ] 2. Secret management and credential rotation
-  - [ ] 2.1 Remove plaintext default secrets from the app compose
+- [x] 2. Secret management and credential rotation
+  - [x] 2.1 Remove plaintext default secrets from the app compose
     - In `deploy/docker/docker-compose.app.yml`, replace `JWT_SECRET_KEY`, `AUTH_BOOTSTRAP_ADMIN_PASSWORD`, `ML_INTERNAL_API_KEY`, `POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD`, and `NEO4J_AUTH` plaintext `:-` defaults with the externally-injected `:?required` pattern already used in `docker-compose.deploy.yml`.
     - _Requirements: 1.1, 1.2, 1.6_
-  - [ ] 2.2 Author the credential-rotation runbook
+  - [x] 2.2 Author the credential-rotation runbook
     - Create `docs/ops/secret-rotation.md` enumerating each secret, its managed-store location, rotation steps, and the JWT key-overlap procedure.
     - _Requirements: 1.3, 1.7_
-  - [ ] 2.3 Rotate the exposed deploy SSH credential and move to key-based auth
+  - [x] 2.3 Rotate the exposed deploy SSH credential and move to key-based auth
     - Record in the rotation runbook that the exposed SSH password is rotated, SSH password auth is replaced with key-based auth, and the private key resides only in the managed secret store / CI encrypted secrets.
     - _Requirements: 1.4, 1.5_
-  - [ ] 2.4 Extend startup secret guards and document the JWT key-overlap window
+  - [x] 2.4 Extend startup secret guards and document the JWT key-overlap window
     - Confirm/extend the `main.py` production guards (reject `change-me` JWT key, insecure bootstrap password, missing ML internal key) and document the dual-key validation window for JWT rotation.
     - _Requirements: 1.2, 1.7_
   - [ ]* 2.5 **[PBT]** Write deploy-stack plaintext-secret scan test (hypothesis/pytest)
@@ -79,17 +79,17 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 3: Fail-fast on missing secret**
     - **Validates: Requirements 1.2**
 
-- [ ] 3. Authentication and session hardening
-  - [ ] 3.1 Implement `SessionSecurity` (rotation + denylist + reuse event)
+- [x] 3. Authentication and session hardening
+  - [x] 3.1 Implement `SessionSecurity` (rotation + denylist + reuse event)
     - Create `services/api/src/clara_api/core/session_security.py` with `rotate_refresh`, `is_revoked`, `revoke(jti, ttl)`, and `record_reuse`, backed by `RedisSecurityStore` and gated by `hardening_refresh_rotation_enabled` / `hardening_token_denylist_enabled`. No-PII payloads only.
     - _Requirements: 2.2, 2.3, 2.4_
-  - [ ] 3.2 Wire rotation + denylist into the auth endpoints
+  - [x] 3.2 Wire rotation + denylist into the auth endpoints
     - In `services/api/src/clara_api/api/v1/endpoints/auth.py`, rotate the refresh token on `/auth/refresh` and revoke access+refresh `jti` on `/auth/logout` when the flags are on; preserve the current flow when off.
     - _Requirements: 2.1, 2.2, 2.4, 2.7_
-  - [ ] 3.3 Consult the denylist in token resolution
+  - [x] 3.3 Consult the denylist in token resolution
     - In `core/rbac.py`, have `get_current_token` reject denylisted `jti` when `hardening_token_denylist_enabled`.
     - _Requirements: 2.4_
-  - [ ] 3.4 Add login fail-closed mode
+  - [x] 3.4 Add login fail-closed mode
     - In `core/login_guard.py`, when `hardening_login_fail_closed` and the distributed backend is unavailable, fall back to the in-process guard instead of returning unthrottled.
     - _Requirements: 2.5_
   - [ ]* 3.5 **[PBT]** Write refresh-rotation-invalidation property test (hypothesis)
@@ -108,25 +108,25 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 8: CSRF preserved**
     - **Validates: Requirements 2.6, 11.3**
 
-- [ ] 4. Authorization coverage
-  - [ ] 4.1 Build the route-classification inventory
+- [x] 4. Authorization coverage
+  - [x] 4.1 Build the route-classification inventory
     - Add a fixture listing every API route as `public`, `authenticated`, or `role:<name>`, derived from the FastAPI route table.
     - _Requirements: 3.2_
-  - [ ] 4.2 Confirm admin/operator surfaces reject under-privileged callers
+  - [x] 4.2 Confirm admin/operator surfaces reject under-privileged callers
     - Audit metrics, compliance-records, and knowledge-source admin routes for explicit role dependencies; fix any drift. Confirm the ML internal-key guard on protected prefixes.
     - _Requirements: 3.1, 3.4, 3.5_
   - [ ]* 4.3 **[PBT]** Write route-coverage property test (hypothesis/pytest)
     - **Property 9: Route coverage**
     - **Validates: Requirements 3.2, 3.3**
 
-- [ ] 5. Input validation and request limits
-  - [ ] 5.1 Add the request-body-size middleware
+- [x] 5. Input validation and request limits
+  - [x] 5.1 Add the request-body-size middleware
     - Add `RequestBodyLimitMiddleware` (gated by `hardening_request_body_limit_enabled`) returning a 413-class PII-free response above `hardening_request_body_max_bytes`; preserve ML `_MAX_AUDIO_BYTES`.
     - _Requirements: 4.1, 4.2_
-  - [ ] 5.2 Document and enforce list/batch caps
+  - [x] 5.2 Document and enforce list/batch caps
     - Reaffirm research-job caps and add explicit documented maxima to any unbounded list/batch input; keep PII-free 422 validation responses.
     - _Requirements: 4.3, 4.5_
-  - [ ] 5.3 Reaffirm ownership checks on client-supplied identifiers
+  - [x] 5.3 Reaffirm ownership checks on client-supplied identifiers
     - Audit endpoints that accept client-supplied resource ids and confirm owner/role scoping.
     - _Requirements: 4.4_
   - [ ]* 5.4 **[PBT]** Write body-size-enforcement property test (hypothesis)
@@ -136,11 +136,11 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 11: Ownership enforcement**
     - **Validates: Requirements 4.4**
 
-- [ ] 6. Rate limiting and abuse protection
-  - [ ] 6.1 Add rate-limit fail-closed fallback
+- [x] 6. Rate limiting and abuse protection
+  - [x] 6.1 Add rate-limit fail-closed fallback
     - In `core/rate_limit.py`, when `hardening_rate_limit_fail_closed` and the distributed backend returns `None`, enforce via the in-process limiter instead of passing through.
     - _Requirements: 5.2, 5.3_
-  - [ ] 6.2 Document recommended production limiter config
+  - [x] 6.2 Document recommended production limiter config
     - In `.env.example` / deploy docs, recommend distributed rate limiting + login limiting with `REDIS_URL` for multi-replica production and flag the current `false` defaults.
     - _Requirements: 5.5_
   - [ ]* 6.3 **[PBT]** Write rate-limit fail-closed property test (hypothesis)
@@ -150,17 +150,17 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 13: Proxy-trust soundness**
     - **Validates: Requirements 5.6**
 
-- [ ] 7. Health, readiness and graceful degradation
-  - [ ] 7.1 Add the dependency-aware readiness probe
+- [x] 7. Health, readiness and graceful degradation
+  - [x] 7.1 Add the dependency-aware readiness probe
     - In `services/api/src/clara_api/api/v1/endpoints/health.py`, add `GET /health/ready` (gated by `hardening_readiness_probe_enabled`) probing DB, Redis (if configured), and ML, returning 200 `ready` or 503 with a no-PII reason code; keep `/health` as liveness.
     - _Requirements: 6.1, 6.2, 6.3_
-  - [ ] 7.2 Add container healthchecks to the deploy stack
+  - [x] 7.2 Add container healthchecks to the deploy stack
     - In `deploy/docker/docker-compose.app.yml` and `docker-compose.deploy.yml`, add healthchecks for `api` (`/health`), `ml` (`/health`), and `web` (`/`).
     - _Requirements: 6.4_
-  - [ ] 7.3 Implement the `CircuitBreaker` around the LLM/embedding client
+  - [x] 7.3 Implement the `CircuitBreaker` around the LLM/embedding client
     - Create `services/ml/src/clara_ml/llm/circuit_breaker.py` wrapping the DeepSeek/embedding retry loop: open after the failure threshold, short-circuit to the existing labeled local fallback for the cool-down, then half-open probe. Gated off by default.
     - _Requirements: 6.5_
-  - [ ] 7.4 Stop forcing production DB fallback in deploy/CD
+  - [x] 7.4 Stop forcing production DB fallback in deploy/CD
     - In `docker-compose.deploy.yml` and `.github/workflows/cd.yml`, stop emitting `DATABASE_FALLBACK_ENABLED=true` for production; document the explicit opt-in. Preserve the in-code prod fallback guard.
     - _Requirements: 6.6_
   - [ ]* 7.5 **[PBT]** Write readiness-reflects-dependencies property test (hypothesis)
@@ -180,14 +180,14 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 18: Timeout-floor invariant preserved**
     - **Validates: Requirements 6.7, 10.3**
 
-- [ ] 8. Structured logging without PII
-  - [ ] 8.1 Add structured logging + redaction filter + correlation id
+- [x] 8. Structured logging without PII
+  - [x] 8.1 Add structured logging + redaction filter + correlation id
     - Create `services/api/src/clara_api/core/logging_config.py` with `configure_logging(settings)` installing a JSON formatter and a `RedactionFilter` (reusing the compliance redaction projection) when `hardening_structured_logging_enabled`; add a correlation-id middleware surfacing the id in logs and a response header. Mirror the filter in ML.
     - _Requirements: 7.1, 7.2, 7.3_
-  - [ ] 8.2 Harden the generic exception handler logging
+  - [x] 8.2 Harden the generic exception handler logging
     - Ensure `generic_exception_handler` logs error type + correlation id without request bodies; preserve the production secure-error-message client response.
     - _Requirements: 7.3, 7.4_
-  - [ ] 8.3 Add the Content-Security-Policy header
+  - [x] 8.3 Add the Content-Security-Policy header
     - In the API `add_security_headers` middleware, add a CSP header gated by `hardening_csp_enabled` (default off), alongside the existing headers.
     - _Requirements: 7.4_
   - [ ]* 8.4 **[PBT]** Write no-PII-logging property test (hypothesis)
@@ -197,14 +197,14 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 20: Secure error messages preserved**
     - **Validates: Requirements 7.4**
 
-- [ ] 9. Dependency remediation and supply-chain gate
-  - [ ] 9.1 Remediate critical and high-severity dependency vulnerabilities
+- [x] 9. Dependency remediation and supply-chain gate
+  - [x] 9.1 Remediate critical and high-severity dependency vulnerabilities
     - Across `services/api`, `services/ml`, and `apps/web`, upgrade/replace/justifiably-accept the reported critical and high-severity findings; record outcomes.
     - _Requirements: 8.1, 8.3_
-  - [ ] 9.2 Strengthen the CI supply-chain gate
+  - [x] 9.2 Strengthen the CI supply-chain gate
     - In `.github/workflows/ci.yml`, make `security-audit` block on CRITICAL and (for default-branch changes) HIGH findings; broaden `npm audit` toward dev where feasible; keep the Trivy container scan.
     - _Requirements: 8.2, 8.3, 8.4_
-  - [ ] 9.3 Record accepted/ignored findings
+  - [x] 9.3 Record accepted/ignored findings
     - Create `docs/security/accepted-findings.md` listing each unfixable finding, its compensating control, and a review date; document the Dependabot triage/merge cadence.
     - _Requirements: 8.4, 8.5, 8.6_
   - [ ]* 9.4 **[PBT]** Write supply-chain-gate severity test (hypothesis/pytest)
@@ -215,14 +215,14 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 22: Accepted-findings completeness**
     - _Requirements: 8.4, 8.6_
 
-- [ ] 10. Backup/restore and migration safety
-  - [ ] 10.1 Author the backup/restore runbook and schedule
+- [x] 10. Backup/restore and migration safety
+  - [x] 10.1 Author the backup/restore runbook and schedule
     - Create `docs/ops/backup-restore.md` with the Postgres backup schedule, retention, restore procedure, and a rehearsed restore-drill checklist.
     - _Requirements: 9.1, 9.2_
-  - [ ] 10.2 Add a pre-migrate backup step and downgrade check to CD
+  - [x] 10.2 Add a pre-migrate backup step and downgrade check to CD
     - In `.github/workflows/cd.yml`, add a pre-migrate backup step and a check that the migration to be deployed defines a downgrade; document rollback to the prior image/backup.
     - _Requirements: 9.3, 9.5_
-  - [ ] 10.3 Confirm the production migration-management guard
+  - [x] 10.3 Confirm the production migration-management guard
     - Verify `phr/migration_guard.py` still requires migration-managed schema in production (no behavior change).
     - _Requirements: 9.4_
   - [ ]* 10.4 **[PBT]** Write migration-downgrade-presence test (hypothesis/pytest)
@@ -233,22 +233,22 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 24: Migration-managed schema preserved**
     - _Requirements: 9.4_
 
-- [ ] 11. Performance and resource limits
-  - [ ] 11.1 Set production worker concurrency and DB pool sizing
+- [x] 11. Performance and resource limits
+  - [x] 11.1 Set production worker concurrency and DB pool sizing
     - In the deploy stack and `.env.example`, set API/ML `UVICORN_WORKERS` to production values and define DB pool sizing relative to worker count; preserve `pool_pre_ping`.
     - _Requirements: 10.1, 10.2_
-  - [ ] 11.2 Audit outbound-call timeouts and bounded retries
+  - [x] 11.2 Audit outbound-call timeouts and bounded retries
     - Confirm every outbound dependency call (DB, Redis, LLM, embedding, OCR, search) carries an explicit timeout and that retries stay within the `DEEPSEEK_RETRIES_PER_BASE` ceiling.
     - _Requirements: 10.3, 10.4_
-  - [ ] 11.3 Confirm latency/error metrics exclude PII
+  - [x] 11.3 Confirm latency/error metrics exclude PII
     - Verify the metrics surface exposes latency/error-rate signals with no PII.
     - _Requirements: 10.5_
   - [ ]* 11.4 **[PBT]** Write bounded-retries property test (hypothesis)
     - **Property 25: Bounded retries**
     - **Validates: Requirements 10.4**
 
-- [ ] 12. Safety and flags-off regression suite
-  - [ ] 12.1 Set up the safety-regression module and shared fixtures
+- [x] 12. Safety and flags-off regression suite
+  - [x] 12.1 Set up the safety-regression module and shared fixtures
     - Create a dedicated regression module with fixtures for roles, cookie-vs-bearer auth, the `HARDENING_*` flag matrix, and adversarial-PII payloads, locking RBAC, no-PII, and flags-off invariants across tracks.
     - _Requirements: 11.2, 11.6_
   - [ ]* 12.2 Write the flags-off baseline-equivalence regression test
@@ -258,11 +258,11 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 26: Guardrail preservation** (emergency fast-path, FIDES CRITICAL block, no-PII telemetry)
     - **Validates: Requirements 11.3**
 
-- [ ] 13. Backend checkpoint — CLARA_API & CLARA_ML quality gates
+- [x] 13. Backend checkpoint — CLARA_API & CLARA_ML quality gates
   - Ensure `make lint` and the API and ML service test suites pass after the backend epics (1–11 backend tasks, 12). Ask the user if questions arise.
   - _Requirements: 11.6_
 
-- [ ] 14. Final checkpoint — full quality gates
+- [x] 14. Final checkpoint — full quality gates
   - Ensure `make lint`, the API/ML suites, the web lint+build, the strengthened supply-chain gate, the container scan, and the docker-compose smoke all pass; confirm every new runtime capability is default-off, the no-PII/RBAC/CSRF/timeout-floor invariants hold, the secret-rotation and backup runbooks exist, and each property has its test. Ask the user if questions arise.
   - _Requirements: 8.2, 11.2, 11.3, 11.6_
 

@@ -311,7 +311,8 @@ class CabinetScanTextResponse(BaseModel):
 
 
 class CabinetImportRequest(BaseModel):
-    detections: list[CabinetScanDetection]
+    # Bounded batch import (Req 4.5): oversized arrays are rejected with a PII-free 422.
+    detections: list[CabinetScanDetection] = Field(max_length=200)
 
 
 class CabinetImportResponse(BaseModel):
@@ -320,14 +321,15 @@ class CabinetImportResponse(BaseModel):
 
 
 class CabinetAutoDdiRequest(BaseModel):
-    symptoms: list[str] = Field(default_factory=list)
+    # Bounded list inputs (Req 4.5): caps keep auto-DDI payloads from growing unbounded.
+    symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
-    allergies: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list, max_length=100)
 
 
 class VnDrugMappingCreateRequest(BaseModel):
     brand_name: str = Field(min_length=1, max_length=255)
-    aliases: list[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list, max_length=100)
     active_ingredients: str = Field(default="", max_length=2000)
     normalized_name: str = Field(min_length=1, max_length=255)
     rx_cui: str = Field(default="", max_length=64)
@@ -338,7 +340,7 @@ class VnDrugMappingCreateRequest(BaseModel):
 
 class VnDrugMappingUpdateRequest(BaseModel):
     brand_name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
+    aliases: list[str] | None = Field(default=None, max_length=100)
     active_ingredients: str | None = Field(default=None, max_length=2000)
     normalized_name: str | None = Field(default=None, min_length=1, max_length=255)
     rx_cui: str | None = Field(default=None, max_length=64)
@@ -349,7 +351,7 @@ class VnDrugMappingUpdateRequest(BaseModel):
 
 class VnDrugMappingCurationRequest(BaseModel):
     brand_name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
+    aliases: list[str] | None = Field(default=None, max_length=100)
     active_ingredients: str | None = Field(default=None, max_length=2000)
     normalized_name: str | None = Field(default=None, min_length=1, max_length=255)
     rx_cui: str | None = Field(default=None, max_length=64)
@@ -499,12 +501,13 @@ class MobileSummaryResponse(BaseModel):
 
 
 class CouncilRunRequest(BaseModel):
-    symptoms: list[str] = Field(default_factory=list)
+    # Bounded list inputs (Req 4.5): caps bound the council request payload size.
+    symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
-    medications: list[str] = Field(default_factory=list)
+    medications: list[str] = Field(default_factory=list, max_length=100)
     history: str | list[str] | dict[str, Any] = ""
     specialist_count: int = Field(default=3, ge=2, le=5)
-    specialists: list[str] = Field(default_factory=list)
+    specialists: list[str] = Field(default_factory=list, max_length=50)
 
 
 class CouncilRunResponse(BaseModel):
@@ -673,9 +676,12 @@ class ResearchTier2JobCreateRequest(BaseModel):
     response_format: str = "markdown"
     render_hints: dict[str, Any] = Field(default_factory=dict)
     source_mode: str | None = None
-    uploaded_file_ids: list[str] = Field(default_factory=list)
-    source_ids: list[int] = Field(default_factory=list)
-    source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)
+    # Bounded batch arrays (Req 4.5): cap research-job inputs so a single job cannot
+    # reference an unbounded set of uploads/sources; violations yield a PII-free 422.
+    # uploaded_file_ids mirrors the in-process _MAX_RESEARCH_UPLOADS=200 ceiling.
+    uploaded_file_ids: list[str] = Field(default_factory=list, max_length=200)
+    source_ids: list[int] = Field(default_factory=list, max_length=200)
+    source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list, max_length=50)
     # llm_runtime declared EXACTLY ONCE with a single type (clara-research R1.5).
     llm_runtime: dict[str, Any] = Field(default_factory=dict)
     # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
@@ -913,7 +919,7 @@ class WorkspacePublicConversationResponse(BaseModel):
 class WorkspaceNoteCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     content_markdown: str = ""
-    tags: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list, max_length=50)
     is_pinned: bool = False
     conversation_id: int | None = None
 
@@ -921,7 +927,7 @@ class WorkspaceNoteCreateRequest(BaseModel):
 class WorkspaceNoteUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     content_markdown: str | None = None
-    tags: list[str] | None = None
+    tags: list[str] | None = Field(default=None, max_length=50)
     is_pinned: bool | None = None
     conversation_id: int | None = None
 

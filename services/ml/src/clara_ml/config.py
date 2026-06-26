@@ -875,6 +875,35 @@ class Settings(BaseSettings):
         validation_alias="RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED",
     )
 
+    # --- Platform hardening: circuit breaker (additive; default OFF) ---------
+    # Mirrors the API-side HARDENING_CIRCUIT_BREAKER_ENABLED flag so the ML
+    # service can wrap the DeepSeek/embedding client retry loop with a breaker
+    # that opens after a threshold of consecutive failures and short-circuits to
+    # the existing labeled local fallback for a cool-down window before a
+    # half-open probe. Default OFF preserves byte-for-byte current behavior: the
+    # breaker is never consulted and calls flow through the existing bounded
+    # retry path unchanged (Requirement 6.5, 11.1; design Property 16).
+    hardening_circuit_breaker_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_CIRCUIT_BREAKER_ENABLED",
+    )
+    # Consecutive-failure count at which the breaker opens. Inert while the flag
+    # is off.
+    hardening_circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        validation_alias="HARDENING_CIRCUIT_BREAKER_FAILURE_THRESHOLD",
+        ge=1,
+        le=100,
+    )
+    # Cool-down window (seconds) the breaker stays open before allowing a
+    # half-open recovery probe. Inert while the flag is off.
+    hardening_circuit_breaker_cooldown_seconds: float = Field(
+        default=30.0,
+        validation_alias="HARDENING_CIRCUIT_BREAKER_COOLDOWN_SECONDS",
+        ge=0.0,
+        le=3600.0,
+    )
+
     @model_validator(mode="after")
     def _enforce_deep_beta_word_budget_bounds(self) -> "Settings":
         """Guarantee the deep_beta config band can never violate the

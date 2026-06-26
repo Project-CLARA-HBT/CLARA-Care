@@ -11,6 +11,7 @@ from clara_api.api.router import api_router
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
+from clara_api.core.logging_config import CorrelationIdMiddleware, configure_logging
 from clara_api.core.metrics import (
     APIMetricsMiddleware,
     format_metrics_prometheus,
@@ -18,6 +19,8 @@ from clara_api.core.metrics import (
 )
 from clara_api.core.rate_limit import RateLimiterMiddleware
 from clara_api.core.rbac import AuthContextMiddleware
+from clara_api.core.readiness import evaluate_readiness
+from clara_api.core.request_limits import RequestBodyLimitMiddleware
 from clara_api.core.timeouts import TimeoutFloorError, assert_settings_timeout_floors
 from clara_api.db import models as _db_models  # noqa: F401
 from clara_api.db.base import Base
@@ -29,6 +32,11 @@ from clara_api.phr.migration_guard import (
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+# Structured JSON logging + PII redaction filter (Requirement 7.1, 7.2, 7.3),
+# gated by HARDENING_STRUCTURED_LOGGING_ENABLED. Default-off: this is a no-op and
+# the current logging configuration is preserved (Requirement 7.5, 11.1, 11.2).
+configure_logging(settings)
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 _CSRF_EXEMPT_PATHS = {
@@ -48,6 +56,60 @@ _CSRF_EXEMPT_PATHS = {
 # failure) even when the caller happens to carry a session cookie. Exempting them
 # from CSRF is safe because no mutating route exists under these prefixes.
 _CSRF_EXEMPT_PREFIXES = ("/api/v1/phr/shared/",)
+
+# Default Content-Security-Policy emitted only when HARDENING_CSP_ENABLED is on
+# (Requirement 7.4). Kept conservative and self-origin oriented: the API serves
+# JSON, not HTML, so a restrictive policy adds defense-in-depth without breaking
+# the API surface. When the flag is off this constant is never read, preserving
+# the current response behavior (Requirement 11.1, 11.2).
+_DEFAULT_CSP = (
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+)
+
+# Obviously-insecure / placeholder secret values that must never reach a
+# production deployment (Requirement 1.2). These include the historical
+# plaintext compose defaults that task 2.1 removed from
+# docker-compose.app.yml, plus common throwaway placeholders. The startup
+# guards below reject any production secret whose value (case-insensitively)
+# appears in these sets and emit a secret-value-free error. Stored lower-cased
+# so the comparison is case-insensitive.
+_INSECURE_JWT_SECRET_VALUES = frozenset(
+    {
+        "change-me",
+        "change_me",
+        "change_me_super_secret",
+        "changeme",
+        "secret",
+        "jwt-secret",
+        "your-secret-key",
+        "dev",
+        "development",
+        "test",
+    }
+)
+_INSECURE_ML_INTERNAL_KEY_VALUES = frozenset(
+    {
+        "clara_internal_key_default_2026",
+        "change-me",
+        "change_me",
+        "changeme",
+        "dev",
+        "development",
+        "test",
+    }
+)
+# Insecure bootstrap-admin passwords, including the historical compose default
+# (``Clara#Admin2026!``) and common weak placeholders.
+_INSECURE_BOOTSTRAP_PASSWORDS = frozenset(
+    {
+        "wrongpass",
+        "change-me",
+        "admin",
+        "password",
+        "12345678",
+        "clara#admin2026!",
+    }
+)
 
 raw_origins = [
     origin.strip()
@@ -79,6 +141,11 @@ app.add_middleware(
 )
 app.add_middleware(AuthContextMiddleware)
 app.add_middleware(RateLimiterMiddleware)
+# Request body-size limit (gated by HARDENING_REQUEST_BODY_LIMIT_ENABLED; inert
+# by default). Rejects over-limit bodies with a 413-class PII-free response. The
+# audio-upload endpoints retain their own _MAX_AUDIO_BYTES limit (exempted in the
+# middleware).
+app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(APIMetricsMiddleware)
 
 
@@ -101,21 +168,39 @@ def init_db_schema() -> None:
             f"{exc}"
         ) from exc
     if settings.environment.lower() == "production":
-        if settings.jwt_secret_key.strip() == "change-me":
-            raise RuntimeError("JWT_SECRET_KEY must be configured in production.")
+        if settings.jwt_secret_key.strip().lower() in _INSECURE_JWT_SECRET_VALUES:
+            raise RuntimeError(
+                "JWT_SECRET_KEY uses an insecure/placeholder value; "
+                "configure a strong, unique secret in production."
+            )
+        # Reject a previous-key rotation window that reuses a known-insecure
+        # placeholder (Requirement 1.2, 1.7). An empty previous key is the
+        # default and is always allowed (no overlap window).
+        previous_jwt_key = settings.jwt_secret_key_previous.strip()
+        if previous_jwt_key and previous_jwt_key.lower() in _INSECURE_JWT_SECRET_VALUES:
+            raise RuntimeError(
+                "JWT_SECRET_KEY_PREVIOUS uses an insecure/placeholder value; "
+                "set it only to a real prior signing key during rotation, "
+                "and clear it once prior-key tokens have expired."
+            )
         if not settings.auth_cookie_secure:
             raise RuntimeError("AUTH_COOKIE_SECURE must be true in production.")
         if settings.auth_csrf_enabled and not settings.auth_cookie_secure:
             raise RuntimeError("CSRF protection requires AUTH_COOKIE_SECURE=true in production.")
-        if not settings.ml_internal_api_key.strip():
+        ml_internal_key = settings.ml_internal_api_key.strip()
+        if not ml_internal_key:
             raise RuntimeError("ML_INTERNAL_API_KEY must be configured in production.")
+        if ml_internal_key.lower() in _INSECURE_ML_INTERNAL_KEY_VALUES:
+            raise RuntimeError(
+                "ML_INTERNAL_API_KEY uses an insecure/placeholder value; "
+                "configure a strong, unique secret in production."
+            )
         if settings.auth_auto_provision_users:
             raise RuntimeError("AUTH_AUTO_PROVISION_USERS must be disabled in production.")
-        insecure_bootstrap_passwords = {"wrongpass", "change-me", "admin", "password", "12345678"}
         bootstrap_password = settings.auth_bootstrap_admin_password.strip().lower()
         if (
             settings.auth_bootstrap_admin_enabled
-            and bootstrap_password in insecure_bootstrap_passwords
+            and bootstrap_password in _INSECURE_BOOTSTRAP_PASSWORDS
         ):
             raise RuntimeError(
                 "AUTH_BOOTSTRAP_ADMIN_PASSWORD uses insecure default; configure a strong secret."
@@ -163,7 +248,19 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(_request: Request, exc: Exception):
-    logger.exception("Unhandled API error")
+    # Structured-logging hardening (Requirement 7.3): log only the error *type*
+    # — never the traceback, the raw exception text, or the request body, any of
+    # which can carry PII. Using ``logger.error`` (not ``logger.exception``)
+    # keeps the stack trace and the raw exception message out of the logs in
+    # every configuration, so no PII leaks even when structured logging is off.
+    # When HARDENING_STRUCTURED_LOGGING_ENABLED is on, this record additionally
+    # flows through the JSON formatter + RedactionFilter and carries the
+    # per-request correlation id (surfaced automatically by the formatter). The
+    # exception class name is a bounded, non-PII identifier and is safe to emit.
+    logger.error("Unhandled API error (%s)", type(exc).__name__)
+    # Client response is unchanged from the pre-hardening baseline: a detailed
+    # message only under debug / non-secure-error-messages, and a generic,
+    # PII-free message in production (Requirement 7.4, 11.2).
     if settings.debug or not settings.secure_error_messages:
         return JSONResponse(status_code=500, content={"detail": f"Lỗi hệ thống: {exc}"})
     return JSONResponse(status_code=500, content={"detail": "Lỗi hệ thống nội bộ"})
@@ -177,6 +274,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     response.headers.setdefault("Cache-Control", "no-store")
+    # Content-Security-Policy (Requirement 7.4), gated by HARDENING_CSP_ENABLED.
+    # Default-off: the header is not added, preserving the pre-hardening response
+    # shape (Requirement 11.1, 11.2). When enabled, emit a restrictive default
+    # CSP; ``setdefault`` lets any upstream value take precedence.
+    if settings.hardening_csp_enabled:
+        response.headers.setdefault("Content-Security-Policy", _DEFAULT_CSP)
     if request.url.scheme == "https":
         response.headers.setdefault(
             "Strict-Transport-Security",
@@ -224,6 +327,17 @@ def root_health() -> dict[str, str]:
     return {"status": "ok", "service": "clara-api"}
 
 
+@app.get("/health/ready")
+def root_readiness() -> JSONResponse:
+    # Dependency-aware readiness probe (Requirement 6.1, 6.2), gated by
+    # HARDENING_READINESS_PROBE_ENABLED. Default-off returns the liveness shape
+    # (always ready); enabled, it returns 503 with a no-PII reason code when a
+    # critical dependency (DB, configured cache, downstream ML) is unreachable.
+    # The root liveness /health above is unchanged (Requirement 6.3).
+    result = evaluate_readiness()
+    return JSONResponse(status_code=result.http_status, content=result.to_payload())
+
+
 @app.get("/metrics", response_class=PlainTextResponse)
 def root_metrics(request: Request) -> PlainTextResponse:
     expected = settings.metrics_access_token.strip()
@@ -239,6 +353,14 @@ def root_metrics(request: Request) -> PlainTextResponse:
     payload = format_metrics_prometheus(get_api_metrics_store().snapshot())
     return PlainTextResponse(content=payload, media_type="text/plain; version=0.0.4")
 
+
+# Per-request correlation id (Requirement 7.1, 7.3), gated by
+# HARDENING_STRUCTURED_LOGGING_ENABLED. Registered last so it is the outermost
+# middleware: it binds the correlation id before any inner middleware logs and
+# echoes it in the X-Correlation-ID response header. Default-off it is not
+# registered, so response shapes match the pre-hardening baseline (11.1, 11.2).
+if settings.hardening_structured_logging_enabled:
+    app.add_middleware(CorrelationIdMiddleware)
 
 app.include_router(api_router)
 # Backward compatibility for stale frontend bundles that accidentally call

@@ -423,8 +423,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r .github/requirements-security-audit.txt
-          pip install -e services/api -e services/ml
-          pip-audit --progress-spinner=off
+          # Audit services/api + services/ml including dev dependencies
+          # (Requirement 8.3 — audit dev deps where feasible, not runtime-only).
+          pip install -e "services/api[dev]" -e "services/ml[dev]"
+          # Supply-chain gate (Requirement 8.2 / design Property 21):
+          # pip-audit exits non-zero on any known advisory, so this blocks on
+          # CRITICAL and HIGH findings (all fixable findings are remediated on
+          # the fix track, task 9.1). On pull requests this job is
+          # continue-on-error, so findings are advisory; on default-branch
+          # pushes to main the failure blocks the gate.
+          #
+          # The single unfixable finding is suppressed here and MUST stay in
+          # sync with docs/security/accepted-findings.md:
+          #   - GHSA-wj6h-64fc-37mp (CVE-2024-23342): ecdsa Minerva timing
+          #     side-channel; no upstream fix, transitive via python-jose, and
+          #     the ECDSA (ES*) code path is not exercised (CLARA uses HMAC).
+          pip-audit \
+            --progress-spinner=off \
+            --ignore-vuln GHSA-wj6h-64fc-37mp
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -437,7 +453,18 @@ jobs:
         run: |
           cd apps/web
           npm ci
-          npm audit --omit=dev --audit-level=critical
+          # Blocking gate (Requirement 8.2): fail on HIGH and CRITICAL runtime
+          # advisories. Strengthened from critical-only. On pull requests this
+          # job is continue-on-error (advisory); on default-branch pushes the
+          # failure blocks the gate.
+          npm audit --omit=dev --audit-level=high
+          # Advisory dev-dependency audit (Requirement 8.3): surface HIGH/
+          # CRITICAL findings in dev dependencies without failing the gate on
+          # dev-only advisories. Any carried dev advisory must be recorded in
+          # docs/security/accepted-findings.md.
+          echo "::group::npm audit (including dev dependencies — advisory)"
+          npm audit --audit-level=high || true
+          echo "::endgroup::"
 
   docker-compose-smoke:
     name: docker compose smoke build
@@ -556,6 +583,18 @@ jobs:
           images=("${COMPOSE_PROJECT_NAME}-api" "${COMPOSE_PROJECT_NAME}-ml" "${COMPOSE_PROJECT_NAME}-web")
           high_or_critical_exit=0
           critical_exit=0
+
+          # Default-branch changes (pushes to main / manual dispatch) block on
+          # HIGH and CRITICAL; pull requests run the same scan but treat HIGH as
+          # advisory (this job is continue-on-error on PRs). Requirement 8.2,
+          # design Property 21. Trivy runs with --ignore-unfixed so no-fix OS
+          # findings are skipped; any carried image finding must have an Active
+          # entry in docs/security/accepted-findings.md (.trivyignore).
+          is_default_branch="false"
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            is_default_branch="true"
+          fi
+
           for image in "${images[@]}"; do
             echo "Scanning ${image}..."
             trivy image \
@@ -590,16 +629,24 @@ jobs:
             echo "### Container Scan Summary"
             echo "- High/Critical detected: \`${high_or_critical_exit}\`"
             echo "- Critical detected: \`${critical_exit}\`"
+            echo "- Default-branch change: \`${is_default_branch}\`"
             if [ "$critical_exit" -eq 1 ]; then
               echo "- Gate: **FAIL** (critical vulnerabilities present)"
+            elif [ "$is_default_branch" = "true" ] && [ "$high_or_critical_exit" -eq 1 ]; then
+              echo "- Gate: **FAIL** (high-severity vulnerabilities on default-branch change)"
             elif [ "$high_or_critical_exit" -eq 1 ]; then
-              echo "- Gate: **PASS with warnings** (no critical vulnerabilities)"
+              echo "- Gate: **PASS with warnings** (high-severity findings advisory on PR)"
             else
               echo "- Gate: **PASS**"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$critical_exit" -eq 1 ]; then
+            exit 1
+          fi
+
+          if [ "$is_default_branch" = "true" ] && [ "$high_or_critical_exit" -eq 1 ]; then
+            echo "::error::High-severity vulnerabilities present on a default-branch change."
             exit 1
           fi
 

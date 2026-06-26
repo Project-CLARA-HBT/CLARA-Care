@@ -6,8 +6,28 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from clara_api.core.config import get_settings
 from clara_api.core.security import TokenPayload, decode_access_token
+from clara_api.core.session_security import session_security
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _reject_if_revoked(payload: TokenPayload) -> TokenPayload:
+    """Reject a denylisted (revoked-at-logout) access token.
+
+    Part of clara-platform-hardening Requirement 2.4 / Property 6. Consults the
+    ``jti`` denylist via the shared ``session_security`` singleton. The consult
+    is gated inside ``SessionSecurity.is_revoked`` by
+    ``HARDENING_TOKEN_DENYLIST_ENABLED``: when the flag is off it short-circuits
+    to ``False`` without touching the backend, so token resolution behaves
+    exactly as the pre-hardening baseline (Requirements 2.7, 11.1, 11.2).
+    """
+    jti = str(payload.get("jti", ""))
+    if jti and session_security.is_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token đã bị thu hồi",
+        )
+    return payload
 
 
 class AuthContextMiddleware(BaseHTTPMiddleware):
@@ -47,7 +67,7 @@ async def get_current_token(
 ) -> TokenPayload:
     state_token = getattr(request.state, "token_payload", None)
     if state_token is not None:
-        return state_token
+        return _reject_if_revoked(state_token)
     state_error = getattr(request.state, "token_error", None)
     if isinstance(state_error, HTTPException):
         raise state_error
@@ -55,8 +75,8 @@ async def get_current_token(
         token = _extract_access_token(request)
         if not token:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Thiếu token")
-        return decode_access_token(token)
-    return decode_access_token(credentials.credentials)
+        return _reject_if_revoked(decode_access_token(token))
+    return _reject_if_revoked(decode_access_token(credentials.credentials))
 
 
 async def get_optional_current_token(

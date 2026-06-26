@@ -13,7 +13,9 @@ dependencies = [
   "fastapi>=0.115.0",
   "httpx>=0.27.2",
   "uvicorn>=0.32.0",
-  "python-multipart>=0.0.9",
+  # Security floor: python-multipart >=0.0.18 clears the multipart DoS
+  # (CVE-2024-53981); the older ReDoS (CVE-2024-24762) was already covered.
+  "python-multipart>=0.0.18",
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",
   "PyYAML>=6.0.2",

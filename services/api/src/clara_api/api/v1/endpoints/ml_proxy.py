@@ -31,6 +31,11 @@ def proxy_ml_post(
 
     for attempt in range(2):
         try:
+            # Bounded outbound timeout + bounded retries (Requirements 10.3, 10.4):
+            # every attempt carries an explicit timeout (caller override or the
+            # configured ml_service_timeout_seconds) and the loop is capped at 2
+            # attempts, so a slow/unavailable ML service cannot stall or retry
+            # without bound.
             request_kwargs: dict[str, Any] = {
                 "json": payload,
                 "timeout": (

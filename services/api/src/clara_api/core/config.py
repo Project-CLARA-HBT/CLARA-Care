@@ -19,6 +19,43 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
+    # --- Database connection-pool sizing (additive; defaults preserve behavior) ---
+    # These map to the SQLAlchemy QueuePool knobs applied during engine creation
+    # for non-SQLite backends. The defaults equal SQLAlchemy's own defaults so an
+    # unconfigured deployment behaves exactly as before (only ``pool_pre_ping`` was
+    # set previously). Production deploys size ``DB_POOL_SIZE`` / ``DB_MAX_OVERFLOW``
+    # relative to the API/ML worker count (Requirement 10.2). ``pool_pre_ping`` is
+    # always preserved as the liveness check; ``DB_POOL_PRE_PING`` exists only as an
+    # explicit override and defaults on.
+    db_pool_size: int = Field(
+        default=5,
+        validation_alias="DB_POOL_SIZE",
+        ge=1,
+    )
+    db_max_overflow: int = Field(
+        default=10,
+        validation_alias="DB_MAX_OVERFLOW",
+        ge=0,
+    )
+    # Recycle connections after this many seconds. ``-1`` (the default) disables
+    # recycling, matching SQLAlchemy's default and the prior behavior.
+    db_pool_recycle: int = Field(
+        default=-1,
+        validation_alias="DB_POOL_RECYCLE",
+        ge=-1,
+    )
+    # Seconds to wait for a connection from the pool before raising. ``30`` is the
+    # SQLAlchemy default, preserving current behavior.
+    db_pool_timeout: int = Field(
+        default=30,
+        validation_alias="DB_POOL_TIMEOUT",
+        ge=1,
+    )
+    db_pool_pre_ping: bool = Field(
+        default=True,
+        validation_alias="DB_POOL_PRE_PING",
+    )
+
     cors_allowed_origins: str = Field(
         default="*",
         validation_alias="CORS_ALLOWED_ORIGINS",
@@ -38,6 +75,17 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = Field(
         default="change-me", min_length=8, validation_alias="JWT_SECRET_KEY"
+    )
+    # Previous JWT signing key, used for verification only during a key-overlap
+    # rotation window (Requirement 1.7). Default empty ⇒ no overlap window and
+    # behavior is identical to the pre-hardening baseline: only the current
+    # ``jwt_secret_key`` signs and verifies tokens. When set, newly minted tokens
+    # are still signed with ``jwt_secret_key``, but tokens that fail verification
+    # against the current key are additionally checked against this previous key
+    # so rotating the signing key does not force a mass logout. Operators clear
+    # this value once all tokens signed with the prior key have naturally expired.
+    jwt_secret_key_previous: str = Field(
+        default="", validation_alias="JWT_SECRET_KEY_PREVIOUS"
     )
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = Field(default="clara-api", validation_alias="JWT_ISSUER")
@@ -458,6 +506,55 @@ class Settings(BaseSettings):
     research_upload_object_store_url: str = Field(
         default="",
         validation_alias="RESEARCH_UPLOAD_OBJECT_STORE_URL",
+    )
+
+    # --- Platform hardening feature flags (additive; default off/behavior-preserving) ---
+    # Every flag below gates a new runtime behavior and defaults to the value that
+    # preserves current behavior. With all HARDENING_* flags off the system is
+    # equivalent to the pre-hardening baseline (Requirements 11.1, 11.2).
+    hardening_refresh_rotation_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_REFRESH_ROTATION_ENABLED",
+    )
+    hardening_token_denylist_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_TOKEN_DENYLIST_ENABLED",
+    )
+    hardening_login_fail_closed: bool = Field(
+        default=False,
+        validation_alias="HARDENING_LOGIN_FAIL_CLOSED",
+    )
+    hardening_rate_limit_fail_closed: bool = Field(
+        default=False,
+        validation_alias="HARDENING_RATE_LIMIT_FAIL_CLOSED",
+    )
+    hardening_request_body_limit_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_REQUEST_BODY_LIMIT_ENABLED",
+    )
+    # Maximum request body size enforced only when the body-size limit is enabled.
+    # The default (10 MiB) is inert while ``hardening_request_body_limit_enabled``
+    # is off, preserving current behavior.
+    hardening_request_body_max_bytes: int = Field(
+        default=10_485_760,
+        validation_alias="HARDENING_REQUEST_BODY_MAX_BYTES",
+        gt=0,
+    )
+    hardening_readiness_probe_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_READINESS_PROBE_ENABLED",
+    )
+    hardening_circuit_breaker_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_CIRCUIT_BREAKER_ENABLED",
+    )
+    hardening_structured_logging_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_STRUCTURED_LOGGING_ENABLED",
+    )
+    hardening_csp_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_CSP_ENABLED",
     )
 
 
