@@ -15,6 +15,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.compliance.consent import PURPOSE_PERSONALIZATION
+from clara_api.compliance.service import ComplianceService
+from clara_api.compliance.transfer import LLM_PROCESSOR, LLM_PURPOSE
 from clara_api.core.attribution import (
     attach_attribution,
     build_attribution,
@@ -22,7 +25,7 @@ from clara_api.core.attribution import (
     normalize_source_used,
 )
 from clara_api.core.config import get_settings
-from clara_api.core.consent import ensure_medical_disclaimer_consent
+from clara_api.core.consent import PhrConsentService, ensure_medical_disclaimer_consent
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
@@ -30,12 +33,16 @@ from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     MedicineCabinet,
     MedicineItem,
+    PhrProfile,
     User,
     VnDrugMapping,
     VnDrugMappingAlias,
     VnDrugMappingAudit,
 )
 from clara_api.db.session import get_db
+from clara_api.phr.features import phr_features
+from clara_api.phr.provenance import hedge_text_bilingual
+from clara_api.phr.reconciler import find_allergy_conflicts, reconcile
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
     CabinetImportRequest,
@@ -433,7 +440,9 @@ def _resolve_dictionary_mapping_with_source(
     if db is not None:
         db_mapping = _find_db_mapping_by_alias(db, normalized_input)
         if db_mapping is not None:
-            display_name = db_mapping.brand_name.strip() or _to_title_case(db_mapping.normalized_name)
+            display_name = db_mapping.brand_name.strip() or _to_title_case(
+                db_mapping.normalized_name
+            )
             normalized_name = db_mapping.normalized_name.strip() or normalized_input
             rx_cui = db_mapping.rx_cui.strip()
             if not rx_cui:
@@ -442,12 +451,20 @@ def _resolve_dictionary_mapping_with_source(
 
         candidate_mapping, candidate_score, _, _ = _find_db_mapping_candidate(db, normalized_input)
         if candidate_mapping is not None:
-            display_name = candidate_mapping.brand_name.strip() or _to_title_case(candidate_mapping.normalized_name)
+            display_name = candidate_mapping.brand_name.strip() or _to_title_case(
+                candidate_mapping.normalized_name
+            )
             normalized_name = candidate_mapping.normalized_name.strip() or normalized_input
             rx_cui = candidate_mapping.rx_cui.strip()
             if not rx_cui:
                 rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
-            return display_name, normalized_name, rx_cui, "candidate", max(min(candidate_score, 1.0), 0.0)
+            return (
+                display_name,
+                normalized_name,
+                rx_cui,
+                "candidate",
+                max(min(candidate_score, 1.0), 0.0),
+            )
 
     canonical = DRUG_ALIAS_LOOKUP.get(normalized_input, normalized_input)
     display_name = _to_title_case(canonical)
@@ -463,9 +480,11 @@ def _resolve_dictionary_mapping(
     drug_name: str,
     db: Session | None = None,
 ) -> tuple[str, str, str]:
-    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
-        drug_name=drug_name,
-        db=db,
+    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            drug_name=drug_name,
+            db=db,
+        )
     )
     return display_name, normalized_name, rx_cui
 
@@ -648,7 +667,9 @@ def _create_mapping_audit(
 
 
 def _get_mapping_or_404(db: Session, mapping_id: int) -> VnDrugMapping:
-    mapping = db.execute(select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)).scalar_one_or_none()
+    mapping = db.execute(
+        select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)
+    ).scalar_one_or_none()
     if mapping is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mapping")
     return mapping
@@ -932,7 +953,9 @@ def _detect_drugs_from_text(
     token_candidates = [
         token
         for token in re.split(r"[^a-z0-9+]+", normalized_text)
-        if len(token) >= 4 and token not in _OCR_FUZZY_STOPWORDS and sum(char.isalpha() for char in token) >= 3
+        if len(token) >= 4
+        and token not in _OCR_FUZZY_STOPWORDS
+        and sum(char.isalpha() for char in token) >= 3
     ]
     fuzzy_threshold = 0.9 if detections else 0.86
     fuzzy_limit = 2 if detections else 4
@@ -991,8 +1014,7 @@ def _enforce_low_confidence_manual_confirm(
     enforced: list[CabinetScanDetection] = []
     for detection in detections:
         requires_manual_confirm = (
-            detection.requires_manual_confirm
-            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+            detection.requires_manual_confirm or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
         )
         if requires_manual_confirm:
             enforced.append(
@@ -1349,9 +1371,11 @@ def add_cabinet_item(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
-    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
-        payload.drug_name,
-        db=db,
+    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            payload.drug_name,
+            db=db,
+        )
     )
     existing = db.execute(
         select(MedicineItem).where(
@@ -1500,9 +1524,11 @@ def update_cabinet_item(
     db.commit()
     db.refresh(item)
     if response_mapping_source is None or response_mapping_confidence is None:
-        _, _, _, response_mapping_source, response_mapping_confidence = _resolve_dictionary_mapping_with_source(
-            item.drug_name,
-            db=db,
+        _, _, _, response_mapping_source, response_mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(
+                item.drug_name,
+                db=db,
+            )
         )
     return _to_item_response(
         item,
@@ -1617,8 +1643,7 @@ def import_detections(
     blocked_unconfirmed: list[dict[str, Any]] = []
     for index, detection in enumerate(payload.detections):
         needs_manual_confirm = (
-            detection.requires_manual_confirm
-            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+            detection.requires_manual_confirm or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
         )
         if needs_manual_confirm and not detection.confirmed:
             blocked_unconfirmed.append(
@@ -1649,9 +1674,11 @@ def import_detections(
     inserted = 0
     prioritized_fields: list[CabinetPrioritizedField] = []
     for detection in payload.detections:
-        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
-            detection.normalized_name or detection.drug_name,
-            db=db,
+        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(
+                detection.normalized_name or detection.drug_name,
+                db=db,
+            )
         )
         if not normalized or normalized in existing_names:
             continue
@@ -1703,9 +1730,7 @@ def run_auto_ddi_check(
     cabinet = _get_or_create_cabinet(db, user.id)
     control_tower = get_control_tower_config_service().load(db)
     medication_items = (
-        db.execute(
-            select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
-        )
+        db.execute(select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id))
         .scalars()
         .all()
     )
@@ -1734,11 +1759,93 @@ def run_auto_ddi_check(
         "allergies": payload.allergies,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
+
+    # --- PHR reconciliation + allergy-aware DDI (flag-gated, Req 7) ----------
+    # Flag OFF ⇒ cabinet-only payload above, byte-for-byte legacy (Req 7.5,
+    # Correctness Property 22). Both stores are always preserved; reconciliation
+    # is a read-time projection that never mutates the cabinet or PHR (Req 7.6).
+    flags = phr_features(settings=None)
+    phr_derived = False
+    allergy_conflicts: list[dict[str, Any]] = []
+    if flags.reconciliation:
+        profile = db.execute(
+            select(PhrProfile).where(PhrProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        phr_meds: list[dict[str, Any]] = []
+        phr_allergies: list[dict[str, Any]] = []
+        if profile is not None:
+            phr_meds = [
+                {
+                    "id": str(m.get("id") or ""),
+                    "rx_cui": str(m.get("rx_cui") or ""),
+                    "normalized_name": str(m.get("normalized_name") or ""),
+                    "name": str(m.get("name") or ""),
+                }
+                for m in (profile.medications_json or [])
+                if isinstance(m, dict)
+            ]
+            phr_allergies = [a for a in (profile.allergies_json or []) if isinstance(a, dict)]
+        cabinet_payload = [
+            {
+                "id": str(item.id),
+                "rx_cui": item.rx_cui or "",
+                "normalized_name": item.normalized_name or "",
+                "drug_name": item.drug_name or "",
+            }
+            for item in medication_items
+        ]
+        reconciled = reconcile(phr_meds, cabinet_payload)
+        request_payload["reconciled_medications"] = reconciled.as_dict()["medications"]
+        phr_derived = bool(phr_meds)
+
+        # Allergy-aware DDI requires personalization consent (Req 7.3, 7.4).
+        if flags.allergy_aware_ddi and phr_allergies:
+            consent_ok = not flags.consent_enforcement or PhrConsentService.is_granted(
+                db, user_id=user.id, purpose="personalization"
+            )
+            # Compliance granular-consent gate (Req 2.1, 2.3): when
+            # COMPLIANCE_GRANULAR_CONSENT_ENABLED is on, also require the
+            # compliance-ledger personalization grant. Flag off ⇒ has_consent
+            # returns True, so legacy behavior is preserved exactly.
+            consent_ok = consent_ok and ComplianceService(db).has_consent(
+                user_id=user.id, purpose=PURPOSE_PERSONALIZATION
+            )
+            if consent_ok:
+                request_payload["coded_allergies"] = phr_allergies
+                allergy_conflicts = find_allergy_conflicts(reconciled, phr_allergies)
+                phr_derived = True
+
+    # --- Cross-border guard (Req 19.4) --------------------------------------
+    # When cross-border gating is on and the user has not granted cross-border
+    # consent, strip identifiable PHR-derived fields from the offshore call.
+    transfer = ComplianceService(db).outbound_guard(user_id=user.id)
+    if not transfer.allow_cross_border:
+        request_payload.pop("reconciled_medications", None)
+        request_payload.pop("coded_allergies", None)
+    # No-PII transfer event (Req 4.4 / Property P5): record processor identity,
+    # purpose, and an opaque user ref for the offshore call decision — never the
+    # reconciled medications or allergies. Gated by the flag so flags-off side
+    # effects stay byte-equivalent to baseline (Property P6).
+    _compliance = ComplianceService(db)
+    if _compliance.settings.compliance_cross_border_gating_enabled:
+        _compliance.record_transfer(
+            user_id=user.id,
+            processor=LLM_PROCESSOR,
+            purpose=LLM_PURPOSE,
+            allowed=transfer.allow_cross_border,
+        )
+
     result = proxy_ml_post("/v1/careguard/analyze", request_payload)
-    return _attach_careguard_attribution(
+    attributed = _attach_careguard_attribution(
         result,
         external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
     )
+    if allergy_conflicts:
+        attributed["allergy_conflicts"] = allergy_conflicts
+    if phr_derived:
+        # Hedge any PHR-derived decision-support output (Req 6.6, 18.5).
+        attributed["phr_hedge"] = hedge_text_bilingual()
+    return attributed
 
 
 @router.get("/dictionary", response_model=VnDrugMappingListResponse)
@@ -2041,7 +2148,9 @@ def list_vn_drug_mapping_audits(
 
     total = int(
         db.execute(
-            select(func.count(VnDrugMappingAudit.id)).where(VnDrugMappingAudit.mapping_id == mapping_id)
+            select(func.count(VnDrugMappingAudit.id)).where(
+                VnDrugMappingAudit.mapping_id == mapping_id
+            )
         ).scalar_one()
         or 0
     )
@@ -2070,9 +2179,11 @@ def resolve_vn_drug_mapping(
     db: Session = Depends(get_db),
 ) -> VnDrugResolveResponse:
     _require_user(token, db)
-    display_name, normalized_name, rx_cui, source, mapping_confidence = _resolve_dictionary_mapping_with_source(
-        payload.drug_name,
-        db=db,
+    display_name, normalized_name, rx_cui, source, mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            payload.drug_name,
+            db=db,
+        )
     )
     return VnDrugResolveResponse(
         input_name=payload.drug_name.strip(),

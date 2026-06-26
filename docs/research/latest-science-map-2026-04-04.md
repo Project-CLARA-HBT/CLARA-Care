@@ -31,7 +31,7 @@ File này chuyển danh sách nghiên cứu mới (2025-2026) thành **kế ho�
 | 14 | MA-RAG 2026 multi-round | Mở rộng deep_beta nhiều vòng reasoning + contradiction loops | `services/ml/src/clara_ml/agents/research_tier2.py`, `services/ml/src/clara_ml/main.py` | Mean reasoning depth, contradiction resolved |
 | 15 | MedBioRAG 2025 hybrid retrieval | Tối ưu hybrid BM25+dense+neural rerank theo loại query y khoa | `services/ml/src/clara_ml/rag/retrieval/score_engine.py`, `services/ml/src/clara_ml/rag/retrieval/reranker.py` | nDCG@10, MRR@10 |
 | 16 | npj Digital Medicine 2025 local RAG radiology (DOI: 10.1038/s41746-025-01802-z) | Chế độ local/private RAG mặc định cho ca nhạy cảm dữ liệu | `services/api/src/clara_api/core/config.py`, `services/ml/src/clara_ml/config.py` | Privacy mode adoption, latency p95 |
-| 17 | MedHallu EMNLP 2025 benchmark | Thêm hallucination benchmark lane trong scientific eval | `services/ml/tests/test_research_tier2_agent.py`, `docs/hackathon/scientific-eval-testkit-guide-2026-04-01.md` | Hallucination rate, groundedness score |
+| 17 | MedHallu EMNLP 2025 benchmark | Thêm hallucination benchmark lane trong scientific eval | `services/ml/tests/test_research_tier2_agent.py`, `data/docs/hackathon/scientific-eval-testkit-guide-2026-04-01.md` | Hallucination rate, groundedness score |
 | 18 | MEGA-RAG public health 2025 | Multi-evidence refinement trước final synthesis | `services/ml/src/clara_ml/agents/research_tier2.py`, `services/ml/src/clara_ml/factcheck/fides_lite.py` | Evidence diversity index |
 
 ---
@@ -199,7 +199,7 @@ Mục này trả lời trực tiếp câu hỏi: **CLARA hiện tại đang dùn
 | GraphRAG sidecar | Đã chạy runtime (fail-soft) |
 | Claim-level verification + FIDES-lite | Đã chạy runtime |
 | Legal hard guard backend | Đã chạy runtime |
-| Map PMID/DOI chi tiết theo từng rule trong payload trả lời | **Chưa đầy đủ**, hiện chủ yếu nằm ở docs/benchmark |
+| Map PMID/DOI chi tiết theo từng rule trong payload trả lời | **Chưa đầy đủ**, hiện chủ yếu nằm ở các báo cáo benchmark trong data/docs/hackathon |
 
 ### 6.8 Chứng cứ tài liệu nghiên cứu đang dùng để dẫn roadmap
 - File bản đồ khoa học hiện tại: `docs/research/latest-science-map-2026-04-04.md` (Sections 1-4).

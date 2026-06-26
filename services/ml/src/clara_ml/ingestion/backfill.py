@@ -31,7 +31,12 @@ from typing import Any, Protocol, runtime_checkable
 
 from clara_ml.config import settings
 
-__all__ = ["BackfillReport", "IngestionOrchestratorLike", "run_backfill"]
+__all__ = [
+    "BackfillReport",
+    "IngestionOrchestratorLike",
+    "SourceRegistryLike",
+    "run_backfill",
+]
 
 
 @runtime_checkable
@@ -48,6 +53,23 @@ class IngestionOrchestratorLike(Protocol):
 
     def run(self, source_key: str, *, since: str | None = None) -> Any:
         """Ingest a single source, starting from ``since`` or its watermark."""
+        ...
+
+
+@runtime_checkable
+class SourceRegistryLike(Protocol):
+    """Structural seam for the Source_Registry reader (tasks 3.1 / 3.21).
+
+    Any object exposing ``list_enabled_source_keys() -> list[str]`` satisfies
+    this protocol, so the registry reader (backed by ``kb_source_registry``) can
+    be injected for the "all enabled sources" resolution without this skeleton
+    importing the persistent-store module or opening a DB connection at import
+    time. Returning the enabled source keys is the only thing the backfill needs
+    to fan out per source (Requirement 4.6).
+    """
+
+    def list_enabled_source_keys(self) -> list[str]:
+        """Return the keys of every enabled source in the registry."""
         ...
 
 
@@ -72,25 +94,13 @@ class BackfillReport:
     per_source: dict[str, Any] = field(default_factory=dict)
 
 
-def _resolve_sources(source_keys: list[str] | None) -> list[str]:
-    """Resolve the source list to backfill, de-duplicated and order-preserving.
-
-    When ``source_keys`` is provided, it is normalized (blanks dropped,
-    duplicates removed while preserving first-seen order). When ``None``, the
-    full enabled set would be resolved from the Source_Registry; that registry
-    read is wired in a later phase (tasks 3.1/3.21), so for the P0 skeleton this
-    returns an empty list (the "all sources" placeholder).
-    """
-
-    if source_keys is None:
-        # Registry-driven resolution of "all enabled sources" is pending the
-        # document store / source registry (tasks 3.1, 3.21). No DB read here.
-        return []
+def _normalize_source_keys(source_keys: list[str]) -> list[str]:
+    """Normalize a source-key list: drop blanks, de-duplicate, preserve order."""
 
     resolved: list[str] = []
     seen: set[str] = set()
     for raw in source_keys:
-        key = raw.strip()
+        key = str(raw).strip()
         if not key or key in seen:
             continue
         seen.add(key)
@@ -98,17 +108,44 @@ def _resolve_sources(source_keys: list[str] | None) -> list[str]:
     return resolved
 
 
+def _resolve_sources(
+    source_keys: list[str] | None,
+    *,
+    source_registry: SourceRegistryLike | None = None,
+) -> list[str]:
+    """Resolve the source list to backfill, de-duplicated and order-preserving.
+
+    When ``source_keys`` is provided, it is normalized (blanks dropped,
+    duplicates removed while preserving first-seen order). When ``None``, the
+    full enabled set is resolved from the injected ``source_registry`` reader
+    (the Source_Registry, tasks 3.1/3.21). When no registry is wired, this
+    returns an empty list (the "all sources" placeholder) so the skeleton stays
+    import-safe and never opens a DB connection on its own.
+    """
+
+    if source_keys is None:
+        if source_registry is None:
+            # No registry reader wired: "all enabled sources" cannot be resolved
+            # without a Source_Registry read, and this skeleton must not open a
+            # DB connection itself (tasks 3.1 / 3.21 inject the reader).
+            return []
+        return _normalize_source_keys(list(source_registry.list_enabled_source_keys()))
+
+    return _normalize_source_keys(source_keys)
+
+
 def run_backfill(
     source_keys: list[str] | None = None,
     *,
     since: str | None = None,
     orchestrator: IngestionOrchestratorLike | None = None,
+    source_registry: SourceRegistryLike | None = None,
 ) -> BackfillReport:
     """Watermark-driven backfill entrypoint, callable by scheduler/admin.
 
     Args:
         source_keys: Explicit source keys to backfill. ``None`` means "all
-            enabled sources" (resolved from the Source_Registry once wired).
+            enabled sources", resolved from the injected ``source_registry``.
         since: Optional watermark override applied to every source. When
             ``None``, each source resumes from its per-source watermark in the
             Source_Registry (Requirement 4.6).
@@ -116,6 +153,10 @@ def run_backfill(
             (the current default, since task 3.16 is not implemented yet), the
             function returns a "not yet wired" report instead of importing a
             nonexistent module.
+        source_registry: Dependency-injected Source_Registry reader used to
+            resolve "all enabled sources" when ``source_keys`` is ``None`` (tasks
+            3.1 / 3.21). When ``None`` and ``source_keys`` is ``None``, the
+            resolved source list is empty (no DB read happens here).
 
     Returns:
         A :class:`BackfillReport` describing the outcome. Disabled and
@@ -130,16 +171,13 @@ def run_backfill(
             per_source={},
         )
 
-    sources = _resolve_sources(source_keys)
+    sources = _resolve_sources(source_keys, source_registry=source_registry)
 
     if orchestrator is None:
         return BackfillReport(
             sources=sources,
             started=False,
-            reason=(
-                "not yet wired: no IngestionOrchestrator provided "
-                "(pending task 3.16)"
-            ),
+            reason=("not yet wired: no IngestionOrchestrator provided (pending task 3.16)"),
             per_source={},
         )
 

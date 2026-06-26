@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -231,6 +232,31 @@ class ResearchJob(Base):
     user: Mapped[User] = relationship("User")
 
 
+class ResearchUploadedFile(Base):
+    """Durable, owner-isolated uploaded research file (R2)."""
+
+    __tablename__ = "research_uploaded_files"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    file_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    owner_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    filename: Mapped[str] = mapped_column(String(512))
+    content_type: Mapped[str] = mapped_column(String(128))
+    size: Mapped[int] = mapped_column(Integer, default=0)
+    storage_kind: Mapped[str] = mapped_column(String(16), default="db")
+    storage_ref: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    raw_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    extracted_text: Mapped[str] = mapped_column(Text, default="")
+    preview: Mapped[str] = mapped_column(Text, default="")
+    token_count: Mapped[int] = mapped_column(Integer, default=0)
+    ocr_bridge_kind: Mapped[str] = mapped_column(String(16), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    owner: Mapped[User] = relationship("User")
+
+
 class AuthToken(Base):
     __tablename__ = "auth_tokens"
 
@@ -256,6 +282,9 @@ class UserConsent(Base):
         DateTime(timezone=True),
         server_default=func.now(),
     )
+    # Appended (never mutated in place) when a typed consent is withdrawn; the
+    # ledger stays append-only. Null ⇒ the grant is still active.
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship("User")
 
@@ -586,6 +615,9 @@ class WorkspaceConversationShare(Base):
     __tablename__ = "workspace_conversation_shares"
     __table_args__ = (
         UniqueConstraint("session_id", name="uq_workspace_conversation_shares_session"),
+        UniqueConstraint(
+            "research_job_id", name="uq_workspace_conversation_shares_research_job"
+        ),
         UniqueConstraint("share_token", name="uq_workspace_conversation_shares_token"),
     )
 
@@ -594,9 +626,19 @@ class WorkspaceConversationShare(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
-    session_id: Mapped[int] = mapped_column(
+    # A share targets either a workspace conversation (``session_id``) or a
+    # research tier2 job (``research_job_id``); exactly one is set. Both are
+    # nullable so the same share mechanism can back research report shares
+    # (R16.3) without requiring an associated chat session.
+    session_id: Mapped[int | None] = mapped_column(
         ForeignKey("sessions.id", ondelete="CASCADE"),
         index=True,
+        nullable=True,
+    )
+    research_job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("research_jobs.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
     )
     share_token: Mapped[str] = mapped_column(String(160), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
@@ -609,7 +651,8 @@ class WorkspaceConversationShare(Base):
     )
 
     owner: Mapped[User] = relationship("User")
-    session: Mapped[SessionModel] = relationship("SessionModel")
+    session: Mapped[SessionModel | None] = relationship("SessionModel")
+    research_job: Mapped[ResearchJob | None] = relationship("ResearchJob")
 
 
 class WorkspaceNote(Base):
@@ -665,6 +708,10 @@ class PhrProfile(Base):
     allergies_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
     conditions_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
     medications_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
+    # New (additive, nullable) — owner-controlled emergency-card field inclusion.
+    emergency_card_prefs_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # New — monotonic per-profile version counter, bumped on each committed change.
+    current_version_no: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -673,3 +720,132 @@ class PhrProfile(Base):
     )
 
     user: Mapped[User] = relationship("User")
+
+
+class PhrAudit(Base):
+    """Append-only audit trail for PHR create/update/delete/read events."""
+
+    __tablename__ = "phr_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    entity: Mapped[str] = mapped_column(String(32), index=True)
+    entity_id: Mapped[str] = mapped_column(String(64), default="")
+    before_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    after_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    scope: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhrVersion(Base):
+    """Monotonic per-profile snapshot history (append-only)."""
+
+    __tablename__ = "phr_versions"
+    __table_args__ = (
+        UniqueConstraint("profile_id", "version_no", name="uq_phr_versions_profile_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer, index=True)
+    snapshot_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    actor_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhrObservation(Base):
+    """Structured lab/vital observations linked to a PHR profile."""
+
+    __tablename__ = "phr_observations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    entry_id: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(160), default="")
+    value: Mapped[str] = mapped_column(String(120), default="")
+    unit: Mapped[str] = mapped_column(String(64), default="")
+    observed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    information_source: Mapped[str] = mapped_column(String(32), default="self-declared")
+    ocr_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhrReminder(Base):
+    """Medication reminder / refill / caregiver-nudge configuration."""
+
+    __tablename__ = "phr_reminders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    medication_entry_id: Mapped[str] = mapped_column(String(64), index=True)
+    schedule_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    remaining_supply: Mapped[float | None] = mapped_column(Float, nullable=True)
+    refill_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    caregiver_nudge_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhrShare(Base):
+    """Read-only revocable share link to a PHR projection."""
+
+    __tablename__ = "phr_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    share_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    scope: Mapped[str] = mapped_column(String(32), default="full")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DsarRequest(Base):
+    """Append-only Data Subject Access Request log (no free-text PII)."""
+
+    __tablename__ = "dsar_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Opaque hashed user reference — never the email/name itself.
+    user_ref: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="received", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ComplianceEvent(Base):
+    """Append-only compliance event log. ``meta_json`` is a PII-free projection."""
+
+    __tablename__ = "compliance_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    subject_ref: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    processor: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    severity: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    meta_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TransferAssessment(Base):
+    """Registry of cross-border processors + their Transfer Impact Assessment."""
+
+    __tablename__ = "transfer_assessments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    processor: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    jurisdiction: Mapped[str] = mapped_column(String(64), default="")
+    purpose: Mapped[str] = mapped_column(String(64), default="")
+    tia_doc_ref: Mapped[str] = mapped_column(String(128), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)

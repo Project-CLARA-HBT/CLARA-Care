@@ -222,15 +222,9 @@ class Settings(BaseSettings):
     )
     # ASR provider selection seam (mirrors CLARA_ML config). "whisper" = the
     # existing DeepSeek/Whisper audio client; other names degrade to it.
-    scribe_asr_primary: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_PRIMARY"
-    )
-    scribe_asr_fallback: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_FALLBACK"
-    )
-    scribe_asr_language: str = Field(
-        default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
-    )
+    scribe_asr_primary: str = Field(default="whisper", validation_alias="SCRIBE_ASR_PRIMARY")
+    scribe_asr_fallback: str = Field(default="whisper", validation_alias="SCRIBE_ASR_FALLBACK")
+    scribe_asr_language: str = Field(default="vi", validation_alias="SCRIBE_ASR_LANGUAGE")
     # --- Clara Scribe (enterprise) wave-2 feature flags -------------------------
     # R12–R20. All additive + default off ⇒ byte-for-byte current behavior.
     rag_scribe_grounding_enabled: bool = Field(
@@ -367,6 +361,103 @@ class Settings(BaseSettings):
         validation_alias="ANALYTICS_DEFAULT_RANGE_DAYS",
         gt=0,
         le=365,
+    )
+
+    # --- Regulatory compliance (AI Law 134/2025 + PDPD 13/2023) feature flags ---
+    # All additive + default OFF ⇒ byte-for-byte current behavior. When every
+    # flag is off the compliance layer is inert (Requirement 8.1, 8.2).
+    compliance_transparency_notice_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_TRANSPARENCY_NOTICE_ENABLED"
+    )
+    compliance_granular_consent_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_GRANULAR_CONSENT_ENABLED"
+    )
+    compliance_dsar_enabled: bool = Field(default=False, validation_alias="COMPLIANCE_DSAR_ENABLED")
+    compliance_cross_border_gating_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_CROSS_BORDER_GATING_ENABLED"
+    )
+    compliance_retention_job_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_RETENTION_JOB_ENABLED"
+    )
+    compliance_model_disclosure_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_MODEL_DISCLOSURE_ENABLED"
+    )
+    compliance_records_admin_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_RECORDS_ADMIN_ENABLED"
+    )
+    # Current AI transparency-notice version; bumping it forces re-acknowledgement
+    # on next access (Requirement 1.6).
+    compliance_transparency_notice_version: str = Field(
+        default="2026-03-v1",
+        validation_alias="COMPLIANCE_TRANSPARENCY_NOTICE_VERSION",
+    )
+
+    # --- Personal Health Record (enhanced) feature flags ------------------------
+    # ``phr_enhanced_enabled`` is the master switch; every sub-flag is effective
+    # only as ``master AND sub`` (see ``phr_features``). All default OFF ⇒ the
+    # legacy PHR upsert/read path is untouched (Requirement 18.1).
+    phr_enhanced_enabled: bool = Field(default=False, validation_alias="PHR_ENHANCED_ENABLED")
+    phr_consent_enforcement_enabled: bool = Field(
+        default=False, validation_alias="PHR_CONSENT_ENFORCEMENT_ENABLED"
+    )
+    phr_reconciliation_enabled: bool = Field(
+        default=False, validation_alias="PHR_RECONCILIATION_ENABLED"
+    )
+    phr_allergy_aware_ddi_enabled: bool = Field(
+        default=False, validation_alias="PHR_ALLERGY_AWARE_DDI_ENABLED"
+    )
+    phr_ocr_import_enabled: bool = Field(default=False, validation_alias="PHR_OCR_IMPORT_ENABLED")
+    phr_observations_enabled: bool = Field(
+        default=False, validation_alias="PHR_OBSERVATIONS_ENABLED"
+    )
+    phr_export_enabled: bool = Field(default=False, validation_alias="PHR_EXPORT_ENABLED")
+    phr_sharing_enabled: bool = Field(default=False, validation_alias="PHR_SHARING_ENABLED")
+    phr_reminders_enabled: bool = Field(default=False, validation_alias="PHR_REMINDERS_ENABLED")
+    phr_completeness_meter_enabled: bool = Field(
+        default=False, validation_alias="PHR_COMPLETENESS_METER_ENABLED"
+    )
+
+    # --- CLARA Research enhancement feature flags (additive; default off) --------
+    # All flags default to the value that preserves current (legacy) behavior.
+    # When every flag below is False/off, the research endpoints behave
+    # identically to the pre-enhancement baseline (Requirement 20.2).
+    research_api_gap_fill_hard_max: int = Field(
+        default=3,
+        validation_alias="RESEARCH_API_GAP_FILL_HARD_MAX",
+        ge=1,
+        le=10,
+    )
+    research_clarifying_questions_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_CLARIFYING_QUESTIONS_ENABLED",
+    )
+    research_role_gated_telemetry_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_ROLE_GATED_TELEMETRY_ENABLED",
+    )
+    research_personalization_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_PERSONALIZATION_ENABLED",
+    )
+    research_export_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_EXPORT_ENABLED",
+    )
+    research_share_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_SHARE_ENABLED",
+    )
+    research_quality_gate_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_QUALITY_GATE_ENABLED",
+    )
+    research_durable_uploads_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_DURABLE_UPLOADS_ENABLED",
+    )
+    research_upload_object_store_url: str = Field(
+        default="",
+        validation_alias="RESEARCH_UPLOAD_OBJECT_STORE_URL",
     )
 
 

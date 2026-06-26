@@ -218,6 +218,9 @@ class ChatResponse(BaseModel):
     fallback_reason: str | None = None
     attribution: dict[str, Any] = Field(default_factory=dict)
     attributions: list[dict[str, Any]] = Field(default_factory=list)
+    # Compliance: AI model/version disclosure (Req 1.3, 1.4). Populated only when
+    # COMPLIANCE_MODEL_DISCLOSURE_ENABLED; omitted otherwise (legacy envelope).
+    ai_disclosure: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemCreate(BaseModel):
@@ -678,6 +681,18 @@ class ResearchTier2JobCreateRequest(BaseModel):
     # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
     clarifying_answers: dict[str, str] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def _reject_fast_personal(self) -> "ResearchTier2JobCreateRequest":
+        # clara-research R15.2: preserve the invariant "never (fast && personal)".
+        # Personalization is valid only in tier2 (deep / deep_beta); a fast request that
+        # sets personal_mode is rejected rather than silently downgraded.
+        if self.personal_mode and self.research_mode == "fast":
+            raise ValueError(
+                "personal_mode is not allowed when research_mode is 'fast' "
+                "(invariant: never (fast && personal))."
+            )
+        return self
+
 
 class ResearchTier2JobResponse(BaseModel):
     job_id: str
@@ -690,6 +705,34 @@ class ResearchTier2JobResponse(BaseModel):
     progress: dict[str, object] = Field(default_factory=dict)
     result: dict[str, object] | None = None
     error: str | None = None
+
+
+class ResearchClarifyRequest(BaseModel):
+    """Request to evaluate whether a deep research query needs clarification (R12)."""
+
+    query: str = Field(min_length=1, max_length=4000)
+    message: str | None = None
+    research_mode: Literal["fast", "deep", "deep_beta"] = "deep"
+    ui_language: Literal["vi", "en"] = Field(
+        default="vi",
+        validation_alias=AliasChoices("ui_language", "answer_language"),
+    )
+
+
+class ResearchClarifyQuestion(BaseModel):
+    """A single clarifying question; ``id`` is the key used in ``clarifying_answers`` (R12.2)."""
+
+    id: str
+    question: str
+    rationale: str | None = None
+
+
+class ResearchClarifyResponse(BaseModel):
+    """Clarifying-question payload returned by ``POST /research/clarify`` (clara-research R12.1)."""
+
+    ambiguous: bool = False
+    research_mode: Literal["fast", "deep", "deep_beta"] = "deep"
+    questions: list[ResearchClarifyQuestion] = Field(default_factory=list)
 
 
 class WorkspaceFolderCreateRequest(BaseModel):
@@ -814,6 +857,22 @@ class WorkspaceConversationShareCreateRequest(BaseModel):
 
 class WorkspaceConversationShareResponse(BaseModel):
     conversation_id: int
+    share_token: str
+    public_url: str
+    is_active: bool
+    expires_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResearchTier2ShareResponse(BaseModel):
+    """Read-only share link for a research tier2 job (R16.3).
+
+    Reuses the ``WorkspaceConversationShare`` mechanism: a ``share_token`` and a
+    ``/share/{token}`` public URL.
+    """
+
+    job_id: str
     share_token: str
     public_url: str
     is_active: bool
@@ -984,7 +1043,9 @@ class ScribeAddendumListResponse(BaseModel):
     addenda: list[ScribeAddendumResponse] = Field(default_factory=list)
 
 
-class PhrAllergyItem(BaseModel):
+class PhrAllergyItemLegacy(BaseModel):
+    """Legacy allergy item shape (kept for byte-for-byte flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=140)
     reaction: str = Field(default="", max_length=200)
@@ -992,7 +1053,9 @@ class PhrAllergyItem(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-class PhrConditionItem(BaseModel):
+class PhrConditionItemLegacy(BaseModel):
+    """Legacy condition item shape (flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=160)
     status: Literal["active", "resolved", "monitoring", "unknown"] = "unknown"
@@ -1000,7 +1063,9 @@ class PhrConditionItem(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-class PhrMedicationItem(BaseModel):
+class PhrMedicationItemLegacy(BaseModel):
+    """Legacy medication item shape (flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=160)
     dose: str = Field(default="", max_length=140)
@@ -1008,6 +1073,61 @@ class PhrMedicationItem(BaseModel):
     started_on: date | None = None
     is_current: bool = True
     note: str = Field(default="", max_length=500)
+
+
+class PhrAllergyItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=140)
+    reaction: str = Field(default="", max_length=200)
+    severity: Literal["mild", "moderate", "severe", "unknown"] = "unknown"
+    note: str = Field(default="", max_length=500)
+    # --- new coded + provenance (additive, optional, safe defaults) ---
+    substance: str = Field(default="", max_length=140)
+    coded_substance_id: str = Field(default="", max_length=64)
+    is_coded: bool = False
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+
+
+class PhrConditionItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    status: Literal["active", "resolved", "monitoring", "unknown"] = "unknown"
+    diagnosed_on: date | None = None
+    note: str = Field(default="", max_length=500)
+    # --- new coded + provenance (additive, optional, safe defaults) ---
+    icd10_code: str = Field(default="", max_length=16)
+    snomed_code: str = Field(default="", max_length=32)
+    is_coded: bool = False
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+
+
+class PhrMedicationItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    dose: str = Field(default="", max_length=140)
+    frequency: str = Field(default="", max_length=140)
+    started_on: date | None = None
+    is_current: bool = True
+    note: str = Field(default="", max_length=500)
+    # --- new structured (additive, optional, safe defaults) ---
+    dose_amount: float | None = Field(default=None, ge=0)
+    dose_unit: str = Field(default="", max_length=32)
+    route: str = Field(default="", max_length=64)
+    # --- new coded ---
+    normalized_name: str = Field(default="", max_length=160)
+    rx_cui: str = Field(default="", max_length=64)
+    normalization_source: str = Field(default="", max_length=32)
+    is_normalized: bool = False
+    duplicate_of: str | None = Field(default=None, max_length=64)
+    # --- new provenance ---
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+    ocr_confidence: float | None = Field(default=None, ge=0, le=1)
 
 
 class PhrRecordUpdateRequest(BaseModel):
@@ -1023,12 +1143,36 @@ class PhrRecordUpdateRequest(BaseModel):
     emergency_contact_phone: str = Field(default="", max_length=64)
     insurance_id: str = Field(default="", max_length=128)
     notes: str = Field(default="", max_length=4000)
-    allergies: list[PhrAllergyItem] = Field(default_factory=list, max_length=80)
-    conditions: list[PhrConditionItem] = Field(default_factory=list, max_length=80)
-    medications: list[PhrMedicationItem] = Field(default_factory=list, max_length=120)
+    allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list, max_length=80)
+    conditions: list[PhrConditionItemLegacy] = Field(default_factory=list, max_length=80)
+    medications: list[PhrMedicationItemLegacy] = Field(default_factory=list, max_length=120)
 
 
 class PhrRecordResponse(BaseModel):
+    """Legacy /record response shape — unchanged so flags-off equivalence holds."""
+
+    full_name: str = ""
+    date_of_birth: date | None = None
+    gender: str = ""
+    blood_type: str = ""
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    phone: str = ""
+    address: str = ""
+    emergency_contact_name: str = ""
+    emergency_contact_phone: str = ""
+    insurance_id: str = ""
+    notes: str = ""
+    allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list)
+    conditions: list[PhrConditionItemLegacy] = Field(default_factory=list)
+    medications: list[PhrMedicationItemLegacy] = Field(default_factory=list)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class PhrEnhancedRecordResponse(BaseModel):
+    """Enhanced /record/enhanced response — surfaces coded/provenance fields."""
+
     full_name: str = ""
     date_of_birth: date | None = None
     gender: str = ""
@@ -1044,5 +1188,72 @@ class PhrRecordResponse(BaseModel):
     allergies: list[PhrAllergyItem] = Field(default_factory=list)
     conditions: list[PhrConditionItem] = Field(default_factory=list)
     medications: list[PhrMedicationItem] = Field(default_factory=list)
+    current_version_no: int = 0
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class PhrEntryPatchRequest(BaseModel):
+    """Entry/field-level patch payload for PATCH /phr/entries/{kind}/{id}."""
+
+    fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class PhrConsentMutationRequest(BaseModel):
+    purpose: Literal["personalization", "research", "sharing"]
+    granted: bool = True
+
+
+class PhrObservationCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    value: str = Field(default="", max_length=120)
+    unit: str = Field(default="", max_length=64)
+    observed_on: date | None = None
+
+
+class PhrShareCreateRequest(BaseModel):
+    scope: Literal["full", "emergency_card"] = "full"
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)
+
+
+class PhrOcrCandidate(BaseModel):
+    """A single OCR-extracted candidate medication awaiting confirmation."""
+
+    name: str = Field(min_length=1, max_length=160)
+    dose: str = Field(default="", max_length=140)
+    frequency: str = Field(default="", max_length=140)
+    ocr_confidence: float | None = Field(default=None, ge=0, le=1)
+    requires_manual_confirm: bool = False
+
+
+class PhrOcrConfirmRequest(BaseModel):
+    """User-edited candidate list to commit as ``ocr``-sourced entries."""
+
+    medications: list[PhrOcrCandidate] = Field(default_factory=list, max_length=120)
+
+
+class PhrReminderCreateRequest(BaseModel):
+    medication_entry_id: str = Field(min_length=1, max_length=64)
+    schedule: dict[str, Any] = Field(default_factory=dict)
+    remaining_supply: float | None = Field(default=None, ge=0)
+    refill_threshold: float | None = Field(default=None, ge=0)
+    caregiver_nudge_enabled: bool = False
+
+
+class PhrReminderDoseState(BaseModel):
+    """Per-medication dose acknowledgement state supplied at dispatch time."""
+
+    dose_marked_taken: bool = False
+    within_window: bool = True
+
+
+class PhrReminderDispatchRequest(BaseModel):
+    """Trigger evaluation + notification dispatch for the owner's reminders.
+
+    ``now`` allows callers (e.g. the scheduler) to pin the evaluation instant;
+    ``dose_states`` carries per-medication-entry acknowledgement state used by
+    the caregiver missed-dose nudge decision (Req 14.5).
+    """
+
+    now: datetime | None = None
+    dose_states: dict[str, PhrReminderDoseState] = Field(default_factory=dict)

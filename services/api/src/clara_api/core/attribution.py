@@ -4,8 +4,8 @@ import re
 from typing import Any
 
 
-def normalize_citations(citations_payload: Any) -> list[dict[str, str]]:
-    rows: list[dict[str, str]] = []
+def normalize_citations(citations_payload: Any) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     if not isinstance(citations_payload, list):
         return rows
 
@@ -23,13 +23,21 @@ def normalize_citations(citations_payload: Any) -> list[dict[str, str]]:
         source = str(raw_source).strip() if raw_source is not None else ""
         if not source:
             source = f"reference-{idx}"
-        citation: dict[str, str] = {"source": source}
+        citation: dict[str, Any] = {"source": source}
 
         raw_url = item.get("url") or item.get("link")
         if raw_url is not None:
             url = str(raw_url).strip()
             if url:
                 citation["url"] = url
+
+        # Additive, flag-gated provenance fields surfaced by CLARA Research Tier2
+        # (R6.2 recency/trust ranking, R11.2 claim-to-study traceability). They are
+        # carried through only when the source dict supplies them, so legacy
+        # citations that never set these keys keep their existing minimal shape.
+        for provenance_key in ("study_id", "source_type", "trust_tier", "published_at"):
+            if provenance_key in item and item[provenance_key] is not None:
+                citation[provenance_key] = item[provenance_key]
 
         rows.append(citation)
     return rows

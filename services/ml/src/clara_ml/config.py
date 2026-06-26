@@ -1,5 +1,15 @@
-from pydantic import AliasChoices, Field
+import logging
+
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+#: Hard ceiling for the deep_beta report word budget. The scope-aware band
+#: (task 3.1) resolves ``target`` inside ``[min_words, max_words]``; this is the
+#: absolute upper bound that ``max_words`` — and therefore ``target`` — can
+#: never exceed (Requirement 1.4, 6.5; design Correctness Property P1).
+DEEP_BETA_REPORT_HARD_MAX_WORDS = 15000
 
 
 class Settings(BaseSettings):
@@ -180,18 +190,42 @@ class Settings(BaseSettings):
         ge=1,
         le=24,
     )
+    # Master flag for CLARA Pro answer-synthesis v2 (scope-aware budget,
+    # de-templating, robust convergence). Default OFF preserves pre-feature
+    # behavior so the work ships dark and is enabled per environment.
+    synthesis_v2_enabled: bool = Field(
+        default=False,
+        validation_alias="SYNTHESIS_V2_ENABLED",
+    )
     deep_beta_report_llm_enabled: bool = Field(
         default=True,
         validation_alias="DEEP_BETA_REPORT_LLM_ENABLED",
     )
+    # deep_beta report length floor. Raised to 8000 for the synthesis-v2 band so
+    # full-scope Pro answers can reach the 8,000-15,000 word target. Bounded
+    # 4000-12000 so a misconfiguration cannot push the floor above the realistic
+    # band or below a coherent dossier length.
     deep_beta_report_min_words: int = Field(
-        default=7000,
+        default=8000,
         validation_alias=AliasChoices(
             "DEEP_BETA_REPORT_MIN_WORDS",
             "DEEP_BETA_REPORT_MIN_CHARS",
         ),
-        ge=600,
-        le=40000,
+        ge=4000,
+        le=12000,
+    )
+    # Hard ceiling for the scope-aware budget band. Never exceeds 15000 words.
+    # The lower static bound (6000) covers the smallest floor+2000 case; the
+    # cross-field ``min <= target <= max <= 15000`` invariant is enforced
+    # separately by config-bounds validation (task 1.2 / Requirement 6.5).
+    deep_beta_report_max_words_cap: int = Field(
+        default=15000,
+        validation_alias=AliasChoices(
+            "DEEP_BETA_REPORT_MAX_WORDS_CAP",
+            "DEEP_BETA_REPORT_MAX_WORDS",
+        ),
+        ge=6000,
+        le=15000,
     )
     deep_beta_report_target_pages: int = Field(
         default=28,
@@ -280,6 +314,13 @@ class Settings(BaseSettings):
     external_ddi_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices("EXTERNAL_DDI_ENABLED", "CAREGUARD_EXTERNAL_DDI_ENABLED"),
+    )
+    # CareGuard optional DrugBank shard layer. Default OFF preserves byte-identical
+    # curated-Vietnamese-rules behavior; consumed by
+    # ``agents/careguard._resolve_ddi_rules`` via ``settings.careguard_drugbank_enabled``.
+    careguard_drugbank_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_ENABLED"),
     )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
@@ -790,6 +831,97 @@ class Settings(BaseSettings):
         ge=1,
         le=4,
     )
+
+    # --- CLARA Research enhancement feature flags (additive; default off) --------
+    # All flags default to the value that preserves current (legacy) behavior.
+    # When every flag below is False/off, the research pipeline produces
+    # byte-for-byte identical output to the pre-enhancement baseline (R20.2).
+    research_query_decomposition_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_QUERY_DECOMPOSITION_ENABLED",
+    )
+    research_gap_fill_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_GAP_FILL_ENABLED",
+    )
+    research_gap_fill_max_passes: int = Field(
+        default=2,
+        validation_alias="RESEARCH_GAP_FILL_MAX_PASSES",
+        ge=0,
+        le=8,
+    )
+    research_recency_trust_ranking_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_RECENCY_TRUST_RANKING_ENABLED",
+    )
+    research_pico_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_PICO_ENABLED",
+    )
+    research_grade_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_GRADE_ENABLED",
+    )
+    research_consensus_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_CONSENSUS_ENABLED",
+    )
+    research_claim_trace_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_CLAIM_TRACE_ENABLED",
+    )
+    research_role_adaptive_output_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED",
+    )
+
+    @model_validator(mode="after")
+    def _enforce_deep_beta_word_budget_bounds(self) -> "Settings":
+        """Guarantee the deep_beta config band can never violate the
+        ``min_words <= max_words_cap <= 15000`` invariant (Requirement 6.5;
+        design Correctness Property P1).
+
+        The per-field bounds already constrain each value to its documented
+        range (``min_words`` 4000-12000, ``max_words_cap`` 6000-15000), but they
+        cannot catch a *cross-field* misconfiguration such as
+        ``DEEP_BETA_REPORT_MIN_WORDS=12000`` together with
+        ``DEEP_BETA_REPORT_MAX_WORDS_CAP=6000`` (each individually valid, yet
+        ``min > max``). Per the design's error-handling strategy we **clamp and
+        log** rather than raise so a misconfiguration degrades gracefully while
+        the invariant still holds: the ceiling (the hard 15000 guarantee) stays
+        authoritative and the floor is lowered to meet it.
+        """
+
+        hard_max = DEEP_BETA_REPORT_HARD_MAX_WORDS
+
+        # Defensive: the ceiling can never exceed the hard cap. The field bound
+        # (le=15000) already enforces this for env input, but clamp anyway so
+        # the invariant holds even if the bound is later relaxed.
+        if self.deep_beta_report_max_words_cap > hard_max:
+            logger.warning(
+                "deep_beta_report_max_words_cap=%d exceeds hard ceiling %d; "
+                "clamping to %d",
+                self.deep_beta_report_max_words_cap,
+                hard_max,
+                hard_max,
+            )
+            self.deep_beta_report_max_words_cap = hard_max
+
+        # The floor must never exceed the ceiling. Clamp the floor down so the
+        # ceiling stays authoritative and ``min <= max`` holds.
+        if self.deep_beta_report_min_words > self.deep_beta_report_max_words_cap:
+            logger.warning(
+                "deep_beta_report_min_words=%d exceeds "
+                "deep_beta_report_max_words_cap=%d; clamping floor to %d so "
+                "min <= max <= %d holds",
+                self.deep_beta_report_min_words,
+                self.deep_beta_report_max_words_cap,
+                self.deep_beta_report_max_words_cap,
+                hard_max,
+            )
+            self.deep_beta_report_min_words = self.deep_beta_report_max_words_cap
+
+        return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

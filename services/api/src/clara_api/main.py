@@ -22,6 +22,10 @@ from clara_api.core.timeouts import TimeoutFloorError, assert_settings_timeout_f
 from clara_api.db import models as _db_models  # noqa: F401
 from clara_api.db.base import Base
 from clara_api.db.session import SessionLocal, engine
+from clara_api.phr.migration_guard import (
+    PhrMigrationGuardError,
+    assert_engine_phr_profiles_migration_managed,
+)
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -38,6 +42,12 @@ _CSRF_EXEMPT_PATHS = {
     "/api/v1/auth/verify-email",
     "/api/v1/auth/resend-verification",
 }
+
+# Public, unauthenticated read-only path prefixes. These register only GET, so an
+# unsupported write verb must surface as 405 Method Not Allowed (not a 403 CSRF
+# failure) even when the caller happens to carry a session cookie. Exempting them
+# from CSRF is safe because no mutating route exists under these prefixes.
+_CSRF_EXEMPT_PREFIXES = ("/api/v1/phr/shared/",)
 
 raw_origins = [
     origin.strip()
@@ -116,6 +126,16 @@ def init_db_schema() -> None:
             raise RuntimeError(
                 "REDIS_URL must be configured when distributed security limiters are enabled."
             )
+    # Migration-management guard (Requirement 1.2): in production the PHR schema
+    # must be created by Alembic migrations, never by the create_all fallback
+    # below. This runs before create_all so the inspected table set reflects the
+    # migration-produced schema. No-op outside production.
+    try:
+        assert_engine_phr_profiles_migration_managed(
+            engine, environment=settings.environment
+        )
+    except PhrMigrationGuardError as exc:
+        raise RuntimeError(str(exc)) from exc
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
@@ -173,6 +193,8 @@ async def enforce_csrf_for_cookie_session(request: Request, call_next):
     if request.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
         return await call_next(request)
     if request.url.path in _CSRF_EXEMPT_PATHS:
+        return await call_next(request)
+    if request.url.path.startswith(_CSRF_EXEMPT_PREFIXES):
         return await call_next(request)
 
     auth_header = request.headers.get("authorization", "").strip().lower()
