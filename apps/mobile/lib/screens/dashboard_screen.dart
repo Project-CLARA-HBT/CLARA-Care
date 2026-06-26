@@ -5,6 +5,7 @@ import '../core/api_client.dart';
 import '../core/session_store.dart';
 import 'careguard_screen.dart';
 import 'council_screen.dart';
+import 'phr_screen.dart';
 import 'research_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -217,6 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ResearchScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
+                  deepResearchEnabled: _featureEnabled('research_mobile_deep'),
                 ),
               ),
             ),
@@ -239,6 +241,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               enabled: canCouncil,
               onTap: () => _openScreen(
                 CouncilScreen(
+                  apiClient: widget.apiClient,
+                  sessionStore: widget.sessionStore,
+                ),
+              ),
+            ),
+            // PHR is available to every authenticated role (RBAC normal/
+            // researcher/doctor/admin — Requirement 18.2), so the tile is always
+            // enabled (personal-health-record Requirement 17.1).
+            _FeatureTile(
+              icon: Icons.folder_shared,
+              title: 'Hồ sơ sức khỏe',
+              subtitle: 'Xem và cập nhật hồ sơ tự khai',
+              enabled: true,
+              onTap: () => _openScreen(
+                PhrScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
                 ),

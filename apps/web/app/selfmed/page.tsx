@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
+import { trackCareguardViewed } from "@/lib/analytics/events";
 
 type TimelineEntry = {
   id: number;
@@ -241,6 +242,10 @@ export default function SelfMedPage() {
   };
 
   useEffect(() => {
+    // Emit a named SelfMed/CareGuard product event (Req 9.1). The facade
+    // suppresses transmission without consent/credentials and strips PII; only
+    // the coarse surface label is sent.
+    trackCareguardViewed({ surface: "selfmed" });
     void refreshCabinet();
   }, []);
 

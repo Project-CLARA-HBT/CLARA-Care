@@ -24,7 +24,11 @@ import {
   ANALYTICS_EVENTS,
   trackAdminSurfaceViewed,
   trackChatMessageSent,
-  trackCareguardDdiChecked
+  trackCareguardDdiChecked,
+  trackCouncilRun,
+  trackCouncilViewed,
+  trackResearchSourcesSynced,
+  trackResearchViewed
 } from "@/lib/analytics/events";
 
 beforeEach(() => {
@@ -118,5 +122,79 @@ describe("Shared emitter contract (Feature: product-polish-analytics, Req 9.1)",
       alert_count: 2,
       medicine_count: 3
     });
+  });
+});
+
+describe("Research surface events (Feature: product-polish-analytics, Req 9.1)", () => {
+  it("declares the research source-sync named event", () => {
+    expect(ANALYTICS_EVENTS.researchViewed).toBe("research_viewed");
+    expect(ANALYTICS_EVENTS.researchSourcesSynced).toBe("research_sources_synced");
+  });
+
+  it("emits research_viewed with the surface label only (no PII)", () => {
+    trackResearchViewed();
+    expect(trackMock).toHaveBeenCalledWith("research_viewed", {
+      surface: "research"
+    });
+  });
+
+  it("emits research_sources_synced with coarse source key + counts only", () => {
+    trackResearchSourcesSynced({ source: "pubmed", fetched: 12, stored: 9 });
+    expect(trackMock).toHaveBeenCalledWith("research_sources_synced", {
+      surface: "research",
+      source: "pubmed",
+      fetched: 12,
+      stored: 9
+    });
+  });
+
+  it("never attaches query text or record content to research sync events", () => {
+    trackResearchSourcesSynced({ source: "openfda", fetched: 5, stored: 5 });
+    for (const call of trackMock.mock.calls) {
+      const props = (call[1] ?? {}) as Record<string, unknown>;
+      expect(Object.keys(props).sort()).toEqual(["fetched", "source", "stored", "surface"]);
+    }
+  });
+});
+
+describe("Council surface events (Feature: product-polish-analytics, Req 9.1)", () => {
+  it("declares the council named events", () => {
+    expect(ANALYTICS_EVENTS.councilViewed).toBe("council_viewed");
+    expect(ANALYTICS_EVENTS.councilRun).toBe("council_run");
+  });
+
+  it("emits council_viewed with the surface label only (no PII)", () => {
+    trackCouncilViewed();
+    expect(trackMock).toHaveBeenCalledWith("council_viewed", {
+      surface: "council"
+    });
+  });
+
+  it("emits council_viewed with a coarse view label when provided", () => {
+    trackCouncilViewed({ view: "result" });
+    expect(trackMock).toHaveBeenCalledWith("council_viewed", {
+      surface: "council",
+      view: "result"
+    });
+  });
+
+  it("emits council_run with the coarse specialist count only", () => {
+    trackCouncilRun({ specialistCount: 3 });
+    expect(trackMock).toHaveBeenCalledWith("council_run", {
+      surface: "council",
+      specialist_count: 3
+    });
+  });
+
+  it("never attaches case or patient content to council events", () => {
+    trackCouncilViewed({ view: "landing" });
+    trackCouncilRun({ specialistCount: 4 });
+    for (const call of trackMock.mock.calls) {
+      const props = (call[1] ?? {}) as Record<string, unknown>;
+      for (const key of Object.keys(props)) {
+        expect(["surface", "view", "specialist_count"]).toContain(key);
+      }
+      expect(props.surface).toBe("council");
+    }
   });
 });

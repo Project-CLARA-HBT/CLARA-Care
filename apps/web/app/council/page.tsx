@@ -6,6 +6,8 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { getRole } from "@/lib/auth-store";
+import { trackCouncilViewed } from "@/lib/analytics/events";
+import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
@@ -21,11 +23,11 @@ type SeverityLevel = "stable" | "warning" | "critical";
 type CouncilBannerState = "stable" | "review" | "conflict" | "safety" | "incomplete";
 type GuardAction = "override" | "pause";
 
-const PANEL_CLASS = "rounded-lg border border-[#B6D4FE] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
-const SOFT_PANEL_CLASS = "rounded-lg border border-[#93C5FD] bg-[#EEF6FF] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
-const BODY_TEXT_CLASS = "text-[#1F2937] dark:text-slate-100";
-const SECONDARY_TEXT_CLASS = "text-[#4B5563] dark:text-slate-300";
-const MUTED_TEXT_CLASS = "text-[#64748B] dark:text-slate-400";
+const PANEL_CLASS = "rounded-lg border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+const SOFT_PANEL_CLASS = "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+const BODY_TEXT_CLASS = "text-[color:var(--text-primary)] dark:text-slate-100";
+const SECONDARY_TEXT_CLASS = "text-[color:var(--text-muted)] dark:text-slate-300";
+const MUTED_TEXT_CLASS = "text-[color:var(--text-muted)] dark:text-slate-400";
 
 function parseNumericLab(value: string): number | null {
   const match = value.match(/-?\d+(?:\.\d+)?/);
@@ -90,7 +92,7 @@ function normalizeSearch(value: string): string {
 }
 
 function summarizeClinicalText(value: string | undefined, fallback: string): string {
-  const text = value?.trim();
+  const text = stripTelemetryLabels(value ?? "").trim();
   if (!text) return fallback;
   const firstLine = text.split(/\n|\.\s+/)[0]?.trim() || text;
   if (firstLine.length <= 130) return firstLine;
@@ -192,6 +194,8 @@ export default function CouncilPage() {
 
   useEffect(() => {
     setRoleState(getRole());
+    // The Council surface was viewed (Req 9.1). No PII — coarse view label only.
+    trackCouncilViewed({ view: "landing" });
   }, []);
 
   useEffect(() => {
@@ -343,7 +347,7 @@ export default function CouncilPage() {
       id: `${step.sequence}-${step.step}`,
       time: `Bước ${step.sequence}`,
       title: getTimelineTitle(step.step),
-      detail: step.detail,
+      detail: stripTelemetryLabels(step.detail),
       status: getTimelineStatus(
         getTimelineTitle(step.step),
         missingCriticalData,
@@ -392,7 +396,7 @@ export default function CouncilPage() {
           <div className="flex">
             <Link
               href="/council/new"
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-[#2563EB] bg-[#2563EB] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1D4ED8]"
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[color:var(--brand-700)]"
             >
               Mở trang nhập ca bệnh
             </Link>
@@ -437,7 +441,7 @@ export default function CouncilPage() {
             <article className={`${PANEL_CLASS} overflow-hidden p-6`}>
               <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}>
-                  <span className="h-4 w-1 rounded-full bg-[#2563EB]" />
+                  <span className="h-4 w-1 rounded-full bg-[color:var(--brand-600)]" />
                   Sơ đồ bất đồng chuyên khoa
                 </h3>
                 <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
@@ -447,13 +451,13 @@ export default function CouncilPage() {
 
               <div className={`${SOFT_PANEL_CLASS} p-5`}>
                 <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                  <div className="rounded-lg border border-[#93C5FD] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#DBEAFE] text-[#1D4ED8] dark:bg-sky-500/20 dark:text-sky-100">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--surface-brand-soft)] text-[color:var(--brand-700)] dark:bg-sky-500/20 dark:text-sky-100">
                         <span className="material-symbols-outlined">cardiology</span>
                       </div>
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#2563EB] dark:text-sky-200">{cardiologyNode}</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">{cardiologyNode}</p>
                         <p className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}>Tim mạch đề xuất gì?</p>
                       </div>
                     </div>
@@ -467,7 +471,7 @@ export default function CouncilPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-[#93C5FD] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100">
                         <span className="material-symbols-outlined">medication</span>
@@ -491,8 +495,8 @@ export default function CouncilPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#2563EB] dark:text-sky-200">MAP</p>
-                  <span className="material-symbols-outlined text-sm text-[#2563EB] dark:text-sky-200">show_chart</span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">MAP</p>
+                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">show_chart</span>
                 </div>
                 <div className="flex items-end gap-2">
                   <span className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}>
@@ -504,8 +508,8 @@ export default function CouncilPage() {
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#2563EB] dark:text-sky-200">Creatinine/eGFR</p>
-                  <span className="material-symbols-outlined text-sm text-[#2563EB] dark:text-sky-200">science</span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">Creatinine/eGFR</p>
+                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">science</span>
                 </div>
                 <div className="flex items-end gap-2">
                   <span className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}>
@@ -517,8 +521,8 @@ export default function CouncilPage() {
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#2563EB] dark:text-sky-200">Độ tin cậy AI</p>
-                  <span className="material-symbols-outlined text-sm text-[#2563EB] dark:text-sky-200">bolt</span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">Độ tin cậy AI</p>
+                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">bolt</span>
                 </div>
                 <div className="flex items-end gap-2">
                   <span className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}>
@@ -526,8 +530,8 @@ export default function CouncilPage() {
                   </span>
                   <span className={`mb-1 text-xs font-bold ${MUTED_TEXT_CLASS}`}>{confidenceStateLabel}</span>
                 </div>
-                <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[#DBEAFE] dark:bg-slate-700">
-                  <div className="h-full bg-[#2563EB]" style={{ width: `${confidenceBarWidth}%` }} />
+                <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[color:var(--surface-brand-soft)] dark:bg-slate-700">
+                  <div className="h-full bg-[color:var(--brand-600)]" style={{ width: `${confidenceBarWidth}%` }} />
                 </div>
                 {missingCriticalData ? (
                   <p className="mt-3 text-xs font-semibold text-amber-800 dark:text-amber-200">
@@ -541,13 +545,13 @@ export default function CouncilPage() {
           <div className="flex flex-col gap-6 xl:col-span-4">
             <article className={`${PANEL_CLASS} flex-1 p-6`}>
               <h3 className={`mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}>
-                <span className="material-symbols-outlined text-[#2563EB] dark:text-sky-200">history</span>
+                <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">history</span>
                 Timeline hội chẩn
               </h3>
 
               {timeline.length ? (
                 <div className="relative space-y-6">
-                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[#B6D4FE] dark:bg-sky-800" />
+                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)] dark:bg-sky-800" />
                   {timeline.map((step) => {
                     const meta = timelineStatusMeta(step.status);
                     const dotClass =
@@ -595,7 +599,7 @@ export default function CouncilPage() {
               <button
                 type="button"
                 onClick={() => setHandoffOpen(true)}
-                className="group flex w-full items-center justify-between rounded-lg border border-[#2563EB] bg-[#2563EB] p-4 text-white shadow-sm transition hover:bg-[#1D4ED8]"
+                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-white shadow-sm transition hover:bg-[color:var(--brand-700)]"
               >
                 <div className="text-left">
                   <p className="text-base font-black leading-tight">Mời bác sĩ phụ trách xem lại</p>
@@ -612,10 +616,10 @@ export default function CouncilPage() {
                       setGuardAction("override");
                       setGuardReason("");
                     }}
-                    className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[#F8FBFF] dark:hover:bg-slate-800`}
+                    className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[color:var(--surface-muted)] dark:hover:bg-slate-800`}
                   >
-                    <span className="material-symbols-outlined text-[#2563EB] dark:text-sky-200">touch_app</span>
-                    <p className="text-xs font-bold text-[#1E3A8A] dark:text-sky-100">Ghi đè quyết định</p>
+                    <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">touch_app</span>
+                    <p className="text-xs font-bold text-[color:var(--text-brand)] dark:text-sky-100">Ghi đè quyết định</p>
                   </button>
                   <button
                     type="button"
@@ -691,7 +695,7 @@ export default function CouncilPage() {
 
         {handoffOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true">
-            <div className="w-full max-w-2xl rounded-xl border border-[#B6D4FE] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
+            <div className="w-full max-w-2xl rounded-xl border border-[color:var(--shell-border)] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>Mời chuyên khoa hội chẩn</h3>
@@ -700,7 +704,7 @@ export default function CouncilPage() {
                 <button
                   type="button"
                   onClick={() => setHandoffOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#B6D4FE] text-[#1F2937] hover:bg-[#F8FBFF] dark:border-sky-700 dark:text-slate-100 dark:hover:bg-slate-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:text-slate-100 dark:hover:bg-slate-800"
                   aria-label="Đóng"
                 >
                   <span className="material-symbols-outlined text-[20px]">close</span>
@@ -718,12 +722,12 @@ export default function CouncilPage() {
                       className={[
                         "rounded-lg border p-3 text-left transition",
                         active
-                          ? "border-[#2563EB] bg-[#DBEAFE] text-[#1E3A8A] shadow-sm dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100"
-                          : "border-[#B6D4FE] bg-white text-[#1F2937] hover:border-[#2563EB] hover:bg-[#F8FBFF] dark:border-sky-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500",
+                          ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-brand)] shadow-sm dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100"
+                          : "border-[color:var(--shell-border)] bg-white text-[color:var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)] dark:border-sky-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500",
                       ].join(" ")}
                     >
                       <p className="font-bold">{item.name}</p>
-                      <p className="mt-1 text-xs font-medium leading-relaxed text-[#4B5563] dark:text-slate-300">{item.reason}</p>
+                      <p className="mt-1 text-xs font-medium leading-relaxed text-[color:var(--text-muted)] dark:text-slate-300">{item.reason}</p>
                     </button>
                   );
                 })}
@@ -733,14 +737,14 @@ export default function CouncilPage() {
                 <button
                   type="button"
                   onClick={() => setHandoffOpen(false)}
-                  className="min-h-[44px] rounded-lg border border-[#B6D4FE] bg-white px-4 text-sm font-bold text-[#1F2937] hover:bg-[#F8FBFF] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
                   onClick={confirmHandoff}
-                  className="min-h-[44px] rounded-lg border border-[#2563EB] bg-[#2563EB] px-4 text-sm font-bold text-white hover:bg-[#1D4ED8]"
+                  className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-bold text-white hover:bg-[color:var(--brand-700)]"
                 >
                   Gửi yêu cầu hội chẩn
                 </button>
@@ -751,7 +755,7 @@ export default function CouncilPage() {
 
         {guardAction ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true">
-            <div className="w-full max-w-xl rounded-xl border border-[#B6D4FE] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
+            <div className="w-full max-w-xl rounded-xl border border-[color:var(--shell-border)] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
               <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
                 {guardAction === "override" ? "Ghi đè quyết định" : "Tạm dừng quy trình"}
               </h3>
@@ -767,14 +771,14 @@ export default function CouncilPage() {
                 id="guard-reason"
                 value={guardReason}
                 onChange={(event) => setGuardReason(event.target.value)}
-                className="mt-2 min-h-[120px] w-full rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 py-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#6B7280] focus:border-[#2563EB] focus:ring-4 focus:ring-blue-200/70 dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-500/20"
+                className="mt-2 min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-3 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--brand-600)] focus:ring-4 focus:ring-blue-200/70 dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-500/20"
                 placeholder="Ví dụ: Dữ liệu lâm sàng mới cho thấy cần ưu tiên xử trí khác..."
               />
               <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeGuardDialog}
-                  className="min-h-[44px] rounded-lg border border-[#B6D4FE] bg-white px-4 text-sm font-bold text-[#1F2937] hover:bg-[#F8FBFF] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
                   Hủy
                 </button>

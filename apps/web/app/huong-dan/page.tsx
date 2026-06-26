@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { PRIMARY_ACTIONS, type PrimarySurface } from "@/lib/primary-actions";
 
 type GuideTask = {
   title: string;
   detail: string;
-  href: string;
-  action: string;
+  surface: PrimarySurface;
   icon: string;
   steps: string[];
 };
@@ -13,48 +13,42 @@ const TASKS: GuideTask[] = [
   {
     title: "Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc",
     detail: "Dùng khi bạn cần câu trả lời nhanh, dễ đọc, có nhắc an toàn.",
-    href: "/chat",
-    action: "Mở hỏi CLARA",
+    surface: "chat",
     icon: "chat",
     steps: ["Nhập câu hỏi bằng ngôn ngữ bình thường.", "Chọn Nhanh nếu chỉ cần trả lời ngắn.", "Đọc phần lưu ý an toàn trước khi làm theo."],
   },
   {
     title: "Tôi muốn câu trả lời kỹ hơn",
     detail: "Dùng Tư duy hoặc Pro khi cần phân tích dài, nhiều nguồn hơn.",
-    href: "/chat",
-    action: "Mở chế độ Tư duy",
+    surface: "chat_thinking",
     icon: "psychology",
     steps: ["Bấm nút chỉnh chế độ cạnh ô nhập.", "Chọn Tư duy cho phân tích kỹ hơn, Pro cho báo cáo dài.", "Chọn Đầy đủ nguồn nếu muốn CLARA kiểm tra nhiều nguồn hơn."],
   },
   {
     title: "Tôi muốn lưu thuốc đang dùng",
     detail: "Tủ thuốc giúp CLARA nhớ danh sách thuốc để kiểm tra tương tác.",
-    href: "/selfmed",
-    action: "Mở tủ thuốc",
+    surface: "selfmed",
     icon: "medication",
     steps: ["Thêm từng thuốc hoặc quét ảnh đơn thuốc.", "Bổ sung liều dùng nếu biết.", "Khi có ít nhất 2 thuốc, chạy kiểm tra tương tác."],
   },
   {
     title: "Tôi muốn kiểm tra hai thuốc có kỵ nhau không",
     detail: "Dùng mục kiểm tra tương tác thuốc trước khi phối hợp nhiều thuốc.",
-    href: "/selfmed/ddi",
-    action: "Kiểm tra tương tác",
+    surface: "ddi",
     icon: "health_and_safety",
     steps: ["Đảm bảo tủ thuốc đã có ít nhất 2 thuốc.", "Bấm Kiểm tra tương tác thuốc.", "Đọc cặp thuốc bị cảnh báo và phần Bạn nên làm gì."],
   },
   {
     title: "Tôi là bác sĩ và cần hội chẩn ca khó",
     detail: "Hội chẩn AI phù hợp khi ca có nhiều hướng xử trí hoặc nhiều chuyên khoa.",
-    href: "/council",
-    action: "Mở hội chẩn AI",
+    surface: "council",
     icon: "groups",
     steps: ["Nhập bối cảnh ca bệnh rõ ràng.", "Thêm kết quả xét nghiệm hoặc ghi chú nếu có.", "Dùng kết quả như tài liệu tham khảo, không thay thế quyết định lâm sàng."],
   },
   {
     title: "Tôi muốn ghi lại buổi khám",
     detail: "Medical scribe giúp chuyển ghi chú thành bản tóm tắt có cấu trúc.",
-    href: "/scribe",
-    action: "Mở ghi chép y khoa",
+    surface: "scribe",
     icon: "edit_note",
     steps: ["Nhập hoặc dán nội dung buổi khám.", "Kiểm tra lại bản SOAP trước khi dùng.", "Không đưa thông tin nhạy cảm nếu chưa có đồng ý phù hợp."],
   },
@@ -80,25 +74,28 @@ export default function GuidePage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-2">
-        {TASKS.map((task) => (
-          <article key={task.title} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined mt-0.5 text-[22px] text-[var(--brand-600)]">{task.icon}</span>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold text-[var(--text-primary)]">{task.title}</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{task.detail}</p>
+        {TASKS.map((task) => {
+          const action = PRIMARY_ACTIONS[task.surface];
+          return (
+            <article key={task.title} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="material-symbols-outlined mt-0.5 text-[22px] text-[var(--brand-600)]">{task.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">{task.title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{task.detail}</p>
+                </div>
               </div>
-            </div>
-            <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-[var(--text-secondary)]">
-              {task.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <Link href={task.href} className="mt-4 inline-flex min-h-10 items-center rounded-md bg-[var(--text-primary)] px-3 text-sm font-semibold text-[var(--bg-canvas)] transition hover:opacity-90">
-              {task.action}
-            </Link>
-          </article>
-        ))}
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-[var(--text-secondary)]">
+                {task.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              <Link href={action.href} className="focus-ring mt-4 inline-flex min-h-10 items-center rounded-md bg-[var(--text-primary)] px-3 text-sm font-semibold text-[var(--bg-canvas)] transition hover:opacity-90">
+                {action.label}
+              </Link>
+            </article>
+          );
+        })}
       </section>
 
       <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">

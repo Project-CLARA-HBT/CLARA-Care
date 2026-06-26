@@ -34,6 +34,11 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
   const result = turn.result;
   const answer = sanitizeChatboxAnswer(result.answer || "");
   const citations = result.tier === "tier2" ? result.citations : [];
+  // Claim-to-study traceability + Citation Registry (Requirement 11). Surfaced
+  // only on tier2 results that carry them; tolerate persisted results where the
+  // fields may be absent.
+  const tracedClaims = result.tier === "tier2" ? result.tracedClaims ?? [] : [];
+  const citationRegistry = result.tier === "tier2" ? result.citationRegistry ?? [] : [];
 
   return (
     <div className="space-y-1.5">
@@ -62,6 +67,8 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
               stripMermaidBlocks={true}
               stripChartSpecBlocks={true}
               uiLanguage={uiLanguage}
+              tracedClaims={tracedClaims}
+              citationRegistry={citationRegistry}
             />
           </section>
         </article>

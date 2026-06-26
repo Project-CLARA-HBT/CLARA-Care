@@ -5,6 +5,10 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { trackCouncilViewed } from "@/lib/analytics/events";
+import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
@@ -49,6 +53,12 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [role, setRole] = useState<UserRole>("normal");
+  useEffect(() => {
+    setRole(getRole());
+    // The Council surface was viewed (Req 9.1). No PII — coarse tab label only.
+    trackCouncilViewed({ view: tab });
+  }, [tab]);
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get("caseId");
     const parsed = Number(raw);
@@ -102,19 +112,19 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Key Signals</p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.keySignals} emptyText="Không có key signal." />
+                  <CouncilList items={view.analyze.keySignals.map(stripTelemetryLabels)} emptyText="Không có key signal." />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Risk Drivers</p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.riskDrivers} emptyText="Không có risk driver nổi bật." />
+                  <CouncilList items={view.analyze.riskDrivers.map(stripTelemetryLabels)} emptyText="Không có risk driver nổi bật." />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Action Items</p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.actionItems} emptyText="Không có action item." />
+                  <CouncilList items={view.analyze.actionItems.map(stripTelemetryLabels)} emptyText="Không có action item." />
                 </div>
               </article>
             </div>
@@ -130,9 +140,9 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                   className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">{item.specialist}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--text-secondary)]">{item.reasoning}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(item.reasoning)}</p>
                   {item.recommendation ? (
-                    <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{item.recommendation}</p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{stripTelemetryLabels(item.recommendation)}</p>
                   ) : null}
                 </article>
               ))}
@@ -152,7 +162,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">{item.source || "Clinical source"}</p>
                     {item.snippet ? (
-                      <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{item.snippet}</p>
+                      <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(item.snippet)}</p>
                     ) : null}
                     {item.url ? (
                       <a
@@ -179,19 +189,19 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Highlights</p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.highlights} emptyText="Không có highlights." />
+                  <CouncilList items={view.research.highlights.map(stripTelemetryLabels)} emptyText="Không có highlights." />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Open Questions</p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.openQuestions} emptyText="Không có open questions." />
+                  <CouncilList items={view.research.openQuestions.map(stripTelemetryLabels)} emptyText="Không có open questions." />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Next Steps</p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.nextSteps} emptyText="Không có next steps." />
+                  <CouncilList items={view.research.nextSteps.map(stripTelemetryLabels)} emptyText="Không có next steps." />
                 </div>
               </article>
             </div>
@@ -208,16 +218,19 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">{section.title}</p>
                   <div className="mt-2">
-                    <CouncilList items={section.items} emptyText="Không có dữ liệu cho section này." />
+                    <CouncilList items={section.items.map(stripTelemetryLabels)} emptyText="Không có dữ liệu cho section này." />
                   </div>
                 </article>
               ))}
-              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Raw Preview</p>
-                <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-black/5 p-3 text-xs text-[var(--text-secondary)] dark:bg-white/5">
-                  {view.deepDive.rawPreview}
-                </pre>
-              </article>
+              {/* Raw snapshot preview is internal/engineering telemetry — Admin_Users only (Req 4.1). */}
+              <TelemetryPanel role={role}>
+                <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Raw Preview</p>
+                  <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-black/5 p-3 text-xs text-[var(--text-secondary)] dark:bg-white/5">
+                    {view.deepDive.rawPreview}
+                  </pre>
+                </article>
+              </TelemetryPanel>
             </div>
           </CouncilSection>
         ) : null}

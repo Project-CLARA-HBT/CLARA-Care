@@ -94,6 +94,8 @@ class MobileAnalyticsEvents {
   static const String careguardAnalyzed = 'mobile_careguard_analyzed';
   static const String councilViewed = 'mobile_council_viewed';
   static const String councilRun = 'mobile_council_run';
+  static const String phrViewed = 'mobile_phr_viewed';
+  static const String phrSaved = 'mobile_phr_saved';
 }
 
 /// Consent + PII guarded analytics client mirroring the web `AnalyticsClient`.
