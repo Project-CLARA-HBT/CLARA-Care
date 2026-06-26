@@ -26,6 +26,20 @@ export default function EvidencePanel({ citations }: EvidencePanelProps) {
                 [{index + 1}] {citation.source ?? citation.title}
               </p>
               <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{citation.title}</p>
+              {citation.trustTier !== undefined || citation.publishedAt ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {citation.trustTier !== undefined ? (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      Tier {citation.trustTier}
+                    </span>
+                  ) : null}
+                  {citation.publishedAt ? (
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {citation.publishedAt}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               {citation.snippet ? (
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{citation.snippet}</p>
               ) : null}

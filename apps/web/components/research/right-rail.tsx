@@ -12,6 +12,7 @@ import {
 } from "@/lib/research";
 import DebugHintsPanel from "@/components/research/debug-hints-panel";
 import EvidencePanel from "@/components/research/evidence-panel";
+import ConsensusPanel from "@/components/research/consensus-panel";
 import FlowTimelinePanel from "@/components/research/flow-timeline-panel";
 import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel";
 import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
@@ -157,7 +158,12 @@ export default function ResearchRightRail({
         isProcessing={isSubmitting}
       />
     ),
-    evidence: <EvidencePanel citations={citations} />,
+    evidence: (
+      <div className="space-y-4">
+        <EvidencePanel citations={citations} />
+        <ConsensusPanel consensus={telemetry.consensus} />
+      </div>
+    ),
     sources: (
       <KnowledgeSourcesPanel
         sources={knowledgeSources}
@@ -227,6 +233,7 @@ export default function ResearchRightRail({
           />
         </TelemetryPanel>
         <EvidencePanel citations={citations} />
+        <ConsensusPanel consensus={telemetry.consensus} />
         <KnowledgeSourcesPanel
           sources={knowledgeSources}
           selectedSourceIds={selectedSourceIds}

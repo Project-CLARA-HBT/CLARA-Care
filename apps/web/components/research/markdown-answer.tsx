@@ -6,6 +6,12 @@ import remarkGfm from "remark-gfm";
 import { toPng } from "html-to-image";
 import type { UILanguage } from "@/lib/ui-language";
 import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
+import {
+  citationRegistryAnchorId,
+  injectTracedClaimAnchors,
+  type ResearchTier2CitationRegistryEntry,
+  type ResearchTier2TracedClaim
+} from "@/lib/research";
 
 export type MarkdownAnswerCitation = {
   title: string;
@@ -22,6 +28,19 @@ export type MarkdownAnswerProps = {
   stripMermaidBlocks?: boolean;
   stripChartSpecBlocks?: boolean;
   uiLanguage?: UILanguage;
+  /**
+   * Claim-to-study traceability (Requirement 11.1). When provided alongside a
+   * non-empty `citationRegistry`, inline sentence-level anchors are rendered
+   * after each matched claim (Requirement 11.3). Absent/empty preserves the
+   * legacy answer rendering.
+   */
+  tracedClaims?: ResearchTier2TracedClaim[];
+  /**
+   * Citation Registry appendix entries (Requirement 11.4). Rendered as a
+   * resolvable appendix below the answer so every inline anchor links to its
+   * registry row. Absent/empty renders nothing extra.
+   */
+  citationRegistry?: ResearchTier2CitationRegistryEntry[];
 };
 
 type MermaidBlockProps = {
@@ -896,6 +915,83 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
   );
 }
 
+function formatTrustTier(trustTier?: number): string | null {
+  return typeof trustTier === "number" && Number.isFinite(trustTier) ? `Tier ${trustTier}` : null;
+}
+
+/**
+ * Citation Registry appendix (Requirement 11.4, design §11). Lists every
+ * citation referenced by the report with its study identifier, source type,
+ * trust tier, and date. Each row carries a stable DOM id so the inline
+ * sentence-level anchors (Requirement 11.3) resolve here. Renders nothing when
+ * the registry is empty, preserving the legacy answer layout.
+ */
+function CitationRegistryAppendix({
+  entries,
+  isEnglishUI,
+}: {
+  entries: ResearchTier2CitationRegistryEntry[];
+  isEnglishUI: boolean;
+}) {
+  if (!entries.length) return null;
+
+  const heading = isEnglishUI ? "Citation Registry" : "Danh mục trích dẫn";
+
+  return (
+    <section className="mt-6 border-t border-slate-200 pt-3 dark:border-slate-700">
+      <h2 className="text-[0.96rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+        {heading}
+      </h2>
+      <ol className="mt-2.5 space-y-2">
+        {entries.map((entry, index) => {
+          const anchorId = citationRegistryAnchorId(entry.citationId);
+          const trustTier = formatTrustTier(entry.trustTier);
+          const meta = [entry.sourceType, trustTier, entry.publishedAt].filter(Boolean);
+          const href = sanitizeHref(entry.url);
+          return (
+            <li
+              key={`${entry.citationId}-${index}`}
+              id={anchorId}
+              className="scroll-mt-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100"
+            >
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[10px] font-semibold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  {entry.title ? (
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{entry.title}</p>
+                  ) : null}
+                  {entry.studyId ? (
+                    <p className="font-mono text-[12px] text-slate-600 dark:text-slate-300">
+                      {entry.studyId}
+                    </p>
+                  ) : null}
+                  {meta.length ? (
+                    <p className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                      {meta.join(" · ")}
+                    </p>
+                  ) : null}
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer noopener nofollow"
+                      className="break-all text-[12px] font-medium text-cyan-700 underline decoration-cyan-500/50 underline-offset-2 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+                    >
+                      {href}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 export default function MarkdownAnswer({
   answer,
   citations,
@@ -906,6 +1002,8 @@ export default function MarkdownAnswer({
   stripMermaidBlocks = true,
   stripChartSpecBlocks = true,
   uiLanguage = "vi",
+  tracedClaims,
+  citationRegistry,
 }: MarkdownAnswerProps) {
   const normalized = useMemo(
     () =>
@@ -917,10 +1015,17 @@ export default function MarkdownAnswer({
       }),
     [answer, stripReferenceSection, stripSafetyMatrixSection, stripMermaidBlocks, stripChartSpecBlocks]
   );
-  const renderedMarkdown = useMemo(
-    () => (showInlineCitations ? materializeInlineCitations(normalized, citations) : normalized),
-    [citations, normalized, showInlineCitations]
-  );
+  const renderedMarkdown = useMemo(() => {
+    const base = showInlineCitations ? materializeInlineCitations(normalized, citations) : normalized;
+    // Render inline sentence-level citation anchors that resolve into the
+    // Citation Registry appendix (Requirement 11.3, 11.4). Surfaced only when
+    // both traced claims and a registry are present, so legacy answers are
+    // unchanged.
+    if (tracedClaims?.length && citationRegistry?.length) {
+      return injectTracedClaimAnchors(base, tracedClaims, citationRegistry);
+    }
+    return base;
+  }, [citations, normalized, showInlineCitations, tracedClaims, citationRegistry]);
   const [exportNotice, setExportNotice] = useState<string>("");
   const contentId = useMemo(() => `markdown-answer-${Math.random().toString(36).slice(2, 10)}`, []);
   const exportBaseName = useMemo(() => buildExportBaseName(normalized), [normalized]);
@@ -933,6 +1038,19 @@ export default function MarkdownAnswer({
           }, {})
         : {},
     [citations, showInlineCitations]
+  );
+  // Anchor-id -> registry entry, for resolving inline citation-anchor tooltips
+  // and verifying that anchors point into the appendix (Requirement 11.4).
+  const registryByAnchor = useMemo(
+    () =>
+      (citationRegistry ?? []).reduce<Record<string, ResearchTier2CitationRegistryEntry>>(
+        (acc, entry) => {
+          acc[citationRegistryAnchorId(entry.citationId)] = entry;
+          return acc;
+        },
+        {}
+      ),
+    [citationRegistry]
   );
   const isEnglishUI = uiLanguage === "en";
 
@@ -1099,18 +1217,30 @@ export default function MarkdownAnswer({
           a: ({ href, children, ...props }) => {
             const text =
               Array.isArray(children) && typeof children[0] === "string" ? children[0] : "";
+            const registryAnchorId =
+              typeof href === "string" && href.startsWith("#citation-")
+                ? href.slice(1)
+                : undefined;
+            const registryEntry = registryAnchorId ? registryByAnchor[registryAnchorId] : undefined;
             const citationMatch = text.match(/^\[(\d+)\]$/);
-            const citation = citationMatch ? citationMap[citationMatch[1]] : undefined;
-            const resolvedHref = sanitizeHref(href) ?? sanitizeHref(citation?.url) ?? "#";
+            const citation = citationMatch && !registryEntry ? citationMap[citationMatch[1]] : undefined;
+            // Inline registry anchors resolve to the in-page Citation Registry
+            // appendix (Requirement 11.3, 11.4); never treat them as external.
+            const resolvedHref = registryAnchorId
+              ? `#${registryAnchorId}`
+              : sanitizeHref(href) ?? sanitizeHref(citation?.url) ?? "#";
             const external = resolvedHref.startsWith("http://") || resolvedHref.startsWith("https://");
-            const isCitationLink = Boolean(citationMatch);
+            const isCitationLink = Boolean(citationMatch) || Boolean(registryEntry);
+            const registryTitle = registryEntry
+              ? [registryEntry.studyId, registryEntry.title].filter(Boolean).join(" · ") || undefined
+              : undefined;
             return (
               <a
                 {...props}
                 href={resolvedHref}
                 target={external ? "_blank" : undefined}
                 rel={external ? "noreferrer noopener nofollow" : undefined}
-                title={citation?.title}
+                title={registryTitle ?? citation?.title}
                 className={
                   isCitationLink
                     ? "ml-0.5 inline-flex min-w-[1rem] -translate-y-[0.28rem] items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[9px] font-semibold text-cyan-700 no-underline transition hover:bg-cyan-500/16 hover:text-cyan-900 dark:bg-cyan-500/12 dark:text-cyan-300 dark:hover:text-cyan-100"
@@ -1198,6 +1328,7 @@ export default function MarkdownAnswer({
       >
         {renderedMarkdown}
       </ReactMarkdown>
+      <CitationRegistryAppendix entries={citationRegistry ?? []} isEnglishUI={isEnglishUI} />
       </div>
     </div>
   );
