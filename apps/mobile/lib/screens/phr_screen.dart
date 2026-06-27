@@ -615,7 +615,17 @@ class _PhrScreenState extends State<PhrScreen> {
 
   Widget _buildBody(BuildContext context, PhrStrings s, PhrRecordModel? record) {
     if (_loading && record == null) {
-      return const Center(child: CircularProgressIndicator());
+      // Keep the self-declared disclaimer present even while loading so it is
+      // persistent on every PHR surface (Requirement 5.3 / 17.4).
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: PhrDisclaimerBanner(text: s.disclaimer),
+          ),
+          const Expanded(child: Center(child: CircularProgressIndicator())),
+        ],
+      );
     }
     if (_loadError != null && record == null) {
       return Center(

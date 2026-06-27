@@ -19,6 +19,11 @@ void main() {
   final sessionStore = SessionStore();
   final apiClient = ApiClient(baseUrl: _defaultApiBaseUrl);
 
+  // Enable pre-flight expiry refresh + single 401-retry against /auth/refresh,
+  // persisting or clearing the secure-storage session (Req 6.2, 6.3). Additive:
+  // the client behaves exactly as before until these hooks are attached.
+  apiClient.authHooks = SessionStoreAuthHooks(sessionStore);
+
   runApp(
     ClaraApp(
       apiClient: apiClient,

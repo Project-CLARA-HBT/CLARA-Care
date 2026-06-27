@@ -3,6 +3,87 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'session_store.dart';
+
+/// Seam the [ApiClient] uses to read the current session, persist a refreshed
+/// session, or clear it (forcing re-login). Kept as a small interface so the
+/// refresh state machine is testable without `flutter_secure_storage` and
+/// without coupling networking to a concrete store. When no hooks are attached
+/// the client behaves exactly as before (fully back-compatible — no pre-flight
+/// check and no 401 refresh-retry).
+abstract class AuthSessionHooks {
+  /// The currently held access token (may be expired).
+  String? get accessToken;
+
+  /// The currently held refresh token, or null/empty when none is held.
+  String? get refreshToken;
+
+  /// The current role, used to preserve role when a refresh response omits it.
+  String? get role;
+
+  /// Pre-flight check: whether the held access token is expired/invalid.
+  bool get isAccessTokenExpired;
+
+  /// Persists a freshly refreshed session (Req 6.2).
+  Future<void> onSessionRefreshed({
+    required String accessToken,
+    required String refreshToken,
+    required String role,
+  });
+
+  /// Clears the session, forcing re-login (Req 6.3).
+  Future<void> onSessionCleared();
+}
+
+/// Adapts a [PersistentSessionStore] to [AuthSessionHooks] so the production
+/// app wires token refresh straight onto the existing secure-storage session
+/// store. Additive: construct this and pass it to [ApiClient] (or attach it via
+/// [ApiClient.authHooks]) to enable refresh; omit it to preserve old behavior.
+class SessionStoreAuthHooks implements AuthSessionHooks {
+  SessionStoreAuthHooks(this._store, {this.onCleared});
+
+  final PersistentSessionStore _store;
+
+  /// Optional navigation side-effect invoked after the session is cleared
+  /// (e.g. routing to the login screen). Kept separate from persistence so the
+  /// store stays UI-agnostic.
+  final Future<void> Function()? onCleared;
+
+  @override
+  String? get accessToken => _store.accessToken;
+
+  @override
+  String? get refreshToken => _store.refreshToken;
+
+  @override
+  String? get role => _store.role;
+
+  @override
+  bool get isAccessTokenExpired => _store.isExpired;
+
+  @override
+  Future<void> onSessionRefreshed({
+    required String accessToken,
+    required String refreshToken,
+    required String role,
+  }) {
+    return _store.setSession(
+      email: _store.email ?? '',
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      role: role,
+    );
+  }
+
+  @override
+  Future<void> onSessionCleared() async {
+    await _store.clear();
+    if (onCleared != null) {
+      await onCleared!();
+    }
+  }
+}
+
 class ApiException implements Exception {
   ApiException({required this.message, this.statusCode});
 
@@ -66,11 +147,45 @@ class ApiClient {
   ApiClient({
     required String baseUrl,
     http.Client? httpClient,
+    Duration requestTimeout = const Duration(seconds: 30),
+    Duration streamIdleTimeout = const Duration(seconds: 60),
+    AuthSessionHooks? authHooks,
   })  : _baseUrl = _trimTrailingSlash(baseUrl),
-        _httpClient = httpClient ?? http.Client();
+        _httpClient = httpClient ?? http.Client(),
+        _requestTimeout = requestTimeout,
+        _streamIdleTimeout = streamIdleTimeout,
+        _authHooks = authHooks;
 
   final String _baseUrl;
   final http.Client _httpClient;
+
+  /// Session seam enabling pre-flight expiry refresh and the single 401-retry
+  /// (Req 6.2, 6.3). Null until attached (default), keeping the legacy path
+  /// untouched. Settable so the store and client can be constructed in either
+  /// order (e.g. wired together in `main`).
+  AuthSessionHooks? _authHooks;
+
+  /// De-duplicates concurrent refreshes: parallel authenticated requests that
+  /// all see an expired token (or all receive 401) share a single in-flight
+  /// `POST /auth/refresh` rather than stampeding the endpoint.
+  Future<String?>? _refreshInFlight;
+
+  set authHooks(AuthSessionHooks? hooks) => _authHooks = hooks;
+  AuthSessionHooks? get authHooks => _authHooks;
+
+  /// Maximum time to await a single request/response round-trip before it is
+  /// surfaced as a recoverable [ApiException] instead of hanging (Req 9.2).
+  final Duration _requestTimeout;
+
+  /// Maximum idle time between SSE events before a stalled stream is surfaced
+  /// as a recoverable [ApiException]. Reset by every event, including the
+  /// server's keepalive comments (Req 9.2, 2.6).
+  final Duration _streamIdleTimeout;
+
+  /// Vietnamese-first, PII-free message used when a request/stream exceeds its
+  /// bounded timeout. Maps cleanly onto the existing [ApiException] type so
+  /// callers handle a timeout exactly like any other recoverable API error.
+  static const String _timeoutMessage = 'Hết thời gian chờ phản hồi từ server.';
 
   Future<LoginResponseData> login({
     required String email,
@@ -129,7 +244,9 @@ class ApiClient {
 
     final http.StreamedResponse response;
     try {
-      response = await _httpClient.send(request);
+      response = await _httpClient.send(request).timeout(_requestTimeout);
+    } on TimeoutException {
+      throw ApiException(message: _timeoutMessage);
     } catch (e) {
       throw ApiException(message: 'Không thể kết nối tới server.');
     }
@@ -152,7 +269,21 @@ class ApiClient {
     String? currentEvent;
     final dataBuffer = StringBuffer();
 
-    await for (final chunk in response.stream.transform(utf8.decoder).transform(const LineSplitter())) {
+    // Bound the idle gap between SSE events: if no line (event or keepalive
+    // comment) arrives within [_streamIdleTimeout], surface a recoverable
+    // [ApiException] instead of hanging forever (Req 9.2, 2.6).
+    final lines = response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .timeout(
+      _streamIdleTimeout,
+      onTimeout: (sink) {
+        sink.addError(ApiException(message: _timeoutMessage));
+        sink.close();
+      },
+    );
+
+    await for (final chunk in lines) {
       if (chunk.isEmpty) {
         // Blank line = end of event.
         if (dataBuffer.isNotEmpty || currentEvent != null) {
@@ -471,18 +602,164 @@ class ApiClient {
     );
   }
 
+  /// Applies the bounded [_requestTimeout] to a single request future, mapping a
+  /// stalled request onto the existing [ApiException] type (Req 9.2). Additive:
+  /// callers keep awaiting an `http.Response` exactly as before.
+  Future<http.Response> _withTimeout(Future<http.Response> request) {
+    return request.timeout(
+      _requestTimeout,
+      onTimeout: () => throw ApiException(message: _timeoutMessage),
+    );
+  }
+
+  /// Sends an authenticated request with token-refresh resilience (Req 6.2,
+  /// 6.3). [send] builds the request from whichever access token should be
+  /// used (it may differ from [accessToken] after a refresh).
+  ///
+  /// Behavior:
+  ///  * No hooks attached, or an unauthenticated request -> sent once, exactly
+  ///    as before (back-compatible).
+  ///  * Hooks attached + access token expired (pre-flight) -> refresh first,
+  ///    then send with the new token.
+  ///  * A `401` from the API -> a single refresh + one resend (no loop).
+  ///  * A failed refresh (or no refresh token) -> session cleared and a
+  ///    PII-free auth error is thrown to route the user to login.
+  Future<Map<String, dynamic>> _sendAuthed(
+    String? accessToken,
+    Future<http.Response> Function(String? token) send,
+  ) async {
+    final hooks = _authHooks;
+
+    // Fast path: unauthenticated request or no refresh wiring — unchanged.
+    if (hooks == null || accessToken == null || accessToken.isEmpty) {
+      final response = await _withTimeout(send(accessToken));
+      return _decodeResponse(response);
+    }
+
+    // Pre-flight expiry check: refresh proactively before spending a request
+    // we know will be rejected (Req 6.2).
+    var token = accessToken;
+    if (hooks.isAccessTokenExpired) {
+      final refreshed = await _attemptRefresh();
+      if (refreshed == null) {
+        throw _sessionExpiredError();
+      }
+      token = refreshed;
+    }
+
+    var response = await _withTimeout(send(token));
+
+    // Single 401 retry: one refresh attempt, then one resend (Req 6.2). If the
+    // resend is still 401, it falls through to _decodeResponse and surfaces as
+    // a normal auth error — never an infinite refresh loop.
+    if (response.statusCode == 401) {
+      final refreshed = await _attemptRefresh();
+      if (refreshed == null) {
+        throw _sessionExpiredError();
+      }
+      response = await _withTimeout(send(refreshed));
+    }
+
+    return _decodeResponse(response);
+  }
+
+  /// Coalesces concurrent refreshes into one in-flight `POST /auth/refresh` and
+  /// returns the new access token, or null when refresh is impossible/failed
+  /// (in which case the session has already been cleared).
+  Future<String?> _attemptRefresh() {
+    final existing = _refreshInFlight;
+    if (existing != null) {
+      return existing;
+    }
+    final future = _doRefresh();
+    _refreshInFlight = future;
+    return future.whenComplete(() => _refreshInFlight = null);
+  }
+
+  Future<String?> _doRefresh() async {
+    final hooks = _authHooks;
+    if (hooks == null) {
+      return null;
+    }
+
+    final refreshToken = hooks.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      // No refresh token to exchange -> clear and force re-login (Req 6.3).
+      await hooks.onSessionCleared();
+      return null;
+    }
+
+    http.Response response;
+    try {
+      response = await _withTimeout(
+        _httpClient.post(
+          Uri.parse('$_baseUrl/api/v1/auth/refresh'),
+          headers: _headers(),
+          body: jsonEncode({'refresh_token': refreshToken}),
+        ),
+      );
+    } catch (_) {
+      // Timeout / transport error during refresh -> clear (Req 6.3).
+      await hooks.onSessionCleared();
+      return null;
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      await hooks.onSessionCleared();
+      return null;
+    }
+
+    Object? decoded;
+    try {
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } catch (_) {
+      decoded = null;
+    }
+
+    if (decoded is! Map<String, dynamic>) {
+      await hooks.onSessionCleared();
+      return null;
+    }
+
+    final newAccess = decoded['access_token'];
+    if (newAccess is! String || newAccess.isEmpty) {
+      // A 2xx without a usable token is treated as a failed refresh.
+      await hooks.onSessionCleared();
+      return null;
+    }
+
+    // Preserve the existing refresh token / role when the response omits them.
+    final newRefresh = (decoded['refresh_token'] as String?) ?? refreshToken;
+    final newRole = (decoded['role'] as String?) ?? hooks.role ?? 'normal';
+
+    await hooks.onSessionRefreshed(
+      accessToken: newAccess,
+      refreshToken: newRefresh,
+      role: newRole,
+    );
+    return newAccess;
+  }
+
+  /// PII-free, Vietnamese-first auth error raised when a session cannot be
+  /// refreshed. The 401 status lets callers route to login (Req 6.3).
+  ApiException _sessionExpiredError() => ApiException(
+        statusCode: 401,
+        message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+      );
+
   Future<Map<String, dynamic>> _post(
     String path, {
     required Map<String, dynamic> body,
     String? accessToken,
-  }) async {
-    final response = await _httpClient.post(
-      Uri.parse('$_baseUrl$path'),
-      headers: _headers(accessToken: accessToken),
-      body: jsonEncode(body),
+  }) {
+    return _sendAuthed(
+      accessToken,
+      (token) => _httpClient.post(
+        Uri.parse('$_baseUrl$path'),
+        headers: _headers(accessToken: token),
+        body: jsonEncode(body),
+      ),
     );
-
-    return _decodeResponse(response);
   }
 
   /// Sends a `multipart/form-data` POST, mirroring the Council intake endpoint's
@@ -515,8 +792,16 @@ class ApiClient {
 
     final http.Response response;
     try {
-      final streamed = await _httpClient.send(request);
-      response = await http.Response.fromStream(streamed);
+      final streamed = await _httpClient.send(request).timeout(
+            _requestTimeout,
+            onTimeout: () => throw ApiException(message: _timeoutMessage),
+          );
+      response = await http.Response.fromStream(streamed).timeout(
+            _requestTimeout,
+            onTimeout: () => throw ApiException(message: _timeoutMessage),
+          );
+    } on ApiException {
+      rethrow;
     } catch (_) {
       throw ApiException(message: 'Không thể kết nối tới server.');
     }
@@ -528,52 +813,56 @@ class ApiClient {
     String path, {
     required Map<String, dynamic> body,
     String? accessToken,
-  }) async {
-    final response = await _httpClient.put(
-      Uri.parse('$_baseUrl$path'),
-      headers: _headers(accessToken: accessToken),
-      body: jsonEncode(body),
+  }) {
+    return _sendAuthed(
+      accessToken,
+      (token) => _httpClient.put(
+        Uri.parse('$_baseUrl$path'),
+        headers: _headers(accessToken: token),
+        body: jsonEncode(body),
+      ),
     );
-
-    return _decodeResponse(response);
   }
 
   Future<Map<String, dynamic>> _patch(
     String path, {
     required Map<String, dynamic> body,
     String? accessToken,
-  }) async {
-    final response = await _httpClient.patch(
-      Uri.parse('$_baseUrl$path'),
-      headers: _headers(accessToken: accessToken),
-      body: jsonEncode(body),
+  }) {
+    return _sendAuthed(
+      accessToken,
+      (token) => _httpClient.patch(
+        Uri.parse('$_baseUrl$path'),
+        headers: _headers(accessToken: token),
+        body: jsonEncode(body),
+      ),
     );
-
-    return _decodeResponse(response);
   }
 
   Future<Map<String, dynamic>> _delete(
     String path, {
     String? accessToken,
-  }) async {
-    final response = await _httpClient.delete(
-      Uri.parse('$_baseUrl$path'),
-      headers: _headers(accessToken: accessToken),
+  }) {
+    return _sendAuthed(
+      accessToken,
+      (token) => _httpClient.delete(
+        Uri.parse('$_baseUrl$path'),
+        headers: _headers(accessToken: token),
+      ),
     );
-
-    return _decodeResponse(response);
   }
 
   Future<Map<String, dynamic>> _get(
     String path, {
     String? accessToken,
-  }) async {
-    final response = await _httpClient.get(
-      Uri.parse('$_baseUrl$path'),
-      headers: _headers(accessToken: accessToken),
+  }) {
+    return _sendAuthed(
+      accessToken,
+      (token) => _httpClient.get(
+        Uri.parse('$_baseUrl$path'),
+        headers: _headers(accessToken: token),
+      ),
     );
-
-    return _decodeResponse(response);
   }
 
   Map<String, String> _headers({String? accessToken}) {
