@@ -62,7 +62,7 @@ def _now_utc() -> datetime:
     return datetime.now(UTC)
 
 
-class FlowEventArchive(Base):
+class FlowEventArchiveRow(Base):
     """One PII-free durable mirror of a Flow_Event (table ``flow_event_archive``).
 
     Insert-only by convention: the sink only appends rows, mirroring the
@@ -169,7 +169,7 @@ class FlowEventSink:
         # including value-level markers under non-denylisted keys — ever reaches
         # the durable archive (Requirement 11.1).
         projected_event = strip_pii(projected_event)
-        row = FlowEventArchive(
+        row = FlowEventArchiveRow(
             sequence=int(record.get("sequence") or 0),
             source=_truncate(record.get("source"), _SOURCE_MAX) or "",
             role=_truncate(record.get("role"), _ROLE_MAX) or "",
@@ -190,7 +190,7 @@ class FlowEventSink:
         """Return archived flow events within the inclusive ``[start, end]`` range.
 
         Records are shaped like in-memory ``FlowEventStore`` entries (see
-        :meth:`FlowEventArchive.as_record`) and ordered oldest-first by sequence
+        :meth:`FlowEventArchiveRow.as_record`) and ordered oldest-first by sequence
         so the aggregator consumes them exactly as it consumes the live
         snapshot. Returns an empty list when the durable store is disabled
         (Requirement 7.2).
@@ -207,10 +207,10 @@ class FlowEventSink:
         session = self._make_session()
         try:
             stmt = (
-                select(FlowEventArchive)
-                .where(FlowEventArchive.occurred_at >= lower)
-                .where(FlowEventArchive.occurred_at <= upper)
-                .order_by(FlowEventArchive.sequence.asc(), FlowEventArchive.id.asc())
+                select(FlowEventArchiveRow)
+                .where(FlowEventArchiveRow.occurred_at >= lower)
+                .where(FlowEventArchiveRow.occurred_at <= upper)
+                .order_by(FlowEventArchiveRow.sequence.asc(), FlowEventArchiveRow.id.asc())
             )
             return [row.as_record() for row in session.execute(stmt).scalars()]
         finally:

@@ -102,6 +102,49 @@ describe("Admin surface events (Feature: product-polish-analytics, Req 9.1)", ()
       }
     }
   });
+
+  // Hardening (Req 11.5): every prop emitted from an Admin surface must be a
+  // coarse, non-identifying signal. Beyond the key allowlist above, assert that
+  // each emitted prop NAME is allowlisted and each emitted VALUE is a coarse
+  // token (a short snake_case label or a number) — never a PII-shaped value
+  // such as an email, a name with whitespace, free-text, or a long identifier.
+  it("restricts admin event props to an allowlist of coarse keys and coarse values", () => {
+    const ADMIN_PROP_ALLOWLIST = new Set(["surface", "view"]);
+    // A coarse label: lowercase snake_case token, no PII characters
+    // (no '@', no spaces, no punctuation) and short enough to be an enum, not
+    // free-text or an opaque id.
+    const COARSE_TOKEN = /^[a-z][a-z0-9_]{0,40}$/;
+    const views = [
+      "overview",
+      "knowledge_sources",
+      "answer_flow",
+      "observability",
+      "product_analytics",
+      "clinical_analytics"
+    ] as const;
+
+    for (const view of views) {
+      trackMock.mockReset();
+      trackAdminSurfaceViewed({ view });
+      expect(trackMock).toHaveBeenCalled();
+      for (const [name, props] of trackMock.mock.calls as Array<
+        [string, Record<string, unknown> | undefined]
+      >) {
+        // Event name is a coarse admin_*_viewed label.
+        expect(name).toMatch(/^admin_[a-z_]+_viewed$/);
+        for (const [key, value] of Object.entries(props ?? {})) {
+          expect(ADMIN_PROP_ALLOWLIST.has(key)).toBe(true);
+          if (typeof value === "string") {
+            expect(value).toMatch(COARSE_TOKEN);
+            expect(value).not.toContain("@");
+            expect(value).not.toContain(" ");
+          } else {
+            expect(typeof value).toBe("number");
+          }
+        }
+      }
+    }
+  });
 });
 
 describe("Shared emitter contract (Feature: product-polish-analytics, Req 9.1)", () => {

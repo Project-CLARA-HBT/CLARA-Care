@@ -42,16 +42,16 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
 
 ## Tasks
 
-- [ ] 1. Configuration, feature flags, and migrations
+- [x] 1. Configuration, feature flags, and migrations
   - [x] 1.1 Add API feature flags and settings keys
     - In `services/api/src/clara_api/core/config.py`, add `admin_rag_ingestion_controls_enabled`, `admin_observability_percentiles_enabled`, `admin_observability_persistent_store_enabled`, `admin_observability_alerting_enabled`, `admin_observability_alert_webhook_url`, and `admin_audit_log_enabled`, all defaulting to off/empty (preserving baseline).
     - _Requirements: 12.1, 12.2_
 
-  - [ ] 1.2 Document all new flags and keys in `.env.example`
+  - [x] 1.2 Document all new flags and keys in `.env.example`
     - Add the API flags from 1.1 and confirm the existing ML `OTEL_EXPORT_ENABLED`/`OTEL_EXPORT_ENDPOINT`/`OTEL_EXPORT_TIMEOUT_SECONDS` keys are documented as the tracing switches; ensure no duplicate key definitions.
     - _Requirements: 12.3_
 
-  - [ ] 1.3 Add additive migrations for the new tables
+  - [x] 1.3 Add additive migrations for the new tables
     - Create a single Alembic migration adding `admin_audit_log`, `flow_event_archive`, and `alert_state` per the design data models, each with a downgrade. No destructive change to existing tables.
     - _Requirements: 9.1, 7.1, 8.4, 12.1_
 
@@ -59,8 +59,8 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 26: Flags-off equivalence**
     - **Validates: Requirements 12.2, 12.4**
 
-- [ ] 2. RBAC audit and route-dependency lock
-  - [ ] 2.1 Audit and normalize admin/observability role dependencies
+- [x] 2. RBAC audit and route-dependency lock
+  - [x] 2.1 Audit and normalize admin/observability role dependencies
     - Confirm every admin mutation route (`admin_rag.py` ingestion/eval/sources, plus new alert-ack and audit-read routes) uses `require_roles("admin")`, and the operational reads (`/system/metrics`, `/dependencies`, `/ecosystem`, `/sources`) use `require_roles("doctor")`. Fix any drift.
     - _Requirements: 1.1, 1.4, 1.5_
 
@@ -81,7 +81,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Validates: Requirements 1.6**
 
 - [ ] 3. Knowledge ingestion controls and durable status
-  - [ ] 3.1 Gate live ingestion controls and surface honest degradation
+  - [x] 3.1 Gate live ingestion controls and surface honest degradation
     - In `services/api/src/clara_api/api/v1/endpoints/admin_rag.py`, gate the ingestion/eval control path behind `admin_rag_ingestion_controls_enabled` (404 feature-disabled when off), and add an explicit `degraded` marker derived from the existing `fallback`/`ml_available` fail-soft fields so a successful ML response is never marked degraded.
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 12.4_
 
@@ -93,7 +93,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 6: A single ingestion run is bounded by the record cap**
     - **Validates: Requirements 3.5**
 
-  - [ ] 3.4 Surface degraded/retry state on the Knowledge Sources web page
+  - [x] 3.4 Surface degraded/retry state on the Knowledge Sources web page
     - In `apps/web/app/admin/knowledge-sources/page.tsx`, render an explicit "unavailable, retry" state when the ingestion/registry payload is `degraded`/`fallback`, keeping the four `AsyncSection` states and `sanitizeUpstreamError` for failures.
     - _Requirements: 2.4, 2.5, 3.3_
 
@@ -101,12 +101,12 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - Verify admin create/upload/list-documents/toggle-status return their documented shapes and persist status.
     - _Requirements: 2.1, 2.2_
 
-- [ ] 4. RAG source registry governance
-  - [ ] 4.1 Extend the source contract with license and attribution
+- [x] 4. RAG source registry governance
+  - [x] 4.1 Extend the source contract with license and attribution
     - In `admin_rag.py`, add `license_code` and `attribution` to the declared `SourceInfo` contract (already passed through `extra="allow"`) so they are first-class in the list response.
     - _Requirements: 4.1_
 
-  - [ ] 4.2 Render license/attribution in the registry UI
+  - [x] 4.2 Render license/attribution in the registry UI
     - In `apps/web/app/admin/knowledge-sources/page.tsx`, display each source's `license_code` and `attribution` alongside the trust-tier/weight/enabled controls.
     - _Requirements: 4.5_
 
@@ -122,8 +122,8 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 9: Partial source updates touch only provided fields**
     - **Validates: Requirements 4.4**
 
-- [ ] 5. Metrics percentiles and ecosystem health
-  - [ ] 5.1 Implement per-route latency percentiles
+- [x] 5. Metrics percentiles and ecosystem health
+  - [x] 5.1 Implement per-route latency percentiles
     - Add a bounded per-route latency sample ring and a `MetricsPercentiles.percentiles(route)` projection (reusing the monotonic `_percentile`), gated by `admin_observability_percentiles_enabled`; expose p50/p90/p99 alongside the existing average in the metrics surface (off → average-only baseline).
     - _Requirements: 5.1, 5.2, 12.2_
 
@@ -131,7 +131,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 10: Latency percentiles are monotonic**
     - **Validates: Requirements 5.2, 5.3**
 
-  - [ ] 5.3 Extract the flow-event health classifier as a pure function
+  - [x] 5.3 Extract the flow-event health classifier as a pure function
     - In `services/api/src/clara_api/api/v1/endpoints/system.py`, factor the `/ecosystem` flow-event `ok/degraded/down` decision (from latest-event age + count + error ratio) into a pure, unit-testable function without changing the surfaced behavior.
     - _Requirements: 5.4, 5.5_
 
@@ -139,16 +139,16 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 11: Flow-event health classification follows the staleness rule**
     - **Validates: Requirements 5.5**
 
-  - [ ] 5.5 Complete the Observability dashboard async states
+  - [x] 5.5 Complete the Observability dashboard async states
     - In `apps/web/components/admin/admin-observability-panel.tsx`, ensure loading/empty/error/populated states are rendered and error states exclude stack traces (via `sanitizeUpstreamError`); surface the new per-route percentiles.
     - _Requirements: 5.6_
 
-- [ ] 6. Distributed tracing / OpenTelemetry export
+- [x] 6. Distributed tracing / OpenTelemetry export
   - [x] 6.1 Wire the OTEL tracer behind the existing config keys
     - Create `services/ml/src/clara_ml/observability/tracing.py` with `init_tracing(settings)` that returns a no-op unless `otel_export_enabled` and a non-empty `otel_export_endpoint` are set, and a `request_span(...)` context manager emitting a top-level span plus stage child spans, with all attributes passed through `strip_pii`. Initialize once at app startup.
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 6.2 Make export failures non-fatal
+  - [x] 6.2 Make export failures non-fatal
     - Ensure exporter init/flush/export errors are caught inside the tracing wrapper so a request is always served and the failure never reaches the response.
     - _Requirements: 6.5_
 
@@ -164,8 +164,8 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - With a recording exporter assert a per-request span + stage children are emitted (6.1); with a failing exporter assert the request still completes (6.5).
     - _Requirements: 6.1, 6.5_
 
-- [ ] 7. Durable observability store and analytics correctness
-  - [ ] 7.1 Implement the opt-in durable flow-event sink
+- [x] 7. Durable observability store and analytics correctness
+  - [x] 7.1 Implement the opt-in durable flow-event sink
     - Create `FlowEventSink` (gated by `admin_observability_persistent_store_enabled`) that mirrors each appended Flow_Event as a `_project_pii_free`-projected `flow_event_archive` row and supports a `query(start, end)` read; the aggregator reads from the sink when enabled, else from the in-memory `FlowEventStore`.
     - _Requirements: 7.1, 7.2, 11.1_
 
@@ -185,16 +185,16 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - Verify the Clinical_Analytics and Product_Analytics response shapes (10.1, 10.4), that Clinical is derived from the existing observability sources (10.3), non-admin → 403 (10.6), and that the existing scribe `/analytics/summary` remains intact (10.5).
     - _Requirements: 10.1, 10.3, 10.4, 10.5, 10.6_
 
-- [ ] 8. Alert engine: evaluate, deliver, acknowledge
+- [x] 8. Alert engine: evaluate, deliver, acknowledge
   - [x] 8.1 Implement the alert engine and threshold rules
     - Create `services/api/src/clara_api/observability/alerts.py` with `Alert`, `AlertEngine.evaluate(...)` (ML unreachable/degraded, API 5xx warn/critical, flow stale/missing → stable id + bounded severity), `reconcile(...)` (firing/cleared transitions persisted to `alert_state`), and `acknowledge(alert_id)`, all gated by `admin_observability_alerting_enabled`.
     - _Requirements: 8.1, 8.4, 8.5_
 
-  - [ ] 8.2 Implement no-PII webhook delivery
+  - [x] 8.2 Implement no-PII webhook delivery
     - Add `deliver(fired)` posting a `_project_pii_free` payload to `admin_observability_alert_webhook_url` only on a not-firing → firing transition; no URL configured → in-app only; delivery failures are swallowed and never propagated.
     - _Requirements: 8.2, 8.3, 8.6, 11.2_
 
-  - [ ] 8.3 Add the alert-acknowledge endpoint and wire the web control
+  - [x] 8.3 Add the alert-acknowledge endpoint and wire the web control
     - Add an admin-gated `POST` acknowledge endpoint keyed by stable alert id and an acknowledge control on the Observability surface.
     - _Requirements: 8.4, 1.1_
 
@@ -214,16 +214,16 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 20: Alert delivery failure never breaks the request**
     - **Validates: Requirements 8.6**
 
-- [ ] 9. Admin-action audit trail
+- [x] 9. Admin-action audit trail
   - [x] 9.1 Implement the append-only admin audit module
     - Create `services/api/src/clara_api/observability/admin_audit.py` with `record_admin_action(db, actor_ref, action, target, outcome, meta)` (insert-only, opaque actor ref, `_project_pii_free` meta) and `list_admin_actions(db)` (most-recent-first), gated by `admin_audit_log_enabled`. No update/delete path.
     - _Requirements: 9.1, 9.2, 9.3_
 
-  - [ ] 9.2 Instrument every admin mutation with an audit write
+  - [x] 9.2 Instrument every admin mutation with an audit write
     - Call `record_admin_action(...)` from knowledge-source create/upload/document-status, RAG source update, ingestion/eval trigger, and alert acknowledge — recording both success and failure outcomes.
     - _Requirements: 9.1, 9.5_
 
-  - [ ] 9.3 Add the admin audit-read endpoint and web view
+  - [x] 9.3 Add the admin audit-read endpoint and web view
     - Add an `ADMIN_ROLE_DEP` read endpoint returning records most-recent-first and a simple admin audit list view.
     - _Requirements: 9.4_
 
@@ -235,12 +235,12 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Property 22: The admin audit trail is append-only and ordered**
     - **Validates: Requirements 9.2, 9.4**
 
-- [ ] 10. Web admin/observability surface completion and no-PII
-  - [ ] 10.1 Lock admin-only detailed telemetry rails
+- [x] 10. Web admin/observability surface completion and no-PII
+  - [x] 10.1 Lock admin-only detailed telemetry rails
     - Ensure detailed telemetry across admin surfaces is wrapped so it renders only for `admin` and is passed through the role-gated sanitizer (`sanitize_telemetry`/`strip_pii`); non-admin sees only the sanitized summary.
     - _Requirements: 11.4_
 
-  - [ ] 10.2 Confirm coarse, no-PII admin product events
+  - [x] 10.2 Confirm coarse, no-PII admin product events
     - Verify each Admin_Surface emits only its coarse `admin_*_viewed` event (surface/view/counts) via `lib/analytics/events.ts` and never passes PII props.
     - _Requirements: 11.5_
 
@@ -269,11 +269,11 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - With all new flags off, assert the metrics shape, admin RAG responses, analytics shapes, and ecosystem alerts equal the pre-feature baseline, and that flag-disabled gated endpoints return the 404 feature-disabled shape.
     - _Requirements: 12.2, 12.4_
 
-- [ ] 12. Backend checkpoint — CLARA_API & CLARA_ML quality gates
+- [x] 12. Backend checkpoint — CLARA_API & CLARA_ML quality gates
   - Ensure `make lint` and the API and ML service test suites pass after the backend batches (Epics 1–9, 11). Ask the user if questions arise.
   - _Requirements: 12.5_
 
-- [ ] 13. Final checkpoint — full quality gates
+- [x] 13. Final checkpoint — full quality gates
   - Ensure `make lint`, the API/ML suites, and the web test suite all pass; confirm every new capability is default-off, the no-PII and RBAC invariants hold, and each property has its test. Ask the user if questions arise.
   - _Requirements: 11.1, 12.2, 12.5_
 
