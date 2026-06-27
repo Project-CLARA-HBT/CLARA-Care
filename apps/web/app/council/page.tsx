@@ -9,12 +9,23 @@ import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
+  CouncilAiDisclosure,
   CouncilCaseRecord,
+  CouncilRunRecord,
+  CouncilStreamStage,
   buildSnapshotFromCouncilCase,
   getActiveCouncilCaseId,
   getCouncilCase,
+  getCouncilRuns,
   getLatestCouncilCase,
+  isCouncilModelDisclosureEnabled,
+  isCouncilOversightEnabled,
+  isCouncilStreamingEnabled,
+  normalizeCouncilRunResult,
+  runCouncilCaseById,
   setActiveCouncilCaseId,
+  streamCouncilRun,
+  submitCouncilOversight,
 } from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
 import type { UserRole } from "@/lib/navigation.config";
@@ -47,6 +58,55 @@ function formatElapsed(fromIso?: string): string {
   const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
   const s = (totalSeconds % 60).toString().padStart(2, "0");
   return `${h}:${m}:${s}`;
+}
+
+function formatRunTimestamp(iso: string): string {
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return "Không rõ thời điểm";
+  try {
+    return new Date(parsed).toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return new Date(parsed).toISOString();
+  }
+}
+
+// Derive a short, non-PII outcome label for a historical run from its snapshot.
+function summarizeRunOutcome(run: CouncilRunRecord): string {
+  if (run.emergencyTriggered) return "Cần xử trí khẩn";
+  if (!run.result) return "Đã chạy hội chẩn";
+  try {
+    const normalized = normalizeCouncilRunResult(run.result);
+    if (normalized.isEmergency) return "Cần xử trí khẩn";
+    if ((normalized.conflicts?.length ?? 0) > 0) return "Có điểm bất đồng";
+    if (normalized.consensus?.trim()) return "Đã đạt đồng thuận";
+    return "Đã chạy hội chẩn";
+  } catch {
+    return "Đã chạy hội chẩn";
+  }
+}
+
+// Derive a concise, user-facing label for the model basis behind a Council
+// result (Req 6.3, 6.4). Coarse and non-identifying — safe for every role; the
+// raw model identifiers stay admin-only at the call site.
+function describeModelBasis(disclosure: CouncilAiDisclosure): string {
+  const family = disclosure.modelFamily.toLowerCase();
+  const version = disclosure.modelVersion.toLowerCase();
+  if (/rule/.test(family) || /rule/.test(version)) {
+    return "Bộ quy tắc hội chẩn xác định (rule-based)";
+  }
+  if (/heuristic|fallback/.test(family) || /heuristic|fallback/.test(version)) {
+    return "Trích xuất dự phòng theo heuristic";
+  }
+  if (/deepseek/.test(family)) {
+    return "Mô hình ngôn ngữ DeepSeek";
+  }
+  return disclosure.modelFamily || "Mô hình AI";
 }
 
 function getSeverity(view: ReturnType<typeof buildCouncilView> | null): SeverityLevel {
@@ -191,6 +251,14 @@ export default function CouncilPage() {
   const [guardAction, setGuardAction] = useState<GuardAction | null>(null);
   const [guardReason, setGuardReason] = useState("");
   const [actionNotice, setActionNotice] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [streamStages, setStreamStages] = useState<CouncilStreamStage[]>([]);
+  const [runNotice, setRunNotice] = useState("");
+  const [runHistory, setRunHistory] = useState<CouncilRunRecord[]>([]);
+  const [oversightPaused, setOversightPaused] = useState(false);
+  const streamingEnabled = isCouncilStreamingEnabled();
+  const oversightEnabled = isCouncilOversightEnabled();
+  const modelDisclosureEnabled = isCouncilModelDisclosureEnabled();
 
   useEffect(() => {
     setRoleState(getRole());
@@ -229,6 +297,119 @@ export default function CouncilPage() {
     }
   }, [queryCaseId]);
 
+  // Load the owner-isolated, newest-first run history for the active case
+  // (Req 2.4). Owner isolation is enforced server-side; we render only what the
+  // server returns. The /runs endpoint is only mounted when
+  // COUNCIL_RUN_HISTORY_ENABLED is on, so an absent endpoint or empty payload
+  // degrades gracefully to "no history" (the section simply does not render).
+  const activeCaseId = caseItem?.id ?? null;
+  useEffect(() => {
+    if (!activeCaseId) {
+      setRunHistory([]);
+      return;
+    }
+    let active = true;
+    const loadRuns = async () => {
+      try {
+        const runs = await getCouncilRuns(activeCaseId);
+        if (active) setRunHistory(runs);
+      } catch {
+        // Run history disabled (endpoint not mounted) or unavailable — no-op.
+        if (active) setRunHistory([]);
+      }
+    };
+    void loadRuns();
+    return () => {
+      active = false;
+    };
+  }, [activeCaseId]);
+
+  // Sync the "not yet confirmed" pause state from the loaded case. The server is
+  // the source of truth: `oversight_state === "paused"` means the case was
+  // paused via the real oversight endpoint (Req 3.2). Resets when switching
+  // cases or when the server reports the pause cleared. Pre-feature payloads
+  // omit `oversight_state`, so this is a no-op when the feature is off.
+  useEffect(() => {
+    setOversightPaused(caseItem?.oversight_state === "paused");
+  }, [caseItem?.id, caseItem?.oversight_state]);
+
+  // Re-run the deliberation on the result surface. When streaming is enabled
+  // (NEXT_PUBLIC_COUNCIL_STREAMING_ENABLED) we open the SSE deliberation stream
+  // and surface progressive stage updates; otherwise we fall back to the
+  // existing blocking run. Either way the persisted case is reloaded once the
+  // terminal result lands so the rendered view reflects the newest run. (Req 1.3)
+  const handleRerun = async () => {
+    if (!caseItem || isRunning) return;
+    const caseId = caseItem.id;
+    const requestPayload =
+      caseItem.request && typeof caseItem.request === "object"
+        ? { request: caseItem.request as Record<string, unknown> }
+        : {};
+
+    setIsRunning(true);
+    setRunNotice("");
+    setStreamStages([]);
+
+    const reload = async () => {
+      try {
+        const refreshed = await getCouncilCase(caseId);
+        setActiveCouncilCaseId(refreshed.id);
+        setCaseItem(refreshed);
+      } catch {
+        /* keep the current view if the refresh fails; the run itself succeeded */
+      }
+      try {
+        // Refresh run history so a new run appears (newest-first) when the
+        // run-history feature is on; no-op gracefully when it is off.
+        setRunHistory(await getCouncilRuns(caseId));
+      } catch {
+        /* run history disabled or unavailable — leave the current list as-is */
+      }
+    };
+
+    const runBlocking = async () => {
+      await runCouncilCaseById(caseId, requestPayload);
+      await reload();
+      setRunNotice("Đã chạy lại hội chẩn.");
+    };
+
+    try {
+      if (streamingEnabled) {
+        let streamFailed = false;
+        try {
+          await streamCouncilRun(caseId, requestPayload, {
+            onStage: (stage) =>
+              setStreamStages((prev) => {
+                const next = prev.filter((item) => item.sequence !== stage.sequence);
+                next.push(stage);
+                return next.sort((a, b) => a.sequence - b.sequence);
+              }),
+            onResult: () => {
+              setRunNotice("Hội chẩn hoàn tất.");
+            },
+            onError: () => {
+              streamFailed = true;
+            },
+          });
+        } catch {
+          streamFailed = true;
+        }
+        if (streamFailed) {
+          // Stream unavailable or errored mid-deliberation: fall back to blocking.
+          await runBlocking();
+        } else {
+          await reload();
+        }
+      } else {
+        await runBlocking();
+      }
+    } catch (cause) {
+      setRunNotice(cause instanceof Error ? cause.message : "Không thể chạy lại hội chẩn.");
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
   const isAnalyzedCase = useMemo(() => {
@@ -241,6 +422,15 @@ export default function CouncilPage() {
 
   const consensusText = view?.summary.consensus?.trim() || "";
   const escalationText = view?.summary.escalationReason?.trim() || "";
+
+  // Model & fallback disclosure (Req 6.4, 6.5). Rendered only when the
+  // client-readable flag is on AND the ML tier attached an `ai_disclosure`
+  // block (present only when COUNCIL_MODEL_DISCLOSURE_ENABLED is on server-side).
+  // With the flag off, `disclosure` is null and nothing about disclosure
+  // renders — byte-identical to today. The coarse basis + fallback note is safe
+  // for every role; the raw model identifiers are gated to admins below.
+  const disclosure = modelDisclosureEnabled ? snapshot?.result.aiDisclosure ?? null : null;
+  const isAdmin = role === "admin";
 
   const supportRatioPct = view?.quality.supportRatio != null
     ? Math.round((view.quality.supportRatio * 100 + Number.EPSILON) * 10) / 10
@@ -365,16 +555,63 @@ export default function CouncilPage() {
     setGuardReason("");
   };
 
-  const confirmGuardAction = () => {
+  const confirmGuardAction = async () => {
     if (!guardAction || !guardReason.trim()) return;
-    const label = guardAction === "override" ? "ghi đè quyết định" : "tạm dừng quy trình";
-    setActionNotice(`Đã ghi nhận yêu cầu ${label}. Lý do: ${guardReason.trim()}`);
+    const action = guardAction;
+    const reason = guardReason.trim();
+    const label = action === "override" ? "ghi đè quyết định" : "tạm dừng quy trình";
+    const localNotice = `Đã ghi nhận yêu cầu ${label}. Lý do: ${reason}`;
     closeGuardDialog();
+
+    // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
+    // nothing is persisted. (Req 3.6)
+    if (!oversightEnabled || !caseItem) {
+      setActionNotice(localNotice);
+      return;
+    }
+
+    // Flag ON: persist server-side. A `pause` flips the case oversight_state so
+    // the final recommendation renders as "chưa được xác nhận". (Req 3.2)
+    try {
+      const result = await submitCouncilOversight(caseItem.id, { action, reason });
+      if (action === "pause" || result.oversightState === "paused") {
+        setOversightPaused(true);
+        setActionNotice(
+          "Đã tạm dừng quy trình. Khuyến nghị cuối cùng đang ở trạng thái chưa được xác nhận, chờ bác sĩ phụ trách xem lại."
+        );
+      } else {
+        setActionNotice(localNotice);
+      }
+    } catch {
+      // Endpoint absent/unavailable (e.g. server flag still off): fall back to
+      // the local-notice behavior so the control never silently fails.
+      setActionNotice(localNotice);
+    }
   };
 
-  const confirmHandoff = () => {
-    setActionNotice(`Đã chuẩn bị yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`);
+  const confirmHandoff = async () => {
+    const localNotice = `Đã chuẩn bị yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`;
     setHandoffOpen(false);
+
+    // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
+    // nothing is persisted. (Req 3.6)
+    if (!oversightEnabled || !caseItem) {
+      setActionNotice(localNotice);
+      return;
+    }
+
+    // Flag ON: persist the handoff against the case. (Req 3.1)
+    try {
+      await submitCouncilOversight(caseItem.id, {
+        action: "handoff",
+        handoffSpecialty: selectedSpecialtyMeta.name,
+        reason: selectedSpecialtyMeta.reason,
+      });
+      setActionNotice(`Đã gửi yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`);
+    } catch {
+      // Endpoint absent/unavailable: fall back to the local-notice behavior.
+      setActionNotice(localNotice);
+    }
   };
 
   if (!view || !isAnalyzedCase) {
@@ -593,7 +830,92 @@ export default function CouncilPage() {
               ) : (
                 <p className={`text-xs ${SECONDARY_TEXT_CLASS}`}>Chưa có timeline hội chẩn từ lần chạy gần nhất.</p>
               )}
+
+              {streamingEnabled && streamStages.length > 0 ? (
+                <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/60 dark:bg-sky-500/10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-200">
+                    Tiến trình trực tiếp
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {streamStages.map((stage) => (
+                      <li key={`${stage.sequence}-${stage.step}`} className="flex items-start gap-2">
+                        <span className="material-symbols-outlined text-base text-sky-600 dark:text-sky-200">
+                          bolt
+                        </span>
+                        <div>
+                          <p className={`text-sm font-semibold ${BODY_TEXT_CLASS}`}>{getTimelineTitle(stage.step)}</p>
+                          {stage.detail ? (
+                            <p className={`text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
+                              {stripTelemetryLabels(stage.detail)}
+                            </p>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleRerun()}
+                  disabled={isRunning}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[color:var(--brand-600)] bg-white px-4 text-sm font-bold text-[color:var(--text-brand)] transition hover:bg-[color:var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100 dark:hover:bg-slate-800"
+                >
+                  <span className={`material-symbols-outlined text-[20px] ${isRunning ? "animate-spin" : ""}`}>
+                    {isRunning ? "progress_activity" : "refresh"}
+                  </span>
+                  {isRunning
+                    ? streamingEnabled
+                      ? "Đang hội chẩn trực tiếp..."
+                      : "Đang chạy lại..."
+                    : "Chạy lại hội chẩn"}
+                </button>
+                {runNotice ? (
+                  <p className={`text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>{runNotice}</p>
+                ) : null}
+              </div>
             </article>
+
+            {runHistory.length > 0 ? (
+              <article className={`${PANEL_CLASS} p-6`}>
+                <h3 className={`mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}>
+                  <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">manage_history</span>
+                  Lịch sử hội chẩn
+                </h3>
+                <ol className="space-y-3">
+                  {runHistory.map((run, index) => (
+                    <li
+                      key={run.id}
+                      className={`${SOFT_PANEL_CLASS} flex items-start justify-between gap-3 p-3`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
+                            {index === 0 ? "Lần chạy mới nhất" : `Lần chạy #${runHistory.length - index}`}
+                          </span>
+                          {run.emergencyTriggered ? (
+                            <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">
+                              Cảnh báo khẩn
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className={`mt-1 text-xs ${SECONDARY_TEXT_CLASS}`}>{summarizeRunOutcome(run)}</p>
+                        {run.modelVersion ? (
+                          <p className={`mt-0.5 text-[10px] font-medium uppercase tracking-[0.1em] ${MUTED_TEXT_CLASS}`}>
+                            {run.modelVersion}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className={`shrink-0 text-right text-[11px] font-mono ${MUTED_TEXT_CLASS}`}>
+                        {formatRunTimestamp(run.createdAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </article>
+            ) : null}
 
             <article className="space-y-3">
               <button
@@ -642,7 +964,19 @@ export default function CouncilPage() {
               ) : null}
 
               <div className={`${SOFT_PANEL_CLASS} p-4`}>
-                <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>Tóm tắt hội chẩn</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>Tóm tắt hội chẩn</p>
+                  {oversightPaused ? (
+                    <span className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
+                      Chưa được xác nhận
+                    </span>
+                  ) : null}
+                </div>
+                {oversightPaused ? (
+                  <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs font-semibold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
+                    Quy trình đang tạm dừng. Khuyến nghị cuối cùng <strong>chưa được xác nhận</strong>, chờ bác sĩ phụ trách xem lại.
+                  </p>
+                ) : null}
                 {finalDecisionBlocked ? (
                   <div className={`mt-3 space-y-3 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
                     <p>Hệ thống chưa ghi nhận đồng thuận chắc chắn giữa các chuyên khoa.</p>
@@ -688,6 +1022,31 @@ export default function CouncilPage() {
                   <span>Mức bất đồng</span>
                   <span>{disagreementPct != null ? `${disagreementPct}%` : "--"}</span>
                 </div>
+                {disclosure ? (
+                  <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3 dark:border-sky-700/60">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}>
+                        Cơ sở mô hình
+                      </span>
+                      {disclosure.isFallback ? (
+                        <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
+                          Chế độ dự phòng / degraded
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
+                      Kết quả được tạo bởi: {describeModelBasis(disclosure)}.
+                      {disclosure.isFallback
+                        ? " Đây là kết quả ở chế độ dự phòng (degraded) — hãy cân nhắc thận trọng hơn."
+                        : ""}
+                    </p>
+                    {isAdmin && (disclosure.modelFamily || disclosure.modelVersion) ? (
+                      <p className={`mt-1 font-mono text-[10px] ${MUTED_TEXT_CLASS}`}>
+                        {[disclosure.modelFamily, disclosure.modelVersion].filter(Boolean).join(" · ")}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </article>
           </div>

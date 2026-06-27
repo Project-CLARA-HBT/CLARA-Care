@@ -293,6 +293,138 @@ class ApiClient {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Council case lifecycle (clara-council-upgrade Requirement 8.1, 8.2).
+  //
+  // These methods reuse the existing Council_API endpoints so the mobile parity
+  // surfaces drive the same case create -> intake -> specialists -> run -> result
+  // flow as the web wizard, with no mobile-only result shape (Requirement 8.2).
+  // The case-scoped result envelope is the shared `run_council` shape, so the
+  // mobile screens render consensus/divergence/final from the same keys.
+  // ---------------------------------------------------------------------------
+
+  /// Lists the owner's Council cases, newest-first, with owner isolation enforced
+  /// server-side. `GET /api/v1/council/cases`. Returns the
+  /// `{ items: [...], total: int }` envelope.
+  Future<Map<String, dynamic>> listCouncilCases({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) {
+    return _get(
+      '/api/v1/council/cases?limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Loads the owner's most-recent Council case. `GET /api/v1/council/cases/latest`.
+  /// Throws an [ApiException] (404) when the owner has no cases yet.
+  Future<Map<String, dynamic>> getLatestCouncilCase({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/council/cases/latest',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Creates a new Council case (Requirement 8.1). `POST /api/v1/council/cases`.
+  /// [payload] mirrors the server `CouncilCaseCreateRequest`
+  /// (`title`, `intake_mode`, `transcript`, optional `request`). Returns the
+  /// persisted case envelope.
+  Future<Map<String, dynamic>> createCouncilCase({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/council/cases',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Loads a single owned Council case, including its latest `result`
+  /// (Requirement 8.1). `GET /api/v1/council/cases/{caseId}`.
+  Future<Map<String, dynamic>> getCouncilCase({
+    required String accessToken,
+    required int caseId,
+  }) {
+    return _get(
+      '/api/v1/council/cases/$caseId',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Updates an owned Council case (Requirement 8.1). `PATCH /api/v1/council/cases/{caseId}`.
+  /// Used to persist the specialist selection (and other intake/request edits)
+  /// onto the case's `request` payload before a run. [payload] mirrors the
+  /// server `CouncilCaseUpdateRequest`; e.g. `{ "request": { "specialists": [...],
+  /// "specialist_count": 3 } }`.
+  Future<Map<String, dynamic>> updateCouncilCase({
+    required String accessToken,
+    required int caseId,
+    required Map<String, dynamic> payload,
+  }) {
+    return _patch(
+      '/api/v1/council/cases/$caseId',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Runs intake extraction for an owned case (Requirement 8.1).
+  /// `POST /api/v1/council/cases/{caseId}/intake` (multipart form). Provide a
+  /// [transcript] and/or an audio upload via [audioBytes]; the server preserves
+  /// the existing 15MB size and content-type allow-list limits and labels a
+  /// degraded heuristic extraction. Returns the updated case envelope with the
+  /// extracted `intake` and normalized `request`.
+  Future<Map<String, dynamic>> submitCouncilCaseIntake({
+    required String accessToken,
+    required int caseId,
+    String transcript = '',
+    List<int>? audioBytes,
+    String? audioFilename,
+  }) {
+    return _postMultipart(
+      '/api/v1/council/cases/$caseId/intake',
+      accessToken: accessToken,
+      fields: {'transcript': transcript},
+      fileField: 'audio_file',
+      fileBytes: audioBytes,
+      filename: audioFilename ?? 'audio-input',
+    );
+  }
+
+  /// Runs the Council for an owned case (Requirement 8.1).
+  /// `POST /api/v1/council/cases/{caseId}/run`. Optionally override the stored
+  /// [request] payload, the [specialistCount] (clamped 2..5 server-side), or the
+  /// explicit [specialists] selection. Returns the case envelope whose `result`
+  /// is the shared `run_council` shape (consensus, conflicts, final
+  /// recommendation, clinician directive).
+  Future<Map<String, dynamic>> runCouncilCase({
+    required String accessToken,
+    required int caseId,
+    Map<String, dynamic>? request,
+    int? specialistCount,
+    List<String>? specialists,
+  }) {
+    final body = <String, dynamic>{};
+    if (request != null) {
+      body['request'] = request;
+    }
+    if (specialistCount != null) {
+      body['specialist_count'] = specialistCount;
+    }
+    if (specialists != null) {
+      body['specialists'] = specialists;
+    }
+    return _post(
+      '/api/v1/council/cases/$caseId/run',
+      body: body,
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> getSystemMetrics({
     required String accessToken,
   }) {
@@ -349,6 +481,45 @@ class ApiClient {
       headers: _headers(accessToken: accessToken),
       body: jsonEncode(body),
     );
+
+    return _decodeResponse(response);
+  }
+
+  /// Sends a `multipart/form-data` POST, mirroring the Council intake endpoint's
+  /// `Form`/`UploadFile` contract. [fields] are string form fields; an optional
+  /// file part is attached when [fileBytes] is non-null. The `Content-Type`
+  /// boundary header is managed by [http.MultipartRequest].
+  Future<Map<String, dynamic>> _postMultipart(
+    String path, {
+    required Map<String, String> fields,
+    String? accessToken,
+    String? fileField,
+    List<int>? fileBytes,
+    String? filename,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$path'));
+    request.headers['Accept'] = 'application/json';
+    if (accessToken != null && accessToken.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $accessToken';
+    }
+    request.fields.addAll(fields);
+    if (fileField != null && fileBytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          fileField,
+          fileBytes,
+          filename: filename ?? 'upload',
+        ),
+      );
+    }
+
+    final http.Response response;
+    try {
+      final streamed = await _httpClient.send(request);
+      response = await http.Response.fromStream(streamed);
+    } catch (_) {
+      throw ApiException(message: 'Không thể kết nối tới server.');
+    }
 
     return _decodeResponse(response);
   }

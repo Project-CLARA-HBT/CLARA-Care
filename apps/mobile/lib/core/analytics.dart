@@ -95,6 +95,9 @@ class MobileAnalyticsEvents {
   static const String careguardCabinetViewed = 'mobile_careguard_cabinet_viewed';
   static const String councilViewed = 'mobile_council_viewed';
   static const String councilRun = 'mobile_council_run';
+  // Council mobile parity (clara-council-upgrade Req 8.4). Coarse, no-PII:
+  // carries only a `has_transcript` flag — never transcript/symptom free text.
+  static const String councilCaseCreated = 'mobile_council_case_created';
   static const String phrViewed = 'mobile_phr_viewed';
   static const String phrSaved = 'mobile_phr_saved';
 }

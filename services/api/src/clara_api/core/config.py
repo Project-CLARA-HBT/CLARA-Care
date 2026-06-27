@@ -619,6 +619,75 @@ class Settings(BaseSettings):
         validation_alias="ADMIN_AUDIT_LOG_ENABLED",
     )
 
+    # --- Council upgrade feature flags (additive; default OFF) ------------------
+    # All additive + default OFF ⇒ byte-for-byte current behavior. With every
+    # flag below off, the Council endpoints, the proxied ML run/intake output
+    # shapes, the web wizard, and the response envelopes equal the pre-feature
+    # baseline (Requirements 9.1, 9.2). Each flag gates exactly one new
+    # capability so the upgrade ships dark and is enabled per environment in the
+    # staged order documented in tasks.md.
+    council_streaming_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_STREAMING_ENABLED",
+    )
+    council_run_history_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_RUN_HISTORY_ENABLED",
+    )
+    council_oversight_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_OVERSIGHT_ENABLED",
+    )
+    council_resilience_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_RESILIENCE_ENABLED",
+    )
+    council_model_disclosure_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MODEL_DISCLOSURE_ENABLED",
+    )
+    council_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_OBSERVABILITY_ENABLED",
+    )
+    council_mobile_parity_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MOBILE_PARITY_ENABLED",
+    )
+
+    # Bounded retry/timeout policy knobs for the Council resilience wrapper
+    # (task 5.1, Requirement 5.1, 5.2). These are inert while
+    # ``council_resilience_enabled`` is off — the wrapper performs a single
+    # attempt and preserves today's error mapping byte-for-byte (Requirement
+    # 5.5). When the flag is on, the wrapper makes at most
+    # ``council_resilience_max_attempts`` bounded attempts, sleeping an
+    # exponential backoff (capped) between attempts, with each attempt carrying
+    # ``council_resilience_timeout_seconds`` as its outbound timeout (``0`` ⇒
+    # use the existing ``ml_service_timeout_seconds`` default, so the per-attempt
+    # timeout is never weakened). The attempt count is hard-capped so a slow or
+    # unavailable ML service can never retry without bound.
+    council_resilience_max_attempts: int = Field(
+        default=3,
+        validation_alias="COUNCIL_RESILIENCE_MAX_ATTEMPTS",
+        ge=1,
+        le=10,
+    )
+    council_resilience_backoff_base_seconds: float = Field(
+        default=0.25,
+        validation_alias="COUNCIL_RESILIENCE_BACKOFF_BASE_SECONDS",
+        ge=0,
+    )
+    council_resilience_backoff_max_seconds: float = Field(
+        default=2.0,
+        validation_alias="COUNCIL_RESILIENCE_BACKOFF_MAX_SECONDS",
+        ge=0,
+    )
+    council_resilience_timeout_seconds: float = Field(
+        default=0.0,
+        validation_alias="COUNCIL_RESILIENCE_TIMEOUT_SECONDS",
+        ge=0,
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

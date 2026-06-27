@@ -196,6 +196,14 @@ class CouncilCase(Base):
     request_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     raw_result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    # Additive oversight-state column (migration 20260421_0017, clara-council-upgrade
+    # Req 3). Nullable; defaults to ``none``. A ``pause`` oversight action flips
+    # this to ``paused`` so the final recommendation renders as "not yet confirmed".
+    # Written only when COUNCIL_OVERSIGHT_ENABLED is on; null/``none`` preserves
+    # today's behavior.
+    oversight_state: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, default="none"
+    )
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -205,6 +213,72 @@ class CouncilCase(Base):
     )
 
     user: Mapped[User] = relationship("User")
+
+
+class CouncilRun(Base):
+    """Append-only snapshot of a single ``run_council`` execution (Req 2).
+
+    A new row is appended on each run when ``COUNCIL_RUN_HISTORY_ENABLED`` is on;
+    rows are immutable by convention (no UPDATE / DELETE). The owning case's
+    ``result_json`` / ``last_run_at`` continue to mirror the newest run so
+    existing consumers are unaffected. Clinical payloads live within the same
+    owner-isolated trust boundary as ``CouncilCase`` and are never telemetered
+    (Req 2.7).
+    """
+
+    __tablename__ = "council_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("council_cases.id", ondelete="CASCADE"),
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    request_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    model_version: Mapped[str] = mapped_column(String(64), default="")
+    emergency_triggered: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    case: Mapped["CouncilCase"] = relationship("CouncilCase")
+    user: Mapped[User] = relationship("User")
+
+
+class CouncilOversightAction(Base):
+    """Append-only human-oversight governance action on a run (Req 3, 4).
+
+    Records ``handoff`` (invite an attending specialty), ``override`` (a human
+    decision that differs from the AI; the AI recommendation is retained), or
+    ``pause`` (suspend automated conclusion pending review). Rows are immutable
+    by convention. ``reason`` and the override fields are owner-isolated case
+    data and are never emitted to telemetry or analytics (Req 3.7).
+    """
+
+    __tablename__ = "council_oversight_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("council_cases.id", ondelete="CASCADE"),
+        index=True,
+    )
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("council_runs.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    actor_ref: Mapped[str] = mapped_column(String(64), default="")
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    handoff_specialty: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    override_decision: Mapped[str | None] = mapped_column(Text, nullable=True)
+    override_original: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    case: Mapped["CouncilCase"] = relationship("CouncilCase")
+    run: Mapped["CouncilRun | None"] = relationship("CouncilRun")
 
 
 class ResearchJob(Base):

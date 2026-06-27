@@ -6,6 +6,7 @@ import '../core/session_store.dart';
 import 'careguard_screen.dart';
 import 'careguard_cabinet_screen.dart';
 import 'council_screen.dart';
+import 'council_case_screen.dart';
 import 'phr_screen.dart';
 import 'research_screen.dart';
 
@@ -257,10 +258,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               subtitle: 'Tổng hợp ý kiến nhiều chuyên khoa',
               enabled: canCouncil,
               onTap: () => _openScreen(
-                CouncilScreen(
-                  apiClient: widget.apiClient,
-                  sessionStore: widget.sessionStore,
-                ),
+                // Council mobile parity (clara-council-upgrade Req 8.5): when
+                // COUNCIL_MOBILE_PARITY_ENABLED is on AND the `council` feature
+                // flag is enabled, route to the case-based parity flow. With the
+                // build flag off, fall back to today's direct-run screen so
+                // existing behavior is preserved byte-for-byte.
+                kCouncilMobileParityEnabled
+                    ? CouncilCaseScreen(
+                        apiClient: widget.apiClient,
+                        sessionStore: widget.sessionStore,
+                      )
+                    : CouncilScreen(
+                        apiClient: widget.apiClient,
+                        sessionStore: widget.sessionStore,
+                      ),
               ),
             ),
             // PHR is available to every authenticated role (RBAC normal/

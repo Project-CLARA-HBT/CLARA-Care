@@ -672,6 +672,27 @@ class Settings(BaseSettings):
         le=1.0,
     )
 
+    # --- Council upgrade feature flags (additive; default OFF) ---------------
+    # ML-side gates for the Council upgrade, mirroring the COUNCIL_NEURAL_*
+    # pattern above. All additive + default OFF ⇒ byte-for-byte current
+    # behavior: with these off, run_council / run_council_intake emit their
+    # existing shapes, no SSE stage stream is produced, no ai_disclosure block
+    # is attached, and no per-stage flow events are emitted (Requirements 9.1,
+    # 9.2). Each flag is the ML peer of the same-named API flag in
+    # services/api/.../core/config.py.
+    council_streaming_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_STREAMING_ENABLED",
+    )
+    council_model_disclosure_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MODEL_DISCLOSURE_ENABLED",
+    )
+    council_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_OBSERVABILITY_ENABLED",
+    )
+
     # --- RAG Knowledge Pipeline (P0 foundations) -----------------------------
     # Additive feature flags. Every flag defaults to legacy behavior so the
     # existing in-memory pipeline keeps serving traffic until cutover.

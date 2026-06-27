@@ -28,6 +28,7 @@ from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.store.health import run_startup_self_check
 from clara_ml.routing import P1RoleIntentRouter
 from clara_ml.streaming.chat_stream import stream_chat_sse as chat_stream_sse
+from clara_ml.streaming.council_stream import stream_council_sse
 from clara_ml.streaming.ws import token_stream
 
 app = FastAPI(title="CLARA ML Service", version="0.1.0")
@@ -1219,6 +1220,31 @@ async def scribe_stream(
 @app.post("/v1/council/run")
 def council_run(payload: dict) -> dict:
     return run_council(payload)
+
+
+@app.post("/v1/council/run/stream")
+def council_run_stream(payload: dict) -> StreamingResponse:
+    """SSE stream of one Council deliberation: per-stage progress + final result.
+
+    Reuses the unchanged ``run_council`` computation and the ``chat_stream`` SSE
+    pattern: each ``reasoning_timeline`` step is forwarded, in order, as a
+    ``stage`` event, then the full result envelope is emitted as a terminal
+    ``result`` event (or an ``error`` event on failure). The terminal result is
+    identical to what the blocking ``POST /v1/council/run`` returns for the same
+    payload (stream/blocking equivalence). Additive: ``/v1/council/run`` is
+    untouched.
+    """
+
+    generator = stream_council_sse(payload or {}, run=run_council)
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.post("/v1/council/consult")
