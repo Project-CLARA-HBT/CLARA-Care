@@ -1,4 +1,5 @@
-from collections import Counter
+import math
+from collections import Counter, deque
 from collections.abc import Mapping
 from threading import Lock
 from time import perf_counter
@@ -6,6 +7,9 @@ from typing import Any
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from clara_api.core.careguard_metrics import _percentile
+from clara_api.core.config import get_settings
 
 
 class APIMetricsStore:
@@ -35,6 +39,76 @@ class APIMetricsStore:
             }
 
 
+# Bound the per-route latency sample ring so the projection stays O(1) in memory
+# regardless of traffic; percentiles are computed over the retained window.
+_MAX_ROUTE_LATENCY_SAMPLES = 1024
+
+
+class MetricsPercentiles:
+    """Bounded per-route latency sample rings with a p50/p90/p99 projection.
+
+    Optional, flag-gated companion to ``APIMetricsStore`` (Requirement 5.2):
+    when ``admin_observability_percentiles_enabled`` is on the metrics
+    middleware records each request's route latency here and the
+    ``/system/metrics`` surface exposes the per-route percentiles alongside the
+    existing average. With the flag off nothing is recorded and the metrics
+    surface returns its average-only baseline, byte-equivalent to today
+    (Requirements 5.1, 12.2).
+
+    Percentiles reuse the proven, monotonic ``_percentile`` helper (linear
+    interpolation), so for any fixed sample set ``p50 <= p90 <= p99``
+    (Requirement 5.3).
+    """
+
+    def __init__(self, max_samples: int = _MAX_ROUTE_LATENCY_SAMPLES) -> None:
+        self._lock = Lock()
+        self._max_samples = max_samples
+        self._samples: dict[str, deque[float]] = {}
+
+    def record(self, route: str, latency_ms: float) -> None:
+        try:
+            value = float(latency_ms)
+        except (TypeError, ValueError):
+            return
+        if value < 0.0 or math.isnan(value) or math.isinf(value):
+            return
+        with self._lock:
+            ring = self._samples.get(route)
+            if ring is None:
+                ring = deque(maxlen=self._max_samples)
+                self._samples[route] = ring
+            ring.append(value)
+
+    def percentiles(self, route: str) -> dict[str, float]:
+        with self._lock:
+            samples = list(self._samples.get(route, ()))
+        return _project_percentiles(samples)
+
+    def snapshot(self) -> dict[str, dict[str, float]]:
+        with self._lock:
+            routes = {route: list(ring) for route, ring in self._samples.items()}
+        return {route: _project_percentiles(samples) for route, samples in routes.items()}
+
+    def reset(self) -> None:
+        with self._lock:
+            self._samples.clear()
+
+
+def _project_percentiles(samples: list[float]) -> dict[str, float]:
+    return {
+        "p50_ms": round(_percentile(samples, 50.0), 3),
+        "p90_ms": round(_percentile(samples, 90.0), 3),
+        "p99_ms": round(_percentile(samples, 99.0), 3),
+    }
+
+
+_metrics_percentiles = MetricsPercentiles()
+
+
+def get_metrics_percentiles() -> MetricsPercentiles:
+    return _metrics_percentiles
+
+
 _UNKNOWN_ROUTE_LABEL = "__unknown__"
 
 
@@ -58,7 +132,10 @@ class APIMetricsMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             elapsed_ms = (perf_counter() - started) * 1000
-            get_api_metrics_store().record(_resolve_route(request), status_code, elapsed_ms)
+            route = _resolve_route(request)
+            get_api_metrics_store().record(route, status_code, elapsed_ms)
+            if get_settings().admin_observability_percentiles_enabled:
+                get_metrics_percentiles().record(route, elapsed_ms)
 
 
 _api_metrics_store = APIMetricsStore()

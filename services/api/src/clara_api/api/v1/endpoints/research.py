@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.compliance.consent import PURPOSE_PERSONALIZATION, PURPOSE_RESEARCH
+from clara_api.compliance.redaction import hash_user_ref
 from clara_api.compliance.service import ComplianceService
 from clara_api.core.attribution import (
     attach_attribution,
@@ -66,6 +67,14 @@ from clara_api.db.models import (
     Query as QueryModel,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.observability.admin_audit import (
+    ACTION_KB_DOCUMENT_STATUS,
+    ACTION_KB_SOURCE_CREATE,
+    ACTION_KB_SOURCE_UPLOAD,
+    OUTCOME_FAILURE,
+    OUTCOME_SUCCESS,
+    record_admin_action,
+)
 from clara_api.phr.features import phr_features
 from clara_api.schemas import (
     KnowledgeDocumentResponse,
@@ -4056,6 +4065,36 @@ def list_knowledge_sources(
     }
 
 
+def _audit_kb_mutation(
+    db: Session,
+    token: TokenPayload,
+    action: str,
+    *,
+    target: str = "",
+    outcome: str,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """Append one admin-action audit row for a knowledge-source mutation.
+
+    Records both success and failure outcomes (Requirement 9.5) with an opaque,
+    salted actor reference (the hash of the caller id — never a raw user id /
+    email, Requirement 9.3) and a PII-free ``meta`` (counts/flags/mime only).
+    The write is a no-op when ``admin_audit_log_enabled`` is off, preserving the
+    flags-off baseline (Requirement 12.2); the audit row is committed on its own
+    so it is durable independently of the mutation's own transaction.
+    """
+
+    record_admin_action(
+        db,
+        hash_user_ref(token.sub),
+        action,
+        target=target,
+        outcome=outcome,
+        meta=meta,
+    )
+    db.commit()
+
+
 @router.post("/knowledge-sources")
 def create_knowledge_source(
     payload: KnowledgeSourceCreateRequest,
@@ -4063,15 +4102,34 @@ def create_knowledge_source(
     db: Session = Depends(get_db),
 ) -> KnowledgeSourceResponse:
     user = _get_user_by_token(db, token)
-    source = KnowledgeSource(
-        owner_user_id=user.id,
-        name=payload.name.strip(),
-        description=payload.description.strip(),
-        is_active=True,
+    try:
+        source = KnowledgeSource(
+            owner_user_id=user.id,
+            name=payload.name.strip(),
+            description=payload.description.strip(),
+            is_active=True,
+        )
+        db.add(source)
+        db.commit()
+        db.refresh(source)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_SOURCE_CREATE,
+            outcome=OUTCOME_FAILURE,
+            meta={"name_length": len(payload.name.strip())},
+        )
+        raise
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_SOURCE_CREATE,
+        target=str(source.id),
+        outcome=OUTCOME_SUCCESS,
+        meta={"name_length": len(payload.name.strip())},
     )
-    db.add(source)
-    db.commit()
-    db.refresh(source)
     return _serialize_knowledge_source(source, documents_count=0)
 
 
@@ -4151,33 +4209,61 @@ async def upload_file_to_knowledge_source(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     user = _get_user_by_token(db, token)
-    source = _get_owned_source(db, source_id=source_id, owner_user_id=user.id)
+    try:
+        source = _get_owned_source(db, source_id=source_id, owner_user_id=user.id)
 
-    file_name = file.filename or "uploaded-file"
-    content_type = file.content_type or "application/octet-stream"
-    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
-    if not file_bytes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
+        file_name = file.filename or "uploaded-file"
+        content_type = file.content_type or "application/octet-stream"
+        file_bytes = await _read_upload_bytes_with_limit(
+            file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
+        )
+        if not file_bytes:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
+        _validate_upload_safety(
+            file_name=file_name, content_type=content_type, file_bytes=file_bytes
+        )
 
-    extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
-    preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
-    token_count = _approx_token_count(extracted_text if file_kind == "text" else "")
+        extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
+        preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
+        token_count = _approx_token_count(extracted_text if file_kind == "text" else "")
 
-    document = KnowledgeDocument(
-        source_id=source.id,
-        owner_user_id=user.id,
-        filename=file_name,
-        content_type=content_type,
-        size=len(file_bytes),
-        extracted_text=extracted_text if file_kind == "text" else "",
-        preview=preview,
-        token_count=token_count,
-        is_active=True,
+        document = KnowledgeDocument(
+            source_id=source.id,
+            owner_user_id=user.id,
+            filename=file_name,
+            content_type=content_type,
+            size=len(file_bytes),
+            extracted_text=extracted_text if file_kind == "text" else "",
+            preview=preview,
+            token_count=token_count,
+            is_active=True,
+        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_SOURCE_UPLOAD,
+            target=str(source_id),
+            outcome=OUTCOME_FAILURE,
+        )
+        raise
+
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_SOURCE_UPLOAD,
+        target=str(source.id),
+        outcome=OUTCOME_SUCCESS,
+        meta={
+            "size": len(file_bytes),
+            "token_count": token_count,
+            "content_type": content_type,
+        },
     )
-    db.add(document)
-    db.commit()
-    db.refresh(document)
 
     return {
         "document": _serialize_knowledge_document(document),
@@ -4193,11 +4279,31 @@ def update_knowledge_document(
     db: Session = Depends(get_db),
 ) -> KnowledgeDocumentResponse:
     user = _get_user_by_token(db, token)
-    document = _get_owned_document(db, document_id=document_id, owner_user_id=user.id)
-    document.is_active = payload.is_active
-    db.add(document)
-    db.commit()
-    db.refresh(document)
+    try:
+        document = _get_owned_document(db, document_id=document_id, owner_user_id=user.id)
+        document.is_active = payload.is_active
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_DOCUMENT_STATUS,
+            target=str(document_id),
+            outcome=OUTCOME_FAILURE,
+            meta={"is_active": payload.is_active},
+        )
+        raise
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_DOCUMENT_STATUS,
+        target=str(document_id),
+        outcome=OUTCOME_SUCCESS,
+        meta={"is_active": payload.is_active},
+    )
     return _serialize_knowledge_document(document)
 
 

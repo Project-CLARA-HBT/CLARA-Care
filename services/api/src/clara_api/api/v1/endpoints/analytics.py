@@ -428,7 +428,11 @@ class AnalyticsAggregator:
         _ = db  # reserved for control-tower config lookups; no DB write/read needed today
         generated_at = datetime.now(tz=UTC)
 
-        records = self._iter_event_records(flow_events)
+        # When the durable store is enabled, read the range-windowed archive so
+        # analytics cover events beyond the in-memory deque and across restarts
+        # (Requirement 7.1). When disabled, fall back to the in-memory snapshot
+        # that was passed in, preserving the pre-feature baseline (Req 7.2).
+        records = self._resolve_clinical_records(flow_events, start=start, end=end)
         metrics_snapshot = metrics if isinstance(metrics, dict) else {}
 
         verdicts = VerdictDistribution()
@@ -530,6 +534,28 @@ class AnalyticsAggregator:
         )
 
     # -- internal clinical helpers ----------------------------------------
+
+    @staticmethod
+    def _resolve_clinical_records(
+        flow_events: Any, *, start: date, end: date
+    ) -> list[dict[str, Any]]:
+        """Choose the clinical-event source based on the durable-store flag.
+
+        When ``admin_observability_persistent_store_enabled`` is on, read the
+        range-windowed durable archive via the ``FlowEventSink`` (events beyond
+        the in-memory deque and across restarts — Requirement 7.1). When off,
+        normalize the in-memory ``flow_events`` snapshot that was passed in, so
+        behavior equals the pre-feature baseline (Requirement 7.2).
+        """
+
+        # Lazy imports avoid a circular import (the sink imports this module).
+        from clara_api.core.config import get_settings
+
+        if get_settings().admin_observability_persistent_store_enabled:
+            from clara_api.observability.flow_event_sink import get_flow_event_sink
+
+            return get_flow_event_sink().query(start=start, end=end)
+        return AnalyticsAggregator._iter_event_records(flow_events)
 
     @staticmethod
     def _iter_event_records(flow_events: Any) -> list[dict[str, Any]]:

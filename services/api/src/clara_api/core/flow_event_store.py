@@ -51,7 +51,28 @@ class FlowEventStore:
             record["sequence"] = self._next_sequence
             self._next_sequence += 1
             self._events.append(record)
+        self._mirror_to_sink(record)
         return deepcopy(record)
+
+    @staticmethod
+    def _mirror_to_sink(record: dict[str, Any]) -> None:
+        """Best-effort durable mirror of an appended event (Requirement 7.1).
+
+        Gated by ``admin_observability_persistent_store_enabled`` inside the
+        sink; a no-op when the durable store is disabled, so flags-off behavior
+        equals the pre-feature baseline (Requirement 7.2). Any sink/DB failure
+        is swallowed so the live telemetry append path is never broken — the
+        in-memory deque remains the source of truth for streaming.
+        """
+
+        try:
+            # Lazy import keeps the core telemetry path import-light and avoids
+            # a circular import (the sink imports the analytics aggregator).
+            from clara_api.observability.flow_event_sink import get_flow_event_sink
+
+            get_flow_event_sink().persist(record)
+        except Exception:  # pragma: no cover - durability must never break append
+            pass
 
     def list_events(
         self,

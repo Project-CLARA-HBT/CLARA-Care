@@ -22,13 +22,24 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.compliance.redaction import hash_user_ref
 from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.db.session import get_db
+from clara_api.observability.admin_audit import (
+    ACTION_EVAL_RUN,
+    ACTION_INGESTION_RUN,
+    ACTION_RAG_SOURCE_UPDATE,
+    OUTCOME_FAILURE,
+    OUTCOME_SUCCESS,
+    record_admin_action,
+)
 
 router = APIRouter()
 
@@ -50,6 +61,76 @@ def _build_fail_soft(payload: dict[str, Any], reason: str) -> dict[str, Any]:
     response["fallback"] = True
     response["fallback_reason"] = reason
     return response
+
+
+def _require_ingestion_controls_enabled() -> None:
+    """Gate the live ingestion/eval control path behind its feature flag.
+
+    When ``admin_rag_ingestion_controls_enabled`` is off the control surface
+    ships dark: each gated endpoint returns the project's standard
+    "feature-disabled" HTTP 404 shape (matching ``system.py`` analytics and the
+    flag-gated scribe/careguard surfaces) rather than a partial or misleading
+    success (Requirements 3.1, 12.4). The check runs inside the handler body so
+    the ``require_roles("admin")`` dependency still authorizes the caller first.
+    """
+
+    if not get_settings().admin_rag_ingestion_controls_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Điều khiển ingestion/eval đã bị tắt.",
+        )
+
+
+def _mark_degraded(result: dict[str, Any]) -> dict[str, Any]:
+    """Stamp an explicit boolean ``degraded`` marker on a control response.
+
+    The marker is derived purely from the existing fail-soft fields: a payload
+    is degraded when CLARA_ML reported ``fallback`` or is not available. A
+    successful CLARA_ML response (``ml_available`` truthy, no ``fallback``) is
+    therefore never marked degraded, so the web surface can render an
+    "unavailable, retry" state on real outages instead of presenting stale
+    success (Requirements 3.3, 3.4).
+    """
+
+    result["degraded"] = bool(
+        result.get("fallback") or not result.get("ml_available", True)
+    )
+    return result
+
+
+def _audit_rag_mutation(
+    db: Session,
+    token: TokenPayload,
+    action: str,
+    *,
+    target: str,
+    result: dict[str, Any],
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """Append one admin-action audit row for a RAG control mutation (Req 9.1, 9.5).
+
+    The outcome mirrors the fail-soft/degraded marker derived from the proxy
+    response: a degraded result (CLARA_ML unavailable / ``fallback``) is recorded
+    as a ``failure`` and a clean ML response as a ``success`` (Requirement 9.5).
+    The actor reference is the opaque, salted hash of the caller's id — never the
+    raw user id / email (Requirement 9.3) — and ``meta`` carries counts/flags
+    only. The write is a no-op when ``admin_audit_log_enabled`` is off, so the
+    flags-off baseline is preserved (Requirement 12.2).
+    """
+
+    degraded = bool(result.get("fallback") or not result.get("ml_available", True))
+    audit_meta: dict[str, Any] = {"degraded": degraded}
+    if meta:
+        audit_meta.update(meta)
+    record_admin_action(
+        db,
+        hash_user_ref(token.sub),
+        action,
+        target=target,
+        outcome=OUTCOME_FAILURE if degraded else OUTCOME_SUCCESS,
+        meta=audit_meta,
+    )
+    db.commit()
 
 
 def _proxy_ml_read(
@@ -141,6 +222,9 @@ class IngestionRunResponse(_ProxyAwareModel):
     source_key: str = ""
     status: str = "queued"
     accepted: bool = False
+    # Explicit fail-soft marker (Req 3.3/3.4): true only when CLARA_ML is
+    # unavailable or returned a fallback payload; never set on real success.
+    degraded: bool = False
 
 
 class IngestionStatusResponse(_ProxyAwareModel):
@@ -163,6 +247,8 @@ class SourceInfo(_ProxyAwareModel):
     enabled: bool = True
     weight: float | None = None
     fetch_mode: str = ""
+    license_code: str = ""
+    attribution: str = ""
     last_watermark: str = ""
     last_run_at: str | None = None
 
@@ -203,6 +289,8 @@ class EvalRunResponse(_ProxyAwareModel):
     run_id: str = ""
     status: str = "queued"
     accepted: bool = False
+    # Explicit fail-soft marker (Req 3.3/3.4); see ``IngestionRunResponse``.
+    degraded: bool = False
 
 
 class EvalResultItem(_ProxyAwareModel):
@@ -222,6 +310,8 @@ class EvalResultsResponse(_ProxyAwareModel):
     ndcg_at_k: float = 0.0
     faithfulness: float = 0.0
     citation_acc: float = 0.0
+    # Explicit fail-soft marker (Req 3.3/3.4); see ``IngestionRunResponse``.
+    degraded: bool = False
 
 
 class CorpusStatsResponse(_ProxyAwareModel):
@@ -241,10 +331,12 @@ class CorpusStatsResponse(_ProxyAwareModel):
 @router.post("/ingestion/run", response_model=IngestionRunResponse)
 def run_ingestion(
     payload: IngestionRunRequest,
-    _token: TokenPayload = ADMIN_ROLE_DEP,
+    token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
 ) -> IngestionRunResponse:
     """Trigger an async ingestion job for a source (Requirement 13.2)."""
 
+    _require_ingestion_controls_enabled()
     result = proxy_ml_post(
         "/v1/admin/rag/ingestion/run",
         payload.model_dump(),
@@ -256,6 +348,15 @@ def run_ingestion(
             "ml_available": False,
         },
     )
+    _mark_degraded(result)
+    _audit_rag_mutation(
+        db,
+        token,
+        ACTION_INGESTION_RUN,
+        target=str(result.get("source_key") or payload.source_key),
+        result=result,
+        meta={"force": payload.force},
+    )
     return IngestionRunResponse.model_validate(result)
 
 
@@ -266,6 +367,7 @@ def get_ingestion_status(
 ) -> IngestionStatusResponse:
     """Poll the status / report of a previously triggered ingestion job."""
 
+    _require_ingestion_controls_enabled()
     result = _proxy_ml_read(
         "GET",
         f"/v1/admin/rag/ingestion/status/{quote(job_id, safe='')}",
@@ -297,7 +399,8 @@ def list_sources(
 def update_source(
     payload: SourceUpdateRequest,
     source_id: int = Path(..., ge=1, description="kb_source_registry.id"),
-    _token: TokenPayload = ADMIN_ROLE_DEP,
+    token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
 ) -> SourceInfo:
     """Enable/disable a source or set its trust tier / ranking weight."""
 
@@ -308,6 +411,14 @@ def update_source(
         f"/v1/admin/rag/sources/{source_id}",
         json_body=body,
         fail_soft_payload={"id": source_id},
+    )
+    _audit_rag_mutation(
+        db,
+        token,
+        ACTION_RAG_SOURCE_UPDATE,
+        target=str(source_id),
+        result=result,
+        meta={"fields": sorted(body.keys())},
     )
     return SourceInfo.model_validate(result)
 
@@ -320,10 +431,12 @@ def update_source(
 @router.post("/eval/run", response_model=EvalRunResponse)
 def run_eval(
     payload: EvalRunRequest,
-    _token: TokenPayload = ADMIN_ROLE_DEP,
+    token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
 ) -> EvalRunResponse:
     """Run the eval harness over the golden VN Q&A set; returns a ``run_id``."""
 
+    _require_ingestion_controls_enabled()
     result = proxy_ml_post(
         "/v1/admin/rag/eval/run",
         payload.model_dump(),
@@ -333,6 +446,15 @@ def run_eval(
             "accepted": False,
             "ml_available": False,
         },
+    )
+    _mark_degraded(result)
+    _audit_rag_mutation(
+        db,
+        token,
+        ACTION_EVAL_RUN,
+        target=str(result.get("run_id") or ""),
+        result=result,
+        meta={"k": payload.k, "categories_count": len(payload.categories)},
     )
     return EvalRunResponse.model_validate(result)
 
@@ -344,12 +466,13 @@ def get_eval_results(
 ) -> EvalResultsResponse:
     """Fetch eval metrics (recall@k / nDCG / faithfulness / citation accuracy)."""
 
+    _require_ingestion_controls_enabled()
     result = _proxy_ml_read(
         "GET",
         f"/v1/admin/rag/eval/results/{quote(run_id, safe='')}",
         fail_soft_payload={"run_id": run_id, "results": []},
     )
-    return EvalResultsResponse.model_validate(result)
+    return EvalResultsResponse.model_validate(_mark_degraded(result))
 
 
 # ---------------------------------------------------------------------------

@@ -80,7 +80,17 @@ def _stub_ml_proxy(monkeypatch: pytest.MonkeyPatch):
     Returns the handler's own fail-soft payload, which every response model is
     designed to validate. This isolates the RBAC property from downstream ML
     availability.
+
+    Also enables ``ADMIN_RAG_INGESTION_CONTROLS_ENABLED`` so the ingestion/eval
+    control endpoints (gated behind that flag — feature clara-admin-observability
+    task 3.1) proceed to the stubbed proxy and resolve to a 200 fail-soft
+    instead of the flags-off feature-disabled 404. The RBAC property under test
+    ("the admin gets through the role gate on every route") is unchanged; the
+    flags-off 404 gating is covered separately in the admin-observability suite.
     """
+
+    monkeypatch.setenv("ADMIN_RAG_INGESTION_CONTROLS_ENABLED", "true")
+    get_settings.cache_clear()
 
     def _stub(*_args, **kwargs):
         return dict(kwargs.get("fail_soft_payload") or {})
@@ -88,6 +98,7 @@ def _stub_ml_proxy(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(admin_rag, "proxy_ml_post", _stub)
     monkeypatch.setattr(admin_rag, "_proxy_ml_read", _stub)
     yield
+    get_settings.cache_clear()
 
 
 # ---------------------------------------------------------------------------

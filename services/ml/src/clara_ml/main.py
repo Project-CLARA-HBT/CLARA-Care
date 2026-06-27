@@ -22,6 +22,7 @@ from clara_ml.factcheck import run_fides_lite
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
+from clara_ml.observability.tracing import init_tracing
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.store.health import run_startup_self_check
@@ -52,6 +53,25 @@ def _rag_persistent_store_self_check() -> None:
         app.state.rag_persistent_flags = run_startup_self_check(settings)
     except Exception:  # noqa: BLE001 - startup must never crash on the self-check
         logger.exception("RAG persistent store self-check failed; using legacy path")
+
+
+@app.on_event("startup")
+def _init_tracing() -> None:
+    """Initialize the optional OTEL tracer once at startup (Requirement 6.1).
+
+    Idempotent: a tracer is only built if one is not already present on
+    ``app.state``. The tracer is a no-op unless OTEL export is enabled and an
+    endpoint is configured, and any init failure degrades to a no-op so startup
+    never crashes (Requirements 6.2, 6.3, 6.5).
+    """
+
+    if getattr(app.state, "tracer", None) is not None:
+        return
+    try:
+        app.state.tracer = init_tracing(settings)
+    except Exception:  # noqa: BLE001 - tracing init must never crash startup
+        logger.exception("Tracing initialization failed; tracing disabled")
+        app.state.tracer = None
 
 _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (

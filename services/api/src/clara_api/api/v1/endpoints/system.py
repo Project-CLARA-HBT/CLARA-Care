@@ -15,7 +15,7 @@ from clara_api.core.config import get_settings
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.flow import FLOW_EVENTS_DEFAULT_LIMIT, get_flow_event_stream_service
 from clara_api.core.flow.event_stream_service import FLOW_EVENTS_MAX_LIMIT
-from clara_api.core.metrics import get_api_metrics_store
+from clara_api.core.metrics import get_api_metrics_store, get_metrics_percentiles
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -97,6 +97,38 @@ def _status_from_ratio(value: float, *, warn: float, critical: float) -> str:
     return "ok"
 
 
+# Flow-event stream health thresholds (Requirements 5.4, 5.5). These mirror the
+# values previously inlined in the /ecosystem handler so the surfaced behavior
+# is byte-equivalent.
+FLOW_EVENT_STALENESS_MINUTES = 30.0
+FLOW_EVENT_ERROR_RATIO_THRESHOLD = 0.2
+
+
+def classify_flow_event_health(
+    *,
+    minutes_since_last_event: float | None,
+    event_count: int,
+    error_ratio: float,
+) -> str:
+    """Classify flow-event stream health as ``ok``/``degraded``/``down``.
+
+    Pure projection of the /ecosystem flow-event decision (Requirements 5.4,
+    5.5): the stream is ``down`` when it is stale with no sampled events,
+    ``degraded`` when stale-with-items or the error ratio is at/above threshold,
+    and ``ok`` otherwise. The latest-event age is considered stale when it is
+    unknown (``None``) or older than ``FLOW_EVENT_STALENESS_MINUTES``.
+    """
+    flow_stale = (
+        minutes_since_last_event is None
+        or minutes_since_last_event > FLOW_EVENT_STALENESS_MINUTES
+    )
+    if flow_stale:
+        return "down" if event_count <= 0 else "degraded"
+    if error_ratio >= FLOW_EVENT_ERROR_RATIO_THRESHOLD:
+        return "degraded"
+    return "ok"
+
+
 def _minutes_since(now_utc: datetime, when_utc: datetime | None) -> float | None:
     if when_utc is None:
         return None
@@ -170,7 +202,13 @@ def _get_user_by_token(db: Session, token: TokenPayload) -> User:
 def get_metrics(
     _token: TokenPayload = Depends(require_roles("doctor")),
 ) -> dict[str, object]:
-    return get_api_metrics_store().snapshot()
+    snapshot = get_api_metrics_store().snapshot()
+    # Per-route p50/p90/p99 are additive and flag-gated: with the flag off the
+    # surface is byte-equivalent to the average-only baseline (Requirements 5.1,
+    # 5.2, 12.2).
+    if get_settings().admin_observability_percentiles_enabled:
+        snapshot["percentiles"] = get_metrics_percentiles().snapshot()
+    return snapshot
 
 
 @router.get("/dependencies")
@@ -615,12 +653,11 @@ def get_ecosystem(
     flow_error_ratio = (
         flow_error_like_count / max(len(flow_items), 1) if flow_items else 1.0
     )
-    if flow_stale:
-        flow_status = "down" if not flow_items else "degraded"
-    elif flow_error_ratio >= 0.2:
-        flow_status = "degraded"
-    else:
-        flow_status = "ok"
+    flow_status = classify_flow_event_health(
+        minutes_since_last_event=minutes_since_last_event,
+        event_count=len(flow_items),
+        error_ratio=flow_error_ratio,
+    )
 
     partner_health: list[dict[str, object]] = [
         {

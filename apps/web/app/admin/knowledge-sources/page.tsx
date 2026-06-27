@@ -82,16 +82,33 @@ type RagRegistrySource = {
   last_watermark?: string;
   last_run_at?: string | null;
   // Fail-soft markers the proxy may attach when services/ml is unavailable.
+  // `degraded` is the explicit marker added by the admin RAG proxy (task 3.1):
+  // it is derived from `fallback`/`ml_available` so a successful ML response is
+  // never flagged degraded.
   ml_available?: boolean;
   fallback?: boolean;
+  degraded?: boolean;
 };
 
 type RagSourcesListResponse = {
   sources: RagRegistrySource[];
   ml_available?: boolean;
   fallback?: boolean;
+  degraded?: boolean;
   fallback_reason?: string;
 };
+
+/** True when an admin RAG proxy payload signals fail-soft degradation: the
+ *  explicit `degraded` marker (task 3.1) or the underlying `fallback` /
+ *  `ml_available=false` fields it is derived from. Used to drive the explicit
+ *  "unavailable, retry" state instead of presenting stale success. */
+function isRagPayloadDegraded(payload: {
+  degraded?: boolean;
+  fallback?: boolean;
+  ml_available?: boolean;
+}): boolean {
+  return payload.degraded === true || payload.fallback === true || payload.ml_available === false;
+}
 
 /** Only the explicitly-changed knobs are sent; the backend accepts any of
  *  enabled / trust_tier (1..4) / weight (>= 0). */
@@ -398,7 +415,7 @@ export default function AdminKnowledgeSourcesPage() {
     try {
       const result = await fetchRagRegistrySources();
       setRagRegistry(Array.isArray(result.sources) ? result.sources : []);
-      setRagRegistryDegraded(result.fallback === true || result.ml_available === false);
+      setRagRegistryDegraded(isRagPayloadDegraded(result));
     } catch (cause) {
       setRagRegistry(null);
       setRagRegistryError(
@@ -422,7 +439,8 @@ export default function AdminKnowledgeSourcesPage() {
       setRagUpdateNotice("");
       try {
         const updated = await patchRagRegistrySource(targetId, patch);
-        if (updated.fallback === true || updated.ml_available === false) {
+        if (isRagPayloadDegraded(updated)) {
+          setRagRegistryDegraded(true);
           setRagUpdateError(
             "Dịch vụ xử lý tạm thời không khả dụng — thay đổi chưa được áp dụng. Vui lòng thử lại sau ít phút."
           );
@@ -1017,10 +1035,23 @@ export default function AdminKnowledgeSourcesPage() {
           {ragRegistryDegraded ? (
             <div
               role="alert"
-              className="mb-4 rounded-[var(--radius-md)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-sm text-[color:var(--status-warn-text)]"
+              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-sm text-[color:var(--status-warn-text)]"
             >
-              Dịch vụ xử lý tạm thời không khả dụng — danh sách nguồn RAG có thể chưa đầy đủ. Vui
-              lòng thử lại sau ít phút.
+              <div>
+                <p className="font-semibold">Dịch vụ xử lý tạm thời không khả dụng</p>
+                <p className="mt-0.5">
+                  Danh sách nguồn RAG có thể chưa đầy đủ và các thay đổi chưa được áp dụng. Vui lòng
+                  thử lại.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void loadRagRegistry()}
+                disabled={ragRegistryLoading || ragUpdatingId != null}
+                className="rounded-[var(--radius-sm)] border border-[color:var(--status-warn-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-[color:var(--status-warn-text)] transition hover:text-[var(--text-primary)] disabled:opacity-60"
+              >
+                {ragRegistryLoading ? "Đang thử lại..." : "Thử lại"}
+              </button>
             </div>
           ) : null}
 

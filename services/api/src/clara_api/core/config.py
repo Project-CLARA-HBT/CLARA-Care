@@ -589,6 +589,36 @@ class Settings(BaseSettings):
         validation_alias="CAREGUARD_OBSERVABILITY_ENABLED",
     )
 
+    # --- Admin & Observability upgrade feature flags ----------------------------
+    # All additive + default OFF/empty ⇒ byte-for-byte current behavior. With
+    # every flag below off, request/response shapes and side effects equal the
+    # pre-feature baseline (Requirements 12.1, 12.2). Each flag gates one new
+    # capability so the upgrade ships dark and can be enabled per environment.
+    admin_rag_ingestion_controls_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_RAG_INGESTION_CONTROLS_ENABLED",
+    )
+    admin_observability_percentiles_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_PERCENTILES_ENABLED",
+    )
+    admin_observability_persistent_store_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_PERSISTENT_STORE_ENABLED",
+    )
+    admin_observability_alerting_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_ALERTING_ENABLED",
+    )
+    admin_observability_alert_webhook_url: str = Field(
+        default="",
+        validation_alias="ADMIN_OBSERVABILITY_ALERT_WEBHOOK_URL",
+    )
+    admin_audit_log_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_AUDIT_LOG_ENABLED",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

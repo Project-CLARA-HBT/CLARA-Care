@@ -43,7 +43,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
 ## Tasks
 
 - [ ] 1. Configuration, feature flags, and migrations
-  - [ ] 1.1 Add API feature flags and settings keys
+  - [x] 1.1 Add API feature flags and settings keys
     - In `services/api/src/clara_api/core/config.py`, add `admin_rag_ingestion_controls_enabled`, `admin_observability_percentiles_enabled`, `admin_observability_persistent_store_enabled`, `admin_observability_alerting_enabled`, `admin_observability_alert_webhook_url`, and `admin_audit_log_enabled`, all defaulting to off/empty (preserving baseline).
     - _Requirements: 12.1, 12.2_
 
@@ -144,7 +144,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - _Requirements: 5.6_
 
 - [ ] 6. Distributed tracing / OpenTelemetry export
-  - [ ] 6.1 Wire the OTEL tracer behind the existing config keys
+  - [x] 6.1 Wire the OTEL tracer behind the existing config keys
     - Create `services/ml/src/clara_ml/observability/tracing.py` with `init_tracing(settings)` that returns a no-op unless `otel_export_enabled` and a non-empty `otel_export_endpoint` are set, and a `request_span(...)` context manager emitting a top-level span plus stage child spans, with all attributes passed through `strip_pii`. Initialize once at app startup.
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
@@ -186,7 +186,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - _Requirements: 10.1, 10.3, 10.4, 10.5, 10.6_
 
 - [ ] 8. Alert engine: evaluate, deliver, acknowledge
-  - [ ] 8.1 Implement the alert engine and threshold rules
+  - [x] 8.1 Implement the alert engine and threshold rules
     - Create `services/api/src/clara_api/observability/alerts.py` with `Alert`, `AlertEngine.evaluate(...)` (ML unreachable/degraded, API 5xx warn/critical, flow stale/missing → stable id + bounded severity), `reconcile(...)` (firing/cleared transitions persisted to `alert_state`), and `acknowledge(alert_id)`, all gated by `admin_observability_alerting_enabled`.
     - _Requirements: 8.1, 8.4, 8.5_
 
@@ -215,7 +215,7 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - **Validates: Requirements 8.6**
 
 - [ ] 9. Admin-action audit trail
-  - [ ] 9.1 Implement the append-only admin audit module
+  - [x] 9.1 Implement the append-only admin audit module
     - Create `services/api/src/clara_api/observability/admin_audit.py` with `record_admin_action(db, actor_ref, action, target, outcome, meta)` (insert-only, opaque actor ref, `_project_pii_free` meta) and `list_admin_actions(db)` (most-recent-first), gated by `admin_audit_log_enabled`. No update/delete path.
     - _Requirements: 9.1, 9.2, 9.3_
 
@@ -256,8 +256,8 @@ Testing prerequisites (set up as part of the first task that needs them, not as 
     - Verify any raw upstream error rendered on the Knowledge Sources / Observability pages is sanitized (no codes/stack/URLs).
     - _Requirements: 2.4, 5.6_
 
-- [ ] 11. Safety and flags-off regression suite
-  - [ ] 11.1 Set up the safety-regression module and shared fixtures
+- [x] 11. Safety and flags-off regression suite
+  - [x] 11.1 Set up the safety-regression module and shared fixtures
     - Create a dedicated regression test module with shared fixtures for roles, cookie-vs-bearer auth, flag matrices, and adversarial-PII payloads, so the RBAC, no-PII, and flags-off invariants are locked across all tracks.
     - _Requirements: 11.1, 12.2_
 

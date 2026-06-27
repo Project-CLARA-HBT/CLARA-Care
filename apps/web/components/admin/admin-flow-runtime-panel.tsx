@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SystemFlowEvent, getSystemFlowEvents } from "@/lib/system";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 
 const DEFAULT_LIMIT = 120;
 const MAX_KEEP_ITEMS = 180;
@@ -49,6 +51,17 @@ export default function AdminFlowRuntimePanel() {
   const [error, setError] = useState("");
   const [latestSequence, setLatestSequence] = useState(0);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("chat");
+  // Detailed/raw flow-event telemetry is admin-only (Requirement 11.4,
+  // Property 25). The `/system/flow-events` read is operational (doctor+admin),
+  // so a non-admin reaching this surface must see only the sanitized summary —
+  // never the raw per-event payloads. Visibility is a pure function of role via
+  // the shared role-gated TelemetryPanel; hydrate the role client-side so the
+  // gate matches the active session (getRole() is "normal" during SSR).
+  const [role, setRole] = useState<UserRole>("normal");
+
+  useEffect(() => {
+    setRole(getRole());
+  }, []);
 
   const latestSequenceRef = useRef(0);
 
@@ -208,63 +221,72 @@ export default function AdminFlowRuntimePanel() {
       ) : null}
 
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-          <span>Sequence</span>
-          <span>Time</span>
-          <span>Stage / Note</span>
-          <span>Status</span>
-        </div>
-
-        <div className="max-h-[28rem] overflow-y-auto">
-          {isLoading ? (
-            <div className="space-y-2 p-3">
-              <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-              <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-              <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-            </div>
-          ) : items.length ? (
-            items.map((item) => {
-              const status = normalizeStatus(item.status);
-              return (
-                <div
-                  key={`${item.sequence}-${item.stage}-${item.timestamp}`}
-                  className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-100 px-3 py-2 text-xs text-slate-700 last:border-b-0 dark:border-slate-800 dark:text-slate-200"
-                >
-                  <span className="font-mono text-slate-500 dark:text-slate-400">#{item.sequence}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatTimestamp(item.timestamp)}</span>
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">
-                      {item.stage}
-                      {item.sourceCount !== null ? ` (${item.sourceCount})` : ""}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
-                      {item.note || item.eventType || "No note"}
-                    </p>
-                  </div>
-                  <span
-                    className={cx(
-                      "inline-flex h-fit w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                      status === "ok" &&
-                        "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-                      status === "warn" &&
-                        "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-                      status === "error" &&
-                        "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-                      status === "pending" &&
-                        "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                    )}
-                  >
-                    {item.status || "pending"}
-                  </span>
-                </div>
-              );
-            })
-          ) : (
+        <TelemetryPanel
+          role={role}
+          summary={
             <p className="px-3 py-5 text-xs text-slate-500 dark:text-slate-400">
-              Chưa có flow event nào cho bộ lọc hiện tại.
+              Chi tiết telemetry runtime (payload từng flow event) chỉ hiển thị cho quản trị viên. Tổng quan trạng thái phía trên đã được tóm tắt an toàn.
             </p>
-          )}
-        </div>
+          }
+        >
+          <div className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+            <span>Sequence</span>
+            <span>Time</span>
+            <span>Stage / Note</span>
+            <span>Status</span>
+          </div>
+
+          <div className="max-h-[28rem] overflow-y-auto">
+            {isLoading ? (
+              <div className="space-y-2 p-3">
+                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+              </div>
+            ) : items.length ? (
+              items.map((item) => {
+                const status = normalizeStatus(item.status);
+                return (
+                  <div
+                    key={`${item.sequence}-${item.stage}-${item.timestamp}`}
+                    className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-100 px-3 py-2 text-xs text-slate-700 last:border-b-0 dark:border-slate-800 dark:text-slate-200"
+                  >
+                    <span className="font-mono text-slate-500 dark:text-slate-400">#{item.sequence}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatTimestamp(item.timestamp)}</span>
+                    <div>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        {item.stage}
+                        {item.sourceCount !== null ? ` (${item.sourceCount})` : ""}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
+                        {item.note || item.eventType || "No note"}
+                      </p>
+                    </div>
+                    <span
+                      className={cx(
+                        "inline-flex h-fit w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                        status === "ok" &&
+                          "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                        status === "warn" &&
+                          "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                        status === "error" &&
+                          "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+                        status === "pending" &&
+                          "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      )}
+                    >
+                      {item.status || "pending"}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="px-3 py-5 text-xs text-slate-500 dark:text-slate-400">
+                Chưa có flow event nào cho bộ lọc hiện tại.
+              </p>
+            )}
+          </div>
+        </TelemetryPanel>
       </div>
     </section>
   );
