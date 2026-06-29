@@ -1,0 +1,16 @@
+* Tỉ lệ đóng góp của các thành viên:
+* Tính theo tổng số dòng thay đổi:
+Thành viên	Thêm	  Xóa	  Tổng thay đổi	  Tỉ lệ
+nguyenntdev	164.415	  50.382  214.797	  55,71%
+hhthuis	        136.947	  7.958	  144.905	  37,58%    - Lê Hữu Hoàng-24520539-ATTN2024
+TuanHung1149	12.627	  4.360	  16.987	  4,41%     - Nguyễn Tuấn Hùng-24520616-ATTN2024
+jamabighotdog	4.305	  2.407	  6.712	          1,74%
+dependabot	629	  1.525	  2.154	          0,56%
+
+* Tính theo số commit:
+Thành viên	Số commit	Tỉ lệ đóng góp
+nguyenntdev	294	        73,68%
+jamabighotdog	39	        9,77%
+TuanHung1149	34	        8,52% - NGuyễn Tuấn Hùng-24520616
+dependabot[bot]	18	        4,51%
+hhthuis	        14	        3,51% - Lê Hữu Hoàng-24520539
