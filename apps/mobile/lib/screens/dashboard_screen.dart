@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/analytics.dart';
 import '../core/api_client.dart';
+import '../core/feature_flags.dart';
 import '../core/session_store.dart';
 import 'careguard_screen.dart';
 import 'careguard_cabinet_screen.dart';
@@ -324,6 +325,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 PhrScreen(
                   apiClient: widget.apiClient,
                   sessionStore: widget.sessionStore,
+                  // Enhanced read-only PHR surfaces (export + emergency card)
+                  // are gated by `phr_enhanced_mobile_enabled`, resolved from
+                  // the role-scoped summary combined with build defaults. A
+                  // null/unloadable summary resolves the gate to false, so the
+                  // screen behaves as the legacy PHR surface (Req 5.6).
+                  featureFlags: MobileFeatureFlagResolver(summary: _summary),
                 ),
               ),
             ),

@@ -233,7 +233,7 @@ class ApiClient {
   Stream<SseEvent> streamResearchJob({
     required String accessToken,
     required String jobId,
-  }) async* {
+  }) {
     final uri = Uri.parse('$_baseUrl/api/v1/research/tier2/jobs/$jobId/stream');
     final request = http.Request('GET', uri);
     request.headers.addAll({
@@ -241,7 +241,16 @@ class ApiClient {
       'Cache-Control': 'no-cache',
       if (accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
     });
+    return _streamSse(request);
+  }
 
+  /// Shared SSE consumer reused by the research-job and chat streams. Sends the
+  /// prepared [request], maps a stalled connection/idle gap onto the existing
+  /// recoverable [ApiException] (Req 9.2, 2.6), then parses the SSE protocol:
+  /// lines prefixed with `id:`, `event:`, `data:`, or comments `:`, with events
+  /// separated by blank lines. Yields one [SseEvent] per complete frame and
+  /// flushes a trailing frame that was not terminated by a blank line.
+  Stream<SseEvent> _streamSse(http.BaseRequest request) async* {
     final http.StreamedResponse response;
     try {
       response = await _httpClient.send(request).timeout(_requestTimeout);
@@ -263,8 +272,6 @@ class ApiClient {
       throw ApiException(statusCode: response.statusCode, message: message);
     }
 
-    // Parse SSE protocol: lines prefixed with "id:", "event:", "data:", or
-    // comments ":". Events are separated by blank lines.
     String? currentId;
     String? currentEvent;
     final dataBuffer = StringBuffer();
@@ -324,6 +331,52 @@ class ApiClient {
         data: dataBuffer.toString(),
       );
     }
+  }
+
+  /// Submits a chat turn and returns the full assistant answer envelope in a
+  /// single blocking response (Req 1.1). Mirrors the web `sendChatMessage`
+  /// contract: `POST /api/v1/chat` with `{ "message": ... }`, returning the
+  /// `ChatResponse` shape (`reply`, `role`, `intent`, `confidence`,
+  /// `emergency`, `model_used`, `retrieved_ids`, `ml`, `fallback`,
+  /// `attribution`, optional `ai_disclosure`). Routes through [_sendAuthed], so
+  /// it inherits the bounded timeout and token-refresh resilience.
+  ///
+  /// [payload] is the request body; callers pass at least `{'message': text}`.
+  Future<Map<String, dynamic>> chat({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/chat',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Opens the chat SSE stream and yields [SseEvent]s as the answer is
+  /// produced (Req 1.2). Mirrors the web `streamChatMessage` contract:
+  /// `POST /api/v1/chat/stream` with `{ "message": ... }` and
+  /// `Accept: text/event-stream`. The server emits `start`, `step`, `token`
+  /// (`{"text": ...}`), and a terminal `done` (final envelope) or `error`
+  /// (`{"message": ...}`) frame; callers can fall back to [chat] on `error` or
+  /// disconnect, preserving any already-streamed content (Req 1.3).
+  ///
+  /// Reuses the shared SSE parser ([_streamSse]) so the bounded idle timeout
+  /// applies identically to research and chat streams.
+  Stream<SseEvent> streamChat({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    final uri = Uri.parse('$_baseUrl/api/v1/chat/stream');
+    final request = http.Request('POST', uri);
+    request.headers.addAll({
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      if (accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+    });
+    request.body = jsonEncode(payload);
+    return _streamSse(request);
   }
 
   Future<Map<String, dynamic>> analyzeCareguard({
@@ -386,6 +439,52 @@ class ApiClient {
     return _delete(
       '/api/v1/careguard/cabinet/items/$itemId',
       accessToken: accessToken,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Self-med cabinet ops (clara-mobile-feature-parity Req 3.1, 3.2).
+  //
+  // The web "self-med" surface (`apps/web/lib/selfmed.ts`) is NOT backed by a
+  // distinct `/selfmed/*` API — its `getCabinet` / `addCabinetItem` /
+  // `deleteCabinetItem` all call the shared `/careguard/cabinet*` endpoints
+  // (the CLARA_API exposes no `/selfmed/*` routes). To match that actual server
+  // contract without changing it (Req 15.5), the mobile self-med cabinet ops are
+  // thin, selfmed-named aliases that delegate to the existing careguard cabinet
+  // methods. This keeps the change additive/surgical and lets the SelfMedCabinet
+  // screen (task 5.2) depend on parity-named methods rather than reaching for
+  // the careguard-prefixed ones directly.
+  // ---------------------------------------------------------------------------
+
+  /// Loads the owner's self-med cabinet, mirroring the web `getCabinet`
+  /// contract (`GET /api/v1/careguard/cabinet`). Returns the
+  /// `{ cabinet_id, items: [...], ... }` envelope (Req 3.1).
+  Future<Map<String, dynamic>> getCabinet({
+    required String accessToken,
+  }) {
+    return getCareguardCabinet(accessToken: accessToken);
+  }
+
+  /// Adds a self-med cabinet item, mirroring the web `addCabinetItem` contract
+  /// (`POST /api/v1/careguard/cabinet/items`). A duplicate normalized name is
+  /// rejected server-side (409) and surfaces as an [ApiException] (Req 3.2).
+  Future<Map<String, dynamic>> addCabinetItem({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return addCareguardCabinetItem(accessToken: accessToken, payload: payload);
+  }
+
+  /// Deletes a self-med cabinet item scoped to the owner, mirroring the web
+  /// `deleteCabinetItem` contract
+  /// (`DELETE /api/v1/careguard/cabinet/items/{itemId}`) (Req 3.2).
+  Future<Map<String, dynamic>> deleteCabinetItem({
+    required String accessToken,
+    required int itemId,
+  }) {
+    return deleteCareguardCabinetItem(
+      accessToken: accessToken,
+      itemId: itemId,
     );
   }
 
@@ -552,6 +651,162 @@ class ApiClient {
     return _post(
       '/api/v1/council/cases/$caseId/run',
       body: body,
+      accessToken: accessToken,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ambient scribe ops (clara-mobile-feature-parity Req 4.1, 4.2, 4.3, 4.4, 4.5).
+  //
+  // These mirror the web scribe client (`apps/web/lib/scribe.ts`) and the
+  // server Scribe_API routes mounted under `/api/v1/scribe` (see
+  // `services/api/.../endpoints/scribe.py`). Every route is doctor-RBAC-gated
+  // server-side and owner-scoped; the mobile screen (task 6.2) layers the
+  // `scribe_mobile_enabled` flag + RBAC + consent gate on top. The methods are
+  // thin, additive wrappers reusing `_get`/`_post`/`_postMultipart`, so they
+  // inherit the same bounded-timeout / token-refresh resilience as the rest of
+  // the client. No mobile-only request/response shape is introduced — the
+  // session envelope is the shared `ScribeSessionResponse`.
+  // ---------------------------------------------------------------------------
+
+  /// Lists the clinician's own scribe sessions, newest-first
+  /// (`GET /api/v1/scribe/sessions`). Returns the `{ items: [...], total: int }`
+  /// envelope; each item is the shared `ScribeSessionResponse` shape (Req 4.2).
+  Future<Map<String, dynamic>> listScribeSessions({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) {
+    return _get(
+      '/api/v1/scribe/sessions?limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Creates a new scribe session (`POST /api/v1/scribe/sessions`). [payload]
+  /// mirrors the server `ScribeSessionCreateRequest`
+  /// (`title`, `transcript`, `auto_generate_soap`); when a transcript is
+  /// supplied and `auto_generate_soap` is true the server returns the session
+  /// with its generated SOAP note (Req 4.1, 4.2). Returns the session envelope.
+  Future<Map<String, dynamic>> createScribeSession({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/scribe/sessions',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Loads a single owned scribe session by id, including its transcript, SOAP
+  /// note, insights, and status (`GET /api/v1/scribe/sessions/{sessionId}`).
+  /// Throws an [ApiException] (404) when the session is not owned/absent.
+  Future<Map<String, dynamic>> getScribeSession({
+    required String accessToken,
+    required int sessionId,
+  }) {
+    return _get(
+      '/api/v1/scribe/sessions/$sessionId',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Transcribes an uploaded audio clip via the server ASR proxy
+  /// (`POST /api/v1/scribe/transcribe`, multipart form). Mirrors the web
+  /// `transcribeScribeAudio` contract: the file part is `audio_file` and the
+  /// optional string form fields are `language`, `prompt`, `chunk_index`,
+  /// `session_id`, and `append_to_session`. When [sessionId] is provided with
+  /// [appendToSession] true the server appends the recognized text to that
+  /// session's transcript. The server enforces the 15MB size limit and the
+  /// audio content-type allow-list, and (when consent is required) rejects a
+  /// transcription for a session with no active consent before any ASR work
+  /// (Req 4.1, 4.4). Returns the ML transcribe payload (`{ text, language, ...}`).
+  Future<Map<String, dynamic>> transcribeScribeAudio({
+    required String accessToken,
+    required List<int> audioBytes,
+    String? filename,
+    String? language,
+    String? prompt,
+    int? chunkIndex,
+    int? sessionId,
+    bool? appendToSession,
+  }) {
+    final fields = <String, String>{};
+    if (language != null && language.isNotEmpty) {
+      fields['language'] = language;
+    }
+    if (prompt != null && prompt.isNotEmpty) {
+      fields['prompt'] = prompt;
+    }
+    if (chunkIndex != null) {
+      fields['chunk_index'] = chunkIndex.toString();
+    }
+    if (sessionId != null) {
+      fields['session_id'] = sessionId.toString();
+    }
+    if (appendToSession != null) {
+      fields['append_to_session'] = appendToSession ? 'true' : 'false';
+    }
+    return _postMultipart(
+      '/api/v1/scribe/transcribe',
+      accessToken: accessToken,
+      fields: fields,
+      fileField: 'audio_file',
+      fileBytes: audioBytes,
+      filename: filename ?? 'scribe-live.webm',
+    );
+  }
+
+  /// Regenerates the SOAP note for an owned session
+  /// (`POST /api/v1/scribe/sessions/{sessionId}/regenerate`). [payload] mirrors
+  /// the server `ScribeSessionRegenerateRequest` (optional `transcript` to
+  /// regenerate from, optional `status`); an empty/absent transcript with no
+  /// stored transcript is rejected server-side (400) and surfaces as an
+  /// [ApiException] (Req 4.2). Returns the updated session envelope.
+  Future<Map<String, dynamic>> regenerateScribeSession({
+    required String accessToken,
+    required int sessionId,
+    Map<String, dynamic> payload = const {},
+  }) {
+    return _post(
+      '/api/v1/scribe/sessions/$sessionId/regenerate',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Captures an immutable patient-consent record for a session
+  /// (`POST /api/v1/scribe/sessions/{sessionId}/consent`). [method] and [scope]
+  /// mirror the server `ConsentRequest` defaults (`verbal` / `encounter`).
+  /// Consent must be captured before audio processing when consent is required
+  /// (Req 4.4). Returns `{ session_id, consent_id, captured: true }`.
+  Future<Map<String, dynamic>> captureScribeConsent({
+    required String accessToken,
+    required int sessionId,
+    String method = 'verbal',
+    String scope = 'encounter',
+  }) {
+    return _post(
+      '/api/v1/scribe/sessions/$sessionId/consent',
+      body: {'method': method, 'scope': scope},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Revokes the active consent for a session
+  /// (`POST /api/v1/scribe/sessions/{sessionId}/consent/revoke`). Revocation is
+  /// a new audit event that leaves the original consent record immutable and
+  /// flags the session so further transcription/streaming is blocked (Req 4.4).
+  /// Throws an [ApiException] (404) when there is no active consent to revoke.
+  /// Returns `{ session_id, consent_id, revoked: true }`.
+  Future<Map<String, dynamic>> revokeScribeConsent({
+    required String accessToken,
+    required int sessionId,
+  }) {
+    return _post(
+      '/api/v1/scribe/sessions/$sessionId/consent/revoke',
+      body: const {},
       accessToken: accessToken,
     );
   }

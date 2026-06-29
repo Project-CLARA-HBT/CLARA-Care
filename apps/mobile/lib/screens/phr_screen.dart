@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../core/analytics.dart';
 import '../core/api_client.dart';
+import '../core/feature_flags.dart';
 import '../core/session_store.dart';
 
 // =============================================================================
@@ -77,6 +80,18 @@ class PhrStrings {
   String get done => _t('Xong', 'Done');
 
   // Entry fields.
+  // Enhanced (flag-gated) read-only surfaces — export + emergency card (Req 5.6).
+  String get exportAction => _t('Xuất hồ sơ', 'Export');
+  String get emergencyCardAction => _t('Thẻ khẩn cấp', 'Emergency card');
+  String get exportTitle => _t('Xuất hồ sơ (chỉ đọc)', 'Export (read-only)');
+  String get emergencyCardTitle => _t('Thẻ khẩn cấp', 'Emergency card');
+  String get close => _t('Đóng', 'Close');
+  String get emergencyEmpty =>
+      _t('Chưa có thông tin khẩn cấp.', 'No emergency information yet.');
+  String get bloodTypeUnknown => _t('Chưa rõ', 'Unknown');
+  String get noEmergencyContact =>
+      _t('Chưa có người liên hệ khẩn cấp.', 'No emergency contact.');
+
   String get name => _t('Tên', 'Name');
   String get reaction => _t('Phản ứng', 'Reaction');
   String get severity => _t('Mức độ', 'Severity');
@@ -395,6 +410,99 @@ class PhrRecordModel {
 }
 
 // =============================================================================
+// Read-only enhanced projections (flag-gated behind phr_enhanced_mobile_enabled)
+//
+// These are pure, client-side, read-only projections of the already-loaded
+// record (no new API call) used by the enhanced PHR surfaces (Requirement 5.6):
+//   * The export view shows the full record serialized as JSON (read-only).
+//   * The emergency card mirrors the web `/phr/emergency-card` shape
+//     (allergies, current medications, conditions, blood type, emergency
+//     contact). Only currently-taken medications are included.
+// Both surfaces are additive and never alter the legacy GET/PUT behavior; when
+// the flag is off they are not constructed at all.
+// =============================================================================
+
+/// A single emergency-card allergy line (name + severity + reaction).
+class PhrEmergencyAllergy {
+  const PhrEmergencyAllergy({
+    required this.name,
+    required this.severity,
+    required this.reaction,
+  });
+  final String name;
+  final String severity;
+  final String reaction;
+}
+
+/// A single emergency-card medication line (name + dose).
+class PhrEmergencyMedication {
+  const PhrEmergencyMedication({required this.name, required this.dose});
+  final String name;
+  final String dose;
+}
+
+/// A single emergency-card condition line (name + status).
+class PhrEmergencyCondition {
+  const PhrEmergencyCondition({required this.name, required this.status});
+  final String name;
+  final String status;
+}
+
+/// A read-only emergency-card projection of a loaded [PhrRecordModel], mirroring
+/// the web `/phr/emergency-card` field shape (Requirement 5.6). Pure — derived
+/// entirely from the in-memory record, so it can be unit tested and never makes
+/// a network call.
+class PhrEmergencyCardProjection {
+  PhrEmergencyCardProjection({
+    required this.allergies,
+    required this.currentMedications,
+    required this.conditions,
+    required this.bloodType,
+    required this.emergencyContactName,
+    required this.emergencyContactPhone,
+  });
+
+  final List<PhrEmergencyAllergy> allergies;
+  final List<PhrEmergencyMedication> currentMedications;
+  final List<PhrEmergencyCondition> conditions;
+  final String bloodType;
+  final String emergencyContactName;
+  final String emergencyContactPhone;
+
+  /// Whether the card carries any displayable emergency information.
+  bool get isEmpty =>
+      allergies.isEmpty &&
+      currentMedications.isEmpty &&
+      conditions.isEmpty &&
+      bloodType.trim().isEmpty &&
+      emergencyContactName.trim().isEmpty &&
+      emergencyContactPhone.trim().isEmpty;
+
+  factory PhrEmergencyCardProjection.fromRecord(PhrRecordModel record) {
+    return PhrEmergencyCardProjection(
+      allergies: record.allergies
+          .map((a) => PhrEmergencyAllergy(
+                name: a.name,
+                severity: a.severity,
+                reaction: a.reaction,
+              ))
+          .toList(),
+      // Only currently-taken medications belong on the emergency card.
+      currentMedications: record.medications
+          .where((m) => m.isCurrent)
+          .map((m) => PhrEmergencyMedication(name: m.name, dose: m.dose))
+          .toList(),
+      conditions: record.conditions
+          .map((c) => PhrEmergencyCondition(name: c.name, status: c.status))
+          .toList(),
+      bloodType: record.bloodType,
+      emergencyContactName: record.emergencyContactName,
+      emergencyContactPhone: record.emergencyContactPhone,
+    );
+  }
+}
+
+// =============================================================================
 // Screen
 // =============================================================================
 
@@ -403,10 +511,17 @@ class PhrScreen extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.featureFlags,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Resolved mobile feature gates. When omitted (or when
+  /// `phr_enhanced_mobile_enabled` is off) the screen behaves exactly as the
+  /// legacy PHR surface — the enhanced export/emergency-card affordances are
+  /// not rendered (Requirement 5.6, fail-closed default).
+  final MobileFeatureFlagResolver? featureFlags;
 
   @override
   State<PhrScreen> createState() => _PhrScreenState();
@@ -419,6 +534,13 @@ class _PhrScreenState extends State<PhrScreen> {
   String? _loadError;
   String? _saveError;
   PhrRecordModel? _record;
+
+  /// Whether the flag-gated enhanced PHR reads (export + emergency card) are
+  /// enabled. Defaults to a fail-closed resolver when none was injected, so the
+  /// screen behaves as the legacy PHR surface unless the flag is explicitly on
+  /// (Requirement 5.6).
+  bool get _phrEnhancedEnabled =>
+      (widget.featureFlags ?? MobileFeatureFlagResolver()).phrEnhancedEnabled;
 
   // Profile text controllers (created once the record is loaded).
   final _fullName = TextEditingController();
@@ -658,6 +780,13 @@ class _PhrScreenState extends State<PhrScreen> {
         // Persistent disclaimer on every PHR surface (Requirement 17.4).
         PhrDisclaimerBanner(text: s.disclaimer),
         const SizedBox(height: 16),
+        // Flag-gated read-only enhanced surfaces — export + emergency card
+        // (Requirement 5.6). Hidden entirely when the flag is off so legacy
+        // behavior is unchanged.
+        if (_phrEnhancedEnabled) ...[
+          _enhancedActions(s, record),
+          const SizedBox(height: 16),
+        ],
         if (_saveError != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -674,6 +803,55 @@ class _PhrScreenState extends State<PhrScreen> {
         const SizedBox(height: 16),
         _medicationsSection(s, record),
       ],
+    );
+  }
+
+  /// Flag-gated read-only affordances opening the export + emergency-card
+  /// surfaces (Requirement 5.6). Both views are read-only projections of the
+  /// already-loaded record — no additional API calls.
+  Widget _enhancedActions(PhrStrings s, PhrRecordModel record) {
+    return Card(
+      key: const Key('phr-enhanced-actions'),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              key: const Key('phr-export-action'),
+              onPressed: () => _openExport(s, record),
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: Text(s.exportAction),
+            ),
+            FilledButton.tonalIcon(
+              key: const Key('phr-emergency-card-action'),
+              onPressed: () => _openEmergencyCard(s, record),
+              icon: const Icon(Icons.local_hospital_outlined, size: 18),
+              label: Text(s.emergencyCardAction),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openExport(PhrStrings s, PhrRecordModel record) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _PhrExportView(strings: s, record: record),
+      ),
+    );
+  }
+
+  Future<void> _openEmergencyCard(PhrStrings s, PhrRecordModel record) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _PhrEmergencyCardView(
+          strings: s,
+          card: PhrEmergencyCardProjection.fromRecord(record),
+        ),
+      ),
     );
   }
 
@@ -1399,6 +1577,171 @@ class _Dropdown extends StatelessWidget {
         onChanged: (v) {
           if (v != null) onChanged(v);
         },
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Flag-gated read-only surfaces (phr_enhanced_mobile_enabled) — Requirement 5.6
+// =============================================================================
+
+/// Read-only export view: renders the loaded record serialized to pretty JSON
+/// in a selectable, copyable text block. This is a client-side projection of
+/// the already-loaded record — it performs no network call and cannot mutate
+/// the record. The persistent self-declared disclaimer remains present.
+class _PhrExportView extends StatelessWidget {
+  const _PhrExportView({required this.strings, required this.record});
+
+  final PhrStrings strings;
+  final PhrRecordModel record;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = strings;
+    final pretty = const JsonEncoder.withIndent('  ').convert(record.toJson());
+    return Scaffold(
+      appBar: AppBar(title: Text(s.exportTitle)),
+      body: ListView(
+        key: const Key('phr-export-view'),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        children: [
+          PhrDisclaimerBanner(text: s.disclaimer),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(
+                pretty,
+                key: const Key('phr-export-json'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Read-only emergency-card view rendering the [PhrEmergencyCardProjection]
+/// (allergies, current medications, conditions, blood type, emergency contact),
+/// mirroring the web emergency-card field shape (Requirement 5.6). All status
+/// is conveyed by text labels (not color alone). The persistent self-declared
+/// disclaimer remains present.
+class _PhrEmergencyCardView extends StatelessWidget {
+  const _PhrEmergencyCardView({required this.strings, required this.card});
+
+  final PhrStrings strings;
+  final PhrEmergencyCardProjection card;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = strings;
+    return Scaffold(
+      appBar: AppBar(title: Text(s.emergencyCardTitle)),
+      body: ListView(
+        key: const Key('phr-emergency-card-view'),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        children: [
+          PhrDisclaimerBanner(text: s.disclaimer),
+          const SizedBox(height: 16),
+          if (card.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(s.emergencyEmpty),
+            )
+          else ...[
+            _EmergencyBlock(
+              title: s.bloodType,
+              children: [
+                Text(card.bloodType.trim().isEmpty
+                    ? s.bloodTypeUnknown
+                    : card.bloodType),
+              ],
+            ),
+            _EmergencyBlock(
+              title: s.sectionAllergies,
+              children: card.allergies.isEmpty
+                  ? [Text(s.emptySection)]
+                  : card.allergies
+                      .map((a) => Text(
+                            [
+                              a.name,
+                              s.severityLabel(a.severity),
+                              if (a.reaction.trim().isNotEmpty) a.reaction,
+                            ].where((e) => e.trim().isNotEmpty).join(' • '),
+                          ))
+                      .toList(),
+            ),
+            _EmergencyBlock(
+              title: s.sectionMedications,
+              children: card.currentMedications.isEmpty
+                  ? [Text(s.emptySection)]
+                  : card.currentMedications
+                      .map((m) => Text(
+                            [
+                              m.name,
+                              if (m.dose.trim().isNotEmpty) m.dose,
+                            ].where((e) => e.trim().isNotEmpty).join(' • '),
+                          ))
+                      .toList(),
+            ),
+            _EmergencyBlock(
+              title: s.sectionConditions,
+              children: card.conditions.isEmpty
+                  ? [Text(s.emptySection)]
+                  : card.conditions
+                      .map((c) => Text(
+                            '${c.name} • ${s.statusLabel(c.status)}',
+                          ))
+                      .toList(),
+            ),
+            _EmergencyBlock(
+              title: s.emergencyContactName,
+              children: [
+                if (card.emergencyContactName.trim().isEmpty &&
+                    card.emergencyContactPhone.trim().isEmpty)
+                  Text(s.noEmergencyContact)
+                else ...[
+                  if (card.emergencyContactName.trim().isNotEmpty)
+                    Text(card.emergencyContactName),
+                  if (card.emergencyContactPhone.trim().isNotEmpty)
+                    Text(card.emergencyContactPhone),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A titled block of read-only emergency-card lines.
+class _EmergencyBlock extends StatelessWidget {
+  const _EmergencyBlock({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            ...children,
+          ],
+        ),
       ),
     );
   }
