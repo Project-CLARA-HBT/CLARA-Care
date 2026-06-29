@@ -114,4 +114,63 @@ void main() {
     expect(api.wasCalled('getSystemMetrics'), isTrue);
     expect(find.text('Tổng số request: 42'), findsOneWidget);
   });
+
+  testWidgets(
+      'new parity tiles stay hidden when their flags are off (fail closed)',
+      (tester) async {
+    // Flags-off equivalence with the pre-feature app: the additive parity
+    // surfaces are not reachable from the dashboard unless their resolver gate
+    // is on (Req 13.2, 15.1).
+    final api = FakeApiClient();
+    api.stub('getMobileSummary', response: const {
+      'feature_flags': {'research': true},
+    });
+
+    await _pumpDashboard(tester, api: api, role: 'normal');
+
+    expect(find.text('Trò chuyện'), findsNothing);
+    expect(find.text('Tủ thuốc tự kê'), findsNothing);
+    expect(find.text('Ghi chú lâm sàng'), findsNothing);
+    expect(find.text('Trung tâm đồng ý'), findsNothing);
+    expect(find.text('Nội dung chia sẻ'), findsNothing);
+  });
+
+  testWidgets('parity tiles appear when their feature flags are enabled',
+      (tester) async {
+    final api = FakeApiClient();
+    api.stub('getMobileSummary', response: const {
+      'feature_flags': {
+        'chat_mobile_enabled': true,
+        'selfmed_cabinet_mobile_enabled': true,
+        'consent_center_mobile_enabled': true,
+        'sharing_mobile_enabled': true,
+      },
+    });
+
+    await _pumpDashboard(tester, api: api, role: 'normal');
+
+    expect(find.text('Trò chuyện'), findsOneWidget);
+    expect(find.text('Tủ thuốc tự kê'), findsOneWidget);
+    expect(find.text('Trung tâm đồng ý'), findsOneWidget);
+    expect(find.text('Nội dung chia sẻ'), findsOneWidget);
+  });
+
+  testWidgets('scribe tile requires both its flag and the doctor role',
+      (tester) async {
+    // The scribe flag alone is not enough for a non-doctor role (Req 4.6).
+    final nonDoctorApi = FakeApiClient();
+    nonDoctorApi.stub('getMobileSummary', response: const {
+      'feature_flags': {'scribe_mobile_enabled': true},
+    });
+    await _pumpDashboard(tester, api: nonDoctorApi, role: 'normal');
+    expect(find.text('Ghi chú lâm sàng'), findsNothing);
+
+    // A doctor with the flag on can reach the scribe surface.
+    final doctorApi = FakeApiClient();
+    doctorApi.stub('getMobileSummary', response: const {
+      'feature_flags': {'scribe_mobile_enabled': true},
+    });
+    await _pumpDashboard(tester, api: doctorApi, role: 'doctor');
+    expect(find.text('Ghi chú lâm sàng'), findsOneWidget);
+  });
 }

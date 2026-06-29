@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/session_store.dart';
+import 'auth_flows_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -161,6 +162,36 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  // Auth-lifecycle entry points (clara-mobile-feature-parity
+                  // Req 6.1): route to the register / forgot-password flows.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => RegisterScreen(
+                                        apiClient: widget.apiClient),
+                                  ),
+                                ),
+                        child: const Text('Đăng ký'),
+                      ),
+                      TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => ForgotPasswordScreen(
+                                        apiClient: widget.apiClient),
+                                  ),
+                                ),
+                        child: const Text('Quên mật khẩu?'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

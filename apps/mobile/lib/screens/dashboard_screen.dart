@@ -6,10 +6,24 @@ import '../core/feature_flags.dart';
 import '../core/session_store.dart';
 import 'careguard_screen.dart';
 import 'careguard_cabinet_screen.dart';
+import 'chat_screen.dart';
+import 'consent_center_screen.dart';
 import 'council_screen.dart';
 import 'council_case_screen.dart';
 import 'phr_screen.dart';
 import 'research_screen.dart';
+import 'scribe_screen.dart';
+import 'selfmed_cabinet_screen.dart';
+import 'shared_resource_screen.dart';
+
+/// CLARA_API base URL for surfaces that build their own read-only fetcher
+/// (e.g. the public shared-resource viewer). Mirrors `main.dart`'s
+/// `--dart-define=CLARA_API_BASE_URL` so wiring stays additive without
+/// reaching into [ApiClient]'s private base URL (Req 13, 15.5).
+const String _dashboardApiBaseUrl = String.fromEnvironment(
+  'CLARA_API_BASE_URL',
+  defaultValue: 'http://localhost:8100',
+);
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -202,6 +216,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final canCareguard = _featureEnabled('careguard');
     final canCouncil = _featureEnabled('council');
     final canSystemMonitor = _canSystemMonitor;
+    // ONE resolver built from the loaded role-scoped summary, reused for every
+    // new additive parity gate below and for the PHR tile. A null/unloadable
+    // summary resolves every gate to its build-time default (all OFF in a
+    // normal build), so the new parity surfaces stay dark and fail closed
+    // (Req 13.1, 13.2, 13.4, 15.1).
+    final resolver = MobileFeatureFlagResolver(summary: _summary);
+    // Scribe is additionally restricted to the doctor role (Req 4.6): the gate
+    // opens only when the flag is on AND the authenticated role is `doctor`,
+    // so the surface is never reachable for any other role even if the flag
+    // were mis-scoped server-side.
+    final canScribe = resolver.scribeEnabled && role == 'doctor';
     // Show the fail-closed retry affordance once a load attempt has settled
     // without yielding a summary (Requirement 13.4).
     final showSummaryRetry = !summaryLoaded && !_loadingSummary;
@@ -311,6 +336,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                 ),
               ),
+              // --- Additive feature-parity surfaces (clara-mobile-feature-
+              // parity Req 13.1/13.2). Each is rendered ONLY when its resolver
+              // gate is open; the gate is derived from the role-scoped summary
+              // combined with build-time defaults (all OFF by default). Because
+              // they live inside the `summaryLoaded` block, a null/unloadable
+              // summary shows none of them (fail closed, Req 13.4).
+              if (resolver.chatEnabled)
+                _FeatureTile(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Trò chuyện',
+                  subtitle: 'Hỏi đáp cùng CLARA',
+                  enabled: true,
+                  onTap: () => _openScreen(
+                    ChatScreen(
+                      apiClient: widget.apiClient,
+                      sessionStore: widget.sessionStore,
+                      resolver: resolver,
+                    ),
+                  ),
+                ),
+              if (resolver.selfMedCabinetEnabled)
+                _FeatureTile(
+                  icon: Icons.medication_outlined,
+                  title: 'Tủ thuốc tự kê',
+                  subtitle: 'Quản lý thuốc & kiểm tra tương tác',
+                  enabled: true,
+                  onTap: () => _openScreen(
+                    SelfMedCabinetScreen(
+                      apiClient: widget.apiClient,
+                      sessionStore: widget.sessionStore,
+                      featureFlags: resolver,
+                    ),
+                  ),
+                ),
+              if (canScribe)
+                _FeatureTile(
+                  icon: Icons.mic_none,
+                  title: 'Ghi chú lâm sàng',
+                  subtitle: 'Ghi âm và tạo ghi chú SOAP',
+                  enabled: true,
+                  onTap: () => _openScreen(
+                    ScribeScreen(
+                      apiClient: widget.apiClient,
+                      sessionStore: widget.sessionStore,
+                      featureFlags: resolver,
+                    ),
+                  ),
+                ),
+              if (resolver.consentCenterEnabled)
+                _FeatureTile(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Trung tâm đồng ý',
+                  subtitle: 'Quản lý quyền riêng tư & yêu cầu dữ liệu',
+                  enabled: true,
+                  onTap: () => _openScreen(
+                    ConsentCenterScreen(
+                      resolver: resolver,
+                      sessionStore: widget.sessionStore,
+                    ),
+                  ),
+                ),
+              if (resolver.sharingEnabled)
+                _FeatureTile(
+                  icon: Icons.share_outlined,
+                  title: 'Nội dung chia sẻ',
+                  subtitle: 'Xem tài nguyên được chia sẻ',
+                  enabled: true,
+                  onTap: () => _openScreen(
+                    SharedResourceScreen(
+                      // The dashboard entry point carries no deep-link token;
+                      // the read-only viewer surfaces an error state until a
+                      // token arrives via a share link. The tile exists so the
+                      // surface is reachable when the gate is on (Req 12, 13.1).
+                      token: '',
+                      fetcher: createHttpSharedResourceFetcher(
+                        baseUrl: _dashboardApiBaseUrl,
+                      ),
+                      flags: resolver,
+                    ),
+                  ),
+                ),
             ],
             // PHR is available to every authenticated role (RBAC normal/
             // researcher/doctor/admin — Requirement 13.3), independent of the
@@ -330,7 +436,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // the role-scoped summary combined with build defaults. A
                   // null/unloadable summary resolves the gate to false, so the
                   // screen behaves as the legacy PHR surface (Req 5.6).
-                  featureFlags: MobileFeatureFlagResolver(summary: _summary),
+                  featureFlags: resolver,
                 ),
               ),
             ),

@@ -202,6 +202,100 @@ class ApiClient {
     return LoginResponseData.fromJson(data);
   }
 
+  // ---------------------------------------------------------------------------
+  // Auth lifecycle parity (clara-mobile-feature-parity Req 6.1).
+  //
+  // These mirror the web auth surface (`apps/web/lib/http-client.ts` /
+  // `logout.ts`) and the server Auth_API routes mounted under `/api/v1/auth`
+  // (see `services/api/.../endpoints/auth.py`). register/verify-email/
+  // forgot-password/reset-password are unauthenticated (no access token), so
+  // they take the `_sendAuthed` fast path with no pre-flight refresh. logout
+  // accepts an optional access token because the server gate is
+  // `get_optional_current_token`. Request/response bodies match the server
+  // pydantic schemas exactly (`RegisterRequest`/`RegisterResponse`,
+  // `VerifyEmailRequest`, `ForgotPasswordRequest`/`ForgotPasswordResponse`,
+  // `ResetPasswordRequest`) — no mobile-only shape is introduced. The consent
+  // status / accept methods already exist below (`getConsentStatus` /
+  // `acceptConsent`) and are intentionally not duplicated here.
+  // ---------------------------------------------------------------------------
+
+  /// Registers a new account (Req 6.1). `POST /api/v1/auth/register`.
+  /// [payload] mirrors the server `RegisterRequest`: `email`, `password`, and
+  /// the optional `full_name`, `role`, and `accepted_terms` /
+  /// `accepted_privacy` / `accepted_medical_consent` flags (the latter three
+  /// are required in production). Returns the `RegisterResponse` envelope
+  /// (`user_id`, `email`, `role`, `is_email_verified`, `email_delivery_status`,
+  /// `verification_token_preview`). A duplicate email is rejected server-side
+  /// (409) and surfaces as an [ApiException]. Unauthenticated.
+  Future<Map<String, dynamic>> register({
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/auth/register',
+      body: payload,
+    );
+  }
+
+  /// Verifies an email-verification token (Req 6.1).
+  /// `POST /api/v1/auth/verify-email`. The body mirrors the server
+  /// `VerifyEmailRequest` (`{ "token": ... }`); an invalid or expired token is
+  /// rejected server-side (400) and surfaces as an [ApiException]. Returns
+  /// `{ "verified": true, "email": ... }`. Unauthenticated.
+  Future<Map<String, dynamic>> verifyEmail({
+    required String token,
+  }) {
+    return _post(
+      '/api/v1/auth/verify-email',
+      body: {'token': token},
+    );
+  }
+
+  /// Requests a password-reset email (Req 6.1).
+  /// `POST /api/v1/auth/forgot-password`. The body mirrors the server
+  /// `ForgotPasswordRequest` (`{ "email": ... }`). To avoid account
+  /// enumeration the server always returns an accepted envelope regardless of
+  /// whether the email exists (`ForgotPasswordResponse`: `accepted`,
+  /// `email_delivery_status`, `reset_token_preview`). Unauthenticated.
+  Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) {
+    return _post(
+      '/api/v1/auth/forgot-password',
+      body: {'email': email},
+    );
+  }
+
+  /// Resets a password using a reset token (Req 6.1).
+  /// `POST /api/v1/auth/reset-password`. The body mirrors the server
+  /// `ResetPasswordRequest` (`{ "token": ..., "new_password": ... }`); an
+  /// invalid/expired token (400) or a new password that fails the server
+  /// policy surfaces as an [ApiException]. Returns `{ "reset": true }`.
+  /// Unauthenticated.
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return _post(
+      '/api/v1/auth/reset-password',
+      body: {'token': token, 'new_password': newPassword},
+    );
+  }
+
+  /// Logs out, revoking the caller's server-side refresh sessions (Req 6.1).
+  /// `POST /api/v1/auth/logout`. The access token is optional server-side
+  /// (`get_optional_current_token`); pass [accessToken] when one is held so the
+  /// server can revoke the matching refresh sessions and denylist the presented
+  /// token. Returns `{ "logged_out": true, "revoked_refresh_sessions": int }`.
+  Future<Map<String, dynamic>> logout({
+    String? accessToken,
+  }) {
+    return _post(
+      '/api/v1/auth/logout',
+      body: const {},
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> researchTier2({
     required String accessToken,
     required Map<String, dynamic> payload,

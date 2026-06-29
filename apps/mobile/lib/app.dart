@@ -4,6 +4,7 @@ import 'core/api_client.dart';
 import 'core/session_store.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'widgets/consent_gate.dart';
 
 class ClaraApp extends StatefulWidget {
   const ClaraApp({
@@ -60,9 +61,19 @@ class _ClaraAppState extends State<ClaraApp> {
             animation: widget.sessionStore,
             builder: (context, _) {
               if (widget.sessionStore.isAuthenticated) {
-                return DashboardScreen(
+                // Consent gate before gated medical content (Req 6.6): after
+                // login, if the backend consent status is not accepted, present
+                // the acceptance step before routing into the dashboard. The
+                // gate is keyed by the access token so it re-evaluates whenever
+                // the session changes (e.g. refresh / re-login).
+                return ConsentGate(
+                  key: ValueKey<String?>(widget.sessionStore.accessToken),
                   apiClient: widget.apiClient,
-                  sessionStore: widget.sessionStore,
+                  accessToken: widget.sessionStore.accessToken ?? '',
+                  child: DashboardScreen(
+                    apiClient: widget.apiClient,
+                    sessionStore: widget.sessionStore,
+                  ),
                 );
               }
               return LoginScreen(
