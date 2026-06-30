@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import EnterpriseReview from "@/components/scribe/enterprise-review";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { trackScribeGenerated, trackScribeViewed } from "@/lib/analytics/events";
+import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
@@ -38,23 +42,23 @@ type LiveInsight = {
 };
 
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
-const panelClass = "rounded-xl border border-[#B6D4FE] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+const panelClass = "rounded-xl border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
 const panelPaddedClass = `${panelClass} p-4`;
 const panelPaddedLgClass = `${panelClass} p-5`;
-const softPanelClass = "rounded-lg border border-[#93C5FD] bg-[#EEF6FF] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
-const sectionTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[#4B5563] dark:text-slate-200";
-const accentTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[#2563EB] dark:text-sky-100";
-const bodyTextClass = "text-[#1F2937] dark:text-slate-100";
-const secondaryTextClass = "text-[#4B5563] dark:text-slate-300";
-const mutedTextClass = "text-[#64748B] dark:text-slate-400";
+const softPanelClass = "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+const sectionTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--text-muted)] dark:text-slate-200";
+const accentTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--brand-600)] dark:text-sky-100";
+const bodyTextClass = "text-[color:var(--text-primary)] dark:text-slate-100";
+const secondaryTextClass = "text-[color:var(--text-muted)] dark:text-slate-300";
+const mutedTextClass = "text-[color:var(--text-muted)] dark:text-slate-400";
 const primaryButtonClass =
-  "rounded-lg border border-[#2563EB] bg-[#2563EB] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:border-[#93C5FD] disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
+  "rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
 const secondaryButtonClass =
-  "rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
+  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[color:var(--brand-700)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
 const dangerButtonClass =
   "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
 const transcriptInputClass =
-  "min-h-[120px] w-full rounded-xl border border-[#93C5FD] bg-[#F8FBFF] px-4 py-3 text-sm leading-6 text-[#1F2937] placeholder:text-[#6B7280] outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
+  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -162,26 +166,28 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
     ? (medicalRecord?.warnings as unknown[]).map((item) => String(item).trim()).filter(Boolean)
     : [];
 
+  // Backend-derived clinical text is sanitized through `stripTelemetryLabels`
+  // so internal telemetry jargon never reaches the End_User view (Req 4.1).
   const insights: LiveInsight[] = [];
   if (safeText(soap.assessment)) {
     insights.push({
       id: "assessment",
       title: "Tín hiệu đánh giá",
-      detail: safeText(soap.assessment).slice(0, 220),
+      detail: stripTelemetryLabels(safeText(soap.assessment)).slice(0, 220),
     });
   }
   if (safeText(soap.plan)) {
     insights.push({
       id: "plan",
       title: "Kế hoạch nháp",
-      detail: safeText(soap.plan).slice(0, 220),
+      detail: stripTelemetryLabels(safeText(soap.plan)).slice(0, 220),
     });
   }
   warnings.slice(0, 2).forEach((warning, index) => {
     insights.push({
       id: `warning-${index}`,
       title: "Cảnh báo an toàn",
-      detail: warning,
+      detail: stripTelemetryLabels(warning),
     });
   });
 
@@ -248,6 +254,7 @@ export default function ScribePage() {
   const [waveBars, setWaveBars] = useState<number[]>(DEFAULT_WAVE_BARS);
   const [notice, setNotice] = useState<{ tone: NoticeTone; message: string } | null>(null);
   const [error, setError] = useState("");
+  const [role, setRole] = useState<UserRole>("normal");
 
   const selectedSessionIdRef = useRef<number | null>(null);
   const transcriptDraftRef = useRef("");
@@ -390,6 +397,13 @@ export default function ScribePage() {
   useEffect(() => {
     void refreshData();
   }, [refreshData]);
+
+  useEffect(() => {
+    setRole(getRole());
+    // The Scribe surface was viewed (Req 9.1). Consent/PII guarded by the
+    // facade; only the coarse surface label is sent — no transcript or note.
+    trackScribeViewed();
+  }, []);
 
   useEffect(() => {
     selectedSessionIdRef.current = selectedSessionId;
@@ -720,6 +734,8 @@ export default function ScribePage() {
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
       pushNotice("success", "Đã tạo lại ghi chú SOAP.");
+      // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
+      trackScribeGenerated({ action: "regenerate" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể tạo lại ghi chú SOAP.");
     } finally {
@@ -736,6 +752,8 @@ export default function ScribePage() {
       setSelectedSession(updated);
       upsertSession(updated);
       pushNotice("success", "Đã hoàn tất ghi chú.");
+      // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
+      trackScribeGenerated({ action: "finalize" });
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
@@ -759,17 +777,17 @@ export default function ScribePage() {
   return (
     <PageShell title="" description="" variant="plain">
       <section className="space-y-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#B6D4FE] bg-white px-4 py-3 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-white px-4 py-3 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
           <div className="flex items-center gap-6">
-            <span className="text-lg font-black tracking-tight text-[#2563EB] dark:text-sky-100">ScribeOS v2.4</span>
-            <nav className="inline-flex items-center gap-1 rounded-xl border border-[#93C5FD] bg-[#EFF6FF] p-1 dark:border-sky-700/70 dark:bg-slate-800/90">
+            <span className="text-lg font-black tracking-tight text-[color:var(--brand-600)] dark:text-sky-100">ScribeOS v2.4</span>
+            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1 dark:border-sky-700/70 dark:bg-slate-800/90">
               <button
                 type="button"
                 onClick={() => setMode("workspace")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
                   mode === "workspace"
-                    ? "bg-[#2563EB] text-white shadow-sm"
-                    : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-[color:var(--brand-600)] text-white shadow-sm"
+                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
                 Ghi âm trực tiếp
@@ -778,7 +796,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("review")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-[#2563EB] text-white shadow-sm" : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "review" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
                 Rà soát
@@ -787,7 +805,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("enterprise")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "enterprise" ? "bg-[#2563EB] text-white shadow-sm" : "text-[#1F2937] hover:bg-[#DBEAFE] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
                 Ký &amp; xuất bản
@@ -839,7 +857,7 @@ export default function ScribePage() {
             <div className={panelPaddedClass}>
               <div className="flex items-center justify-between">
                 <h2 className={sectionTitleClass}>Danh sách phiên</h2>
-                <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
+                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
                   {sessions.length} bản nháp
                 </span>
               </div>
@@ -863,8 +881,8 @@ export default function ScribePage() {
                     onClick={() => void onSelectSession(item.id)}
                     className={`w-full rounded-xl border p-3 text-left transition ${
                       active
-                        ? "border-[#2563EB] bg-[#DBEAFE] shadow-sm dark:border-sky-400 dark:bg-sky-500/20"
-                        : "border-[#B6D4FE] bg-white hover:border-[#2563EB] hover:bg-[#F8FBFF] dark:border-sky-800 dark:bg-slate-900/90 dark:hover:border-sky-500"
+                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] shadow-sm dark:border-sky-400 dark:bg-sky-500/20"
+                        : "border-[color:var(--shell-border)] bg-white hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)] dark:border-sky-800 dark:bg-slate-900/90 dark:hover:border-sky-500"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -882,7 +900,7 @@ export default function ScribePage() {
               })}
 
               {!isLoading && sessions.length === 0 ? (
-                <p className={`rounded-xl border border-[#B6D4FE] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
+                <p className={`rounded-xl border border-[color:var(--shell-border)] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
                   Chưa có phiên nào.
                 </p>
               ) : null}
@@ -922,7 +940,7 @@ export default function ScribePage() {
                     {waveBars.map((height, index) => (
                       <div
                         key={`wave-${index}`}
-                        className={`w-[3px] rounded-[1px] ${isRecording ? "bg-[#2563EB]" : "bg-[#93C5FD]"}`}
+                        className={`w-[3px] rounded-[1px] ${isRecording ? "bg-[color:var(--brand-600)]" : "bg-[color:var(--shell-border)]"}`}
                         style={{ height: `${height}%` }}
                       />
                     ))}
@@ -936,10 +954,10 @@ export default function ScribePage() {
                 </div>
 
                 <div className={panelClass}>
-                  <div className="flex items-center justify-between border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
+                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3 dark:border-sky-800">
                     <h3 className={sectionTitleClass}>Bản ghi thời gian thực</h3>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1D4ED8] dark:text-sky-100">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[#2563EB] animate-pulse" : "bg-slate-500"}`} />
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--brand-700)] dark:text-sky-100">
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[color:var(--brand-600)] animate-pulse" : "bg-slate-500"}`} />
                       {isRecording ? "Đang ghi" : "Đã dừng"}
                     </div>
                   </div>
@@ -954,15 +972,15 @@ export default function ScribePage() {
                             {row.timestamp}
                           </span>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[#2563EB] dark:text-sky-100">{row.speaker}</p>
-                            <p className={`text-sm leading-6 ${secondaryTextClass}`}>{row.text}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--brand-600)] dark:text-sky-100">{row.speaker}</p>
+                            <p className={`text-sm leading-6 ${secondaryTextClass}`}>{stripTelemetryLabels(row.text)}</p>
                           </div>
                         </div>
                       ))
                     )}
                   </div>
 
-                  <div className="border-t border-[#B6D4FE] p-4 dark:border-sky-800">
+                  <div className="border-t border-[color:var(--shell-border)] p-4 dark:border-sky-800">
                     <textarea
                       value={transcriptDraft}
                       onChange={(event) => setTranscriptDraft(event.target.value)}
@@ -1003,9 +1021,9 @@ export default function ScribePage() {
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
                     {SOAP_SECTION_LABELS.map((item) => (
                       <article key={item.key} className={`${softPanelClass} p-3`}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2563EB] dark:text-sky-100">{item.title}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
                         <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                          {safeText(selectedSoap[item.valueKey]) || "Chưa có dữ liệu."}
+                          {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || "Chưa có dữ liệu."}
                         </p>
                       </article>
                     ))}
@@ -1018,9 +1036,12 @@ export default function ScribePage() {
                     <p className={`text-sm font-medium ${secondaryTextClass}`}>
                       {isLiveAnalyzing ? "Đang phân tích trực tiếp..." : "Sẵn sàng phân tích trực tiếp."}
                     </p>
-                    <p className={`text-[11px] font-medium ${mutedTextClass}`}>
-                      Tốc độ xử lý: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/đoạn` : "--"}
-                    </p>
+                    {/* Raw pipeline timing is internal telemetry — admin only (Req 4.3). */}
+                    <TelemetryPanel role={role}>
+                      <p className={`text-[11px] font-medium ${mutedTextClass}`}>
+                        Tốc độ xử lý: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/đoạn` : "--"}
+                      </p>
+                    </TelemetryPanel>
                   </div>
                   <div className="mt-4 space-y-2">
                     {liveInsights.length === 0 ? (
@@ -1028,7 +1049,7 @@ export default function ScribePage() {
                     ) : (
                       liveInsights.map((item) => (
                         <article key={item.id} className={`${softPanelClass} p-3`}>
-                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#2563EB] dark:text-sky-100">{item.title}</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
                           <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>{item.detail}</p>
                         </article>
                       ))
@@ -1058,7 +1079,7 @@ export default function ScribePage() {
                             strokeDashoffset={314 - (314 * confidenceScore) / 100}
                           />
                         </svg>
-                        <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-[#1D4ED8] dark:text-sky-100">
+                        <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-[color:var(--brand-700)] dark:text-sky-100">
                           {confidenceScore}%
                         </div>
                       </div>
@@ -1071,7 +1092,7 @@ export default function ScribePage() {
                       {waveBars.slice(0, 16).map((value, index) => (
                         <div
                           key={`review-wave-${index}`}
-                          className="flex-1 rounded-sm bg-[#2563EB]"
+                          className="flex-1 rounded-sm bg-[color:var(--brand-600)]"
                           style={{ height: `${Math.max(10, Math.round((value / 100) * 100))}%` }}
                         />
                       ))}
@@ -1079,7 +1100,7 @@ export default function ScribePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[#93C5FD] bg-[#EEF6FF] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
+                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
                   <div className="mb-5 flex items-center justify-between">
                     <div>
                       <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>Tổng hợp ghi chú lâm sàng</h2>
@@ -1087,7 +1108,7 @@ export default function ScribePage() {
                         Mã phiên: {selectedSession ? `#PHIEN-${selectedSession.id}` : "--"}
                       </p>
                     </div>
-                    <span className="rounded-full border border-[#93C5FD] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#1D4ED8] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
                       {scribeStatusLabel(selectedSession?.status)}
                     </span>
                   </div>
@@ -1095,10 +1116,10 @@ export default function ScribePage() {
                   <div className="space-y-5">
                     {SOAP_SECTION_LABELS.map((item) => (
                       <section key={item.key}>
-                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2563EB] dark:text-sky-100">{item.title}</h5>
-                        <div className="mt-2 rounded-lg border border-[#B6D4FE] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
+                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</h5>
+                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
                           <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                            {safeText(selectedSoap[item.valueKey]) || "Chưa có dữ liệu."}
+                            {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || "Chưa có dữ liệu."}
                           </p>
                         </div>
                       </section>
@@ -1114,10 +1135,10 @@ export default function ScribePage() {
                     {clinicalCodes.map((code) => (
                       <article key={code.code} className={`flex items-center justify-between ${softPanelClass} p-3`}>
                         <div>
-                          <p className="text-xs font-black text-[#1D4ED8] dark:text-sky-100">{code.code}</p>
+                          <p className="text-xs font-black text-[color:var(--brand-700)] dark:text-sky-100">{code.code}</p>
                           <p className={`text-[10px] font-medium ${secondaryTextClass}`}>{code.label}</p>
                         </div>
-                        <span className="material-symbols-outlined text-[#2563EB] dark:text-sky-100">add_circle</span>
+                        <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-100">add_circle</span>
                       </article>
                     ))}
                   </div>
@@ -1126,7 +1147,7 @@ export default function ScribePage() {
                 <div className={panelPaddedClass}>
                   <h3 className={accentTitleClass}>Chuyển hội chẩn AI</h3>
                   <div className={`mt-3 ${softPanelClass} p-3`}>
-                    <p className="text-[10px] font-black uppercase text-[#2563EB] dark:text-sky-100">Tóm tắt chính</p>
+                    <p className="text-[10px] font-black uppercase text-[color:var(--brand-600)] dark:text-sky-100">Tóm tắt chính</p>
                     <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
                       {liveInsights[0]?.detail || "Chưa có dữ liệu tổng hợp để chuyển hội chẩn."}
                     </p>
@@ -1146,10 +1167,15 @@ export default function ScribePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>Tốc độ xử lý</p>
-                      <p className="text-sm font-black text-[#1D4ED8] dark:text-sky-100">
-                        {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
+                      <div className="text-sm font-black text-[color:var(--brand-700)] dark:text-sky-100">
+                        {/* Raw per-segment pipeline latency is internal telemetry — admin only (Req 4.3). */}
+                        <TelemetryPanel role={role} summaryText="--" className="inline">
+                          <span>
+                            {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
+                          </span>
+                        </TelemetryPanel>
                         <span className={`text-[10px] ${secondaryTextClass}`}> / đoạn</span>
-                      </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
@@ -1169,7 +1195,7 @@ export default function ScribePage() {
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Đã hoàn tất</p>
-            <p className="mt-2 text-xl font-black text-[#1D4ED8] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
+            <p className="mt-2 text-xl font-black text-[color:var(--brand-700)] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Hôm nay</p>

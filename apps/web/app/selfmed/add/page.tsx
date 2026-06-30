@@ -38,20 +38,20 @@ function normalizationClass(source: string | null | undefined): string {
   return "border-slate-300 bg-slate-50 text-slate-700";
 }
 
-const cardClass = "rounded-[1.35rem] border border-[#B6D4FE] bg-white p-5 shadow-sm sm:p-6";
-const fieldLabelClass = "text-sm font-semibold text-[#1F2937]";
-const fieldOptionalLabelClass = "text-sm font-semibold text-[#4B5563]";
+const cardClass = "rounded-[1.35rem] border border-[color:var(--shell-border)] bg-white p-5 shadow-sm sm:p-6";
+const fieldLabelClass = "text-sm font-semibold text-[color:var(--text-primary)]";
+const fieldOptionalLabelClass = "text-sm font-semibold text-[color:var(--text-muted)]";
 const inputClass =
-  "h-14 w-full rounded-2xl border border-[#93C5FD] bg-[#F8FBFF] px-4 text-base text-[#1F2937] placeholder:text-[#6B7280] placeholder:font-medium outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100";
+  "h-14 w-full rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-base text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] placeholder:font-medium outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100";
 const textareaClass =
-  "min-h-[220px] w-full rounded-2xl border border-[#93C5FD] bg-[#F8FBFF] px-4 py-4 text-base leading-7 text-[#1F2937] placeholder:text-[#6B7280] placeholder:font-medium outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100";
+  "min-h-[220px] w-full rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-4 text-base leading-7 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] placeholder:font-medium outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100";
 const primaryButtonClass =
-  "inline-flex min-h-12 items-center justify-center rounded-xl border border-[#2563EB] bg-[#2563EB] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:border-[#93C5FD] disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:shadow-none";
+  "inline-flex min-h-12 items-center justify-center rounded-xl border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:shadow-none";
 const secondaryButtonClass =
-  "inline-flex min-h-12 items-center justify-center rounded-xl border border-[#93C5FD] bg-white px-5 py-2 text-sm font-bold text-[#1F2937] transition hover:bg-[#EEF6FF]";
+  "inline-flex min-h-12 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-white px-5 py-2 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-muted)]";
 const warningButtonClass =
   "inline-flex min-h-12 items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:bg-amber-50 disabled:text-amber-700";
-const helperTextClass = "mt-2 text-sm font-medium text-[#4B5563]";
+const helperTextClass = "mt-2 text-sm font-medium text-[color:var(--text-muted)]";
 
 export default function SelfMedAddPage() {
   const [scanFile, setScanFile] = useState<File | null>(null);
@@ -290,16 +290,16 @@ export default function SelfMedAddPage() {
                 className={[
                   "rounded-2xl border p-4 transition",
                   step.active
-                    ? "border-[#2563EB] bg-[#EEF6FF] shadow-sm"
+                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-muted)] shadow-sm"
                     : step.completed
                       ? "border-emerald-300 bg-emerald-50"
-                      : "border-[#B6D4FE] bg-white",
+                      : "border-[color:var(--shell-border)] bg-white",
                 ].join(" ")}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#4B5563]">Bước {index + 1}</p>
-                    <h2 className="mt-1 text-base font-bold text-[#1F2937]">{step.title}</h2>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Bước {index + 1}</p>
+                    <h2 className="mt-1 text-base font-bold text-[color:var(--text-primary)]">{step.title}</h2>
                   </div>
                   <span
                     className={[
@@ -307,14 +307,14 @@ export default function SelfMedAddPage() {
                       step.completed
                         ? "border-emerald-300 bg-emerald-100 text-emerald-800"
                         : step.active
-                          ? "border-[#2563EB] bg-white text-[#2563EB]"
-                          : "border-[#B6D4FE] bg-[#F8FBFF] text-[#4B5563]",
+                          ? "border-[color:var(--brand-600)] bg-white text-[color:var(--brand-600)]"
+                          : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]",
                     ].join(" ")}
                   >
                     {step.completed ? <span className="material-symbols-outlined text-[16px]">check</span> : step.optional ? "Tùy chọn" : index + 1}
                   </span>
                 </div>
-                <p className="mt-2 text-sm font-medium text-[#4B5563]">{step.status}</p>
+                <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{step.status}</p>
               </article>
             ))}
           </section>
@@ -322,9 +322,9 @@ export default function SelfMedAddPage() {
           <section className={cardClass}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#4B5563]">Bước 1</p>
-                <h2 className="mt-2 text-2xl font-bold text-[#1F2937]">Tải ảnh đơn thuốc / hóa đơn</h2>
-                <p className="mt-2 text-base font-medium text-[#4B5563]">Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 1</p>
+                <h2 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Tải ảnh đơn thuốc / hóa đơn</h2>
+                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -345,7 +345,7 @@ export default function SelfMedAddPage() {
             <div
               onDrop={onDropScanFile}
               onDragOver={(event) => event.preventDefault()}
-              className="mt-5 rounded-[1.4rem] border-2 border-dashed border-[#93C5FD] bg-[#EEF6FF] p-6 sm:p-8"
+              className="mt-5 rounded-[1.4rem] border-2 border-dashed border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 sm:p-8"
             >
               <input
                 id="scan-file-input"
@@ -356,8 +356,8 @@ export default function SelfMedAddPage() {
               />
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-lg font-bold text-[#1F2937]">Kéo thả ảnh/PDF đơn thuốc vào đây</p>
-                  <p className="mt-2 text-sm font-medium text-[#4B5563]">Hỗ trợ ảnh đơn thuốc, hóa đơn thuốc hoặc file PDF.</p>
+                  <p className="text-lg font-bold text-[color:var(--text-primary)]">Kéo thả ảnh/PDF đơn thuốc vào đây</p>
+                  <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">Hỗ trợ ảnh đơn thuốc, hóa đơn thuốc hoặc file PDF.</p>
                   {scanFile ? (
                     <p className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
                       Đã chọn: {scanFile.name}
@@ -380,15 +380,15 @@ export default function SelfMedAddPage() {
                 >
                   {isScanningFile ? "Đang nhận diện..." : "Nhận diện thuốc từ file"}
                 </button>
-                {!scanFile ? <span className="text-sm font-medium text-[#4B5563]">Chọn file ảnh/PDF trước để quét OCR.</span> : null}
+                {!scanFile ? <span className="text-sm font-medium text-[color:var(--text-muted)]">Chọn file ảnh/PDF trước để quét OCR.</span> : null}
               </div>
             </div>
           </section>
 
           <section className={cardClass}>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#4B5563]">Bước 2</p>
-            <h3 className="mt-2 text-2xl font-bold text-[#1F2937]">Nhập hoặc dán nội dung thuốc</h3>
-            <p className="mt-2 text-base font-medium text-[#4B5563]">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 2</p>
+            <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Nhập hoặc dán nội dung thuốc</h3>
+            <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
               Nếu OCR ngoài đã có sẵn nội dung, bạn có thể dán vào đây để nhận diện nhanh hơn.
             </p>
 
@@ -410,7 +410,7 @@ export default function SelfMedAddPage() {
             {!scanText.trim() ? <p className={helperTextClass}>Dán hoặc nhập nội dung trước để tiếp tục.</p> : null}
 
             {scanNotice ? (
-              <p className="mt-4 rounded-xl border border-[#B6D4FE] bg-[#F8FBFF] px-4 py-3 text-sm font-semibold text-[#4B5563]">
+              <p className="mt-4 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)]">
                 {scanNotice}
               </p>
             ) : null}
@@ -418,8 +418,8 @@ export default function SelfMedAddPage() {
             {detections.length ? (
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-base font-bold text-[#1F2937]">Danh sách thuốc nhận diện</p>
-                  <span className="rounded-full border border-[#B6D4FE] bg-[#F8FBFF] px-3 py-1 text-xs font-semibold text-[#4B5563]">
+                  <p className="text-base font-bold text-[color:var(--text-primary)]">Danh sách thuốc nhận diện</p>
+                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1 text-xs font-semibold text-[color:var(--text-muted)]">
                     Đã chọn {selectedDetections.length}/{detections.length}
                   </span>
                 </div>
@@ -469,8 +469,8 @@ export default function SelfMedAddPage() {
                           checked
                             ? isLowConfidence
                               ? "border-amber-400 bg-amber-50 shadow-sm"
-                              : "border-[#2563EB] bg-[#EEF6FF] shadow-sm"
-                            : "border-[#B6D4FE] bg-white"
+                              : "border-[color:var(--brand-600)] bg-[color:var(--surface-muted)] shadow-sm"
+                            : "border-[color:var(--shell-border)] bg-white"
                         }`}
                       >
                         <label className="flex min-h-11 cursor-pointer items-start gap-3">
@@ -478,12 +478,12 @@ export default function SelfMedAddPage() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => onToggleDetection(key)}
-                            className="mt-1 h-6 w-6 rounded border-[#2563EB] text-[#2563EB] focus:ring-[#93C5FD]"
+                            className="mt-1 h-6 w-6 rounded border-[color:var(--brand-600)] text-[color:var(--brand-600)] focus:ring-[color:var(--shell-border)]"
                           />
                           <div>
-                            <p className="text-lg font-bold text-[#1F2937]">{item.drug_name}</p>
+                            <p className="text-lg font-bold text-[color:var(--text-primary)]">{item.drug_name}</p>
                             {(item.dosage || item.brand_name || item.manufacturer) ? (
-                              <p className="mt-1 text-sm font-medium text-[#4B5563]">
+                              <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">
                                 {item.dosage ? `Liều: ${item.dosage}` : "Liều: N/A"}
                                 {" · "}
                                 {item.brand_name ? `Brand: ${item.brand_name}` : "Brand: N/A"}
@@ -491,7 +491,7 @@ export default function SelfMedAddPage() {
                                 {item.manufacturer ? `Hãng: ${item.manufacturer}` : "Hãng: N/A"}
                               </p>
                             ) : null}
-                            <p className="mt-1 text-sm font-medium text-[#4B5563]">Bằng chứng: {item.evidence}</p>
+                            <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">Bằng chứng: {item.evidence}</p>
                             <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceClass(item.confidence)}`}>
                               OCR {Math.round(item.confidence * 100)}%
                             </span>
@@ -546,13 +546,13 @@ export default function SelfMedAddPage() {
           <section className={cardClass}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#4B5563]">Bước 3</p>
-                <h3 className="mt-2 text-2xl font-bold text-[#1F2937]">Nhập thuốc thủ công</h3>
-                <p className="mt-2 text-base font-medium text-[#4B5563]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 3</p>
+                <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Nhập thuốc thủ công</h3>
+                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
                   Dùng khi đơn thuốc khó OCR hoặc bạn muốn thêm từng thuốc một.
                 </p>
               </div>
-              <span className="rounded-full border border-[#B6D4FE] bg-[#F8FBFF] px-3 py-1 text-xs font-bold text-[#4B5563]">
+              <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1 text-xs font-bold text-[color:var(--text-muted)]">
                 Tùy chọn
               </span>
             </div>
@@ -602,11 +602,11 @@ export default function SelfMedAddPage() {
 
               <div className="space-y-2">
                 <span className={fieldLabelClass}>Số lượng</span>
-                <div className="flex h-14 overflow-hidden rounded-2xl border border-[#93C5FD] bg-[#F8FBFF] focus-within:border-[#2563EB] focus-within:ring-4 focus-within:ring-blue-100">
+                <div className="flex h-14 overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] focus-within:border-[color:var(--brand-600)] focus-within:ring-4 focus-within:ring-blue-100">
                   <button
                     type="button"
                     onClick={() => adjustManualQuantity(-1)}
-                    className="flex w-14 items-center justify-center border-r border-[#B6D4FE] text-xl font-bold text-[#1F2937] hover:bg-[#EEF6FF]"
+                    className="flex w-14 items-center justify-center border-r border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)]"
                     aria-label="Giảm số lượng"
                   >
                     -
@@ -616,12 +616,12 @@ export default function SelfMedAddPage() {
                     onChange={(event) => setManualQuantity(event.target.value)}
                     inputMode="numeric"
                     aria-label="Số lượng thuốc"
-                    className="min-w-0 flex-1 bg-transparent px-4 text-center text-base font-semibold text-[#1F2937] outline-none placeholder:text-[#6B7280]"
+                    className="min-w-0 flex-1 bg-transparent px-4 text-center text-base font-semibold text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                   />
                   <button
                     type="button"
                     onClick={() => adjustManualQuantity(1)}
-                    className="flex w-14 items-center justify-center border-l border-[#B6D4FE] text-xl font-bold text-[#1F2937] hover:bg-[#EEF6FF]"
+                    className="flex w-14 items-center justify-center border-l border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)]"
                     aria-label="Tăng số lượng"
                   >
                     +
@@ -642,7 +642,7 @@ export default function SelfMedAddPage() {
             </form>
 
             {manualNotice ? (
-              <p className="mt-4 rounded-xl border border-[#B6D4FE] bg-[#F8FBFF] px-4 py-3 text-sm font-semibold text-[#4B5563]">
+              <p className="mt-4 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)]">
                 {manualNotice}
               </p>
             ) : null}

@@ -46,6 +46,13 @@ class LoginGuard:
             lock_ttl = self._redis.get_ttl(self._redis_key("auth:lock", key))
             if lock_ttl is not None:
                 return max(0, lock_ttl)
+            # Distributed backend unavailable (Redis returned ``None``).
+            # Fail-closed (Requirement 2.5): when ``hardening_login_fail_closed``
+            # is on, fall through to the in-process guard so login throttling is
+            # not silently disabled. When off, preserve the current fail-open
+            # behavior so availability is unchanged (Requirement 11.1/11.2).
+            if not settings.hardening_login_fail_closed:
+                return 0
         now = time.time()
         with self._lock:
             state = self._states[key]
@@ -74,6 +81,14 @@ class LoginGuard:
                     self._redis.set_lock(lock_key, ttl_seconds=settings.auth_login_lock_seconds)
                     self._redis.delete(attempts_key)
                     return settings.auth_login_lock_seconds
+                return 0
+            # Distributed backend unavailable (``incr_with_ttl`` returned
+            # ``None``). Fail-closed (Requirement 2.5): when
+            # ``hardening_login_fail_closed`` is on, fall through to the
+            # in-process guard so the failed attempt is still counted and
+            # throttling continues. When off, preserve the current fail-open
+            # behavior (no throttle) so availability is unchanged.
+            if not settings.hardening_login_fail_closed:
                 return 0
 
         now = time.time()

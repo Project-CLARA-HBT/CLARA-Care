@@ -4,11 +4,12 @@ import json
 import math
 import os
 import re
+import secrets
 import time
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from html import unescape
 from html.parser import HTMLParser
 from io import BytesIO
@@ -19,11 +20,15 @@ from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi import Query as FastAPIQuery
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.compliance.consent import PURPOSE_PERSONALIZATION, PURPOSE_RESEARCH
+from clara_api.compliance.redaction import hash_user_ref
+from clara_api.compliance.service import ComplianceService
 from clara_api.core.attribution import (
     attach_attribution,
     build_attribution,
@@ -31,10 +36,18 @@ from clara_api.core.attribution import (
     normalize_source_used,
 )
 from clara_api.core.config import get_settings
+from clara_api.core.consent import PhrConsentService
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.control_tower.defaults import get_default_control_tower_config
 from clara_api.core.flow_event_store import get_flow_event_store
 from clara_api.core.rbac import require_roles
+from clara_api.core.research_telemetry import sanitize_telemetry
+from clara_api.core.research_upload_store import (
+    ResearchUploadAuthorizationError,
+    ResearchUploadNotFoundError,
+    ResearchUploadStore,
+    ResearchUploadStoreUnavailable,
+)
 from clara_api.core.security import TokenPayload
 from clara_api.core.timeouts import resolve_sync_research_timeout
 from clara_api.db.models import (
@@ -48,11 +61,21 @@ from clara_api.db.models import (
     SessionModel,
     SystemSetting,
     User,
+    WorkspaceConversationShare,
 )
 from clara_api.db.models import (
     Query as QueryModel,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.observability.admin_audit import (
+    ACTION_KB_DOCUMENT_STATUS,
+    ACTION_KB_SOURCE_CREATE,
+    ACTION_KB_SOURCE_UPLOAD,
+    OUTCOME_FAILURE,
+    OUTCOME_SUCCESS,
+    record_admin_action,
+)
+from clara_api.phr.features import phr_features
 from clara_api.schemas import (
     KnowledgeDocumentResponse,
     KnowledgeDocumentUpdateRequest,
@@ -60,6 +83,9 @@ from clara_api.schemas import (
     KnowledgeSourceResponse,
     KnowledgeSourceUpdateRequest,
     RagFlowConfig,
+    ResearchClarifyQuestion,
+    ResearchClarifyRequest,
+    ResearchClarifyResponse,
     ResearchConversationCreateRequest,
     ResearchConversationListResponse,
     ResearchConversationMessageResponse,
@@ -67,12 +93,14 @@ from clara_api.schemas import (
     ResearchConversationResponse,
     ResearchTier2JobCreateRequest,
     ResearchTier2JobResponse,
+    ResearchTier2ShareResponse,
     SourceHubCatalogEntry,
     SourceHubRecord,
     SourceHubRecordsResponse,
     SourceHubSourceKey,
     SourceHubSyncRequest,
     SourceHubSyncResponse,
+    WorkspaceConversationShareCreateRequest,
 )
 
 router = APIRouter()
@@ -435,13 +463,73 @@ def _store_uploaded_file(entry: dict[str, Any]) -> None:
         _uploaded_research_files.pop(oldest_file_id, None)
 
 
+def _durable_uploads_enabled() -> bool:
+    """Return True when the DB-backed durable upload store should be used (R2)."""
+
+    return bool(get_settings().research_durable_uploads_enabled)
+
+
+def _build_research_upload_store(db: Session) -> ResearchUploadStore:
+    """Construct a durable upload store bound to the request DB session."""
+
+    object_store_url = (get_settings().research_upload_object_store_url or "").strip()
+    return ResearchUploadStore(db, object_store_url=object_store_url or None)
+
+
+def _build_uploaded_documents_durable(
+    uploaded_file_ids: list[Any],
+    *,
+    owner_user_id: int,
+    db: Session,
+) -> list[dict[str, Any]]:
+    """Resolve uploaded documents from the durable, owner-isolated store (R2).
+
+    A referenced ``file_id`` not owned by the requester raises a 403 and is
+    excluded from the job (R2.4). An unknown ``file_id`` is skipped (mirrors the
+    legacy in-memory behavior). If the configured backend is unavailable, a 503
+    is raised so uploads are never silently dropped (R2.5).
+    """
+
+    store = _build_research_upload_store(db)
+    documents: list[dict[str, Any]] = []
+    for raw_file_id in uploaded_file_ids:
+        if not isinstance(raw_file_id, str):
+            continue
+        try:
+            stored = store.get(raw_file_id, owner_user_id)
+        except ResearchUploadNotFoundError:
+            continue
+        except ResearchUploadAuthorizationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không sở hữu file đã tải lên được tham chiếu.",
+            ) from exc
+        except ResearchUploadStoreUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Kho lưu trữ file research tạm thời không khả dụng.",
+            ) from exc
+        documents.append(stored.as_document())
+    return documents
+
+
 def _build_uploaded_documents(
     uploaded_file_ids: Any,
     *,
     owner_user_id: int,
+    db: Session | None = None,
 ) -> list[dict[str, Any]]:
     if not isinstance(uploaded_file_ids, list):
         return []
+
+    # Durable, owner-isolated backend behind the flag (R2). Falls back to the
+    # in-memory dict when the flag is off so legacy behavior is preserved.
+    if db is not None and _durable_uploads_enabled():
+        return _build_uploaded_documents_durable(
+            uploaded_file_ids,
+            owner_user_id=owner_user_id,
+            db=db,
+        )
 
     documents: list[dict[str, Any]] = []
     with _uploaded_research_lock:
@@ -596,14 +684,11 @@ def _canonicalize_research_payload_contract(payload: dict[str, Any]) -> dict[str
     else:
         fallback_reason = ""
 
-    has_fallback_signal = (
-        any(key in normalized for key in ("fallback", "fallback_used", "fallback_reason"))
-        or (
-            metadata_obj is not None
-            and any(
-                key in metadata_obj for key in ("fallback", "fallback_used", "fallback_reason")
-            )
-        )
+    has_fallback_signal = any(
+        key in normalized for key in ("fallback", "fallback_used", "fallback_reason")
+    ) or (
+        metadata_obj is not None
+        and any(key in metadata_obj for key in ("fallback", "fallback_used", "fallback_reason"))
     )
     if has_fallback_signal:
         fallback_used = bool(
@@ -946,6 +1031,68 @@ def _extract_tier2_query_text(payload: dict[str, Any]) -> str:
             if text:
                 return text
     return ""
+
+
+# Clarifying-questions support (clara-research R12). Ambiguity detection is a deterministic,
+# API-side heuristic: deep research benefits from a well-scoped question, so an underspecified
+# query (too few content words) is treated as ambiguous and triggers clarifying questions.
+_CLARIFY_MIN_CONTENT_WORDS = 4
+_CLARIFY_DEEP_MODES = {"deep", "deep_beta"}
+
+
+def _detect_query_ambiguity(query: str) -> bool:
+    """Return True when the query is underspecified enough to warrant clarification.
+
+    A query is ambiguous when it carries fewer than ``_CLARIFY_MIN_CONTENT_WORDS`` content
+    words (tokens of length >= 2). This keeps the gate deterministic and conservative: long,
+    specific queries start immediately while short/vague prompts ask for scope first.
+    """
+    content_words = [token for token in re.split(r"\W+", query.lower()) if len(token) >= 2]
+    return len(content_words) < _CLARIFY_MIN_CONTENT_WORDS
+
+
+def _build_clarifying_questions(*, ui_language: str) -> list[ResearchClarifyQuestion]:
+    """Build the curated clarifying-question set, localized to the requested UI language."""
+    if ui_language == "en":
+        specs = [
+            (
+                "population",
+                "Who is this for (patient profile, age group, or condition)?",
+                "Scoping the population focuses retrieval on the most relevant evidence.",
+            ),
+            (
+                "scope",
+                "What specifically would you like to compare or learn about?",
+                "Narrowing the scope avoids an overly broad, unfocused report.",
+            ),
+            (
+                "outcome",
+                "What outcome or decision are you trying to support?",
+                "The target outcome shapes which evidence and recommendations matter.",
+            ),
+        ]
+    else:
+        specs = [
+            (
+                "population",
+                "Câu hỏi này dành cho đối tượng nào (hồ sơ bệnh nhân, nhóm tuổi, hoặc bệnh lý)?",
+                "Xác định đối tượng giúp truy xuất đúng bằng chứng phù hợp nhất.",
+            ),
+            (
+                "scope",
+                "Bạn muốn so sánh hoặc tìm hiểu cụ thể về điều gì?",
+                "Thu hẹp phạm vi tránh báo cáo quá rộng và thiếu trọng tâm.",
+            ),
+            (
+                "outcome",
+                "Bạn đang cần hỗ trợ cho kết quả hoặc quyết định nào?",
+                "Kết quả mục tiêu quyết định bằng chứng và khuyến nghị nào là quan trọng.",
+            ),
+        ]
+    return [
+        ResearchClarifyQuestion(id=question_id, question=question, rationale=rationale)
+        for question_id, question, rationale in specs
+    ]
 
 
 def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1376,6 +1523,36 @@ def _build_tier2_telemetry(
     return telemetry or None
 
 
+def _apply_role_gated_telemetry(
+    result: dict[str, Any] | None,
+    *,
+    role: str | None,
+) -> dict[str, Any] | None:
+    """Replace the result's telemetry with a role-gated, PII-safe view (R3).
+
+    Gated behind ``RESEARCH_ROLE_GATED_TELEMETRY_ENABLED``; when the flag is off
+    the result is returned unchanged so legacy behavior is preserved (R20.2).
+    Fail-closed: an unknown/unavailable role yields no telemetry at all.
+    """
+
+    if not isinstance(result, dict):
+        return result
+    if not get_settings().research_role_gated_telemetry_enabled:
+        return result
+
+    raw_telemetry = result.get("telemetry")
+    telemetry_source: dict[str, Any] = raw_telemetry if isinstance(raw_telemetry, dict) else {}
+    # Fold in the progress/flow signals so the sanitized summary can be built even
+    # when the raw telemetry block carries no stage list of its own.
+    for stage_key in ("flow_stages", "flow_events", "active_stage"):
+        if stage_key not in telemetry_source and stage_key in result:
+            telemetry_source = {**telemetry_source, stage_key: result[stage_key]}
+
+    gated = result.copy()
+    gated["telemetry"] = sanitize_telemetry(telemetry_source, role=role)
+    return gated
+
+
 def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(payload)
 
@@ -1538,14 +1715,10 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
     metadata_obj = (
-        normalized.get("metadata")
-        if isinstance(normalized.get("metadata"), dict)
-        else {}
+        normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
     )
     telemetry_obj = (
-        normalized.get("telemetry")
-        if isinstance(normalized.get("telemetry"), dict)
-        else {}
+        normalized.get("telemetry") if isinstance(normalized.get("telemetry"), dict) else {}
     )
 
     source_used = normalize_source_used(
@@ -1575,9 +1748,11 @@ def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
             if isinstance(citation, str):
                 normalized_value = citation.strip().lower()
             elif isinstance(citation, dict):
-                normalized_value = str(
-                    citation.get("source") or citation.get("id") or citation.get("title") or ""
-                ).strip().lower()
+                normalized_value = (
+                    str(citation.get("source") or citation.get("id") or citation.get("title") or "")
+                    .strip()
+                    .lower()
+                )
             else:
                 normalized_value = ""
             if normalized_value and normalized_value not in source_used:
@@ -1592,20 +1767,14 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
         normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
     )
     telemetry_obj = (
-        normalized.get("telemetry")
-        if isinstance(normalized.get("telemetry"), dict)
-        else {}
+        normalized.get("telemetry") if isinstance(normalized.get("telemetry"), dict) else {}
     )
     source_used = _extract_research_source_used(normalized)
     source_errors = normalize_source_errors(
         normalized.get("source_errors")
         or metadata_obj.get("source_errors")
         or telemetry_obj.get("source_errors")
-        or (
-            telemetry_obj.get("errors")
-            if isinstance(telemetry_obj.get("errors"), dict)
-            else {}
-        )
+        or (telemetry_obj.get("errors") if isinstance(telemetry_obj.get("errors"), dict) else {})
         or {}
     )
     if "source_errors" not in normalized and source_errors:
@@ -1668,6 +1837,27 @@ def _coerce_personal_mode(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return False
+
+
+def _enforce_never_fast_and_personal(payload: dict[str, Any]) -> None:
+    """Reject any request that sets ``personal_mode`` while the mode is fast.
+
+    clara-research R15.2 / Property 30: preserve the invariant "never (fast && personal)".
+    Personalization (PHR + medicine cabinet) is valid only in tier2 deep/deep_beta runs, so a
+    fast-mode request carrying ``personal_mode`` is rejected here rather than silently coerced.
+    Applied unconditionally (independent of personalization feature flags) so the invariant holds
+    even when personalization is disabled.
+    """
+    if _coerce_personal_mode(payload.get("personal_mode")) and (
+        _coerce_research_mode(payload) == "fast"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "personal_mode is not allowed when research_mode is 'fast' "
+                "(invariant: never (fast && personal))."
+            ),
+        )
 
 
 def _as_dict_list(value: Any) -> list[dict[str, Any]]:
@@ -1816,6 +2006,51 @@ def _build_personal_context_payload(
     }
 
 
+# Gap-fill pass-count keys an upstream caller may supply to request additional bounded
+# gap-fill retrieval passes. The Research_API independently clamps any such request to
+# ``RESEARCH_API_GAP_FILL_HARD_MAX`` before forwarding to ML (clara-research R5.5,
+# defense in depth). Both the top-level payload and the opaque ``llm_runtime`` override
+# block are inspected. Absent any request, the payload is left untouched so legacy
+# (flag-off) requests keep their exact shape (clara-research R20.2).
+_GAP_FILL_PASS_REQUEST_KEYS: tuple[str, ...] = (
+    "gap_fill_max_passes",
+    "research_gap_fill_max_passes",
+)
+
+
+def _clamp_gap_fill_request_keys(container: dict[str, Any], *, ceiling: int) -> None:
+    """Clamp in place any gap-fill pass-count keys present in ``container`` to ``ceiling``."""
+
+    for key in _GAP_FILL_PASS_REQUEST_KEYS:
+        if key not in container:
+            continue
+        try:
+            requested = int(container[key])
+        except (TypeError, ValueError):
+            # Non-numeric request values are left untouched for the schema layer to reject.
+            continue
+        container[key] = max(0, min(requested, ceiling))
+
+
+def _enforce_api_gap_fill_ceiling(
+    payload: dict[str, Any], *, hard_max: int
+) -> dict[str, Any]:
+    """Clamp any requested gap-fill pass count to the API hard ceiling (clara-research R5.5).
+
+    The Research_API enforces ``RESEARCH_API_GAP_FILL_HARD_MAX`` externally so a
+    misbehaving or over-eager caller cannot drive unbounded gap-fill retrieval. When no
+    gap-fill pass count is requested, ``payload`` is returned unchanged so legacy
+    (flag-off) requests keep their exact shape (clara-research R20.2).
+    """
+
+    ceiling = max(0, int(hard_max))
+    _clamp_gap_fill_request_keys(payload, ceiling=ceiling)
+    runtime = payload.get("llm_runtime")
+    if isinstance(runtime, dict):
+        _clamp_gap_fill_request_keys(runtime, ceiling=ceiling)
+    return payload
+
+
 def _build_tier2_upstream_payload(
     payload: dict[str, Any],
     *,
@@ -1825,9 +2060,11 @@ def _build_tier2_upstream_payload(
 ) -> dict[str, Any]:
     settings = get_settings()
     upstream_payload = dict(payload)
-    requested_language = str(
-        upstream_payload.get("ui_language") or upstream_payload.get("answer_language") or "vi"
-    ).strip().lower()
+    requested_language = (
+        str(upstream_payload.get("ui_language") or upstream_payload.get("answer_language") or "vi")
+        .strip()
+        .lower()
+    )
     answer_language = "en" if requested_language == "en" else "vi"
     upstream_payload["ui_language"] = answer_language
     upstream_payload["answer_language"] = answer_language
@@ -1859,6 +2096,7 @@ def _build_tier2_upstream_payload(
     transient_documents = _build_uploaded_documents(
         payload.get("uploaded_file_ids"),
         owner_user_id=user.id,
+        db=db,
     )
     source_ids = _extract_source_ids(payload)
     source_documents = _build_source_documents(db, owner_user_id=user.id, source_ids=source_ids)
@@ -1874,20 +2112,52 @@ def _build_tier2_upstream_payload(
     if uploaded_documents or payload.get("source_mode") in {"uploaded_files", "knowledge_sources"}:
         upstream_payload["uploaded_documents"] = uploaded_documents
 
-    if personal_mode:
-        personal_context = _build_personal_context_payload(
-            db,
-            user_id=user.id,
-            answer_language=answer_language,
+    # clara-research R15.1 / Property 29: personalization (PHR + medicine cabinet) is
+    # incorporated into the synthesis only when personal_mode is set, the research mode is
+    # deep or deep_beta, AND the user has granted consent. Fast mode never personalizes
+    # (R15.2 invariant — rejected upstream and re-checked here as defense in depth so personal
+    # context can never leak into a fast run). No consent ⇒ run without personalization
+    # (R15.3), which is not an error.
+    if personal_mode and research_mode in {"deep", "deep_beta"}:
+        # PHR consent gate (Req 2.2, 2.3, 2.4): when consent enforcement is on, only feed
+        # personal PHR context if personalization + research consent are present; skip the
+        # personal-mode context if either consent is absent. The clara-research personalization
+        # surface (RESEARCH_PERSONALIZATION_ENABLED) likewise requires explicit personalization
+        # + research consent regardless of the legacy PHR enforcement flag (R15.1/R15.3). The
+        # gate reads current consent each request, so revocation takes effect on the next
+        # request. Both flags off ⇒ legacy behavior (always include).
+        phr_flags = phr_features(settings)
+        include_personal = True
+        if phr_flags.consent_enforcement or settings.research_personalization_enabled:
+            include_personal = PhrConsentService.is_granted(
+                db, user_id=user.id, purpose="personalization"
+            ) and PhrConsentService.is_granted(db, user_id=user.id, purpose="research")
+        # Compliance granular-consent gate (Req 2.1, 2.3): when
+        # COMPLIANCE_GRANULAR_CONSENT_ENABLED is on, also require the
+        # compliance-ledger personalization + research grants. Flag off ⇒
+        # has_consent returns True, so legacy behavior is preserved exactly.
+        compliance = ComplianceService(db, settings=settings)
+        include_personal = (
+            include_personal
+            and compliance.has_consent(user_id=user.id, purpose=PURPOSE_PERSONALIZATION)
+            and compliance.has_consent(user_id=user.id, purpose=PURPOSE_RESEARCH)
         )
-        upstream_payload["personal_context"] = personal_context
-        metadata = upstream_payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        metadata["personal_mode"] = True
-        metadata["personal_context_available"] = bool(personal_context.get("summary_markdown"))
-        metadata["personal_context_medication_count"] = len(personal_context.get("medications", []))
-        upstream_payload["metadata"] = metadata
+        if include_personal:
+            personal_context = _build_personal_context_payload(
+                db,
+                user_id=user.id,
+                answer_language=answer_language,
+            )
+            upstream_payload["personal_context"] = personal_context
+            metadata = upstream_payload.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            metadata["personal_mode"] = True
+            metadata["personal_context_available"] = bool(personal_context.get("summary_markdown"))
+            metadata["personal_context_medication_count"] = len(
+                personal_context.get("medications", [])
+            )
+            upstream_payload["metadata"] = metadata
 
     upstream_payload["role"] = token.role
     upstream_payload["strict_deepseek_required"] = bool(settings.deepseek_strict_mode)
@@ -1898,6 +2168,12 @@ def _build_tier2_upstream_payload(
     except Exception:
         upstream_payload["rag_flow"] = RagFlowConfig().model_dump()
     upstream_payload["rag_sources"] = runtime_rag_sources
+
+    # R5.5: clamp any requested gap-fill pass count to the API hard ceiling before the
+    # payload is forwarded to ML. No-op (legacy shape) when no count is requested.
+    upstream_payload = _enforce_api_gap_fill_ceiling(
+        upstream_payload, hard_max=settings.research_api_gap_fill_hard_max
+    )
 
     return upstream_payload
 
@@ -1924,6 +2200,18 @@ def _enforce_request_execution_contract(
     metadata_obj["retrieval_stack_mode"] = retrieval_stack_mode
     response["ui_language"] = answer_language
     metadata_obj["answer_language"] = answer_language
+
+    # R5.5 (defense in depth): the API forcibly caps the reported gap-fill pass count at
+    # the configured hard ceiling so a misbehaving orchestrator cannot surface or persist
+    # an unbounded count. Only acts when the field is present (legacy shape preserved).
+    hard_max = max(0, int(get_settings().research_api_gap_fill_hard_max))
+    if "gap_fill_passes" in response:
+        try:
+            reported_passes = int(response["gap_fill_passes"])
+        except (TypeError, ValueError):
+            reported_passes = None
+        if reported_passes is not None:
+            response["gap_fill_passes"] = max(0, min(reported_passes, hard_max))
 
     return response
 
@@ -1963,9 +2251,7 @@ def _stage_from_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _extract_stage_status_note(value: Any) -> tuple[str, str, str] | None:
     if not isinstance(value, dict):
         return None
-    stage = str(
-        value.get("stage") or value.get("phase") or value.get("active_stage") or ""
-    ).strip()
+    stage = str(value.get("stage") or value.get("phase") or value.get("active_stage") or "").strip()
     if not stage:
         return None
     status_text = str(
@@ -2139,9 +2425,14 @@ def _append_job_event(
         pass
 
 
-def _serialize_research_job(job: ResearchJob) -> ResearchTier2JobResponse:
+def _serialize_research_job(
+    job: ResearchJob,
+    *,
+    role: str | None = None,
+) -> ResearchTier2JobResponse:
     progress = job.progress_json if isinstance(job.progress_json, dict) else _empty_job_progress()
     result = job.result_json if isinstance(job.result_json, dict) else None
+    result = _apply_role_gated_telemetry(result, role=role)
     return ResearchTier2JobResponse(
         job_id=job.job_id,
         status=str(job.status or "queued"),  # type: ignore[arg-type]
@@ -2229,9 +2520,7 @@ def _invoke_ml_tier2_with_progress(
 
     if not isinstance(data, dict):
         if fail_soft_payload is not None:
-            return _build_fail_soft_response_local(
-                fail_soft_payload, "UnexpectedPayloadFormat"
-            )
+            return _build_fail_soft_response_local(fail_soft_payload, "UnexpectedPayloadFormat")
         raise RuntimeError("ml_unexpected_payload_format")
 
     elapsed_seconds = (datetime.now(tz=UTC) - started).total_seconds()
@@ -2342,9 +2631,7 @@ def _run_research_job(job_id: str) -> None:
             status_text="completed",
             note="Đã hoàn tất trả lời, có thể render Markdown đầy đủ.",
             payload={
-                "fallback_used": bool(
-                    enriched.get("fallback") or enriched.get("fallback_reason")
-                ),
+                "fallback_used": bool(enriched.get("fallback") or enriched.get("fallback_reason")),
                 "fallback_reason": enriched.get("fallback_reason"),
                 "source_errors": enriched.get("source_errors"),
                 "verification_matrix": enriched.get("verification_matrix"),
@@ -3368,11 +3655,7 @@ def _fetch_semantic_scholar_records(
                 title=title,
                 url=(
                     url
-                    or (
-                        f"https://www.semanticscholar.org/paper/{paper_id}"
-                        if paper_id
-                        else None
-                    )
+                    or (f"https://www.semanticscholar.org/paper/{paper_id}" if paper_id else None)
                 ),
                 snippet=" | ".join(part for part in [venue, journal, year] if part) or None,
                 external_id=paper_id or None,
@@ -3421,9 +3704,7 @@ def _fetch_clinicaltrials_records(
         overall_status = _to_text(status_module.get("overallStatus"))
         start_date_obj = status_module.get("startDateStruct")
         start_date = (
-            _to_text(start_date_obj.get("date"))
-            if isinstance(start_date_obj, dict)
-            else ""
+            _to_text(start_date_obj.get("date")) if isinstance(start_date_obj, dict) else ""
         )
 
         records.append(
@@ -3784,6 +4065,36 @@ def list_knowledge_sources(
     }
 
 
+def _audit_kb_mutation(
+    db: Session,
+    token: TokenPayload,
+    action: str,
+    *,
+    target: str = "",
+    outcome: str,
+    meta: dict[str, Any] | None = None,
+) -> None:
+    """Append one admin-action audit row for a knowledge-source mutation.
+
+    Records both success and failure outcomes (Requirement 9.5) with an opaque,
+    salted actor reference (the hash of the caller id — never a raw user id /
+    email, Requirement 9.3) and a PII-free ``meta`` (counts/flags/mime only).
+    The write is a no-op when ``admin_audit_log_enabled`` is off, preserving the
+    flags-off baseline (Requirement 12.2); the audit row is committed on its own
+    so it is durable independently of the mutation's own transaction.
+    """
+
+    record_admin_action(
+        db,
+        hash_user_ref(token.sub),
+        action,
+        target=target,
+        outcome=outcome,
+        meta=meta,
+    )
+    db.commit()
+
+
 @router.post("/knowledge-sources")
 def create_knowledge_source(
     payload: KnowledgeSourceCreateRequest,
@@ -3791,15 +4102,34 @@ def create_knowledge_source(
     db: Session = Depends(get_db),
 ) -> KnowledgeSourceResponse:
     user = _get_user_by_token(db, token)
-    source = KnowledgeSource(
-        owner_user_id=user.id,
-        name=payload.name.strip(),
-        description=payload.description.strip(),
-        is_active=True,
+    try:
+        source = KnowledgeSource(
+            owner_user_id=user.id,
+            name=payload.name.strip(),
+            description=payload.description.strip(),
+            is_active=True,
+        )
+        db.add(source)
+        db.commit()
+        db.refresh(source)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_SOURCE_CREATE,
+            outcome=OUTCOME_FAILURE,
+            meta={"name_length": len(payload.name.strip())},
+        )
+        raise
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_SOURCE_CREATE,
+        target=str(source.id),
+        outcome=OUTCOME_SUCCESS,
+        meta={"name_length": len(payload.name.strip())},
     )
-    db.add(source)
-    db.commit()
-    db.refresh(source)
     return _serialize_knowledge_source(source, documents_count=0)
 
 
@@ -3879,33 +4209,61 @@ async def upload_file_to_knowledge_source(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     user = _get_user_by_token(db, token)
-    source = _get_owned_source(db, source_id=source_id, owner_user_id=user.id)
+    try:
+        source = _get_owned_source(db, source_id=source_id, owner_user_id=user.id)
 
-    file_name = file.filename or "uploaded-file"
-    content_type = file.content_type or "application/octet-stream"
-    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
-    if not file_bytes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
+        file_name = file.filename or "uploaded-file"
+        content_type = file.content_type or "application/octet-stream"
+        file_bytes = await _read_upload_bytes_with_limit(
+            file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
+        )
+        if not file_bytes:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
+        _validate_upload_safety(
+            file_name=file_name, content_type=content_type, file_bytes=file_bytes
+        )
 
-    extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
-    preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
-    token_count = _approx_token_count(extracted_text if file_kind == "text" else "")
+        extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
+        preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
+        token_count = _approx_token_count(extracted_text if file_kind == "text" else "")
 
-    document = KnowledgeDocument(
-        source_id=source.id,
-        owner_user_id=user.id,
-        filename=file_name,
-        content_type=content_type,
-        size=len(file_bytes),
-        extracted_text=extracted_text if file_kind == "text" else "",
-        preview=preview,
-        token_count=token_count,
-        is_active=True,
+        document = KnowledgeDocument(
+            source_id=source.id,
+            owner_user_id=user.id,
+            filename=file_name,
+            content_type=content_type,
+            size=len(file_bytes),
+            extracted_text=extracted_text if file_kind == "text" else "",
+            preview=preview,
+            token_count=token_count,
+            is_active=True,
+        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_SOURCE_UPLOAD,
+            target=str(source_id),
+            outcome=OUTCOME_FAILURE,
+        )
+        raise
+
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_SOURCE_UPLOAD,
+        target=str(source.id),
+        outcome=OUTCOME_SUCCESS,
+        meta={
+            "size": len(file_bytes),
+            "token_count": token_count,
+            "content_type": content_type,
+        },
     )
-    db.add(document)
-    db.commit()
-    db.refresh(document)
 
     return {
         "document": _serialize_knowledge_document(document),
@@ -3921,11 +4279,31 @@ def update_knowledge_document(
     db: Session = Depends(get_db),
 ) -> KnowledgeDocumentResponse:
     user = _get_user_by_token(db, token)
-    document = _get_owned_document(db, document_id=document_id, owner_user_id=user.id)
-    document.is_active = payload.is_active
-    db.add(document)
-    db.commit()
-    db.refresh(document)
+    try:
+        document = _get_owned_document(db, document_id=document_id, owner_user_id=user.id)
+        document.is_active = payload.is_active
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        _audit_kb_mutation(
+            db,
+            token,
+            ACTION_KB_DOCUMENT_STATUS,
+            target=str(document_id),
+            outcome=OUTCOME_FAILURE,
+            meta={"is_active": payload.is_active},
+        )
+        raise
+    _audit_kb_mutation(
+        db,
+        token,
+        ACTION_KB_DOCUMENT_STATUS,
+        target=str(document_id),
+        outcome=OUTCOME_SUCCESS,
+        meta={"is_active": payload.is_active},
+    )
     return _serialize_knowledge_document(document)
 
 
@@ -3949,20 +4327,47 @@ async def upload_research_file(
     token_count = _approx_token_count(extracted_text if file_kind == "text" else "")
     created_at = datetime.now(tz=UTC).isoformat()
     file_id = str(uuid4())
+    stored_text = extracted_text if file_kind == "text" else ""
 
-    _store_uploaded_file(
-        {
-            "file_id": file_id,
-            "filename": file_name,
-            "content_type": content_type,
-            "size": len(file_bytes),
-            "created_at": created_at,
-            "owner_user_id": user.id,
-            "text": extracted_text if file_kind == "text" else "",
-            "preview": preview,
-            "token_count": token_count,
-        }
-    )
+    if _durable_uploads_enabled():
+        # Durable, owner-isolated persistence (R2.1-R2.3, R2.6). A broken but
+        # enabled backend surfaces a 503 so the upload is never silently lost.
+        store = _build_research_upload_store(db)
+        try:
+            stored = store.put(
+                user.id,
+                file_bytes,
+                stored_text,
+                meta={
+                    "file_id": file_id,
+                    "filename": file_name,
+                    "content_type": content_type,
+                    "size": len(file_bytes),
+                    "preview": preview,
+                    "token_count": token_count,
+                    "ocr_bridge_kind": file_kind,
+                },
+            )
+        except ResearchUploadStoreUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Kho lưu trữ file research tạm thời không khả dụng.",
+            ) from exc
+        file_id = stored.file_id
+    else:
+        _store_uploaded_file(
+            {
+                "file_id": file_id,
+                "filename": file_name,
+                "content_type": content_type,
+                "size": len(file_bytes),
+                "created_at": created_at,
+                "owner_user_id": user.id,
+                "text": stored_text,
+                "preview": preview,
+                "token_count": token_count,
+            }
+        )
 
     default_source = _get_or_create_default_source(db, user.id)
     document = KnowledgeDocument(
@@ -4002,6 +4407,8 @@ def research_tier2(
     user = _get_user_by_token(db, token)
     query_text = _extract_tier2_query_text(payload)
     normalized_input = dict(payload)
+    # clara-research R15.2: enforce "never (fast && personal)" on the raw-dict surface too.
+    _enforce_never_fast_and_personal(normalized_input)
     if query_text:
         normalized_input["query"] = query_text
         normalized_input["message"] = query_text
@@ -4017,16 +4424,54 @@ def research_tier2(
             if settings.deepseek_strict_mode
             else _research_tier2_fallback_payload(upstream_payload)
         ),
-        timeout_seconds=resolve_sync_research_timeout(
-            settings.ml_research_timeout_seconds
-        ),
+        timeout_seconds=resolve_sync_research_timeout(settings.ml_research_timeout_seconds),
     )
     normalized = _normalize_tier2_response(response)
     normalized = _enforce_request_execution_contract(
         normalized,
         request_payload=upstream_payload,
     )
-    return _attach_research_attribution(normalized)
+    attributed = _attach_research_attribution(normalized)
+    return _apply_role_gated_telemetry(attributed, role=token.role) or attributed
+
+
+@router.post("/clarify")
+def research_clarify(
+    payload: ResearchClarifyRequest,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> ResearchClarifyResponse:
+    """Return clarifying questions for an ambiguous deep-research query (clara-research R12.1).
+
+    Gated on ``RESEARCH_CLARIFYING_QUESTIONS_ENABLED`` and research mode ∈ {deep, deep_beta}.
+    When the flag is off, the mode is not deep/deep_beta, or the query is unambiguous, the
+    endpoint reports ``ambiguous=false`` with no questions so the UI starts without prompting.
+    """
+    settings = get_settings()
+    # Authenticate the caller against a real user, consistent with the other research endpoints.
+    _get_user_by_token(db, token)
+
+    research_mode = _normalize_research_mode_value(payload.research_mode, default="deep")
+    query_text = _extract_tier2_query_text(payload.model_dump())
+
+    gate_open = (
+        bool(settings.research_clarifying_questions_enabled)
+        and research_mode in _CLARIFY_DEEP_MODES
+    )
+    if not gate_open or not query_text:
+        return ResearchClarifyResponse(
+            ambiguous=False, research_mode=research_mode, questions=[]
+        )
+
+    ambiguous = _detect_query_ambiguity(query_text)
+    questions = (
+        _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
+    )
+    return ResearchClarifyResponse(
+        ambiguous=ambiguous,
+        research_mode=research_mode,
+        questions=questions,
+    )
 
 
 @router.post("/tier2/jobs")
@@ -4106,7 +4551,7 @@ def create_research_tier2_job(
         note="Đã tạo research job. Chuẩn bị chạy truy xuất chuyên sâu.",
     )
     db.refresh(job)
-    return _serialize_research_job(job)
+    return _serialize_research_job(job, role=token.role)
 
 
 @router.get("/tier2/jobs/{job_id}")
@@ -4127,7 +4572,493 @@ def get_research_tier2_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Research job không tồn tại.",
         )
-    return _serialize_research_job(job)
+    return _serialize_research_job(job, role=token.role)
+
+
+_RESEARCH_EXPORT_FORMATS = ("md", "docx", "pdf")
+_RESEARCH_EXPORT_MEDIA_TYPES = {
+    "md": "text/markdown; charset=utf-8",
+    "docx": (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ),
+    "pdf": "application/pdf",
+}
+
+
+def _research_export_enabled() -> bool:
+    """Return True when the export surface is enabled (R16, default-off)."""
+
+    return bool(get_settings().research_export_enabled)
+
+
+def _export_report_body(result: dict[str, Any]) -> str:
+    """Resolve the report body markdown/text from a stored tier2 result."""
+
+    for key in ("answer_markdown", "answer", "summary", "message"):
+        candidate = result.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def _export_citations(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalize the citations list into dicts for rendering (R16.2)."""
+
+    raw_citations = result.get("citations")
+    if not isinstance(raw_citations, list):
+        return []
+
+    citations: list[dict[str, Any]] = []
+    for index, citation in enumerate(raw_citations, start=1):
+        if isinstance(citation, dict):
+            citation_id = (
+                citation.get("source_id")
+                or citation.get("id")
+                or citation.get("citation_id")
+                or f"c{index}"
+            )
+            citations.append(
+                {
+                    "citation_id": str(citation_id),
+                    "title": citation.get("title"),
+                    "source": citation.get("source"),
+                    "url": citation.get("url"),
+                    "study_id": citation.get("study_id"),
+                    "source_type": citation.get("source_type"),
+                    "trust_tier": citation.get("trust_tier"),
+                    "published_at": citation.get("published_at"),
+                }
+            )
+        elif isinstance(citation, str) and citation.strip():
+            citations.append({"citation_id": f"c{index}", "title": citation.strip()})
+    return citations
+
+
+def _export_citation_registry(
+    result: dict[str, Any],
+    citations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Resolve the Citation Registry appendix, deriving it from citations when absent.
+
+    The exported report ALWAYS includes a Citation Registry (R16.2); when the ML
+    layer did not emit an explicit ``citation_registry`` it is reconstructed from
+    the report citations so the appendix is never empty for a cited report.
+    """
+
+    registry = result.get("citation_registry")
+    if isinstance(registry, list) and registry:
+        normalized: list[dict[str, Any]] = []
+        for index, entry in enumerate(registry, start=1):
+            if isinstance(entry, dict):
+                citation_id = entry.get("citation_id") or entry.get("id") or f"c{index}"
+                merged = dict(entry)
+                merged["citation_id"] = str(citation_id)
+                normalized.append(merged)
+            elif isinstance(entry, str) and entry.strip():
+                normalized.append({"citation_id": f"c{index}", "study_id": entry.strip()})
+        if normalized:
+            return normalized
+
+    # Derive from citations so the appendix is always present (R16.2).
+    return [
+        {
+            "citation_id": citation["citation_id"],
+            "study_id": citation.get("study_id"),
+            "title": citation.get("title"),
+            "url": citation.get("url"),
+            "source": citation.get("source"),
+            "source_type": citation.get("source_type"),
+            "trust_tier": citation.get("trust_tier"),
+            "published_at": citation.get("published_at"),
+        }
+        for citation in citations
+    ]
+
+
+def _format_citation_line(entry: dict[str, Any]) -> str:
+    """Render a single citation/registry entry as a one-line summary."""
+
+    label = entry.get("title") or entry.get("source") or entry.get("study_id") or "Nguồn"
+    parts = [str(label).strip()]
+    detail_bits: list[str] = []
+    for key in ("source", "study_id", "source_type"):
+        value = entry.get(key)
+        if value not in (None, "") and str(value).strip():
+            detail_bits.append(f"{key}={str(value).strip()}")
+    trust_tier = entry.get("trust_tier")
+    if trust_tier not in (None, ""):
+        detail_bits.append(f"trust_tier={trust_tier}")
+    published_at = entry.get("published_at")
+    if published_at not in (None, "") and str(published_at).strip():
+        detail_bits.append(f"date={str(published_at).strip()}")
+    if detail_bits:
+        parts.append(f"({', '.join(detail_bits)})")
+    url = entry.get("url")
+    if url not in (None, "") and str(url).strip():
+        parts.append(str(url).strip())
+    return " ".join(parts)
+
+
+def _build_export_markdown(*, query_text: str, result: dict[str, Any]) -> str:
+    """Build the canonical Markdown export, always including citations + registry."""
+
+    citations = _export_citations(result)
+    registry = _export_citation_registry(result, citations)
+
+    title = (query_text or "Research Report").strip() or "Research Report"
+    sections: list[str] = [f"# {title}"]
+
+    body = _export_report_body(result)
+    if body:
+        sections.append(body)
+
+    citation_lines = ["## Citations"]
+    if citations:
+        for index, citation in enumerate(citations, start=1):
+            citation_lines.append(
+                f"{index}. [{citation['citation_id']}] {_format_citation_line(citation)}"
+            )
+    else:
+        citation_lines.append("_Không có trích dẫn cho báo cáo này._")
+    sections.append("\n".join(citation_lines))
+
+    registry_lines = ["## Citation Registry"]
+    if registry:
+        for entry in registry:
+            registry_lines.append(f"- [{entry['citation_id']}] {_format_citation_line(entry)}")
+    else:
+        registry_lines.append("_Không có mục nào trong sổ trích dẫn._")
+    sections.append("\n".join(registry_lines))
+
+    return "\n\n".join(sections).strip() + "\n"
+
+
+def _markdown_to_plain_lines(markdown_text: str) -> list[str]:
+    """Reduce export markdown to plain text lines for PDF rendering."""
+
+    plain_lines: list[str] = []
+    for raw_line in markdown_text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.lstrip("#").strip() if line.startswith("#") else line
+        plain_lines.append(stripped)
+    return plain_lines
+
+
+def _wrap_export_lines(lines: list[str], *, max_chars: int = 95) -> list[str]:
+    wrapped: list[str] = []
+    for line in lines:
+        if not line:
+            wrapped.append("")
+            continue
+        current = ""
+        for word in line.split(" "):
+            if not current:
+                current = word
+            elif len(current) + 1 + len(word) <= max_chars:
+                current = f"{current} {word}"
+            else:
+                wrapped.append(current)
+                current = word
+        wrapped.append(current)
+    return wrapped
+
+
+def _render_export_docx(*, query_text: str, result: dict[str, Any]) -> bytes:
+    """Render the report (with citations + registry) as a DOCX document."""
+
+    from docx import Document
+
+    citations = _export_citations(result)
+    registry = _export_citation_registry(result, citations)
+
+    document = Document()
+    document.add_heading((query_text or "Research Report").strip() or "Research Report", level=0)
+
+    body = _export_report_body(result)
+    if body:
+        for block in body.split("\n\n"):
+            block = block.strip()
+            if block:
+                document.add_paragraph(block)
+
+    document.add_heading("Citations", level=1)
+    if citations:
+        for citation in citations:
+            document.add_paragraph(
+                f"[{citation['citation_id']}] {_format_citation_line(citation)}",
+                style="List Number",
+            )
+    else:
+        document.add_paragraph("Không có trích dẫn cho báo cáo này.")
+
+    document.add_heading("Citation Registry", level=1)
+    if registry:
+        for entry in registry:
+            document.add_paragraph(
+                f"[{entry['citation_id']}] {_format_citation_line(entry)}",
+                style="List Bullet",
+            )
+    else:
+        document.add_paragraph("Không có mục nào trong sổ trích dẫn.")
+
+    buffer = BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def _pdf_escape(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _render_export_pdf(*, query_text: str, result: dict[str, Any]) -> bytes:
+    """Render the report as a minimal, dependency-free PDF (citations + registry)."""
+
+    markdown_text = _build_export_markdown(query_text=query_text, result=result)
+    lines = _wrap_export_lines(_markdown_to_plain_lines(markdown_text))
+
+    lines_per_page = 52
+    pages = [lines[i : i + lines_per_page] for i in range(0, len(lines), lines_per_page)] or [[]]
+
+    # Object numbering: 1=Catalog, 2=Pages, 3=Font, then per page (page, contents).
+    page_object_numbers: list[int] = []
+    objects: dict[int, bytes] = {}
+    next_object_number = 4
+    for page_lines in pages:
+        page_number = next_object_number
+        contents_number = next_object_number + 1
+        next_object_number += 2
+        page_object_numbers.append(page_number)
+
+        content = "BT\n/F1 11 Tf\n14 TL\n50 770 Td\n"
+        for index, line in enumerate(page_lines):
+            if index > 0:
+                content += "T*\n"
+            content += f"({_pdf_escape(line)}) Tj\n"
+        content += "ET"
+        content_bytes = content.encode("latin-1", errors="replace")
+
+        objects[page_number] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            f"/Resources << /Font << /F1 3 0 R >> >> /Contents {contents_number} 0 R >>"
+        ).encode("latin-1")
+        objects[contents_number] = (
+            f"<< /Length {len(content_bytes)} >>\nstream\n".encode("latin-1")
+            + content_bytes
+            + b"\nendstream"
+        )
+
+    kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+    objects[2] = (
+        f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_numbers)} >>"
+    ).encode("latin-1")
+    objects[3] = (
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
+        b"/Encoding /WinAnsiEncoding >>"
+    )
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets: dict[int, int] = {}
+    for number in sorted(objects):
+        offsets[number] = len(pdf)
+        pdf += f"{number} 0 obj\n".encode("latin-1")
+        pdf += objects[number]
+        pdf += b"\nendobj\n"
+
+    xref_offset = len(pdf)
+    total_objects = len(objects) + 1
+    pdf += f"xref\n0 {total_objects}\n".encode("latin-1")
+    pdf += b"0000000000 65535 f \n"
+    for number in sorted(objects):
+        pdf += f"{offsets[number]:010d} 00000 n \n".encode("latin-1")
+    pdf += (
+        f"trailer\n<< /Size {total_objects} /Root 1 0 R >>\n"
+        f"startxref\n{xref_offset}\n%%EOF"
+    ).encode("latin-1")
+    return bytes(pdf)
+
+
+@router.post("/tier2/jobs/{job_id}/export")
+def export_research_tier2_job(
+    job_id: str,
+    export_format: str = FastAPIQuery("md", alias="format"),
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Export a completed research report as md/docx/pdf (R16.1, R16.2, R16.4).
+
+    Default-off behind ``RESEARCH_EXPORT_ENABLED``: when disabled the surface does
+    not exist (404), preserving legacy behavior. Owner-isolated. Export is rejected
+    until the report has completed (R16.4), and every artifact always includes the
+    citations and the Citation Registry (R16.2).
+    """
+
+    if not _research_export_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research export chưa được bật.",
+        )
+
+    normalized_format = str(export_format or "").strip().lower()
+    if normalized_format not in _RESEARCH_EXPORT_FORMATS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="format phải là 'md', 'docx' hoặc 'pdf'.",
+        )
+
+    user = _get_user_by_token(db, token)
+    job = db.execute(
+        select(ResearchJob).where(
+            ResearchJob.job_id == job_id,
+            ResearchJob.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research job không tồn tại.",
+        )
+
+    if str(job.status or "").strip().lower() != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Báo cáo chưa hoàn tất nên không thể export.",
+        )
+
+    result = job.result_json if isinstance(job.result_json, dict) else None
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Báo cáo chưa hoàn tất nên không thể export.",
+        )
+
+    query_text = job.query_text or ""
+    if normalized_format == "md":
+        body = _build_export_markdown(query_text=query_text, result=result).encode("utf-8")
+    elif normalized_format == "docx":
+        body = _render_export_docx(query_text=query_text, result=result)
+    else:  # pdf
+        body = _render_export_pdf(query_text=query_text, result=result)
+
+    filename = f"research_{job_id}.{normalized_format}"
+    return Response(
+        content=body,
+        media_type=_RESEARCH_EXPORT_MEDIA_TYPES[normalized_format],
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _research_share_enabled() -> bool:
+    """Return True when the read-only share surface is enabled (R16.3, default-off)."""
+
+    return bool(get_settings().research_share_enabled)
+
+
+def _research_share_public_url(share_token: str) -> str:
+    """Build the public ``/share/{token}`` URL (reuses the workspace mechanism)."""
+
+    base = get_settings().auth_public_web_base_url.rstrip("/")
+    return f"{base}/share/{share_token}"
+
+
+def _generate_research_share_token(db: Session) -> str:
+    """Generate a unique share token, mirroring the workspace share mechanism."""
+
+    for _ in range(8):
+        candidate = secrets.token_urlsafe(24)
+        exists = db.execute(
+            select(WorkspaceConversationShare.id).where(
+                WorkspaceConversationShare.share_token == candidate
+            )
+        ).scalar_one_or_none()
+        if exists is None:
+            return candidate
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Không thể tạo share token.",
+    )
+
+
+def _serialize_research_share(
+    share: WorkspaceConversationShare,
+    *,
+    job_id: str,
+) -> ResearchTier2ShareResponse:
+    return ResearchTier2ShareResponse(
+        job_id=job_id,
+        share_token=share.share_token,
+        public_url=_research_share_public_url(share.share_token),
+        is_active=bool(share.is_active),
+        expires_at=share.expires_at,
+        created_at=share.created_at,
+        updated_at=share.updated_at,
+    )
+
+
+@router.post("/tier2/jobs/{job_id}/share")
+def share_research_tier2_job(
+    job_id: str,
+    payload: WorkspaceConversationShareCreateRequest | None = None,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> ResearchTier2ShareResponse:
+    """Create (or rotate) a read-only share link for a research report (R16.3).
+
+    Default-off behind ``RESEARCH_SHARE_ENABLED``: when disabled the surface does
+    not exist (404), preserving legacy behavior. Owner-isolated. Reuses the
+    ``WorkspaceConversationShare`` mechanism (``share_token`` + ``/share/{token}``
+    public URL), keyed on the research job instead of a chat session.
+    """
+
+    if not _research_share_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research share chưa được bật.",
+        )
+
+    request = payload or WorkspaceConversationShareCreateRequest()
+
+    user = _get_user_by_token(db, token)
+    job = db.execute(
+        select(ResearchJob).where(
+            ResearchJob.job_id == job_id,
+            ResearchJob.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research job không tồn tại.",
+        )
+
+    share = db.execute(
+        select(WorkspaceConversationShare).where(
+            WorkspaceConversationShare.user_id == user.id,
+            WorkspaceConversationShare.research_job_id == job.id,
+        )
+    ).scalar_one_or_none()
+
+    should_rotate = bool(request.rotate) or share is None
+    if share is None:
+        share = WorkspaceConversationShare(
+            user_id=user.id,
+            session_id=None,
+            research_job_id=job.id,
+            share_token=_generate_research_share_token(db),
+            is_active=True,
+        )
+    else:
+        share.is_active = True
+        if should_rotate:
+            share.share_token = _generate_research_share_token(db)
+
+    if request.expires_in_hours is not None:
+        share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
+
+    db.add(share)
+    db.commit()
+    db.refresh(share)
+    return _serialize_research_share(share, job_id=job_id)
 
 
 def _build_research_job_stream_headers() -> dict[str, str]:
@@ -4186,7 +5117,7 @@ async def stream_research_tier2_job(
             ).scalar_one_or_none()
             if current is None:
                 return None
-            return _serialize_research_job(current).model_dump(mode="json")
+            return _serialize_research_job(current, role=token.role).model_dump(mode="json")
 
     async def event_stream():
         last_heartbeat_at = time.monotonic()
@@ -4296,9 +5227,7 @@ def source_hub_sync(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Query không được rỗng."
         )
-    catalog_by_key = {
-        entry.key: entry for entry in _load_source_hub_catalog(db)
-    }
+    catalog_by_key = {entry.key: entry for entry in _load_source_hub_catalog(db)}
     selected_source = catalog_by_key.get(payload.source)
     if selected_source is None:
         raise HTTPException(

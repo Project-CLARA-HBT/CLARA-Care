@@ -1,16 +1,70 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
+import AsyncSection, {
+  selectAsyncState,
+  type AsyncState,
+} from "@/components/ui/async-section";
 import {
+  DEFAULT_PHR_CAPABILITIES,
+  getPhrCapabilities,
+  getPhrCompleteness,
   getPhrRecord,
   type PhrAllergyItem,
+  type PhrCapabilityFlags,
+  type PhrCompleteness,
+  type PhrCompletenessClass,
   type PhrConditionItem,
   type PhrMedicationItem,
   type PhrRecord,
   updatePhrRecord,
 } from "@/lib/phr";
-import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/ui-language";
+import {
+  getStoredUILanguage,
+  onUILanguageChange,
+  type UILanguage,
+} from "@/lib/ui-language";
+import type { PhrInformationSource, PhrVerificationStatus } from "@/lib/phr";
+import OcrReviewModal from "@/components/phr/ocr-review-modal";
+import PhrExportButton from "@/components/phr/export-button";
+import ShareManager from "@/components/phr/share-manager";
+import EmergencyCardEditor from "@/components/phr/emergency-card-editor";
+import RemindersPanel from "@/components/phr/reminders-panel";
+
+const COMPLETENESS_CLASS_LABELS: Record<
+  PhrCompletenessClass,
+  Record<UILanguage, string>
+> = {
+  patient_demographics: { vi: "Thông tin nhân khẩu", en: "Demographics" },
+  allergies: { vi: "Dị ứng", en: "Allergies" },
+  medications: { vi: "Thuốc", en: "Medications" },
+  problems: { vi: "Bệnh nền", en: "Problems" },
+  immunizations: { vi: "Tiêm chủng", en: "Immunizations" },
+  procedures: { vi: "Thủ thuật", en: "Procedures" },
+  labs: { vi: "Xét nghiệm", en: "Labs" },
+};
+
+const SOURCE_LABELS: Record<
+  PhrInformationSource,
+  Record<UILanguage, string>
+> = {
+  "self-declared": { vi: "Tự khai báo", en: "Self-declared" },
+  ocr: { vi: "Quét OCR", en: "OCR import" },
+  imported: { vi: "Nhập có cấu trúc", en: "Imported" },
+};
+
+const VERIFICATION_LABELS: Record<
+  PhrVerificationStatus,
+  Record<UILanguage, string>
+> = {
+  unconfirmed: { vi: "Chưa xác minh", en: "Unconfirmed" },
+  confirmed: { vi: "Đã xác minh", en: "Confirmed" },
+  provisional: { vi: "Tạm thời", en: "Provisional" },
+  refuted: { vi: "Đã bác bỏ", en: "Refuted" },
+  "entered-in-error": { vi: "Nhập sai", en: "Entered in error" },
+};
 
 const COPY = {
   vi: {
@@ -54,6 +108,22 @@ const COPY = {
     itemNote: "Ghi chú",
     updatedAt: "Cập nhật lần cuối",
     unknown: "Chưa rõ",
+    disclaimer:
+      "Hồ sơ này do bạn tự khai báo, chỉ dùng để hỗ trợ ra quyết định — không phải hồ sơ bệnh án điện tử (EMR/EHR), không thay thế chẩn đoán của bác sĩ và không có giá trị pháp lý ràng buộc. Hãy luôn tham vấn nhân viên y tế trước khi hành động.",
+    source: "Nguồn",
+    verification: "Xác minh",
+    consentTitle: "Đồng thuận dữ liệu",
+    consentBody:
+      "Việc dùng PHR để cá nhân hóa và chia sẻ hồ sơ được quản lý tại Trung tâm đồng thuận.",
+    consentLink: "Mở Trung tâm đồng thuận",
+    completenessTitle: "Mức độ hoàn thiện hồ sơ",
+    completenessDescription:
+      "Điểm dựa trên các nhóm dữ liệu USCDI có trong hồ sơ. Bổ sung nhóm còn thiếu giúp kiểm tra an toàn thuốc và cá nhân hóa tốt hơn.",
+    completenessLoading: "Đang tính mức độ hoàn thiện...",
+    completenessError: "Chưa thể tải mức độ hoàn thiện hồ sơ.",
+    completenessComplete: "Hồ sơ đã đầy đủ các nhóm dữ liệu chính.",
+    completenessPresent: "Đã có",
+    completenessMissing: "Còn thiếu",
   },
   en: {
     title: "Personal Health Record",
@@ -96,6 +166,22 @@ const COPY = {
     itemNote: "Note",
     updatedAt: "Last updated",
     unknown: "Unknown",
+    disclaimer:
+      "This record is self-declared and for decision support only — it is not an EMR/EHR, does not replace a clinician's diagnosis, and is not legally binding. Always review with a healthcare professional before acting.",
+    source: "Source",
+    verification: "Verification",
+    consentTitle: "Data consent",
+    consentBody:
+      "Using your PHR for personalization and sharing is managed in the Consent Center.",
+    consentLink: "Open Consent Center",
+    completenessTitle: "Record completeness",
+    completenessDescription:
+      "Score based on the USCDI data classes present in your record. Filling in missing classes improves medication-safety checks and personalization.",
+    completenessLoading: "Calculating completeness...",
+    completenessError: "Unable to load record completeness.",
+    completenessComplete: "Your record covers all core data classes.",
+    completenessPresent: "Present",
+    completenessMissing: "Missing",
   },
 } as const;
 
@@ -120,7 +206,10 @@ const EMPTY_RECORD: PhrRecord = {
 };
 
 function makeId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `phr_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -145,6 +234,8 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
     reaction: item.reaction ?? "",
     severity: item.severity ?? "unknown",
     note: item.note ?? "",
+    information_source: item.information_source ?? null,
+    verification_status: item.verification_status ?? null,
   }));
   const normalizedConditions = (record.conditions ?? []).map((item) => ({
     id: item.id || makeId(),
@@ -152,6 +243,8 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
     status: item.status ?? "unknown",
     diagnosed_on: item.diagnosed_on ?? null,
     note: item.note ?? "",
+    information_source: item.information_source ?? null,
+    verification_status: item.verification_status ?? null,
   }));
   const normalizedMeds = (record.medications ?? []).map((item) => ({
     id: item.id || makeId(),
@@ -161,6 +254,8 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
     started_on: item.started_on ?? null,
     is_current: item.is_current ?? true,
     note: item.note ?? "",
+    information_source: item.information_source ?? null,
+    verification_status: item.verification_status ?? null,
   }));
   return {
     ...EMPTY_RECORD,
@@ -172,7 +267,141 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
 }
 
 function InputLabel({ children }: { children: string }) {
-  return <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">{children}</span>;
+  return (
+    <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Per-entry provenance + verification chips (personal-health-record Requirement
+ * 6.5). Renders nothing when an entry carries no provenance (preserves the
+ * legacy display when the PHR feature flag is off and the backend omits these
+ * fields — Requirement 18.1).
+ */
+function ProvenanceBadges({
+  source,
+  verification,
+  uiLanguage,
+  sourceLabel,
+  verificationLabel,
+}: {
+  source?: PhrInformationSource | null;
+  verification?: PhrVerificationStatus | null;
+  uiLanguage: UILanguage;
+  sourceLabel: string;
+  verificationLabel: string;
+}) {
+  if (!source && !verification) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {source ? (
+        <span className="inline-flex items-center gap-1 rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold text-[#1D4ED8] dark:border-sky-500/60 dark:bg-sky-500/15 dark:text-sky-100">
+          {sourceLabel}: {SOURCE_LABELS[source][uiLanguage]}
+        </span>
+      ) : null}
+      {verification ? (
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200">
+          {verificationLabel}: {VERIFICATION_LABELS[verification][uiLanguage]}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * USCDI-aligned completeness meter (personal-health-record Requirement 16.2).
+ * Rendered only when the `completeness_meter` capability is effective; the panel
+ * shows the deterministic score plus the present/missing data classes via the
+ * shared `AsyncSection` loading/empty/error/populated pattern. Class names are
+ * localized vi/en; no PHR values are ever read here (Requirement 16.4).
+ */
+function CompletenessMeter({
+  state,
+  text,
+  uiLanguage,
+}: {
+  state: AsyncState<PhrCompleteness>;
+  text: (typeof COPY)[UILanguage];
+  uiLanguage: UILanguage;
+}) {
+  return (
+    <section className={phrPanelClass}>
+      <p className="text-sm font-semibold text-[var(--text-primary)]">
+        {text.completenessTitle}
+      </p>
+      <p className="mt-1 text-[13px] leading-6 text-[var(--text-secondary)]">
+        {text.completenessDescription}
+      </p>
+      <div className="mt-4">
+        <AsyncSection<PhrCompleteness>
+          state={state}
+          loadingLabel={text.completenessLoading}
+        >
+          {(data) => {
+            const percent = Math.round(data.score * 100);
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-muted)]"
+                    role="progressbar"
+                    aria-valuenow={percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={text.completenessTitle}
+                  >
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-sky-600 to-cyan-500 transition-[width]"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
+                    {percent}%
+                  </span>
+                </div>
+                {data.present.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      {text.completenessPresent}:
+                    </span>
+                    {data.present.map((cls) => (
+                      <span
+                        key={cls}
+                        className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/60 dark:bg-emerald-500/15 dark:text-emerald-100"
+                      >
+                        {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {data.missing.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      {text.completenessMissing}:
+                    </span>
+                    {data.missing.map((cls) => (
+                      <span
+                        key={cls}
+                        className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200"
+                      >
+                        {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-emerald-600 dark:text-emerald-300">
+                    {text.completenessComplete}
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </AsyncSection>
+      </div>
+    </section>
+  );
 }
 
 const phrPanelClass =
@@ -193,12 +422,30 @@ export default function PhrPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [capabilities, setCapabilities] = useState<PhrCapabilityFlags>(
+    DEFAULT_PHR_CAPABILITIES,
+  );
+  const [completeness, setCompleteness] = useState<PhrCompleteness | null>(null);
+  const [completenessLoading, setCompletenessLoading] = useState(false);
+  const [completenessError, setCompletenessError] = useState<string>("");
 
   const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
 
   useEffect(() => {
     setUiLanguage(getStoredUILanguage());
     return onUILanguageChange(setUiLanguage);
+  }, []);
+
+  // Resolve effective capability flags so flagged-off surfaces (the completeness
+  // meter) stay hidden, preserving the legacy PHR view (Requirement 18.1).
+  useEffect(() => {
+    let mounted = true;
+    getPhrCapabilities().then((flags) => {
+      if (mounted) setCapabilities(flags);
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -227,24 +474,69 @@ export default function PhrPage() {
     setRecord((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Re-fetch the record after an out-of-band write (e.g. OCR confirm commits
+  // new medications) so the page reflects the server state immediately.
+  const reloadRecord = useCallback(async () => {
+    try {
+      const data = await getPhrRecord();
+      setRecord(normalizeRecord(data));
+    } catch {
+      setError(text.loadError);
+    }
+  }, [text.loadError]);
+
+  // Load the completeness score whenever the meter is enabled. Recomputed after
+  // a save so adding data to a missing class updates the meter (Req 16.2/16.3).
+  const refreshCompleteness = useCallback(async () => {
+    if (!capabilities.completeness_meter) return;
+    setCompletenessLoading(true);
+    setCompletenessError("");
+    try {
+      const data = await getPhrCompleteness();
+      setCompleteness(data);
+    } catch {
+      setCompletenessError(text.completenessError);
+    } finally {
+      setCompletenessLoading(false);
+    }
+  }, [capabilities.completeness_meter, text.completenessError]);
+
+  useEffect(() => {
+    refreshCompleteness();
+  }, [refreshCompleteness]);
+
+  const completenessState: AsyncState<PhrCompleteness> = selectAsyncState({
+    loading: completenessLoading,
+    error: completenessError || null,
+    data: completeness,
+    // The score is always meaningful (even 0%), so never treat it as empty.
+    isEmpty: () => false,
+  });
+
   const updateAllergy = (id: string, patch: Partial<PhrAllergyItem>) => {
     setRecord((prev) => ({
       ...prev,
-      allergies: prev.allergies.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      allergies: prev.allergies.map((item) =>
+        item.id === id ? { ...item, ...patch } : item,
+      ),
     }));
   };
 
   const updateCondition = (id: string, patch: Partial<PhrConditionItem>) => {
     setRecord((prev) => ({
       ...prev,
-      conditions: prev.conditions.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      conditions: prev.conditions.map((item) =>
+        item.id === id ? { ...item, ...patch } : item,
+      ),
     }));
   };
 
   const updateMedication = (id: string, patch: Partial<PhrMedicationItem>) => {
     setRecord((prev) => ({
       ...prev,
-      medications: prev.medications.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      medications: prev.medications.map((item) =>
+        item.id === id ? { ...item, ...patch } : item,
+      ),
     }));
   };
 
@@ -263,7 +555,13 @@ export default function PhrPage() {
       ...prev,
       conditions: [
         ...prev.conditions,
-        { id: makeId(), name: "", status: "unknown", diagnosed_on: null, note: "" },
+        {
+          id: makeId(),
+          name: "",
+          status: "unknown",
+          diagnosed_on: null,
+          note: "",
+        },
       ],
     }));
   };
@@ -273,7 +571,15 @@ export default function PhrPage() {
       ...prev,
       medications: [
         ...prev.medications,
-        { id: makeId(), name: "", dose: "", frequency: "", started_on: null, is_current: true, note: "" },
+        {
+          id: makeId(),
+          name: "",
+          dose: "",
+          frequency: "",
+          started_on: null,
+          is_current: true,
+          note: "",
+        },
       ],
     }));
   };
@@ -298,6 +604,8 @@ export default function PhrPage() {
       const saved = await updatePhrRecord(payload);
       setRecord(normalizeRecord(saved));
       setMessage(text.saveOk);
+      // Recompute completeness so newly-added data classes reflect immediately.
+      void refreshCompleteness();
     } catch (err) {
       setError(err instanceof Error ? err.message : text.saveError);
     } finally {
@@ -306,12 +614,90 @@ export default function PhrPage() {
   };
 
   return (
-    <PageShell variant="plain" title={text.title} description={text.description}>
+    <PageShell
+      variant="plain"
+      title={text.title}
+      description={text.description}
+    >
       <div className="space-y-5">
+        {/* Persistent self-declared, decision-support-only disclaimer
+            (personal-health-record Requirement 18.4; Req 13.5). */}
+        <p
+          role="note"
+          className="rounded-2xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-[13px] leading-6 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+        >
+          {text.disclaimer}
+        </p>
+
+        {/* PHR consents are managed through the unified Consent Center, not a
+            PHR-only toggle (personal-health-record Requirement 19.5). */}
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[var(--text-primary)]">
+              {text.consentTitle}
+            </p>
+            <p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">
+              {text.consentBody}
+            </p>
+          </div>
+          <Link
+            href="/account/consent"
+            className="inline-flex min-h-[38px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-brand)] transition hover:border-[color:var(--shell-border-strong)]"
+          >
+            {text.consentLink}
+          </Link>
+        </section>
+
+        {/* USCDI completeness meter — only when the capability is effective
+            (personal-health-record Requirement 16.2; hidden flag-off per
+            Requirement 18.1). */}
+        {capabilities.completeness_meter ? (
+          <CompletenessMeter
+            state={completenessState}
+            text={text}
+            uiLanguage={uiLanguage}
+          />
+        ) : null}
+
+        {/* Enhanced PHR tools — each surface is shown only when its effective
+            capability flag is on, so with flags off the legacy view is preserved
+            (personal-health-record Requirement 18.1). */}
+        {capabilities.ocr_import ? (
+          <section className={phrPanelClass}>
+            <OcrReviewModal
+              uiLanguage={uiLanguage}
+              onConfirmed={() => {
+                void reloadRecord();
+                void refreshCompleteness();
+              }}
+            />
+          </section>
+        ) : null}
+
+        {capabilities.export ? (
+          <PhrExportButton uiLanguage={uiLanguage} />
+        ) : null}
+
+        {capabilities.sharing ? <ShareManager uiLanguage={uiLanguage} /> : null}
+
+        {capabilities.enhanced ? (
+          <EmergencyCardEditor uiLanguage={uiLanguage} />
+        ) : null}
+
+        {capabilities.reminders ? (
+          <RemindersPanel
+            uiLanguage={uiLanguage}
+            medications={record.medications}
+          />
+        ) : null}
+
         <section className={phrPanelClass}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-[var(--text-secondary)]">
-              {text.updatedAt}: {record.updated_at ? new Date(record.updated_at).toLocaleString() : text.unknown}
+              {text.updatedAt}:{" "}
+              {record.updated_at
+                ? new Date(record.updated_at).toLocaleString()
+                : text.unknown}
             </div>
             <button
               type="button"
@@ -322,17 +708,29 @@ export default function PhrPage() {
               {saving ? text.saving : text.save}
             </button>
           </div>
-          {loading ? <p className="mt-3 text-sm text-[var(--text-secondary)]">{text.loading}</p> : null}
-          {message ? <p className="mt-3 text-sm text-emerald-300">{message}</p> : null}
+          {loading ? (
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">
+              {text.loading}
+            </p>
+          ) : null}
+          {message ? (
+            <p className="mt-3 text-sm text-emerald-300">{message}</p>
+          ) : null}
           {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
         </section>
 
         <section className={phrPanelClass}>
-          <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">{text.profile}</p>
+          <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
+            {text.profile}
+          </p>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.fullName}</InputLabel>
-              <input className="input" value={record.full_name} onChange={(e) => setField("full_name", e.target.value)} />
+              <input
+                className="input"
+                value={record.full_name}
+                onChange={(e) => setField("full_name", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.dob}</InputLabel>
@@ -340,16 +738,26 @@ export default function PhrPage() {
                 type="date"
                 className="input"
                 value={toInputDate(record.date_of_birth)}
-                onChange={(e) => setField("date_of_birth", e.target.value || null)}
+                onChange={(e) =>
+                  setField("date_of_birth", e.target.value || null)
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.gender}</InputLabel>
-              <input className="input" value={record.gender} onChange={(e) => setField("gender", e.target.value)} />
+              <input
+                className="input"
+                value={record.gender}
+                onChange={(e) => setField("gender", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.bloodType}</InputLabel>
-              <input className="input" value={record.blood_type} onChange={(e) => setField("blood_type", e.target.value)} />
+              <input
+                className="input"
+                value={record.blood_type}
+                onChange={(e) => setField("blood_type", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.height}</InputLabel>
@@ -357,7 +765,9 @@ export default function PhrPage() {
                 inputMode="decimal"
                 className="input"
                 value={record.height_cm ?? ""}
-                onChange={(e) => setField("height_cm", parseInputNumber(e.target.value))}
+                onChange={(e) =>
+                  setField("height_cm", parseInputNumber(e.target.value))
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -366,23 +776,35 @@ export default function PhrPage() {
                 inputMode="decimal"
                 className="input"
                 value={record.weight_kg ?? ""}
-                onChange={(e) => setField("weight_kg", parseInputNumber(e.target.value))}
+                onChange={(e) =>
+                  setField("weight_kg", parseInputNumber(e.target.value))
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.phone}</InputLabel>
-              <input className="input" value={record.phone} onChange={(e) => setField("phone", e.target.value)} />
+              <input
+                className="input"
+                value={record.phone}
+                onChange={(e) => setField("phone", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.insurance}</InputLabel>
-              <input className="input" value={record.insurance_id} onChange={(e) => setField("insurance_id", e.target.value)} />
+              <input
+                className="input"
+                value={record.insurance_id}
+                onChange={(e) => setField("insurance_id", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <InputLabel>{text.emergencyName}</InputLabel>
               <input
                 className="input"
                 value={record.emergency_contact_name}
-                onChange={(e) => setField("emergency_contact_name", e.target.value)}
+                onChange={(e) =>
+                  setField("emergency_contact_name", e.target.value)
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -390,12 +812,18 @@ export default function PhrPage() {
               <input
                 className="input"
                 value={record.emergency_contact_phone}
-                onChange={(e) => setField("emergency_contact_phone", e.target.value)}
+                onChange={(e) =>
+                  setField("emergency_contact_phone", e.target.value)
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5 md:col-span-2">
               <InputLabel>{text.address}</InputLabel>
-              <input className="input" value={record.address} onChange={(e) => setField("address", e.target.value)} />
+              <input
+                className="input"
+                value={record.address}
+                onChange={(e) => setField("address", e.target.value)}
+              />
             </label>
             <label className="flex flex-col gap-1.5 md:col-span-2">
               <InputLabel>{text.notes}</InputLabel>
@@ -411,8 +839,14 @@ export default function PhrPage() {
         <section className="grid gap-4 xl:grid-cols-3">
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.allergies}</p>
-              <button type="button" onClick={addAllergy} className={addButtonClass}>
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+                {text.allergies}
+              </p>
+              <button
+                type="button"
+                onClick={addAllergy}
+                className={addButtonClass}
+              >
                 + {text.add}
               </button>
             </div>
@@ -420,11 +854,60 @@ export default function PhrPage() {
               {record.allergies.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input className="input" placeholder={text.allergyName} value={item.name} onChange={(e) => updateAllergy(item.id, { name: e.target.value })} />
-                    <input className="input" placeholder={text.reaction} value={item.reaction} onChange={(e) => updateAllergy(item.id, { reaction: e.target.value })} />
-                    <input className="input" placeholder={text.severity} value={item.severity} onChange={(e) => updateAllergy(item.id, { severity: (e.target.value || "unknown") as PhrAllergyItem["severity"] })} />
-                    <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateAllergy(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, allergies: prev.allergies.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
+                    <input
+                      className="input"
+                      placeholder={text.allergyName}
+                      value={item.name}
+                      onChange={(e) =>
+                        updateAllergy(item.id, { name: e.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder={text.reaction}
+                      value={item.reaction}
+                      onChange={(e) =>
+                        updateAllergy(item.id, { reaction: e.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder={text.severity}
+                      value={item.severity}
+                      onChange={(e) =>
+                        updateAllergy(item.id, {
+                          severity: (e.target.value ||
+                            "unknown") as PhrAllergyItem["severity"],
+                        })
+                      }
+                    />
+                    <textarea
+                      className="input min-h-[56px] resize-y py-2.5"
+                      placeholder={text.itemNote}
+                      value={item.note}
+                      onChange={(e) =>
+                        updateAllergy(item.id, { note: e.target.value })
+                      }
+                    />
+                    <ProvenanceBadges
+                      source={item.information_source}
+                      verification={item.verification_status}
+                      uiLanguage={uiLanguage}
+                      sourceLabel={text.source}
+                      verificationLabel={text.verification}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRecord((prev) => ({
+                          ...prev,
+                          allergies: prev.allergies.filter(
+                            (row) => row.id !== item.id,
+                          ),
+                        }))
+                      }
+                      className={removeButtonClass}
+                    >
                       {text.remove}
                     </button>
                   </div>
@@ -435,8 +918,14 @@ export default function PhrPage() {
 
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.conditions}</p>
-              <button type="button" onClick={addCondition} className={addButtonClass}>
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+                {text.conditions}
+              </p>
+              <button
+                type="button"
+                onClick={addCondition}
+                className={addButtonClass}
+              >
                 + {text.add}
               </button>
             </div>
@@ -444,11 +933,63 @@ export default function PhrPage() {
               {record.conditions.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input className="input" placeholder={text.conditionName} value={item.name} onChange={(e) => updateCondition(item.id, { name: e.target.value })} />
-                    <input className="input" placeholder={text.status} value={item.status} onChange={(e) => updateCondition(item.id, { status: (e.target.value || "unknown") as PhrConditionItem["status"] })} />
-                    <input type="date" className="input" placeholder={text.diagnosedOn} value={toInputDate(item.diagnosed_on)} onChange={(e) => updateCondition(item.id, { diagnosed_on: e.target.value || null })} />
-                    <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateCondition(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, conditions: prev.conditions.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
+                    <input
+                      className="input"
+                      placeholder={text.conditionName}
+                      value={item.name}
+                      onChange={(e) =>
+                        updateCondition(item.id, { name: e.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder={text.status}
+                      value={item.status}
+                      onChange={(e) =>
+                        updateCondition(item.id, {
+                          status: (e.target.value ||
+                            "unknown") as PhrConditionItem["status"],
+                        })
+                      }
+                    />
+                    <input
+                      type="date"
+                      className="input"
+                      placeholder={text.diagnosedOn}
+                      value={toInputDate(item.diagnosed_on)}
+                      onChange={(e) =>
+                        updateCondition(item.id, {
+                          diagnosed_on: e.target.value || null,
+                        })
+                      }
+                    />
+                    <textarea
+                      className="input min-h-[56px] resize-y py-2.5"
+                      placeholder={text.itemNote}
+                      value={item.note}
+                      onChange={(e) =>
+                        updateCondition(item.id, { note: e.target.value })
+                      }
+                    />
+                    <ProvenanceBadges
+                      source={item.information_source}
+                      verification={item.verification_status}
+                      uiLanguage={uiLanguage}
+                      sourceLabel={text.source}
+                      verificationLabel={text.verification}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRecord((prev) => ({
+                          ...prev,
+                          conditions: prev.conditions.filter(
+                            (row) => row.id !== item.id,
+                          ),
+                        }))
+                      }
+                      className={removeButtonClass}
+                    >
                       {text.remove}
                     </button>
                   </div>
@@ -459,8 +1000,14 @@ export default function PhrPage() {
 
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">{text.medications}</p>
-              <button type="button" onClick={addMedication} className={addButtonClass}>
+              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+                {text.medications}
+              </p>
+              <button
+                type="button"
+                onClick={addMedication}
+                className={addButtonClass}
+              >
                 + {text.add}
               </button>
             </div>
@@ -468,16 +1015,80 @@ export default function PhrPage() {
               {record.medications.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input className="input" placeholder={text.medicationName} value={item.name} onChange={(e) => updateMedication(item.id, { name: e.target.value })} />
-                    <input className="input" placeholder={text.dose} value={item.dose} onChange={(e) => updateMedication(item.id, { dose: e.target.value })} />
-                    <input className="input" placeholder={text.frequency} value={item.frequency} onChange={(e) => updateMedication(item.id, { frequency: e.target.value })} />
-                    <input type="date" className="input" placeholder={text.startedOn} value={toInputDate(item.started_on)} onChange={(e) => updateMedication(item.id, { started_on: e.target.value || null })} />
+                    <input
+                      className="input"
+                      placeholder={text.medicationName}
+                      value={item.name}
+                      onChange={(e) =>
+                        updateMedication(item.id, { name: e.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder={text.dose}
+                      value={item.dose}
+                      onChange={(e) =>
+                        updateMedication(item.id, { dose: e.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder={text.frequency}
+                      value={item.frequency}
+                      onChange={(e) =>
+                        updateMedication(item.id, { frequency: e.target.value })
+                      }
+                    />
+                    <input
+                      type="date"
+                      className="input"
+                      placeholder={text.startedOn}
+                      value={toInputDate(item.started_on)}
+                      onChange={(e) =>
+                        updateMedication(item.id, {
+                          started_on: e.target.value || null,
+                        })
+                      }
+                    />
                     <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-[#374151] dark:text-slate-200">
-                      <input type="checkbox" checked={item.is_current} onChange={(e) => updateMedication(item.id, { is_current: e.target.checked })} />
+                      <input
+                        type="checkbox"
+                        checked={item.is_current}
+                        onChange={(e) =>
+                          updateMedication(item.id, {
+                            is_current: e.target.checked,
+                          })
+                        }
+                      />
                       {text.current}
                     </label>
-                    <textarea className="input min-h-[56px] resize-y py-2.5" placeholder={text.itemNote} value={item.note} onChange={(e) => updateMedication(item.id, { note: e.target.value })} />
-                    <button type="button" onClick={() => setRecord((prev) => ({ ...prev, medications: prev.medications.filter((row) => row.id !== item.id) }))} className={removeButtonClass}>
+                    <textarea
+                      className="input min-h-[56px] resize-y py-2.5"
+                      placeholder={text.itemNote}
+                      value={item.note}
+                      onChange={(e) =>
+                        updateMedication(item.id, { note: e.target.value })
+                      }
+                    />
+                    <ProvenanceBadges
+                      source={item.information_source}
+                      verification={item.verification_status}
+                      uiLanguage={uiLanguage}
+                      sourceLabel={text.source}
+                      verificationLabel={text.verification}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRecord((prev) => ({
+                          ...prev,
+                          medications: prev.medications.filter(
+                            (row) => row.id !== item.id,
+                          ),
+                        }))
+                      }
+                      className={removeButtonClass}
+                    >
                       {text.remove}
                     </button>
                   </div>

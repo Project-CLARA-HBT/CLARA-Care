@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AsyncSection, {
+  selectAsyncState,
+  type AsyncState
+} from "@/components/ui/async-section";
 import {
   ConduitFlowLine,
   MatrixHeatmapMini,
@@ -11,13 +15,15 @@ import {
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
+  acknowledgeObservabilityAlert,
   getApiHealth,
   getControlTowerConfig,
   getSystemDependencies,
   getSystemMetrics,
   normalizeApiHealth,
   normalizeSystemDependencies,
-  normalizeSystemMetrics
+  normalizeSystemMetrics,
+  type RouteLatencyPercentiles
 } from "@/lib/system";
 
 type FlowFlags = {
@@ -36,6 +42,7 @@ type FlowFlags = {
 
 type ObservabilityState = {
   loading: boolean;
+  loaded: boolean;
   error: string;
   apiStatus: string;
   apiMessage: string;
@@ -44,6 +51,7 @@ type ObservabilityState = {
   requestCount: number | null;
   errorCount: number | null;
   avgLatencyMs: number | null;
+  routePercentiles: RouteLatencyPercentiles[];
   totalSources: number;
   enabledSources: number;
   flowEnabledCount: number;
@@ -67,10 +75,26 @@ type AlertItem = {
   title: string;
   detail: string;
   source: string;
+  /**
+   * Stable backend alert id (rule + target dedupe key) this row maps to, when
+   * the engine tracks an equivalent condition. Present only for rows that can
+   * be acknowledged through `/admin/observability` (Requirement 8.4).
+   */
+  alertId?: string;
+};
+
+// Map a client-surfaced alert source onto the alert engine's stable dedupe id
+// (see `observability/alerts.py`: `stable_alert_id`). Only conditions the engine
+// actually tracks are acknowledgeable; everything else renders without a button.
+const ALERT_SOURCE_TO_STABLE_ID: Record<string, string> = {
+  ml: "ml:ml_dependency",
+  api: "api:api_runtime",
+  metrics: "api:api_runtime"
 };
 
 const INITIAL_STATE: ObservabilityState = {
   loading: true,
+  loaded: false,
   error: "",
   apiStatus: "unknown",
   apiMessage: "",
@@ -79,6 +103,7 @@ const INITIAL_STATE: ObservabilityState = {
   requestCount: null,
   errorCount: null,
   avgLatencyMs: null,
+  routePercentiles: [],
   totalSources: 0,
   enabledSources: 0,
   flowEnabledCount: 0,
@@ -116,6 +141,11 @@ function formatCount(value: number | null): string {
 
 function formatPercent(value: number): string {
   return `${Math.max(0, value).toFixed(1)}%`;
+}
+
+function formatLatencyMs(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "--";
+  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(Math.max(0, value))}ms`;
 }
 
 function formatClock(value: number): string {
@@ -173,6 +203,30 @@ export default function AdminObservabilityPanel() {
   const [state, setState] = useState<ObservabilityState>(INITIAL_STATE);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  // Per-alert acknowledge UI state keyed by the stable alert id (in-flight,
+  // acknowledged, and a sanitized error message). Kept local to the panel so an
+  // ack never blocks the 15s telemetry refresh.
+  const [ackPending, setAckPending] = useState<Record<string, boolean>>({});
+  const [ackDone, setAckDone] = useState<Record<string, boolean>>({});
+  const [ackError, setAckError] = useState<Record<string, string>>({});
+
+  const handleAcknowledge = useCallback(async (alertId: string) => {
+    setAckPending((prev) => ({ ...prev, [alertId]: true }));
+    setAckError((prev) => ({ ...prev, [alertId]: "" }));
+    try {
+      await acknowledgeObservabilityAlert(alertId);
+      setAckDone((prev) => ({ ...prev, [alertId]: true }));
+    } catch (cause) {
+      setAckError((prev) => ({
+        ...prev,
+        [alertId]: sanitizeUpstreamError(
+          cause instanceof Error ? cause.message : "Không thể xác nhận cảnh báo."
+        )
+      }));
+    } finally {
+      setAckPending((prev) => ({ ...prev, [alertId]: false }));
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: "" }));
@@ -211,6 +265,7 @@ export default function AdminObservabilityPanel() {
 
       setState({
         loading: false,
+        loaded: true,
         error: "",
         apiStatus: health.status,
         apiMessage: health.message,
@@ -219,6 +274,7 @@ export default function AdminObservabilityPanel() {
         requestCount: metrics.requestCount,
         errorCount: metrics.errorCount,
         avgLatencyMs: metrics.avgLatencyMs,
+        routePercentiles: metrics.routePercentiles,
         totalSources: sources.length,
         enabledSources,
         flowEnabledCount,
@@ -452,7 +508,10 @@ export default function AdminObservabilityPanel() {
       });
     }
 
-    return rows;
+    return rows.map((row) => ({
+      ...row,
+      alertId: ALERT_SOURCE_TO_STABLE_ID[row.source]
+    }));
   }, [apiTone, errorRate, latencyMs, sourceCoverage, state.apiMessage, state.enabledSources, state.mlReachable, state.mlStatus, state.totalSources, verificationStackEnabled]);
 
   const riskMatrix = useMemo(
@@ -469,6 +528,31 @@ export default function AdminObservabilityPanel() {
 
   const latestPoint = effectiveTimeline[effectiveTimeline.length - 1];
   const lastUpdate = latestPoint ? formatClock(latestPoint.at) : "--:--:--";
+
+  // Fold loading/error/loaded into one of the four mutually-exclusive
+  // AsyncSection states. The loading slot is only shown on the first load so
+  // 15s auto-refreshes don't blank an already-populated dashboard; the toolbar
+  // already reflects in-flight syncs. Errors carry the pre-sanitized message
+  // (no stack traces / upstream codes) from `sanitizeUpstreamError` (Req 5.6).
+  const dashboardState = useMemo<AsyncState<true>>(
+    () =>
+      selectAsyncState<true>({
+        loading: state.loading && !state.loaded,
+        // First-load failures surface as the AsyncSection error state. Once a
+        // snapshot exists, a failed refresh keeps the populated dashboard and
+        // the sanitized message is shown as a non-blocking banner instead.
+        error: state.loaded ? null : state.error || null,
+        data: state.loaded ? true : null,
+        isEmpty: () =>
+          state.requestCount === null &&
+          state.mlReachable === null &&
+          state.totalSources === 0 &&
+          state.routePercentiles.length === 0
+      }),
+    [state.error, state.loaded, state.loading, state.mlReachable, state.requestCount, state.routePercentiles.length, state.totalSources]
+  );
+
+  const percentilesEnabled = state.routePercentiles.length > 0;
 
   const flowRows: Array<{ label: string; enabled: boolean; detail: string }> = [
     { label: "Role Router", enabled: state.flow.roleRouter, detail: "Định tuyến theo vai trò người dùng." },
@@ -514,11 +598,21 @@ export default function AdminObservabilityPanel() {
         </div>
       </section>
 
-      {state.error ? (
-        <p className="rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-200">{state.error}</p>
+      {state.error && state.loaded ? (
+        <p className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-xs text-amber-200">
+          {state.error}
+        </p>
       ) : null}
 
-      <div className="grid grid-cols-12 gap-6">
+      <AsyncSection<true>
+        state={dashboardState}
+        loadingLabel="Đang tải ảnh chụp trạng thái hệ thống..."
+        emptyTitle="Chưa có dữ liệu quan trắc"
+        emptyDescription="Hiện chưa có tín hiệu telemetry nào để hiển thị trong khung theo dõi."
+        errorTitle="Không tải được dữ liệu quan trắc"
+      >
+        {() => (
+          <div className="grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Sức khỏe API</p>
@@ -677,13 +771,84 @@ export default function AdminObservabilityPanel() {
                     </div>
                     <p className="mt-1 text-sm font-semibold">{alert.title}</p>
                     <p className="mt-1 text-xs opacity-90">{alert.detail}</p>
+                    {alert.alertId ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleAcknowledge(alert.alertId as string)}
+                          disabled={Boolean(ackPending[alert.alertId]) || Boolean(ackDone[alert.alertId])}
+                          className="rounded-md border border-current/40 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {ackDone[alert.alertId]
+                            ? "Đã xác nhận"
+                            : ackPending[alert.alertId]
+                              ? "Đang xác nhận..."
+                              : "Xác nhận"}
+                        </button>
+                        {ackError[alert.alertId] ? (
+                          <span className="text-[11px] text-rose-200">{ackError[alert.alertId]}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           </div>
         </section>
-      </div>
+
+        <section className="col-span-12 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Độ trễ theo tuyến (p50 / p90 / p99)</h3>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                Phân vị độ trễ cho từng route từ ảnh chụp `/system/metrics`.
+              </p>
+            </div>
+            <span
+              className={[
+                "rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                percentilesEnabled
+                  ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
+                  : "border-slate-600 bg-slate-800 text-slate-300"
+              ].join(" ")}
+            >
+              {percentilesEnabled ? "Đang bật" : "Chưa bật"}
+            </span>
+          </div>
+
+          {percentilesEnabled ? (
+            <div className="overflow-x-auto rounded-lg border border-slate-800">
+              <table className="w-full min-w-[480px] text-left text-xs">
+                <thead className="bg-slate-950/60 text-[10px] uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Tuyến</th>
+                    <th className="px-3 py-2 text-right font-semibold">p50</th>
+                    <th className="px-3 py-2 text-right font-semibold">p90</th>
+                    <th className="px-3 py-2 text-right font-semibold">p99</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.routePercentiles.map((row) => (
+                    <tr key={row.route} className="border-t border-slate-800/80">
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{row.route}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-cyan-200">{formatLatencyMs(row.p50Ms)}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-amber-200">{formatLatencyMs(row.p90Ms)}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-rose-200">{formatLatencyMs(row.p99Ms)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-slate-700 bg-slate-950/40 px-4 py-6 text-center text-xs text-slate-400">
+              Phân vị độ trễ theo tuyến chưa được bật. Hệ thống đang hiển thị độ trễ trung bình ({latencyMs}ms).
+            </p>
+          )}
+        </section>
+          </div>
+        )}
+      </AsyncSection>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-[11px] font-mono text-slate-400">
         <span>RUNTIME ID: CLARA-X9-00124</span>

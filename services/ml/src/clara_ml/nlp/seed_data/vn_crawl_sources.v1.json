@@ -1,0 +1,73 @@
+{
+  "version": "vn-crawl-sources-2026-06-v1",
+  "note": "Robots-respecting crawl seeds for Vietnamese AUTHORITATIVE health sources only. Consumed by the vn_crawl connector via kb_source_registry config_json. Every origin here is an official government/national body; crawling is gated by robots.txt + the allow-list in config (WEB_CRAWL_ALLOWED_DOMAINS). Additive: no source is enabled until RAG_INGESTION_ENABLED and the registry row are turned on.",
+  "sources": [
+    {
+      "source_key": "vn_crawl",
+      "registry_id": "vn-dav-registry",
+      "title": "Cục Quản lý Dược (DAV) - Công bố thuốc lưu hành",
+      "trust_tier": "tier_1",
+      "robots_respect": true,
+      "config_json": {
+        "lang": "vi",
+        "doc_type": "drug_registry",
+        "allowed_domains": ["dav.gov.vn", "dichvucong.dav.gov.vn"],
+        "seed_urls": [
+          "https://dichvucong.dav.gov.vn/congbothuoc/index",
+          "https://dichvucong.dav.gov.vn/congbothuockhongkedon",
+          "https://dav.gov.vn/"
+        ],
+        "max_chars": 20000
+      }
+    },
+    {
+      "source_key": "vn_crawl",
+      "registry_id": "vn-canhgiacduoc-registry",
+      "title": "Trung tâm DI & ADR Quốc gia - Cảnh giác dược",
+      "trust_tier": "tier_1",
+      "robots_respect": true,
+      "config_json": {
+        "lang": "vi",
+        "doc_type": "pharmacovigilance",
+        "allowed_domains": ["canhgiacduoc.org.vn"],
+        "seed_urls": [
+          "https://canhgiacduoc.org.vn/",
+          "https://canhgiacduoc.org.vn/CanhBaoAnToanThuoc.aspx"
+        ],
+        "max_chars": 20000
+      }
+    },
+    {
+      "source_key": "vn_crawl",
+      "registry_id": "vn-kcb-registry",
+      "title": "Cục Quản lý Khám chữa bệnh (Bộ Y tế) - Hướng dẫn chuyên môn",
+      "trust_tier": "tier_1",
+      "robots_respect": true,
+      "config_json": {
+        "lang": "vi",
+        "doc_type": "guideline",
+        "allowed_domains": ["kcb.vn"],
+        "seed_urls": [
+          "https://kcb.vn/thu-vien-tai-lieu"
+        ],
+        "max_chars": 30000
+      }
+    },
+    {
+      "source_key": "vn_crawl",
+      "registry_id": "vn-moh-registry",
+      "title": "Bộ Y tế Việt Nam - Văn bản và thông tin chính thống",
+      "trust_tier": "tier_1",
+      "robots_respect": true,
+      "config_json": {
+        "lang": "vi",
+        "doc_type": "guideline",
+        "allowed_domains": ["moh.gov.vn"],
+        "seed_urls": [
+          "https://moh.gov.vn/van-ban-phap-quy"
+        ],
+        "max_chars": 30000
+      }
+    }
+  ]
+}

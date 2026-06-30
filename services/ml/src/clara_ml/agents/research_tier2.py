@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from clara_ml.config import settings
 from clara_ml.factcheck import FactCheckResult, run_fides_lite
+from clara_ml.factcheck.nli_verifier import classify_claim
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.source_router import (
@@ -45,6 +46,257 @@ class Citation:
     title: str
     url: str
     relevance: str
+    # Additive, flag-gated provenance fields (R6.2 recency/trust ranking, R11.2
+    # claim-to-study traceability). They default to None and are stripped from the
+    # emitted payload when unset so the legacy citation shape is preserved (R20.2).
+    study_id: str | None = None  # PMID|DOI|RXCUI
+    source_type: str | None = None
+    trust_tier: int | None = None
+    published_at: str | None = None  # publication / effective date
+
+
+@dataclass(frozen=True)
+class PicoFrame:
+    """Structured EBM question framing (Population, Intervention, Comparison, Outcome).
+
+    Every element is derived from the submitted query; the orchestrator never
+    fabricates an element value. When any element cannot be determined the
+    extractor raises :class:`PicoIncompleteError` naming the missing element (R7.2).
+    """
+
+    population: str
+    intervention: str
+    comparison: str
+    outcome: str
+
+    def as_payload(self) -> dict[str, str]:
+        return {
+            "population": self.population,
+            "intervention": self.intervention,
+            "comparison": self.comparison,
+            "outcome": self.outcome,
+        }
+
+
+class PicoIncompleteError(ValueError):
+    """Raised when a PICO element cannot be determined from a clinical query (R7.2)."""
+
+    def __init__(self, element: str) -> None:
+        self.element = element
+        super().__init__(f"PICO element could not be determined: {element}")
+
+
+@dataclass(frozen=True)
+class CitationRef:
+    """A Citation_Registry entry carrying per-citation study provenance (R11.2, R11.4).
+
+    Every ``CitationRef`` is built from a *retrieved* source, so a citation that does
+    not correspond to a retrieved source is never emitted (R11.5). ``study_id`` is a
+    PMID/DOI/RXCUI (or the backing source id when no scholarly identifier is present),
+    ``trust_tier`` is the ``{1..4}`` authority band, and ``published_at`` is the
+    publication/effective date (``None`` when unknown).
+    """
+
+    citation_id: str
+    study_id: str
+    source_type: str
+    trust_tier: int
+    published_at: str | None
+
+    def as_payload(self) -> dict[str, Any]:
+        return {
+            "citation_id": self.citation_id,
+            "study_id": self.study_id,
+            "source_type": self.source_type,
+            "trust_tier": self.trust_tier,
+            "published_at": self.published_at,
+        }
+
+
+@dataclass(frozen=True)
+class TracedClaim:
+    """A synthesized claim linked to its specific supporting citation id(s) (R11.1).
+
+    ``citation_ids`` is always non-empty and every id resolves into the Citation
+    Registry: a claim with no supporting retrieved source is suppressed before a
+    ``TracedClaim`` is ever built, so a fabricated citation can never be attached
+    (R11.5, R11.6). ``certainty`` carries the GRADE label when R8 is enabled.
+    """
+
+    claim: str
+    citation_ids: list[str]
+    verdict: str
+    certainty: str | None = None
+
+    def as_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "claim": self.claim,
+            "citation_ids": list(self.citation_ids),
+            "verdict": self.verdict,
+        }
+        if self.certainty is not None:
+            payload["certainty"] = self.certainty
+        return payload
+
+
+# Per-citation provenance fields that are additive and only emitted when populated.
+_OPTIONAL_CITATION_KEYS: tuple[str, ...] = (
+    "study_id",
+    "source_type",
+    "trust_tier",
+    "published_at",
+)
+
+
+def _citation_as_payload(citation: Citation) -> dict[str, Any]:
+    """Serialize a :class:`Citation`, omitting unset additive provenance fields.
+
+    The legacy citation payload only ever exposed ``source_id``/``source``/``title``/
+    ``url``/``relevance``. The new provenance fields (``study_id``, ``source_type``,
+    ``trust_tier``, ``published_at``) default to ``None``; when they are unset they are
+    stripped here so a flags-off run emits the byte-for-byte legacy citation shape
+    (R6.2, R11.2, R20.2).
+    """
+
+    payload = asdict(citation)
+    for key in _OPTIONAL_CITATION_KEYS:
+        if payload.get(key) is None:
+            payload.pop(key, None)
+    return payload
+
+
+def _build_tier2_optional_payload(
+    *,
+    pico_frame: PicoFrame | None = None,
+    citation_registry: list[dict[str, Any]] | None = None,
+    traced_claims: list[dict[str, Any]] | None = None,
+    grade: list[dict[str, Any]] | None = None,
+    consensus: list[dict[str, Any]] | None = None,
+    conflicting_evidence: list[dict[str, Any]] | None = None,
+    subquestions: list[str] | None = None,
+    gap_fill_passes: int | None = None,
+    output_profile: str | None = None,
+    disclaimer_present: bool | None = None,
+) -> dict[str, Any]:
+    """Assemble the additive, flag-gated Tier2 result fields.
+
+    Each key is included **only** when its corresponding stage produced a value
+    (i.e. when its feature flag was on). When an artifact is absent the key is
+    omitted entirely, so a run with every new flag disabled emits the legacy result
+    shape unchanged (R20.2). Downstream tasks populate these arguments as their
+    stages land; this builder is the single carrier for all of them.
+
+    Fields carried (design "Tier2 result payload (additive fields)"):
+      * ``pico`` (R7.3)            * ``consensus`` (R9.1)
+      * ``citation_registry`` (R11.4)   * ``conflicting_evidence`` (R9.4)
+      * ``traced_claims`` (R11.1)       * ``subquestions`` (R4.4)
+      * ``grade`` (R8.1)                * ``gap_fill_passes`` (R5.4)
+      * ``output_profile`` (R14)        * ``disclaimer_present`` (R14.5/R14.6)
+    """
+
+    optional: dict[str, Any] = {}
+    if pico_frame is not None:
+        optional["pico"] = pico_frame.as_payload()
+    if citation_registry is not None:
+        optional["citation_registry"] = citation_registry
+    if traced_claims is not None:
+        optional["traced_claims"] = traced_claims
+    if grade is not None:
+        optional["grade"] = grade
+    if consensus is not None:
+        optional["consensus"] = consensus
+    if conflicting_evidence is not None:
+        optional["conflicting_evidence"] = conflicting_evidence
+    if subquestions is not None:
+        optional["subquestions"] = subquestions
+    if gap_fill_passes is not None:
+        optional["gap_fill_passes"] = gap_fill_passes
+    if output_profile is not None:
+        optional["output_profile"] = output_profile
+    if disclaimer_present is not None:
+        optional["disclaimer_present"] = disclaimer_present
+    return optional
+
+
+# R14 Role-Adaptive Output: each user role maps to exactly one output profile so a
+# single run can never blend profiles (`normal` -> plain language, `researcher` ->
+# evidence pack, `doctor` -> IMRaD clinical brief). Unmapped/unknown roles (e.g.
+# `admin`) fall back to the safest plain-language profile so exactly one profile is
+# always selected (R14.1-R14.3, Property 27).
+_ROLE_OUTPUT_PROFILE_MAP: dict[str, str] = {
+    "normal": "normal",
+    "researcher": "researcher",
+    "doctor": "doctor",
+}
+_DEFAULT_OUTPUT_PROFILE = "normal"
+
+# R14.5/R20.5 decision-support disclaimer asset. Every role's output retains a
+# disclaimer stating outputs are decision support only (not treatment orders) and
+# that CLARA-Care is not a medical device or EMR. Keyed by the resolved answer
+# language (Vietnamese default unless ``ui_language == "en"``, R14.4).
+_DECISION_SUPPORT_DISCLAIMER_BY_LANGUAGE: dict[str, str] = {
+    "vi": (
+        "> **Tuyên bố hỗ trợ quyết định:** Nội dung này chỉ nhằm hỗ trợ quyết định, "
+        "không phải là chỉ định điều trị. CLARA-Care không phải là thiết bị y tế hay "
+        "hệ thống bệnh án điện tử (EMR)."
+    ),
+    "en": (
+        "> **Decision-support notice:** This output is decision support only and is "
+        "not a treatment order. CLARA-Care is not a medical device or EMR."
+    ),
+}
+
+
+def _resolve_output_profile(role: str | None) -> str:
+    """Select exactly one role output profile (R14.1-R14.3, Property 27).
+
+    Mapping is total: every role resolves to exactly one of ``{normal, researcher,
+    doctor}`` and unmapped roles fall back to the plain-language ``normal`` profile,
+    so the selected profile can never blend content from other profiles.
+    """
+
+    normalized = str(role or "").strip().lower()
+    return _ROLE_OUTPUT_PROFILE_MAP.get(normalized, _DEFAULT_OUTPUT_PROFILE)
+
+
+def _load_decision_support_disclaimer(answer_language: str) -> str | None:
+    """Return the decision-support disclaimer text for the answer language.
+
+    Returns ``None`` when the disclaimer asset is unavailable so the caller can
+    deliver output without it and record the omission (R14.6). The language is
+    resolved to ``en`` only when ``answer_language`` is ``en``; otherwise the
+    Vietnamese disclaimer is used (R14.4).
+    """
+
+    language = "en" if str(answer_language or "").strip().lower() == "en" else "vi"
+    try:
+        return _DECISION_SUPPORT_DISCLAIMER_BY_LANGUAGE[language]
+    except (KeyError, TypeError):  # pragma: no cover - asset unavailable path
+        return None
+
+
+def _apply_role_adaptive_output(
+    answer_markdown: str,
+    *,
+    role: str | None,
+    answer_language: str,
+) -> tuple[str, str, bool]:
+    """Apply the R14 role-adaptive output profile and disclaimer handling.
+
+    Selects exactly one output profile for ``role`` and ensures the decision-support
+    disclaimer is present in the delivered output for every profile whenever its
+    asset is available (R14.5). When the asset is unavailable the output is delivered
+    unchanged and the omission is recorded via ``disclaimer_present=False`` (R14.6).
+
+    Returns ``(answer_markdown, output_profile, disclaimer_present)``.
+    """
+
+    output_profile = _resolve_output_profile(role)
+    disclaimer = _load_decision_support_disclaimer(answer_language)
+    disclaimer_present = disclaimer is not None
+    if disclaimer and disclaimer not in answer_markdown:
+        answer_markdown = f"{answer_markdown.rstrip()}\n\n{disclaimer}\n"
+    return answer_markdown, output_profile, disclaimer_present
 
 
 _REQUIRED_MARKDOWN_HEADINGS = (
@@ -157,6 +409,91 @@ _DEEP_BETA_PARALLEL_REASONING_NODES: tuple[tuple[str, str], ...] = (
         "Propose high-yield gap-fill retrieval actions to improve coverage.",
     ),
 )
+#: Internal pipeline / planner / telemetry identifiers that must NEVER appear in
+#: the user-facing answer body (Requirement 3.3 / Property P9). Combines the
+#: deep_beta reasoning-stage identifiers with the legacy plan-step / router /
+#: node labels used elsewhere in the pipeline. A defense-in-depth inline scrub
+#: (``_strip_internal_pipeline_tags``) removes any of these that leak past the
+#: structured section removal, including bracketed (``[scope_question]``) and
+#: execution-log arrow-chain forms.
+_INTERNAL_PIPELINE_TAGS: frozenset[str] = frozenset(
+    {
+        *_DEEP_BETA_REASONING_STAGE_ORDER,
+        *(name for name, _ in _DEEP_BETA_PARALLEL_REASONING_NODES),
+        "deep_beta_router",
+        "deep_beta_gate",
+        "deep_beta_planner",
+        "deep_beta_loop",
+        "beta_hypothesis_graph",
+        "deep_beta_hypothesis",
+        "scope_question",
+        "retrieval_budgeting",
+        "reasoning_chain_audit",
+        "iterative_gap_fill",
+        "collect_evidence",
+        "query_decomposition",
+        "query_plan",
+        "keyword_filter",
+        "deep_research",
+        "retrieval_orchestrator",
+    }
+)
+#: Alternation of the known internal tags (longest-first so e.g.
+#: ``deep_beta_scope`` wins over a hypothetical ``deep_beta`` prefix) plus a
+#: catch-all for any ``deep_beta_<suffix>`` snake_case identifier, which is
+#: always an internal stage label and never user-facing prose.
+_INTERNAL_PIPELINE_TAG_ALTERNATION = "|".join(
+    re.escape(tag) for tag in sorted(_INTERNAL_PIPELINE_TAGS, key=len, reverse=True)
+)
+_INTERNAL_PIPELINE_TAG_TOKEN_RE = re.compile(
+    rf"(?<![0-9A-Za-z_])(?:{_INTERNAL_PIPELINE_TAG_ALTERNATION}|deep_beta_[a-z][a-z0-9_]*)(?![0-9A-Za-z_])",
+    flags=re.IGNORECASE,
+)
+#: A bracketed planner tag, e.g. ``[scope_question]`` / ``[deep_beta_scope]``.
+_INTERNAL_PIPELINE_TAG_BRACKETED_RE = re.compile(
+    rf"\[\s*(?:{_INTERNAL_PIPELINE_TAG_ALTERNATION}|deep_beta_[a-z][a-z0-9_]*)\s*\]",
+    flags=re.IGNORECASE,
+)
+
+
+def _strip_internal_pipeline_tags(text: str) -> str:
+    """Remove internal pipeline / planner / telemetry labels from answer text.
+
+    Defense-in-depth for Requirement 3.3 / Property P9: structured telemetry
+    sections are removed by heading elsewhere, but this scrub also catches
+    internal tags that leak *inline* (mid-paragraph, in a stray bullet, or as an
+    execution-log arrow chain) so they never reach the reader. Operates purely
+    on user-facing text and leaves substantive clinical prose untouched.
+    """
+
+    if not text or not text.strip():
+        return text
+
+    # 1) Drop bracketed planner tags entirely (e.g. "[scope_question]").
+    scrubbed = _INTERNAL_PIPELINE_TAG_BRACKETED_RE.sub("", text)
+
+    cleaned_lines: list[str] = []
+    for line in scrubbed.split("\n"):
+        # 2) Drop execution-log arrow-chain / label-only lines, e.g.
+        #    "deep_beta_scope -> retrieval_budgeting -> deep_beta_evidence_audit"
+        #    or a bullet that is nothing but internal labels and separators.
+        stripped_markers = re.sub(r"^[\s>*\-•]+", "", line)
+        residual = _INTERNAL_PIPELINE_TAG_TOKEN_RE.sub("", stripped_markers)
+        residual = re.sub(r"[\s>→\-|/,:;.]+", "", residual)
+        if stripped_markers.strip() and not residual:
+            # The line carried internal tags and nothing else of substance.
+            continue
+        # 3) Strip residual inline tags from otherwise-substantive lines.
+        line = _INTERNAL_PIPELINE_TAG_TOKEN_RE.sub("", line)
+        cleaned_lines.append(line)
+
+    result = "\n".join(cleaned_lines)
+    # Tidy up artifacts left by inline removal (double spaces, empty arrows).
+    result = re.sub(r"[ \t]{2,}", " ", result)
+    result = re.sub(r"[ \t]+([,.;:])", r"\1", result)
+    return result
+
+
 _ALLOWED_RETRIEVAL_ROUTES = {
     "internal-heavy",
     "scientific-heavy",
@@ -557,6 +894,753 @@ def _is_nutrition_diet_query(text: str) -> bool:
         "ăn uống",
     )
     return any(marker in folded for marker in markers)
+
+
+# --- PICO-structured question framing (R7) -------------------------------------------------
+# Marker vocabularies are folded to ASCII (accent-insensitive, lowercase) so they match
+# both Vietnamese (with/without diacritics) and English clinical phrasing. Element values
+# returned by the extractor are always drawn from the query content (never fabricated).
+
+_PICO_CLINICAL_MARKERS: tuple[str, ...] = (
+    "dieu tri",
+    "phac do",
+    "lieu",
+    "lieu luong",
+    "thuoc",
+    "benh nhan",
+    "benh",
+    "lam sang",
+    "chan doan",
+    "tien luong",
+    "phong ngua",
+    "phau thuat",
+    "tiem chung",
+    "vaccine",
+    "vac xin",
+    "hieu qua",
+    "tac dung",
+    "nguy co",
+    "bien chung",
+    "treatment",
+    "therapy",
+    "therapies",
+    "drug",
+    "medication",
+    "dose",
+    "dosage",
+    "regimen",
+    "clinical",
+    "patient",
+    "patients",
+    "disease",
+    "diagnosis",
+    "prognosis",
+    "prevention",
+    "surgery",
+    "efficacy",
+    "symptom",
+)
+
+_PICO_POPULATION_MARKERS: tuple[str, ...] = (
+    "benh nhan",
+    "nguoi benh",
+    "nguoi cao tuoi",
+    "nguoi gia",
+    "nguoi lon",
+    "tre em",
+    "tre nho",
+    "tre so sinh",
+    "phu nu mang thai",
+    "phu nu co thai",
+    "thai phu",
+    "phu nu",
+    "nam gioi",
+    "patient",
+    "patients",
+    "adult",
+    "adults",
+    "child",
+    "children",
+    "infant",
+    "neonate",
+    "elderly",
+    "women",
+    "men",
+    "pregnant",
+    "population",
+)
+
+_PICO_INTERVENTION_MARKERS: tuple[str, ...] = (
+    "dieu tri",
+    "phac do",
+    "su dung",
+    "dung",
+    "uong",
+    "lieu",
+    "thuoc",
+    "tiem",
+    "phau thuat",
+    "can thiep",
+    "vaccine",
+    "vac xin",
+    "treatment",
+    "therapy",
+    "drug",
+    "medication",
+    "dose",
+    "regimen",
+    "intervention",
+    "administer",
+    "surgery",
+    "procedure",
+)
+
+_PICO_COMPARISON_MARKERS: tuple[str, ...] = (
+    "so voi",
+    "so sanh",
+    "thay vi",
+    "doi chung",
+    "khac nhau",
+    "versus",
+    " vs ",
+    " vs.",
+    "compared",
+    "comparison",
+    "compare",
+    "placebo",
+    "control",
+    "alternative",
+    "standard of care",
+)
+
+_PICO_OUTCOME_MARKERS: tuple[str, ...] = (
+    "hieu qua",
+    "ket qua",
+    "ket cuc",
+    "ty le",
+    "nguy co",
+    "giam",
+    "tang",
+    "cai thien",
+    "tac dung phu",
+    "bien co",
+    "bien chung",
+    "tu vong",
+    "song con",
+    "an toan",
+    "xuat huyet",
+    "chay mau",
+    "kiem soat",
+    "outcome",
+    "outcomes",
+    "risk",
+    "mortality",
+    "morbidity",
+    "survival",
+    "efficacy",
+    "effect",
+    "effectiveness",
+    "reduction",
+    "safety",
+    "adverse",
+    "response",
+    "remission",
+    "control",
+)
+
+_PICO_AGE_PATTERN = re.compile(r"\b\d{1,3}\s*(?:tuoi|tuổi|year|years|yo|yrs)\b", re.IGNORECASE)
+
+
+def _is_clinical_query(text: str) -> bool:
+    """Heuristically decide whether a query is a clinical question eligible for PICO (R7.1)."""
+
+    folded = _ascii_fold(text)
+    if not folded.strip():
+        return False
+    if any(marker in folded for marker in _PICO_CLINICAL_MARKERS):
+        return True
+    if _PICO_AGE_PATTERN.search(text):
+        return True
+    # Recognized medications also signal a clinical question.
+    profile = analyze_query_profile(str(text or ""))
+    return bool(profile.get("primary_drug"))
+
+
+def _pico_detect_markers(folded: str, markers: tuple[str, ...]) -> list[str]:
+    found: list[str] = []
+    for marker in markers:
+        if marker in folded and marker.strip() not in found:
+            found.append(marker.strip())
+    return found
+
+
+def _extract_pico_frame(text: str) -> PicoFrame:
+    """Extract a PICO structure from a clinical query.
+
+    Returns a complete :class:`PicoFrame` whose element values are derived from the
+    query, or raises :class:`PicoIncompleteError` naming the first undetermined element.
+    No element value is ever fabricated (R7.2).
+    """
+
+    folded = _ascii_fold(text)
+    profile = analyze_query_profile(str(text or ""))
+    primary_drug = str(profile.get("primary_drug") or "").strip()
+    co_drugs = [str(item).strip() for item in (profile.get("co_drugs") or []) if str(item).strip()]
+
+    # Population.
+    population_markers = _pico_detect_markers(folded, _PICO_POPULATION_MARKERS)
+    age_match = _PICO_AGE_PATTERN.search(text)
+    if age_match:
+        population_markers.append(" ".join(age_match.group(0).split()).lower())
+    population = ", ".join(dict.fromkeys(population_markers)).strip()
+    if not population:
+        raise PicoIncompleteError("population")
+
+    # Intervention.
+    intervention_parts: list[str] = []
+    if primary_drug:
+        intervention_parts.append(primary_drug)
+    intervention_parts.extend(_pico_detect_markers(folded, _PICO_INTERVENTION_MARKERS))
+    intervention = ", ".join(dict.fromkeys(intervention_parts)).strip()
+    if not intervention:
+        raise PicoIncompleteError("intervention")
+
+    # Comparison.
+    comparison_parts: list[str] = list(_pico_detect_markers(folded, _PICO_COMPARISON_MARKERS))
+    # An explicit second drug acts as a comparator/co-intervention.
+    comparison_parts.extend(co_drugs)
+    comparison = ", ".join(dict.fromkeys(comparison_parts)).strip()
+    if not comparison:
+        raise PicoIncompleteError("comparison")
+
+    # Outcome.
+    outcome = ", ".join(
+        dict.fromkeys(_pico_detect_markers(folded, _PICO_OUTCOME_MARKERS))
+    ).strip()
+    if not outcome:
+        raise PicoIncompleteError("outcome")
+
+    return PicoFrame(
+        population=population,
+        intervention=intervention,
+        comparison=comparison,
+        outcome=outcome,
+    )
+
+
+def _maybe_build_pico_frame(query: str) -> PicoFrame | None:
+    """Run PICO framing when enabled for a clinical query; otherwise return None (R7.4).
+
+    Propagates :class:`PicoIncompleteError` so an undetermined element rejects the
+    request before any retrieval/synthesis work (R7.2).
+    """
+
+    if not settings.research_pico_enabled:
+        return None
+    if not _is_clinical_query(query):
+        return None
+    return _extract_pico_frame(query)
+
+
+# --- GRADE-style evidence-certainty + recommendation-strength labeling (R8) -----------------
+# When ``RESEARCH_GRADE_ENABLED`` is on, each key claim surfaced by the verification matrix is
+# assigned a GRADE evidence-certainty label ∈ {high, moderate, low, very_low}, derived from the
+# Evidence Hierarchy (``source_type``) and ``trust_tier`` of its supporting sources (R8.1, R8.2).
+# Recommendation items additionally carry a recommendation strength ∈ {strong, conditional}
+# (R8.3). When the flag is off the orchestrator produces no labels (R8.5) and the legacy payload
+# shape is preserved (R20.2). The certainty mapping is monotonic in evidence strength: a stronger
+# Evidence-Hierarchy rank or higher trust_tier never yields a lower certainty (design Property 13).
+
+# Certainty labels ordered weakest → strongest; the order is authoritative for monotonicity.
+_GRADE_CERTAINTY_ORDER: tuple[str, ...] = ("very_low", "low", "moderate", "high")
+_GRADE_STRENGTH_STRONG = "strong"
+_GRADE_STRENGTH_CONDITIONAL = "conditional"
+
+# Evidence-Hierarchy ranks (1 = strongest … 5 = weakest) keyed by ASCII-folded source-type
+# markers. Mirrors the design "Trust tier / evidence hierarchy mapping" table: systematic review /
+# meta-analysis / guideline (1) > RCT (2) > cohort / observational (3) > case study/series (4) >
+# expert opinion / unranked web (5).
+_EVIDENCE_HIERARCHY_RANK_MARKERS: tuple[tuple[tuple[str, ...], int], ...] = (
+    (("systematic", "meta_analysis", "meta analysis", "guideline"), 1),
+    (("rct", "randomi", "controlled_trial", "clinical_trial", "trial"), 2),
+    (("cohort", "observational", "case_control", "registry", "longitudinal"), 3),
+    (("case_study", "case_series", "case_report", "case study", "case series"), 4),
+)
+_EVIDENCE_HIERARCHY_RANK_DEFAULT = 5  # expert opinion / unranked web
+
+# trust_tier (1 best … 4 worst) → strength contribution; unknown tier contributes 0.
+_GRADE_TRUST_TIER_SCORE: dict[int, int] = {1: 3, 2: 2, 3: 1, 4: 0}
+
+
+def _evidence_hierarchy_rank(source_type: str | None) -> int:
+    """Map a source-type label to its Evidence-Hierarchy rank (1 strongest … 5 weakest)."""
+
+    folded = _ascii_fold(source_type or "").replace("-", "_")
+    if not folded.strip():
+        return _EVIDENCE_HIERARCHY_RANK_DEFAULT
+    for markers, rank in _EVIDENCE_HIERARCHY_RANK_MARKERS:
+        if any(marker.replace("-", "_") in folded for marker in markers):
+            return rank
+    return _EVIDENCE_HIERARCHY_RANK_DEFAULT
+
+
+def _grade_certainty_label(trust_tier: int | None, hierarchy_rank: int) -> str:
+    """Derive a GRADE certainty label from trust_tier + Evidence-Hierarchy rank (R8.2).
+
+    The strength score rises as evidence gets stronger (lower ``trust_tier`` band, lower
+    ``hierarchy_rank``). Because the score is non-decreasing in evidence strength and the
+    label thresholds are monotonic, a stronger source never yields a lower certainty
+    (design Property 13).
+    """
+
+    tier_score = _GRADE_TRUST_TIER_SCORE.get(trust_tier, 0)
+    bounded_rank = max(1, min(5, int(hierarchy_rank)))
+    hierarchy_score = 5 - bounded_rank  # rank 1 → 4 … rank 5 → 0
+    combined = tier_score + hierarchy_score  # range 0..7
+    if combined >= 6:
+        return "high"
+    if combined >= 4:
+        return "moderate"
+    if combined >= 2:
+        return "low"
+    return "very_low"
+
+
+def _is_recommendation_claim(claim: str, claim_type: Any = None) -> bool:
+    """Heuristically detect whether a key claim is a recommendation item (R8.3).
+
+    Detection is accent-aware for Vietnamese (``nên``/``khuyến nghị``/``khuyến cáo``) and
+    keyword-based for English (``should``/``recommend``/``advise``) so a recommendation is
+    recognized in either output language without fabricating intent.
+    """
+
+    if str(claim_type or "").strip().lower() == "recommendation":
+        return True
+    lowered = str(claim or "").lower()
+    if any(marker in lowered for marker in ("nên", "khuyến nghị", "khuyến cáo")):
+        return True
+    folded = _ascii_fold(claim or "")
+    return any(marker in folded for marker in ("should", "recommend", "advis"))
+
+
+def _grade_supporting_profile(
+    evidence_ref: str | None,
+    retrieved_context: list[dict[str, Any]],
+) -> tuple[int | None, int | None, bool]:
+    """Resolve the strongest supporting source for a claim from its ``evidence_ref``.
+
+    Returns ``(best_trust_tier, best_hierarchy_rank, matched)`` where the "best" values are the
+    strongest (lowest) seen across the matched supporting rows. ``matched`` is ``False`` when the
+    reference cannot be resolved to any retrieved source.
+    """
+
+    ref = _ascii_fold(evidence_ref or "").strip()
+    if not ref:
+        return None, None, False
+    best_tier: int | None = None
+    best_rank: int | None = None
+    matched = False
+    for row in retrieved_context:
+        if not isinstance(row, dict):
+            continue
+        identity = _ascii_fold(
+            " ".join(str(row.get(key) or "") for key in ("id", "source", "title", "url"))
+        ).strip()
+        if not identity:
+            continue
+        row_id = _ascii_fold(str(row.get("id") or "")).strip()
+        if ref in identity or (row_id and row_id in ref):
+            matched = True
+            tier = _row_trust_tier(row)
+            if tier is not None:
+                best_tier = tier if best_tier is None else min(best_tier, tier)
+            rank = _evidence_hierarchy_rank(_row_source_type(row))
+            best_rank = rank if best_rank is None else min(best_rank, rank)
+    return best_tier, best_rank, matched
+
+
+def _grade_corpus_profile(
+    retrieved_context: list[dict[str, Any]],
+) -> tuple[int | None, int, bool]:
+    """Strongest supporting source across the whole retrieved corpus (grounded fallback).
+
+    Returns ``(best_trust_tier, best_hierarchy_rank, has_rows)``. Used when a supported claim's
+    ``evidence_ref`` cannot be resolved to a specific row but the claim is still grounded in the
+    retrieved evidence.
+    """
+
+    best_tier: int | None = None
+    best_rank: int | None = None
+    has_rows = False
+    for row in retrieved_context:
+        if not isinstance(row, dict):
+            continue
+        has_rows = True
+        tier = _row_trust_tier(row)
+        if tier is not None:
+            best_tier = tier if best_tier is None else min(best_tier, tier)
+        rank = _evidence_hierarchy_rank(_row_source_type(row))
+        best_rank = rank if best_rank is None else min(best_rank, rank)
+    return best_tier, (best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT), has_rows
+
+
+def _assign_grade_labels(
+    verification_rows: list[dict[str, Any]],
+    retrieved_context: list[dict[str, Any]],
+    *,
+    enabled: bool,
+) -> list[dict[str, Any]] | None:
+    """Assign GRADE certainty + recommendation-strength labels to key claims (R8.1–R8.3, R8.5).
+
+    Returns ``None`` when GRADE labeling is disabled so the optional ``grade`` payload field is
+    omitted entirely and the legacy result shape is preserved (R8.5, R20.2). When enabled, each
+    key claim (verification-matrix row) gets a certainty label derived from the strongest
+    supporting source's Evidence-Hierarchy rank + trust_tier; claims with no resolvable supporting
+    source are labeled ``very_low``. Recommendation items additionally carry a recommendation
+    strength of ``strong`` (when certainty is high/moderate) or ``conditional`` otherwise (R8.3).
+    """
+
+    if not enabled:
+        return None
+
+    context = [row for row in (retrieved_context or []) if isinstance(row, dict)]
+    corpus_tier, corpus_rank, corpus_has_rows = _grade_corpus_profile(context)
+
+    labels: list[dict[str, Any]] = []
+    for row in verification_rows or []:
+        if not isinstance(row, dict):
+            continue
+        claim = _first_nonempty_text(row.get("claim"))
+        if not claim:
+            continue
+
+        status = str(row.get("support_status") or "").strip().lower()
+        evidence_ref = _first_nonempty_text(row.get("evidence_ref")) or None
+        best_tier, best_rank, matched = _grade_supporting_profile(evidence_ref, context)
+
+        if matched:
+            has_support = True
+        elif status in {"supported", "contradicted"} and corpus_has_rows:
+            # Claim is grounded in the retrieved corpus but the per-claim reference did not
+            # resolve to a single row; fall back to the corpus's strongest source.
+            best_tier, best_rank, has_support = corpus_tier, corpus_rank, True
+        else:
+            best_tier, best_rank, has_support = None, _EVIDENCE_HIERARCHY_RANK_DEFAULT, False
+
+        if has_support:
+            certainty = _grade_certainty_label(
+                best_tier,
+                best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT,
+            )
+        else:
+            certainty = "very_low"
+
+        entry: dict[str, Any] = {"claim": claim, "certainty": certainty}
+        if _is_recommendation_claim(claim, row.get("claim_type")):
+            entry["recommendation_strength"] = (
+                _GRADE_STRENGTH_STRONG
+                if certainty in {"high", "moderate"}
+                else _GRADE_STRENGTH_CONDITIONAL
+            )
+        labels.append(entry)
+
+    return labels
+
+
+# --- Evidence-agreement (Consensus) view + conflicting-evidence section (R9) ------------------
+# When ``RESEARCH_CONSENSUS_ENABLED`` is on, the orchestrator computes, for each key claim, the
+# number of retrieved sources that support, contrast, or are neutral toward the claim (R9.1),
+# deriving each source-claim classification from the per-source NLI verdict (R9.2) by reusing the
+# deterministic ``classify_claim`` core that backs ``verify_claims``. When a claim is both
+# supported and contrasted by sources, a structured ``conflicting_evidence`` entry lists the
+# contrasting source ids (R9.4). When the flag is off both helpers return ``None`` so the optional
+# ``consensus``/``conflicting_evidence`` payload fields are omitted and the legacy result shape is
+# preserved (R20.2).
+
+
+def _consensus_evidence_rows(retrieved_context: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Build ``{"ref", "text"}`` source rows for per-source NLI classification.
+
+    Mirrors ``fides_lite._build_evidence_rows`` so the source-claim verdicts used for consensus
+    counts are derived from the exact same evidence set as the verification matrix. Sources with
+    no usable text are excluded (they cannot be NLI-evaluated).
+    """
+
+    rows: list[dict[str, str]] = []
+    for index, item in enumerate(retrieved_context or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        text = " ".join(str(item.get("text", "")).split()).strip()
+        if not text:
+            continue
+        ref = str(item.get("id") or f"evidence-{index}").strip() or f"evidence-{index}"
+        rows.append({"ref": ref, "text": text})
+    return rows
+
+
+def _compute_consensus_view(
+    *,
+    verification_rows: list[dict[str, Any]],
+    retrieved_context: list[dict[str, Any]],
+    enabled: bool,
+) -> tuple[list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
+    """Compute per-claim support/contrast/neutral counts + the conflicting-evidence section (R9).
+
+    Returns ``(consensus, conflicting_evidence)``. Both are ``None`` when consensus is disabled so
+    the optional payload fields are omitted entirely (R20.2). When enabled, ``consensus`` carries
+    one entry per key claim with ``support``/``contrast``/``neutral`` counts that partition the set
+    of evaluated sources exactly (design Property 15): each evaluated source contributes to exactly
+    one bucket, so ``support + contrast + neutral`` equals the number of evaluated sources.
+    ``conflicting_evidence`` lists the contrasting source ids for every claim that has at least one
+    supporting and one contrasting source (R9.4); it is an empty list when no claim conflicts.
+    """
+
+    if not enabled:
+        return None, None
+
+    evidence_rows = _consensus_evidence_rows(retrieved_context)
+
+    consensus: list[dict[str, Any]] = []
+    conflicting_evidence: list[dict[str, Any]] = []
+    for row in verification_rows or []:
+        if not isinstance(row, dict):
+            continue
+        claim = _first_nonempty_text(row.get("claim"))
+        if not claim:
+            continue
+
+        support = 0
+        contrast = 0
+        neutral = 0
+        contrasting_ids: list[str] = []
+        for source in evidence_rows:
+            # Derive the source-claim verdict from the per-source NLI classification (R9.2).
+            verdict = classify_claim(claim, evidence_rows=[source])
+            status = str(verdict.support_status or "").strip().lower()
+            if status == "supported":
+                support += 1
+            elif status == "contradicted":
+                contrast += 1
+                contrasting_ids.append(source["ref"])
+            else:
+                neutral += 1
+
+        consensus.append(
+            {
+                "claim": claim,
+                "support": support,
+                "contrast": contrast,
+                "neutral": neutral,
+            }
+        )
+        # Conflicting-evidence section present iff the claim has both supporting and contrasting
+        # sources; it lists exactly the contrasting sources (R9.4).
+        if support >= 1 and contrast >= 1:
+            conflicting_evidence.append(
+                {
+                    "claim": claim,
+                    "contrasting_citation_ids": contrasting_ids,
+                }
+            )
+
+    return consensus, conflicting_evidence
+
+
+# --- Claim-to-study traceability + Citation Registry + provenance (R11) ----------------------
+# When ``RESEARCH_CLAIM_TRACE_ENABLED`` is on, the orchestrator links each supported key claim to
+# the specific citation id(s) that support it (R11.1), attaches per-citation provenance
+# (``study_id`` PMID/DOI/RXCUI, ``source_type``, ``trust_tier``, publication/effective date —
+# R11.2), and builds a Citation_Registry appendix listing every surfaced citation (R11.4). A
+# citation is only ever built from a retrieved source, so no fabricated citation can be emitted
+# (R11.5); a claim with no resolvable supporting citation is suppressed and never gets a
+# fabricated citation (R11.6). When the flag is off both artifacts are ``None`` so the optional
+# ``citation_registry``/``traced_claims`` payload fields are omitted and the legacy result shape
+# is preserved (R20.2).
+
+# Lowest-authority band assigned to a surfaced citation whose backing source carries no explicit
+# ``trust_tier``; keeps the registry's ``trust_tier`` field always present (R11.2) without
+# inflating an unknown source's authority.
+_DEFAULT_CITATION_TRUST_TIER = 4
+
+# Ordered scholarly-identifier metadata keys → emitted ``study_id`` prefix (R11.2).
+_STUDY_ID_METADATA_KEYS: tuple[tuple[str, str | None], ...] = (
+    ("pmid", "PMID"),
+    ("doi", "DOI"),
+    ("rxcui", "RXCUI"),
+    ("study_id", None),
+)
+_DOI_URL_PATTERN = re.compile(r"10\.\d{4,9}/\S+")
+
+
+def _normalize_claim_verdict(status: Any) -> str:
+    """Map a verification ``support_status`` to a claim verdict ∈ {supported, unsupported, contradicted}."""
+
+    text = str(status or "").strip().lower()
+    if text == "supported":
+        return "supported"
+    if text == "contradicted":
+        return "contradicted"
+    return "unsupported"
+
+
+def _derive_citation_study_id(citation: Citation, row: dict[str, Any] | None) -> str:
+    """Resolve a citation's ``study_id`` (PMID/DOI/RXCUI) from its backing source (R11.2).
+
+    Prefers an explicit identifier already on the citation, then scholarly identifiers on the
+    backing retrieved row, then a DOI embedded in the citation URL. Falls back to the retrieved
+    source's own id so the field is always present while never pointing at a non-retrieved
+    source (R11.5).
+    """
+
+    if citation.study_id:
+        return citation.study_id
+    if isinstance(row, dict):
+        for key, prefix in _STUDY_ID_METADATA_KEYS:
+            text = str(_row_metadata_value(row, key) or "").strip()
+            if not text:
+                continue
+            if prefix and not text.upper().startswith(prefix.upper()):
+                return f"{prefix}:{text}"
+            return text
+    doi_match = _DOI_URL_PATTERN.search(str(citation.url or ""))
+    if doi_match:
+        return f"DOI:{doi_match.group(0)}"
+    return citation.source_id
+
+
+def _match_citation_ids_for_claim(
+    evidence_ref: str | None,
+    citations: list[Citation],
+) -> list[str]:
+    """Resolve the citation id(s) that back a claim's ``evidence_ref`` (R11.1).
+
+    Mirrors the fuzzy identity match used by GRADE supporting-source resolution: a citation
+    matches when its folded identity (id/source/title/url) contains the reference, or when its
+    folded id is contained in the reference. Returns the matched citation ids in citation order
+    (deduplicated); empty when nothing resolves.
+    """
+
+    ref = _ascii_fold(evidence_ref or "").strip()
+    if not ref:
+        return []
+    matched: list[str] = []
+    seen: set[str] = set()
+    for citation in citations or []:
+        source_id = citation.source_id
+        if not source_id or source_id in seen:
+            continue
+        identity = _ascii_fold(
+            " ".join(
+                str(value or "")
+                for value in (citation.source_id, citation.source, citation.title, citation.url)
+            )
+        ).strip()
+        if not identity:
+            continue
+        folded_id = _ascii_fold(source_id).strip()
+        if ref in identity or (folded_id and folded_id in ref):
+            seen.add(source_id)
+            matched.append(source_id)
+    return matched
+
+
+def _build_claim_trace(
+    *,
+    verification_rows: list[dict[str, Any]],
+    citations: list[Citation],
+    retrieved_context: list[dict[str, Any]],
+    grade_labels: list[dict[str, Any]] | None,
+    enabled: bool,
+) -> tuple[list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
+    """Build traced claims + the Citation Registry appendix (R11).
+
+    Returns ``(traced_claims, citation_registry)``. Both are ``None`` when claim tracing is
+    disabled so the optional payload fields are omitted and the legacy shape is preserved (R20.2).
+    When enabled, the registry carries one :class:`CitationRef` per surfaced citation (every
+    citation referenced in the report — R11.4) with complete provenance (R11.2), and
+    ``traced_claims`` carries one :class:`TracedClaim` per *supported* key claim whose evidence
+    resolves to at least one registry citation (R11.1). Claims with no resolvable supporting
+    citation are suppressed (R11.6) and every emitted citation id corresponds to a retrieved
+    source (R11.5).
+    """
+
+    if not enabled:
+        return None, None
+
+    # Index backing retrieved-source rows by id so each citation can inherit its provenance even
+    # when the recency/trust ranking flag (R6) is off and the Citation object carries no metadata.
+    context_by_id: dict[str, dict[str, Any]] = {}
+    for row in retrieved_context or []:
+        if not isinstance(row, dict):
+            continue
+        row_id = _ascii_fold(str(row.get("id") or "")).strip()
+        if row_id and row_id not in context_by_id:
+            context_by_id[row_id] = row
+
+    registry: list[dict[str, Any]] = []
+    valid_ids: set[str] = set()
+    for citation in citations or []:
+        citation_id = citation.source_id
+        if not citation_id or citation_id in valid_ids:
+            continue
+        valid_ids.add(citation_id)
+        row = context_by_id.get(_ascii_fold(citation_id).strip())
+        source_type = (
+            (_row_source_type(row) if row else None) or citation.source_type or "unknown"
+        )
+        trust_tier = (_row_trust_tier(row) if row else None)
+        if trust_tier is None:
+            trust_tier = citation.trust_tier
+        if trust_tier is None:
+            trust_tier = _DEFAULT_CITATION_TRUST_TIER
+        published_at = (_row_effective_date(row) if row else None) or citation.published_at
+        registry.append(
+            CitationRef(
+                citation_id=citation_id,
+                study_id=_derive_citation_study_id(citation, row),
+                source_type=source_type,
+                trust_tier=trust_tier,
+                published_at=published_at,
+            ).as_payload()
+        )
+
+    certainty_by_claim: dict[str, str] = {}
+    for entry in grade_labels or []:
+        if not isinstance(entry, dict):
+            continue
+        claim_text = _first_nonempty_text(entry.get("claim"))
+        certainty = _first_nonempty_text(entry.get("certainty"))
+        if claim_text and certainty:
+            certainty_by_claim[claim_text] = certainty
+
+    traced_claims: list[dict[str, Any]] = []
+    for row in verification_rows or []:
+        if not isinstance(row, dict):
+            continue
+        claim = _first_nonempty_text(row.get("claim"))
+        if not claim:
+            continue
+        # R11.1/R11.6: only a supported claim that resolves to ≥1 registry citation survives.
+        if _normalize_claim_verdict(row.get("support_status")) != "supported":
+            continue
+        evidence_ref = _first_nonempty_text(row.get("evidence_ref")) or None
+        citation_ids = [
+            citation_id
+            for citation_id in _match_citation_ids_for_claim(evidence_ref, citations)
+            if citation_id in valid_ids
+        ]
+        if not citation_ids:
+            continue
+        traced_claims.append(
+            TracedClaim(
+                claim=claim,
+                citation_ids=citation_ids,
+                verdict="supported",
+                certainty=certainty_by_claim.get(claim),
+            ).as_payload()
+        )
+
+    return traced_claims, registry
 
 
 def _normalize_source_mode_key(value: Any) -> str:
@@ -2243,8 +3327,68 @@ def _sanitize_deep_beta_markdown_output(markdown_text: str) -> str:
     return _dedupe_duplicate_h2_headings(_strip_html_from_mermaid_blocks(markdown_text))
 
 
+#: A markdown table layout/separator row carries no prose — only pipes, dashes,
+#: colons, and whitespace (e.g. ``| --- | :--: |``). Such rows are dropped before
+#: counting so table scaffolding never inflates the word count, while table
+#: *content* rows (their cell text) are kept.
+_MARKDOWN_TABLE_LAYOUT_RE = re.compile(r"^[\s|:\-]+$")
+
+
 def _markdown_word_count(text: str) -> int:
-    return len(re.findall(r"\S+", str(text or "").strip()))
+    """Return the markdown-aware prose word count for ``text``.
+
+    This is the SINGLE word counter used across budget resolution, the
+    expansion/convergence loop, and min-word enforcement (design Property P7),
+    so the meaning of a "word" is identical everywhere and a target expressed in
+    words is compared against an equivalently measured body. Markdown scaffolding
+    is stripped first so structural punctuation never inflates the count:
+
+    * fenced code blocks are removed entirely (code is not prose),
+    * table layout/separator rows are dropped (content rows are kept),
+    * link/image syntax is reduced to its visible label,
+    * heading / list / emphasis / blockquote / pipe / rule markers are stripped.
+
+    Only tokens carrying at least one word character are counted, so leftover
+    punctuation (``---``, stray ``|`` …) is never mistaken for a word.
+    """
+
+    source = str(text or "")
+    if not source.strip():
+        return 0
+
+    # 1. Drop fenced code blocks entirely.
+    cleaned = re.sub(r"```[\s\S]*?```", " ", source)
+
+    # 2. Drop table layout/separator rows while keeping table content rows.
+    kept_lines = [
+        line
+        for line in cleaned.splitlines()
+        if not (
+            line.strip().startswith("|") and _MARKDOWN_TABLE_LAYOUT_RE.match(line.strip())
+        )
+    ]
+    cleaned = "\n".join(kept_lines)
+
+    # 3. Reduce markdown links/images to their visible label only.
+    cleaned = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", cleaned)
+
+    # 4. Strip structural / inline markdown markers, keeping surrounding text.
+    cleaned = re.sub(r"[#>*_`~|]+", " ", cleaned)
+
+    # 5. Count only tokens that contain at least one word character.
+    return sum(1 for token in cleaned.split() if re.search(r"\w", token))
+
+
+def _deep_beta_missing_required_headings(content: str, answer_language: str) -> list[str]:
+    """Return the deep_beta dossier headings (R18.1) absent from ``content``.
+
+    Uses the language-resolved ``_REQUIRED_DEEP_BETA_MARKDOWN_HEADINGS`` contract so a
+    deficient draft can be completed by a generation pass before any programmatic
+    fallback/padding is applied (design section 18, Requirement 18.1/18.3).
+    """
+
+    required = _resolve_deep_beta_dossier_headings(answer_language)
+    return [heading for heading in required if not _has_markdown_heading(content, heading)]
 
 
 def _build_reasoning_chain_cards(
@@ -2320,6 +3464,84 @@ def _build_reasoning_chain_cards(
     return cards
 
 
+#: Ordered scope labels (narrowest → broadest) and their ``scope_factor`` in
+#: [0.4, 1.0]. The ordering encodes Property P2 (scope monotonicity): a broader
+#: scope label always carries a ``scope_factor`` greater-than-or-equal to a
+#: narrower one, all else equal.
+_SCOPE_FACTORS: dict[str, float] = {
+    "narrow": 0.4,
+    "standard": 0.62,
+    "broad": 0.85,
+    "comparative_multi": 1.0,
+}
+
+
+def _classify_query_scope(
+    topic: str,
+    *,
+    citation_count: int = 0,
+    deep_pass_count: int = 0,
+    reasoning_node_count: int = 0,
+) -> tuple[str, float]:
+    """Classify a ``deep_beta`` query's scope and emit a ``scope_factor``.
+
+    Returns a ``(scope_label, scope_factor)`` ScopeSignal where
+    ``scope_label ∈ {narrow, standard, broad, comparative_multi}`` and
+    ``scope_factor ∈ [0.4, 1.0]`` (Requirement 1.1).
+
+    Pure and PII-free: it derives the signal only from accent-folded query
+    tokens (via the existing :func:`_is_comparison_query`,
+    :func:`_is_nutrition_diet_query`, :func:`_is_ddi_critical_topic` detectors
+    plus multi-part / length intent cues) and the supplied non-identifying
+    evidence-density counts. No query text is stored, logged, or returned.
+
+    Broader, comparative, or multi-part questions justify a longer report and
+    map to a higher ``scope_factor``; narrow definitional questions scale down.
+    The label→factor mapping is monotonic in scope rank (design Property P2).
+    """
+
+    text = str(topic or "").strip()
+    folded = _ascii_fold(text)
+    word_count = len([token for token in folded.split() if token])
+
+    is_comparison = _is_comparison_query(text)
+
+    # Multi-part cues: clinical-domain breadth, conjunctions / enumerations,
+    # multiple explicit questions, or a long, information-dense prompt.
+    multipart_markers = (
+        " va ",
+        " and ",
+        ";",
+        " cung nhu ",
+        " lan luot ",
+        " dong thoi ",
+    )
+    multipart_hits = sum(1 for marker in multipart_markers if marker in folded)
+    question_marks = text.count("?")
+    is_multipart = multipart_hits >= 2 or question_marks >= 2 or word_count >= 32
+
+    # Breadth-signalling domains (nutrition/diet and critical DDI topics) widen
+    # scope even when phrased compactly.
+    is_breadth_topic = _is_nutrition_diet_query(text) or _is_ddi_critical_topic(text)
+
+    density = (
+        max(0, int(citation_count))
+        + max(0, int(deep_pass_count))
+        + max(0, int(reasoning_node_count))
+    )
+
+    if is_comparison and (is_multipart or density >= 30):
+        label = "comparative_multi"
+    elif is_comparison or is_multipart or is_breadth_topic or density >= 40:
+        label = "broad"
+    elif word_count <= 8 and density < 12:
+        label = "narrow"
+    else:
+        label = "standard"
+
+    return label, _SCOPE_FACTORS[label]
+
+
 def _resolve_deep_beta_word_budget() -> tuple[int, int, int]:
     # Respect runtime tuning while keeping a sensible long-form envelope.
     hard_min = 1200
@@ -2349,6 +3571,99 @@ def _resolve_deep_word_budget() -> tuple[int, int, int]:
     return min_words, target_words, max_words
 
 
+def _smoothstep(value: float, lo: float, hi: float) -> float:
+    """Monotonic Hermite ``smoothstep`` clamped to ``[0.0, 1.0]``.
+
+    Returns ``0.0`` at/below ``lo``, ``1.0`` at/above ``hi``, and a smooth,
+    monotonically non-decreasing ramp in between. Used to turn an unbounded
+    evidence-density count into a bounded ``density_factor`` so the scope-aware
+    budget grows smoothly with evidence (design Property P3, density
+    monotonicity).
+    """
+
+    if hi <= lo:
+        return 1.0 if value >= hi else 0.0
+    if value <= lo:
+        return 0.0
+    if value >= hi:
+        return 1.0
+    t = (value - lo) / (hi - lo)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _resolve_scope_aware_word_budget(
+    *,
+    scope_factor: float,
+    scope_label: str,
+    citation_count: int = 0,
+    deep_pass_count: int = 0,
+    reasoning_node_count: int = 0,
+) -> tuple[int, int, int]:
+    """Scope-aware ``deep_beta`` word budget (synthesis v2 band math).
+
+    Blends the query-scope signal (``scope_factor`` / ``scope_label`` from
+    :func:`_classify_query_scope`) with evidence density (citations + retrieval
+    passes + reasoning nodes) to produce a ``(min, target, max)`` envelope that
+    scales smoothly from a no-pad floor for narrow/sparse queries up into the
+    8,000-15,000 word band for broad, evidence-rich ones.
+
+    Guarantees the design Correctness Properties:
+
+    - **P1** invariant: ``min_words <= target <= max_words <= 15000``.
+    - **P2** scope monotonicity: ``target`` non-decreasing in ``scope_factor``.
+    - **P3** density monotonicity: ``target`` non-decreasing in evidence density.
+    - **P4** broad band: a broad/comparative high-density query reaches ``>= 8000``.
+    - **P5** no-pad floor: a narrow + sparse query lands below ``floor``.
+
+    Pure and PII-free: it consumes only the scope signal and non-identifying
+    evidence counts.
+    """
+
+    hard_max_ceiling = 15000
+
+    # Documented floor: the configured ``deep_beta`` minimum, clamped to the
+    # validated band so a misconfiguration cannot push it out of range.
+    floor = min(max(int(settings.deep_beta_report_min_words), 4000), 12000)
+    # Ceiling: the configured cap, never below ``floor + 2000`` nor above the
+    # hard 15k ceiling (design section B + Requirement 1.4 / 6.5).
+    hard_max = min(
+        max(int(settings.deep_beta_report_max_words_cap), floor + 2000),
+        hard_max_ceiling,
+    )
+
+    # Broad / comparative-multi questions anchor at the full floor; narrower
+    # scopes relax the floor to ~0.7x so a narrow query can land below ``floor``
+    # without padding (design Property P5, Requirement 1.3).
+    if str(scope_label).strip().lower() in {"broad", "comparative_multi"}:
+        min_words = floor
+    else:
+        min_words = round(floor * 0.7)
+    min_words = min(min_words, hard_max)
+
+    density = (
+        max(0, int(citation_count))
+        + max(0, int(deep_pass_count))
+        + max(0, int(reasoning_node_count))
+    )
+    density_factor = _smoothstep(float(density), 10.0, 60.0)
+
+    # Map ``scope_factor`` in [0.4, 1.0] onto a [0, 1] drive so a narrow query
+    # (0.4) contributes no upward push while a comparative-multi query (1.0)
+    # drives the target to the ceiling.
+    scope_drive = max(0.0, min(1.0, (float(scope_factor) - 0.4) / 0.6))
+    drive = max(scope_drive, density_factor * 0.9)
+
+    target_words = round(min_words + drive * (hard_max - min_words))
+    max_words = hard_max
+
+    # Re-assert the invariant defensively (clamp rather than raise so a relaxed
+    # bound can never surface a violation to callers — design error handling).
+    target_words = min(max(target_words, min_words), max_words)
+    max_words = min(max_words, hard_max_ceiling)
+    min_words = min(min_words, target_words)
+    return min_words, target_words, max_words
+
+
 def _resolve_report_word_budget(research_mode: str) -> tuple[int, int, int]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
@@ -2362,8 +3677,46 @@ def _resolve_adaptive_report_word_budget(
     citation_count: int,
     deep_pass_count: int,
     reasoning_node_count: int,
+    topic: str = "",
 ) -> tuple[int, int, int]:
     mode = str(research_mode or "fast").strip().lower()
+
+    # Synthesis v2 (flag-gated): scope-aware band math for deep_beta only.
+    # When the flag is off we fall through to the exact pre-feature behavior so
+    # the budget is byte-identical to baseline (design Property P8).
+    if mode == "deep_beta" and settings.synthesis_v2_enabled:
+        scope_label, scope_factor = _classify_query_scope(
+            topic,
+            citation_count=citation_count,
+            deep_pass_count=deep_pass_count,
+            reasoning_node_count=reasoning_node_count,
+        )
+        min_words, target_words, max_words = _resolve_scope_aware_word_budget(
+            scope_factor=scope_factor,
+            scope_label=scope_label,
+            citation_count=citation_count,
+            deep_pass_count=deep_pass_count,
+            reasoning_node_count=reasoning_node_count,
+        )
+        # Expose the resolved (min, target, max) envelope and the scope label in
+        # trace/telemetry for observability (Requirement 1.6). PII-free by
+        # construction: only the non-identifying scope category, the numeric
+        # word-budget triple, and aggregate evidence counts are emitted — never
+        # the query text or any user content.
+        logger.info(
+            "synthesis_v2 deep_beta budget resolved: "
+            "scope=%s min_words=%d target_words=%d max_words=%d "
+            "citations=%d passes=%d reasoning_nodes=%d",
+            scope_label,
+            min_words,
+            target_words,
+            max_words,
+            max(0, int(citation_count)),
+            max(0, int(deep_pass_count)),
+            max(0, int(reasoning_node_count)),
+        )
+        return min_words, target_words, max_words
+
     min_words, target_words, max_words = _resolve_report_word_budget(mode)
     if mode != "deep_beta":
         return min_words, target_words, max_words
@@ -2384,10 +3737,83 @@ def _resolve_adaptive_report_word_budget(
     return adaptive_min, adaptive_target, adaptive_max
 
 
+def _resolve_query_type_directives(
+    scope_label: str,
+    topic: str,
+) -> list[str]:
+    """Query-type-aware section directives appended on the synthesis-v2 path.
+
+    Pure and PII-free: derives extra framing directives from the scope label
+    (from :func:`_classify_query_scope`) plus accent-folded intent cues, never
+    storing or logging the query text. The returned directives are *appended*
+    after the legacy dossier requirements so the executive-answer-first,
+    decision-boundary, and safety sections always remain (Requirement 3.6, 5).
+
+    The directives vary the report's analytic framing by query type
+    (comparison vs single-intervention vs diagnostic-workup vs narrow) so the
+    prose no longer reads as one fixed template (Requirement 3.1).
+    """
+
+    label = str(scope_label or "standard").strip().lower()
+    folded = _ascii_fold(topic)
+
+    # Diagnostic-workup intent cues (differential / red-flag framing).
+    diagnostic_markers = (
+        "chan doan",
+        "chan doan phan biet",
+        "trieu chung",
+        "dau hieu",
+        "tiep can",
+        "workup",
+        "differential",
+        "diagnos",
+        "symptom",
+    )
+    is_diagnostic = any(marker in folded for marker in diagnostic_markers)
+
+    directives: list[str] = []
+
+    if label == "comparative_multi":
+        directives.append(
+            "- frame as an options-comparison: contrast each option head-to-head on "
+            "efficacy, safety, adherence, feasibility, and cost/access in a comparison table"
+        )
+        directives.append(
+            "- close each comparison with a net decision recommendation and the conditions that flip it"
+        )
+    elif label == "broad":
+        directives.append(
+            "- expand the dossier with type-specific sub-sections so each analytic "
+            "dimension (mechanism, evidence, subgroups, monitoring) gets dedicated depth"
+        )
+
+    if is_diagnostic:
+        directives.append(
+            "- include a differential-diagnosis framing with explicit red-flags and "
+            "escalation criteria before management discussion"
+        )
+
+    if label == "narrow":
+        directives.append(
+            "- keep the brief compact: cover only the directly relevant sections without padding, "
+            "while preserving the executive answer, decision boundary, and safety notes"
+        )
+
+    if not directives:
+        # Standard scope still gets a de-templating nudge so the v2 path is
+        # never byte-identical to the fixed legacy contract.
+        directives.append(
+            "- vary section emphasis to fit the specific question rather than emitting a fixed template"
+        )
+
+    return directives
+
+
 def _resolve_report_section_contract(
     research_mode: str,
     *,
     answer_language: str = "vi",
+    topic: str = "",
 ) -> tuple[list[str], list[str]]:
     mode = str(research_mode or "fast").strip().lower()
     quick_conclusion = f"## {_resolve_section_title('quick_conclusion', answer_language)}"
@@ -2405,6 +3831,13 @@ def _resolve_report_section_contract(
             "- include subgroup caveats, uncertainty, and what new evidence could shift the recommendation",
             "- do not expose internal pipeline tags, execution steps, or debug telemetry in the answer body",
         ]
+        # Synthesis v2 (flag-gated): choose the plan by query scope/type and
+        # append query-type directives. When the flag is off we return the
+        # legacy fixed dossier byte-for-byte so flags-off behavior is identical
+        # to baseline (design Property P8 / Requirement 6.2).
+        if settings.synthesis_v2_enabled:
+            scope_label, _scope_factor = _classify_query_scope(topic)
+            requirements = requirements + _resolve_query_type_directives(scope_label, topic)
         return sections, requirements
 
     sections = [
@@ -2421,10 +3854,91 @@ def _resolve_report_section_contract(
     return sections, requirements
 
 
-def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
+#: Anti-repetition directives appended to the synthesis-v2 ``deep_beta`` style
+#: profile so the model varies phrasing/structure instead of emitting one
+#: template (Requirement 3.2). Pure constants — no PII, no query text.
+_ANTI_REPETITION_DIRECTIVES: list[str] = [
+    "Vary the opening words of adjacent paragraphs; never begin two consecutive paragraphs with the same word or phrase.",
+    "Alternate sentence structure (declarative, comparative, conditional, list-led) so prose does not read as a filled template.",
+    "Rotate connective and transition phrasing instead of reusing the same linkers across sections.",
+    "Avoid reusing the same stock framing sentence to introduce each section.",
+]
+
+
+def _resolve_style_variation(scope_label: str, topic: str) -> dict[str, Any]:
+    """Per-query-type style-variation hints for the synthesis-v2 path.
+
+    Pure and PII-free: derives a stylistic-variation block from the scope label
+    (from :func:`_classify_query_scope`) plus accent-folded intent cues, never
+    storing or logging the query text. The block nudges the model to vary the
+    report's *structure and phrasing by query type* (comparison vs
+    single-intervention vs diagnostic-workup vs narrow) so adjacent reports do
+    not share an identical skeleton or repeated openings (Requirement 3.2,
+    complementing the section-plan variation of Requirement 3.1).
+    """
+
+    label = str(scope_label or "standard").strip().lower()
+    folded = _ascii_fold(topic)
+
+    diagnostic_markers = (
+        "chan doan",
+        "trieu chung",
+        "dau hieu",
+        "tiep can",
+        "workup",
+        "differential",
+        "diagnos",
+        "symptom",
+    )
+    is_diagnostic = any(marker in folded for marker in diagnostic_markers)
+
+    if label == "comparative_multi":
+        framing = "options_contrast"
+        opening_strategy = (
+            "Open each option's analysis from a different angle (efficacy, then safety, then "
+            "adherence) rather than repeating one fixed lead-in per option."
+        )
+    elif label == "broad":
+        framing = "thematic_dossier"
+        opening_strategy = (
+            "Lead successive analytic dimensions (mechanism, evidence, subgroups, monitoring) "
+            "with distinct sentence patterns so the dossier does not read as a repeated shell."
+        )
+    elif label == "narrow":
+        framing = "compact_brief"
+        opening_strategy = (
+            "Keep the brief tight and front-loaded; vary the few openings you use and avoid "
+            "padding sections to fill space."
+        )
+    else:
+        framing = "adaptive_clinical"
+        opening_strategy = (
+            "Shape section emphasis around the specific question and vary paragraph openings "
+            "rather than emitting a fixed template."
+        )
+
+    if is_diagnostic:
+        framing = "differential_workup"
+        opening_strategy = (
+            "Frame around differential reasoning and red-flags first; vary how each differential "
+            "and escalation criterion is introduced."
+        )
+
+    return {
+        "framing": framing,
+        "opening_strategy": opening_strategy,
+        "anti_repetition": list(_ANTI_REPETITION_DIRECTIVES),
+    }
+
+
+def _resolve_report_style_profile(
+    research_mode: str,
+    *,
+    topic: str = "",
+) -> dict[str, Any]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
-        return {
+        profile: dict[str, Any] = {
             "tone": "clinical_dossier_evidence_brief",
             "narrative_density": "very_high",
             "target_reader": "clinician, researcher, or medical operator who needs a traceable long-form synthesis",
@@ -2440,6 +3954,15 @@ def _resolve_report_style_profile(research_mode: str) -> dict[str, Any]:
                 "Do not collapse the report into short Perplexity-style summary-only prose.",
             ],
         }
+        # Synthesis v2 (flag-gated): add per-query-type style variation and
+        # explicit anti-repetition directives so the prose de-templates
+        # (Requirement 3.2). When the flag is off we return the legacy profile
+        # byte-for-byte so flags-off behavior is identical to baseline
+        # (design Property P8 / Requirement 6.2).
+        if settings.synthesis_v2_enabled:
+            scope_label, _scope_factor = _classify_query_scope(topic)
+            profile["style_variation"] = _resolve_style_variation(scope_label, topic)
+        return profile
     return {
         "tone": "clinical_briefing_reader_first",
         "narrative_density": "high",
@@ -2562,6 +4085,38 @@ def _ensure_deep_beta_report_artifacts(
     return output
 
 
+#: Legacy expansion focus line used by the flags-off / non-``deep_beta``
+#: convergence loop. Kept verbatim so the flags-off continuation prompt is
+#: byte-for-byte identical to the pre-feature behavior (design Property P8 /
+#: Requirement 6.2).
+_LEGACY_EXPANSION_FOCUS = (
+    "Add deeper analysis with practical clinical caveats, subgroup handling, "
+    "uncertainty, and scientific interpretation."
+)
+
+#: Ordered expansion directives for the synthesis-v2 ``deep_beta`` convergence
+#: loop (Requirement 2.2 / Property P6). When an expansion round returns empty
+#: or duplicate content, the loop rotates to the next directive — each targeting
+#: a different analytic dimension — before giving up, rather than breaking on the
+#: first empty/duplicate round. The loop stops only when the target length is
+#: met, the round budget is exhausted, a full rotation produces nothing new, or
+#: the wall-clock timeout is hit. Pure constants: no PII, no query text.
+_EXPANSION_DIRECTIVES: tuple[str, ...] = (
+    "Add deeper subgroup and special-population analysis (age, comorbidity, "
+    "renal/hepatic function, pregnancy, polypharmacy) with practical clinical "
+    "caveats, uncertainty, and scientific interpretation.",
+    "Add a comparative analysis contrasting the main options across efficacy, "
+    "safety, adherence, feasibility, and cost/access, using a Markdown comparison "
+    "table where it clarifies the trade-offs.",
+    "Add a monitoring and safety matrix covering baseline checks, follow-up "
+    "cadence, adverse-effect surveillance, and red-flag escalation thresholds, "
+    "using a Markdown table where useful.",
+    "Add an uncertainty and evidence-gap section that states what evidence is "
+    "missing or contradictory, how it changes confidence, and which questions "
+    "remain open for clinician judgement.",
+)
+
+
 def _synthesize_deep_beta_long_report(
     *,
     topic: str,
@@ -2623,12 +4178,14 @@ def _synthesize_deep_beta_long_report(
         citation_count=len(compact_citations),
         deep_pass_count=len(compact_passes),
         reasoning_node_count=len(reasoning_chain_cards),
+        topic=topic,
     )
     section_contract, section_requirements = _resolve_report_section_contract(
         mode,
         answer_language=answer_language,
+        topic=topic,
     )
-    style_profile = _resolve_report_style_profile(mode)
+    style_profile = _resolve_report_style_profile(mode, topic=topic)
     section_contract_text = "\n".join(section_contract)
     section_requirements_text = "\n".join(section_requirements)
     report_timeout_seconds = max(
@@ -2677,6 +4234,17 @@ def _synthesize_deep_beta_long_report(
         if mode == "deep_beta"
         else "- avoid meta labels such as core question, evidence coverage, working synthesis, or retrieval process unless they change the clinical interpretation"
     )
+    # Synthesis v2 (flag-gated, deep_beta only): an explicit anti-repetition
+    # directive so adjacent paragraphs do not share identical sentence openings
+    # and the report does not read as a filled template (Requirement 3.2). Empty
+    # on the flags-off / non-deep_beta path so the legacy prompt is byte-for-byte
+    # preserved (design Property P8 / Requirement 6.2).
+    anti_repetition_requirement_line = (
+        "- vary the opening words of adjacent paragraphs and rotate transition phrasing; "
+        "never begin two consecutive paragraphs with the same word or phrase\n"
+        if mode == "deep_beta" and settings.synthesis_v2_enabled
+        else ""
+    )
     prompt = (
         f"Rewrite the baseline answer into a polished long-form medical research answer in {language_label}.\n"
         "Output valid GitHub-Flavored Markdown only, no HTML.\n"
@@ -2689,6 +4257,7 @@ def _synthesize_deep_beta_long_report(
         f"{opening_requirement_line}\n"
         f"{opening_length_line}\n"
         "- avoid robotic wording and avoid repeating the same sentence pattern across sections\n"
+        f"{anti_repetition_requirement_line}"
         f"{transition_requirement_line}\n"
         f"{skimmable_requirement_line}\n"
         f"{evidence_label_requirement_line}\n"
@@ -2730,6 +4299,11 @@ def _synthesize_deep_beta_long_report(
         )
         if client is None:
             return answer_markdown
+        # Wall-clock start for the synthesis-v2 convergence/enrichment bound
+        # (Requirement 2.4): total synthesis time is capped at
+        # ``report_timeout_seconds`` and the best-so-far report is kept on
+        # timeout rather than discarded.
+        synthesis_start = perf_counter()
         response = client.generate(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -2738,6 +4312,35 @@ def _synthesize_deep_beta_long_report(
         content = _sanitize_deep_beta_markdown_output(str(response.content or "").strip())
         if not content:
             return answer_markdown
+
+        def _build_continuation_prompt(focus_line: str, missing_words: int) -> str:
+            """Build an append-only continuation prompt for a given directive.
+
+            Used by both the legacy loop (with ``_LEGACY_EXPANSION_FOCUS``) and the
+            synthesis-v2 loop (rotating ``_EXPANSION_DIRECTIVES``). With the legacy
+            focus line the produced string is byte-for-byte identical to the
+            pre-feature continuation prompt, preserving flags-off equivalence
+            (design Property P8). ``content`` is read at call time so each round
+            embeds the latest accumulated report.
+            """
+
+            return (
+                f"Expand the following {language_label} medical report by APPENDING new content only.\n"
+                "Do NOT rewrite previous sections.\n"
+                "Do NOT duplicate any existing H2 section title.\n"
+                "Do NOT add internal pipeline labels like [scope_question], deep_beta_scope, retrieval_budgeting, or execution logs.\n"
+                f"{focus_line}\n"
+                f"Need at least ~{missing_words} additional words.\n"
+                "Append supplementary sections using H3/H4 headings and additional tables where useful.\n"
+                "Return Markdown only.\n\n"
+                f"topic={topic}\n"
+                f"existing_report={content}\n"
+                f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
+                f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
+                f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
+                f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
+                f"verification_summary={json.dumps(verification_summary, ensure_ascii=False)}\n"
+            )
 
         configured_rounds = max(1, int(settings.deep_beta_report_expansion_rounds))
         expansion_rounds = (
@@ -2750,40 +4353,125 @@ def _synthesize_deep_beta_long_report(
                 expansion_rounds = max(expansion_rounds, 3)
             elif target_words >= 8000:
                 expansion_rounds = max(expansion_rounds, 2)
-        for round_idx in range(expansion_rounds):
-            current_words = _markdown_word_count(content)
-            if current_words >= target_words:
-                break
+        if mode == "deep_beta" and settings.synthesis_v2_enabled:
+            # Synthesis-v2 robust convergence loop (Requirement 2.1, 2.2, 2.4 /
+            # Property P6). Differences from the legacy loop below:
+            #   * On an empty/duplicate continuation, rotate to the NEXT expansion
+            #     directive (a different analytic dimension) instead of breaking
+            #     immediately; only stop once a full rotation through every
+            #     directive yields nothing new.
+            #   * A wall-clock check bounds total synthesis time against
+            #     ``report_timeout_seconds`` and keeps the best-so-far (append-only)
+            #     report rather than discarding accumulated work on timeout.
+            # ``_markdown_word_count`` is the single counter used for budgeting,
+            # expansion, and enforcement (Property P7).
+            directive_index = 0
+            consecutive_empty = 0
+            for _round_idx in range(expansion_rounds):
+                if perf_counter() - synthesis_start >= report_timeout_seconds:
+                    break
+                current_words = _markdown_word_count(content)
+                if current_words >= target_words:
+                    break
 
-            missing_words = max(target_words - current_words, 0)
-            continuation_prompt = (
-                f"Expand the following {language_label} medical report by APPENDING new content only.\n"
-                "Do NOT rewrite previous sections.\n"
-                "Do NOT duplicate any existing H2 section title.\n"
-                "Do NOT add internal pipeline labels like [scope_question], deep_beta_scope, retrieval_budgeting, or execution logs.\n"
-                "Add deeper analysis with practical clinical caveats, subgroup handling, uncertainty, and scientific interpretation.\n"
-                f"Need at least ~{missing_words} additional words.\n"
-                "Append supplementary sections using H3/H4 headings and additional tables where useful.\n"
-                "Return Markdown only.\n\n"
-                f"topic={topic}\n"
-                f"existing_report={content}\n"
-                f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
-                f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
-                f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
-                f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
-                f"verification_summary={json.dumps(verification_summary, ensure_ascii=False)}\n"
-            )
-            continuation_response = client.generate(
-                prompt=continuation_prompt,
-                system_prompt=system_prompt,
-                max_tokens=report_max_tokens,
-            )
-            continuation = _sanitize_deep_beta_markdown_output(
-                str(continuation_response.content or "").strip()
-            )
-            if not continuation or continuation in content:
-                break
-            content = f"{content.rstrip()}\n\n{continuation.strip()}"
+                missing_words = max(target_words - current_words, 0)
+                focus_line = _EXPANSION_DIRECTIVES[
+                    directive_index % len(_EXPANSION_DIRECTIVES)
+                ]
+                directive_index += 1
+                continuation_prompt = _build_continuation_prompt(focus_line, missing_words)
+                continuation_response = client.generate(
+                    prompt=continuation_prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=report_max_tokens,
+                )
+                continuation = _sanitize_deep_beta_markdown_output(
+                    str(continuation_response.content or "").strip()
+                )
+                if not continuation or continuation in content:
+                    # Empty/duplicate pass: try a different directive before
+                    # giving up (Requirement 2.2). Stop only after a full
+                    # rotation through every directive produced no new content.
+                    consecutive_empty += 1
+                    if consecutive_empty >= len(_EXPANSION_DIRECTIVES):
+                        break
+                    continue
+                consecutive_empty = 0
+                content = f"{content.rstrip()}\n\n{continuation.strip()}"
+        else:
+            for _round_idx in range(expansion_rounds):
+                current_words = _markdown_word_count(content)
+                if current_words >= target_words:
+                    break
+
+                missing_words = max(target_words - current_words, 0)
+                continuation_prompt = _build_continuation_prompt(
+                    _LEGACY_EXPANSION_FOCUS, missing_words
+                )
+                continuation_response = client.generate(
+                    prompt=continuation_prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=report_max_tokens,
+                )
+                continuation = _sanitize_deep_beta_markdown_output(
+                    str(continuation_response.content or "").strip()
+                )
+                if not continuation or continuation in content:
+                    break
+                content = f"{content.rstrip()}\n\n{continuation.strip()}"
+
+        # R18.1/R18.3: enforce the deep_beta section + minimum-word contract *by
+        # generation* before any programmatic fallback/padding runs below. When the
+        # draft is missing required dossier headings or is still short of the resolved
+        # minimum word count, run an additional bounded generation pass that asks the
+        # model to append the deficient sections (by their exact H2 titles) and enough
+        # substantive content to reach the minimum. The existing markdown naturalness
+        # sanitizers (R18.4) are preserved by routing every pass through
+        # ``_sanitize_deep_beta_markdown_output``. Gated behind ``synthesis_v2_enabled``
+        # so the flags-off path stays byte-for-byte the pre-feature legacy behavior
+        # (design Property P8 / Requirement 20.2 flags-off equivalence).
+        if mode == "deep_beta" and settings.synthesis_v2_enabled:
+            for _ in range(2):
+                if perf_counter() - synthesis_start >= report_timeout_seconds:
+                    # Wall-clock bound: keep the best-so-far report rather than
+                    # spending more time on enrichment (Requirement 2.4).
+                    break
+                missing_headings = _deep_beta_missing_required_headings(content, answer_language)
+                word_deficit = max(min_words - _markdown_word_count(content), 0)
+                if not missing_headings and word_deficit <= 0:
+                    break
+                missing_section_lines = "\n".join(missing_headings)
+                section_fill_prompt = (
+                    f"Complete the following {language_label} medical research report so it "
+                    "satisfies its section and length contract.\n"
+                    "Output valid GitHub-Flavored Markdown only, no HTML.\n"
+                    "APPEND new content only; do NOT rewrite or duplicate existing sections.\n"
+                    "Add each of these required H2 sections, using the exact heading text, "
+                    "with concrete, evidence-grounded, clinically actionable analysis:\n"
+                    f"{missing_section_lines or '(all required sections already present)'}\n"
+                    f"After adding the required sections, ensure the full report reaches at least "
+                    f"{min_words} words by deepening analysis (about {word_deficit} more words still needed).\n"
+                    f"- keep every heading, label, bullet, and sentence in {language_label}\n"
+                    "- do not expose internal pipeline tags, execution logs, or debug telemetry\n"
+                    "- do not prescribe dosage, do not diagnose\n\n"
+                    f"topic={topic}\n"
+                    f"existing_report={content}\n"
+                    f"citations={json.dumps(compact_citations, ensure_ascii=False)}\n"
+                    f"evidence_verification={json.dumps(evidence_verification or {}, ensure_ascii=False)}\n"
+                    f"verification_summary={json.dumps(verification_summary, ensure_ascii=False)}\n"
+                    f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
+                )
+                section_fill_response = client.generate(
+                    prompt=section_fill_prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=report_max_tokens,
+                )
+                section_fill = _sanitize_deep_beta_markdown_output(
+                    str(section_fill_response.content or "").strip()
+                )
+                if not section_fill or section_fill in content:
+                    break
+                content = f"{content.rstrip()}\n\n{section_fill.strip()}"
 
         if _markdown_word_count(content) < target_words:
             pass_rows = [
@@ -3812,19 +5500,130 @@ def _context_title(item: dict[str, Any], fallback: str) -> str:
     return fallback
 
 
+# --- R6: Recency / trust-tier composite ranking ------------------------------------------
+# Reuses the trust_tier primitive already carried on retrieved rows (and read by the FIDES
+# trust/recency tightening in ``rag/pipeline.py``). The comparator orders surfaced sources by a
+# composite key ``(trust_tier asc, recency desc, base_score desc)`` so the highest-authority,
+# most-recent, best-scoring evidence sorts first (R6.1, R6.3). Ranking and the surfaced
+# provenance fields are gated on ``RESEARCH_RECENCY_TRUST_RANKING_ENABLED``; when the flag is off
+# the rows are returned untouched and no provenance is attached, preserving the byte-for-byte
+# legacy ordering and citation shape (R20.2).
+
+# Sentinels keep rows whose signal is unknown deterministically *after* rows that carry the
+# signal, without perturbing the relative order among themselves.
+_UNKNOWN_TRUST_TIER_RANK = 99
+_UNKNOWN_RECENCY_RANK = 1  # sorts after any "-year" key, which is always negative
+
+
+def _row_metadata_value(row: Any, key: str) -> Any:
+    """Read ``key`` from a context row, top-level or nested under ``metadata``."""
+
+    if not isinstance(row, dict):
+        return None
+    if row.get(key) is not None:
+        return row.get(key)
+    nested = row.get("metadata")
+    if isinstance(nested, dict):
+        return nested.get(key)
+    return None
+
+
+def _row_trust_tier(row: Any) -> int | None:
+    """Parse a row's ``trust_tier`` into the ``{1,2,3,4}`` authority band (else ``None``)."""
+
+    try:
+        tier = int(_row_metadata_value(row, "trust_tier"))
+    except (TypeError, ValueError):
+        return None
+    return tier if 1 <= tier <= 4 else None
+
+
+def _row_effective_date(row: Any) -> str | None:
+    """Best-effort publication / effective date string for a row (``None`` when absent)."""
+
+    for key in ("published_at", "effective_date", "date"):
+        value = _row_metadata_value(row, key)
+        if value:
+            return str(value)
+    return None
+
+
+def _row_recency_year(row: Any) -> int | None:
+    """Extract a 4-digit year from a row's date metadata (``None`` when undeterminable)."""
+
+    raw = _row_effective_date(row)
+    if not raw:
+        return None
+    match = re.search(r"(\d{4})", raw)
+    if not match:
+        return None
+    year = int(match.group(1))
+    return year if 1000 <= year <= 9999 else None
+
+
+def _row_source_type(row: Any) -> str | None:
+    """Source-type label for a row (``None`` when absent)."""
+
+    value = _row_metadata_value(row, "source_type")
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _composite_source_rank_key(row: dict[str, Any]) -> tuple[int, float, float]:
+    """Composite ranking key ``(trust_tier asc, recency desc, base_score desc)``.
+
+    Lower tuples sort first, so a higher-authority source (lower ``trust_tier``) leads; among
+    equal tiers the more recent source leads; among equal tier + recency the higher base score
+    leads (R6.1, R6.3). Rows missing a signal fall back to a sentinel so they sort after rows
+    that carry it. The key is a total order, so :func:`sorted` is deterministic and the ranking
+    is monotonic in each factor.
+    """
+
+    tier = _row_trust_tier(row)
+    tier_key = tier if tier is not None else _UNKNOWN_TRUST_TIER_RANK
+    year = _row_recency_year(row)
+    recency_key = float(-year) if year is not None else float(_UNKNOWN_RECENCY_RANK)
+    score_key = -_safe_float(row.get("score"))
+    return (tier_key, recency_key, score_key)
+
+
+def _rank_sources_by_recency_trust(
+    rows: list[dict[str, Any]], *, enabled: bool
+) -> list[dict[str, Any]]:
+    """Order retrieved sources by the composite recency/trust-tier key (R6.1).
+
+    Gated on ``RESEARCH_RECENCY_TRUST_RANKING_ENABLED``; when disabled the input is returned
+    unchanged so legacy ordering is byte-for-byte preserved (R20.2). Python's sort is stable, so
+    rows tying on the composite key keep their original relative order — the ranking stays
+    deterministic.
+    """
+
+    if not enabled:
+        return rows
+    valid_rows = [row for row in rows if isinstance(row, dict)]
+    return sorted(valid_rows, key=_composite_source_rank_key)
+
+
 def _build_citations(
     topic: str,
     retrieved_context: list[dict[str, Any]],
     uploaded_documents: list[dict[str, Any]],
     *,
     research_mode: str | None = None,
+    rank_enabled: bool = False,
 ) -> list[Citation]:
     handoff_profile = _resolve_evidence_handoff_profile(research_mode)
     citations: list[Citation] = []
     seen_source_ids: set[str] = set()
 
+    # R6.1: order surfaced sources by the composite recency/trust-tier key before slicing the
+    # citation window. A no-op when ``rank_enabled`` is False (legacy ordering preserved).
+    ranked_context = _rank_sources_by_recency_trust(retrieved_context, enabled=rank_enabled)
+
     for idx, item in enumerate(
-        retrieved_context[: handoff_profile["citation_context_rows"]],
+        ranked_context[: handoff_profile["citation_context_rows"]],
         start=1,
     ):
         if not isinstance(item, dict):
@@ -3844,6 +5643,9 @@ def _build_citations(
         if isinstance(score, (int, float)):
             relevance = f"{relevance} Score={float(score):.4f}."
 
+        # R6.2: surface trust_tier and publication/effective date per source, but only when the
+        # ranking flag is on so a flags-off run keeps the legacy citation shape (R20.2). Unset
+        # fields are stripped by ``_citation_as_payload``.
         citations.append(
             Citation(
                 source_id=source_id,
@@ -3851,6 +5653,9 @@ def _build_citations(
                 title=title,
                 url=url,
                 relevance=relevance,
+                trust_tier=_row_trust_tier(item) if rank_enabled else None,
+                source_type=_row_source_type(item) if rank_enabled else None,
+                published_at=_row_effective_date(item) if rank_enabled else None,
             )
         )
 
@@ -4321,6 +6126,162 @@ def _build_deep_subqueries(
         if len(deduped) >= pass_count:
             break
     return deduped
+
+
+# --- Agentic query decomposition (R4) ------------------------------------------------------
+# A bounded, deterministic decomposition of a compound research question into an ordered set
+# of sub-questions. It runs only when ``RESEARCH_QUERY_DECOMPOSITION_ENABLED`` is on and the
+# research mode is deep/deep_beta; retrieval then runs once per returned sub-question (R4.2).
+# Decomposition is intentionally deterministic (no network/LLM dependency) so it stays cheap,
+# reproducible, and easy to test, while still broadening retrieval coverage facet-by-facet.
+
+# Conjunction/separator markers used to split a compound question into clause sub-questions.
+# Vietnamese forms are matched directly (with diacritics) alongside English equivalents.
+_QUERY_CLAUSE_SPLIT_RE = re.compile(
+    r"(?:\bcùng với\b|\bkết hợp với\b|\bkết hợp\b|\bso với\b|\bvà\b"
+    r"|\band\b|\bversus\b|\bvs\.?\b|[;])",
+    re.IGNORECASE,
+)
+
+# Facet expansions broaden coverage across the evidence dimensions a researcher expects.
+_QUERY_DECOMPOSITION_FACETS_VI: tuple[str, ...] = (
+    "{topic}: hiệu quả và bằng chứng lâm sàng",
+    "{topic}: an toàn, chống chỉ định và tương tác",
+    "{topic}: khuyến nghị hướng dẫn và áp dụng thực hành",
+)
+_QUERY_DECOMPOSITION_FACETS_EN: tuple[str, ...] = (
+    "{topic}: efficacy and clinical evidence",
+    "{topic}: safety, contraindications and interactions",
+    "{topic}: guideline recommendations and practical application",
+)
+
+
+def _split_query_clauses(topic: str) -> list[str]:
+    """Split a compound research question into clause-level sub-questions.
+
+    Returns the discovered clauses only when the query actually decomposes into two or
+    more substantial parts; otherwise returns an empty list so the caller can fall back to
+    facet-based expansion. Each clause must carry at least three words to avoid fragments.
+    """
+
+    parts = _QUERY_CLAUSE_SPLIT_RE.split(str(topic or ""))
+    clauses: list[str] = []
+    for part in parts:
+        clause = " ".join(str(part).split()).strip(" ,.-")
+        if len(clause.split()) >= 3:
+            clauses.append(clause)
+    return clauses if len(clauses) >= 2 else []
+
+
+def _decompose_into_subquestions(
+    topic: str,
+    *,
+    keywords: list[str],
+    seed_queries: list[str],
+    max_subqueries: int,
+) -> list[str]:
+    """Build an ordered, de-duplicated set of sub-questions for ``topic`` (R4.1).
+
+    Ordering: the original query first, then any plan-provided seed queries, clause-level
+    splits of compound questions, evidence-facet expansions, and finally a keyword-targeted
+    sub-question. The list is capped at ``max_subqueries``.
+    """
+
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    def _add(candidate: Any) -> None:
+        text = " ".join(str(candidate or "").split()).strip()
+        if not text:
+            return
+        key = text.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        ordered.append(text)
+
+    # 1. The original query is always the first sub-question.
+    _add(topic)
+    # 2. Explicit plan-provided seed queries (e.g. query_plan.decomposition).
+    for seed in seed_queries:
+        _add(seed)
+    # 3. Clause-level decomposition of compound questions.
+    for clause in _split_query_clauses(topic):
+        _add(clause)
+    # 4. Evidence-facet expansions to broaden retrieval coverage.
+    _, _, language_hint = _detect_language_hint(topic)
+    facets = (
+        _QUERY_DECOMPOSITION_FACETS_EN
+        if language_hint == "en"
+        else _QUERY_DECOMPOSITION_FACETS_VI
+    )
+    for facet in facets:
+        _add(facet.format(topic=topic))
+    # 5. Keyword-targeted sub-question.
+    cleaned_keywords = [item.strip() for item in keywords if isinstance(item, str) and item.strip()]
+    if cleaned_keywords:
+        _add(f"{topic} — {', '.join(cleaned_keywords[:4])}")
+
+    cap = max(1, int(max_subqueries))
+    return ordered[:cap]
+
+
+def decompose_query(
+    topic: str,
+    *,
+    enabled: bool,
+    mode: str,
+    keywords: list[str] | None = None,
+    seed_queries: list[str] | None = None,
+    max_subqueries: int = 6,
+) -> list[str]:
+    """Decompose a research query into an ordered set of sub-questions (R4).
+
+    Returns the original query as a single-element plan ``[topic]`` when decomposition is
+    disabled or the mode is not ``deep``/``deep_beta`` (R4.3, legacy single-query behavior),
+    and also falls back to ``[topic]`` when decomposition yields nothing (R4.5). When enabled
+    for deep/deep_beta the result is an ordered, de-duplicated list of sub-questions; the
+    orchestrator runs retrieval exactly once per returned sub-question (R4.2).
+    """
+
+    clean_topic = str(topic or "").strip()
+    if not clean_topic:
+        return []
+    if not enabled or mode not in {"deep", "deep_beta"}:
+        return [clean_topic]
+    subquestions = _decompose_into_subquestions(
+        clean_topic,
+        keywords=keywords or [],
+        seed_queries=seed_queries or [],
+        max_subqueries=max_subqueries,
+    )
+    return subquestions or [clean_topic]
+
+
+def _gap_fill_should_run(
+    retrieved_count: int,
+    *,
+    enabled: bool,
+    min_results: int,
+    max_passes: int,
+    passes_used: int,
+) -> bool:
+    """Decide whether one more bounded gap-fill retrieval pass may run (R5).
+
+    Returns ``True`` only when iterative gap-fill is enabled, the sub-question has
+    insufficient supporting evidence (fewer than ``min_results`` docs, R5.1), and the
+    cumulative gap-fill pass budget has not been exhausted (R5.2, R5.3). The caller
+    increments ``passes_used`` after each executed pass, so the cumulative count can
+    never exceed ``max_passes`` and the loop is guaranteed to terminate.
+    """
+
+    if not enabled:
+        return False
+    if max_passes <= 0:
+        return False
+    if retrieved_count >= max(1, min_results):
+        return False
+    return passes_used < max_passes
 
 
 def _deep_research_methodology(*, topic: str, subqueries: list[str]) -> dict[str, Any]:
@@ -6479,6 +8440,19 @@ def _sanitize_user_facing_answer_markdown(
             sanitized,
             answer_language=answer_language,
         )
+    if mode in {"deep", "deep_beta"}:
+        # Deep modes keep analytic prose, but any leaked FIDES-style claim/verdict/
+        # confidence debug table is internal telemetry and must not reach the body.
+        sanitized = re.sub(
+            r"(?:^|\n)\s*\|?\s*claim\s*\|?\s*verdict\s*\|?\s*confidence[^\n]*\n(?:\s*\|?.*?\n){1,30}",
+            "\n",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+    # Final defense-in-depth pass: strip any internal pipeline / planner /
+    # telemetry tags that leaked inline past the structured section removal
+    # (Requirement 3.3 / Property P9).
+    sanitized = _strip_internal_pipeline_tags(sanitized)
     sanitized = re.sub(r"\n{3,}", "\n\n", sanitized).strip()
     return sanitized
 
@@ -6575,6 +8549,72 @@ def _coerce_reasoning_queries(value: Any, *, limit: int = 6) -> list[str]:
     return _dedupe_query_list([str(item) for item in value], limit=limit)
 
 
+def _request_targeted_enrichment_section(
+    *,
+    client: DeepSeekClient,
+    system_prompt: str,
+    report_markdown: str,
+    topic: str,
+    citations: list[Citation],
+    answer_language: str,
+    min_chars: int,
+) -> str:
+    """Request ONE targeted, evidence-grounded section to grow a short report.
+
+    Synthesis-v2 enrichment (Requirement 2.3 / design section E, Property P5):
+    instead of immediately padding a sub-minimum ``deep_beta`` report with the
+    static auto-appendix log table, ask the model for a single substantive
+    section that fills the largest missing analytic dimension, grounded only in
+    the citations/evidence already retrieved (no fabricated sources). Returns
+    sanitized Markdown, or ``""`` when the model returns nothing usable so the
+    caller can fall back to the legacy appendix. Pure w.r.t. the report (does
+    not mutate inputs) and PII-free in telemetry (it traces nothing).
+    """
+
+    language_label = "English" if answer_language == "en" else "Vietnamese"
+    compact_citations = [
+        {
+            "source_id": item.source_id,
+            "source": item.source,
+            "title": item.title,
+            "url": item.url,
+            "relevance": item.relevance,
+        }
+        for item in citations[:24]
+    ]
+    missing_words = max(int(min_chars) // 6, 200)
+    enrichment_prompt = (
+        f"The following {language_label} medical research report is shorter than "
+        "its required minimum length. Add ONE substantive, evidence-grounded "
+        "section that deepens the single most valuable missing analytic "
+        "dimension for this topic (for example: comparative effectiveness, "
+        "safety/monitoring, subgroup considerations, or evidence gaps and "
+        "uncertainty).\n"
+        "Output valid GitHub-Flavored Markdown only, no HTML.\n"
+        "APPEND new content only as one new H2 section; do NOT rewrite, repeat, "
+        "or duplicate any existing section.\n"
+        "Ground every major claim in the supplied citations and state evidence "
+        "limitations explicitly; do NOT fabricate citations or sources to reach "
+        "a length target.\n"
+        f"Aim for roughly {missing_words} additional words of dense analysis.\n"
+        f"- keep every heading, label, bullet, and sentence in {language_label}\n"
+        "- do not expose internal pipeline tags, execution logs, or debug telemetry\n"
+        "- do not prescribe dosage, do not provide a definitive diagnosis\n\n"
+        f"topic={topic}\n"
+        f"existing_report={report_markdown}\n"
+        f"citations={json.dumps(compact_citations, ensure_ascii=False)}\n"
+    )
+    raw = _deep_beta_markdown_call(
+        client=client,
+        system_prompt=system_prompt,
+        prompt=enrichment_prompt,
+    )
+    enriched = _sanitize_deep_beta_markdown_output(str(raw or "").strip())
+    if not enriched or enriched in report_markdown:
+        return ""
+    return enriched
+
+
 def _ensure_min_deep_beta_report(
     *,
     report_markdown: str,
@@ -6582,10 +8622,38 @@ def _ensure_min_deep_beta_report(
     citations: list[Citation],
     deep_pass_summaries: list[dict[str, Any]],
     min_chars: int,
+    client: DeepSeekClient | None = None,
+    system_prompt: str | None = None,
+    answer_language: str = "vi",
 ) -> str:
     cleaned = str(report_markdown or "").strip()
-    if len(cleaned) >= max(400, int(min_chars)):
+    threshold = max(400, int(min_chars))
+    if len(cleaned) >= threshold:
         return cleaned
+
+    # Synthesis-v2 (Requirement 2.3 / Property P5): before resorting to the
+    # static appendix padding below, request ONE targeted, evidence-grounded
+    # section from the LLM using the available citations/evidence. Gated behind
+    # ``synthesis_v2_enabled`` AND a usable client so the flags-off / no-client
+    # path stays byte-for-byte identical to the legacy appendix fallback
+    # (design Property P8 / Requirement 6.2).
+    if settings.synthesis_v2_enabled and client is not None:
+        enriched = _request_targeted_enrichment_section(
+            client=client,
+            system_prompt=system_prompt or "",
+            report_markdown=cleaned,
+            topic=topic,
+            citations=citations,
+            answer_language=answer_language,
+            min_chars=threshold,
+        )
+        if enriched:
+            candidate = f"{cleaned}\n\n{enriched}".strip()
+            if len(candidate) >= threshold:
+                return candidate
+            # Keep the substantive enrichment, then let the appendix below act
+            # only as a final top-up rather than the sole padding source.
+            cleaned = candidate
 
     citations_md = "\n".join(_citation_markdown_lines(citations))
     pass_rows = deep_pass_summaries[:10]
@@ -6627,13 +8695,25 @@ def _ensure_min_deep_beta_report(
 def run_research_tier2(payload: dict[str, Any]) -> dict:
     topic = _normalize_topic(payload)
     research_mode = _normalize_research_mode(payload)
+    # PICO-structured question framing (R7). Runs on the clean query before any
+    # personalization suffix, retrieval, or synthesis so that an undetermined element
+    # rejects the request (PicoIncompleteError) instead of fabricating a value (R7.2).
+    # Returns None when the flag is off or the query is not clinical (R7.4).
+    pico_frame = _maybe_build_pico_frame(topic)
     retrieval_stack_mode = _normalize_retrieval_stack_mode(payload)
     answer_language = _normalize_answer_language(payload)
     personal_mode = _normalize_personal_mode(payload)
-    personal_context = _extract_personal_context(payload) if personal_mode else {}
+    # clara-research R15.1: personalization (PHR + medicine cabinet) is incorporated into the
+    # synthesis only for deep / deep_beta runs. Fast mode never personalizes (R15.2 invariant),
+    # so even if a payload carries personal_context in fast mode it is ignored here (defense in
+    # depth). Consent gating is enforced API-side: personal_context is only present in the
+    # payload when the user has granted consent, so no consent ⇒ no personal_context ⇒ no
+    # personalization (R15.3).
+    personalization_allowed = personal_mode and research_mode in {"deep", "deep_beta"}
+    personal_context = _extract_personal_context(payload) if personalization_allowed else {}
     personal_context_suffix = (
         _build_personal_context_suffix(personal_context, answer_language=answer_language)
-        if personal_mode and personal_context
+        if personalization_allowed and personal_context
         else ""
     )
     if personal_context_suffix:
@@ -7010,6 +9090,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     if isinstance(planner_trace.get("planner_hints"), dict):
         planner_trace["planner_hints"]["deep_pass_count"] = deep_pass_count
     deep_subqueries: list[str] = [topic]
+    # R5.4: cumulative count of bounded gap-fill retrieval passes executed across all
+    # sub-questions. Stays 0 when ``RESEARCH_GAP_FILL_ENABLED`` is off (legacy behavior).
+    deep_gap_fill_passes: int = 0
     deep_research_profiles: list[dict[str, Any]] = []
     deep_research_method: dict[str, Any] = {}
     deep_pass_summaries: list[dict[str, Any]] = []
@@ -7089,6 +9172,53 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             }
         )
 
+    def _apply_query_decomposition(
+        legacy_subqueries: list[str],
+        *,
+        seed_queries: list[str],
+    ) -> list[str]:
+        """Override the legacy subquery plan with agentic decomposition when enabled (R4).
+
+        When ``RESEARCH_QUERY_DECOMPOSITION_ENABLED`` is off (or the mode is not deep/
+        deep_beta) the legacy multi-pass subqueries are returned unchanged so flags-off
+        behavior is byte-for-byte preserved (R4.3, R20.2). When on, the query is decomposed
+        into an ordered set of sub-questions; retrieval then runs once per sub-question
+        (R4.2) and the set is recorded in telemetry via ``search_plan.subqueries`` (R4.4).
+        Recording the decomposition flow event is best-effort: a failure is logged and the
+        run continues (R4.6).
+        """
+
+        if not settings.research_query_decomposition_enabled:
+            return legacy_subqueries
+        decomposed = decompose_query(
+            topic,
+            enabled=True,
+            mode=research_mode,
+            keywords=planner_hints.get("keywords", []),
+            seed_queries=seed_queries,
+            max_subqueries=max(1, deep_pass_count),
+        )
+        # R4.5: empty decomposition falls back to the original query.
+        resolved = decomposed or [topic]
+        try:
+            flow_events.append(
+                _event(
+                    stage="query_decomposition",
+                    status="completed",
+                    source_count=0,
+                    note=f"Query decomposed into {len(resolved)} sub-question(s).",
+                    component="planner",
+                    payload={
+                        "subqueries": resolved,
+                        "subquery_count": len(resolved),
+                        "research_mode": research_mode,
+                    },
+                )
+            )
+        except Exception:  # pragma: no cover - telemetry must never abort the run (R4.6)
+            logger.warning("query_decomposition telemetry write failed", exc_info=True)
+        return resolved
+
     if research_mode == "deep":
         query_plan = (
             planner_hints.get("query_plan")
@@ -7107,6 +9237,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             str(query_plan.get("canonical_query") or topic),
             planner_hints.get("keywords", []),
             deep_pass_count,
+            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+        )
+        subqueries = _apply_query_decomposition(
+            subqueries,
             seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
         )
         deep_subqueries = subqueries
@@ -7267,6 +9401,113 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 )
             )
 
+            # --- R5: bounded iterative gap-fill retrieval -------------------------
+            # When a sub-question is below ``rag_min_results`` supporting docs, run
+            # additional retrieval pass(es) for that sub-question, bounded by
+            # ``RESEARCH_GAP_FILL_MAX_PASSES`` across the whole run (R5.1, R5.2). The
+            # loop stops at the bound and synthesis proceeds (R5.3); the executed count
+            # is carried into the result/telemetry (R5.4). Disabled flag => no-op.
+            gap_fill_min_results = max(1, int(settings.rag_min_results))
+            gap_fill_max_passes = max(0, int(settings.research_gap_fill_max_passes))
+            combined_retrieved_ids = list(pass_result.retrieved_ids)
+            while _gap_fill_should_run(
+                len(combined_retrieved_ids),
+                enabled=settings.research_gap_fill_enabled,
+                min_results=gap_fill_min_results,
+                max_passes=gap_fill_max_passes,
+                passes_used=deep_gap_fill_passes,
+            ):
+                deep_gap_fill_passes += 1
+                gap_fill_pass_no = deep_gap_fill_passes
+                gap_fill_started = perf_counter()
+                deep_pass_flow_events.append(
+                    _event(
+                        stage="deep_gap_fill_pass",
+                        status="started",
+                        source_count=0,
+                        note=(
+                            f"Gap-fill retrieval pass {gap_fill_pass_no} started for "
+                            f"sub-question {pass_index} (evidence below minimum)."
+                        ),
+                        component="retrieval",
+                        payload={
+                            "pass_index": pass_index,
+                            "gap_fill_pass": gap_fill_pass_no,
+                            "subquery": subquery,
+                            "evidence_count": len(combined_retrieved_ids),
+                            "min_results": gap_fill_min_results,
+                            "max_passes": gap_fill_max_passes,
+                        },
+                    )
+                )
+                _pause_between_pipeline_parts(multiplier=1.0)
+                gap_fill_result = pipeline.run(
+                    subquery,
+                    low_context_threshold=float(planner_hints["low_context_threshold"]),
+                    deepseek_fallback_enabled=deepseek_fallback_enabled,
+                    scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
+                    web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
+                    file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
+                    rag_sources=rag_sources,
+                    uploaded_documents=uploaded_documents,
+                    planner_hints={
+                        **planner_hints,
+                        "query_focus": f"deep_gap_fill_{pass_index}_{gap_fill_pass_no}",
+                        "reason_codes": [
+                            *planner_hints.get("reason_codes", []),
+                            f"deep_gap_fill_{pass_index}_{gap_fill_pass_no}",
+                        ],
+                    },
+                    generation_enabled=False,
+                    strict_deepseek_required=strict_deepseek_required,
+                    rag_reranker_enabled=rag_reranker_enabled_override,
+                    rag_graphrag_enabled=rag_graphrag_enabled_override,
+                    llm_runtime=llm_runtime,
+                )
+                if gap_fill_result.retrieved_context:
+                    deep_pass_contexts.append(gap_fill_result.retrieved_context)
+                for doc_id in gap_fill_result.retrieved_ids:
+                    if doc_id not in combined_retrieved_ids:
+                        combined_retrieved_ids.append(doc_id)
+                deep_pass_flow_events.extend(
+                    _normalize_retrieval_events(
+                        gap_fill_result.flow_events, default_component="deep_gap_fill"
+                    )
+                )
+                deep_pass_summaries.append(
+                    {
+                        "pass_index": pass_index,
+                        "gap_fill_pass": gap_fill_pass_no,
+                        "subquery": subquery,
+                        "retrieved_count": len(gap_fill_result.retrieved_ids),
+                        "doc_ids": list(gap_fill_result.retrieved_ids[:8]),
+                        "combined_count": len(combined_retrieved_ids),
+                        "duration_ms": round((perf_counter() - gap_fill_started) * 1000.0, 3),
+                        "kind": "gap_fill",
+                    }
+                )
+                deep_pass_flow_events.append(
+                    _event(
+                        stage="deep_gap_fill_pass",
+                        status="completed",
+                        source_count=len(gap_fill_result.retrieved_ids),
+                        note=(
+                            f"Gap-fill retrieval pass {gap_fill_pass_no} completed for "
+                            f"sub-question {pass_index}."
+                        ),
+                        component="retrieval",
+                        payload={
+                            "pass_index": pass_index,
+                            "gap_fill_pass": gap_fill_pass_no,
+                            "subquery": subquery,
+                            "retrieved_count": len(gap_fill_result.retrieved_ids),
+                            "combined_count": len(combined_retrieved_ids),
+                            "duration_ms": round((perf_counter() - gap_fill_started) * 1000.0, 3),
+                        },
+                        started_at=gap_fill_started,
+                    )
+                )
+
         flow_events.extend(deep_pass_flow_events)
         flow_events.append(
             _event(
@@ -7277,6 +9518,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 component="planner",
                 payload={
                     "pass_count": len(deep_pass_summaries),
+                    "gap_fill_passes": deep_gap_fill_passes,
                     "keywords": planner_hints.get("keywords", []),
                     "profiles": deep_research_profiles,
                     "methodology": deep_research_method,
@@ -7303,6 +9545,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             str(query_plan.get("canonical_query") or topic),
             planner_hints.get("keywords", []),
             deep_pass_count,
+            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+        )
+        subqueries = _apply_query_decomposition(
+            subqueries,
             seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
         )
         deep_subqueries = subqueries
@@ -8072,6 +10318,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
 
     citation_handoff = _resolve_evidence_handoff_profile(research_mode)
+    # R6.1: composite recency/trust-tier ranking is gated on its flag; default-off preserves the
+    # legacy citation ordering and shape (R20.2).
+    recency_trust_ranking_enabled = settings.research_recency_trust_ranking_enabled
     citation_context = effective_context
     if research_mode == "deep_beta" and len(citation_context) < citation_handoff["citation_context_rows"]:
         citation_context = _merge_retrieved_context(citation_context, [merged_context])
@@ -8081,6 +10330,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         citation_context,
         uploaded_documents,
         research_mode=research_mode,
+        rank_enabled=recency_trust_ranking_enabled,
     )
     if not citations and merged_context:
         citations = _build_citations(
@@ -8088,6 +10338,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             merged_context[: citation_handoff["citation_context_rows"]],
             uploaded_documents,
             research_mode=research_mode,
+            rank_enabled=recency_trust_ranking_enabled,
         )
     if not citations:
         trace_rows = _trace_rows_for_citation(retrieval_trace, research_mode=research_mode)
@@ -8097,6 +10348,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 trace_rows,
                 uploaded_documents,
                 research_mode=research_mode,
+                rank_enabled=recency_trust_ranking_enabled,
             )
     fallback_used = _infer_fallback_used(rag_result)
     generation_trace = (
@@ -8256,6 +10508,20 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "- Không tự ý thay đổi điều trị nếu chưa có tư vấn chuyên môn.\n"
             "- Khi có dấu hiệu nặng, ưu tiên liên hệ cơ sở y tế ngay."
         )
+    # R14 Role-Adaptive Output (gated). Select exactly one output profile by role and
+    # retain the decision-support disclaimer in every profile; when the disclaimer
+    # asset is unavailable the output is delivered without it and the omission is
+    # recorded (disclaimer_present=False, R14.5/R14.6). Both values are carried through
+    # the additive Tier2 payload builder. When the flag is off both stay None so the
+    # legacy payload shape is preserved (R20.2).
+    output_profile: str | None = None
+    disclaimer_present: bool | None = None
+    if settings.research_role_adaptive_output_enabled:
+        answer_markdown, output_profile, disclaimer_present = _apply_role_adaptive_output(
+            answer_markdown,
+            role=route.role,
+            answer_language=answer_language,
+        )
     answer_status = "warning" if fallback_used else "completed"
     flow_events.append(
         _event(
@@ -8334,6 +10600,35 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "summary": verification_matrix_summary,
         "contradiction_summary": contradiction_summary,
     }
+    # GRADE evidence-certainty + recommendation-strength labeling (R8). Derived from the
+    # verification-matrix key claims and the strongest supporting source's Evidence-Hierarchy
+    # rank + trust_tier. Returns None when the flag is off so the optional `grade` field is
+    # omitted and the legacy payload shape is preserved (R8.5, R20.2).
+    grade_labels = _assign_grade_labels(
+        verification_matrix_rows,
+        effective_context,
+        enabled=settings.research_grade_enabled,
+    )
+    # Evidence-agreement (Consensus) view + conflicting-evidence section (R9). Per-claim
+    # support/contrast/neutral counts are derived from the per-source NLI verdict (reusing
+    # classify_claim). Both return None when the flag is off so the optional payload fields are
+    # omitted and the legacy result shape is preserved (R9.1, R9.2, R9.4, R20.2).
+    consensus_view, conflicting_evidence = _compute_consensus_view(
+        verification_rows=verification_matrix_rows,
+        retrieved_context=effective_context,
+        enabled=settings.research_consensus_enabled,
+    )
+    # Claim-to-study traceability + Citation Registry (R11). Links each supported key claim to its
+    # specific supporting citation id(s), attaches per-citation provenance (study_id/source_type/
+    # trust_tier/date), and builds the registry appendix. Returns (None, None) when the flag is off
+    # so the optional payload fields are omitted and the legacy result shape is preserved (R20.2).
+    traced_claims, citation_registry = _build_claim_trace(
+        verification_rows=verification_matrix_rows,
+        citations=citations,
+        retrieved_context=effective_context,
+        grade_labels=grade_labels,
+        enabled=settings.research_claim_trace_enabled,
+    )
     if rule_verification_enabled:
         safety_override = _evaluate_safety_critical_override(
             rows=verification_matrix_rows,
@@ -9144,7 +11439,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "otel_trace_metadata": otel_trace_metadata,
         "otel_export": otel_export_status,
     }
-    citations_payload = [asdict(item) for item in citations]
+    citations_payload = [_citation_as_payload(item) for item in citations]
     compact_context_debug = _compact_context_debug(rag_result.context_debug)
 
     return {
@@ -9288,6 +11583,22 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "citations": citations_payload,
         # Backward-compat alias for clients still expecting `sources`.
         "sources": citations_payload,
+        # Additive, flag-gated Tier2 result fields. Each key is present only when its
+        # stage produced a value; otherwise it is omitted so the legacy payload shape
+        # is preserved (R20.2). Downstream tasks pass their artifacts here as they land.
+        **_build_tier2_optional_payload(
+            pico_frame=pico_frame,
+            grade=grade_labels,
+            consensus=consensus_view,
+            conflicting_evidence=(conflicting_evidence or None),
+            citation_registry=citation_registry,
+            traced_claims=traced_claims,
+            gap_fill_passes=(
+                deep_gap_fill_passes if settings.research_gap_fill_enabled else None
+            ),
+            output_profile=output_profile,
+            disclaimer_present=disclaimer_present,
+        ),
         "answer": answer_markdown,
         "answer_markdown": answer_markdown,
         "answer_format": "markdown",

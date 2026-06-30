@@ -28,6 +28,7 @@ from clara_api.core.security import (
     create_refresh_token,
     decode_refresh_token,
 )
+from clara_api.core.session_security import session_security
 from clara_api.db.models import AuthToken, User, UserConsent
 from clara_api.db.session import get_db
 from clara_api.schemas import (
@@ -160,20 +161,44 @@ def _consume_action_token(
     return record
 
 
-def _issue_refresh_session_token(db: Session, *, user: User) -> str:
+def _issue_refresh_session_token(
+    db: Session, *, user: User, raw_token: str | None = None
+) -> str:
     settings = get_settings()
-    raw_token = create_refresh_token(subject=user.email, role=user.role)
+    token_value = raw_token or create_refresh_token(subject=user.email, role=user.role)
     expires_at = datetime.now(tz=UTC) + timedelta(minutes=settings.jwt_refresh_minutes)
     db.add(
         AuthToken(
             user_id=user.id,
             token_type="refresh_jwt",
-            token_hash=_hash_action_token(raw_token),
+            token_hash=_hash_action_token(token_value),
             expires_at=expires_at,
         )
     )
     db.commit()
-    return raw_token
+    return token_value
+
+
+def _revoke_token_jti(token_payload: TokenPayload | dict[str, object]) -> None:
+    """Denylist a token's ``jti`` for its remaining lifetime (logout revocation).
+
+    No-op when the denylist flag is off (``SessionSecurity.revoke`` is itself
+    gated), when the payload lacks a ``jti``/``exp``, or when the token has
+    already expired. The TTL is derived from the token's own ``exp`` claim so
+    the denylist entry disappears at the token's natural expiry (Requirement
+    2.4). No PII is read or stored — only the opaque ``jti``.
+    """
+    jti = str(token_payload.get("jti", "")).strip()
+    exp = token_payload.get("exp")
+    if not jti or exp is None:
+        return
+    try:
+        remaining_seconds = int(exp) - int(time.time())
+    except (TypeError, ValueError):
+        return
+    if remaining_seconds <= 0:
+        return
+    session_security.revoke(jti, remaining_seconds)
 
 
 def _resolve_auto_provision_role(email: str) -> str:
@@ -657,6 +682,22 @@ def refresh_token(
             decoded = decode_refresh_token(candidate)
         except HTTPException:
             continue
+        # Refresh-rotation reuse detection (Requirements 2.3): when rotation is
+        # enabled, a refresh jti that was already rotated must never be honored.
+        # Reject the replay and record a no-PII reuse-detection event. Gated by
+        # the flag, so behavior is unchanged when rotation is off.
+        candidate_jti = str(decoded.get("jti", "")).strip()
+        if (
+            settings.hardening_refresh_rotation_enabled
+            and candidate_jti
+            and session_security.is_refresh_reused(candidate_jti)
+        ):
+            session_security.record_reuse(candidate_jti)
+            _clear_auth_cookies(response)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token đã bị thu hồi do phát hiện tái sử dụng",
+            )
         consumed = _consume_refresh_session_token(db, raw_token=candidate)
         if consumed:
             token_payload = decoded
@@ -694,7 +735,16 @@ def refresh_token(
 
     role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
     access_token = create_access_token(subject=user.email, role=role)
-    refresh_token = _issue_refresh_session_token(db, user=user)
+    if settings.hardening_refresh_rotation_enabled:
+        # Rotate: mint a new refresh token and invalidate the presented jti so a
+        # later replay is detected (Requirements 2.2, 2.3). The DB session record
+        # is still written for the new token to preserve the existing
+        # single-use/consume flow.
+        old_jti = str(token_payload.get("jti", "")).strip()
+        rotated_refresh, _new_jti = session_security.rotate_refresh(old_jti, user.email, role)
+        refresh_token = _issue_refresh_session_token(db, user=user, raw_token=rotated_refresh)
+    else:
+        refresh_token = _issue_refresh_session_token(db, user=user)
     _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
     return LoginResponse(access_token=access_token, refresh_token=refresh_token, role=role)
 
@@ -839,16 +889,32 @@ def change_password(
 
 @router.post("/logout")
 def logout(
+    request: Request,
     response: Response,
     token_payload: TokenPayload | None = Depends(get_optional_current_token),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    settings = get_settings()
     user = None
     if token_payload and token_payload.sub:
         user = db.execute(select(User).where(User.email == token_payload.sub)).scalar_one_or_none()
     revoked_count = 0
     if user:
         revoked_count = _revoke_refresh_sessions(db, user_id=user.id)
+    # Denylist the presented access + refresh jti(s) for their remaining TTL so
+    # they are rejected on subsequent requests until natural expiry
+    # (Requirement 2.4). Gated by the flag; a no-op when the denylist is off.
+    if settings.hardening_token_denylist_enabled:
+        if token_payload:
+            _revoke_token_jti(token_payload)
+        refresh_cookie = request.cookies.get(settings.auth_cookie_refresh_name, "").strip()
+        if refresh_cookie:
+            try:
+                refresh_payload = decode_refresh_token(refresh_cookie)
+            except HTTPException:
+                refresh_payload = None
+            if refresh_payload is not None:
+                _revoke_token_jti(refresh_payload)
     _clear_auth_cookies(response)
     return {"logged_out": True, "revoked_refresh_sessions": revoked_count}
 

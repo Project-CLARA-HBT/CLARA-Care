@@ -382,3 +382,130 @@ def test_rxnav_status_surfaced_not_in_source_errors(monkeypatch: pytest.MonkeyPa
     assert "rxnav" not in metadata["source_errors"]
     # rxnav chết KHÔNG được làm flip fallback_used khi openfda đã có tín hiệu
     assert metadata["fallback_used"] is False
+
+
+# ---- Offline / degraded-mode fallback (Req 6.1, 6.2, 6.4, 6.5) ----
+
+
+def test_fallback_used_recorded_when_external_enabled_but_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Req 6.1 / 6.2: when external lookup is requested but unavailable, the
+    analysis still returns a local-rules result and records ``fallback_used``.
+    """
+
+    def _fake_fetch_ddi_context(self: object, medications: list[str]) -> ExternalDDIResult:
+        return ExternalDDIResult(source_errors={"rxnav": ["timeout"]})
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard.DrugSourceClient.fetch_ddi_context",
+        _fake_fetch_ddi_context,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    # Local curated alert is still produced (degraded path is not empty).
+    assert len(result["ddi_alerts"]) >= 1
+    assert result["metadata"]["fallback_used"] is True
+    # Not the fail-closed path: the curated store loaded fine.
+    assert result["metadata"].get("rules_unavailable", False) is False
+
+
+def test_fallback_used_false_when_no_external_lookup_needed() -> None:
+    """Req 6.2: with fewer than two distinct medicines no external lookup is
+    attempted, so there is no degraded path and ``fallback_used`` stays False."""
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["metadata"]["fallback_used"] is False
+    assert "rules_unavailable" not in result["metadata"]
+
+
+def test_curated_store_unreadable_fails_closed_no_fabricated_all_clear(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Req 6.4 / 6.5: when the curated rule store cannot be read, the analysis
+    fails closed with a safe Vietnamese message and MUST NOT fabricate an
+    all-clear ("no interaction") result."""
+
+    def _empty_rules() -> tuple[list, str]:
+        return [], "unknown"
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard._load_local_ddi_rules",
+        _empty_rules,
+    )
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    metadata = result["metadata"]
+    # Degraded path is explicitly flagged and treated as fallback.
+    assert metadata["rules_unavailable"] is True
+    assert metadata["fallback_used"] is True
+    # Non-committal risk level — never a fabricated low/all-clear.
+    assert result["risk"]["level"] == "unknown"
+    assert result["risk"]["level"] != "low"
+    assert result["ddi_alerts"] == []
+    # The recommendation explicitly states the check could not be completed and
+    # is NOT an all-clear.
+    recommendation = result["recommendation"]
+    assert "chưa thể hoàn tất" in recommendation.lower()
+    assert "không có tương tác" in recommendation
+    # No fabricated reassurance copy.
+    assert "chưa thấy nguy cơ" not in recommendation.lower()
+
+
+def test_curated_store_unreadable_fail_closed_with_real_loader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the real loader: point the curated path at a nonexistent file and
+    clear its cache so ``_load_local_ddi_rules`` returns empty, then assert the
+    analysis fails closed (Req 6.4)."""
+    from pathlib import Path
+
+    monkeypatch.setattr(
+        "clara_ml.agents.careguard._LOCAL_DDI_RULES_PATH",
+        Path("/nonexistent/careguard_ddi_rules.v1.json"),
+    )
+    monkeypatch.setattr("clara_ml.agents.careguard._LOCAL_DDI_RULES_CACHE_MTIME_NS", None)
+    monkeypatch.setattr("clara_ml.agents.careguard._LOCAL_DDI_RULES_CACHE_RULES", [])
+    monkeypatch.setattr("clara_ml.agents.careguard._LOCAL_DDI_RULES_CACHE_VERSION", "unknown")
+
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["metadata"]["rules_unavailable"] is True
+    assert result["risk"]["level"] == "unknown"
+    assert result["ddi_alerts"] == []
+
+
+def test_normal_path_does_not_set_rules_unavailable() -> None:
+    """Byte-equivalence guard: the normal (rules-present) path never adds the
+    ``rules_unavailable`` metadata key (Req 12.2)."""
+    result = run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert "rules_unavailable" not in result["metadata"]
+    assert result["risk"]["level"] in {"low", "medium", "high", "critical"}

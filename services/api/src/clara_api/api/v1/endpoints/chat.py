@@ -5,8 +5,11 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.compliance.service import ComplianceService
+from clara_api.compliance.transfer import LLM_PROCESSOR, LLM_PURPOSE
 from clara_api.core.attribution import (
     attach_attribution,
     build_attribution,
@@ -18,6 +21,7 @@ from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.flow import get_chat_flow_event_persister
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.db.models import User
 from clara_api.db.session import get_db
 from clara_api.schemas import ChatRequest, ChatResponse, RagFlowConfig
 
@@ -167,6 +171,51 @@ def _safe_chat_fallback(message: str, role: str, reason: str) -> dict[str, Any]:
         "model_used": "api-safe-fallback-v1",
         "fallback_reason": reason,
         "query_echo": message,
+    }
+
+
+_CROSS_BORDER_DEGRADED_NOTICE = (
+    "Bạn chưa đồng ý cho phép xử lý dữ liệu xuyên biên giới, nên CLARA tạm thời "
+    "dùng chế độ nội địa rút gọn (degraded) và KHÔNG gửi nội dung nhận dạng được "
+    "ra mô hình đặt ngoài Việt Nam. Bạn nên ưu tiên phác đồ chính thống, đối chiếu "
+    "tương tác thuốc quan trọng, và trao đổi bác sĩ/dược sĩ khi có bệnh nền hoặc dấu "
+    "hiệu nặng. Để nhận câu trả lời đầy đủ hơn, bạn có thể bật đồng ý xử lý xuyên "
+    "biên giới trong Trung tâm quyền riêng tư."
+)
+
+
+def _resolve_user_id(db: Session, token: TokenPayload) -> int | None:
+    """Resolve the numeric user id for the authenticated subject.
+
+    Returns ``None`` when no matching user row exists; the cross-border guard
+    treats a missing subject as "no consent" and degrades, which fails closed
+    for processing while keeping safety surfaces intact.
+    """
+
+    user_id = db.execute(select(User.id).where(User.email == token.sub)).scalar_one_or_none()
+    return int(user_id) if user_id is not None else None
+
+
+def _cross_border_degraded_payload(message: str, role: str, reason: str) -> dict[str, Any]:
+    """Local deterministic answer used when cross-border transfer is gated off.
+
+    No identifiable content is transmitted offshore: this payload is built
+    entirely in-process. ``model_used`` uses the ``local-synth-*`` sentinel so
+    the response-envelope disclosure labels it ``is_fallback=true`` / degraded
+    (Req 1.4, 4.2 / Correctness Property 2).
+    """
+
+    return {
+        "role": role,
+        "intent": "general_guidance",
+        "confidence": 0.3,
+        "emergency": False,
+        "answer": _CROSS_BORDER_DEGRADED_NOTICE,
+        "retrieved_ids": [],
+        "model_used": "local-synth-degraded-v1",
+        "fallback_reason": f"cross_border_gated:{reason}",
+        "query_echo": message,
+        "safe_mode_used": True,
     }
 
 
@@ -362,6 +411,46 @@ def _load_rag_runtime(db: Session) -> tuple[RagFlowConfig, list[dict[str, Any]]]
         ) from exc
 
 
+def _build_cross_border_degraded_response(
+    payload: ChatRequest,
+    role: str,
+    rag_sources: list[dict[str, Any]],
+    db: Session,
+    settings: Any,
+    reason: str,
+) -> dict[str, object]:
+    """Assemble the chat response for a cross-border-gated (degraded) turn.
+
+    Mirrors the shape of the normal/fallback response so clients render it
+    identically, but the answer is the local deterministic notice and the turn
+    is flagged ``fallback=True`` with a ``cross_border_gated:*`` reason. No
+    offshore call is made, so no identifiable content leaves the country
+    (Req 4.2 / Property P2).
+    """
+
+    degraded_ml = _cross_border_degraded_payload(payload.message, role, reason)
+    response_payload: dict[str, object] = {
+        "message": payload.message,
+        "reply": degraded_ml["answer"],
+        "role": role,
+        "intent": degraded_ml.get("intent"),
+        "confidence": degraded_ml.get("confidence"),
+        "emergency": degraded_ml.get("emergency"),
+        "model_used": degraded_ml.get("model_used"),
+        "retrieved_ids": degraded_ml.get("retrieved_ids", []),
+        "ml": degraded_ml,
+        "fallback": True,
+        "fallback_reason": str(degraded_ml.get("fallback_reason")),
+    }
+    attribution = _build_chat_attribution(degraded_ml, rag_sources)
+    disclosure = ComplianceService(db, settings=settings).model_disclosure(
+        degraded_ml.get("model_used")
+    )
+    if disclosure is not None:
+        response_payload["ai_disclosure"] = disclosure
+    return attach_attribution(response_payload, attribution=attribution)
+
+
 @router.post("/", response_model=ChatResponse, response_model_exclude_none=True)
 @router.post("", response_model=ChatResponse, response_model_exclude_none=True)
 def chat_completion(
@@ -371,6 +460,34 @@ def chat_completion(
 ) -> dict[str, object]:
     settings = get_settings()
     rag_flow, rag_sources = _load_rag_runtime(db)
+
+    # Cross-border transfer gate (Req 4.2 / Correctness Property P2): when
+    # COMPLIANCE_CROSS_BORDER_GATING_ENABLED is on and the user has not granted
+    # cross_border_processing consent, the offshore model MUST NOT receive the
+    # user's identifiable query. We consult the guard before any outbound ML
+    # call and degrade to a local deterministic answer labeled degraded. The
+    # whole block is behind the flag so that with gating off no new code path
+    # runs and the request is byte-equivalent to baseline (Property P6).
+    if settings.compliance_cross_border_gating_enabled:
+        compliance = ComplianceService(db, settings=settings)
+        user_id = _resolve_user_id(db, token)
+        transfer = compliance.outbound_guard(user_id=user_id)
+        # No-PII transfer event (Req 4.4 / Property P5): record the processor
+        # identity, purpose, and an opaque user ref for the outbound offshore
+        # decision — never the query text. ``allowed`` distinguishes a payload
+        # transmitted offshore ("sent") from a consent-blocked degrade
+        # ("blocked"). Inside the flag block so flags-off side effects are
+        # byte-equivalent to baseline (Property P6).
+        compliance.record_transfer(
+            user_id=user_id,
+            processor=LLM_PROCESSOR,
+            purpose=LLM_PURPOSE,
+            allowed=transfer.allow_cross_border,
+        )
+        if not transfer.allow_cross_border:
+            return _build_cross_border_degraded_response(
+                payload, token.role, rag_sources, db, settings, transfer.reason
+            )
 
     try:
         ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
@@ -474,6 +591,11 @@ def chat_completion(
         }
         if isinstance(fallback_reason, str) and fallback_reason.strip():
             response_payload["fallback_reason"] = fallback_reason.strip()
+        disclosure = ComplianceService(db, settings=settings).model_disclosure(
+            ml_response.get("model_used")
+        )
+        if disclosure is not None:
+            response_payload["ai_disclosure"] = disclosure
         return attach_attribution(response_payload, attribution=attribution)
     except HTTPException:
         raise
@@ -506,6 +628,11 @@ def chat_completion(
         if isinstance(fallback_reason, str) and fallback_reason.strip():
             response_payload["fallback_reason"] = fallback_reason.strip()
         attribution = _build_chat_attribution(fallback_ml, rag_sources)
+        disclosure = ComplianceService(db, settings=settings).model_disclosure(
+            fallback_ml.get("model_used")
+        )
+        if disclosure is not None:
+            response_payload["ai_disclosure"] = disclosure
         return attach_attribution(response_payload, attribution=attribution)
 
 
@@ -539,6 +666,43 @@ def chat_completion_stream(
     # Generous read timeout: the upstream holds the connection open while it
     # synthesizes + streams tokens (no per-chunk write timeout).
     timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
+
+    # Cross-border transfer gate (Req 4.2 / Correctness Property P2): when gating
+    # is on and the user has not granted cross_border_processing consent, never
+    # open the upstream stream (which would transmit the query offshore). Emit a
+    # terminal degraded ``error`` frame so the client falls back to the
+    # non-streaming endpoint, which is gated and returns the local degraded
+    # answer. Behind the flag ⇒ no new behavior with gating off (Property P6).
+    if settings.compliance_cross_border_gating_enabled:
+        compliance = ComplianceService(db, settings=settings)
+        user_id = _resolve_user_id(db, token)
+        transfer = compliance.outbound_guard(user_id=user_id)
+        # No-PII transfer event (Req 4.4 / Property P5): record processor,
+        # purpose, and opaque user ref for the outbound offshore decision before
+        # the upstream stream is (or is not) opened. No query text is logged.
+        compliance.record_transfer(
+            user_id=user_id,
+            processor=LLM_PROCESSOR,
+            purpose=LLM_PURPOSE,
+            allowed=transfer.allow_cross_border,
+        )
+        if not transfer.allow_cross_border:
+
+            def degraded_relay():  # noqa: ANN202 - generator of SSE byte chunks
+                yield (
+                    b'event: error\ndata: {"message":"cross_border_consent_required",'
+                    b'"degraded":true,"fallback":"non_streaming"}\n\n'
+                )
+
+            return StreamingResponse(
+                degraded_relay(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                },
+            )
 
     def relay():  # noqa: ANN202 - generator of SSE byte chunks
         try:

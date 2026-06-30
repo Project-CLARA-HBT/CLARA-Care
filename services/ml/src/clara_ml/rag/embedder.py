@@ -205,6 +205,11 @@ class HttpEmbeddingClient:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
         req = Request(self._endpoint(), data=payload, headers=headers, method="POST")
+        # Bounded outbound timeout (Requirement 10.3): the embedding request uses
+        # an explicit urlopen timeout (>= 0.2s floor) sourced from
+        # settings.embedding_timeout_seconds, so a stalled provider cannot hang
+        # the call. Attempts are bounded by embedding_max_retries in _produce
+        # (Requirement 10.4).
         with urlopen(req, timeout=max(float(self._timeout_seconds), 0.2)) as response:
             raw = response.read().decode("utf-8", errors="ignore")
         parsed = json.loads(raw)

@@ -9,6 +9,8 @@ import json
 
 import httpx
 
+from clara_ml.llm.circuit_breaker import get_llm_circuit_breaker
+
 
 @dataclass
 class DeepSeekResponse:
@@ -44,6 +46,11 @@ class DeepSeekClient:
             self._parse_base_urls(audio_base_url) if audio_base_url.strip() else []
         )
         self._model = model
+        # Bounded outbound timeout (Requirement 10.3): every httpx call below is
+        # constructed with httpx.Client(timeout=self._timeout_seconds), so no
+        # request can hang without bound. Retries are capped per base by
+        # _retries_per_base (DEEPSEEK_RETRIES_PER_BASE) — see attempts =
+        # _retries_per_base + 1 in the _*_with_failover loops (Requirement 10.4).
         self._timeout_seconds = timeout_seconds
         self._retries_per_base = max(0, int(retries_per_base))
         self._retry_backoff_seconds = max(0.0, float(retry_backoff_seconds))
@@ -141,6 +148,21 @@ class DeepSeekClient:
             yield
         finally:
             semaphore.release()
+
+    def _guard(self, func):
+        """Run ``func`` through the platform-hardening circuit breaker.
+
+        When the breaker flag is off (the default) this returns ``func()``
+        directly, so the bounded-retry path behaves byte-for-byte as before
+        (Requirement 11.1). When on, repeated downstream failures open the
+        breaker and a short-circuited call raises ``CircuitBreakerOpenError``
+        (a ``RuntimeError`` subclass) so the caller's existing labeled local
+        fallback runs without making the network call (Requirement 6.5).
+        """
+        breaker = get_llm_circuit_breaker()
+        if breaker is None:
+            return func()
+        return breaker.call(func)
 
     def _post_json_with_failover(self, payload: dict[str, object]) -> dict[str, object]:
         errors: list[str] = []
@@ -347,6 +369,9 @@ class DeepSeekClient:
         if isinstance(max_tokens, int) and max_tokens > 0:
             payload["max_tokens"] = int(max_tokens)
 
+        return self._guard(lambda: self._generate_once(payload))
+
+    def _generate_once(self, payload: dict[str, object]) -> DeepSeekResponse:
         data = self._post_json_with_failover(payload)
         choices = data.get("choices", [])
         if not choices:
@@ -384,6 +409,23 @@ class DeepSeekClient:
         if prompt:
             data["prompt"] = prompt
 
+        return self._guard(
+            lambda: self._transcribe_once(
+                data=data,
+                audio_bytes=audio_bytes,
+                filename=filename,
+                content_type=content_type,
+            )
+        )
+
+    def _transcribe_once(
+        self,
+        *,
+        data: dict[str, str],
+        audio_bytes: bytes,
+        filename: str,
+        content_type: str,
+    ) -> str:
         errors: list[str] = []
         attempts = self._retries_per_base + 1
         payload: dict[str, object] | None = None

@@ -198,6 +198,11 @@ class BaseSourceConnector(ABC):
     ) -> None:
         self.context = context
         self._http_client_factory = http_client_factory
+        # Bounded outbound timeout (Requirement 10.3): a conservative 10s default
+        # is applied to the lazily-constructed httpx.Client below so every
+        # external-connector fetch is time-bounded even when no per-source
+        # timeout is configured. Paging is bounded by next_offset_cursor (a short
+        # page ends the window), keeping fetch loops finite (Requirement 10.4).
         self._timeout_seconds = timeout_seconds
         self._client: httpx.Client | None = None
 

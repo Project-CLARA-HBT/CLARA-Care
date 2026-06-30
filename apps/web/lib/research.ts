@@ -23,6 +23,17 @@ export type Tier2Citation = {
   url?: string;
   snippet?: string;
   year?: string;
+  /**
+   * Optional source authority/reliability tier (lower is more authoritative).
+   * Emitted per surfaced source when recency/trust-tier ranking is enabled
+   * (Requirement 6.2/6.4). Absent on legacy payloads.
+   */
+  trustTier?: number;
+  /**
+   * Optional publication/effective date for the surfaced source (Requirement
+   * 6.2/6.4). Carried verbatim from the result payload; absent on legacy payloads.
+   */
+  publishedAt?: string;
 };
 
 export type Tier2Step = {
@@ -124,6 +135,13 @@ export type ResearchTier2VerificationMatrixEntry = {
   note?: string;
   source?: string;
   evidence: string[];
+  /**
+   * GRADE evidence-certainty label for the claim (high | moderate | low |
+   * very_low) when `RESEARCH_GRADE_ENABLED` assigned one (Requirement 8.4).
+   * Absent when no label has been assigned, so the UI never renders a
+   * certainty label before assignment.
+   */
+  certainty?: string;
 };
 
 export type ResearchTier2ContradictionSummary = {
@@ -203,6 +221,20 @@ export type ResearchTier2CrawlSummary = {
   durationMs?: number;
 };
 
+/**
+ * Evidence-agreement (consensus) counts for a single key claim, derived by the
+ * orchestrator from per-source NLI verdicts when `RESEARCH_CONSENSUS_ENABLED`
+ * is on (Requirement 9.1, 9.2). The three counts partition the evaluated
+ * sources into those that support, contrast, or are neutral toward the claim.
+ * Absent (empty list) when the flag is off, preserving the legacy shape.
+ */
+export type ResearchTier2ConsensusEntry = {
+  claim: string;
+  support: number;
+  contrast: number;
+  neutral: number;
+};
+
 export type ResearchTier2Telemetry = {
   keywords: string[];
   searchPlan: ResearchTier2SearchPlan;
@@ -213,6 +245,11 @@ export type ResearchTier2Telemetry = {
   scores: ResearchTier2TelemetryScore[];
   sourceReasoning: ResearchTier2SourceReasoning[];
   verificationMatrix: ResearchTier2VerificationMatrixEntry[];
+  /**
+   * Per-key-claim support/contrast/neutral consensus counts (Requirement 9.3).
+   * Empty when `RESEARCH_CONSENSUS_ENABLED` did not emit a consensus section.
+   */
+  consensus: ResearchTier2ConsensusEntry[];
   safetyOverride?: ResearchTier2SafetyOverride;
   contradictionSummary?: ResearchTier2ContradictionSummary;
   stageSpans?: ResearchTier2StageSpan[];
@@ -287,6 +324,37 @@ export type ResearchTier2RawResponse = {
   [key: string]: unknown;
 };
 
+/**
+ * A single entry of the Citation Registry appendix (Requirement 11.2, 11.4,
+ * design §11). Each cited study carries a stable `studyId` (PMID/DOI/RXCUI),
+ * its source type, trust tier, and publication/effective date. Surfaced only
+ * when `RESEARCH_CLAIM_TRACE_ENABLED` emitted a `citation_registry`; absent
+ * (empty list) on legacy payloads so the existing shape is preserved.
+ */
+export type ResearchTier2CitationRegistryEntry = {
+  citationId: string;
+  studyId?: string;
+  sourceType?: string;
+  trustTier?: number;
+  publishedAt?: string;
+  title?: string;
+  url?: string;
+};
+
+/**
+ * A synthesized claim linked to the specific supporting citation id(s) that
+ * the orchestrator traced for it (Requirement 11.1, design §11). `citationIds`
+ * reference entries in the Citation Registry so every inline sentence-level
+ * anchor resolves into the appendix (Requirement 11.3, 11.4). Surfaced only
+ * when `RESEARCH_CLAIM_TRACE_ENABLED` emitted `traced_claims`.
+ */
+export type ResearchTier2TracedClaim = {
+  claim: string;
+  citationIds: string[];
+  verdict?: string;
+  certainty?: string;
+};
+
 export type ResearchTier2Result = {
   answer: string;
   citations: Tier2Citation[];
@@ -297,6 +365,18 @@ export type ResearchTier2Result = {
   visualAssets: ResearchTier2VisualAsset[];
   chartSpecs: ResearchTier2ChartSpec[];
   reasoningDigest: ResearchTier2ReasoningDigest;
+  /**
+   * Claim-to-study traceability (Requirement 11.1). Each entry links a
+   * synthesized claim to its supporting citation id(s). Empty when
+   * `RESEARCH_CLAIM_TRACE_ENABLED` did not emit `traced_claims`.
+   */
+  tracedClaims: ResearchTier2TracedClaim[];
+  /**
+   * Citation Registry appendix (Requirement 11.4). Lists every citation
+   * referenced by the report so inline anchors resolve. Empty on legacy
+   * payloads, preserving the existing result shape.
+   */
+  citationRegistry: ResearchTier2CitationRegistryEntry[];
   debug: ResearchTier2DebugMeta;
   verificationStatus?: {
     verdict?: string;
@@ -351,6 +431,13 @@ export type ResearchTier2JobCreateOptions = {
   personalMode?: boolean;
   uiLanguage?: "vi" | "en";
   deepPassCount?: number;
+  /**
+   * Answers to the clarifying questions returned by `POST /research/clarify`
+   * (Requirement 12.2). Keyed by question `id`. Carried verbatim to the job
+   * request as `clarifying_answers`; omitted when empty so legacy/unambiguous
+   * starts keep their existing shape.
+   */
+  clarifyingAnswers?: Record<string, string>;
   llmRuntime?: {
     provider?: string;
     apiKey?: string;
@@ -358,6 +445,37 @@ export type ResearchTier2JobCreateOptions = {
     model?: string;
   };
 };
+
+/**
+ * A single clarifying question returned by `POST /research/clarify` (R12.1).
+ * `id` is the key the UI uses when collecting answers into `clarifyingAnswers`
+ * (Requirement 12.2).
+ */
+export type ResearchClarifyQuestion = {
+  id: string;
+  question: string;
+  rationale?: string;
+};
+
+/**
+ * Result of evaluating whether a deep-research query needs clarification (R12).
+ * When `ambiguous` is false (flag off, non-deep mode, or a well-scoped query)
+ * the UI starts the job immediately without prompting (Requirement 12.4).
+ */
+export type ResearchClarifyResult = {
+  ambiguous: boolean;
+  researchMode: ResearchExecutionMode;
+  questions: ResearchClarifyQuestion[];
+};
+
+/**
+ * User decision about an ambiguous query's clarifying questions.
+ * - `pending`: questions are shown and the user has neither answered nor
+ *   skipped — the job MUST NOT start (Requirement 12.5).
+ * - `answered`: the user supplied answers — start, carrying them (R12.2).
+ * - `skipped`: the user declined — start with the original query (R12.3).
+ */
+export type ResearchClarifyDecision = "pending" | "answered" | "skipped";
 
 export type UploadedResearchFile = {
   id: string;
@@ -676,12 +794,22 @@ function parseCitation(value: unknown): Tier2Citation | null {
 
   if (!title) return null;
 
+  const trustTier = asNumber(item.trust_tier ?? item.trustTier);
+  const publishedAt =
+    asText(item.published_at) ??
+    asText(item.publishedAt) ??
+    asText(item.effective_date) ??
+    asText(item.effectiveDate) ??
+    asText(item.date);
+
   return {
     title,
     source: asText(item.source) ?? asText(item.publisher) ?? asText(item.source_id),
     url: asSafeHttpUrl(item.url),
     snippet: asText(item.snippet) ?? asText(item.summary) ?? asText(item.relevance),
-    year: asText(item.year)
+    year: asText(item.year),
+    ...(trustTier !== undefined ? { trustTier } : {}),
+    ...(publishedAt ? { publishedAt } : {})
   };
 }
 
@@ -1592,6 +1720,331 @@ function parseEvidenceList(value: unknown): string[] {
   );
 }
 
+const _CERTAINTY_LABELS = new Set(["high", "moderate", "low", "very_low"]);
+
+/**
+ * Normalizes a raw GRADE certainty value to one of the canonical labels
+ * {high, moderate, low, very_low}. Returns `undefined` for any absent or
+ * out-of-set value so a certainty label is only ever surfaced once a real
+ * label has been assigned (Requirement 8.4, design §8). Tolerates spacing and
+ * casing variants such as "Very Low" / "very-low".
+ */
+function normalizeCertaintyLabel(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return _CERTAINTY_LABELS.has(normalized) ? normalized : undefined;
+}
+
+/**
+ * Builds a claim-text → certainty-label lookup from the optional `grade` and
+ * `traced_claims` payload arrays (design §8). Only entries that carry a valid
+ * assigned label are recorded, so claims without an assigned label never gain
+ * a certainty value (Requirement 8.4). Keys are normalized claim text for a
+ * tolerant match against the verification matrix.
+ */
+function buildCertaintyByClaim(...payloads: unknown[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const payload of payloads) {
+    if (!Array.isArray(payload)) continue;
+    for (const item of payload) {
+      const row = asRecord(item);
+      if (!row) continue;
+      const claim =
+        asText(row.claim) ??
+        asText(row.statement) ??
+        asText(row.text) ??
+        asText(row.title);
+      if (!claim) continue;
+      const certainty = normalizeCertaintyLabel(
+        asText(row.certainty) ??
+        asText(row.grade_certainty) ??
+        asText(row.gradeCertainty) ??
+        asText(row.grade)
+      );
+      if (!certainty) continue;
+      const key = claim.trim().toLowerCase();
+      if (!map.has(key)) map.set(key, certainty);
+    }
+  }
+  return map;
+}
+
+function applyCertaintyToMatrix(
+  matrix: ResearchTier2VerificationMatrixEntry[],
+  certaintyByClaim: Map<string, string>
+): ResearchTier2VerificationMatrixEntry[] {
+  if (!certaintyByClaim.size) return matrix;
+  return matrix.map((entry) => {
+    if (entry.certainty) return entry;
+    const certainty = certaintyByClaim.get(entry.claim.trim().toLowerCase());
+    return certainty ? { ...entry, certainty } : entry;
+  });
+}
+
+/**
+ * Coerces a raw consensus count to a non-negative integer, tolerating numeric
+ * strings. Out-of-range / missing values collapse to 0 so the rendered counts
+ * always form a clean partition (Requirement 9.1, 9.3).
+ */
+function normalizeConsensusCount(value: unknown): number {
+  const numeric = asNumber(value);
+  if (numeric === undefined || numeric < 0) return 0;
+  return Math.trunc(numeric);
+}
+
+/**
+ * Parses a single consensus entry `{claim, support, contrast, neutral}` from
+ * the optional flag-gated `consensus` payload (design §9, Requirement 9.2).
+ * Tolerates the alternate `agree`/`disagree` source-side naming. Returns null
+ * for rows without a claim or without any counted source.
+ */
+function parseConsensusEntry(value: unknown): ResearchTier2ConsensusEntry | null {
+  const row = asRecord(value);
+  if (!row) return null;
+
+  const claim =
+    asText(row.claim) ??
+    asText(row.statement) ??
+    asText(row.assertion) ??
+    asText(row.text) ??
+    asText(row.title);
+  if (!claim) return null;
+
+  const support = normalizeConsensusCount(
+    row.support ?? row.supporting ?? row.agree ?? row.supports
+  );
+  const contrast = normalizeConsensusCount(
+    row.contrast ?? row.contrasting ?? row.disagree ?? row.contradict ?? row.against
+  );
+  const neutral = normalizeConsensusCount(row.neutral ?? row.unrelated ?? row.mixed);
+
+  if (support + contrast + neutral === 0) return null;
+  return { claim, support, contrast, neutral };
+}
+
+/**
+ * Parses the per-key-claim consensus section (Requirement 9.3). Returns an
+ * empty list when the `RESEARCH_CONSENSUS_ENABLED` flag did not emit one, so
+ * the UI surfaces consensus counts only when present (legacy shape preserved).
+ */
+function parseConsensusEntries(value: unknown): ResearchTier2ConsensusEntry[] {
+  const direct = parseList(value, parseConsensusEntry);
+  if (direct.length) return direct;
+
+  // Tolerate a wrapper object such as `{ claims: [...] }` / `{ items: [...] }`.
+  const record = asRecord(value);
+  if (!record) return [];
+  const nested =
+    record.claims ?? record.items ?? record.entries ?? record.consensus ?? record.rows;
+  return parseList(nested, parseConsensusEntry);
+}
+
+/**
+ * Parses a single Citation Registry entry (Requirement 11.2, 11.4, design §11).
+ * Requires a `citation_id` (the anchor key); tolerates the various study-id
+ * shapes (`study_id` or a bare `pmid`/`doi`/`rxcui`). Returns null for rows
+ * without an id so a fabricated/empty entry can never reach the appendix.
+ */
+function parseCitationRegistryEntry(value: unknown): ResearchTier2CitationRegistryEntry | null {
+  const row = asRecord(value);
+  if (!row) return null;
+
+  const citationId =
+    asText(row.citation_id) ??
+    asText(row.citationId) ??
+    asText(row.id) ??
+    asText(row.ref) ??
+    asText(row.anchor);
+  if (!citationId) return null;
+
+  const trustTier = asNumber(row.trust_tier ?? row.trustTier);
+  const publishedAt =
+    asText(row.published_at) ??
+    asText(row.publishedAt) ??
+    asText(row.effective_date) ??
+    asText(row.effectiveDate) ??
+    asText(row.date) ??
+    asText(row.year);
+
+  return {
+    citationId,
+    studyId:
+      asText(row.study_id) ??
+      asText(row.studyId) ??
+      asText(row.pmid) ??
+      asText(row.doi) ??
+      asText(row.rxcui),
+    sourceType:
+      asText(row.source_type) ??
+      asText(row.sourceType) ??
+      asText(row.source) ??
+      asText(row.type),
+    ...(trustTier !== undefined ? { trustTier } : {}),
+    ...(publishedAt ? { publishedAt } : {}),
+    title: asText(row.title) ?? asText(row.name),
+    url: asSafeHttpUrl(row.url) ?? asSafeHttpUrl(row.link)
+  };
+}
+
+/**
+ * Parses the list of citation ids that a traced claim links to. Tolerates a
+ * list of bare ids, numbers, or `{citation_id}` objects, and a single id.
+ */
+function parseCitationIdList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return uniqueText(
+      value
+        .map((item) => {
+          if (typeof item === "string" || typeof item === "number") {
+            return asText(String(item));
+          }
+          const record = asRecord(item);
+          if (!record) return undefined;
+          return (
+            asText(record.citation_id) ??
+            asText(record.citationId) ??
+            asText(record.id)
+          );
+        })
+        .filter((item): item is string => Boolean(item))
+    );
+  }
+  const single = asText(value);
+  return single ? [single] : [];
+}
+
+/**
+ * Parses a single traced claim `{claim, citation_ids[]}` (Requirement 11.1).
+ * Returns null for rows without claim text. The certainty value is normalized
+ * to the canonical GRADE set so it can be reused for display gating (R8.4).
+ */
+function parseTracedClaim(value: unknown): ResearchTier2TracedClaim | null {
+  const row = asRecord(value);
+  if (!row) return null;
+
+  const claim =
+    asText(row.claim) ??
+    asText(row.statement) ??
+    asText(row.text) ??
+    asText(row.assertion) ??
+    asText(row.title);
+  if (!claim) return null;
+
+  const citationIds = parseCitationIdList(
+    row.citation_ids ??
+      row.citationIds ??
+      row.citations ??
+      row.citation_id ??
+      row.refs
+  );
+
+  return {
+    claim,
+    citationIds,
+    verdict: asText(row.verdict) ?? asText(row.support_status) ?? asText(row.supportStatus),
+    certainty: normalizeCertaintyLabel(
+      asText(row.certainty) ?? asText(row.grade_certainty) ?? asText(row.gradeCertainty)
+    )
+  };
+}
+
+/**
+ * Builds a stable DOM id for a Citation Registry entry so an inline
+ * sentence-level anchor (Requirement 11.3) can resolve to its appendix row
+ * (Requirement 11.4). The mapping is deterministic for a given citation id.
+ */
+export function citationRegistryAnchorId(citationId: string): string {
+  const slug = citationId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `citation-${slug || "ref"}`;
+}
+
+function normalizeForClaimMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\[\[?\d{1,3}\]?\]\([^)]*\)/g, " ")
+    .replace(/[#*_`>~]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Renders inline sentence-level citation anchors into the answer markdown
+ * (Requirement 11.3). For each traced claim whose text is found in a line of
+ * the answer, the supporting citation id(s) are appended as markdown links of
+ * the form `[[ordinal]](#citation-<id>)` so every anchor resolves into the
+ * Citation Registry appendix (Requirement 11.4). Only citation ids that exist
+ * in the registry are emitted, so no anchor can dangle. The function is a pure,
+ * side-effect-free transform and never alters fenced code blocks. When no claim
+ * matches (or the registry/claims are empty) the markdown is returned unchanged
+ * so legacy output is preserved.
+ */
+export function injectTracedClaimAnchors(
+  answer: string,
+  tracedClaims: ResearchTier2TracedClaim[],
+  citationRegistry: ResearchTier2CitationRegistryEntry[]
+): string {
+  if (!answer.trim() || !tracedClaims.length || !citationRegistry.length) {
+    return answer;
+  }
+
+  // Map each known citation id to its 1-based registry ordinal (the anchor
+  // label shown both inline and in the appendix).
+  const ordinalById = new Map<string, number>();
+  citationRegistry.forEach((entry, index) => {
+    if (!ordinalById.has(entry.citationId)) {
+      ordinalById.set(entry.citationId, index + 1);
+    }
+  });
+
+  const lines = answer.split("\n");
+  const anchoredClaims = new Set<number>();
+  let inFence = false;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence || !trimmed) continue;
+
+    const normalizedLine = normalizeForClaimMatch(line);
+    if (!normalizedLine) continue;
+
+    for (let claimIndex = 0; claimIndex < tracedClaims.length; claimIndex += 1) {
+      if (anchoredClaims.has(claimIndex)) continue;
+      const claim = tracedClaims[claimIndex];
+
+      const ordinals = uniqueText(
+        claim.citationIds
+          .filter((id) => ordinalById.has(id))
+          .map((id) => String(ordinalById.get(id)))
+      );
+      if (!ordinals.length) continue;
+
+      const normalizedClaim = normalizeForClaimMatch(claim.claim);
+      // Guard against trivially-short claims producing spurious matches.
+      if (normalizedClaim.length < 12) continue;
+      if (!normalizedLine.includes(normalizedClaim)) continue;
+
+      const anchors = claim.citationIds
+        .filter((id) => ordinalById.has(id))
+        .map((id) => `[[${ordinalById.get(id)}]](#${citationRegistryAnchorId(id)})`)
+        .join("");
+
+      lines[lineIndex] = `${line.replace(/\s+$/, "")} ${anchors}`;
+      anchoredClaims.add(claimIndex);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 function parseVerificationMatrixEntry(value: unknown): ResearchTier2VerificationMatrixEntry | null {
   if (typeof value === "string") {
     const claim = asText(value);
@@ -1630,6 +2083,12 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     asText(row.claim_type) ??
     asText(row.claimType);
   const severity = asText(row.severity);
+  const certainty = normalizeCertaintyLabel(
+    asText(row.certainty) ??
+    asText(row.grade_certainty) ??
+    asText(row.gradeCertainty) ??
+    asText(row.grade)
+  );
   const confidence =
     asNumber(row.confidence) ??
     asNumber(row.score) ??
@@ -1676,7 +2135,8 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     evidenceRef,
     note,
     source,
-    evidence
+    evidence,
+    ...(certainty ? { certainty } : {})
   };
 }
 
@@ -2515,6 +2975,107 @@ export async function runResearchTier2(
   return response.data;
 }
 
+/**
+ * Trim and drop empty clarifying answers so only meaningful, user-supplied
+ * responses are carried to the job request (Requirement 12.2). A blank answer
+ * is treated as "no answer for this question" rather than an empty string.
+ */
+function normalizeClarifyingAnswers(
+  answers?: Record<string, string>
+): Record<string, string> {
+  if (!answers) return {};
+  const normalized: Record<string, string> = {};
+  for (const [rawId, rawValue] of Object.entries(answers)) {
+    const id = rawId.trim();
+    const value = typeof rawValue === "string" ? rawValue.trim() : "";
+    if (id && value) {
+      normalized[id] = value;
+    }
+  }
+  return normalized;
+}
+
+function parseClarifyQuestion(value: unknown): ResearchClarifyQuestion | null {
+  const item = asRecord(value);
+  if (!item) return null;
+  const id = asText(item.id) ?? asText(item.key);
+  const question = asText(item.question) ?? asText(item.text) ?? asText(item.prompt);
+  if (!id || !question) return null;
+  const rationale = asText(item.rationale) ?? asText(item.reason) ?? asText(item.detail);
+  return rationale ? { id, question, rationale } : { id, question };
+}
+
+/**
+ * Ask the API whether a deep-research query needs clarification before a job
+ * starts (Requirement 12.1). The endpoint is flag- and mode-gated server side;
+ * when clarification is not warranted it returns `ambiguous=false` with no
+ * questions, so callers can start the job without prompting (Requirement 12.4).
+ *
+ * Network/parse failures fail open (treated as unambiguous) so a transient
+ * clarify outage never blocks the user from running research.
+ */
+export async function requestResearchClarification(
+  query: string,
+  options?: { researchMode?: ResearchExecutionMode; uiLanguage?: "vi" | "en" }
+): Promise<ResearchClarifyResult> {
+  const researchMode = normalizeResearchExecutionMode(options?.researchMode);
+  const fallback: ResearchClarifyResult = {
+    ambiguous: false,
+    researchMode,
+    questions: []
+  };
+
+  const trimmed = query.trim();
+  if (!trimmed) return fallback;
+
+  try {
+    const response = await api.post<{
+      ambiguous?: unknown;
+      research_mode?: unknown;
+      questions?: unknown;
+    }>(
+      "/api/v1/research/clarify",
+      {
+        query: trimmed,
+        message: trimmed,
+        research_mode: researchMode,
+        ...(options?.uiLanguage ? { ui_language: options.uiLanguage } : {})
+      },
+      { timeout: 30000 }
+    );
+
+    const data = asRecord(response.data) ?? {};
+    const questions = Array.isArray(data.questions)
+      ? data.questions
+          .map(parseClarifyQuestion)
+          .filter((item): item is ResearchClarifyQuestion => Boolean(item))
+      : [];
+    const ambiguous = asBoolean(data.ambiguous) === true && questions.length > 0;
+    const resolvedMode = normalizeResearchExecutionMode(
+      (asText(data.research_mode) as ResearchExecutionMode | undefined) ?? researchMode
+    );
+
+    return { ambiguous, researchMode: resolvedMode, questions };
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Pure start-gate for the clarifying-question flow (Requirement 12.5; design
+ * Property 25). A research job may start if and only if the query is
+ * unambiguous, or the user has answered, or the user has skipped. While a
+ * query is ambiguous and the decision is still `pending`, the job must not
+ * start. Kept side-effect free so it can be unit/property tested in isolation.
+ */
+export function canStartResearchJob(
+  ambiguous: boolean,
+  decision: ResearchClarifyDecision
+): boolean {
+  if (!ambiguous) return true;
+  return decision === "answered" || decision === "skipped";
+}
+
 export async function createResearchTier2Job(
   query: string,
   options?: ResearchTier2JobCreateOptions
@@ -2574,6 +3135,11 @@ export async function createResearchTier2Job(
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
+
+  const clarifyingAnswers = normalizeClarifyingAnswers(options?.clarifyingAnswers);
+  if (Object.keys(clarifyingAnswers).length) {
+    payload.clarifying_answers = clarifyingAnswers;
+  }
 
   const response = await api.post<ResearchTier2JobResponse>("/api/v1/research/tier2/jobs", payload, {
     timeout: 30000
@@ -2657,6 +3223,100 @@ export async function streamResearchTier2Job(
   }
 }
 
+/**
+ * Canonical ordering of the user-facing research pipeline stages that are
+ * progressively disclosed over the SSE job-progress stream (Requirement 13.1):
+ * `plan → retrieval → synthesis → verification`.
+ *
+ * The entries are the canonical `stageId`s produced by `FLOW_STAGE_ALIAS_MAP`
+ * for the planner, retrieval, synthesis, and verification phases. Disclosure
+ * ordering operates on these mapped ids (Requirement 13.2) so that regardless
+ * of the order in which raw SSE events arrive, these four phases are always
+ * surfaced as an ordered subsequence.
+ */
+export const CANONICAL_RESEARCH_STAGE_ORDER = [
+  "planner",
+  "retrieval_orchestrator",
+  "synthesis",
+  "verification",
+] as const;
+
+const CANONICAL_RESEARCH_STAGE_RANK = new Map<string, number>(
+  CANONICAL_RESEARCH_STAGE_ORDER.map((stageId, index) => [stageId, index])
+);
+
+/**
+ * Enforces ordered progressive disclosure of the research pipeline stages
+ * (Requirement 13).
+ *
+ * Given the flow stages derived from a job-progress snapshot, this:
+ *
+ * 1. Reorders the stages so the canonical `plan → retrieval → synthesis →
+ *    verification` phases always appear as an ordered subsequence, even if the
+ *    underlying SSE events arrived out of order (R13.1). Non-canonical stages
+ *    (gateways, routers, deep-beta sub-stages, etc.) keep their relative
+ *    position by anchoring to the canonical phase they followed.
+ * 2. Marks every canonical phase that precedes the furthest-advanced canonical
+ *    phase as `completed` before the next phase is disclosed (R13.3), unless the
+ *    earlier phase ended in a terminal negative state (`failed`/`skipped`),
+ *    which is preserved.
+ *
+ * The function is pure and side-effect free so the disclosure ordering can be
+ * property-tested in isolation.
+ */
+export function orderDisclosedResearchFlowStages(
+  stages: ResearchFlowStage[]
+): ResearchFlowStage[] {
+  if (stages.length <= 1) return stages;
+
+  // Furthest-advanced canonical phase: the highest-ranked canonical stage that
+  // has begun or finished (anything other than still-pending/skipped).
+  let maxAdvancedRank = -1;
+  for (const stage of stages) {
+    const rank = CANONICAL_RESEARCH_STAGE_RANK.get(stage.id);
+    if (rank === undefined) continue;
+    if (stage.status !== "pending" && stage.status !== "skipped") {
+      if (rank > maxAdvancedRank) maxAdvancedRank = rank;
+    }
+  }
+
+  // Anchor each stage to a sortable position. Canonical stages sort by their
+  // canonical rank; non-canonical stages anchor just after the canonical phase
+  // that preceded them in the original stream, preserving their relative order.
+  let lastCanonicalRank = -1;
+  const decorated = stages.map((stage, index) => {
+    const rank = CANONICAL_RESEARCH_STAGE_RANK.get(stage.id);
+    let anchor: number;
+    if (rank !== undefined) {
+      anchor = rank;
+      lastCanonicalRank = rank;
+    } else {
+      anchor = lastCanonicalRank + 0.5;
+    }
+
+    let nextStatus = stage.status;
+    if (
+      rank !== undefined &&
+      rank < maxAdvancedRank &&
+      (nextStatus === "pending" || nextStatus === "in_progress")
+    ) {
+      // Complete-before-next: an earlier canonical phase must read as completed
+      // once a later canonical phase has been disclosed.
+      nextStatus = "completed";
+    }
+
+    return {
+      stage: nextStatus === stage.status ? stage : { ...stage, status: nextStatus },
+      anchor,
+      index,
+    };
+  });
+
+  return decorated
+    .sort((a, b) => (a.anchor !== b.anchor ? a.anchor - b.anchor : a.index - b.index))
+    .map((item) => item.stage);
+}
+
 export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2JobProgress {
   const record = asRecord(value) ?? {};
   const flowEvents = parseFlowEvents(record.flow_events ?? record.events);
@@ -2665,7 +3325,9 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
     parseStageSpans(record.stage_spans ?? record.stageSpans ?? record.stage_span)
   );
   const baseFlowStages = metadataStages.length ? metadataStages : deriveStagesFromFlowEvents(flowEvents);
-  const flowStages = mergeFlowStagesWithStageSpans(baseFlowStages, stageSpans);
+  const flowStages = orderDisclosedResearchFlowStages(
+    mergeFlowStagesWithStageSpans(baseFlowStages, stageSpans)
+  );
   const reasoningSteps = parseList(
     pickFromRecords(
       [record],
@@ -2697,10 +3359,15 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
     asText(record.status) ??
     asText(record.message);
 
+  const rawActiveStage = asText(record.active_stage);
+  const activeStage = rawActiveStage
+    ? resolveFlowStageIdentity(rawActiveStage, rawActiveStage).stageId
+    : undefined;
+
   return {
     flowStages,
     flowEvents,
-    activeStage: asText(record.active_stage),
+    activeStage,
     statusNote,
     reasoningNotes: uniqueText([...(statusNote ? [statusNote] : []), ...reasoningSteps]).slice(-40)
   };
@@ -2859,6 +3526,45 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   const verificationMatrix = dedupeVerificationMatrix(
     parseVerificationMatrix(verificationPayload)
   );
+  const verificationMatrixWithCertainty = applyCertaintyToMatrix(
+    verificationMatrix,
+    buildCertaintyByClaim(
+      pickFromRecords(telemetryRecords, ["grade", "grade_labels", "gradeLabels"]),
+      pickFromRecords(telemetryRecords, ["traced_claims", "tracedClaims"])
+    )
+  );
+  const consensus = parseConsensusEntries(
+    pickFromRecords(telemetryRecords, [
+      "consensus",
+      "consensus_view",
+      "consensusView",
+      "consensus_counts",
+      "consensusCounts",
+      "evidence_consensus",
+      "evidenceConsensus"
+    ])
+  );
+  // Claim-to-study traceability + Citation Registry (R11). These are top-level
+  // result-payload fields emitted only when `RESEARCH_CLAIM_TRACE_ENABLED`;
+  // empty lists preserve the legacy result shape.
+  const citationRegistry = parseList(
+    pickFromRecords(telemetryRecords, [
+      "citation_registry",
+      "citationRegistry",
+      "citations_registry",
+      "registry"
+    ]),
+    parseCitationRegistryEntry
+  );
+  const tracedClaims = parseList(
+    pickFromRecords(telemetryRecords, [
+      "traced_claims",
+      "tracedClaims",
+      "claim_traces",
+      "claimTraces"
+    ]),
+    parseTracedClaim
+  );
   const safetyOverride = parseSafetyOverride(
     pickFromRecords(
       [asRecord(verificationPayload), ...telemetryRecords],
@@ -2913,7 +3619,8 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     docs,
     scores,
     sourceReasoning,
-    verificationMatrix,
+    verificationMatrix: verificationMatrixWithCertainty,
+    consensus,
     safetyOverride,
     contradictionSummary,
     stageSpans,
@@ -3001,6 +3708,8 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     steps,
     flowStages,
     flowEvents,
+    tracedClaims,
+    citationRegistry,
     debug: {
       pipeline: asText(metadata.pipeline),
       responseStyle: asText(metadata.response_style),

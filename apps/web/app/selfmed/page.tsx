@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
+import { trackCareguardViewed } from "@/lib/analytics/events";
 
 type TimelineEntry = {
   id: number;
@@ -36,15 +37,17 @@ function sourceClass(source: string): string {
 }
 
 function normalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Khớp chuẩn";
+  if (source === "db" || source === "matched") return "Khớp chuẩn";
   if (source === "candidate") return "Cần kiểm tra lại";
+  if (source === "needs_review") return "Cần xem lại";
   if (source === "fallback") return "Nhập thủ công";
   return "Chưa rõ";
 }
 
 function normalizationClass(source: string | null | undefined): string {
-  if (source === "db") return "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-300/60 dark:bg-emerald-500/15 dark:text-emerald-100";
+  if (source === "db" || source === "matched") return "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-300/60 dark:bg-emerald-500/15 dark:text-emerald-100";
   if (source === "candidate") return "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-100";
+  if (source === "needs_review") return "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-300/70 dark:bg-rose-500/20 dark:text-rose-100";
   if (source === "fallback") return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-300/60 dark:bg-rose-500/15 dark:text-rose-100";
   return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
 }
@@ -241,6 +244,10 @@ export default function SelfMedPage() {
   };
 
   useEffect(() => {
+    // Emit a named SelfMed/CareGuard product event (Req 9.1). The facade
+    // suppresses transmission without consent/credentials and strips PII; only
+    // the coarse surface label is sent.
+    trackCareguardViewed({ surface: "selfmed" });
     void refreshCabinet();
   }, []);
 
@@ -431,9 +438,9 @@ export default function SelfMedPage() {
                           <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${sourceClass(item.source)}`}>
                             {sourceLabel(item.source)}
                           </span>
-                          {item.normalization_source ? (
-                            <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${normalizationClass(item.normalization_source)}`}>
-                              {normalizationLabel(item.normalization_source)}
+                          {(item.normalization_status ?? item.normalization_source) ? (
+                            <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${normalizationClass(item.normalization_status ?? item.normalization_source)}`}>
+                              {normalizationLabel(item.normalization_status ?? item.normalization_source)}
                             </span>
                           ) : null}
                         </div>

@@ -4,15 +4,20 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import {
   CareguardAnalyzeResult,
+  DdiUserView,
   analyzeCareguard,
   formatCareguardRiskLabel,
   normalizeCareguardResult,
   parseFreeTextList,
   parseLabsInput,
-  toCareguardUserMessage
+  toCareguardUserMessage,
+  toDdiUserView
 } from "@/lib/careguard";
+import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
 import {
   addCabinetItem,
   CabinetItem,
@@ -48,18 +53,22 @@ function getDetectionKey(item: ScanDetection, index: number): string {
 }
 
 function getNormalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Khớp từ điển";
+  if (source === "db" || source === "matched") return "Khớp từ điển";
   if (source === "candidate") return "Khớp gợi ý";
+  if (source === "needs_review") return "Cần xem lại";
   if (source === "fallback") return "Dự phòng";
   return "Chưa xác định";
 }
 
 function getNormalizationClass(source: string | null | undefined): string {
-  if (source === "db") {
+  if (source === "db" || source === "matched") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
   }
   if (source === "candidate") {
     return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
+  }
+  if (source === "needs_review") {
+    return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-200";
   }
   if (source === "fallback") {
     return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300";
@@ -124,6 +133,7 @@ function getRiskResultIcon(score: number): string {
 }
 
 export default function CareguardPage() {
+  const [role, setRole] = useState<UserRole>("normal");
   const [consentLoading, setConsentLoading] = useState(true);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentRequiredVersion, setConsentRequiredVersion] = useState("");
@@ -189,35 +199,42 @@ export default function CareguardPage() {
   );
 
   const displayedResult = manualResult ?? autoResult;
+  // Render ONLY the End_User projection of the DDI result: risk level, alerts,
+  // recommendations, and reference sources. Runtime mode, fallback flags, and
+  // source_errors are dropped by toDdiUserView (Req 3.1, 3.6, 4.1).
+  const displayedUserView = useMemo<DdiUserView | null>(
+    () => (displayedResult ? toDdiUserView(displayedResult) : null),
+    [displayedResult]
+  );
   const aggregateRiskScore = useMemo(() => getRiskScore(displayedResult), [displayedResult]);
   const aggregateRiskLabel = useMemo(() => getRiskScoreLabel(aggregateRiskScore), [aggregateRiskScore]);
 
   const visibleAlerts = useMemo(() => {
-    if (!displayedResult) return [] as Array<{ title: string; details: string; tone: "major" | "moderate" }>;
+    if (!displayedUserView) return [] as Array<{ title: string; details: string; tone: "major" | "moderate" }>;
 
-    return displayedResult.ddiAlerts.slice(0, 4).map((alert, index) => ({
-      title: alert.title,
+    return displayedUserView.alerts.slice(0, 4).map((alert, index) => ({
+      title: alert.message,
       details:
         alert.details ??
         (index === 0
           ? "Dùng đồng thời có thể làm tăng nguy cơ tác dụng bất lợi có ý nghĩa lâm sàng."
           : "Cần theo dõi sát hơn và đánh giá lợi ích - nguy cơ trong lần tái khám."),
-      tone: getSeverityTone(alert.severity, index)
+      tone: alert.severity === "critical" || alert.severity === "high" ? "major" : "moderate"
     }));
-  }, [displayedResult]);
+  }, [displayedUserView]);
 
   const aiInsight = useMemo(() => {
-    if (!displayedResult) {
+    if (!displayedUserView) {
       return "Hãy thêm ít nhất 2 thuốc, sau đó bấm kiểm tra tương tác để xem cặp thuốc nào cần lưu ý.";
     }
-    if (displayedResult.recommendations.length > 0) {
-      return displayedResult.recommendations[0];
+    if (displayedUserView.recommendations.length > 0) {
+      return displayedUserView.recommendations[0];
     }
-    if (displayedResult.ddiAlerts.length > 0) {
+    if (displayedUserView.alerts.length > 0) {
       return "Mẫu tương tác phát hiện được cần đối chiếu thêm theo tuổi, chức năng thận và diễn tiến triệu chứng hiện tại.";
     }
     return "Chưa ghi nhận tương tác nghiêm trọng trong bộ thuốc hiện tại. Tiếp tục rà soát định kỳ khi thay đổi đơn thuốc.";
-  }, [displayedResult]);
+  }, [displayedUserView]);
 
   const refreshConsentStatus = async (): Promise<boolean> => {
     setConsentError("");
@@ -247,6 +264,9 @@ export default function CareguardPage() {
   };
 
   useEffect(() => {
+    setRole(getRole());
+    // Named CareGuard product event (Req 9.1); consent/PII guarded by the facade.
+    trackCareguardViewed({ surface: "careguard" });
     const initialize = async () => {
       setConsentLoading(true);
       const accepted = await refreshConsentStatus();
@@ -428,6 +448,14 @@ export default function CareguardPage() {
         allergies: includeHerbalOverlay ? parseFreeTextList(allergiesInput) : []
       });
       setAutoResult(result);
+      // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
+      const view = toDdiUserView(result);
+      trackCareguardDdiChecked({
+        riskLevel: view.riskLevel,
+        alertCount: view.alerts.length,
+        medicineCount: medicationNames.length,
+        source: "careguard_auto"
+      });
     } catch (error) {
       setAutoError(toCareguardUserMessage(error, "Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại."));
     } finally {
@@ -458,7 +486,16 @@ export default function CareguardPage() {
         medications: medicationNames,
         allergies: includeHerbalOverlay ? parseFreeTextList(allergiesInput) : []
       });
-      setManualResult(normalizeCareguardResult(response));
+      const normalized = normalizeCareguardResult(response);
+      setManualResult(normalized);
+      // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
+      const view = toDdiUserView(normalized);
+      trackCareguardDdiChecked({
+        riskLevel: view.riskLevel,
+        alertCount: view.alerts.length,
+        medicineCount: medicationNames.length,
+        source: "careguard_advanced"
+      });
     } catch (error) {
       setManualError(
         toCareguardUserMessage(error, "Không thể chạy phân tích nâng cao lúc này. Vui lòng thử lại.")
@@ -516,7 +553,7 @@ export default function CareguardPage() {
             type="button"
             onClick={onAcceptConsent}
             disabled={!consentChecked || acceptingConsent}
-            className="mt-5 min-h-11 rounded-xl bg-[#003461] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="mt-5 min-h-11 rounded-xl bg-[color:var(--brand-700)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
             {acceptingConsent ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
           </button>
@@ -794,8 +831,8 @@ export default function CareguardPage() {
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
                       <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.dosage || "Liều: Chưa có"}</p>
-                      <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_source)}`}>
-                        {getNormalizationLabel(item.normalization_source)}
+                      <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_status ?? item.normalization_source)}`}>
+                        {getNormalizationLabel(item.normalization_status ?? item.normalization_source)}
                       </span>
                     </div>
                     <button
@@ -942,9 +979,9 @@ export default function CareguardPage() {
 
                 <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
                   <h3 className="text-base font-bold text-[var(--text-primary)]">Khuyến nghị nên làm gì</h3>
-                  {displayedResult.recommendations.length > 0 ? (
+                  {displayedUserView && displayedUserView.recommendations.length > 0 ? (
                     <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      {displayedResult.recommendations.slice(0, 4).map((item, index) => (
+                      {displayedUserView.recommendations.slice(0, 4).map((item, index) => (
                         <li key={`${item}-${index}`} className="flex gap-2">
                           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-600)]" />
                           <span>{item}</span>
@@ -961,29 +998,63 @@ export default function CareguardPage() {
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
                 <h3 className="text-base font-bold text-[var(--text-primary)]">Nguồn tham khảo</h3>
-                {displayedResult.attribution?.sources?.length ? (
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {displayedResult.attribution.sources.map((source) => source.name).join(", ")}
-                  </p>
+                {displayedUserView && displayedUserView.sources.length ? (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {displayedUserView.sources.map((source, index) => (
+                      <li key={`${source.label}-${index}`}>
+                        {source.url ? (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-brand)] underline"
+                          >
+                            {source.label}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                            {source.label}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <p className="mt-2 text-sm text-[var(--text-secondary)]">Chưa có nguồn tham khảo hiển thị cho kết quả này.</p>
                 )}
               </article>
 
-              <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
-                <h3 className="text-base font-bold text-[var(--text-primary)]">Độ tin cậy của kết quả</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult.riskTier)}`}>
-                    {formatCareguardRiskLabel(displayedResult.riskTier)}
-                  </span>
-                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                    {displayedResult.attribution?.sourceCount ?? 0} nguồn
-                  </span>
-                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                    {displayedResult.attribution?.citationCount ?? 0} trích dẫn
-                  </span>
-                </div>
-              </article>
+              {/* Detailed telemetry (raw source/citation counts) is admin-only
+                  (Req 4.3, Property 11). End_Users see the sanitized risk label
+                  summary instead. */}
+              <TelemetryPanel
+                role={role}
+                summary={
+                  <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">Mức rủi ro tổng quan</h3>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult.riskTier)}`}>
+                        {formatCareguardRiskLabel(displayedUserView?.riskLevel ?? displayedResult.riskTier)}
+                      </span>
+                    </div>
+                  </article>
+                }
+              >
+                <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">Độ tin cậy của kết quả</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult.riskTier)}`}>
+                      {formatCareguardRiskLabel(displayedResult.riskTier)}
+                    </span>
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                      {displayedResult.attribution?.sourceCount ?? 0} nguồn
+                    </span>
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                      {displayedResult.attribution?.citationCount ?? 0} trích dẫn
+                    </span>
+                  </div>
+                </article>
+              </TelemetryPanel>
             </div>
           </section>
         ) : null}

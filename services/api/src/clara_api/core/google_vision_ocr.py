@@ -51,6 +51,9 @@ def _get_access_token(service_account: dict[str, str]) -> str:
         return _cached_token["access_token"]
 
     jwt_token = _build_jwt(service_account)
+    # Bounded outbound timeout (Requirement 10.3): the OAuth token exchange uses
+    # an explicit, conservative timeout so a hung upstream cannot stall the OCR
+    # path indefinitely. Single attempt — no retry loop, so calls are bounded.
     response = httpx.post(
         _TOKEN_URI,
         data={
@@ -98,6 +101,9 @@ def detect_text(
             "languageHints": language_hints
         }
 
+    # Bounded outbound timeout (Requirement 10.3): the Vision annotate call uses
+    # an explicit timeout (default 30s, caller-overridable) so OCR cannot block
+    # indefinitely on a slow upstream. Single attempt — bounded, no retry loop.
     response = httpx.post(
         _VISION_API_URL,
         json=request_body,

@@ -1,11 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
-import { CareguardAnalyzeResult, formatCareguardRiskLabel, toCareguardUserMessage } from "@/lib/careguard";
+import {
+  DdiUserView,
+  MINIMUM_DDI_MEDICINES,
+  formatCareguardRiskLabel,
+  requiresTwoMedicines,
+  toCareguardUserMessage,
+  toDdiUserView
+} from "@/lib/careguard";
+import {
+  CAREGUARD_OFFLINE_LABEL,
+  cacheDdiUserView,
+  isCareguardOfflineFallbackEnabled,
+  isLikelyOfflineError,
+  readCachedDdiView
+} from "@/lib/careguard-offline";
 import { CabinetItem, getCabinet, runCabinetAutoDdi } from "@/lib/selfmed";
+import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
+
+function formatOfflineCachedAt(cachedAt: string): string | null {
+  const parsed = new Date(cachedAt);
+  if (Number.isNaN(parsed.getTime())) return null;
+  try {
+    return parsed.toLocaleString("vi-VN");
+  } catch {
+    return parsed.toISOString();
+  }
+}
 
 function parseLineList(value: string): string[] {
   return value
@@ -44,12 +69,21 @@ export default function SelfMedDdiPage() {
   const [cabinetError, setCabinetError] = useState("");
 
   const [allergiesInput, setAllergiesInput] = useState("");
-  const [result, setResult] = useState<CareguardAnalyzeResult | null>(null);
+  const [result, setResult] = useState<DdiUserView | null>(null);
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
+  // Offline / last-known fallback state (Req 6.3). When the result on screen was
+  // served from the client cache because the API was unreachable, we flag it as
+  // stale and show when it was captured.
+  const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
 
-  const refreshCabinet = async () => {
-    setCabinetError("");
+  // Distinct medicine names drive the two-medicine guard (Requirement 3.5).
+  // A drug-drug interaction needs two *different* medicines, so the canonical
+  // requiresTwoMedicines helper collapses case-insensitive duplicates.
+  const medicineNames = useMemo(() => items.map((item) => item.drug_name), [items]);
+  const needsMoreMedicines = useMemo(() => requiresTwoMedicines(medicineNames), [medicineNames]);
+
+  const refreshCabinet = async () => {    setCabinetError("");
     setIsLoadingCabinet(true);
     try {
       const response = await getCabinet();
@@ -62,17 +96,52 @@ export default function SelfMedDdiPage() {
   };
 
   useEffect(() => {
+    // Named SelfMed/CareGuard product event (Req 9.1); consent/PII guarded.
+    trackCareguardViewed({ surface: "selfmed" });
     void refreshCabinet();
   }, []);
 
   const onRunDdi = async () => {
     setError("");
     setResult(null);
+    setOfflineCachedAt(null);
+    // Guard the analysis call: with fewer than two distinct medicines, prompt
+    // the End_User to add at least two and do NOT call the DDI analysis
+    // (Requirement 3.5).
+    if (needsMoreMedicines) {
+      setError(`Cần ít nhất ${MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác. Vui lòng thêm thuốc.`);
+      return;
+    }
     setIsChecking(true);
     try {
       const next = await runCabinetAutoDdi({ allergies: parseLineList(allergiesInput) });
-      setResult(next);
+      // Render ONLY the End_User projection: risk level, alerts,
+      // recommendations, and reference sources. Runtime mode, fallback flags,
+      // and source_errors are dropped by toDdiUserView (Req 3.1, 3.6, 4.1).
+      const view = toDdiUserView(next);
+      setResult(view);
+      // Cache the last-known *projection* for offline fallback (Req 6.3). No-op
+      // when CAREGUARD_OFFLINE_FALLBACK_ENABLED is off.
+      cacheDdiUserView(view);
+      // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
+      trackCareguardDdiChecked({
+        riskLevel: view.riskLevel,
+        alertCount: view.alerts.length,
+        medicineCount: items.length,
+        source: "selfmed"
+      });
     } catch (cause) {
+      // Offline / degraded fallback (Req 6.3): when the flag is on and the API
+      // is unreachable, show the last-known cached projection labeled stale.
+      // We never fabricate an all-clear — only a genuine cached result is shown.
+      if (isCareguardOfflineFallbackEnabled() && isLikelyOfflineError(cause)) {
+        const cached = readCachedDdiView();
+        if (cached) {
+          setResult(cached.view);
+          setOfflineCachedAt(cached.cachedAt);
+          return;
+        }
+      }
       setError(
         toCareguardUserMessage(cause, "Không thể hoàn tất phân tích tương tác thuốc. Vui lòng thử lại.")
       );
@@ -161,37 +230,50 @@ export default function SelfMedDdiPage() {
               <button
                 type="button"
                 onClick={() => void onRunDdi()}
-                disabled={isChecking || items.length < 2}
+                disabled={isChecking || needsMoreMedicines}
                 className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
               >
                 {isChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
               </button>
 
-              {items.length < 2 ? <p className="mt-2 text-xs text-amber-200">Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác.</p> : null}
+              {needsMoreMedicines ? <p className="mt-2 text-xs text-amber-200">Cần ít nhất {MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác.</p> : null}
               {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
             </section>
           </div>
 
           {result ? (
-            <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskTier)}`}>
+            <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskLevel)}`}>
+              {offlineCachedAt ? (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-3 py-2 dark:border-amber-400/55 dark:bg-amber-500/10">
+                  <span className="rounded-full border border-amber-400 bg-amber-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-900 dark:border-amber-300/60 dark:bg-amber-500/20 dark:text-amber-100">
+                    {CAREGUARD_OFFLINE_LABEL}
+                  </span>
+                  <span className="text-xs text-amber-900 dark:text-amber-100">
+                    {(() => {
+                      const at = formatOfflineCachedAt(offlineCachedAt);
+                      return at
+                        ? `Đang hiển thị kết quả lưu gần nhất (${at}). Kết quả có thể đã cũ.`
+                        : "Đang hiển thị kết quả lưu gần nhất. Kết quả có thể đã cũ.";
+                    })()}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Kết quả tổng quan</p>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(result.riskTier)}`}>
-                  Mức rủi ro: {formatCareguardRiskLabel(result.riskTier)}
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(result.riskLevel)}`}>
+                  Mức rủi ro: {formatCareguardRiskLabel(result.riskLevel)}
                 </span>
               </div>
 
-              {result.ddiAlerts.length ? (
+              {result.alerts.length ? (
                 <ul className="mt-3 space-y-2">
-                  {result.ddiAlerts.map((alert, index) => (
-                    <li key={`${alert.title}-${index}`} className={`rounded-2xl border p-3 ${riskPanelClass(alert.severity ?? result.riskTier)}`}>
+                  {result.alerts.map((alert, index) => (
+                    <li key={`${alert.message}-${index}`} className={`rounded-2xl border p-3 ${riskPanelClass(alert.severity)}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.title}</p>
-                        {alert.severity ? (
-                          <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
-                            {formatCareguardRiskLabel(alert.severity)}
-                          </span>
-                        ) : null}
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.message}</p>
+                        <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
+                          {formatCareguardRiskLabel(alert.severity)}
+                        </span>
                       </div>
                       {alert.details ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{alert.details}</p> : null}
                     </li>
@@ -214,10 +296,27 @@ export default function SelfMedDdiPage() {
 
               <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Nguồn tham khảo</p>
-                {result.attribution?.sources.length ? (
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {result.attribution.sources.map((source) => source.name).join(", ")}
-                  </p>
+                {result.sources.length ? (
+                  <ul className="mt-1 flex flex-wrap gap-2">
+                    {result.sources.map((source, index) => (
+                      <li key={`${source.label}-${index}`}>
+                        {source.url ? (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-brand)] underline"
+                          >
+                            {source.label}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                            {source.label}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">Chưa có dữ liệu nguồn tham khảo.</p>
                 )}

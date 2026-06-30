@@ -1,4 +1,5 @@
 import api from "@/lib/http-client";
+import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
 
 export type CouncilRunRequest = {
   symptoms: string[];
@@ -104,6 +105,12 @@ export type CouncilNeuralRisk = {
   }>;
 };
 
+export type CouncilAiDisclosure = {
+  modelFamily: string;
+  modelVersion: string;
+  isFallback: boolean;
+};
+
 export type CouncilRunRawResponse = {
   [key: string]: unknown;
 };
@@ -126,6 +133,7 @@ export type CouncilRunResult = {
   citationQuality: CouncilCitationQuality | null;
   reasoningTimeline: CouncilReasoningTimelineStep[];
   neuralRisk: CouncilNeuralRisk | null;
+  aiDisclosure: CouncilAiDisclosure | null;
   analysisSections: {
     analyze: string[];
     details: string[];
@@ -461,6 +469,30 @@ function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Model & fallback disclosure (Req 6.1, 6.2, 6.3, 6.4)
+//
+// `parseCouncilDisclosure` reads the additive `ai_disclosure` block
+// (`{ model_family, model_version, is_fallback }`) attached to the run/intake
+// envelope by the ML tier when `COUNCIL_MODEL_DISCLOSURE_ENABLED` is on (design
+// §E). With the flag off the block is absent, so this returns `null` and the
+// surfaces render byte-identically to today. `is_fallback` is true IFF a
+// degraded/heuristic path produced the output (Property P10). Mirrors the
+// `parseNeuralRisk` style above.
+// ---------------------------------------------------------------------------
+function parseCouncilDisclosure(value: unknown): CouncilAiDisclosure | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const modelFamily = asText(record.model_family ?? record.modelFamily) ?? "";
+  const modelVersion = asText(record.model_version ?? record.modelVersion) ?? "";
+  if (!modelFamily && !modelVersion) return null;
+  return {
+    modelFamily,
+    modelVersion,
+    isFallback: parseBoolean(record.is_fallback ?? record.isFallback),
+  };
+}
+
 function formatLabsInput(value: unknown): string {
   const rows = Array.isArray(value) ? value : [];
   const formattedRows = rows
@@ -612,6 +644,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
   const citationQuality = parseCitationQuality(pickUnknown(candidates, ["citation_quality"]));
   const reasoningTimeline = parseReasoningTimeline(pickUnknown(candidates, ["reasoning_timeline"]));
   const neuralRisk = parseNeuralRisk(pickUnknown(candidates, ["neural_risk"]));
+  const aiDisclosure = parseCouncilDisclosure(pickUnknown(candidates, ["ai_disclosure", "aiDisclosure"]));
 
   const policyAction = parseText(pickUnknown(candidates, ["policy_action", "action"])).toLowerCase();
   const explicitEmergencyFlag = parseBoolean(
@@ -691,6 +724,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     citationQuality,
     reasoningTimeline,
     neuralRisk,
+    aiDisclosure,
     analysisSections
   };
 }
@@ -756,6 +790,10 @@ export type CouncilCaseRecord = {
   result?: CouncilRunRawResponse | null;
   raw_result?: CouncilRunRawResponse | null;
   last_run_at?: string | null;
+  // Additive oversight column (Req 3.2). Present only when the server has the
+  // oversight feature; `paused` drives the "not yet confirmed" render. Optional
+  // so flags-off / pre-feature payloads remain shape-compatible.
+  oversight_state?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -839,6 +877,257 @@ export async function runCouncilCaseById(
   return response.data;
 }
 
+// ---------------------------------------------------------------------------
+// Run history & versioning (Req 2.4)
+//
+// `getCouncilRuns` fetches the owner-isolated, newest-first run history for a
+// case (`GET /council/cases/{id}/runs`). Owner isolation is enforced
+// server-side; the client only renders what it is given. The endpoint is only
+// mounted when `COUNCIL_RUN_HISTORY_ENABLED` is on, so callers treat an absent
+// endpoint / empty payload as "no history" and degrade gracefully (no-op).
+// ---------------------------------------------------------------------------
+
+/** One immutable Council run-history record (a single `run_council` snapshot). */
+export type CouncilRunRecord = {
+  id: number;
+  caseId: number | null;
+  modelVersion: string;
+  emergencyTriggered: boolean;
+  createdAt: string;
+  result: CouncilRunRawResponse | null;
+  request: Record<string, unknown> | null;
+};
+
+function parseCouncilRunRecord(value: unknown): CouncilRunRecord | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const id = parseNumber(record.id);
+  if (id == null) return null;
+  const result = asRecord(record.result ?? record.result_json) as CouncilRunRawResponse | null;
+  const request = asRecord(record.request ?? record.request_json);
+  return {
+    id,
+    caseId: parseNumber(record.case_id ?? record.caseId),
+    modelVersion: asText(record.model_version ?? record.modelVersion) ?? "",
+    emergencyTriggered: parseBoolean(record.emergency_triggered ?? record.emergencyTriggered),
+    createdAt:
+      asText(record.created_at ?? record.createdAt) ?? "",
+    result,
+    request,
+  };
+}
+
+/**
+ * Fetch the newest-first run history for a case. Server enforces owner
+ * isolation; this returns whatever the server permits. The list is sorted
+ * newest-first defensively (by `createdAt` desc, then `id` desc) so the render
+ * order is stable regardless of server ordering. Throws on transport errors so
+ * callers can decide to no-op (e.g. when run history is disabled and the
+ * endpoint is not mounted).
+ */
+export async function getCouncilRuns(
+  caseId: number,
+  limit = 20,
+  offset = 0
+): Promise<CouncilRunRecord[]> {
+  const response = await api.get<unknown>(`/council/cases/${caseId}/runs`, {
+    params: { limit, offset },
+  });
+  const root = asRecord(response.data);
+  const rawItems = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(root?.items)
+      ? (root?.items as unknown[])
+      : Array.isArray(root?.runs)
+        ? (root?.runs as unknown[])
+        : [];
+  return rawItems
+    .map((item) => parseCouncilRunRecord(item))
+    .filter((item): item is CouncilRunRecord => Boolean(item))
+    .sort((a, b) => {
+      const aTime = Date.parse(a.createdAt);
+      const bTime = Date.parse(b.createdAt);
+      if (Number.isFinite(aTime) && Number.isFinite(bTime) && aTime !== bTime) {
+        return bTime - aTime;
+      }
+      return b.id - a.id;
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Streaming / progressive deliberation (Req 1.3)
+//
+// `streamCouncilRun` opens the additive SSE deliberation stream
+// (`POST /council/cases/{id}/run/stream`) and dispatches one `onStage` callback
+// per pipeline stage, then exactly one terminal `onResult` (the full
+// `run_council` envelope — same shape as the blocking `/run`) or `onError`.
+// It mirrors the `streamScribe`/`streamChatMessage` SSE conventions (same
+// bearer + CSRF + credentials and the same `\n\n`-delimited frame parsing).
+//
+// The streaming endpoint only exists when the server flag
+// `COUNCIL_STREAMING_ENABLED` is on; callers gate the streaming path on the
+// client-readable `NEXT_PUBLIC_COUNCIL_STREAMING_ENABLED` flag (default off) via
+// `isCouncilStreamingEnabled()` and fall back to the blocking run when off.
+// ---------------------------------------------------------------------------
+
+/** One streamed deliberation stage event (stage label + non-PII metadata). */
+export type CouncilStreamStage = {
+  sequence: number;
+  step: string;
+  detail: string;
+  metadata: Record<string, unknown>;
+};
+
+export type CouncilStreamRunPayload = {
+  request?: Record<string, unknown>;
+  specialist_count?: number;
+  specialists?: string[];
+};
+
+export type CouncilStreamHandlers = {
+  /** Fired once per ordered pipeline stage as the deliberation progresses. */
+  onStage?: (stage: CouncilStreamStage) => void;
+  /** Fired once with the terminal result envelope (equals the blocking `/run`). */
+  onResult?: (raw: CouncilRunRawResponse) => void;
+  /** Fired on a terminal error; ``message`` names the failure class (no PII). */
+  onError?: (message: string) => void;
+  signal?: AbortSignal;
+};
+
+/**
+ * Client-readable gate for the streaming deliberation path. Defaults to OFF so
+ * the blocking `/run` path is used unless the environment opts in. The server
+ * remains the source of truth (the stream endpoint is only mounted when
+ * `COUNCIL_STREAMING_ENABLED` is on); this only decides which path the web
+ * client attempts first.
+ */
+export function isCouncilStreamingEnabled(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_COUNCIL_STREAMING_ENABLED ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}
+
+/**
+ * Client-readable gate for the model/fallback disclosure surface (Req 6.4,
+ * 6.5). Defaults to OFF so nothing about disclosure renders unless the
+ * environment opts in — byte-identical to today. The server/ML tier remains
+ * the source of truth (the `ai_disclosure` block is only attached when
+ * `COUNCIL_MODEL_DISCLOSURE_ENABLED` is on); this only decides whether the web
+ * client renders the disclosure when the block is present. Mirrors
+ * `isCouncilStreamingEnabled()`.
+ */
+export function isCouncilModelDisclosureEnabled(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_COUNCIL_MODEL_DISCLOSURE_ENABLED ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}
+
+function councilStreamUrl(caseId: number): string {
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? "/api/v1").replace(/\/$/, "");
+  return `${base}/council/cases/${caseId}/run/stream`;
+}
+
+function parseCouncilSseFrame(block: string): { event: string; data: string } | null {
+  const lines = block.split("\n");
+  let event = "message";
+  const dataLines: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (!dataLines.length) return null;
+  return { event, data: dataLines.join("\n") };
+}
+
+function parseCouncilStreamStage(value: unknown): CouncilStreamStage {
+  const record = asRecord(value) ?? {};
+  const metadata = asRecord(record.metadata) ?? {};
+  return {
+    sequence: parseNumber(record.sequence) ?? 0,
+    step: asText(record.step) ?? asText(record.stage) ?? "",
+    detail: asText(record.detail) ?? "",
+    metadata,
+  };
+}
+
+/**
+ * Open the SSE Council deliberation stream for a case and dispatch
+ * stage/result/error callbacks. Resolves once a terminal `result`/`error`
+ * event is seen; throws on a transport failure or if the stream ends without a
+ * terminal event (so callers can fall back to the blocking run path).
+ */
+export async function streamCouncilRun(
+  caseId: number,
+  payload: CouncilStreamRunPayload,
+  handlers: CouncilStreamHandlers = {}
+): Promise<void> {
+  const headers: Record<string, string> = {
+    Accept: "text/event-stream",
+    "Content-Type": "application/json",
+  };
+  const accessToken = getAccessToken();
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const csrfToken = getCsrfToken();
+  if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+  const response = await fetch(councilStreamUrl(caseId), {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: JSON.stringify(payload ?? {}),
+    signal: handlers.signal,
+  });
+  if (!response.ok || !response.body) {
+    throw new Error(`council stream failed (status=${response.status})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let sawTerminal = false;
+
+  const dispatch = (event: string, data: string) => {
+    let parsed: unknown = data;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      parsed = data;
+    }
+    if (event === "stage") {
+      handlers.onStage?.(parseCouncilStreamStage(parsed));
+    } else if (event === "result") {
+      sawTerminal = true;
+      handlers.onResult?.((parsed ?? {}) as CouncilRunRawResponse);
+    } else if (event === "error") {
+      sawTerminal = true;
+      const message = (parsed as { message?: string; error?: string })?.message
+        ?? (parsed as { error?: string })?.error
+        ?? "council stream error";
+      handlers.onError?.(message);
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx = buffer.indexOf("\n\n");
+      while (idx !== -1) {
+        const frameBlock = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const frame = parseCouncilSseFrame(frameBlock);
+        if (frame) dispatch(frame.event, frame.data);
+        idx = buffer.indexOf("\n\n");
+      }
+    }
+    const tail = parseCouncilSseFrame(buffer);
+    if (tail) dispatch(tail.event, tail.data);
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!sawTerminal) throw new Error("council stream ended without a terminal event");
+}
+
 export function buildSnapshotFromCouncilCase(caseItem: CouncilCaseRecord): CouncilRunSnapshot | null {
   const raw = (caseItem.raw_result ?? caseItem.result) as CouncilRunRawResponse | null;
   const requestRaw = (caseItem.request ?? {}) as Record<string, unknown>;
@@ -882,4 +1171,113 @@ export function buildSnapshotFromCouncilCase(caseItem: CouncilCaseRecord): Counc
     raw,
     createdAt: caseItem.last_run_at ?? caseItem.updated_at ?? caseItem.created_at,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Human oversight actions (Req 3.2, 3.6)
+//
+// `submitCouncilOversight` records a clinician/admin governance action against a
+// case (`POST /council/cases/{id}/oversight`). It reuses the shared `api` axios
+// instance, so the existing bearer + CSRF + credentials interceptors apply
+// exactly as they do for `runCouncilCaseById` (no bespoke header handling).
+//
+// The endpoint is only mounted when the server flag `COUNCIL_OVERSIGHT_ENABLED`
+// is on. Callers gate the real call behind the client-readable
+// `NEXT_PUBLIC_COUNCIL_OVERSIGHT_ENABLED` flag (default OFF) via
+// `isCouncilOversightEnabled()`; when the flag is off they keep the existing
+// browser-only local-notice behavior and write nothing (Req 3.6). When on, a
+// `pause` flips the case `oversight_state` so the final recommendation renders
+// as "chưa được xác nhận" / not yet confirmed (Req 3.2). The call is defensive:
+// if the endpoint is absent/unavailable (e.g. the server flag is still off) the
+// caller falls back to the local notice.
+// ---------------------------------------------------------------------------
+
+/** The three governance action kinds (mirrors the server `kind` enum). */
+export type CouncilOversightActionKind = "handoff" | "override" | "pause";
+
+/** Client-side oversight request; `action` maps to the server `kind` field. */
+export type CouncilOversightRequest = {
+  action: CouncilOversightActionKind;
+  reason?: string;
+  /** For `handoff`: the invited attending specialty. */
+  handoffSpecialty?: string;
+  /** For `override`: the human decision recorded alongside the AI output. */
+  overrideDecision?: string;
+  /** Optional target run id; the server defaults to the case's latest run. */
+  runId?: number;
+};
+
+/** Normalized oversight response (server is the source of truth). */
+export type CouncilOversightResult = {
+  id: number | null;
+  caseId: number | null;
+  kind: CouncilOversightActionKind | string;
+  reason: string;
+  /** `none` / `paused` — `paused` drives the "not yet confirmed" render. */
+  oversightState: string;
+  handoffSpecialty: string;
+  overrideDecision: string;
+  /** Retained original AI recommendation for an `override` (never discarded). */
+  overrideOriginal: string;
+  createdAt: string;
+};
+
+/**
+ * Client-readable gate for the real oversight path. Defaults to OFF so the
+ * existing browser-only local-notice behavior is preserved unless the
+ * environment opts in. The server remains the source of truth (the oversight
+ * endpoint is only mounted + authorized when `COUNCIL_OVERSIGHT_ENABLED` is on);
+ * this only decides whether the web client attempts the real call.
+ */
+export function isCouncilOversightEnabled(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_COUNCIL_OVERSIGHT_ENABLED ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}
+
+function parseCouncilOversightResult(
+  value: unknown,
+  fallbackKind: CouncilOversightActionKind
+): CouncilOversightResult {
+  const record = asRecord(value) ?? {};
+  return {
+    id: parseNumber(record.id),
+    caseId: parseNumber(record.case_id ?? record.caseId),
+    kind: asText(record.kind ?? record.action) ?? fallbackKind,
+    reason: asText(record.reason) ?? "",
+    oversightState:
+      asText(record.oversight_state ?? record.oversightState) ??
+      (fallbackKind === "pause" ? "paused" : "none"),
+    handoffSpecialty: asText(record.handoff_specialty ?? record.handoffSpecialty) ?? "",
+    overrideDecision: asText(record.override_decision ?? record.overrideDecision) ?? "",
+    overrideOriginal: asText(record.override_original ?? record.overrideOriginal) ?? "",
+    createdAt: asText(record.created_at ?? record.createdAt) ?? "",
+  };
+}
+
+/**
+ * Persist a Council oversight action (`handoff` / `override` / `pause`) for a
+ * case. Sends both `kind` and `action` for forward/back compatibility with the
+ * server contract. Throws on transport errors (including the endpoint being
+ * absent) so callers can fall back to the local-notice behavior.
+ */
+export async function submitCouncilOversight(
+  caseId: number,
+  payload: CouncilOversightRequest
+): Promise<CouncilOversightResult> {
+  const body: Record<string, unknown> = {
+    kind: payload.action,
+    action: payload.action,
+  };
+  const reason = (payload.reason ?? "").trim();
+  if (reason) body.reason = reason;
+  const handoffSpecialty = (payload.handoffSpecialty ?? "").trim();
+  if (handoffSpecialty) body.handoff_specialty = handoffSpecialty;
+  const overrideDecision = (payload.overrideDecision ?? "").trim();
+  if (overrideDecision) body.override_decision = overrideDecision;
+  if (typeof payload.runId === "number" && Number.isFinite(payload.runId)) {
+    body.run_id = Math.trunc(payload.runId);
+  }
+
+  const response = await api.post<unknown>(`/council/cases/${caseId}/oversight`, body);
+  return parseCouncilOversightResult(response.data, payload.action);
 }

@@ -9,6 +9,10 @@ import {
   SourceHubSourceKey,
   syncSourceHub,
 } from "@/lib/research";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { sanitizeUpstreamError, stripTelemetryLabels } from "@/lib/user-facing-text";
+import { trackResearchSourcesSynced, trackResearchViewed } from "@/lib/analytics/events";
 
 const SOURCE_LABELS: Record<SourceHubSourceKey, string> = {
   pubmed: "PubMed",
@@ -44,6 +48,18 @@ export default function ResearchSourceHubPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  // Raw connector diagnostics from the last sync. These can carry internal
+  // telemetry (e.g. `openfda http_400`) so they are NEVER rendered inline;
+  // they are surfaced through the role-gated TelemetryPanel (admin-only).
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
+  const [role, setRoleState] = useState<UserRole>("normal");
+
+  // Hydrate the viewer role on mount and emit the coarse, non-PII
+  // "Research surface viewed" product event (Req 9.1).
+  useEffect(() => {
+    setRoleState(getRole());
+    trackResearchViewed();
+  }, []);
 
   const loadCatalog = useCallback(async () => {
     const items = await listSourceHubCatalog();
@@ -65,7 +81,7 @@ export default function ResearchSourceHubPage() {
       });
       setRecords(items);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu nguồn nghiên cứu.");
+      setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu nguồn nghiên cứu."));
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +95,7 @@ export default function ResearchSourceHubPage() {
         await loadCatalog();
         await loadRecords();
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải Source Hub.");
+        setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tải Source Hub."));
         setIsLoading(false);
       }
     };
@@ -122,15 +138,29 @@ export default function ResearchSourceHubPage() {
     setIsSyncing(true);
     setError("");
     setMessage("");
+    setSyncWarnings([]);
     try {
       const result = await syncSourceHub({ source: activeSource, query, limit: safeLimit });
       await loadRecords(filterText);
-      setMessage(`Đã đồng bộ ${SOURCE_LABELS[result.source]}: lấy ${result.fetched}, lưu ${result.stored} bản ghi.`);
+      // Clean, End_User-safe success summary only — no raw connector strings.
+      setMessage(
+        stripTelemetryLabels(
+          `Đã đồng bộ ${SOURCE_LABELS[result.source]}: lấy ${result.fetched}, lưu ${result.stored} bản ghi.`
+        )
+      );
       if (result.warnings.length) {
-        setMessage((current) => `${current} Cảnh báo: ${result.warnings.join(" | ")}`);
+        // Retain raw warnings for the admin-only telemetry panel; surface a
+        // calm, non-technical hint to End_Users instead of connector errors.
+        setSyncWarnings(result.warnings);
       }
+      // Coarse, non-PII analytics: source key + counts only (Req 9.1, 9.4).
+      trackResearchSourcesSynced({
+        source: result.source,
+        fetched: result.fetched,
+        stored: result.stored,
+      });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đồng bộ nguồn nghiên cứu.");
+      setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể đồng bộ nguồn nghiên cứu."));
     } finally {
       setIsSyncing(false);
     }
@@ -181,7 +211,7 @@ export default function ResearchSourceHubPage() {
                 <select
                   value={activeSource}
                   onChange={(event) => setActiveSource(event.target.value as SourceHubSourceKey)}
-                  className="min-h-11 w-full rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
                 >
                   {catalog.map((item) => (
                     <option key={item.key} value={item.key}>
@@ -196,7 +226,7 @@ export default function ResearchSourceHubPage() {
                   value={syncQuery}
                   onChange={(event) => setSyncQuery(event.target.value)}
                   placeholder={activeCatalogEntry?.default_query || "Ví dụ: metformin interaction"}
-                  className="min-h-11 w-full rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[#6B7280] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
                 />
               </label>
               <label className="space-y-1">
@@ -205,7 +235,7 @@ export default function ResearchSourceHubPage() {
                   value={syncLimit}
                   onChange={(event) => setSyncLimit(event.target.value)}
                   inputMode="numeric"
-                  className="min-h-11 w-full rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
                 />
               </label>
               <div className="flex items-end">
@@ -263,7 +293,7 @@ export default function ResearchSourceHubPage() {
                 value={filterText}
                 onChange={(event) => setFilterText(event.target.value)}
                 placeholder="Lọc theo tiêu đề hoặc query..."
-                className="min-h-10 w-72 rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[#6B7280] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
               />
               <button
                 type="submit"
@@ -283,6 +313,23 @@ export default function ResearchSourceHubPage() {
             <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
               {message}
             </p>
+          ) : null}
+          {syncWarnings.length ? (
+            <TelemetryPanel
+              role={role}
+              payload={syncWarnings}
+              className="mb-3"
+              summaryText="Một số nguồn phản hồi chậm, dữ liệu hiển thị có thể chưa đầy đủ."
+            >
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                <p className="text-xs font-bold uppercase tracking-[0.12em]">Cảnh báo đồng bộ (chỉ admin)</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 font-mono text-xs">
+                  {syncWarnings.map((warning, index) => (
+                    <li key={`${warning}-${index}`}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </TelemetryPanel>
           ) : null}
 
           <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">

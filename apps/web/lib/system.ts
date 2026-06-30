@@ -19,13 +19,29 @@ export type SystemMetricsRawResponse = {
   request_count?: number;
   error_count?: number;
   avg_latency_ms?: number;
+  percentiles?: Record<string, unknown>;
   [key: string]: unknown;
+};
+
+/**
+ * Per-route latency percentiles surfaced by `/system/metrics` under the
+ * additive `percentiles` key when `admin_observability_percentiles_enabled` is
+ * on (Requirements 5.2, 5.6). With the flag off the key is absent and the
+ * normalizer yields an empty list so the dashboard degrades gracefully.
+ */
+export type RouteLatencyPercentiles = {
+  route: string;
+  p50Ms: number | null;
+  p90Ms: number | null;
+  p99Ms: number | null;
 };
 
 export type SystemMetricsSnapshot = {
   requestCount: number | null;
   errorCount: number | null;
   avgLatencyMs: number | null;
+  /** Empty when the percentiles flag is off / the key is absent. */
+  routePercentiles: RouteLatencyPercentiles[];
 };
 
 export type SystemDependenciesRawResponse = {
@@ -382,6 +398,30 @@ export async function updateControlTowerConfig(payload: ControlTowerConfig): Pro
   return response.data;
 }
 
+export type AcknowledgeAlertResult = {
+  acknowledged: boolean;
+  alert: {
+    alert_id: string;
+    severity?: string;
+    state?: string;
+    acknowledged?: boolean;
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * Acknowledge a firing observability alert by its stable id (rule + target
+ * dedupe key). POSTs to the admin-gated `/admin/observability` endpoint, which
+ * is flag-gated (`admin_observability_alerting_enabled`): when off it returns a
+ * feature-disabled 404 and an unknown id returns 404 (Requirements 8.4, 1.1).
+ */
+export async function acknowledgeObservabilityAlert(alertId: string): Promise<AcknowledgeAlertResult> {
+  const response = await api.post<AcknowledgeAlertResult>(
+    `/admin/observability/alerts/${encodeURIComponent(alertId)}/acknowledge`
+  );
+  return response.data;
+}
+
 export function isAccessDeniedError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const normalized = normalizeTextForMatch(error.message);
@@ -447,8 +487,36 @@ export function normalizeSystemMetrics(data: SystemMetricsRawResponse): SystemMe
   return {
     requestCount,
     errorCount,
-    avgLatencyMs
+    avgLatencyMs,
+    routePercentiles: normalizeRoutePercentiles(pickUnknown(candidates, ["percentiles"]))
   };
+}
+
+/**
+ * Folds the additive `/system/metrics` `percentiles` map ({ route -> { p50_ms,
+ * p90_ms, p99_ms } }) into a stable, route-sorted list. Tolerates the absent
+ * key (flag off → empty list) and both `pXX_ms` and bare `pXX` field spellings
+ * so the Observability dashboard renders gracefully either way (Req 5.6).
+ */
+export function normalizeRoutePercentiles(value: unknown): RouteLatencyPercentiles[] {
+  const root = asRecord(value);
+  if (!root) return [];
+
+  const rows: RouteLatencyPercentiles[] = [];
+  for (const [route, raw] of Object.entries(root)) {
+    const bucket = asRecord(raw);
+    if (!bucket) continue;
+    const label = asText(route);
+    if (!label) continue;
+    rows.push({
+      route: label,
+      p50Ms: asNumber(pickUnknown([bucket], ["p50_ms", "p50Ms", "p50"])),
+      p90Ms: asNumber(pickUnknown([bucket], ["p90_ms", "p90Ms", "p90"])),
+      p99Ms: asNumber(pickUnknown([bucket], ["p99_ms", "p99Ms", "p99"]))
+    });
+  }
+
+  return rows.sort((a, b) => a.route.localeCompare(b.route));
 }
 
 export function normalizeSystemDependencies(data: SystemDependenciesRawResponse): SystemDependenciesSnapshot {

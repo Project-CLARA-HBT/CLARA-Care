@@ -7,6 +7,10 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilMetricCard, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
+import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { getRole, type UserRole } from "@/lib/auth-store";
+import { trackCouncilViewed } from "@/lib/analytics/events";
+import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
@@ -22,6 +26,13 @@ export default function CouncilResultPage() {
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [error, setError] = useState("");
+  const [role, setRole] = useState<UserRole>("normal");
+
+  useEffect(() => {
+    setRole(getRole());
+    // The Council surface was viewed (Req 9.1). No PII — coarse view label only.
+    trackCouncilViewed({ view: "result" });
+  }, []);
 
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get("caseId");
@@ -136,7 +147,7 @@ export default function CouncilResultPage() {
 
               {view.summary.escalationReason ? (
                 <p className="mt-3 rounded-xl border border-red-300/40 bg-red-50/80 px-3 py-2 text-sm text-red-700 dark:border-red-700/45 dark:bg-red-950/20 dark:text-red-300">
-                  Lý do leo thang: {view.summary.escalationReason}
+                  Lý do leo thang: {stripTelemetryLabels(view.summary.escalationReason)}
                 </p>
               ) : null}
 
@@ -144,51 +155,53 @@ export default function CouncilResultPage() {
                 <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Final Recommendation</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--text-secondary)]">
-                    {view.summary.finalRecommendation || "Không có khuyến nghị cuối trong snapshot này."}
+                    {stripTelemetryLabels(view.summary.finalRecommendation) || "Không có khuyến nghị cuối trong snapshot này."}
                   </p>
                 </article>
 
                 <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Consensus</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--text-secondary)]">
-                    {view.summary.consensus || "Không có nội dung đồng thuận."}
+                    {stripTelemetryLabels(view.summary.consensus) || "Không có nội dung đồng thuận."}
                   </p>
                 </article>
               </div>
             </CouncilSection>
 
-            <CouncilSection eyebrow="Reasoning Timeline" title="Luồng suy luận hội chẩn">
-              {view.timeline.steps.length ? (
-                <ol className="space-y-2">
-                  {view.timeline.steps.map((step) => (
-                    <li
-                      key={`${step.sequence}-${step.step}`}
-                      className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
-                    >
-                      <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
-                        Step {step.sequence}: {step.step}
-                      </p>
-                      <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{step.detail}</p>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-sm text-[var(--text-secondary)]">Chưa có reasoning timeline trong snapshot này.</p>
-              )}
-            </CouncilSection>
+            <TelemetryPanel role={role}>
+              <CouncilSection eyebrow="Reasoning Timeline" title="Luồng suy luận hội chẩn">
+                {view.timeline.steps.length ? (
+                  <ol className="space-y-2">
+                    {view.timeline.steps.map((step) => (
+                      <li
+                        key={`${step.sequence}-${step.step}`}
+                        className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                          Step {step.sequence}: {step.step}
+                        </p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(step.detail)}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-[var(--text-secondary)]">Chưa có reasoning timeline trong snapshot này.</p>
+                )}
+              </CouncilSection>
+            </TelemetryPanel>
 
             <CouncilSection eyebrow="Risk Notes" title="Điểm cần lưu ý">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Conflict List</p>
                   <div className="mt-2">
-                    <CouncilList items={view.summary.conflicts} emptyText="Không có conflict nổi bật." />
+                    <CouncilList items={view.summary.conflicts.map(stripTelemetryLabels)} emptyText="Không có conflict nổi bật." />
                   </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Divergence</p>
                   <div className="mt-2">
-                    <CouncilList items={view.summary.divergence} emptyText="Không có divergence nổi bật." />
+                    <CouncilList items={view.summary.divergence.map(stripTelemetryLabels)} emptyText="Không có divergence nổi bật." />
                   </div>
                 </div>
               </div>

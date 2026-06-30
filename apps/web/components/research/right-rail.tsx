@@ -12,6 +12,7 @@ import {
 } from "@/lib/research";
 import DebugHintsPanel from "@/components/research/debug-hints-panel";
 import EvidencePanel from "@/components/research/evidence-panel";
+import ConsensusPanel from "@/components/research/consensus-panel";
 import FlowTimelinePanel from "@/components/research/flow-timeline-panel";
 import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel";
 import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
@@ -143,21 +144,37 @@ export default function ResearchRightRail({
   }, [showDebugHints, showTelemetry]);
 
   const panelByTab: Record<MobileTab, JSX.Element | null> = {
+    // Detailed telemetry rails (flow timeline, telemetry detail, debug hints)
+    // are locked to Admin_Users via the role-gated TelemetryPanel — the same
+    // pure role predicate the desktop layout uses (Requirement 11.4). The tab
+    // list above already hides these tabs from non-admins; wrapping the panel
+    // here is defense-in-depth so the rail can never render to a non-admin even
+    // if the active tab desyncs from the role (e.g. role re-hydration), keeping
+    // the gate independent of UI tab state.
     flow: (
-      <FlowTimelinePanel
-        stages={flowStages}
-        events={flowEvents}
-        mode={flowMode}
-        isProcessing={isSubmitting}
-      />
+      <TelemetryPanel role={viewerRole}>
+        <FlowTimelinePanel
+          stages={flowStages}
+          events={flowEvents}
+          mode={flowMode}
+          isProcessing={isSubmitting}
+        />
+      </TelemetryPanel>
     ),
     telemetry: (
-      <TelemetryDetailsPanel
-        telemetry={telemetry}
-        isProcessing={isSubmitting}
-      />
+      <TelemetryPanel role={viewerRole}>
+        <TelemetryDetailsPanel
+          telemetry={telemetry}
+          isProcessing={isSubmitting}
+        />
+      </TelemetryPanel>
     ),
-    evidence: <EvidencePanel citations={citations} />,
+    evidence: (
+      <div className="space-y-4">
+        <EvidencePanel citations={citations} />
+        <ConsensusPanel consensus={telemetry.consensus} />
+      </div>
+    ),
     sources: (
       <KnowledgeSourcesPanel
         sources={knowledgeSources}
@@ -185,7 +202,11 @@ export default function ResearchRightRail({
         onDragLeave={onDragLeaveUpload}
       />
     ),
-    debug: <DebugHintsPanel enabled={showDebugHints} {...debugHints} />
+    debug: (
+      <TelemetryPanel role={viewerRole}>
+        <DebugHintsPanel enabled={showDebugHints} {...debugHints} />
+      </TelemetryPanel>
+    )
   };
 
   return (
@@ -227,6 +248,7 @@ export default function ResearchRightRail({
           />
         </TelemetryPanel>
         <EvidencePanel citations={citations} />
+        <ConsensusPanel consensus={telemetry.consensus} />
         <KnowledgeSourcesPanel
           sources={knowledgeSources}
           selectedSourceIds={selectedSourceIds}

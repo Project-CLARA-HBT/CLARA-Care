@@ -40,12 +40,34 @@ services:
       TGC_OCR_TIMEOUT_SECONDS: ${TGC_OCR_TIMEOUT_SECONDS:-45}
       TGC_OCR_API_KEY: ${TGC_OCR_API_KEY:-}
       API_UVICORN_WORKERS: ${API_UVICORN_WORKERS:-4}
+      # Database connection-pool sizing (Requirement 10.2). Defaults match the
+      # in-code defaults so behavior is unchanged unless explicitly overridden;
+      # size relative to API_UVICORN_WORKERS for production load. pool_pre_ping
+      # is preserved as the liveness check.
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-5}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-30}
+      DB_POOL_RECYCLE: ${DB_POOL_RECYCLE:-1800}
+      DB_POOL_PRE_PING: ${DB_POOL_PRE_PING:-true}
     ports:
       - "127.0.0.1:${APP_API_PORT:-8100}:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - clara_api_data:/data
+    # Container healthcheck (Requirement 6.4). Uses the static /health liveness
+    # endpoint (unchanged shape) via the in-image python interpreter, since the
+    # slim base image ships no curl/wget. Additive: orchestration liveness only.
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   ml:
     image: ${ML_IMAGE}
@@ -91,6 +113,19 @@ services:
       - searxng
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
+    # Container healthcheck (Requirement 6.4). Uses the ML /health liveness
+    # endpoint (unchanged shape) via the in-image python interpreter, since the
+    # slim base image ships no curl/wget. Additive: orchestration liveness only.
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8010/health', timeout=5)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   searxng:
     image: ${SEARXNG_IMAGE:-searxng/searxng:latest}
@@ -114,6 +149,21 @@ services:
       - api
     ports:
       - "127.0.0.1:${APP_WEB_PORT:-3100}:3000"
+    # Container healthcheck (Requirement 6.4). Probes the web root over HTTP via
+    # busybox wget (present in the node:alpine runtime image). Additive:
+    # orchestration liveness only.
+    healthcheck:
+      test:
+        - "CMD"
+        - "wget"
+        - "--no-verbose"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:3000/"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   clara_api_data:

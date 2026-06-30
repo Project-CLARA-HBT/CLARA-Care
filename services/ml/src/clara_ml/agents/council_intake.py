@@ -7,6 +7,20 @@ from typing import Any
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 
+#: Sentinel ``model_used`` value for the degraded heuristic extraction path.
+_HEURISTIC_FALLBACK_MODEL = "heuristic-fallback-v1"
+
+#: User-visible degraded/fallback notice (Vietnamese-first, bilingual tail per the
+#: spec's copy rule). Surfaced on the intake result when extraction falls back to
+#: the heuristic path so a degraded extraction is never silently presented as a
+#: primary-model result (Requirement 5.3).
+_INTAKE_FALLBACK_NOTICE = (
+    "Trích xuất intake đang dùng cơ chế dự phòng (heuristic) do mô hình AI "
+    "không khả dụng. Kết quả có thể kém chính xác — vui lòng kiểm tra và chỉnh "
+    "sửa thủ công trước khi hội chẩn. (Degraded heuristic fallback extraction — "
+    "review and correct manually.)"
+)
+
 
 def _build_client() -> DeepSeekClient:
     return DeepSeekClient(
@@ -398,12 +412,39 @@ def _extract_with_deepseek(client: DeepSeekClient, transcript: str) -> dict[str,
     return payload
 
 
+def _build_intake_disclosure(model_used: str) -> dict[str, Any]:
+    """Build the ``ai_disclosure`` block for an intake result.
+
+    ``is_fallback`` is true IFF the heuristic/degraded path produced the
+    extraction (``heuristic-fallback-v1``). The model_family/version split
+    mirrors the compliance ``notice.model_disclosure`` helper (partition on the
+    first hyphen) so Council disclosure stays consistent with the regulatory
+    model-disclosure semantics (Requirement 6.6).
+    """
+
+    raw = (model_used or "").strip()
+    is_fallback = raw == "heuristic-fallback-v1"
+    if not raw:
+        family, version = "unknown", "unknown"
+    elif "-" in raw:
+        head, _, tail = raw.partition("-")
+        family, version = head, tail or "unknown"
+    else:
+        family, version = raw, "unknown"
+    return {
+        "model_family": family,
+        "model_version": version,
+        "is_fallback": is_fallback,
+    }
+
+
 def run_council_intake(
     *,
     transcript: str,
     audio_bytes: bytes | None = None,
     audio_filename: str = "audio.webm",
     audio_content_type: str = "audio/webm",
+    disclosure_enabled: bool | None = None,
 ) -> dict[str, Any]:
     transcript_text = transcript.strip()
     warnings: list[str] = []
@@ -465,7 +506,19 @@ def run_council_intake(
     if not research_topics:
         research_topics = ["Proceed to council review with current intake extraction."]
 
-    return {
+    # --- Degraded / fallback labeling (Requirement 5.3) ---------------------
+    # Fallback-only + additive: when intake degrades to the heuristic path we
+    # append a clear, user-visible notice to ``warnings`` (which the web intake
+    # surface already renders) so a degraded extraction is never silently shown
+    # as primary-model output. It is appended AFTER ``_compute_intake_confidence``
+    # above so the confidence/warning-penalty math stays byte-identical to today.
+    # The non-fallback (LLM) path is untouched, preserving "LLM intake is not
+    # flagged as fallback" and flags-off envelope equivalence.
+    is_fallback = model_used == _HEURISTIC_FALLBACK_MODEL
+    if is_fallback and _INTAKE_FALLBACK_NOTICE not in warnings:
+        warnings.append(_INTAKE_FALLBACK_NOTICE)
+
+    result = {
         "transcript": transcript_text,
         "symptoms": symptoms,
         "labs": labs,
@@ -530,3 +583,35 @@ def run_council_intake(
             },
         },
     }
+
+    # --- Machine-readable degraded/fallback flag (Requirement 5.3) ----------
+    # Fallback-only and independent of the disclosure flag: carry an explicit
+    # top-level ``is_fallback`` boolean plus the user-visible ``fallback_notice``
+    # so any downstream (web/mobile) can detect a degraded extraction without
+    # string-matching ``model_used`` or digging into ``deepdive``. This mirrors
+    # ``ai_disclosure.is_fallback`` (task 6.1) where that block is enabled. The
+    # LLM-backed path adds neither key, so it is byte-identical to today and is
+    # never flagged as a fallback.
+    if is_fallback:
+        result["is_fallback"] = True
+        result["fallback_notice"] = _INTAKE_FALLBACK_NOTICE
+
+    # --- Model & fallback disclosure (Requirement 6.1, 6.2) -----------------
+    # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on
+    # (explicit override via ``disclosure_enabled`` else the ML settings),
+    # attach an ``ai_disclosure`` block. ``is_fallback`` is true IFF the
+    # heuristic/degraded extraction path produced this intake
+    # (``heuristic-fallback-v1``) so a degraded extraction is never silently
+    # presented as primary-model output (design §E, Property P10). The
+    # model_family/version split mirrors the compliance model-disclosure
+    # semantics (Requirement 6.6). When off, the block is omitted so the
+    # envelope is byte-equivalent to today (Requirement 6.5, 9.2).
+    disclosure_on = (
+        settings.council_model_disclosure_enabled
+        if disclosure_enabled is None
+        else disclosure_enabled
+    )
+    if disclosure_on:
+        result["ai_disclosure"] = _build_intake_disclosure(model_used)
+
+    return result

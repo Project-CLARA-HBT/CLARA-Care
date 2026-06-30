@@ -218,6 +218,9 @@ class ChatResponse(BaseModel):
     fallback_reason: str | None = None
     attribution: dict[str, Any] = Field(default_factory=dict)
     attributions: list[dict[str, Any]] = Field(default_factory=list)
+    # Compliance: AI model/version disclosure (Req 1.3, 1.4). Populated only when
+    # COMPLIANCE_MODEL_DISCLOSURE_ENABLED; omitted otherwise (legacy envelope).
+    ai_disclosure: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemCreate(BaseModel):
@@ -232,6 +235,10 @@ class MedicineCabinetItemCreate(BaseModel):
     ocr_confidence: float | None = None
     expires_on: datetime | None = None
     note: str = ""
+    # Per-item expiry reminder state (Req 10.3). Persisted only when
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` is on; ignored (no persistence) when
+    # off so behavior is byte-equivalent to today (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemUpdate(BaseModel):
@@ -246,6 +253,9 @@ class MedicineCabinetItemUpdate(BaseModel):
     ocr_confidence: float | None = None
     expires_on: datetime | None = None
     note: str | None = None
+    # Per-item expiry reminder state (Req 10.3); persisted only behind
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
 
 
 class MedicineCabinetItemResponse(BaseModel):
@@ -256,6 +266,17 @@ class MedicineCabinetItemResponse(BaseModel):
     normalized_name: str
     normalization_source: Literal["db", "candidate", "fallback"] | None = None
     normalization_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Derived normalization status surfaced to clients (Req 2.1, 2.5, 2.6).
+    # ``matched`` (exact dictionary hit) / ``candidate`` (fuzzy dictionary
+    # candidate) / ``fallback`` (alias-map hit) / ``needs_review`` (unmatched or
+    # low-confidence — the user-entered name is retained, never dropped).
+    # Additive + nullable so flags-off byte-equivalence is preserved for the
+    # pre-existing fields (P12); ``needs_review`` is a convenience boolean
+    # equal to ``normalization_status == "needs_review"``.
+    normalization_status: (
+        Literal["matched", "candidate", "fallback", "needs_review"] | None
+    ) = None
+    needs_review: bool = False
     dosage: str
     dosage_form: str
     quantity: float
@@ -263,15 +284,38 @@ class MedicineCabinetItemResponse(BaseModel):
     rx_cui: str
     ocr_confidence: float | None
     expires_on: datetime | None
+    # Derived expiry status from ``expires_on`` (Req 10.1). ``expired`` (in the
+    # past), ``expiring_soon`` (within the configured window), ``ok`` (beyond the
+    # window), or ``None`` when there is no expiry data (Req 10.5). Purely
+    # derived — no persisted state — so the pre-existing fields stay
+    # byte-equivalent (P12).
+    expiry_status: Literal["expired", "expiring_soon", "ok"] | None = None
+    # Persisted per-item reminder state, exposed only when
+    # ``SELFMED_EXPIRY_REMINDERS_ENABLED`` is on (Req 10.3); ``None`` otherwise,
+    # so flags-off behavior matches today (Req 10.4).
+    expiry_reminder: dict[str, Any] | None = None
     note: str
     created_at: datetime
     updated_at: datetime
+
+
+class CabinetExpirySummary(BaseModel):
+    # Cabinet-level expiry rollup (Req 10.2) computed from each item's
+    # ``expires_on``. Items with no expiry data are excluded from both counts
+    # (Req 10.5).
+    expired_count: int = 0
+    expiring_soon_count: int = 0
+    expiry_window_days: int = 0
 
 
 class MedicineCabinetResponse(BaseModel):
     cabinet_id: int
     label: str
     items: list[MedicineCabinetItemResponse]
+    # Expired / expiring-soon rollup surfaced in the cabinet summary (Req 10.2).
+    # Additive + nullable so legacy clients ignore it and flags-off
+    # byte-equivalence of the pre-existing fields is preserved (P12).
+    expiry_summary: CabinetExpirySummary | None = None
 
 
 class CabinetScanTextRequest(BaseModel):
@@ -288,6 +332,12 @@ class CabinetScanDetection(BaseModel):
     evidence: str
     mapping_source: Literal["db", "candidate", "fallback"] | None = None
     mapping_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Derived normalization status (Req 2.1, 2.5, 2.6) — same vocabulary as the
+    # cabinet item response so the UI can render a consistent badge before
+    # import. Additive + nullable; legacy clients ignore it.
+    normalization_status: (
+        Literal["matched", "candidate", "fallback", "needs_review"] | None
+    ) = None
     requires_manual_confirm: bool = False
     confirmed: bool = False
 
@@ -299,16 +349,33 @@ class CabinetPrioritizedField(BaseModel):
     dosage: str = ""
 
 
+class OcrConfirmGate(BaseModel):
+    """Low-confidence OCR manual-confirm gate state (Req 2.2, 2.6).
+
+    Surfaced on scan responses so clients can render the confirm gate
+    explicitly: any detection below ``threshold`` (or otherwise flagged) must be
+    manually confirmed before it can be imported. Additive + optional.
+    """
+
+    threshold: float
+    total_detections: int = 0
+    requires_confirmation: int = 0
+    confirmed: int = 0
+    needs_review: int = 0
+
+
 class CabinetScanTextResponse(BaseModel):
     detections: list[CabinetScanDetection]
     extracted_text: str | None = None
     ocr_provider: str | None = None
     ocr_endpoint: str | None = None
     prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
+    confirm_gate: OcrConfirmGate | None = None
 
 
 class CabinetImportRequest(BaseModel):
-    detections: list[CabinetScanDetection]
+    # Bounded batch import (Req 4.5): oversized arrays are rejected with a PII-free 422.
+    detections: list[CabinetScanDetection] = Field(max_length=200)
 
 
 class CabinetImportResponse(BaseModel):
@@ -317,14 +384,15 @@ class CabinetImportResponse(BaseModel):
 
 
 class CabinetAutoDdiRequest(BaseModel):
-    symptoms: list[str] = Field(default_factory=list)
+    # Bounded list inputs (Req 4.5): caps keep auto-DDI payloads from growing unbounded.
+    symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
-    allergies: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list, max_length=100)
 
 
 class VnDrugMappingCreateRequest(BaseModel):
     brand_name: str = Field(min_length=1, max_length=255)
-    aliases: list[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list, max_length=100)
     active_ingredients: str = Field(default="", max_length=2000)
     normalized_name: str = Field(min_length=1, max_length=255)
     rx_cui: str = Field(default="", max_length=64)
@@ -335,7 +403,7 @@ class VnDrugMappingCreateRequest(BaseModel):
 
 class VnDrugMappingUpdateRequest(BaseModel):
     brand_name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
+    aliases: list[str] | None = Field(default=None, max_length=100)
     active_ingredients: str | None = Field(default=None, max_length=2000)
     normalized_name: str | None = Field(default=None, min_length=1, max_length=255)
     rx_cui: str | None = Field(default=None, max_length=64)
@@ -346,7 +414,7 @@ class VnDrugMappingUpdateRequest(BaseModel):
 
 class VnDrugMappingCurationRequest(BaseModel):
     brand_name: str | None = Field(default=None, min_length=1, max_length=255)
-    aliases: list[str] | None = None
+    aliases: list[str] | None = Field(default=None, max_length=100)
     active_ingredients: str | None = Field(default=None, max_length=2000)
     normalized_name: str | None = Field(default=None, min_length=1, max_length=255)
     rx_cui: str | None = Field(default=None, max_length=64)
@@ -496,12 +564,13 @@ class MobileSummaryResponse(BaseModel):
 
 
 class CouncilRunRequest(BaseModel):
-    symptoms: list[str] = Field(default_factory=list)
+    # Bounded list inputs (Req 4.5): caps bound the council request payload size.
+    symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
-    medications: list[str] = Field(default_factory=list)
+    medications: list[str] = Field(default_factory=list, max_length=100)
     history: str | list[str] | dict[str, Any] = ""
     specialist_count: int = Field(default=3, ge=2, le=5)
-    specialists: list[str] = Field(default_factory=list)
+    specialists: list[str] = Field(default_factory=list, max_length=50)
 
 
 class CouncilRunResponse(BaseModel):
@@ -670,13 +739,28 @@ class ResearchTier2JobCreateRequest(BaseModel):
     response_format: str = "markdown"
     render_hints: dict[str, Any] = Field(default_factory=dict)
     source_mode: str | None = None
-    uploaded_file_ids: list[str] = Field(default_factory=list)
-    source_ids: list[int] = Field(default_factory=list)
-    source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list)
+    # Bounded batch arrays (Req 4.5): cap research-job inputs so a single job cannot
+    # reference an unbounded set of uploads/sources; violations yield a PII-free 422.
+    # uploaded_file_ids mirrors the in-process _MAX_RESEARCH_UPLOADS=200 ceiling.
+    uploaded_file_ids: list[str] = Field(default_factory=list, max_length=200)
+    source_ids: list[int] = Field(default_factory=list, max_length=200)
+    source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list, max_length=50)
     # llm_runtime declared EXACTLY ONCE with a single type (clara-research R1.5).
     llm_runtime: dict[str, Any] = Field(default_factory=dict)
     # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
     clarifying_answers: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _reject_fast_personal(self) -> "ResearchTier2JobCreateRequest":
+        # clara-research R15.2: preserve the invariant "never (fast && personal)".
+        # Personalization is valid only in tier2 (deep / deep_beta); a fast request that
+        # sets personal_mode is rejected rather than silently downgraded.
+        if self.personal_mode and self.research_mode == "fast":
+            raise ValueError(
+                "personal_mode is not allowed when research_mode is 'fast' "
+                "(invariant: never (fast && personal))."
+            )
+        return self
 
 
 class ResearchTier2JobResponse(BaseModel):
@@ -690,6 +774,34 @@ class ResearchTier2JobResponse(BaseModel):
     progress: dict[str, object] = Field(default_factory=dict)
     result: dict[str, object] | None = None
     error: str | None = None
+
+
+class ResearchClarifyRequest(BaseModel):
+    """Request to evaluate whether a deep research query needs clarification (R12)."""
+
+    query: str = Field(min_length=1, max_length=4000)
+    message: str | None = None
+    research_mode: Literal["fast", "deep", "deep_beta"] = "deep"
+    ui_language: Literal["vi", "en"] = Field(
+        default="vi",
+        validation_alias=AliasChoices("ui_language", "answer_language"),
+    )
+
+
+class ResearchClarifyQuestion(BaseModel):
+    """A single clarifying question; ``id`` is the key used in ``clarifying_answers`` (R12.2)."""
+
+    id: str
+    question: str
+    rationale: str | None = None
+
+
+class ResearchClarifyResponse(BaseModel):
+    """Clarifying-question payload returned by ``POST /research/clarify`` (clara-research R12.1)."""
+
+    ambiguous: bool = False
+    research_mode: Literal["fast", "deep", "deep_beta"] = "deep"
+    questions: list[ResearchClarifyQuestion] = Field(default_factory=list)
 
 
 class WorkspaceFolderCreateRequest(BaseModel):
@@ -822,6 +934,22 @@ class WorkspaceConversationShareResponse(BaseModel):
     updated_at: datetime
 
 
+class ResearchTier2ShareResponse(BaseModel):
+    """Read-only share link for a research tier2 job (R16.3).
+
+    Reuses the ``WorkspaceConversationShare`` mechanism: a ``share_token`` and a
+    ``/share/{token}`` public URL.
+    """
+
+    job_id: str
+    share_token: str
+    public_url: str
+    is_active: bool
+    expires_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkspaceConversationShareListItem(BaseModel):
     conversation_id: int
     conversation_title: str
@@ -854,7 +982,7 @@ class WorkspacePublicConversationResponse(BaseModel):
 class WorkspaceNoteCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     content_markdown: str = ""
-    tags: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list, max_length=50)
     is_pinned: bool = False
     conversation_id: int | None = None
 
@@ -862,7 +990,7 @@ class WorkspaceNoteCreateRequest(BaseModel):
 class WorkspaceNoteUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     content_markdown: str | None = None
-    tags: list[str] | None = None
+    tags: list[str] | None = Field(default=None, max_length=50)
     is_pinned: bool | None = None
     conversation_id: int | None = None
 
@@ -984,7 +1112,9 @@ class ScribeAddendumListResponse(BaseModel):
     addenda: list[ScribeAddendumResponse] = Field(default_factory=list)
 
 
-class PhrAllergyItem(BaseModel):
+class PhrAllergyItemLegacy(BaseModel):
+    """Legacy allergy item shape (kept for byte-for-byte flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=140)
     reaction: str = Field(default="", max_length=200)
@@ -992,7 +1122,9 @@ class PhrAllergyItem(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-class PhrConditionItem(BaseModel):
+class PhrConditionItemLegacy(BaseModel):
+    """Legacy condition item shape (flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=160)
     status: Literal["active", "resolved", "monitoring", "unknown"] = "unknown"
@@ -1000,7 +1132,9 @@ class PhrConditionItem(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-class PhrMedicationItem(BaseModel):
+class PhrMedicationItemLegacy(BaseModel):
+    """Legacy medication item shape (flags-off /record)."""
+
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=160)
     dose: str = Field(default="", max_length=140)
@@ -1008,6 +1142,61 @@ class PhrMedicationItem(BaseModel):
     started_on: date | None = None
     is_current: bool = True
     note: str = Field(default="", max_length=500)
+
+
+class PhrAllergyItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=140)
+    reaction: str = Field(default="", max_length=200)
+    severity: Literal["mild", "moderate", "severe", "unknown"] = "unknown"
+    note: str = Field(default="", max_length=500)
+    # --- new coded + provenance (additive, optional, safe defaults) ---
+    substance: str = Field(default="", max_length=140)
+    coded_substance_id: str = Field(default="", max_length=64)
+    is_coded: bool = False
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+
+
+class PhrConditionItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    status: Literal["active", "resolved", "monitoring", "unknown"] = "unknown"
+    diagnosed_on: date | None = None
+    note: str = Field(default="", max_length=500)
+    # --- new coded + provenance (additive, optional, safe defaults) ---
+    icd10_code: str = Field(default="", max_length=16)
+    snomed_code: str = Field(default="", max_length=32)
+    is_coded: bool = False
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+
+
+class PhrMedicationItem(BaseModel):
+    # --- existing (unchanged) ---
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=160)
+    dose: str = Field(default="", max_length=140)
+    frequency: str = Field(default="", max_length=140)
+    started_on: date | None = None
+    is_current: bool = True
+    note: str = Field(default="", max_length=500)
+    # --- new structured (additive, optional, safe defaults) ---
+    dose_amount: float | None = Field(default=None, ge=0)
+    dose_unit: str = Field(default="", max_length=32)
+    route: str = Field(default="", max_length=64)
+    # --- new coded ---
+    normalized_name: str = Field(default="", max_length=160)
+    rx_cui: str = Field(default="", max_length=64)
+    normalization_source: str = Field(default="", max_length=32)
+    is_normalized: bool = False
+    duplicate_of: str | None = Field(default=None, max_length=64)
+    # --- new provenance ---
+    information_source: Literal["self-declared", "ocr", "imported"] = "self-declared"
+    verification_status: str = Field(default="unconfirmed", max_length=32)
+    ocr_confidence: float | None = Field(default=None, ge=0, le=1)
 
 
 class PhrRecordUpdateRequest(BaseModel):
@@ -1023,12 +1212,36 @@ class PhrRecordUpdateRequest(BaseModel):
     emergency_contact_phone: str = Field(default="", max_length=64)
     insurance_id: str = Field(default="", max_length=128)
     notes: str = Field(default="", max_length=4000)
-    allergies: list[PhrAllergyItem] = Field(default_factory=list, max_length=80)
-    conditions: list[PhrConditionItem] = Field(default_factory=list, max_length=80)
-    medications: list[PhrMedicationItem] = Field(default_factory=list, max_length=120)
+    allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list, max_length=80)
+    conditions: list[PhrConditionItemLegacy] = Field(default_factory=list, max_length=80)
+    medications: list[PhrMedicationItemLegacy] = Field(default_factory=list, max_length=120)
 
 
 class PhrRecordResponse(BaseModel):
+    """Legacy /record response shape — unchanged so flags-off equivalence holds."""
+
+    full_name: str = ""
+    date_of_birth: date | None = None
+    gender: str = ""
+    blood_type: str = ""
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    phone: str = ""
+    address: str = ""
+    emergency_contact_name: str = ""
+    emergency_contact_phone: str = ""
+    insurance_id: str = ""
+    notes: str = ""
+    allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list)
+    conditions: list[PhrConditionItemLegacy] = Field(default_factory=list)
+    medications: list[PhrMedicationItemLegacy] = Field(default_factory=list)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class PhrEnhancedRecordResponse(BaseModel):
+    """Enhanced /record/enhanced response — surfaces coded/provenance fields."""
+
     full_name: str = ""
     date_of_birth: date | None = None
     gender: str = ""
@@ -1044,5 +1257,72 @@ class PhrRecordResponse(BaseModel):
     allergies: list[PhrAllergyItem] = Field(default_factory=list)
     conditions: list[PhrConditionItem] = Field(default_factory=list)
     medications: list[PhrMedicationItem] = Field(default_factory=list)
+    current_version_no: int = 0
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class PhrEntryPatchRequest(BaseModel):
+    """Entry/field-level patch payload for PATCH /phr/entries/{kind}/{id}."""
+
+    fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class PhrConsentMutationRequest(BaseModel):
+    purpose: Literal["personalization", "research", "sharing"]
+    granted: bool = True
+
+
+class PhrObservationCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    value: str = Field(default="", max_length=120)
+    unit: str = Field(default="", max_length=64)
+    observed_on: date | None = None
+
+
+class PhrShareCreateRequest(BaseModel):
+    scope: Literal["full", "emergency_card"] = "full"
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)
+
+
+class PhrOcrCandidate(BaseModel):
+    """A single OCR-extracted candidate medication awaiting confirmation."""
+
+    name: str = Field(min_length=1, max_length=160)
+    dose: str = Field(default="", max_length=140)
+    frequency: str = Field(default="", max_length=140)
+    ocr_confidence: float | None = Field(default=None, ge=0, le=1)
+    requires_manual_confirm: bool = False
+
+
+class PhrOcrConfirmRequest(BaseModel):
+    """User-edited candidate list to commit as ``ocr``-sourced entries."""
+
+    medications: list[PhrOcrCandidate] = Field(default_factory=list, max_length=120)
+
+
+class PhrReminderCreateRequest(BaseModel):
+    medication_entry_id: str = Field(min_length=1, max_length=64)
+    schedule: dict[str, Any] = Field(default_factory=dict)
+    remaining_supply: float | None = Field(default=None, ge=0)
+    refill_threshold: float | None = Field(default=None, ge=0)
+    caregiver_nudge_enabled: bool = False
+
+
+class PhrReminderDoseState(BaseModel):
+    """Per-medication dose acknowledgement state supplied at dispatch time."""
+
+    dose_marked_taken: bool = False
+    within_window: bool = True
+
+
+class PhrReminderDispatchRequest(BaseModel):
+    """Trigger evaluation + notification dispatch for the owner's reminders.
+
+    ``now`` allows callers (e.g. the scheduler) to pin the evaluation instant;
+    ``dose_states`` carries per-medication-entry acknowledgement state used by
+    the caregiver missed-dose nudge decision (Req 14.5).
+    """
+
+    now: datetime | None = None
+    dose_states: dict[str, PhrReminderDoseState] = Field(default_factory=dict)

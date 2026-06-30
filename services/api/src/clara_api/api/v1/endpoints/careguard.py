@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import base64
+import math
 import re
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
 from time import perf_counter
 from typing import Any
@@ -15,14 +16,21 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.compliance.consent import PURPOSE_PERSONALIZATION
+from clara_api.compliance.service import ComplianceService
+from clara_api.compliance.transfer import LLM_PROCESSOR, LLM_PURPOSE
 from clara_api.core.attribution import (
     attach_attribution,
     build_attribution,
     normalize_source_errors,
     normalize_source_used,
 )
+from clara_api.core.careguard_metrics import (
+    get_careguard_metrics_store,
+    record_careguard_check,
+)
 from clara_api.core.config import get_settings
-from clara_api.core.consent import ensure_medical_disclaimer_consent
+from clara_api.core.consent import PhrConsentService, ensure_medical_disclaimer_consent
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
@@ -30,14 +38,19 @@ from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     MedicineCabinet,
     MedicineItem,
+    PhrProfile,
     User,
     VnDrugMapping,
     VnDrugMappingAlias,
     VnDrugMappingAudit,
 )
 from clara_api.db.session import get_db
+from clara_api.phr.features import phr_features
+from clara_api.phr.provenance import hedge_text_bilingual
+from clara_api.phr.reconciler import find_allergy_conflicts, reconcile
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
+    CabinetExpirySummary,
     CabinetImportRequest,
     CabinetImportResponse,
     CabinetPrioritizedField,
@@ -48,6 +61,7 @@ from clara_api.schemas import (
     MedicineCabinetItemResponse,
     MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
+    OcrConfirmGate,
     VnDrugMappingAuditListResponse,
     VnDrugMappingAuditResponse,
     VnDrugMappingCreateRequest,
@@ -191,6 +205,29 @@ DRUG_RXCUI_MAP: dict[str, str] = {
 LOW_CONFIDENCE_OCR_THRESHOLD = 0.9
 OCR_CORRECTION_CUTOFF = 0.86
 OCR_CORRECTION_MAX_CHARS = 12000
+# Normalization "needs review" threshold (Req 2.5, 2.6). A normalization whose
+# confidence falls below this is retained (never dropped) but flagged
+# ``needs_review`` so the user can confirm/correct it. The dictionary path
+# returns confidence 1.0 for an exact db hit, >= 0.78 for a fuzzy candidate, and
+# 0.72 for an alias-map hit; only the unmatched fallback (0.35, name not in the
+# alias map) sits below this threshold, which is exactly the "needs review"
+# case. Purely derived — no persisted state — so flags-off byte-equivalence of
+# the existing response fields is preserved (P12).
+NORMALIZATION_REVIEW_CONFIDENCE_THRESHOLD = 0.5
+# Cabinet quantity/expiry validation bounds (Req 1.7). Validation only rejects
+# clearly-invalid input (negative/non-finite quantity, absurd magnitude, or an
+# expiry date far outside any plausible range); all previously-valid inputs are
+# accepted unchanged so flags-off byte-equivalence (P12) is preserved.
+_MAX_CABINET_QUANTITY = 1_000_000.0
+_MIN_EXPIRY_DATE = datetime(1900, 1, 1, tzinfo=UTC)
+_MAX_EXPIRY_DATE = datetime(2200, 1, 1, tzinfo=UTC)
+# Expiry "expiring soon" window (Req 10.1). An item whose ``expires_on`` is in
+# the past is ``expired``; one within this many days is ``expiring_soon``;
+# anything further out is ``ok``; a missing ``expires_on`` is "no expiry data"
+# (status ``None``) and is excluded from the cabinet rollup counts (Req 10.5).
+# Purely derived from ``expires_on`` with no persisted state, so the existing
+# response fields remain byte-equivalent (P12).
+EXPIRY_SOON_WINDOW_DAYS = 30
 _CANDIDATE_DB_LIMIT = 120
 _CANDIDATE_MIN_SCORE = 0.78
 _CANDIDATE_MIN_MARGIN = 0.05
@@ -433,7 +470,9 @@ def _resolve_dictionary_mapping_with_source(
     if db is not None:
         db_mapping = _find_db_mapping_by_alias(db, normalized_input)
         if db_mapping is not None:
-            display_name = db_mapping.brand_name.strip() or _to_title_case(db_mapping.normalized_name)
+            display_name = db_mapping.brand_name.strip() or _to_title_case(
+                db_mapping.normalized_name
+            )
             normalized_name = db_mapping.normalized_name.strip() or normalized_input
             rx_cui = db_mapping.rx_cui.strip()
             if not rx_cui:
@@ -442,12 +481,20 @@ def _resolve_dictionary_mapping_with_source(
 
         candidate_mapping, candidate_score, _, _ = _find_db_mapping_candidate(db, normalized_input)
         if candidate_mapping is not None:
-            display_name = candidate_mapping.brand_name.strip() or _to_title_case(candidate_mapping.normalized_name)
+            display_name = candidate_mapping.brand_name.strip() or _to_title_case(
+                candidate_mapping.normalized_name
+            )
             normalized_name = candidate_mapping.normalized_name.strip() or normalized_input
             rx_cui = candidate_mapping.rx_cui.strip()
             if not rx_cui:
                 rx_cui = DRUG_RXCUI_MAP.get(normalized_name, "")
-            return display_name, normalized_name, rx_cui, "candidate", max(min(candidate_score, 1.0), 0.0)
+            return (
+                display_name,
+                normalized_name,
+                rx_cui,
+                "candidate",
+                max(min(candidate_score, 1.0), 0.0),
+            )
 
     canonical = DRUG_ALIAS_LOOKUP.get(normalized_input, normalized_input)
     display_name = _to_title_case(canonical)
@@ -463,11 +510,65 @@ def _resolve_dictionary_mapping(
     drug_name: str,
     db: Session | None = None,
 ) -> tuple[str, str, str]:
-    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
-        drug_name=drug_name,
-        db=db,
+    display_name, normalized_name, rx_cui, _mapping_source, _mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            drug_name=drug_name,
+            db=db,
+        )
     )
     return display_name, normalized_name, rx_cui
+
+
+def _derive_normalization_status(
+    normalization_source: str | None,
+    normalization_confidence: float | None,
+) -> str | None:
+    """Map a dictionary mapping_source + confidence to a user-facing status.
+
+    Returns one of ``matched`` (exact db hit), ``candidate`` (fuzzy db
+    candidate), ``fallback`` (alias-map hit), or ``needs_review`` (unmatched or
+    below ``NORMALIZATION_REVIEW_CONFIDENCE_THRESHOLD``). ``None`` is returned
+    only when no source was resolved (status unknown). The user-entered name is
+    always retained by callers regardless of status (Req 2.5).
+    """
+
+    if normalization_source is None:
+        return None
+    if (
+        normalization_confidence is not None
+        and normalization_confidence < NORMALIZATION_REVIEW_CONFIDENCE_THRESHOLD
+    ):
+        return "needs_review"
+    return {
+        "db": "matched",
+        "candidate": "candidate",
+        "fallback": "fallback",
+    }.get(normalization_source, "needs_review")
+
+
+def _compute_expiry_status(
+    expires_on: datetime | None,
+    *,
+    now: datetime | None = None,
+) -> str | None:
+    """Derive an expiry status from ``expires_on`` (Req 10.1, 10.5).
+
+    Returns ``expired`` when the date is at/before ``now``, ``expiring_soon``
+    when it falls within ``EXPIRY_SOON_WINDOW_DAYS`` of ``now``, ``ok`` when it
+    is further out, or ``None`` when there is no expiry data. A naive datetime
+    is interpreted as UTC. A missing/unset ``expires_on`` is treated as "no
+    expiry data" without error (Req 10.5).
+    """
+
+    if expires_on is None:
+        return None
+    reference = now or datetime.now(tz=UTC)
+    moment = expires_on if expires_on.tzinfo is not None else expires_on.replace(tzinfo=UTC)
+    if moment <= reference:
+        return "expired"
+    if moment <= reference + timedelta(days=EXPIRY_SOON_WINDOW_DAYS):
+        return "expiring_soon"
+    return "ok"
 
 
 def _to_title_case(value: str) -> str:
@@ -545,7 +646,32 @@ def _to_item_response(
     normalization_source: str | None = None,
     normalization_confidence: float | None = None,
 ) -> MedicineCabinetItemResponse:
-    clean_note, brand_name, manufacturer = _decode_item_note(item.note)
+    # Dual-read (Req 1.4): the legacy ``[meta]`` note encoding is ALWAYS decoded
+    # so pre-existing items remain readable regardless of the structured-fields
+    # flag. When the structured columns are populated (writes made while
+    # SELFMED_CABINET_STRUCTURED_FIELDS_ENABLED was on) they take precedence; an
+    # unset column (None) falls back to the decoded legacy note value, so no
+    # brand/manufacturer data is ever lost across a flag flip.
+    clean_note, note_brand_name, note_manufacturer = _decode_item_note(item.note)
+    brand_name = item.brand_name if item.brand_name is not None else note_brand_name
+    manufacturer = (
+        item.manufacturer if item.manufacturer is not None else note_manufacturer
+    )
+    normalization_status = _derive_normalization_status(
+        normalization_source,
+        normalization_confidence,
+    )
+    # Expiry status (Req 10.1) is purely derived from ``expires_on`` and is
+    # always surfaced; a missing/unset ``expires_on`` yields ``None`` (no expiry
+    # data, Req 10.5). The persisted reminder state (Req 10.3) is exposed ONLY
+    # when SELFMED_EXPIRY_REMINDERS_ENABLED is on; when off it stays ``None`` so
+    # behavior matches today (Req 10.4).
+    expiry_status = _compute_expiry_status(item.expires_on)
+    expiry_reminder: dict[str, Any] | None = None
+    if get_settings().selfmed_expiry_reminders_enabled:
+        stored_reminder = item.expiry_reminder_json
+        if isinstance(stored_reminder, dict):
+            expiry_reminder = stored_reminder
     return MedicineCabinetItemResponse(
         id=item.id,
         drug_name=item.drug_name,
@@ -554,6 +680,8 @@ def _to_item_response(
         normalized_name=item.normalized_name,
         normalization_source=normalization_source,
         normalization_confidence=normalization_confidence,
+        normalization_status=normalization_status,
+        needs_review=normalization_status == "needs_review",
         dosage=item.dosage,
         dosage_form=item.dosage_form,
         quantity=item.quantity,
@@ -561,6 +689,8 @@ def _to_item_response(
         rx_cui=item.rx_cui,
         ocr_confidence=item.ocr_confidence,
         expires_on=item.expires_on,
+        expiry_status=expiry_status,
+        expiry_reminder=expiry_reminder,
         note=clean_note,
         created_at=item.created_at,
         updated_at=item.updated_at,
@@ -648,7 +778,9 @@ def _create_mapping_audit(
 
 
 def _get_mapping_or_404(db: Session, mapping_id: int) -> VnDrugMapping:
-    mapping = db.execute(select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)).scalar_one_or_none()
+    mapping = db.execute(
+        select(VnDrugMapping).where(VnDrugMapping.id == mapping_id)
+    ).scalar_one_or_none()
     if mapping is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mapping")
     return mapping
@@ -806,6 +938,56 @@ def _get_or_create_cabinet(db: Session, user_id: int) -> MedicineCabinet:
     return cabinet
 
 
+def _validate_cabinet_quantity(quantity: float | None) -> None:
+    """Reject malformed/out-of-range cabinet quantities (Req 1.7).
+
+    A quantity must be a finite, non-negative number within a sane upper bound.
+    ``None`` is treated as "not provided" by callers and skipped. Error messages
+    are Vietnamese and PII-free.
+    """
+
+    if quantity is None:
+        return
+    if not isinstance(quantity, (int, float)) or isinstance(quantity, bool):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Số lượng không hợp lệ",
+        )
+    if not math.isfinite(quantity):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Số lượng không hợp lệ",
+        )
+    if quantity < 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Số lượng phải là số không âm",
+        )
+    if quantity > _MAX_CABINET_QUANTITY:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Số lượng vượt quá giới hạn cho phép",
+        )
+
+
+def _validate_cabinet_expiry(expires_on: datetime | None) -> None:
+    """Reject an expiry date far outside any plausible range (Req 1.7).
+
+    Pydantic already guarantees a well-formed ``datetime``; here we only reject
+    dates absurdly far in the past or future. A naive datetime is interpreted as
+    UTC for comparison. ``None`` (no expiry data) is always allowed (Req 10.5).
+    """
+
+    if expires_on is None:
+        return
+    moment = expires_on if expires_on.tzinfo is not None else expires_on.replace(tzinfo=UTC)
+    if moment < _MIN_EXPIRY_DATE or moment > _MAX_EXPIRY_DATE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Ngày hết hạn không hợp lệ",
+        )
+
+
 def _apply_ocr_correction(text: str) -> OcrCorrectionResult:
     bounded_text = str(text or "")[:OCR_CORRECTION_MAX_CHARS]
     return correct_ocr_text(
@@ -921,6 +1103,9 @@ def _detect_drugs_from_text(
                     evidence=alias,
                     mapping_source=mapping_source,
                     mapping_confidence=mapping_confidence,
+                    normalization_status=_derive_normalization_status(
+                        mapping_source, mapping_confidence
+                    ),
                     requires_manual_confirm=requires_manual_confirm,
                     confirmed=not requires_manual_confirm,
                 )
@@ -932,7 +1117,9 @@ def _detect_drugs_from_text(
     token_candidates = [
         token
         for token in re.split(r"[^a-z0-9+]+", normalized_text)
-        if len(token) >= 4 and token not in _OCR_FUZZY_STOPWORDS and sum(char.isalpha() for char in token) >= 3
+        if len(token) >= 4
+        and token not in _OCR_FUZZY_STOPWORDS
+        and sum(char.isalpha() for char in token) >= 3
     ]
     fuzzy_threshold = 0.9 if detections else 0.86
     fuzzy_limit = 2 if detections else 4
@@ -974,6 +1161,9 @@ def _detect_drugs_from_text(
                 evidence=f"fuzzy:{token}->{best_alias}",
                 mapping_source=mapping_source,
                 mapping_confidence=mapping_confidence,
+                normalization_status=_derive_normalization_status(
+                    mapping_source, mapping_confidence
+                ),
                 requires_manual_confirm=True,
                 confirmed=False,
             )
@@ -991,8 +1181,7 @@ def _enforce_low_confidence_manual_confirm(
     enforced: list[CabinetScanDetection] = []
     for detection in detections:
         requires_manual_confirm = (
-            detection.requires_manual_confirm
-            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+            detection.requires_manual_confirm or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
         )
         if requires_manual_confirm:
             enforced.append(
@@ -1013,6 +1202,38 @@ def _enforce_low_confidence_manual_confirm(
             )
         )
     return enforced
+
+
+def _build_ocr_confirm_gate(detections: list[CabinetScanDetection]) -> OcrConfirmGate:
+    """Summarize the low-confidence OCR manual-confirm gate for clients (Req 2.2, 2.6).
+
+    Pure projection over already-enforced detections: counts how many require
+    manual confirmation, how many are confirmed, and how many normalized to a
+    ``needs_review`` status. Surfaces the active ``LOW_CONFIDENCE_OCR_THRESHOLD``
+    so the UI can render the confirm gate explicitly before import.
+    """
+
+    requires_confirmation = 0
+    confirmed = 0
+    needs_review = 0
+    for detection in detections:
+        gated = (
+            detection.requires_manual_confirm
+            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+        )
+        if gated:
+            requires_confirmation += 1
+        if detection.confirmed:
+            confirmed += 1
+        if detection.normalization_status == "needs_review":
+            needs_review += 1
+    return OcrConfirmGate(
+        threshold=LOW_CONFIDENCE_OCR_THRESHOLD,
+        total_detections=len(detections),
+        requires_confirmation=requires_confirmation,
+        confirmed=confirmed,
+        needs_review=needs_review,
+    )
 
 
 def _parse_ocr_endpoints(raw: str) -> list[str]:
@@ -1337,6 +1558,15 @@ def get_cabinet(
         cabinet_id=cabinet.id,
         label=cabinet.label,
         items=resolved_items,
+        expiry_summary=CabinetExpirySummary(
+            expired_count=sum(
+                1 for entry in resolved_items if entry.expiry_status == "expired"
+            ),
+            expiring_soon_count=sum(
+                1 for entry in resolved_items if entry.expiry_status == "expiring_soon"
+            ),
+            expiry_window_days=EXPIRY_SOON_WINDOW_DAYS,
+        ),
     )
 
 
@@ -1349,9 +1579,14 @@ def add_cabinet_item(
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
 
-    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = _resolve_dictionary_mapping_with_source(
-        payload.drug_name,
-        db=db,
+    _validate_cabinet_quantity(payload.quantity)
+    _validate_cabinet_expiry(payload.expires_on)
+
+    _, normalized, mapped_rxcui, mapping_source, mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            payload.drug_name,
+            db=db,
+        )
     )
     existing = db.execute(
         select(MedicineItem).where(
@@ -1376,13 +1611,30 @@ def add_cabinet_item(
         rx_cui=payload.rx_cui.strip() or mapped_rxcui,
         ocr_confidence=payload.ocr_confidence,
         expires_on=payload.expires_on,
-        note=_encode_item_note(
+        updated_at=datetime.now(tz=UTC),
+    )
+    # Dual-write (Req 1.2, 1.3): when SELFMED_CABINET_STRUCTURED_FIELDS_ENABLED
+    # is on, persist brand/manufacturer in first-class columns and store a clean
+    # note; when off, reproduce the legacy ``[meta]`` note encoding byte-for-byte
+    # and leave the structured columns null.
+    if get_settings().selfmed_cabinet_structured_fields_enabled:
+        item.brand_name = _sanitize_meta_value(payload.brand_name) or None
+        item.manufacturer = _sanitize_meta_value(payload.manufacturer) or None
+        item.note = payload.note.strip()
+    else:
+        item.note = _encode_item_note(
             payload.note.strip(),
             brand_name=payload.brand_name,
             manufacturer=payload.manufacturer,
-        ),
-        updated_at=datetime.now(tz=UTC),
-    )
+        )
+    # Reminder-state persistence (Req 10.3) is gated on
+    # SELFMED_EXPIRY_REMINDERS_ENABLED; when off the field is ignored and no
+    # state is persisted, matching today's behavior (Req 10.4).
+    if (
+        get_settings().selfmed_expiry_reminders_enabled
+        and payload.expiry_reminder is not None
+    ):
+        item.expiry_reminder_json = payload.expiry_reminder
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -1421,7 +1673,14 @@ def update_cabinet_item(
 
     response_mapping_source: str | None = None
     response_mapping_confidence: float | None = None
-    note_value, brand_value, manufacturer_value = _decode_item_note(item.note)
+    # Dual-read effective brand/manufacturer (Req 1.4): structured columns win
+    # when set, else fall back to the decoded legacy ``[meta]`` note so updates
+    # never drop data written under either scheme.
+    note_value, note_brand, note_manufacturer = _decode_item_note(item.note)
+    brand_value = item.brand_name if item.brand_name is not None else note_brand
+    manufacturer_value = (
+        item.manufacturer if item.manufacturer is not None else note_manufacturer
+    )
 
     if "drug_name" in provided:
         if payload.drug_name is None or not payload.drug_name.strip():
@@ -1462,6 +1721,7 @@ def update_cabinet_item(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Số lượng không hợp lệ",
             )
+        _validate_cabinet_quantity(payload.quantity)
         item.quantity = payload.quantity
     if "source" in provided:
         if payload.source is None:
@@ -1482,27 +1742,42 @@ def update_cabinet_item(
     if "ocr_confidence" in provided:
         item.ocr_confidence = payload.ocr_confidence
     if "expires_on" in provided:
+        _validate_cabinet_expiry(payload.expires_on)
         item.expires_on = payload.expires_on
+    # Reminder-state persistence (Req 10.3): only mutate ``expiry_reminder_json``
+    # when SELFMED_EXPIRY_REMINDERS_ENABLED is on. When off, the field is
+    # silently ignored (no persistence), matching today's behavior (Req 10.4).
+    if "expiry_reminder" in provided and get_settings().selfmed_expiry_reminders_enabled:
+        item.expiry_reminder_json = payload.expiry_reminder
     if "note" in provided:
         note_value = (payload.note or "").strip()
     if "brand_name" in provided:
         brand_value = _sanitize_meta_value(payload.brand_name or "") or None
     if "manufacturer" in provided:
         manufacturer_value = _sanitize_meta_value(payload.manufacturer or "") or None
-    item.note = _encode_item_note(
-        note_value,
-        brand_name=brand_value or "",
-        manufacturer=manufacturer_value or "",
-    )
+    # Dual-write (Req 1.2, 1.3): structured columns + clean note when the flag is
+    # on; legacy ``[meta]`` note encoding (byte-for-byte) when off.
+    if get_settings().selfmed_cabinet_structured_fields_enabled:
+        item.brand_name = brand_value
+        item.manufacturer = manufacturer_value
+        item.note = note_value
+    else:
+        item.note = _encode_item_note(
+            note_value,
+            brand_name=brand_value or "",
+            manufacturer=manufacturer_value or "",
+        )
 
     item.updated_at = datetime.now(tz=UTC)
     db.add(item)
     db.commit()
     db.refresh(item)
     if response_mapping_source is None or response_mapping_confidence is None:
-        _, _, _, response_mapping_source, response_mapping_confidence = _resolve_dictionary_mapping_with_source(
-            item.drug_name,
-            db=db,
+        _, _, _, response_mapping_source, response_mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(
+                item.drug_name,
+                db=db,
+            )
         )
     return _to_item_response(
         item,
@@ -1554,6 +1829,7 @@ def scan_cabinet_text(
         ocr_provider="ocr-postprocess",
         ocr_endpoint="local-ocr-correction",
         prioritized_fields=_build_prioritized_fields(detections),
+        confirm_gate=_build_ocr_confirm_gate(detections),
     )
 
 
@@ -1594,6 +1870,7 @@ async def scan_cabinet_file(
         ocr_provider=ocr_provider,
         ocr_endpoint=used_endpoint,
         prioritized_fields=_build_prioritized_fields(detections),
+        confirm_gate=_build_ocr_confirm_gate(detections),
     )
 
 
@@ -1617,8 +1894,7 @@ def import_detections(
     blocked_unconfirmed: list[dict[str, Any]] = []
     for index, detection in enumerate(payload.detections):
         needs_manual_confirm = (
-            detection.requires_manual_confirm
-            or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
+            detection.requires_manual_confirm or detection.confidence < LOW_CONFIDENCE_OCR_THRESHOLD
         )
         if needs_manual_confirm and not detection.confirmed:
             blocked_unconfirmed.append(
@@ -1649,9 +1925,11 @@ def import_detections(
     inserted = 0
     prioritized_fields: list[CabinetPrioritizedField] = []
     for detection in payload.detections:
-        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = _resolve_dictionary_mapping_with_source(
-            detection.normalized_name or detection.drug_name,
-            db=db,
+        _, normalized, mapped_rxcui, _mapping_source, _mapping_confidence = (
+            _resolve_dictionary_mapping_with_source(
+                detection.normalized_name or detection.drug_name,
+                db=db,
+            )
         )
         if not normalized or normalized in existing_names:
             continue
@@ -1703,9 +1981,7 @@ def run_auto_ddi_check(
     cabinet = _get_or_create_cabinet(db, user.id)
     control_tower = get_control_tower_config_service().load(db)
     medication_items = (
-        db.execute(
-            select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
-        )
+        db.execute(select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id))
         .scalars()
         .all()
     )
@@ -1734,11 +2010,111 @@ def run_auto_ddi_check(
         "allergies": payload.allergies,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
+
+    # --- PHR reconciliation + allergy-aware DDI (flag-gated, Req 7) ----------
+    # Flag OFF ⇒ cabinet-only payload above, byte-for-byte legacy (Req 7.5,
+    # Correctness Property 22). Both stores are always preserved; reconciliation
+    # is a read-time projection that never mutates the cabinet or PHR (Req 7.6).
+    flags = phr_features(settings=None)
+    phr_derived = False
+    allergy_conflicts: list[dict[str, Any]] = []
+    if flags.reconciliation:
+        profile = db.execute(
+            select(PhrProfile).where(PhrProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        phr_meds: list[dict[str, Any]] = []
+        phr_allergies: list[dict[str, Any]] = []
+        if profile is not None:
+            phr_meds = [
+                {
+                    "id": str(m.get("id") or ""),
+                    "rx_cui": str(m.get("rx_cui") or ""),
+                    "normalized_name": str(m.get("normalized_name") or ""),
+                    "name": str(m.get("name") or ""),
+                }
+                for m in (profile.medications_json or [])
+                if isinstance(m, dict)
+            ]
+            phr_allergies = [a for a in (profile.allergies_json or []) if isinstance(a, dict)]
+        cabinet_payload = [
+            {
+                "id": str(item.id),
+                "rx_cui": item.rx_cui or "",
+                "normalized_name": item.normalized_name or "",
+                "drug_name": item.drug_name or "",
+            }
+            for item in medication_items
+        ]
+        reconciled = reconcile(phr_meds, cabinet_payload)
+        request_payload["reconciled_medications"] = reconciled.as_dict()["medications"]
+        phr_derived = bool(phr_meds)
+
+        # Allergy-aware DDI requires personalization consent (Req 7.3, 7.4).
+        if flags.allergy_aware_ddi and phr_allergies:
+            consent_ok = not flags.consent_enforcement or PhrConsentService.is_granted(
+                db, user_id=user.id, purpose="personalization"
+            )
+            # Compliance granular-consent gate (Req 2.1, 2.3): when
+            # COMPLIANCE_GRANULAR_CONSENT_ENABLED is on, also require the
+            # compliance-ledger personalization grant. Flag off ⇒ has_consent
+            # returns True, so legacy behavior is preserved exactly.
+            consent_ok = consent_ok and ComplianceService(db).has_consent(
+                user_id=user.id, purpose=PURPOSE_PERSONALIZATION
+            )
+            if consent_ok:
+                request_payload["coded_allergies"] = phr_allergies
+                allergy_conflicts = find_allergy_conflicts(reconciled, phr_allergies)
+                phr_derived = True
+
+    # --- Cross-border guard (Req 19.4) --------------------------------------
+    # When cross-border gating is on and the user has not granted cross-border
+    # consent, strip identifiable PHR-derived fields from the offshore call.
+    transfer = ComplianceService(db).outbound_guard(user_id=user.id)
+    if not transfer.allow_cross_border:
+        request_payload.pop("reconciled_medications", None)
+        request_payload.pop("coded_allergies", None)
+    # No-PII transfer event (Req 4.4 / Property P5): record processor identity,
+    # purpose, and an opaque user ref for the offshore call decision — never the
+    # reconciled medications or allergies. Gated by the flag so flags-off side
+    # effects stay byte-equivalent to baseline (Property P6).
+    _compliance = ComplianceService(db)
+    if _compliance.settings.compliance_cross_border_gating_enabled:
+        _compliance.record_transfer(
+            user_id=user.id,
+            processor=LLM_PROCESSOR,
+            purpose=LLM_PURPOSE,
+            allowed=transfer.allow_cross_border,
+        )
+
+    observability_enabled = get_settings().careguard_observability_enabled
+    started_at = perf_counter() if observability_enabled else 0.0
     result = proxy_ml_post("/v1/careguard/analyze", request_payload)
-    return _attach_careguard_attribution(
+    attributed = _attach_careguard_attribution(
         result,
         external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
     )
+    if allergy_conflicts:
+        attributed["allergy_conflicts"] = allergy_conflicts
+    if phr_derived:
+        # Hedge any PHR-derived decision-support output (Req 6.6, 18.5).
+        attributed["phr_hedge"] = hedge_text_bilingual()
+    # No-PII observability (Req 9.3, 9.4, 9.5). Recorded ONLY when the flag is on
+    # so behavior stays byte-equivalent to baseline when off (Req 12.1, 12.2).
+    # Only enum/number signals are folded in; the per-medicine normalization
+    # confidences come from the dictionary mapping (numbers only, no names).
+    if observability_enabled:
+        latency_ms = (perf_counter() - started_at) * 1000
+        normalization_confidences = [
+            meta["mapping_confidence"]
+            for meta in medications_with_meta
+            if isinstance(meta.get("mapping_confidence"), (int, float))
+        ]
+        record_careguard_check(
+            result,
+            latency_ms=latency_ms,
+            normalization_confidences=normalization_confidences,
+        )
+    return attributed
 
 
 @router.get("/dictionary", response_model=VnDrugMappingListResponse)
@@ -2041,7 +2417,9 @@ def list_vn_drug_mapping_audits(
 
     total = int(
         db.execute(
-            select(func.count(VnDrugMappingAudit.id)).where(VnDrugMappingAudit.mapping_id == mapping_id)
+            select(func.count(VnDrugMappingAudit.id)).where(
+                VnDrugMappingAudit.mapping_id == mapping_id
+            )
         ).scalar_one()
         or 0
     )
@@ -2070,9 +2448,11 @@ def resolve_vn_drug_mapping(
     db: Session = Depends(get_db),
 ) -> VnDrugResolveResponse:
     _require_user(token, db)
-    display_name, normalized_name, rx_cui, source, mapping_confidence = _resolve_dictionary_mapping_with_source(
-        payload.drug_name,
-        db=db,
+    display_name, normalized_name, rx_cui, source, mapping_confidence = (
+        _resolve_dictionary_mapping_with_source(
+            payload.drug_name,
+            db=db,
+        )
     )
     return VnDrugResolveResponse(
         input_name=payload.drug_name.strip(),
@@ -2094,8 +2474,39 @@ def careguard_analyze(
     control_tower = get_control_tower_config_service().load(db)
     request_payload = dict(payload)
     request_payload["external_ddi_enabled"] = control_tower.careguard_runtime.external_ddi_enabled
+    observability_enabled = get_settings().careguard_observability_enabled
+    started_at = perf_counter() if observability_enabled else 0.0
     result = proxy_ml_post("/v1/careguard/analyze", request_payload)
-    return _attach_careguard_attribution(
+    attributed = _attach_careguard_attribution(
         result,
         external_ddi_enabled=control_tower.careguard_runtime.external_ddi_enabled,
     )
+    # No-PII observability (Req 9.3, 9.4, 9.5); recorded only when the flag is on
+    # so flags-off behavior is byte-equivalent (Req 12.1, 12.2).
+    if observability_enabled:
+        latency_ms = (perf_counter() - started_at) * 1000
+        record_careguard_check(result, latency_ms=latency_ms)
+    return attributed
+
+
+@router.get("/metrics")
+def get_careguard_metrics(
+    _token: TokenPayload = Depends(require_roles("admin")),
+) -> dict[str, Any]:
+    """Admin-only aggregate read of no-PII CareGuard observability metrics (Req 9.5).
+
+    Gated by ``CAREGUARD_OBSERVABILITY_ENABLED``: when the flag is off the
+    surface returns 404 (consistent with the other flag-gated analytics
+    surfaces) and no metrics are collected, so the feature ships dark. The
+    returned aggregate carries only counts, rates, enum distributions, the
+    active rule-set version label, and latency percentiles — never drug names,
+    notes, or any user identifier (Req 9.2, 9.3, 11.4). Access is restricted to
+    the admin role (Req 9.5, 12.4).
+    """
+
+    if not get_settings().careguard_observability_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="CareGuard observability đã bị tắt.",
+        )
+    return get_careguard_metrics_store().snapshot()

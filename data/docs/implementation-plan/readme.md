@@ -34,5 +34,4 @@ Quy ước nguồn sự thật:
 
 - Không mở thêm tài liệu kế hoạch mới nếu chưa thật sự cần; ưu tiên cập nhật 2 tài liệu canonical ở trên.
 - Mọi thay đổi quan trọng phải phản ánh lại checklist 14 ngày trong ngày đó.
-- Khi cần tra cứu tài liệu cũ, vào:
-- `docs/archive/2026-03-30-cleanup/`
+- Tài liệu lịch sử/deep-dive cũ đã được dọn; lịch sử tra cứu qua `git log`/`git show`.

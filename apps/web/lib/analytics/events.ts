@@ -29,8 +29,10 @@ export const ANALYTICS_EVENTS = {
   // `<surface>_<action>` convention (the `mobile_` prefix dropped).
   researchSubmitted: "research_submitted",
   researchViewed: "research_viewed",
+  researchSourcesSynced: "research_sources_synced",
   careguardViewed: "careguard_viewed",
   careguardDdiChecked: "careguard_ddi_checked",
+  councilViewed: "council_viewed",
   councilRun: "council_run",
   scribeViewed: "scribe_viewed",
   scribeGenerated: "scribe_generated",
@@ -122,6 +124,24 @@ export function trackResearchViewed(): void {
   });
 }
 
+/**
+ * A Research Source Hub sync completed. Only coarse, non-identifying signals
+ * are recorded: the source key (e.g. `pubmed`) and the fetched/stored record
+ * counts. The free-text sync query and any record content are NEVER included.
+ */
+export function trackResearchSourcesSynced(props: {
+  source: string;
+  fetched: number;
+  stored: number;
+}): void {
+  emit(ANALYTICS_EVENTS.researchSourcesSynced, {
+    surface: "research",
+    source: props.source,
+    fetched: props.fetched,
+    stored: props.stored,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // CareGuard / SelfMed
 // ---------------------------------------------------------------------------
@@ -159,6 +179,18 @@ export function trackCareguardDdiChecked(props: {
 // ---------------------------------------------------------------------------
 // Council
 // ---------------------------------------------------------------------------
+
+/**
+ * The Council surface was viewed. Mirrors the per-screen `*_viewed` convention
+ * used by the other surfaces (`careguard_viewed`, `research_viewed`) and the
+ * mobile facade. No case/patient content is included.
+ */
+export function trackCouncilViewed(props?: { view?: string }): void {
+  emit(ANALYTICS_EVENTS.councilViewed, {
+    surface: "council",
+    ...(props?.view ? { view: props.view } : {}),
+  });
+}
 
 /**
  * A Council case was run. Only coarse configuration is recorded (specialist

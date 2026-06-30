@@ -108,8 +108,10 @@ jobs:
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
             echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
-            echo "DATABASE_FALLBACK_ENABLED=true"
-            echo "DATABASE_FALLBACK_URL=sqlite+pysqlite:////data/clara.db"
+            # Requirement 6.6: do NOT force the implicit SQLite database fallback.
+            # The deploy stack defaults DATABASE_FALLBACK_ENABLED to false; any
+            # fallback is an explicit, documented opt-in supplied deliberately via
+            # the DEPLOY_ENV_FILE secret (written to .env above).
           } >> .env
 
       - name: Pull and deploy staging stack
@@ -230,9 +232,83 @@ jobs:
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
             echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
-            echo "DATABASE_FALLBACK_ENABLED=true"
-            echo "DATABASE_FALLBACK_URL=sqlite+pysqlite:////data/clara.db"
+            # Requirement 6.6: do NOT force the implicit SQLite database fallback
+            # in production. The deploy stack defaults DATABASE_FALLBACK_ENABLED to
+            # false and the in-code guard refuses implicit production fallback; any
+            # fallback must be an explicit, documented opt-in supplied deliberately
+            # via the DEPLOY_ENV_FILE secret (written to .env above).
           } >> .env
+
+      - name: Set up Python for migration checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Verify target migrations define a downgrade
+        run: |
+          set -euo pipefail
+          # Requirement 9.3 / design Property 23: every migration to be deployed
+          # must define a downgrade() so a failed migration can be rolled back
+          # (see docs/runbooks/backup-restore.md "Pre-migration backup & rollback").
+          # Static, dependency-free gate — fails the deploy if any migration lacks
+          # a downgrade(). Runs before any image is pulled or alembic upgrade runs.
+          python scripts/ops/check_migration_downgrade.py services/api/alembic/versions
+
+      - name: Pre-migration database backup
+        env:
+          CLARA_POSTGRES_CONTAINER: ${{ vars.CLARA_POSTGRES_CONTAINER || 'clara-postgres' }}
+        run: |
+          set -euo pipefail
+          # Requirement 9.3 / 9.5 + docs/runbooks/backup-restore.md ("Postgres
+          # (primary)" and "Pre-migration backup & rollback"): take and verify a
+          # fresh Postgres backup BEFORE the new stack starts and runs
+          # `alembic upgrade head`. A failed migration rolls back to the prior
+          # image and, if needed, this pre-migration backup.
+          #
+          # Credentials are sourced only from the secret-store-injected .env
+          # (never printed); the dump is written off the repo tree.
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env
+          set +a
+
+          container="${CLARA_POSTGRES_CONTAINER}"
+          backup_dir="${PRE_MIGRATION_BACKUP_DIR:-/opt/clara-care/backups/pre-migration}"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          dump="${backup_dir}/pg_clara_${ts}.dump"
+
+          if ! docker ps --format '{{.Names}}' | grep -qx "${container}"; then
+            echo "[info] postgres container '${container}' is not running — no existing"
+            echo "[info] database to back up (initial deploy). Skipping pre-migration backup."
+            exit 0
+          fi
+
+          mkdir -p "${backup_dir}"
+          chmod 700 "${backup_dir}" || true
+
+          echo "[backup] dumping database from container '${container}' to ${dump}"
+          # Consistent custom-format logical dump (includes alembic_version), per
+          # the runbook's Postgres backup procedure.
+          docker exec "${container}" pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc \
+            > "${dump}"
+
+          # Integrity: checksum + non-empty assertion (a bad/empty backup fails the deploy).
+          sha256sum "${dump}" > "${dump}.sha256"
+          ( cd "${backup_dir}" && sha256sum -c "$(basename "${dump}").sha256" )
+          if [ ! -s "${dump}" ]; then
+            echo "[error] pre-migration backup is empty: ${dump}" >&2
+            exit 1
+          fi
+          chmod 600 "${dump}" "${dump}.sha256" || true
+
+          echo "[ok] verified pre-migration backup: ${dump}"
+          {
+            echo "### Pre-migration backup"
+            echo "- container: \`${container}\`"
+            echo "- artifact: \`${dump}\`"
+            echo "- target image tag: \`${IMAGE_TAG}\`"
+            echo "- rollback: redeploy prior image; if needed restore this backup (see docs/runbooks/backup-restore.md)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Pull and deploy production stack
         run: |

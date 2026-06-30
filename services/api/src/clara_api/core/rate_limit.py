@@ -166,6 +166,14 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
                     )
                 return await call_next(request)
 
+            # Distributed limiter backend is unavailable (incr_with_ttl returned
+            # None). By default the limiter fails open and passes the request
+            # through, preserving current behavior. When the fail-closed flag is
+            # enabled, fall through to the in-process limiter below so that rate
+            # enforcement does not silently disappear (Requirements 5.2, 5.3).
+            if not settings.hardening_rate_limit_fail_closed:
+                return await call_next(request)
+
         now = time.monotonic()
         cutoff = now - window_seconds
         key = f"{self._resolve_client_ip(request)}:{request.url.path}"

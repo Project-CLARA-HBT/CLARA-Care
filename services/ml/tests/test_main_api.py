@@ -763,7 +763,10 @@ def test_careguard_analyze_returns_risk_and_alerts():
     assert response.status_code == 200
     body = response.json()
 
-    assert body["risk"]["level"] == "high"
+    # Emergency fast-path (Req 7.2 / Property 9): a recognized critical symptom
+    # ("chest pain") co-occurring with a high-risk DDI (warfarin + ibuprofen)
+    # escalates the overall risk to `critical`.
+    assert body["risk"]["level"] == "critical"
     assert body["risk"]["score"] >= 5
     assert isinstance(body["risk"]["factors"], list)
     assert isinstance(body["ddi_alerts"], list)

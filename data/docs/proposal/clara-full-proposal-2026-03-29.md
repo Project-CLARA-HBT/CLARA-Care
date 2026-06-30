@@ -775,7 +775,7 @@ gantt
 6. `docs/research/market-need-and-regulatory-research.md`  
 7. `docs/research/risk-deep-dive-and-mitigation.md`  
 
-Ghi chú: Các tài liệu nội bộ lịch sử/deep-dive đã được lưu trữ tại `docs/archive/2026-03-30-cleanup/`.
+Ghi chú: Các tài liệu nội bộ lịch sử/deep-dive cũ đã được dọn khỏi cây tài liệu; tra cứu lịch sử qua `git log`.
 
 ## 13.2 Tài liệu kỹ thuật và nguồn chính thức
 

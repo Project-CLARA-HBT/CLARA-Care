@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
+import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import { getRole } from "@/lib/auth-store";
 import { beginLogout } from "@/lib/logout";
 import {
@@ -32,7 +33,11 @@ type Props = {
   children: ReactNode;
 };
 
-const THEME_OPTIONS: Array<{ value: ThemePreference; label: string; iconClass: string }> = [
+const THEME_OPTIONS: Array<{
+  value: ThemePreference;
+  label: string;
+  iconClass: string;
+}> = [
   { value: "light", label: "Sang", iconClass: "fa-sun-o" },
   { value: "dark", label: "Toi", iconClass: "fa-moon-o" },
   { value: "system", label: "System", iconClass: "fa-desktop" },
@@ -62,7 +67,8 @@ export default function AppShell({ children }: Props) {
   const router = useRouter();
 
   const [role, setRole] = useState<UserRole>("normal");
-  const [themePreference, setThemePreference] = useState<ThemePreference>("light");
+  const [themePreference, setThemePreference] =
+    useState<ThemePreference>("light");
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -71,10 +77,10 @@ export default function AppShell({ children }: Props) {
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isImmersiveLayout = IMMERSIVE_LAYOUT_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
 
@@ -164,7 +170,9 @@ export default function AppShell({ children }: Props) {
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
     if (!isRoleHydrated) return;
-    const allowed = roleNavItems.some((item) => isActiveRoute(pathname, item.href));
+    const allowed = roleNavItems.some((item) =>
+      isActiveRoute(pathname, item.href),
+    );
     if (allowed) return;
     router.replace(getRoleHomePath(role));
   }, [isRoleHydrated, pathname, role, roleNavItems, router]);
@@ -184,7 +192,10 @@ export default function AppShell({ children }: Props) {
     setIsSidebarCollapsed((current) => {
       const next = !current;
       try {
-        window.localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, next ? "1" : "0");
+        window.localStorage.setItem(
+          SIDEBAR_COLLAPSE_STORAGE_KEY,
+          next ? "1" : "0",
+        );
       } catch {
         // noop
       }
@@ -201,7 +212,10 @@ export default function AppShell({ children }: Props) {
 
   if (hideSidebar) {
     return (
-      <main className="h-[100dvh] min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+      <main
+        id="main-content"
+        className="h-[100dvh] min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+      >
         {children}
       </main>
     );
@@ -209,6 +223,10 @@ export default function AppShell({ children }: Props) {
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+      <a href="#main-content" className="skip-link">
+        Bỏ qua, tới nội dung chính
+      </a>
+      <TransparencyNoticeGate />
       <div
         className={[
           "relative z-[1] mx-auto flex min-h-screen w-full",
@@ -237,9 +255,15 @@ export default function AppShell({ children }: Props) {
               <span className="material-symbols-outlined text-lg">menu</span>
             </button>
 
-            <Link href={getRoleHomePath(role)} className="flex min-w-0 items-center gap-2.5">
+            <Link
+              href={getRoleHomePath(role)}
+              className="flex min-w-0 items-center gap-2.5"
+            >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
-                <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span
+                  className="material-symbols-outlined text-[16px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
                   clinical_notes
                 </span>
               </span>
@@ -254,6 +278,8 @@ export default function AppShell({ children }: Props) {
           </header>
 
           <main
+            id="main-content"
+            tabIndex={-1}
             className={[
               "flex-1 px-2.5 sm:px-3",
               isImmersiveLayout
@@ -263,7 +289,12 @@ export default function AppShell({ children }: Props) {
                 : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-4 sm:px-6 sm:pb-32 sm:pt-6 lg:px-8 lg:pb-10 lg:pt-6",
             ].join(" ")}
           >
-            <div className={["w-full", isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1360px]"].join(" ")}>
+            <div
+              className={[
+                "w-full",
+                isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1360px]",
+              ].join(" ")}
+            >
               {children}
             </div>
           </main>
@@ -272,7 +303,9 @@ export default function AppShell({ children }: Props) {
 
       <div
         className={`fixed inset-0 z-[70] transition duration-200 lg:hidden ${
-          isMobileNavOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          isMobileNavOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
         }`}
         role="dialog"
         aria-modal="true"
@@ -304,7 +337,9 @@ export default function AppShell({ children }: Props) {
                 <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
                   Clara Care
                 </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">Không gian chăm sóc</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Không gian chăm sóc
+                </p>
               </div>
             </div>
             <button
@@ -321,7 +356,9 @@ export default function AppShell({ children }: Props) {
             {mobileNavGroups.map((group) => (
               <section key={group.key}>
                 <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  <span className="material-symbols-outlined text-[15px]">{getGroupMeta(group.key).icon}</span>
+                  <span className="material-symbols-outlined text-[15px]">
+                    {getGroupMeta(group.key).icon}
+                  </span>
                   {group.label}
                 </p>
                 <nav className="space-y-2">
@@ -363,11 +400,15 @@ export default function AppShell({ children }: Props) {
                           </span>
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              active ? "bg-sky-500 dark:bg-sky-300" : "bg-[var(--text-muted)]/55"
+                              active
+                                ? "bg-sky-500 dark:bg-sky-300"
+                                : "bg-[var(--text-muted)]/55"
                             }`}
                           />
                         </div>
-                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">{item.desc}</p>
+                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                          {item.desc}
+                        </p>
                       </Link>
                     );
                   })}
@@ -405,7 +446,10 @@ export default function AppShell({ children }: Props) {
                         aria-pressed={active}
                         title={`Theme: ${option.label}`}
                       >
-                        <i className={`fa ${option.iconClass} text-[13px]`} aria-hidden="true" />
+                        <i
+                          className={`fa ${option.iconClass} text-[13px]`}
+                          aria-hidden="true"
+                        />
                         <span className="sr-only">{option.label}</span>
                       </button>
                     );
@@ -456,7 +500,9 @@ export default function AppShell({ children }: Props) {
               disabled={isLoggingOut}
               className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-500/10 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-700/70 dark:text-rose-300"
             >
-              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span className="material-symbols-outlined text-[18px]">
+                logout
+              </span>
               <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
             </button>
           </div>

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../core/analytics.dart';
 import '../core/api_client.dart';
+import '../core/careguard_offline_cache.dart';
+import '../core/ddi_user_view.dart';
 import '../core/session_store.dart';
+import 'ddi_result_view.dart';
 
 /// Minimum number of distinct medicines required before a DDI check may run,
 /// mirroring the web two-medicine guard (Requirement 3.5).
@@ -13,10 +16,21 @@ class CareguardScreen extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.offlineFallbackEnabled = kCareguardOfflineFallbackEnabled,
+    this.offlineStorage,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Client-readable gate (`CAREGUARD_OFFLINE_FALLBACK_ENABLED`). When false the
+  /// last-known DDI caching/labeling is fully inert and behavior is unchanged
+  /// (Requirement 6.3, 12.1).
+  final bool offlineFallbackEnabled;
+
+  /// Storage backing the offline cache. Defaults to platform secure storage;
+  /// tests inject an in-memory double.
+  final SessionSecureStorage? offlineStorage;
 
   @override
   State<CareguardScreen> createState() => _CareguardScreenState();
@@ -28,11 +42,19 @@ class _CareguardScreenState extends State<CareguardScreen> {
 
   bool _isLoading = false;
   String? _error;
-  _DdiUserView? _view;
+  DdiUserView? _view;
+  // Offline / last-known fallback state (Req 6.3): set when the on-screen result
+  // was served from the device cache because the API was unreachable.
+  DateTime? _offlineCachedAt;
+  late final CareguardOfflineCache _offlineCache;
 
   @override
   void initState() {
     super.initState();
+    _offlineCache = CareguardOfflineCache(
+      storage: widget.offlineStorage ?? FlutterSecureSessionStorage(),
+      enabled: widget.offlineFallbackEnabled,
+    );
     getAnalyticsClient()
         .captureScreenView(MobileAnalyticsEvents.careguardViewed);
   }
@@ -83,6 +105,7 @@ class _CareguardScreenState extends State<CareguardScreen> {
       _isLoading = true;
       _error = null;
       _view = null;
+      _offlineCachedAt = null;
     });
 
     // Named product event for a DDI analysis. Only a non-PII count is attached;
@@ -109,17 +132,36 @@ class _CareguardScreenState extends State<CareguardScreen> {
         return;
       }
 
+      final view = DdiUserView.fromPayload(response);
+      if (!mounted) {
+        return;
+      }
       setState(() {
-        _view = _DdiUserView.fromPayload(response);
+        _view = view;
+        _offlineCachedAt = null;
       });
+      // Cache the last-known *projection* for offline fallback (Req 6.3).
+      // No-op when CAREGUARD_OFFLINE_FALLBACK_ENABLED is off. Best-effort: a
+      // storage write failure must never hijack a fresh, successful result.
+      try {
+        await _offlineCache.save(view.toCacheJson());
+      } catch (_) {
+        // Ignore cache-write failures; the fresh result is already shown.
+      }
     } on ApiException catch (error) {
+      if (await _tryServeOffline(error)) {
+        return;
+      }
       if (!mounted) {
         return;
       }
       setState(() {
         _error = error.message;
       });
-    } catch (_) {
+    } catch (failure) {
+      if (await _tryServeOffline(failure)) {
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -133,6 +175,27 @@ class _CareguardScreenState extends State<CareguardScreen> {
         });
       }
     }
+  }
+
+  /// Offline / degraded fallback (Req 6.3): when the flag is on and the failure
+  /// looks like the device could not reach the API, show the last-known cached
+  /// projection labeled stale. Returns true when a cached result was served.
+  /// Never fabricates an all-clear — only a genuine cached result is shown.
+  Future<bool> _tryServeOffline(Object failure) async {
+    if (!_offlineCache.enabled || !isLikelyOfflineFailure(failure)) {
+      return false;
+    }
+    final cached = await _offlineCache.read();
+    if (cached == null || !mounted) {
+      return false;
+    }
+    setState(() {
+      _view = DdiUserView.fromCacheJson(cached.view);
+      _offlineCachedAt = cached.cachedAt;
+      _error = null;
+      _isLoading = false;
+    });
+    return true;
   }
 
   @override
@@ -184,248 +247,9 @@ class _CareguardScreenState extends State<CareguardScreen> {
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-          if (view != null) _DdiResultView(view: view),
+          if (view != null) DdiResultView(view: view, offlineCachedAt: _offlineCachedAt),
         ],
       ),
-    );
-  }
-}
-
-/// End_User DDI projection: only risk level, alerts, recommendations, and
-/// reference sources. Runtime mode, fallback flags, and connector source_errors
-/// are intentionally excluded (Requirements 3.1, 3.6).
-class _DdiResultView extends StatelessWidget {
-  const _DdiResultView({required this.view});
-
-  final _DdiUserView view;
-
-  Color _riskColor(BuildContext context) {
-    switch (view.riskLevel) {
-      case 'high':
-      case 'critical':
-        return Colors.red.shade700;
-      case 'medium':
-        return Colors.orange.shade800;
-      case 'low':
-        return Colors.green.shade700;
-      default:
-        return Theme.of(context).colorScheme.outline;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('Kết quả tổng quan',
-                        style: Theme.of(context).textTheme.titleSmall),
-                    const Spacer(),
-                    Chip(
-                      label: Text('Mức rủi ro: ${view.riskLabel}'),
-                      backgroundColor: _riskColor(context).withValues(alpha: 0.15),
-                      side: BorderSide(color: _riskColor(context)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (view.alerts.isEmpty)
-                  const Text('Chưa ghi nhận cảnh báo tương tác rõ ràng.')
-                else
-                  ...view.alerts.map(
-                    (alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(alert.message,
-                              style: const TextStyle(fontWeight: FontWeight.w600)),
-                          if (alert.details != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                alert.details!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        if (view.recommendations.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Khuyến nghị',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  ...view.recommendations.map(
-                    (rec) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('• $rec'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        if (view.sources.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nguồn tham khảo',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  Text(view.sources.join(', ')),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _DdiAlert {
-  const _DdiAlert({required this.message, this.details});
-
-  final String message;
-  final String? details;
-}
-
-/// Parses the raw CareGuard payload into an End_User-safe view, dropping
-/// telemetry (mode/fallback/source_errors) per Requirements 3.1/3.6.
-class _DdiUserView {
-  _DdiUserView({
-    required this.riskLevel,
-    required this.alerts,
-    required this.recommendations,
-    required this.sources,
-  });
-
-  final String riskLevel;
-  final List<_DdiAlert> alerts;
-  final List<String> recommendations;
-  final List<String> sources;
-
-  String get riskLabel {
-    switch (riskLevel) {
-      case 'high':
-      case 'critical':
-        return 'Cao';
-      case 'medium':
-        return 'Trung bình';
-      case 'low':
-        return 'Thấp';
-      default:
-        return 'Chưa xác định';
-    }
-  }
-
-  static String _classifyRisk(String? raw) {
-    final value = (raw ?? '').toLowerCase();
-    if (RegExp(r'critical|contra|fatal').hasMatch(value)) return 'critical';
-    if (RegExp(r'severe|major|high|danger').hasMatch(value)) return 'high';
-    if (RegExp(r'moderate|medium|amber').hasMatch(value)) return 'medium';
-    if (RegExp(r'minor|low|safe|none').hasMatch(value)) return 'low';
-    return 'unknown';
-  }
-
-  static List<String> _stringList(dynamic value) {
-    if (value is List) {
-      return value
-          .map((item) => item?.toString().trim() ?? '')
-          .where((item) => item.isNotEmpty)
-          .toList();
-    }
-    if (value is String && value.trim().isNotEmpty) {
-      return [value.trim()];
-    }
-    return const [];
-  }
-
-  factory _DdiUserView.fromPayload(Map<String, dynamic> payload) {
-    final risk = payload['risk'];
-    final riskTier = payload['risk_tier'] ??
-        payload['riskTier'] ??
-        payload['tier'] ??
-        (risk is Map ? risk['level'] : risk);
-
-    final rawAlerts = payload['ddi_alerts'] ?? payload['ddiAlerts'];
-    final alerts = <_DdiAlert>[];
-    if (rawAlerts is List) {
-      for (final item in rawAlerts) {
-        if (item is String && item.trim().isNotEmpty) {
-          alerts.add(_DdiAlert(message: item.trim()));
-        } else if (item is Map) {
-          final map = item.cast<String, dynamic>();
-          final message = (map['title'] ??
-                  map['interaction'] ??
-                  map['message'] ??
-                  map['summary'])
-              ?.toString()
-              .trim();
-          if (message != null && message.isNotEmpty) {
-            final details =
-                (map['details'] ?? map['description'] ?? map['recommendation'])
-                    ?.toString()
-                    .trim();
-            alerts.add(_DdiAlert(
-              message: message,
-              details: (details != null && details.isNotEmpty) ? details : null,
-            ));
-          }
-        }
-      }
-    }
-
-    final recommendations = <String>[
-      ..._stringList(payload['recommendations']),
-      ..._stringList(payload['recommendation']),
-    ];
-
-    // Sources come from the attribution block (label only); connector errors
-    // are never surfaced.
-    final sources = <String>[];
-    final attribution = payload['attribution'];
-    if (attribution is Map) {
-      final list = attribution['sources'];
-      if (list is List) {
-        for (final item in list) {
-          if (item is Map) {
-            final name = item['name']?.toString().trim();
-            if (name != null && name.isNotEmpty && !sources.contains(name)) {
-              sources.add(name);
-            }
-          }
-        }
-      }
-    }
-
-    return _DdiUserView(
-      riskLevel: _classifyRisk(riskTier?.toString()),
-      alerts: alerts,
-      recommendations: recommendations.toSet().toList(),
-      sources: sources,
     );
   }
 }

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
+import { trackCouncilRun } from "@/lib/analytics/events";
 import {
   CouncilCaseRecord,
   getActiveCouncilCaseId,
@@ -107,6 +108,10 @@ export default function CouncilNewReviewPage() {
         specialist_count: parsedCase.specialistCount,
         specialists: parsedCase.specialists,
       });
+      // Emit a named Council product event through the consent/PII-guarded
+      // analytics client. Only the coarse specialist count is recorded; no
+      // case/patient content is included (Req 9.1, 9.4).
+      trackCouncilRun({ specialistCount: parsedCase.specialists.length });
       setActiveCouncilCaseId(updated.id);
       router.push(`/council/result?caseId=${updated.id}`);
     } catch (cause) {

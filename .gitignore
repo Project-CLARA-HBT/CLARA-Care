@@ -27,3 +27,9 @@ _fix_pw.*
 _test_vision*.py
 _build_api.sh
 _deploy_gvision.sh
+
+# --- large / license-restricted third-party data (never commit) ---
+# DrugBank full database export (~1.5GB) and derived DDI/dictionary shards
+# (~335MB). DrugBank's full database is license-restricted; keep it local.
+drugbank_full_database.xml
+services/ml/src/clara_ml/nlp/seed_data/drugbank/

@@ -14,7 +14,7 @@ Thêm hallucination benchmark lane trong scientific eval.
 
 ## Điểm chạm mã nguồn dự kiến
 - `services/ml/tests/test_research_tier2_agent.py`
-- `docs/hackathon/scientific-eval-testkit-guide-2026-04-01.md`
+- `data/docs/hackathon/scientific-eval-testkit-guide-2026-04-01.md`
 
 ## KPI đánh giá khi triển khai
 - Hallucination rate; groundedness score.

@@ -158,6 +158,7 @@ def connector_classes() -> dict[str, type["BaseSourceConnector"]]:
     from .openfda import OpenFdaConnector
     from .pubmed_eutils import PubMedEutilsConnector
     from .rxnorm import RxNormConnector
+    from .vn_crawl import VnCrawlConnector
 
     return {
         "pubmed": PubMedEutilsConnector,
@@ -165,6 +166,7 @@ def connector_classes() -> dict[str, type["BaseSourceConnector"]]:
         "dailymed": DailyMedSplConnector,
         "rxnorm": RxNormConnector,
         "europepmc": EuropePmcConnector,
+        "vn_crawl": VnCrawlConnector,
     }
 
 
@@ -186,5 +188,7 @@ def build_connector(
         connector_cls = classes[key]
     except KeyError as exc:
         known = ", ".join(sorted(classes)) or "<none>"
-        raise KeyError(f"no API connector registered for source_key {source_key!r} (known: {known})") from exc
+        raise KeyError(
+            f"no API connector registered for source_key {source_key!r} (known: {known})"
+        ) from exc
     return connector_cls(context, **kwargs)

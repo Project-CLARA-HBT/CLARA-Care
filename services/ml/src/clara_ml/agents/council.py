@@ -23,6 +23,23 @@ _TRIAGE_SCORE = {
     "emergency_escalation": 3,
 }
 
+# --- Clinician-review safety directive (Requirement 3.5) --------------------
+# CLARA's Council is decision-support software, not a medical device and not an
+# EMR/EHR. Every Council output MUST carry the directive to review the result
+# with a licensed clinician before acting on it, regardless of triage outcome
+# (emergency / consensus / divergence / fallback) and regardless of any
+# oversight or upgrade-flag state. This is a deterministic safety invariant, NOT
+# a flag-gated feature: it is attached unconditionally to the ``run_council``
+# envelope so no output path can ever omit it. Bilingual vi-first / en, matching
+# the project's hedge/disclosure convention.
+CLINICIAN_REVIEW_DIRECTIVE = (
+    "Kết quả này là thông tin hỗ trợ quyết định, không thay thế chẩn đoán hay "
+    "điều trị y khoa. Vui lòng rà soát cùng bác sĩ có chuyên môn (licensed "
+    "clinician) trước khi đưa ra quyết định lâm sàng. "
+    "This is decision-support information and does not replace medical diagnosis "
+    "or treatment; review it with a licensed clinician before acting."
+)
+
 _RED_FLAG_RULES = {
     "possible_acute_coronary_syndrome": (
         "chest pain",
@@ -1338,7 +1355,7 @@ def run_council(payload: dict) -> dict:
         medications=medications,
     )
 
-    return {
+    result = {
         "requested_specialists": specialists,
         "per_specialist_reasoning_logs": assessments_payload,
         "conflict_list": conflicts,
@@ -1413,3 +1430,39 @@ def run_council(payload: dict) -> dict:
             ],
         },
     }
+
+    # --- Clinician-review safety directive (Requirement 3.5) ----------------
+    # Attached unconditionally to EVERY run_council envelope — emergency
+    # escalation, consensus, divergence, needs-more-info/fallback alike — and
+    # independent of all upgrade flags and of any downstream oversight state
+    # (handoff/override/pause). Additive and back-compatible: new keys only, no
+    # existing key is removed or renamed. ``clinician_review_required`` is the
+    # machine-readable guarantee; ``clinician_review_directive`` is the
+    # user-visible bilingual directive. Because run_council has a single return
+    # path, placing this before the (optional) disclosure block guarantees no
+    # output can omit the directive.
+    result["clinician_review_required"] = True
+    result["clinician_review_directive"] = CLINICIAN_REVIEW_DIRECTIVE
+
+    # --- Model & fallback disclosure (Requirement 6.1, 6.3) -----------------
+    # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on (read
+    # from the payload override, falling back to the ML settings — mirroring the
+    # council_neural_enabled pattern), attach an ``ai_disclosure`` block naming
+    # the deterministic rule engine. A rule-engine run is never a degraded
+    # fallback, so ``is_fallback`` is always False (design §E, Property P10).
+    # When the flag is off, the block is omitted entirely so the envelope is
+    # byte-equivalent to today (Requirement 6.5, 9.2).
+    disclosure_enabled = bool(
+        payload.get(
+            "council_model_disclosure_enabled",
+            settings.council_model_disclosure_enabled,
+        )
+    )
+    if disclosure_enabled:
+        result["ai_disclosure"] = {
+            "model_family": "council_rule_engine",
+            "model_version": "rule_based_council_v2",
+            "is_fallback": False,
+        }
+
+    return result

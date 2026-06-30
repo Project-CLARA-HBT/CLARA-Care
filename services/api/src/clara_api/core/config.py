@@ -19,6 +19,43 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
+    # --- Database connection-pool sizing (additive; defaults preserve behavior) ---
+    # These map to the SQLAlchemy QueuePool knobs applied during engine creation
+    # for non-SQLite backends. The defaults equal SQLAlchemy's own defaults so an
+    # unconfigured deployment behaves exactly as before (only ``pool_pre_ping`` was
+    # set previously). Production deploys size ``DB_POOL_SIZE`` / ``DB_MAX_OVERFLOW``
+    # relative to the API/ML worker count (Requirement 10.2). ``pool_pre_ping`` is
+    # always preserved as the liveness check; ``DB_POOL_PRE_PING`` exists only as an
+    # explicit override and defaults on.
+    db_pool_size: int = Field(
+        default=5,
+        validation_alias="DB_POOL_SIZE",
+        ge=1,
+    )
+    db_max_overflow: int = Field(
+        default=10,
+        validation_alias="DB_MAX_OVERFLOW",
+        ge=0,
+    )
+    # Recycle connections after this many seconds. ``-1`` (the default) disables
+    # recycling, matching SQLAlchemy's default and the prior behavior.
+    db_pool_recycle: int = Field(
+        default=-1,
+        validation_alias="DB_POOL_RECYCLE",
+        ge=-1,
+    )
+    # Seconds to wait for a connection from the pool before raising. ``30`` is the
+    # SQLAlchemy default, preserving current behavior.
+    db_pool_timeout: int = Field(
+        default=30,
+        validation_alias="DB_POOL_TIMEOUT",
+        ge=1,
+    )
+    db_pool_pre_ping: bool = Field(
+        default=True,
+        validation_alias="DB_POOL_PRE_PING",
+    )
+
     cors_allowed_origins: str = Field(
         default="*",
         validation_alias="CORS_ALLOWED_ORIGINS",
@@ -38,6 +75,17 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = Field(
         default="change-me", min_length=8, validation_alias="JWT_SECRET_KEY"
+    )
+    # Previous JWT signing key, used for verification only during a key-overlap
+    # rotation window (Requirement 1.7). Default empty ⇒ no overlap window and
+    # behavior is identical to the pre-hardening baseline: only the current
+    # ``jwt_secret_key`` signs and verifies tokens. When set, newly minted tokens
+    # are still signed with ``jwt_secret_key``, but tokens that fail verification
+    # against the current key are additionally checked against this previous key
+    # so rotating the signing key does not force a mass logout. Operators clear
+    # this value once all tokens signed with the prior key have naturally expired.
+    jwt_secret_key_previous: str = Field(
+        default="", validation_alias="JWT_SECRET_KEY_PREVIOUS"
     )
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = Field(default="clara-api", validation_alias="JWT_ISSUER")
@@ -222,15 +270,9 @@ class Settings(BaseSettings):
     )
     # ASR provider selection seam (mirrors CLARA_ML config). "whisper" = the
     # existing DeepSeek/Whisper audio client; other names degrade to it.
-    scribe_asr_primary: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_PRIMARY"
-    )
-    scribe_asr_fallback: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_FALLBACK"
-    )
-    scribe_asr_language: str = Field(
-        default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
-    )
+    scribe_asr_primary: str = Field(default="whisper", validation_alias="SCRIBE_ASR_PRIMARY")
+    scribe_asr_fallback: str = Field(default="whisper", validation_alias="SCRIBE_ASR_FALLBACK")
+    scribe_asr_language: str = Field(default="vi", validation_alias="SCRIBE_ASR_LANGUAGE")
     # --- Clara Scribe (enterprise) wave-2 feature flags -------------------------
     # R12–R20. All additive + default off ⇒ byte-for-byte current behavior.
     rag_scribe_grounding_enabled: bool = Field(
@@ -367,6 +409,283 @@ class Settings(BaseSettings):
         validation_alias="ANALYTICS_DEFAULT_RANGE_DAYS",
         gt=0,
         le=365,
+    )
+
+    # --- Regulatory compliance (AI Law 134/2025 + PDPD 13/2023) feature flags ---
+    # All additive + default OFF ⇒ byte-for-byte current behavior. When every
+    # flag is off the compliance layer is inert (Requirement 8.1, 8.2).
+    compliance_transparency_notice_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_TRANSPARENCY_NOTICE_ENABLED"
+    )
+    compliance_granular_consent_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_GRANULAR_CONSENT_ENABLED"
+    )
+    compliance_dsar_enabled: bool = Field(default=False, validation_alias="COMPLIANCE_DSAR_ENABLED")
+    compliance_cross_border_gating_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_CROSS_BORDER_GATING_ENABLED"
+    )
+    compliance_retention_job_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_RETENTION_JOB_ENABLED"
+    )
+    compliance_model_disclosure_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_MODEL_DISCLOSURE_ENABLED"
+    )
+    compliance_records_admin_enabled: bool = Field(
+        default=False, validation_alias="COMPLIANCE_RECORDS_ADMIN_ENABLED"
+    )
+    # Current AI transparency-notice version; bumping it forces re-acknowledgement
+    # on next access (Requirement 1.6).
+    compliance_transparency_notice_version: str = Field(
+        default="2026-03-v1",
+        validation_alias="COMPLIANCE_TRANSPARENCY_NOTICE_VERSION",
+    )
+
+    # --- Personal Health Record (enhanced) feature flags ------------------------
+    # ``phr_enhanced_enabled`` is the master switch; every sub-flag is effective
+    # only as ``master AND sub`` (see ``phr_features``). All default OFF ⇒ the
+    # legacy PHR upsert/read path is untouched (Requirement 18.1).
+    phr_enhanced_enabled: bool = Field(default=False, validation_alias="PHR_ENHANCED_ENABLED")
+    phr_consent_enforcement_enabled: bool = Field(
+        default=False, validation_alias="PHR_CONSENT_ENFORCEMENT_ENABLED"
+    )
+    phr_reconciliation_enabled: bool = Field(
+        default=False, validation_alias="PHR_RECONCILIATION_ENABLED"
+    )
+    phr_allergy_aware_ddi_enabled: bool = Field(
+        default=False, validation_alias="PHR_ALLERGY_AWARE_DDI_ENABLED"
+    )
+    phr_ocr_import_enabled: bool = Field(default=False, validation_alias="PHR_OCR_IMPORT_ENABLED")
+    phr_observations_enabled: bool = Field(
+        default=False, validation_alias="PHR_OBSERVATIONS_ENABLED"
+    )
+    phr_export_enabled: bool = Field(default=False, validation_alias="PHR_EXPORT_ENABLED")
+    phr_sharing_enabled: bool = Field(default=False, validation_alias="PHR_SHARING_ENABLED")
+    phr_reminders_enabled: bool = Field(default=False, validation_alias="PHR_REMINDERS_ENABLED")
+    phr_completeness_meter_enabled: bool = Field(
+        default=False, validation_alias="PHR_COMPLETENESS_METER_ENABLED"
+    )
+
+    # --- CLARA Research enhancement feature flags (additive; default off) --------
+    # All flags default to the value that preserves current (legacy) behavior.
+    # When every flag below is False/off, the research endpoints behave
+    # identically to the pre-enhancement baseline (Requirement 20.2).
+    research_api_gap_fill_hard_max: int = Field(
+        default=3,
+        validation_alias="RESEARCH_API_GAP_FILL_HARD_MAX",
+        ge=1,
+        le=10,
+    )
+    research_clarifying_questions_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_CLARIFYING_QUESTIONS_ENABLED",
+    )
+    research_role_gated_telemetry_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_ROLE_GATED_TELEMETRY_ENABLED",
+    )
+    research_personalization_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_PERSONALIZATION_ENABLED",
+    )
+    research_export_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_EXPORT_ENABLED",
+    )
+    research_share_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_SHARE_ENABLED",
+    )
+    research_quality_gate_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_QUALITY_GATE_ENABLED",
+    )
+    research_durable_uploads_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_DURABLE_UPLOADS_ENABLED",
+    )
+    research_upload_object_store_url: str = Field(
+        default="",
+        validation_alias="RESEARCH_UPLOAD_OBJECT_STORE_URL",
+    )
+
+    # --- Platform hardening feature flags (additive; default off/behavior-preserving) ---
+    # Every flag below gates a new runtime behavior and defaults to the value that
+    # preserves current behavior. With all HARDENING_* flags off the system is
+    # equivalent to the pre-hardening baseline (Requirements 11.1, 11.2).
+    hardening_refresh_rotation_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_REFRESH_ROTATION_ENABLED",
+    )
+    hardening_token_denylist_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_TOKEN_DENYLIST_ENABLED",
+    )
+    hardening_login_fail_closed: bool = Field(
+        default=False,
+        validation_alias="HARDENING_LOGIN_FAIL_CLOSED",
+    )
+    hardening_rate_limit_fail_closed: bool = Field(
+        default=False,
+        validation_alias="HARDENING_RATE_LIMIT_FAIL_CLOSED",
+    )
+    hardening_request_body_limit_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_REQUEST_BODY_LIMIT_ENABLED",
+    )
+    # Maximum request body size enforced only when the body-size limit is enabled.
+    # The default (10 MiB) is inert while ``hardening_request_body_limit_enabled``
+    # is off, preserving current behavior.
+    hardening_request_body_max_bytes: int = Field(
+        default=10_485_760,
+        validation_alias="HARDENING_REQUEST_BODY_MAX_BYTES",
+        gt=0,
+    )
+    hardening_readiness_probe_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_READINESS_PROBE_ENABLED",
+    )
+    hardening_circuit_breaker_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_CIRCUIT_BREAKER_ENABLED",
+    )
+    hardening_structured_logging_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_STRUCTURED_LOGGING_ENABLED",
+    )
+    hardening_csp_enabled: bool = Field(
+        default=False,
+        validation_alias="HARDENING_CSP_ENABLED",
+    )
+
+    # --- Self-Med + DDI + CareGuard upgrade feature flags ----------------------
+    # All additive + default OFF ⇒ byte-for-byte current behavior. With every
+    # flag below off, the cabinet API, the ML analysis payload, and the response
+    # envelope are equivalent to the pre-upgrade baseline (Requirements 12.1,
+    # 12.2). Existing flags (``CAREGUARD_DRUGBANK_ENABLED`` /
+    # ``EXTERNAL_DDI_ENABLED`` in the ML config) remain the source of truth for
+    # their respective behaviors and are intentionally not redefined here.
+    selfmed_cabinet_structured_fields_enabled: bool = Field(
+        default=False,
+        validation_alias="SELFMED_CABINET_STRUCTURED_FIELDS_ENABLED",
+    )
+    selfmed_expiry_reminders_enabled: bool = Field(
+        default=False,
+        validation_alias="SELFMED_EXPIRY_REMINDERS_ENABLED",
+    )
+    careguard_ddi_index_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_DDI_INDEX_ENABLED",
+    )
+    careguard_offline_fallback_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_OFFLINE_FALLBACK_ENABLED",
+    )
+    careguard_mobile_cabinet_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_MOBILE_CABINET_ENABLED",
+    )
+    careguard_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_OBSERVABILITY_ENABLED",
+    )
+
+    # --- Admin & Observability upgrade feature flags ----------------------------
+    # All additive + default OFF/empty ⇒ byte-for-byte current behavior. With
+    # every flag below off, request/response shapes and side effects equal the
+    # pre-feature baseline (Requirements 12.1, 12.2). Each flag gates one new
+    # capability so the upgrade ships dark and can be enabled per environment.
+    admin_rag_ingestion_controls_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_RAG_INGESTION_CONTROLS_ENABLED",
+    )
+    admin_observability_percentiles_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_PERCENTILES_ENABLED",
+    )
+    admin_observability_persistent_store_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_PERSISTENT_STORE_ENABLED",
+    )
+    admin_observability_alerting_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_OBSERVABILITY_ALERTING_ENABLED",
+    )
+    admin_observability_alert_webhook_url: str = Field(
+        default="",
+        validation_alias="ADMIN_OBSERVABILITY_ALERT_WEBHOOK_URL",
+    )
+    admin_audit_log_enabled: bool = Field(
+        default=False,
+        validation_alias="ADMIN_AUDIT_LOG_ENABLED",
+    )
+
+    # --- Council upgrade feature flags (additive; default OFF) ------------------
+    # All additive + default OFF ⇒ byte-for-byte current behavior. With every
+    # flag below off, the Council endpoints, the proxied ML run/intake output
+    # shapes, the web wizard, and the response envelopes equal the pre-feature
+    # baseline (Requirements 9.1, 9.2). Each flag gates exactly one new
+    # capability so the upgrade ships dark and is enabled per environment in the
+    # staged order documented in tasks.md.
+    council_streaming_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_STREAMING_ENABLED",
+    )
+    council_run_history_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_RUN_HISTORY_ENABLED",
+    )
+    council_oversight_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_OVERSIGHT_ENABLED",
+    )
+    council_resilience_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_RESILIENCE_ENABLED",
+    )
+    council_model_disclosure_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MODEL_DISCLOSURE_ENABLED",
+    )
+    council_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_OBSERVABILITY_ENABLED",
+    )
+    council_mobile_parity_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MOBILE_PARITY_ENABLED",
+    )
+
+    # Bounded retry/timeout policy knobs for the Council resilience wrapper
+    # (task 5.1, Requirement 5.1, 5.2). These are inert while
+    # ``council_resilience_enabled`` is off — the wrapper performs a single
+    # attempt and preserves today's error mapping byte-for-byte (Requirement
+    # 5.5). When the flag is on, the wrapper makes at most
+    # ``council_resilience_max_attempts`` bounded attempts, sleeping an
+    # exponential backoff (capped) between attempts, with each attempt carrying
+    # ``council_resilience_timeout_seconds`` as its outbound timeout (``0`` ⇒
+    # use the existing ``ml_service_timeout_seconds`` default, so the per-attempt
+    # timeout is never weakened). The attempt count is hard-capped so a slow or
+    # unavailable ML service can never retry without bound.
+    council_resilience_max_attempts: int = Field(
+        default=3,
+        validation_alias="COUNCIL_RESILIENCE_MAX_ATTEMPTS",
+        ge=1,
+        le=10,
+    )
+    council_resilience_backoff_base_seconds: float = Field(
+        default=0.25,
+        validation_alias="COUNCIL_RESILIENCE_BACKOFF_BASE_SECONDS",
+        ge=0,
+    )
+    council_resilience_backoff_max_seconds: float = Field(
+        default=2.0,
+        validation_alias="COUNCIL_RESILIENCE_BACKOFF_MAX_SECONDS",
+        ge=0,
+    )
+    council_resilience_timeout_seconds: float = Field(
+        default=0.0,
+        validation_alias="COUNCIL_RESILIENCE_TIMEOUT_SECONDS",
+        ge=0,
     )
 
 

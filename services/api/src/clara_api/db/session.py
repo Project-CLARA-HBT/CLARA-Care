@@ -11,10 +11,22 @@ _DEFAULT_FALLBACK_DATABASE_URL = "sqlite+pysqlite:////data/clara.db"
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
-def _engine_kwargs_for(url: str) -> dict[str, object]:
-    kwargs: dict[str, object] = {"pool_pre_ping": True}
+def _engine_kwargs_for(url: str, settings=None) -> dict[str, object]:
+    if settings is None:
+        settings = get_settings()
+    kwargs: dict[str, object] = {"pool_pre_ping": bool(settings.db_pool_pre_ping)}
     if url.startswith("sqlite"):
+        # SQLite uses a non-QueuePool by default; the QueuePool sizing knobs do
+        # not apply, so only the connect_args/pre_ping behavior is preserved.
         kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        # Apply connection-pool sizing for server-backed databases. Defaults equal
+        # SQLAlchemy's own defaults, so an unconfigured deployment is unchanged.
+        kwargs["pool_size"] = settings.db_pool_size
+        kwargs["max_overflow"] = settings.db_max_overflow
+        kwargs["pool_timeout"] = settings.db_pool_timeout
+        if settings.db_pool_recycle >= 0:
+            kwargs["pool_recycle"] = settings.db_pool_recycle
     return kwargs
 
 
@@ -50,7 +62,7 @@ def _resolve_fallback_url() -> str:
 def _build_engine():
     settings = get_settings()
     primary_url = settings.database_url
-    primary_engine = create_engine(primary_url, **_engine_kwargs_for(primary_url))
+    primary_engine = create_engine(primary_url, **_engine_kwargs_for(primary_url, settings))
     try:
         _probe_connection(primary_engine)
         return primary_engine
@@ -73,7 +85,7 @@ def _build_engine():
         if fallback_url == primary_url:
             raise RuntimeError("DATABASE_FALLBACK_URL must differ from DATABASE_URL.") from exc
 
-        fallback_engine = create_engine(fallback_url, **_engine_kwargs_for(fallback_url))
+        fallback_engine = create_engine(fallback_url, **_engine_kwargs_for(fallback_url, settings))
         try:
             _probe_connection(fallback_engine)
         except Exception as fallback_exc:

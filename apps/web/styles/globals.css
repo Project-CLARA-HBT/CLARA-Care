@@ -42,10 +42,10 @@
   --danger-500: #dc2626;
   --status-ok-bg: rgba(5, 150, 105, 0.14);
   --status-ok-border: rgba(5, 150, 105, 0.36);
-  --status-ok-text: #047857;
+  --status-ok-text: #046b4d;
   --status-warn-bg: rgba(217, 119, 6, 0.14);
   --status-warn-border: rgba(217, 119, 6, 0.34);
-  --status-warn-text: #b45309;
+  --status-warn-text: #92400e;
   --status-danger-bg: rgba(220, 38, 38, 0.14);
   --status-danger-border: rgba(220, 38, 38, 0.34);
   --status-danger-text: #b91c1c;
@@ -75,6 +75,11 @@
   --shadow-hero: 0 34px 88px -42px rgba(37, 99, 235, 0.45);
   --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.28);
   --shadow-chrome: 0 20px 54px -34px rgba(37, 99, 235, 0.40);
+
+  /* Focus ring (Requirement 5.4) — defined once, reused everywhere */
+  --focus-ring-color: var(--brand-700);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   --font-sans:
     "Manrope",
@@ -196,6 +201,7 @@ html[data-theme="dark"] {
   --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
   --shadow-focus: 0 0 0 3px rgba(99, 155, 255, 0.35);
   --shadow-chrome: 0 22px 56px -34px rgba(2, 6, 23, 0.9);
+  --focus-ring-color: #7dd3fc;
 }
 
 * {
@@ -305,7 +311,7 @@ a {
   --shell-border-strong: rgba(37, 99, 235, 0.5);
   --text-primary: #1e2a44;
   --text-secondary: #3b4a6b;
-  --text-muted: #64748b;
+  --text-muted: #5b6a80;
   background:
     radial-gradient(120% 130% at 100% -10%, rgba(59, 130, 246, 0.08) 0%, #f0f6ff 45%, #e8f0fe 100%);
 }
@@ -342,6 +348,22 @@ html[data-theme="dark"] .clara-chat-workspace {
 html.dark .clara-chat-workspace .clara-scrollbar::-webkit-scrollbar-thumb,
 html[data-theme="dark"] .clara-chat-workspace .clara-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(96, 165, 250, 0.38);
+}
+
+/*
+ * CHAT_V2 (clara-chat-redesign, task 7.1) — WCAG AA contrast hardening.
+ *
+ * The v2 shell reuses the root design tokens. In dark mode the root
+ * `--text-muted` (#8d919a) lands at ~4.0:1 against the v2 `--surface-muted`
+ * panels — below the AA 4.5:1 threshold for the small (10–11px) uppercase
+ * labels that use it. Scope a slightly lighter muted to the v2 surface only so
+ * the audit passes without altering the legacy chat or the rest of the app.
+ * All other v2 token pairs (primary/secondary/brand/status text on their
+ * backgrounds, both themes) already clear AA.
+ */
+html.dark .clara-chat-v2,
+html[data-theme="dark"] .clara-chat-v2 {
+  --text-muted: #9aa7be;
 }
 
 /* Compat classes */
@@ -551,14 +573,100 @@ html[data-theme="dark"] .research-chip-cyan {
   color: transparent;
 }
 
-.focus-ring:focus-visible,
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: none;
+/*
+ * Accessibility: visible keyboard focus indicator (Requirement 5.4).
+ *
+ * A single token-driven focus ring is applied to every interactive control,
+ * including custom-role widgets. We draw a real `outline` (not just a
+ * box-shadow) so the indicator survives Windows High Contrast / forced-colors
+ * mode, and layer the soft brand glow on top for the default theme. Focus is
+ * only shown for keyboard interaction via `:focus-visible`, so pointer users
+ * are not distracted by rings.
+ */
+:is(
+    a[href],
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    [tabindex]:not([tabindex="-1"]),
+    [contenteditable="true"],
+    [role="button"],
+    [role="link"],
+    [role="tab"],
+    [role="menuitem"],
+    [role="menuitemcheckbox"],
+    [role="menuitemradio"],
+    [role="option"],
+    [role="switch"],
+    [role="checkbox"],
+    [role="radio"]
+  ):focus-visible,
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   box-shadow: var(--shadow-focus);
+}
+
+/* In forced-colors mode the soft glow is dropped; keep the system-drawn ring. */
+@media (forced-colors: active) {
+  :is(
+      a[href],
+      button,
+      input,
+      textarea,
+      select,
+      summary,
+      [tabindex]:not([tabindex="-1"]),
+      [contenteditable="true"],
+      [role="button"],
+      [role="link"],
+      [role="tab"],
+      [role="menuitem"],
+      [role="option"],
+      [role="switch"],
+      [role="checkbox"],
+      [role="radio"]
+    ):focus-visible,
+  .focus-ring:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/*
+ * Skip link: the first focusable element in the app shell so keyboard users can
+ * jump straight to the main content, keeping a logical tab order (Requirement 5.4).
+ * It is visually hidden until focused.
+ */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-180%);
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--shell-border-strong);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-float);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
 }
 
 @layer components {
