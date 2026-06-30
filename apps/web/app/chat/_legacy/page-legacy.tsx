@@ -2262,6 +2262,8 @@ export default function ChatWorkspacePage() {
     if (isSubmitting) return;
     setClarifyGate(null);
   };
+
+  const onUpdateActiveConversationMeta = async (payload: {
     folderId?: number | null;
     isFavorite?: boolean;
   }) => {
