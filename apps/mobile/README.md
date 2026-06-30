@@ -142,6 +142,23 @@ flutter build apk --dart-define=CLARA_API_BASE_URL=https://<your-gateway-host>
 Production builds ship with all feature-flag defines OFF; the server's
 role-scoped `feature_flags` are authoritative there.
 
+## Branding (Experience_V2)
+
+CLARA branding — display name, adaptive launcher icon, and themed splash — is
+applied per platform by an operator. The steps (manifest/plist keys, asset
+sizes, and the optional `flutter_launcher_icons` / `flutter_native_splash`
+generators) are documented in **[docs/branding.md](docs/branding.md)**.
+
+- App display name: **CLARA** (Android `android:label`, iOS
+  `CFBundleDisplayName` / `CFBundleName`).
+- Splash + adaptive-icon background use the brand seed
+  `ClaraTokens.brandSeed` (`0xFF0F766E`), matching the Material 3 theme.
+- **No binaries are committed.** Assets and platform folders are generated
+  **locally** and kept out of git; the generator packages are optional/manual
+  (no forced `pubspec.yaml` dependency).
+- The themed splash adds **no artificial delay** — the existing `_LaunchSplash`
+  shows only while `SessionStore.hydrate()` runs (launch stays hydration-driven).
+
 ## Notes
 
 - Backend role scaffold behavior:

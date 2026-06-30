@@ -118,6 +118,27 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
   MobileFeatureFlags.sharingMobileEnabled: _sharingMobileDefault,
 };
 
+// --- Experience_V2 build gate (single switch, default OFF) -------------------
+//
+// The one compile-time gate for the modernized "Experience_V2" mobile UI/UX
+// (Material 3 design system, adaptive shell, modern Home, onboarding, polished
+// states, micro-interactions, branding, language toggle). Read at exactly one
+// place — `app.dart` — to choose the authenticated root surface.
+
+/// The single build-time gate for the modern Experience_V2 mobile UI/UX
+/// (Requirements 1.1, 1.6).
+///
+/// Resolved at compile time via `--dart-define=MOBILE_EXPERIENCE_V2_ENABLED=…`
+/// with a literal define name, mirroring the existing `_chatMobileDefault`
+/// pattern. Defaults to `false` (fail-closed): when off, the app is
+/// byte-for-byte the legacy experience (`ClaraApp` → `DashboardScreen`) and no
+/// Experience_V2 surface is constructed. This gate is purely additive — it
+/// changes no CLARA_API contract and gates only client-side surface selection.
+const bool kMobileExperienceV2Enabled = bool.fromEnvironment(
+  'MOBILE_EXPERIENCE_V2_ENABLED',
+  defaultValue: false,
+);
+
 /// Resolves mobile feature gates from the `mobile/summary` `feature_flags` map
 /// combined with the compile-time `--dart-define` defaults.
 ///

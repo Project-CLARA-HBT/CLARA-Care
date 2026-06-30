@@ -10,5 +10,6 @@
 
 export 'fake_api_client.dart';
 export 'fake_connectivity_service.dart';
+export 'fake_secure_storage.dart';
 export 'fake_session_store.dart';
 export 'recording_analytics_transport.dart';
