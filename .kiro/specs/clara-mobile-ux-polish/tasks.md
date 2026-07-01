@@ -37,3 +37,15 @@
 - [ ] 7.1 `flutter analyze` and `flutter test` clean.
 - [ ] 7.2 Build the debug APK with the polish + V2 flags on and install via adb to the connected device.
 - [ ] 7.3 Manually verify on-device: modern look, web-matching colors (light/dark), smooth streaming, auto-scroll + jump-to-latest, composer grow + stop, empty-state suggestions, copy/regenerate, and Vietnamese-first copy; iterate until stable and smooth.
+
+## Web feature-parity roadmap (extension)
+
+The web app (`apps/web`) exposes these role-gated surfaces: Chat (routed + research tiers), Dashboard, PHR, SelfMed/CareGuard (cabinet + DDI + VN dictionary), Council (intake/consult/result), Scribe (SOAP), Workspace (folders/channels/share/export/notes), and Admin (overview, knowledge-sources, answer-flow, observability). Mobile already has auth, dashboard, chat, careguard, selfmed cabinet, council, scribe, PHR, consent center, DSAR, and shared-resource screens. Parity work applies the same polish (web palette + motion + Vietnamese-first + a11y) to every mobile surface and closes functional gaps.
+
+- [ ] 8. Apply the web-palette theme + motion polish consistently across all existing mobile screens (dashboard, PHR, careguard, selfmed, council, scribe, consent, DSAR, shared-resource, home shell) so the whole app matches the web look. (Req 6, 8)
+- [ ] 9. Chat research tiers: expose `fast` / `deep` / `deep_beta` modes on mobile chat (mode selector), mirroring the web unified chat, using the existing tier2 job/poll/SSE API surface where available. (parity)
+- [ ] 10. CareGuard parity: medication-label scan/OCR entry, VN drug-dictionary lookup, and severity-ranked DDI result view matching the web CareGuard. (parity)
+- [ ] 11. Council parity: full intake → consult → result case flow with consensus/divergence display. (parity)
+- [ ] 12. Workspace surface: folders/channels/notes read + share/export, matching the web workspace (feature-flagged). (parity)
+- [ ] 13. Admin-only surfaces (observability/flow-events, knowledge sources) as read views for admin role, PII-free. (parity)
+- [ ] 14. Per-screen widget tests + on-device verification for each parity surface; small commits per surface.

@@ -353,6 +353,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       apiClient: widget.apiClient,
                       sessionStore: widget.sessionStore,
                       resolver: resolver,
+                      polished: resolver.uxPolishEnabled,
                     ),
                   ),
                 ),

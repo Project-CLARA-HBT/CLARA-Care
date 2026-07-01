@@ -78,8 +78,8 @@ class _ClaraAppState extends State<ClaraApp> {
         listenable: languageController,
         builder: (context, _) => MaterialApp(
           title: 'CLARA Mobile',
-          theme: ClaraTheme.light(),
-          darkTheme: ClaraTheme.dark(),
+          theme: ClaraTheme.light(polished: kMobileUxPolishEnabled),
+          darkTheme: ClaraTheme.dark(polished: kMobileUxPolishEnabled),
           locale: languageController.locale,
           localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
             GlobalMaterialLocalizations.delegate,
@@ -100,12 +100,14 @@ class _ClaraAppState extends State<ClaraApp> {
       // V2: Material 3 light/dark themes from the brand seed, system-driven
       // (Req 2.1, 2.6). Legacy: the existing teal seed `ThemeData`, unchanged.
       theme: kMobileExperienceV2Enabled
-          ? ClaraTheme.light()
+          ? ClaraTheme.light(polished: kMobileUxPolishEnabled)
           : ThemeData(
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
               useMaterial3: true,
             ),
-      darkTheme: kMobileExperienceV2Enabled ? ClaraTheme.dark() : null,
+      darkTheme: kMobileExperienceV2Enabled
+          ? ClaraTheme.dark(polished: kMobileUxPolishEnabled)
+          : null,
       home: _buildHome(),
     );
   }

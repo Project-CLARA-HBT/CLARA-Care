@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 import 'typography.dart';
+import 'web_palette.dart';
 
 /// Pure Material 3 `ThemeData` factory for CLARA_Mobile Experience_V2.
 ///
@@ -37,30 +38,48 @@ class ClaraTheme {
   const ClaraTheme._();
 
   /// The light Experience_V2 theme.
-  static ThemeData light() => _build(Brightness.light);
+  ///
+  /// When [polished] is true (clara-mobile-ux-polish), the `ColorScheme` is
+  /// derived from the web palette (`WebPalette`) with explicit role mapping and
+  /// the `ClaraStatusColors` extension is attached, so mobile matches the web
+  /// app. When false, the legacy teal-seed scheme is used unchanged.
+  static ThemeData light({bool polished = false}) =>
+      _build(Brightness.light, polished: polished);
 
-  /// The dark Experience_V2 theme.
-  static ThemeData dark() => _build(Brightness.dark);
+  /// The dark Experience_V2 theme. See [light] for the [polished] flag.
+  static ThemeData dark({bool polished = false}) =>
+      _build(Brightness.dark, polished: polished);
 
   /// Shared builder for both brightnesses. Generates an AA-correct
   /// `ColorScheme` from the brand seed, then layers the shared typography and
   /// token-driven component themes onto it.
-  static ThemeData _build(Brightness brightness) {
-    // AA contrast note: every on-color pairing (e.g. onPrimary/primary,
-    // onSurface/surface) is produced by the tonal palette below, not chosen by
-    // hand, so the generated pairs satisfy AA in this brightness.
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: ClaraTokens.brandSeed,
-      brightness: brightness,
-    );
+  static ThemeData _build(Brightness brightness, {bool polished = false}) {
+    // AA contrast note: when NOT polished, every on-color pairing is produced
+    // by the tonal palette (generated, not hand-chosen), so pairs satisfy AA.
+    // When polished, `webColorScheme` supplies an explicit, AA-verified web
+    // palette (see `web_palette.dart`).
+    final colorScheme = polished
+        ? webColorScheme(brightness)
+        : ColorScheme.fromSeed(
+            seedColor: ClaraTokens.brandSeed,
+            brightness: brightness,
+          );
     final textTheme = ClaraTypography.textTheme();
 
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      // Keep scaffold/canvas tied to the generated scheme so contrast holds.
-      scaffoldBackgroundColor: colorScheme.surface,
+      // Polished: paint the web canvas behind elevated surfaces; legacy keeps
+      // scaffold tied to the generated surface so contrast holds.
+      scaffoldBackgroundColor: polished
+          ? (brightness == Brightness.dark
+              ? WebPalette.darkCanvas
+              : WebPalette.lightCanvas)
+          : colorScheme.surface,
+      extensions: <ThemeExtension<dynamic>>[
+        if (polished) ClaraStatusColors.of(brightness),
+      ],
     );
 
     return base.copyWith(

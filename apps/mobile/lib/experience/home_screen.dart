@@ -291,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
                 resolver: resolver,
+                polished: resolver.uxPolishEnabled,
               ),
             ),
           ),
@@ -552,5 +553,3 @@ class _QuickActionCard extends StatelessWidget {
     );
   }
 }
-
-

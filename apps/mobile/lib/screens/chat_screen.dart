@@ -1,14 +1,21 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../core/a11y.dart';
 import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/connectivity_service.dart';
 import '../core/feature_flags.dart';
 import '../core/session_store.dart';
+import '../theme/tokens.dart';
 import '../widgets/end_user_safe_answer.dart';
 import '../widgets/error_retry_view.dart';
+import '../widgets/markdown_view.dart';
 import '../widgets/offline_banner.dart';
 import '../widgets/screen_error_boundary.dart';
+import 'chat/polished_chat_view.dart';
 
 // =============================================================================
 // ChatScreen — conversational chat parity for CLARA_Mobile.
@@ -44,6 +51,12 @@ const String kChatViewedEvent = 'mobile_chat_viewed';
 const String kChatSubmittedEvent = 'mobile_chat_submitted';
 const String kChatAnsweredEvent = 'mobile_chat_answered';
 const String kChatEmergencyOpenedEvent = 'mobile_chat_emergency_opened';
+
+/// Coarse, no-PII events for the polished chat surface (clara-mobile-ux-polish
+/// Requirement 5.4, 10.3). None carry message/prompt text or model identity.
+const String kChatStoppedEvent = 'mobile_chat_stopped';
+const String kChatRegeneratedEvent = 'mobile_chat_regenerated';
+const String kChatCopiedEvent = 'mobile_chat_copied';
 
 /// Vietnamese-first standing medical disclaimer (Requirement 1.4).
 const String _kChatDisclaimerVi =
@@ -111,6 +124,7 @@ class ChatScreen extends StatefulWidget {
     this.analytics,
     this.streamingEnabled = true,
     this.isEnglish = false,
+    this.polished = false,
   });
 
   final ApiClient apiClient;
@@ -133,6 +147,11 @@ class ChatScreen extends StatefulWidget {
   /// Vietnamese-first by default; pass `true` for English copy.
   final bool isEnglish;
 
+  /// When true, render the ChatGPT-class polished body (clara-mobile-ux-polish,
+  /// gated by `mobile_ux_polish_enabled`). When false the legacy body renders
+  /// unchanged (Property P1). Defaults to false so callers opt in explicitly.
+  final bool polished;
+
   /// Builds the screen only when the `chat_mobile_enabled` gate is open;
   /// returns `null` otherwise so the entry point can be omitted entirely
   /// (Requirement 1.7 / 15.1 — flags-off equivalence).
@@ -144,6 +163,7 @@ class ChatScreen extends StatefulWidget {
     Analytics? analytics,
     bool streamingEnabled = true,
     bool isEnglish = false,
+    bool? polished,
     Key? key,
   }) {
     if (!resolver.chatEnabled) {
@@ -158,6 +178,7 @@ class ChatScreen extends StatefulWidget {
       analytics: analytics,
       streamingEnabled: streamingEnabled,
       isEnglish: isEnglish,
+      polished: polished ?? resolver.uxPolishEnabled,
     );
   }
 
@@ -173,8 +194,20 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _sending = false;
   bool _emergencyActive = false;
 
+  // --- Polished-surface transient state (clara-mobile-ux-polish) -----------
+  // The active SSE subscription so a user-initiated stop can cancel it, and a
+  // guard so the "stream closed without terminal event" branch does not treat
+  // a user stop as a fallback trigger (Req 3.3 / P10).
+  StreamSubscription<SseEvent>? _activeSubscription;
+  StringBuffer? _activeBuffer;
+  ChatMessage? _activeAssistant;
+  bool _cancelled = false;
+  bool _atBottom = true;
+  bool _showJumpToLatest = false;
+
   Analytics get _analytics => widget.analytics ?? getAnalyticsClient();
   bool get _enabled => widget.resolver.chatEnabled;
+  bool get _polished => widget.polished;
 
   String? get _token {
     final token = widget.sessionStore.accessToken;
@@ -189,13 +222,33 @@ class _ChatScreenState extends State<ChatScreen> {
       // Coarse, no-PII screen-view event.
       _analytics.capture(const AnalyticsEvent(kChatViewedEvent));
     }
+    if (_polished) {
+      _scroll.addListener(_onScroll);
+    }
   }
 
   @override
   void dispose() {
+    _activeSubscription?.cancel();
+    _scroll.removeListener(_onScroll);
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Tracks whether the list is at/near the bottom so auto-scroll is gated and
+  /// the jump-to-latest affordance is offered otherwise (Req 2.3, 2.4 / P3).
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final atBottom = isNearBottom(
+      _scroll.position.pixels,
+      _scroll.position.maxScrollExtent,
+    );
+    if (atBottom == _atBottom) return;
+    setState(() {
+      _atBottom = atBottom;
+      _showJumpToLatest = !atBottom;
+    });
   }
 
   // --- Send / stream -------------------------------------------------------
@@ -251,10 +304,30 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatMessage assistant,
   ) async {
     final buffer = StringBuffer();
-    try {
-      await for (final event in widget.apiClient
-          .streamChat(accessToken: token, payload: payload)) {
-        if (!mounted) return;
+    _cancelled = false;
+    final completer = Completer<void>();
+
+    // Fall back to the blocking endpoint when the stream produced no content,
+    // else preserve what streamed and show a non-PII note (Req 1.3).
+    Future<void> handleInterruption() async {
+      if (!mounted || _cancelled) return;
+      if (buffer.isEmpty) {
+        await _runBlocking(token, payload, assistant);
+      } else {
+        setState(() {
+          assistant.isStreaming = false;
+          assistant.errorNote = _streamErrorMessage;
+        });
+        _finishSending();
+      }
+    }
+
+    late StreamSubscription<SseEvent> sub;
+    sub = widget.apiClient
+        .streamChat(accessToken: token, payload: payload)
+        .listen(
+      (event) {
+        if (!mounted || _cancelled) return;
         switch (event.event) {
           case 'token':
             final t = event.json?['text'];
@@ -267,62 +340,126 @@ class _ChatScreenState extends State<ChatScreen> {
           case 'done':
             final envelope = event.json ?? <String, dynamic>{};
             _completeAnswer(assistant, envelope, buffer.toString());
-            return;
+            _cancelled = true; // terminal — suppress the onDone fallback
+            sub.cancel();
+            if (!completer.isCompleted) completer.complete();
+            break;
           case 'error':
-            // Terminal error: preserve streamed content if any (Req 1.3),
-            // otherwise fall back to the blocking endpoint.
-            if (buffer.isEmpty) {
-              await _runBlocking(token, payload, assistant);
-            } else {
-              setState(() {
-                assistant.isStreaming = false;
-                assistant.errorNote = _streamErrorMessage;
-              });
-              _finishSending();
-            }
-            return;
+            _cancelled = true;
+            sub.cancel();
+            handleInterruption().whenComplete(() {
+              if (!completer.isCompleted) completer.complete();
+            });
+            break;
           default:
             // start / step / keepalive — no user-facing content.
             break;
         }
-      }
+      },
+      onError: (Object _) {
+        // Failed to connect/parse the stream (Req 1.3).
+        handleInterruption().whenComplete(() {
+          if (!completer.isCompleted) completer.complete();
+        });
+      },
+      onDone: () {
+        // Stream closed without a terminal `done`/`error` and not user-stopped.
+        if (_cancelled) {
+          if (!completer.isCompleted) completer.complete();
+          return;
+        }
+        if (buffer.isEmpty) {
+          _runBlocking(token, payload, assistant).whenComplete(() {
+            if (!completer.isCompleted) completer.complete();
+          });
+        } else {
+          _completeAnswer(
+            assistant,
+            <String, dynamic>{'reply': buffer.toString()},
+            buffer.toString(),
+          );
+          if (!completer.isCompleted) completer.complete();
+        }
+      },
+      cancelOnError: true,
+    );
 
-      // Stream closed without a terminal `done`/`error`.
-      if (!mounted) return;
-      if (buffer.isEmpty) {
-        await _runBlocking(token, payload, assistant);
-      } else {
-        _completeAnswer(
-          assistant,
-          <String, dynamic>{'reply': buffer.toString()},
-          buffer.toString(),
-        );
-      }
-    } on ApiException {
-      // Failed to connect/parse the stream. Preserve partial content if any,
-      // else fall back to the blocking endpoint (Req 1.3).
-      if (!mounted) return;
-      if (buffer.isEmpty) {
-        await _runBlocking(token, payload, assistant);
-      } else {
-        setState(() {
-          assistant.isStreaming = false;
-          assistant.errorNote = _streamErrorMessage;
-        });
-        _finishSending();
-      }
-    } catch (_) {
-      if (!mounted) return;
-      if (buffer.isEmpty) {
-        await _runBlocking(token, payload, assistant);
-      } else {
-        setState(() {
-          assistant.isStreaming = false;
-          assistant.errorNote = _streamErrorMessage;
-        });
-        _finishSending();
-      }
+    _activeSubscription = sub;
+    _activeBuffer = buffer;
+    _activeAssistant = assistant;
+    await completer.future;
+    if (identical(_activeSubscription, sub)) {
+      _activeSubscription = null;
+      _activeBuffer = null;
+      _activeAssistant = null;
     }
+  }
+
+  /// Stops an in-flight stream (Req 3.3 / P10): cancels the subscription and
+  /// finalizes the assistant turn with exactly the buffered text, without
+  /// raising a user-facing error (a user-initiated stop is not an error).
+  void _stop() {
+    final sub = _activeSubscription;
+    final assistant = _activeAssistant;
+    final buffer = _activeBuffer;
+    if (sub == null || assistant == null) return;
+    _cancelled = true;
+    sub.cancel();
+    _activeSubscription = null;
+    final streamed = buffer?.toString() ?? assistant.text;
+    setState(() {
+      assistant.isStreaming = false;
+      if (assistant.text.isEmpty && streamed.isNotEmpty) {
+        assistant.text = streamed;
+      }
+      if (assistant.envelope == null && streamed.isNotEmpty) {
+        assistant.envelope = <String, dynamic>{'reply': streamed};
+      }
+    });
+    _analytics.capture(const AnalyticsEvent(kChatStoppedEvent));
+    _finishSending();
+    _activeBuffer = null;
+    _activeAssistant = null;
+  }
+
+  /// Regenerates the answer at [index] (Req 5.2): drops the assistant turn and
+  /// the preceding user turn, then resubmits that prompt through the send path.
+  Future<void> _regenerate(int index) async {
+    if (_sending) return;
+    if (index <= 0 || index >= _messages.length) return;
+    final assistant = _messages[index];
+    if (assistant.isUser) return;
+    final user = _messages[index - 1];
+    if (!user.isUser) return;
+    final prompt = user.text;
+    setState(() {
+      _messages.removeRange(index - 1, index + 1);
+    });
+    _analytics.capture(const AnalyticsEvent(kChatRegeneratedEvent));
+    _input.text = prompt;
+    await _send();
+  }
+
+  /// Copies the answer at [index] to the clipboard as plain text (Req 5.1).
+  Future<void> _copy(int index) async {
+    if (index < 0 || index >= _messages.length) return;
+    final message = _messages[index];
+    final envelope = message.envelope;
+    final raw = envelope != null
+        ? extractAnswerText(
+            endUserSafeProjection(envelope, isAdmin: false),
+          )
+        : message.text;
+    final plain = mdToPlainText(raw);
+    await Clipboard.setData(ClipboardData(text: plain));
+    _analytics.capture(const AnalyticsEvent(kChatCopiedEvent));
+    _showSnack(widget.isEnglish ? 'Copied' : 'Đã sao chép');
+  }
+
+  void _onSuggestionSelected(String prompt) {
+    _input.text = prompt;
+    _input.selection =
+        TextSelection.collapsed(offset: _input.text.length);
   }
 
   Future<void> _runBlocking(
@@ -394,16 +531,36 @@ class _ChatScreenState extends State<ChatScreen> {
       ? 'Could not get an answer right now. Please try again.'
       : 'Không thể nhận câu trả lời lúc này. Vui lòng thử lại.';
 
-  void _scrollToEnd() {
+  /// Scrolls to the newest content. On the polished surface, auto-scroll is
+  /// gated on the user being at/near the bottom (Req 2.3, 2.4); a jump-to-latest
+  /// tap sets [force] to override the gate. Motion collapses under reduced
+  /// motion (Req 8.2).
+  void _scrollToEnd({bool force = false}) {
+    if (_polished && !force && !_atBottom) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+      if (!_scroll.hasClients) return;
+      final duration = _polished
+          ? A11y.resolveMotionDuration(context, ClaraTokens.motionMedium)
+          : const Duration(milliseconds: 200);
+      if (duration == Duration.zero) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        return;
       }
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: duration,
+        curve: Curves.easeOut,
+      );
     });
+  }
+
+  /// Jump-to-latest handler: force-scroll to the end and hide the affordance.
+  void _jumpToLatest() {
+    setState(() {
+      _atBottom = true;
+      _showJumpToLatest = false;
+    });
+    _scrollToEnd(force: true);
   }
 
   void _showSnack(String message) {
@@ -475,8 +632,27 @@ class _ChatScreenState extends State<ChatScreen> {
               OfflineBanner(connectivity: widget.connectivity!),
             if (_emergencyActive) _EmergencyBanner(isEnglish: widget.isEnglish),
             _StandingDisclaimer(isEnglish: widget.isEnglish),
-            Expanded(child: _buildMessageList(context)),
-            _buildComposer(context),
+            Expanded(
+              child: _polished
+                  ? PolishedChatView(
+                      messages: _messages,
+                      scrollController: _scroll,
+                      inputController: _input,
+                      sessionStore: widget.sessionStore,
+                      isStreaming: _sending,
+                      showJumpToLatest: _showJumpToLatest,
+                      canSend: !_sending,
+                      isEnglish: widget.isEnglish,
+                      onSend: _send,
+                      onStop: _stop,
+                      onJumpToLatest: _jumpToLatest,
+                      onSuggestionSelected: _onSuggestionSelected,
+                      onCopy: _copy,
+                      onRegenerate: _regenerate,
+                    )
+                  : _buildMessageList(context),
+            ),
+            if (!_polished) _buildComposer(context),
           ],
         ),
       ),
