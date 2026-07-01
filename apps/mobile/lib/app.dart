@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/api_client.dart';
 import 'core/feature_flags.dart';
@@ -67,9 +68,12 @@ class _ClaraAppState extends State<ClaraApp> {
     final languageController = widget.languageController;
     if (kMobileExperienceV2Enabled && languageController != null) {
       // V2 with a controller: rebuild whenever the language changes so the
-      // selected locale applies app-wide. `flutter_localizations` is not a
-      // dependency, so we set `locale` + `supportedLocales` only and let Flutter
-      // fall back to the default Material localizations for the closest match.
+      // selected locale applies app-wide. `flutter_localizations` supplies the
+      // Global*Localizations delegates so `MaterialLocalizations` resolves for
+      // the Vietnamese ('vi') locale as well as English — without them, setting
+      // `locale: vi` leaves the default (English-only) localizations unable to
+      // produce `MaterialLocalizations`, which crashes any `AppBar`/Material
+      // widget ("No MaterialLocalizations found").
       return ListenableBuilder(
         listenable: languageController,
         builder: (context, _) => MaterialApp(
@@ -77,6 +81,11 @@ class _ClaraAppState extends State<ClaraApp> {
           theme: ClaraTheme.light(),
           darkTheme: ClaraTheme.dark(),
           locale: languageController.locale,
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           supportedLocales: const <Locale>[Locale('vi'), Locale('en')],
           home: _buildHome(),
         ),
