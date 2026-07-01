@@ -1,24 +1,16 @@
 name: Mobile APK
 
 # Builds a release Android APK for the CLARA Flutter app with the modern
-# experience (MOBILE_EXPERIENCE_V2_ENABLED) enabled and the API base URL
-# pointed at production. The APK is uploaded as a downloadable artifact.
+# experience enabled and the API base URL pointed at production, then uploads
+# the APK as a downloadable artifact.
 #
-# The repo intentionally commits no generated android/ platform folder
-# (see apps/mobile/docs/branding.md), so the job generates it with
-# `flutter create` before building.
+# Uses only first-party actions/* (org allow-list friendly) and installs
+# Flutter manually. The Android SDK is preinstalled on ubuntu-latest.
+# The repo commits no generated android/ folder (see apps/mobile/docs/branding.md),
+# so the job generates it with `flutter create` before building.
 
 on:
   workflow_dispatch:
-    inputs:
-      api_base_url:
-        description: "API base URL baked into the APK"
-        required: true
-        default: "https://clara.thiennn.icu"
-      experience_v2:
-        description: "Enable the modern mobile experience (MOBILE_EXPERIENCE_V2_ENABLED)"
-        required: true
-        default: "true"
   push:
     branches: [main]
     paths:
@@ -28,18 +20,11 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: mobile-apk-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-apk:
     name: build release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      API_BASE_URL: ${{ github.event.inputs.api_base_url || 'https://clara.thiennn.icu' }}
-      EXPERIENCE_V2: ${{ github.event.inputs.experience_v2 || 'true' }}
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,18 +35,23 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+      - name: Install Flutter (stable)
+        run: |
+          set -euo pipefail
+          git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Flutter setup
+        run: |
+          set -euo pipefail
+          flutter --version
+          flutter config --no-analytics
+          flutter precache --android
 
       - name: Generate android project (repo commits none)
         working-directory: apps/mobile
         run: |
+          set -euo pipefail
           if [ ! -d android ]; then
             flutter create --platforms=android --project-name clara_mobile .
           else
@@ -75,16 +65,18 @@ jobs:
       - name: Build release APK
         working-directory: apps/mobile
         run: |
+          set -euo pipefail
           flutter build apk --release \
-            --dart-define=MOBILE_EXPERIENCE_V2_ENABLED="${EXPERIENCE_V2}" \
-            --dart-define=CLARA_API_BASE_URL="${API_BASE_URL}"
+            --dart-define=MOBILE_EXPERIENCE_V2_ENABLED=true \
+            --dart-define=CLARA_API_BASE_URL=https://clara.thiennn.icu
 
-      - name: Rename APK
+      - name: Stage APK
         working-directory: apps/mobile
         run: |
+          set -euo pipefail
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk \
-             "dist/clara-mobile-${GITHUB_SHA::7}.apk"
+             "dist/clara-mobile-${GITHUB_SHA:0:7}.apk"
           ls -lh dist
 
       - name: Upload APK artifact
