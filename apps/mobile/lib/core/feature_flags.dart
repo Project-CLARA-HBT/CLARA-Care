@@ -66,6 +66,10 @@ class MobileFeatureFlags {
   /// Read-only shared-resource / deep-link surface (Requirement 12).
   static const String sharingMobileEnabled = 'sharing_mobile_enabled';
 
+  /// Modernized ChatGPT-class chat surface + web-palette theme
+  /// (clara-mobile-ux-polish, Requirement 6, 10).
+  static const String uxPolishEnabled = 'mobile_ux_polish_enabled';
+
   /// All new mobile flag keys, in staged-enablement order.
   static const List<String> all = <String>[
     chatMobileEnabled,
@@ -76,6 +80,7 @@ class MobileFeatureFlags {
     transparencyNoticeMobileEnabled,
     consentCenterMobileEnabled,
     sharingMobileEnabled,
+    uxPolishEnabled,
   ];
 }
 
@@ -101,6 +106,8 @@ const bool _consentCenterMobileDefault =
     bool.fromEnvironment('CONSENT_CENTER_MOBILE_ENABLED', defaultValue: false);
 const bool _sharingMobileDefault =
     bool.fromEnvironment('SHARING_MOBILE_ENABLED', defaultValue: false);
+const bool _uxPolishMobileDefault =
+    bool.fromEnvironment('MOBILE_UX_POLISH_ENABLED', defaultValue: false);
 
 /// The compile-time `--dart-define` defaults keyed by flag. All `false` unless
 /// the build explicitly enabled one. Used as the build-time half of the
@@ -116,6 +123,7 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
       _transparencyNoticeMobileDefault,
   MobileFeatureFlags.consentCenterMobileEnabled: _consentCenterMobileDefault,
   MobileFeatureFlags.sharingMobileEnabled: _sharingMobileDefault,
+  MobileFeatureFlags.uxPolishEnabled: _uxPolishMobileDefault,
 };
 
 // --- Experience_V2 build gate (single switch, default OFF) -------------------
@@ -138,6 +146,21 @@ const bool kMobileExperienceV2Enabled = bool.fromEnvironment(
   'MOBILE_EXPERIENCE_V2_ENABLED',
   defaultValue: false,
 );
+
+/// The compile-time half of the `mobile_ux_polish_enabled` gate
+/// (clara-mobile-ux-polish, Requirement 6, 10).
+///
+/// Governs the **app-root theme palette** (`app.dart`), which is built at
+/// `MaterialApp` construction time — before any server summary is loaded — so
+/// it cannot depend on the runtime [MobileFeatureFlagResolver]. Resolved via
+/// `--dart-define=MOBILE_UX_POLISH_ENABLED=…`, mirroring
+/// [kMobileExperienceV2Enabled]. Defaults to `false` (fail-closed): when off,
+/// the theme is byte-for-byte the pre-feature teal-seed theme. The runtime
+/// resolver getter [MobileFeatureFlagResolver.uxPolishEnabled] governs the
+/// polished chat UI itself; because the resolver combines `server OR
+/// build-default`, a build compiled with this define on turns on both
+/// consistently.
+const bool kMobileUxPolishEnabled = _uxPolishMobileDefault;
 
 /// Resolves mobile feature gates from the `mobile/summary` `feature_flags` map
 /// combined with the compile-time `--dart-define` defaults.
@@ -220,6 +243,10 @@ class MobileFeatureFlagResolver {
   /// Sharing / deep-link gate (Requirement 12).
   bool get sharingEnabled =>
       isEnabled(MobileFeatureFlags.sharingMobileEnabled);
+
+  /// Modernized chat + web-palette theme gate (clara-mobile-ux-polish).
+  bool get uxPolishEnabled =>
+      isEnabled(MobileFeatureFlags.uxPolishEnabled);
 
   /// A snapshot of every known new gate's resolved value. Useful for tiles and
   /// for asserting flags-off equivalence in tests (Property 1).
