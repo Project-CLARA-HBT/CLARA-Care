@@ -1,0 +1,96 @@
+name: Mobile APK
+
+# Builds a release Android APK for the CLARA Flutter app with the modern
+# experience (MOBILE_EXPERIENCE_V2_ENABLED) enabled and the API base URL
+# pointed at production. The APK is uploaded as a downloadable artifact.
+#
+# The repo intentionally commits no generated android/ platform folder
+# (see apps/mobile/docs/branding.md), so the job generates it with
+# `flutter create` before building.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "API base URL baked into the APK"
+        required: true
+        default: "https://clara.thiennn.icu"
+      experience_v2:
+        description: "Enable the modern mobile experience (MOBILE_EXPERIENCE_V2_ENABLED)"
+        required: true
+        default: "true"
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-apk.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      API_BASE_URL: ${{ github.event.inputs.api_base_url || 'https://clara.thiennn.icu' }}
+      EXPERIENCE_V2: ${{ github.event.inputs.experience_v2 || 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Generate android project (repo commits none)
+        working-directory: apps/mobile
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --project-name clara_mobile .
+          else
+            echo "android/ already present"
+          fi
+
+      - name: Resolve dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build release APK
+        working-directory: apps/mobile
+        run: |
+          flutter build apk --release \
+            --dart-define=MOBILE_EXPERIENCE_V2_ENABLED="${EXPERIENCE_V2}" \
+            --dart-define=CLARA_API_BASE_URL="${API_BASE_URL}"
+
+      - name: Rename APK
+        working-directory: apps/mobile
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "dist/clara-mobile-${GITHUB_SHA::7}.apk"
+          ls -lh dist
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clara-mobile-apk
+          path: apps/mobile/dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
