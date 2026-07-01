@@ -82,8 +82,10 @@ class WebPalette {
   /// `--text-secondary` `#c3c6d0` — secondary text.
   static const Color darkTextSecondary = Color(0xFFC3C6D0);
 
-  /// `--text-muted` `#8d919a` — muted text (≥4.6:1 on dark surface/canvas).
-  static const Color darkTextMuted = Color(0xFF8D919A);
+  /// `--text-muted` web `#8d919a`, lightened to `#9DA2AD` so muted text clears
+  /// WCAG AA (≥4.5:1) on the elevated `surfaceContainerHighest` we paint
+  /// (the raw web value lands at ~4.0:1). Documented AA-adjusted mobile token.
+  static const Color darkTextMuted = Color(0xFF9DA2AD);
 
   /// `--text-brand` `#93C5FD` — brand-toned text.
   static const Color darkTextBrand = Color(0xFF93C5FD);
