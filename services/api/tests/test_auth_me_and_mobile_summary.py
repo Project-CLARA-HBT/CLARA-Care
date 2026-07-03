@@ -267,7 +267,27 @@ def test_mobile_summary_requires_token() -> None:
     assert response.status_code == 401
 
 
-def test_mobile_summary_allows_admin_with_safe_defaults() -> None:
+# Every client-consumed mobile feature flag admin is expected to receive (all True).
+# Mirrors apps/mobile/lib/core/feature_flags.dart plus the research deep-mode gate.
+_ADMIN_MOBILE_FEATURE_FLAGS = {
+    "research": True,
+    "careguard": True,
+    "council": True,
+    "system_monitor": True,
+    "chat_mobile_enabled": True,
+    "selfmed_cabinet_mobile_enabled": True,
+    "scribe_mobile_enabled": True,
+    "phr_enhanced_mobile_enabled": True,
+    "model_disclosure_mobile_enabled": True,
+    "transparency_notice_mobile_enabled": True,
+    "consent_center_mobile_enabled": True,
+    "sharing_mobile_enabled": True,
+    "mobile_ux_polish_enabled": True,
+    "research_mobile_deep": True,
+}
+
+
+def test_mobile_summary_admin_enables_all_features() -> None:
     token = create_access_token(subject="admin@example.com", role="admin")
 
     response = client.get("/api/v1/mobile/summary", headers={"Authorization": f"Bearer {token}"})
@@ -275,9 +295,27 @@ def test_mobile_summary_allows_admin_with_safe_defaults() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["role"] == "admin"
-    assert payload["feature_flags"] == {
-        "research": True,
-        "careguard": True,
-        "council": True,
-        "system_monitor": True,
+    assert payload["feature_flags"] == _ADMIN_MOBILE_FEATURE_FLAGS
+    # Every emitted flag must be True for admin.
+    assert all(payload["feature_flags"].values())
+
+
+def test_mobile_summary_non_admin_roles_omit_new_flags() -> None:
+    # Non-admin roles are unchanged: they never receive the new mobile flags
+    # (absent key => resolver treats as false, i.e. fail-closed).
+    new_flag_keys = {
+        key
+        for key in _ADMIN_MOBILE_FEATURE_FLAGS
+        if key not in {"research", "careguard", "council", "system_monitor"}
     }
+
+    token = _login("bob@example.com")
+    response = client.get("/api/v1/mobile/summary", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["role"] == "normal"
+    flags = payload["feature_flags"]
+    # chat_mobile_enabled (and the other new gates) must not be granted to a non-admin.
+    assert flags.get("chat_mobile_enabled", False) is False
+    assert new_flag_keys.isdisjoint(flags.keys())

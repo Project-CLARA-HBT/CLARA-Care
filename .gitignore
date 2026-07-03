@@ -33,3 +33,19 @@ _deploy_gvision.sh
 # (~335MB). DrugBank's full database is license-restricted; keep it local.
 drugbank_full_database.xml
 services/ml/src/clara_ml/nlp/seed_data/drugbank/
+
+# --- build artifacts / scratch (never commit) ---
+*.apk
+dist/
+apps/mobile/dist/
+.DS_Store
+*.tmp_login_check.png
+clara_after_login.png
+clara_apk_build2.sh
+clara_net_build.sh
+mltest_out.txt
+ml_test_out.txt
+ml_t.txt
+tier2_res.txt
+_ml_test_out.txt
+clara_pytest_out.txt

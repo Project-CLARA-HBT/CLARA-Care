@@ -20,7 +20,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/a11y.dart';
-import '../tokens.dart';
 
 /// A token- and theme-driven single-line text field.
 ///
@@ -44,6 +43,7 @@ class ClaraInput extends StatelessWidget {
     this.enabled = true,
     this.textInputAction,
     this.focusNode,
+    this.maxLines = 1,
   });
 
   /// Visible field label and screen-reader name (caller-provided, localized).
@@ -80,6 +80,12 @@ class ClaraInput extends StatelessWidget {
   /// Optional focus node for managing focus/traversal order.
   final FocusNode? focusNode;
 
+  /// Maximum number of lines the field expands to. Defaults to `1` (single
+  /// line); pass a larger value (or `null`) for multiline fields such as notes.
+  /// Ignored when [obscureText] is true (obscured fields are always single
+  /// line).
+  final int? maxLines;
+
   @override
   Widget build(BuildContext context) {
     // Honor OS text scaling (clamped) so labels/hints/value stay legible
@@ -93,13 +99,13 @@ class ClaraInput extends StatelessWidget {
         focusNode: focusNode,
         enabled: enabled,
         obscureText: obscureText,
+        maxLines: obscureText ? 1 : maxLines,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         onChanged: onChanged,
         // Adapt the form validator (value-only) to the framework signature.
-        validator: validator == null
-            ? null
-            : (value) => validator!(value ?? ''),
+        validator:
+            validator == null ? null : (value) => validator!(value ?? ''),
         // Decoration geometry/fill/borders come from `inputDecorationTheme`;
         // only the caller's copy and any external error are supplied here.
         decoration: InputDecoration(

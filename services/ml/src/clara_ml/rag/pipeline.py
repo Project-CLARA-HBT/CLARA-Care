@@ -367,6 +367,7 @@ class RagPipelineP1:
                 max_concurrency=settings.llm_global_max_concurrency,
                 min_interval_seconds=settings.llm_global_min_interval_seconds,
                 request_jitter_seconds=settings.llm_global_jitter_seconds,
+                fallback_model=settings.deepseek_fallback_model,
             )
         self._graphrag = GraphRagSidecar()
         # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
@@ -1498,14 +1499,15 @@ class RagPipelineP1:
             "Do not say 'no context'; still provide practical next steps safely.\n"
             f"Output MUST be valid GitHub-Flavored Markdown (GFM) in {language_label}, no HTML.\n"
             "Do not wrap the full response in a single code fence.\n"
-            "Response should feel like a concise research answer, not a report template.\n"
-            f"Preferred structure: {preferred_headings}.\n"
+            "Answer like a knowledgeable clinician talking to a real person, not like a report template.\n"
+            "Match the answer's length and shape to the question: a simple question gets a short, direct, conversational answer of a few sentences; only a genuinely complex or comparative question needs sections.\n"
+            "Do NOT force a fixed heading scaffold. Headings are optional; use them only when the answer is long enough that they genuinely help the reader scan.\n"
+            f"If you do use headings for a longer answer, natural choices are: {preferred_headings} — but adapt or omit them to fit the question.\n"
             f"Keep every heading, label, bullet, and sentence in {language_label}; do not mix Vietnamese and English except for drug names, study names, or source titles.\n"
-            "Answer the user directly in the first 2-3 sentences, like a strong Perplexity summary.\n"
-            "Keep each section skimmable: short paragraphs, 3-5 bullets when useful, and no meta commentary about retrieval or telemetry.\n"
-            "Prefer short bullets for trade-offs, practical implications, and monitoring.\n"
-            f"If comparing >=2 options, include a Markdown table with columns: {('Criteria | Option A | Option B | Notes' if answer_language == 'en' else 'Tiêu chí | Phương án A | Phương án B | Ghi chú')}.\n"
-            "Write naturally like a senior clinician explaining trade-offs, avoid robotic templates.\n"
+            "Open with a direct, natural answer to what was asked in the first 1-3 sentences.\n"
+            "Prefer flowing prose for short answers; use short bullets or a small table only when they truly improve clarity (e.g. comparing options, trade-offs, monitoring).\n"
+            f"If comparing >=2 options, a Markdown table with columns like {('Criteria | Option A | Option B | Notes' if answer_language == 'en' else 'Tiêu chí | Phương án A | Phương án B | Ghi chú')} is helpful.\n"
+            "Avoid robotic, repetitive templates and meta commentary about retrieval or telemetry.\n"
             "Do not include PICO/methodology/legal disclaimers unless explicitly requested.\n"
             "Do not add a dedicated citations section in the main answer body.\n"
             f"User query: {query}\n"

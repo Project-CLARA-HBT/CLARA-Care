@@ -199,6 +199,101 @@ def test_generate_recovers_from_stream_when_json_content_is_empty(
     assert response.model == "gpt-5.3-codex"
 
 
+def test_generate_falls_back_to_secondary_model_on_primary_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Primary model 503s across all bases; the fallback model then succeeds."""
+    seen_models: list[str] = []
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def post(self, url: str, **kwargs: object) -> _DummyResponse:
+            payload = kwargs.get("json") or {}
+            model = str(payload.get("model", "")) if isinstance(payload, dict) else ""
+            seen_models.append(model)
+            if model == "deepseek-v4-pro":
+                return _DummyResponse(503, {"error": "temporarily unavailable"})
+            return _DummyResponse(
+                200,
+                {
+                    "choices": [{"message": {"content": "flash_ok"}}],
+                    "model": "deepseek-v4-flash",
+                },
+            )
+
+    monkeypatch.setattr("clara_ml.llm.deepseek_client.httpx.Client", FakeClient)
+
+    client = DeepSeekClient(
+        api_key="test-key",
+        base_url="https://api.yescale.vip/v1,https://api.yescale.io/v1",
+        model="deepseek-v4-pro",
+        fallback_model="deepseek-v4-flash",
+        timeout_seconds=0.1,
+        retries_per_base=0,
+    )
+    response = client.generate("hello")
+
+    assert response.content == "flash_ok"
+    # The primary model was tried (and exhausted) before the fallback model.
+    assert "deepseek-v4-pro" in seen_models
+    assert "deepseek-v4-flash" in seen_models
+    assert seen_models.index("deepseek-v4-pro") < seen_models.index(
+        "deepseek-v4-flash"
+    )
+
+
+def test_generate_does_not_use_fallback_when_primary_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_models: list[str] = []
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def post(self, url: str, **kwargs: object) -> _DummyResponse:
+            payload = kwargs.get("json") or {}
+            model = str(payload.get("model", "")) if isinstance(payload, dict) else ""
+            seen_models.append(model)
+            return _DummyResponse(
+                200,
+                {
+                    "choices": [{"message": {"content": "pro_ok"}}],
+                    "model": "deepseek-v4-pro",
+                },
+            )
+
+    monkeypatch.setattr("clara_ml.llm.deepseek_client.httpx.Client", FakeClient)
+
+    client = DeepSeekClient(
+        api_key="test-key",
+        base_url="https://api.yescale.vip/v1",
+        model="deepseek-v4-pro",
+        fallback_model="deepseek-v4-flash",
+        timeout_seconds=0.1,
+        retries_per_base=0,
+    )
+    response = client.generate("hello")
+
+    assert response.content == "pro_ok"
+    # Fallback is never reached when the primary model succeeds.
+    assert seen_models == ["deepseek-v4-pro"]
+
+
 def test_generate_stream_preserves_spaces_between_chunks(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

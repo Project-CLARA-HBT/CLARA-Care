@@ -15,6 +15,7 @@ import '../widgets/error_retry_view.dart';
 import '../widgets/markdown_view.dart';
 import '../widgets/offline_banner.dart';
 import '../widgets/screen_error_boundary.dart';
+import 'chat/chat_flow_status.dart';
 import 'chat/polished_chat_view.dart';
 
 // =============================================================================
@@ -87,14 +88,16 @@ class ChatMessage {
       : isUser = true,
         isStreaming = false,
         envelope = null,
-        errorNote = null;
+        errorNote = null,
+        flowSteps = const <ChatFlowStep>[];
 
   ChatMessage.assistantStreaming()
       : isUser = false,
         text = '',
         isStreaming = true,
         envelope = null,
-        errorNote = null;
+        errorNote = null,
+        flowSteps = const <ChatFlowStep>[];
 
   final bool isUser;
 
@@ -111,6 +114,66 @@ class ChatMessage {
   /// A non-PII error note shown when the stream errored after partial content
   /// (Requirement 1.3). The already-streamed [text] is preserved.
   String? errorNote;
+
+  /// The live pipeline process for this assistant turn, distilled from the
+  /// SSE `step` frames (routing / retrieval / synthesis / verification / …).
+  /// Empty for user turns and for streams that emit no steps.
+  List<ChatFlowStep> flowSteps;
+}
+
+/// The three conversational modes offered in the chat surface.
+///
+///  * [fast] — the low-latency routed chat over `POST /chat/stream` (SSE),
+///    token-by-token, with the blocking `/chat` fallback. Best for everyday
+///    questions.
+///  * [deep] — the tier2 research pipeline (`research_mode=deep`) run as an
+///    async job with multi-pass retrieval + verification, streamed as progress.
+///  * [pro] — the tier2 `deep_beta` pipeline: parallel reasoning, quality
+///    gates, and long-form synthesis. Slowest, most thorough.
+///
+/// [deep]/[pro] reuse the existing, tested research job engine
+/// (`createResearchJob` + `streamResearchJob`) so no API contract changes.
+enum ChatMode { fast, deep, pro }
+
+extension ChatModeX on ChatMode {
+  /// The API `research_mode` value for the deep tiers ([fast] never hits it).
+  String get apiValue {
+    switch (this) {
+      case ChatMode.fast:
+        return 'fast';
+      case ChatMode.deep:
+        return 'deep';
+      case ChatMode.pro:
+        return 'deep_beta';
+    }
+  }
+
+  /// Vietnamese-first short label (matches the web research vocabulary).
+  String labelFor(bool isEnglish) {
+    switch (this) {
+      case ChatMode.fast:
+        return isEnglish ? 'Fast' : 'Nhanh';
+      case ChatMode.deep:
+        return isEnglish ? 'Reasoning' : 'Tư duy';
+      case ChatMode.pro:
+        return 'Pro';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case ChatMode.fast:
+        return Icons.bolt_outlined;
+      case ChatMode.deep:
+        return Icons.psychology_outlined;
+      case ChatMode.pro:
+        return Icons.workspace_premium_outlined;
+    }
+  }
+
+  /// [fast] answers via the chat SSE stream; the deep tiers enqueue a research
+  /// job and stream its progress.
+  bool get usesResearchJob => this != ChatMode.fast;
 }
 
 /// The conversational chat surface (Requirement 1).
@@ -194,6 +257,12 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _sending = false;
   bool _emergencyActive = false;
 
+  /// The active conversational mode (Nhanh / Tư duy / Pro). Defaults to fast.
+  ChatMode _mode = ChatMode.fast;
+
+  /// Active research-job progress stream for the deep tiers (null on fast).
+  StreamSubscription<SseEvent>? _researchSub;
+
   // --- Polished-surface transient state (clara-mobile-ux-polish) -----------
   // The active SSE subscription so a user-initiated stop can cancel it, and a
   // guard so the "stream closed without terminal event" branch does not treat
@@ -230,6 +299,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _activeSubscription?.cancel();
+    _researchSub?.cancel();
     _scroll.removeListener(_onScroll);
     _input.dispose();
     _scroll.dispose();
@@ -284,11 +354,20 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToEnd();
 
-    // Coarse, no-PII event: never carries the message text.
+    // Coarse, no-PII event: never carries the message text. Only the coarse
+    // mode (fast/deep/deep_beta) is attached.
     _analytics.capture(AnalyticsEvent(
       kChatSubmittedEvent,
-      {'streaming': widget.streamingEnabled},
+      {'streaming': widget.streamingEnabled, 'mode': _mode.apiValue},
     ));
+
+    // Deep tiers (Tư duy / Pro) route through the tier2 research job engine so
+    // the answer gets multi-pass retrieval + verification; the live node status
+    // is fed from the job's progress stream. Fast stays on the chat path.
+    if (_mode.usesResearchJob) {
+      await _runResearchJob(token, text, assistant);
+      return;
+    }
 
     final payload = <String, dynamic>{'message': text};
     if (widget.streamingEnabled) {
@@ -296,6 +375,126 @@ class _ChatScreenState extends State<ChatScreen> {
     } else {
       await _runBlocking(token, payload, assistant);
     }
+  }
+
+  /// Runs a deep/deep_beta turn through the tier2 research job engine
+  /// (`createResearchJob` + `streamResearchJob`), mapping the job's progress
+  /// snapshots into the same live [ChatFlowStep] panel and finalizing with the
+  /// research answer envelope. Mirrors the tested research-screen contract.
+  Future<void> _runResearchJob(
+    String token,
+    String query,
+    ChatMessage assistant,
+  ) async {
+    _cancelled = false;
+    final payload = <String, dynamic>{
+      'query': query,
+      'research_mode': _mode.apiValue,
+      'ui_language': widget.isEnglish ? 'en' : 'vi',
+    };
+
+    final Map<String, dynamic> job;
+    try {
+      job = await widget.apiClient
+          .createResearchJob(accessToken: token, payload: payload);
+    } on ApiException catch (error) {
+      _failResearch(assistant, error.message);
+      return;
+    } catch (_) {
+      _failResearch(assistant, _genericErrorMessage);
+      return;
+    }
+
+    final jobId = (job['job_id'] ?? '').toString();
+    if (jobId.isEmpty) {
+      _failResearch(assistant, _genericErrorMessage);
+      return;
+    }
+    _applyJobSnapshot(assistant, job);
+
+    final completer = Completer<void>();
+    _researchSub = widget.apiClient
+        .streamResearchJob(accessToken: token, jobId: jobId)
+        .listen(
+      (event) {
+        if (!mounted || _cancelled) return;
+        final data = event.json;
+        if (data == null) return;
+        if (event.event == 'error') {
+          _cancelled = true;
+          _researchSub?.cancel();
+          _failResearch(
+            assistant,
+            (data['message'] ?? _genericErrorMessage).toString(),
+          );
+          if (!completer.isCompleted) completer.complete();
+          return;
+        }
+        _applyJobSnapshot(assistant, data);
+        final status = (data['status'] ?? '').toString().toLowerCase();
+        if (status == 'completed') {
+          _cancelled = true;
+          _researchSub?.cancel();
+          final resultRaw = data['result'];
+          final envelope = resultRaw is Map
+              ? resultRaw.cast<String, dynamic>()
+              : <String, dynamic>{'reply': assistant.text};
+          _completeAnswer(assistant, envelope, assistant.text);
+          if (!completer.isCompleted) completer.complete();
+        } else if (status == 'failed') {
+          _cancelled = true;
+          _researchSub?.cancel();
+          _failResearch(
+            assistant,
+            (data['error'] ?? _genericErrorMessage).toString(),
+          );
+          if (!completer.isCompleted) completer.complete();
+        }
+      },
+      onError: (Object _) {
+        _failResearch(assistant, _streamErrorMessage);
+        if (!completer.isCompleted) completer.complete();
+      },
+      onDone: () {
+        if (!completer.isCompleted) completer.complete();
+      },
+      cancelOnError: true,
+    );
+    await completer.future;
+    _researchSub = null;
+  }
+
+  /// Maps a research job snapshot's `progress.flow_stages` into the live
+  /// [ChatFlowStep] list so the deep tiers light up the same node panel.
+  void _applyJobSnapshot(ChatMessage assistant, Map<String, dynamic> snapshot) {
+    final progressRaw = snapshot['progress'];
+    final progress = progressRaw is Map ? progressRaw : snapshot;
+    final stagesRaw = progress['flow_stages'];
+    if (stagesRaw is! List) return;
+    var steps = <ChatFlowStep>[];
+    for (final item in stagesRaw) {
+      if (item is! Map) continue;
+      final stage = (item['id'] ?? item['stage'] ?? '').toString();
+      if (stage.isEmpty) continue;
+      steps = foldFlowStep(
+        steps,
+        stage: stage,
+        status: parseFlowStatus(item['status']),
+        note: (item['label'] ?? item['detail'] ?? item['note'])?.toString(),
+      );
+    }
+    if (steps.isEmpty || !mounted) return;
+    setState(() => assistant.flowSteps = steps);
+    _scrollToEnd();
+  }
+
+  void _failResearch(ChatMessage assistant, String message) {
+    if (!mounted) return;
+    setState(() {
+      assistant.isStreaming = false;
+      assistant.errorNote = message;
+    });
+    _finishSending();
   }
 
   Future<void> _runStreaming(
@@ -337,6 +536,9 @@ class _ChatScreenState extends State<ChatScreen> {
               _scrollToEnd();
             }
             break;
+          case 'step':
+            _applyFlowStep(assistant, event.json);
+            break;
           case 'done':
             final envelope = event.json ?? <String, dynamic>{};
             _completeAnswer(assistant, envelope, buffer.toString());
@@ -352,7 +554,7 @@ class _ChatScreenState extends State<ChatScreen> {
             });
             break;
           default:
-            // start / step / keepalive — no user-facing content.
+            // start / keepalive — no user-facing content.
             break;
         }
       },
@@ -458,8 +660,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _onSuggestionSelected(String prompt) {
     _input.text = prompt;
-    _input.selection =
-        TextSelection.collapsed(offset: _input.text.length);
+    _input.selection = TextSelection.collapsed(offset: _input.text.length);
   }
 
   Future<void> _runBlocking(
@@ -489,6 +690,49 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Folds a single SSE `step` frame into the assistant turn's live pipeline
+  /// process (Vietnamese-first node status). Fail-soft: a malformed frame is
+  /// ignored. Only the coarse stage/status/note is kept — never any payload
+  /// that could carry PII.
+  void _applyFlowStep(ChatMessage assistant, Map<String, dynamic>? json) {
+    if (json == null) return;
+    final stage = json['stage']?.toString() ?? '';
+    if (stage.isEmpty) return;
+    final status = parseFlowStatus(json['status']);
+    final note = (json['note'] ?? json['detail'])?.toString();
+    if (!mounted) return;
+    setState(() {
+      assistant.flowSteps = foldFlowStep(
+        assistant.flowSteps,
+        stage: stage,
+        status: status,
+        note: note,
+      );
+    });
+    _scrollToEnd();
+  }
+
+  /// Distills the pipeline process from a terminal/blocking envelope's
+  /// `flow_events` list (the blocking `/chat` path returns them in one shot),
+  /// so the process panel is populated even when no live `step` frames arrived.
+  List<ChatFlowStep> _flowStepsFromEnvelope(Map<String, dynamic> envelope) {
+    final raw = envelope['flow_events'];
+    if (raw is! List) return const <ChatFlowStep>[];
+    var steps = <ChatFlowStep>[];
+    for (final event in raw) {
+      if (event is! Map) continue;
+      final stage = event['stage']?.toString() ?? '';
+      if (stage.isEmpty) continue;
+      steps = foldFlowStep(
+        steps,
+        stage: stage,
+        status: parseFlowStatus(event['status']),
+        note: (event['note'] ?? event['detail'])?.toString(),
+      );
+    }
+    return steps;
+  }
+
   /// Finalizes an assistant answer: attaches the envelope, stops streaming,
   /// surfaces the emergency fast-path when the envelope flags it, and emits a
   /// coarse, no-PII answered event.
@@ -498,11 +742,17 @@ class _ChatScreenState extends State<ChatScreen> {
     String streamedText,
   ) {
     final isEmergency = envelope['emergency'] == true;
+    final envelopeSteps = _flowStepsFromEnvelope(envelope);
     setState(() {
       assistant.envelope = envelope;
       assistant.isStreaming = false;
       if (assistant.text.isEmpty && streamedText.isNotEmpty) {
         assistant.text = streamedText;
+      }
+      // Prefer the richer set: live `step` frames if we got them, else the
+      // envelope's one-shot flow_events (blocking path).
+      if (assistant.flowSteps.length < envelopeSteps.length) {
+        assistant.flowSteps = envelopeSteps;
       }
       _emergencyActive = _emergencyActive || isEmergency;
     });
@@ -578,10 +828,8 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (dialogContext) => AlertDialog(
         key: const Key('chat-emergency-dialog'),
         icon: const Icon(Icons.emergency_outlined),
-        title: Text(
-            widget.isEnglish ? _kEmergencyTitleEn : _kEmergencyTitleVi),
-        content: Text(
-            widget.isEnglish ? _kEmergencyBodyEn : _kEmergencyBodyVi),
+        title: Text(widget.isEnglish ? _kEmergencyTitleEn : _kEmergencyTitleVi),
+        content: Text(widget.isEnglish ? _kEmergencyBodyEn : _kEmergencyBodyVi),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -611,14 +859,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEnglish ? 'Chat with CLARA' : 'Trò chuyện với CLARA'),
+        title:
+            Text(widget.isEnglish ? 'Chat with CLARA' : 'Trò chuyện với CLARA'),
         actions: [
           Semantics(
             button: true,
             label: widget.isEnglish ? _kEmergencyTitleEn : _kEmergencyTitleVi,
             child: IconButton(
               key: const Key('chat-emergency-action'),
-              tooltip: widget.isEnglish ? _kEmergencyTitleEn : _kEmergencyTitleVi,
+              tooltip:
+                  widget.isEnglish ? _kEmergencyTitleEn : _kEmergencyTitleVi,
               icon: const Icon(Icons.emergency_outlined),
               onPressed: _openEmergencyGuidance,
             ),
@@ -632,6 +882,15 @@ class _ChatScreenState extends State<ChatScreen> {
               OfflineBanner(connectivity: widget.connectivity!),
             if (_emergencyActive) _EmergencyBanner(isEnglish: widget.isEnglish),
             _StandingDisclaimer(isEnglish: widget.isEnglish),
+            _ChatModeSelector(
+              mode: _mode,
+              isEnglish: widget.isEnglish,
+              enabled: !_sending,
+              onChanged: (next) {
+                if (next == _mode) return;
+                setState(() => _mode = next);
+              },
+            ),
             Expanded(
               child: _polished
                   ? PolishedChatView(
@@ -682,8 +941,7 @@ class _ChatScreenState extends State<ChatScreen> {
       controller: _scroll,
       padding: const EdgeInsets.all(12),
       itemCount: _messages.length,
-      itemBuilder: (context, index) =>
-          _buildMessage(context, _messages[index]),
+      itemBuilder: (context, index) => _buildMessage(context, _messages[index]),
     );
   }
 
@@ -710,6 +968,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Assistant bubble.
     final children = <Widget>[];
+    if (message.flowSteps.isNotEmpty) {
+      children.add(ChatFlowStatusView(
+        steps: message.flowSteps,
+        isActive: message.isStreaming,
+        isEnglish: widget.isEnglish,
+      ));
+      children.add(const SizedBox(height: 8));
+    }
     if (message.isStreaming) {
       children.add(Row(
         mainAxisSize: MainAxisSize.min,
@@ -918,8 +1184,8 @@ class _EmergencyBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     body,
-                    style: TextStyle(
-                        color: scheme.onErrorContainer, fontSize: 12),
+                    style:
+                        TextStyle(color: scheme.onErrorContainer, fontSize: 12),
                   ),
                 ],
               ),
@@ -928,5 +1194,152 @@ class _EmergencyBanner extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Segmented selector for the three conversational modes (Nhanh / Tư duy / Pro).
+///
+/// A compact, ≥44dp-target control placed above the composer. Disabled while a
+/// turn is in flight so the mode cannot change mid-answer. Selection state is
+/// conveyed by fill + label text (not color alone) and exposed to semantics.
+class _ChatModeSelector extends StatelessWidget {
+  const _ChatModeSelector({
+    required this.mode,
+    required this.isEnglish,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final ChatMode mode;
+  final bool isEnglish;
+  final bool enabled;
+  final ValueChanged<ChatMode> onChanged;
+
+  static String _hintFor(ChatMode mode, bool isEnglish) {
+    switch (mode) {
+      case ChatMode.fast:
+        return isEnglish
+            ? 'Fast: quick everyday answers'
+            : 'Nhanh: trả lời nhanh cho câu hỏi thường ngày';
+      case ChatMode.deep:
+        return isEnglish
+            ? 'Reasoning: multi-pass retrieval + verification'
+            : 'Tư duy: truy xuất nhiều lượt + kiểm chứng';
+      case ChatMode.pro:
+        return isEnglish
+            ? 'Pro: deep parallel reasoning, most thorough'
+            : 'Pro: lập luận song song chuyên sâu, kỹ nhất';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    // Compact single-line control: a small pill that opens a menu, so the mode
+    // switcher no longer occupies a full row of chips plus a hint line.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          ClaraTokens.spaceMd,
+          ClaraTokens.spaceXs,
+          ClaraTokens.spaceMd,
+          0,
+        ),
+        child: PopupMenuButton<ChatMode>(
+          enabled: enabled,
+          tooltip: _hintFor(mode, isEnglish),
+          onSelected: onChanged,
+          itemBuilder: (context) => [
+            for (final m in ChatMode.values)
+              PopupMenuItem<ChatMode>(
+                value: m,
+                child: Row(
+                  children: [
+                    Icon(m.icon,
+                        size: 18,
+                        color: m == mode
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(m.labelFor(isEnglish),
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight:
+                                  m == mode ? FontWeight.w700 : FontWeight.w500,
+                            )),
+                        Text(
+                          _shortHintFor(m, isEnglish),
+                          style: textTheme.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          child: Semantics(
+            button: true,
+            label: isEnglish ? 'Chat mode' : 'Chế độ trò chuyện',
+            value: mode.labelFor(isEnglish),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: kMinTouchTarget),
+              padding: const EdgeInsets.symmetric(
+                horizontal: ClaraTokens.spaceSm,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(mode.icon, size: 16, color: scheme.primary),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    mode.labelFor(isEnglish),
+                    style: textTheme.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 2),
+                  ExcludeSemantics(
+                    child: Icon(Icons.expand_more,
+                        size: 18, color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _shortHintFor(ChatMode mode, bool isEnglish) {
+    switch (mode) {
+      case ChatMode.fast:
+        return isEnglish
+            ? 'Quick everyday answers'
+            : 'Trả lời nhanh thường ngày';
+      case ChatMode.deep:
+        return isEnglish
+            ? 'Multi-pass retrieval + verification'
+            : 'Truy xuất nhiều lượt + kiểm chứng';
+      case ChatMode.pro:
+        return isEnglish
+            ? 'Deep parallel reasoning'
+            : 'Lập luận song song chuyên sâu';
+    }
   }
 }

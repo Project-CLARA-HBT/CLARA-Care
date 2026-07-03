@@ -15,6 +15,13 @@ from clara_ml.rag.retriever import Document
 @pytest.fixture(autouse=True)
 def _disable_deepseek_planner_by_default(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(tier2.settings, "deepseek_api_key", "")
+    # These tests predate the clean-body Pro default and validate the LEGACY
+    # dossier synthesis path (body-injected reasoning/evidence/pass matrices,
+    # PICO/dossier headings, dossier prompt voice). Disable clean-body here so
+    # each continues to exercise the legacy behavior it was written for; the
+    # clean-body default is covered separately in
+    # ``test_deep_beta_clean_body.py``.
+    monkeypatch.setattr(tier2.settings, "deep_beta_clean_body_enabled", False)
 
 
 def _extract_json_assignment(prompt: str, key: str):
@@ -2631,7 +2638,15 @@ def test_resolve_report_word_budget_by_mode() -> None:
     assert deep_max < beta_max
 
 
-def test_resolve_adaptive_report_word_budget_reduces_deep_beta_for_sparse_evidence() -> None:
+def test_resolve_adaptive_report_word_budget_reduces_deep_beta_for_sparse_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # This validates that the adaptive budget SHRINKS Pro for sparse evidence
+    # rather than padding to the dossier floor. That is exactly the clean-body
+    # default, so re-enable it here (the module fixture disables it for the
+    # legacy-dossier tests).
+    monkeypatch.setattr(tier2.settings, "deep_beta_clean_body_enabled", True)
+    monkeypatch.setattr(tier2.settings, "synthesis_v2_enabled", False)
     base_min, base_target, _base_max = tier2._resolve_report_word_budget("deep_beta")
     adaptive_min, adaptive_target, adaptive_max = tier2._resolve_adaptive_report_word_budget(
         research_mode="deep_beta",

@@ -14,6 +14,7 @@ evidence-density and scope inputs.
 
 from __future__ import annotations
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -21,6 +22,25 @@ from clara_ml.agents import research_tier2 as rt
 from clara_ml.config import settings as app_settings
 
 _HARD_MAX = 15000
+
+
+@pytest.fixture(autouse=True)
+def _disable_clean_body():
+    """Isolate the legacy/scope-aware budget path under test.
+
+    The clean-body Pro default (``deep_beta_clean_body_enabled``) short-circuits
+    the scope-aware budget when synthesis_v2 is off. These properties validate
+    the legacy + synthesis_v2 budget math specifically, so clean-body is
+    disabled here and restored afterwards; its own behavior is covered
+    separately.
+    """
+
+    previous = app_settings.deep_beta_clean_body_enabled
+    app_settings.deep_beta_clean_body_enabled = False
+    try:
+        yield
+    finally:
+        app_settings.deep_beta_clean_body_enabled = previous
 
 _BROAD_TOPIC = (
     "So sánh hiệu quả, an toàn, tuân thủ và chi phí giữa các thuốc điều trị "

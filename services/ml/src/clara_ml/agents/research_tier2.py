@@ -3671,6 +3671,22 @@ def _resolve_report_word_budget(research_mode: str) -> tuple[int, int, int]:
     return _resolve_deep_word_budget()
 
 
+def _deep_beta_clean_body_active() -> bool:
+    """Whether the clean-body Pro path is active for deep_beta synthesis.
+
+    Clean-body is the default (natural, reader-first, single-language answer with
+    no telemetry padding in the body). It DEFERS to an explicit ``synthesis_v2``
+    opt-in: when synthesis_v2 is enabled the legacy scope-aware dossier path wins,
+    so existing v2 behavior/tests are byte-for-byte preserved. Only when
+    ``deep_beta_clean_body_enabled`` is true AND ``synthesis_v2_enabled`` is false
+    do the clean-body branches take effect.
+    """
+
+    return bool(
+        settings.deep_beta_clean_body_enabled and not settings.synthesis_v2_enabled
+    )
+
+
 def _resolve_adaptive_report_word_budget(
     *,
     research_mode: str,
@@ -3680,6 +3696,20 @@ def _resolve_adaptive_report_word_budget(
     topic: str = "",
 ) -> tuple[int, int, int]:
     mode = str(research_mode or "fast").strip().lower()
+
+    # Clean-body Pro (default): guide deep_beta to a natural long-form length
+    # instead of the 8,000-15,000 word dossier target, so the answer explains
+    # thoroughly without padding. The technical matrices/sources move to the
+    # hidden telemetry panel, so the prose body itself stays readable.
+    if mode == "deep_beta" and _deep_beta_clean_body_active():
+        clean_min = int(settings.deep_beta_clean_body_min_words)
+        clean_target = max(
+            clean_min, int(settings.deep_beta_clean_body_target_words)
+        )
+        clean_max = max(
+            clean_target, int(settings.deep_beta_clean_body_max_words)
+        )
+        return clean_min, clean_target, clean_max
 
     # Synthesis v2 (flag-gated): scope-aware band math for deep_beta only.
     # When the flag is off we fall through to the exact pre-feature behavior so
@@ -3820,6 +3850,32 @@ def _resolve_report_section_contract(
     key_points = f"## {_resolve_section_title('key_points', answer_language)}"
     practical_application = f"## {_resolve_section_title('practical_application', answer_language)}"
     important_caveats = f"## {_resolve_section_title('safety_notes', answer_language)}"
+    detailed_analysis = f"## {_resolve_section_title('detailed_analysis', answer_language)}"
+    # Clean-body Pro (default): a lean, reader-first explanatory contract instead
+    # of the rigid 12-heading dossier. The answer explains thoroughly in natural
+    # prose; matrices/sources/reasoning logs are NOT part of the body (they move
+    # to the hidden telemetry panel from the response envelope). This is what
+    # removes the "cố làm dài", the mixed VN/EN table headers, and the technical
+    # confusion-matrix/source dump from the answer.
+    if mode == "deep_beta" and _deep_beta_clean_body_active():
+        language_label = "English" if answer_language == "en" else "Vietnamese"
+        sections = [
+            quick_conclusion,
+            detailed_analysis,
+            practical_application,
+            important_caveats,
+        ]
+        requirements = [
+            "- open with a direct, decision-oriented answer in 3-5 sentences before any background",
+            "- explain the reasoning in clear, natural prose a clinician can read quickly; go deep on the WHY, not on process logs",
+            "- expand only where it genuinely helps the decision; never pad to reach a length target",
+            f"- write EVERY heading, sentence, bullet, and table entirely in {language_label}; the only non-{language_label} tokens allowed are drug names, study names, or source titles",
+            "- do NOT include reasoning-node matrices, multi-pass retrieval logs, claim-status/confusion matrices, or source-profile tables in the answer body; those belong to the separate telemetry view",
+            "- use a comparative table ONLY when it makes a clinical trade-off clearer, with fully translated column headers",
+            "- cover contradictory evidence, subgroup caveats, and uncertainty in prose, plainly",
+            "- do not prescribe a personal dosage and do not diagnose",
+        ]
+        return sections, requirements
     if mode == "deep_beta":
         sections = _resolve_deep_beta_dossier_headings(answer_language)
         requirements = [
@@ -4008,6 +4064,13 @@ def _ensure_deep_beta_report_artifacts(
 ) -> str:
     mode = str(research_mode or "deep_beta").strip().lower()
     output = _sanitize_deep_beta_markdown_output(markdown_text)
+    # Clean-body Pro (default): keep the answer body pure explanatory prose and
+    # never inject reasoning-chain / evidence-summary / multi-pass matrix tables
+    # (which also carried English headers, causing the mixed VN/EN output). That
+    # technical material stays in the response envelope for the hidden telemetry
+    # panel on web + mobile. Return the sanitized prose as-is.
+    if mode == "deep_beta" and _deep_beta_clean_body_active():
+        return output
     appendix_sections: list[str] = []
     reasoning_cards = _build_reasoning_chain_cards(
         reasoning_nodes if isinstance(reasoning_nodes, list) else [],
@@ -4199,39 +4262,45 @@ def _synthesize_deep_beta_long_report(
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
     language_label = "English" if answer_language == "en" else "Vietnamese"
+    # Clean-body Pro (default): deep_beta uses the SAME natural, reader-first
+    # style directives as deep mode instead of the dossier/evidence-brief
+    # directives. This is what turns off the rigid "cố làm dài" dossier voice
+    # and keeps the answer explanatory rather than telemetry-like. The technical
+    # matrices/sources move to the hidden telemetry panel (response envelope).
+    use_dossier_style = mode == "deep_beta" and not _deep_beta_clean_body_active()
     style_target_line = (
         "- write as a structured clinical dossier / evidence brief: evidence-dense, contradiction-aware, and clinically actionable"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- write like a high-signal Perplexity-style medical research answer: direct, analytic, reader-first, and not dossier-like"
     )
     chain_requirement_line = (
         "- keep claim-to-evidence linkage explicit with contradiction audit and confidence boundaries; avoid internal debug chain labels"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- keep claim-to-evidence linkage explicit in short paragraphs or short bullets without rigid chain templates"
     )
     opening_requirement_line = (
         "- answer with an executive conclusion and explicit decision boundary before background context"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- answer the user directly in the opening before background context"
     )
     opening_length_line = (
         "- keep the opening to 3-6 strong sentences, then expand by dossier section where it changes decisions"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- keep the opening to 2-4 strong sentences, then expand only where it helps the decision"
     )
     transition_requirement_line = (
         "- use structured dossier transitions and evidence labels; avoid vague narrative jumps"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- use natural transitions between sections; avoid checklist-like prose or compliance boilerplate"
     )
     skimmable_requirement_line = (
         "- keep each section scannable with concise paragraphs/tables; bullets should usually stay within 3-6 items"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- keep each section skimmable: paragraphs should stay short and bullets should usually stay within 3-5 items"
     )
     evidence_label_requirement_line = (
         "- include evidence-brief labels such as research question, retrieval criteria, evidence profile, contradiction audit, and safety matrix when supported by evidence"
-        if mode == "deep_beta"
+        if use_dossier_style
         else "- avoid meta labels such as core question, evidence coverage, working synthesis, or retrieval process unless they change the clinical interpretation"
     )
     # Synthesis v2 (flag-gated, deep_beta only): an explicit anti-repetition
@@ -4284,7 +4353,7 @@ def _synthesize_deep_beta_long_report(
         "Prioritize coherent clinical reasoning over template-heavy filler or dossier language. "
         "The answer should read like a strong Perplexity synthesis for clinicians: fast to scan, but still rigorous."
     )
-    if mode == "deep_beta":
+    if use_dossier_style:
         system_prompt = (
             "You are CLARA deep beta clinical dossier synthesizer. "
             f"Produce a structured {language_label} evidence brief in valid GFM markdown only. "
@@ -4430,7 +4499,11 @@ def _synthesize_deep_beta_long_report(
         # ``_sanitize_deep_beta_markdown_output``. Gated behind ``synthesis_v2_enabled``
         # so the flags-off path stays byte-for-byte the pre-feature legacy behavior
         # (design Property P8 / Requirement 20.2 flags-off equivalence).
-        if mode == "deep_beta" and settings.synthesis_v2_enabled:
+        if (
+            mode == "deep_beta"
+            and settings.synthesis_v2_enabled
+            and not _deep_beta_clean_body_active()
+        ):
             for _ in range(2):
                 if perf_counter() - synthesis_start >= report_timeout_seconds:
                     # Wall-clock bound: keep the best-so-far report rather than
@@ -4473,7 +4546,14 @@ def _synthesize_deep_beta_long_report(
                     break
                 content = f"{content.rstrip()}\n\n{section_fill.strip()}"
 
-        if _markdown_word_count(content) < target_words:
+        # Clean-body Pro (default): never pad the answer body with telemetry
+        # (multi-pass logs, reasoning-node/claim matrices, source-profile tables).
+        # That material stays in the response envelope for the hidden telemetry
+        # panel, so the prose body remains a natural, single-language explanation.
+        if (
+            not _deep_beta_clean_body_active()
+            and _markdown_word_count(content) < target_words
+        ):
             pass_rows = [
                 "| Pass | Subquery | Retrieved | Duration (ms) |",
                 "| --- | --- | ---: | ---: |",
@@ -6956,6 +7036,40 @@ def _inject_research_plan_section(
     return f"{research_plan_heading}\n{plan_markdown}\n\n{text}".strip()
 
 
+def _sentence_split_for_overlap(text: str) -> list[str]:
+    """Split prose into trimmed sentences for overlap detection (pure helper)."""
+
+    parts = re.split(r"(?<=[.!?。])\s+|\n+", str(text or ""))
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _strip_leading_overlap(body: str, already_shown: str) -> str:
+    """Drop sentences from the start of ``body`` that were already shown.
+
+    The deep/deep_beta fallback layout excerpts the quick conclusion and the key
+    points from the SAME source text, so the key-points block tended to repeat
+    the conclusion's opening sentences verbatim. This removes that leading
+    overlap (case/space-insensitive) so key points add new detail instead of
+    echoing the conclusion. Pure and language-agnostic.
+    """
+
+    shown = {
+        re.sub(r"\s+", " ", s).strip().lower()
+        for s in _sentence_split_for_overlap(already_shown)
+    }
+    if not shown:
+        return body.strip()
+    kept: list[str] = []
+    dropping = True
+    for sentence in _sentence_split_for_overlap(body):
+        key = re.sub(r"\s+", " ", sentence).strip().lower()
+        if dropping and key in shown:
+            continue
+        dropping = False
+        kept.append(sentence)
+    return " ".join(kept).strip()
+
+
 def _ensure_markdown_structure(
     topic: str,
     answer: str,
@@ -6971,6 +7085,12 @@ def _ensure_markdown_structure(
         lines = str(text or "").splitlines()
         cleaned_lines: list[str] = []
         prev_key = ""
+        # Track substantial prose lines already emitted anywhere in the answer so
+        # a paragraph echoed across sections (the deep_beta "repeat to fill"
+        # artifact) is dropped, not just adjacent duplicates. Short lines,
+        # headings, table rows, and list markers are exempt so legitimately
+        # repeated bullets/labels are preserved.
+        seen_prose: set[str] = set()
         for raw in lines:
             line = raw.rstrip()
             normalized = re.sub(r"\s+", " ", line).strip().lower()
@@ -6981,6 +7101,21 @@ def _ensure_markdown_structure(
             if normalized.startswith("- phạm vi nghiên cứu: ##") or normalized.startswith("phạm vi nghiên cứu: ##"):
                 line = f"- Phạm vi nghiên cứu: {_compact_snippet(topic, max_len=150)} và bằng chứng truy xuất đa nguồn."
                 normalized = re.sub(r"\s+", " ", line).strip().lower()
+            # Global de-duplication of substantial prose paragraphs: a long,
+            # non-heading, non-table, non-bullet line that exactly repeats an
+            # earlier one is an echo artifact and is skipped.
+            is_structural = (
+                line.lstrip().startswith("#")
+                or line.lstrip().startswith("|")
+                or line.lstrip().startswith("-")
+                or line.lstrip().startswith("*")
+                or line.lstrip().startswith(">")
+                or line.lstrip().startswith("```")
+            )
+            if not is_structural and len(normalized) >= 60:
+                if normalized in seen_prose:
+                    continue
+                seen_prose.add(normalized)
             cleaned_lines.append(line)
             prev_key = normalized
         return "\n".join(cleaned_lines).strip()
@@ -7111,10 +7246,31 @@ def _ensure_markdown_structure(
         key_points_heading = f"## {_resolve_section_title('key_points', answer_language)}"
         practical_heading = f"## {_resolve_section_title('practical_application', answer_language)}"
         caveat_heading = f"## {_resolve_section_title('safety_notes', answer_language)}"
-        executive_summary = _compact_plain_summary(cleaned, max_len=320 if research_mode == "deep_beta" else 260)
+        # Plan steps are authored in English internally. Surface them only in the
+        # English answer; the Vietnamese branch uses clean Vietnamese guidance so
+        # the internal English plan text never leaks into a Vietnamese answer
+        # (the mixed VN/EN artifact).
         plan_summary = _compact_plain_summary(plan_markdown, max_len=220)
+        # The quick-conclusion section is a sentence excerpt taken from the START
+        # of ``cleaned``. If key points also excerpt from the start, the opening
+        # sentences echo across both sections. Build the conclusion first, then
+        # drop that leading text so key points continue from where the
+        # conclusion left off (adds detail instead of repeating it).
+        conclusion_excerpt = _curate_sentence_excerpt(
+            cleaned,
+            max_len=560 if research_mode == "deep_beta" else 420,
+            max_sentences=5 if research_mode == "deep_beta" else 4,
+        )
+        # Only strip the conclusion overlap when enough distinct content remains
+        # afterwards; otherwise an over-eager strip on a thin base answer empties
+        # the key-points section entirely (worse than mild overlap). The global
+        # line-level de-dup in ``_cleanup_markdown_noise`` still removes any exact
+        # repeated paragraph that survives.
+        analysis_remainder = _strip_leading_overlap(analysis_block, conclusion_excerpt)
+        if len(analysis_remainder.strip()) < 120:
+            analysis_remainder = analysis_block
         main_excerpt = _curate_markdown_excerpt(
-            analysis_block,
+            analysis_remainder,
             max_len=2200 if research_mode == "deep_beta" else 1600,
             max_lines=12 if research_mode == "deep_beta" else 9,
         )
@@ -7138,7 +7294,12 @@ def _ensure_markdown_structure(
                 )
 
         reader_facing_main = _normalize_reader_facing_block(
-            "\n\n".join(part for part in [executive_summary, main_excerpt] if str(part).strip()),
+            # Key points must NOT re-summarize the conclusion: the quick-conclusion
+            # section already carries the executive summary of ``cleaned``. Feeding
+            # ``executive_summary`` in here again is what produced the paragraph
+            # echoed across ``Kết luận nhanh`` and ``Điểm chính``. Use the curated
+            # analysis excerpt only so key points add detail rather than repeat.
+            main_excerpt,
             max_items=6 if research_mode == "deep_beta" else 5,
             max_len=1900 if research_mode == "deep_beta" else 1300,
             prefer_paragraphs=True,
@@ -7148,7 +7309,7 @@ def _ensure_markdown_structure(
             practical_block = (
                 "- Most useful when the patient context matches the scenario above and the decision is between reasonable options rather than a single mandatory path.\n"
                 "- Before acting, confirm comorbidities, current medicines, baseline risk, and whether any red-flag symptoms are already present.\n"
-                f"- Best next step: {plan_summary or 'Confirm the main clinical question, compare the core options, and verify the highest-impact risk trade-offs before acting.'}"
+                f"- Best next step: {plan_summary or 'confirm the main clinical question, compare the core options, and verify the highest-impact risk trade-offs before acting.'}"
             )
             caveat_block = (
                 f"- Confidence boundary: {risk_level} ({risk_signal}). {risk_note}\n"
@@ -7159,7 +7320,7 @@ def _ensure_markdown_structure(
             practical_block = (
                 "- Phù hợp nhất khi bối cảnh người bệnh gần với tình huống đang phân tích và quyết định nằm ở chỗ chọn giữa vài hướng hợp lý, không phải một đáp án cứng duy nhất.\n"
                 "- Trước khi áp dụng, cần đối chiếu lại bệnh nền, thuốc đang dùng, mức nguy cơ nền và xem đã có dấu hiệu cảnh báo đỏ hay chưa.\n"
-                f"- Bước tiếp theo nên làm: {plan_summary or 'Chốt lại câu hỏi lâm sàng chính, so sánh các lựa chọn cốt lõi và xác minh các đánh đổi có ảnh hưởng lớn nhất trước khi hành động.'}"
+                "- Bước tiếp theo nên làm: chốt lại câu hỏi lâm sàng chính, so sánh các lựa chọn cốt lõi và xác minh các đánh đổi có ảnh hưởng lớn nhất trước khi hành động."
             )
             caveat_block = (
                 f"- Ranh giới độ chắc chắn: {risk_level} ({risk_signal}). {risk_note}\n"
@@ -7171,7 +7332,7 @@ def _ensure_markdown_structure(
 
         return _cleanup_markdown_noise(
             f"{quick_conclusion_heading}\n"
-            f"{_curate_sentence_excerpt(cleaned, max_len=560 if research_mode == 'deep_beta' else 420, max_sentences=5 if research_mode == 'deep_beta' else 4)}\n\n"
+            f"{conclusion_excerpt}\n\n"
             f"{key_points_heading}\n"
             f"{key_points_block}\n\n"
             f"{practical_heading}\n"
@@ -8435,7 +8596,13 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Full execution plan"),
             },
         )
-    if mode == "deep_beta" and fallback_used:
+    if (
+        mode == "deep_beta"
+        and fallback_used
+        and not _deep_beta_clean_body_active()
+    ):
+        # On the clean-body path we intentionally keep the natural, reader-first
+        # layout even on fallback rather than re-imposing the rigid dossier.
         sanitized = _stabilize_deep_beta_fallback_dossier_layout(
             sanitized,
             answer_language=answer_language,

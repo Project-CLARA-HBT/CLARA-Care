@@ -536,6 +536,45 @@ class ApiClient {
     );
   }
 
+  /// Scans a medication-label image through the API OCR bridge
+  /// (`POST /api/v1/careguard/cabinet/scan-file`, multipart `file`), returning
+  /// the `CabinetScanTextResponse` envelope: `{ detections, extracted_text,
+  /// ocr_provider, ocr_endpoint, prioritized_fields, confirm_gate }`
+  /// (clara-mobile-liquid-glass R4). The server rejects an empty file (400) or
+  /// one larger than its limit (413), surfacing as an [ApiException]. No OCR is
+  /// performed client-side; the raw image is sent for server-side extraction.
+  Future<Map<String, dynamic>> scanCareguardCabinetFile({
+    required String accessToken,
+    required List<int> fileBytes,
+    String? filename,
+  }) {
+    return _postMultipart(
+      '/api/v1/careguard/cabinet/scan-file',
+      accessToken: accessToken,
+      fields: const <String, String>{},
+      fileField: 'file',
+      fileBytes: fileBytes,
+      filename: filename ?? 'medication-label.jpg',
+    );
+  }
+
+  /// Imports user-confirmed OCR detections into the cabinet
+  /// (`POST /api/v1/careguard/cabinet/import-detections`, JSON
+  /// `{ detections: [...] }`, max 200). The server enforces the manual-confirm
+  /// gate (422 when a low-confidence detection is unconfirmed), so callers must
+  /// only send detections the user explicitly confirmed (R4.4). Returns
+  /// `{ inserted, prioritized_fields }`.
+  Future<Map<String, dynamic>> importCareguardDetections({
+    required String accessToken,
+    required List<Map<String, dynamic>> detections,
+  }) {
+    return _post(
+      '/api/v1/careguard/cabinet/import-detections',
+      body: <String, dynamic>{'detections': detections},
+      accessToken: accessToken,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Self-med cabinet ops (clara-mobile-feature-parity Req 3.1, 3.2).
   //
@@ -1146,9 +1185,9 @@ class ApiClient {
             onTimeout: () => throw ApiException(message: _timeoutMessage),
           );
       response = await http.Response.fromStream(streamed).timeout(
-            _requestTimeout,
-            onTimeout: () => throw ApiException(message: _timeoutMessage),
-          );
+        _requestTimeout,
+        onTimeout: () => throw ApiException(message: _timeoutMessage),
+      );
     } on ApiException {
       rethrow;
     } catch (_) {

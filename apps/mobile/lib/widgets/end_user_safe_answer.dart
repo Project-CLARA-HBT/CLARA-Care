@@ -25,8 +25,11 @@
 
 import 'package:flutter/material.dart';
 
-import '../core/research_telemetry_gate.dart' show kAdminRole, stripTelemetryLabels;
+import '../core/research_telemetry_gate.dart'
+    show kAdminRole, stripTelemetryLabels;
 import 'error_retry_view.dart' show kMinTouchTarget;
+import 'markdown_view.dart';
+import 'research_telemetry_panel.dart';
 
 // -----------------------------------------------------------------------------
 // Pure projection
@@ -202,7 +205,8 @@ List<AnswerCitation> extractCitations(Map<String, dynamic> envelope) {
         }
       }
     }
-    if (out.isNotEmpty) break; // first non-empty list wins (citations > sources)
+    if (out.isNotEmpty)
+      break; // first non-empty list wins (citations > sources)
   }
   return out;
 }
@@ -255,13 +259,12 @@ class EndUserSafeAnswer extends StatelessWidget {
 
     // User-facing answer text is always sanitized of internal labels (P4).
     final answer = stripTelemetryLabels(extractAnswerText(projected));
-    final citations = extractCitations(projected);
 
     final children = <Widget>[
       if (answer.isNotEmpty)
         Semantics(
           label: answer,
-          child: Text(answer, style: theme.textTheme.bodyMedium),
+          child: MarkdownView(answer, baseStyle: theme.textTheme.bodyMedium),
         )
       else
         Text(
@@ -269,10 +272,12 @@ class EndUserSafeAnswer extends StatelessWidget {
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-      if (citations.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        _CitationList(citations: citations, isEnglish: isEnglish),
-      ],
+      // Sources/citations no longer render in the answer body; they live only in
+      // the technical-detail panel below, so the answer stays clean prose.
+      // The panel carries verification matrix, reasoning nodes, retrieval
+      // passes AND the reference list. It self-hides when there is nothing to
+      // show, so simple answers render no panel at all.
+      ResearchTelemetryPanel(envelope: envelope),
       if (showDisclaimer) ...[
         const SizedBox(height: 12),
         _Disclaimer(isEnglish: isEnglish),
@@ -288,45 +293,6 @@ class EndUserSafeAnswer extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: children,
-    );
-  }
-}
-
-class _CitationList extends StatelessWidget {
-  const _CitationList({required this.citations, required this.isEnglish});
-
-  final List<AnswerCitation> citations;
-  final bool isEnglish;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final heading = isEnglish
-        ? 'References (${citations.length})'
-        : 'Nguồn tham khảo (${citations.length})';
-    return Column(
-      key: const Key('end-user-safe-citations'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          heading,
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 4),
-        for (var i = 0; i < citations.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Semantics(
-              label: '[${i + 1}] ${citations[i].label}',
-              child: Text(
-                '[${i + 1}] ${citations[i].label}',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

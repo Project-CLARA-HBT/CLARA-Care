@@ -97,8 +97,9 @@ const bool _scribeMobileDefault =
     bool.fromEnvironment('SCRIBE_MOBILE_ENABLED', defaultValue: false);
 const bool _phrEnhancedMobileDefault =
     bool.fromEnvironment('PHR_ENHANCED_MOBILE_ENABLED', defaultValue: false);
-const bool _modelDisclosureMobileDefault =
-    bool.fromEnvironment('MODEL_DISCLOSURE_MOBILE_ENABLED', defaultValue: false);
+const bool _modelDisclosureMobileDefault = bool.fromEnvironment(
+    'MODEL_DISCLOSURE_MOBILE_ENABLED',
+    defaultValue: false);
 const bool _transparencyNoticeMobileDefault = bool.fromEnvironment(
     'TRANSPARENCY_NOTICE_MOBILE_ENABLED',
     defaultValue: false);
@@ -132,6 +133,39 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
 // (Material 3 design system, adaptive shell, modern Home, onboarding, polished
 // states, micro-interactions, branding, language toggle). Read at exactly one
 // place — `app.dart` — to choose the authenticated root surface.
+
+/// The single build-time gate for the **liquid-glass** visual layer
+/// (clara-mobile-liquid-glass, R1.1).
+///
+/// Resolved at compile time via `--dart-define=MOBILE_LIQUID_GLASS_ENABLED=…`
+/// with a literal define name. Defaults to `false` (fail-closed) so the app is
+/// byte-for-byte the Experience_V3 redesign until glass is enabled. When on (and
+/// the redesign is on), chrome surfaces render the iOS-26-inspired translucent
+/// material; clinical content stays opaque regardless. This gate is additionally
+/// ANDed at runtime with the device-capability probe (reduce-transparency /
+/// low-end), so a build with glass on still degrades to opaque where needed. It
+/// changes no CLARA_API contract — client-side rendering only.
+const bool kMobileLiquidGlassEnabled = bool.fromEnvironment(
+  'MOBILE_LIQUID_GLASS_ENABLED',
+  defaultValue: false,
+);
+
+/// The single build-time gate for the modern **Experience_V3 redesign**
+/// (clara-mobile-redesign).
+///
+/// Resolved at compile time via `--dart-define=MOBILE_REDESIGN_ENABLED=…` with a
+/// literal define name, mirroring [kMobileExperienceV2Enabled]. Defaults to
+/// `false` (fail-closed) so the app is byte-for-byte the current experience
+/// until the redesign is enabled. When on, `app.dart` selects the redesigned
+/// authenticated root (`RedesignShell`) and pins `MaterialApp.themeMode` from
+/// the persisted theme preference (default light). This gate is checked BEFORE
+/// [kMobileExperienceV2Enabled], so it is a strict superset: the redesign wins
+/// when both are on. It changes no CLARA_API contract — client-side surface
+/// selection only.
+const bool kMobileRedesignEnabled = bool.fromEnvironment(
+  'MOBILE_REDESIGN_ENABLED',
+  defaultValue: false,
+);
 
 /// The single build-time gate for the modern Experience_V2 mobile UI/UX
 /// (Requirements 1.1, 1.6).
@@ -241,12 +275,10 @@ class MobileFeatureFlagResolver {
       isEnabled(MobileFeatureFlags.consentCenterMobileEnabled);
 
   /// Sharing / deep-link gate (Requirement 12).
-  bool get sharingEnabled =>
-      isEnabled(MobileFeatureFlags.sharingMobileEnabled);
+  bool get sharingEnabled => isEnabled(MobileFeatureFlags.sharingMobileEnabled);
 
   /// Modernized chat + web-palette theme gate (clara-mobile-ux-polish).
-  bool get uxPolishEnabled =>
-      isEnabled(MobileFeatureFlags.uxPolishEnabled);
+  bool get uxPolishEnabled => isEnabled(MobileFeatureFlags.uxPolishEnabled);
 
   /// A snapshot of every known new gate's resolved value. Useful for tiles and
   /// for asserting flags-off equivalence in tests (Property 1).

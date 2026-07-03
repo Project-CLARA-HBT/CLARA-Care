@@ -130,6 +130,7 @@ class PolishedChatView extends StatelessWidget {
       role: sessionStore.role,
       isEnglish: isEnglish,
       errorNote: message.errorNote,
+      flowSteps: message.flowSteps,
       anyStreaming: isStreaming,
       onCopy: () => onCopy(index),
       onRegenerate: () => onRegenerate(index),

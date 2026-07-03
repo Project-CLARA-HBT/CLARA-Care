@@ -8,7 +8,10 @@ import 'experience/app_shell.dart';
 import 'experience/home_screen.dart';
 import 'experience/language_controller.dart';
 import 'experience/onboarding/onboarding_gate.dart';
+import 'experience/redesign/login_screen_v3.dart';
+import 'experience/redesign/redesign_root.dart';
 import 'experience/settings/language_toggle.dart';
+import 'experience/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/phr_screen.dart';
@@ -22,6 +25,7 @@ class ClaraApp extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     this.languageController,
+    this.themeController,
   });
 
   final ApiClient apiClient;
@@ -32,6 +36,12 @@ class ClaraApp extends StatefulWidget {
   /// the `MaterialApp` is built without any locale wiring (byte-for-byte the
   /// pre-feature construction).
   final LanguageController? languageController;
+
+  /// App-wide theme-mode state for the redesign (Experience_V3,
+  /// clara-mobile-redesign Req 1.2). Constructed and hydrated in `main` only
+  /// when `kMobileRedesignEnabled` is ON; `null` otherwise. Drives
+  /// `MaterialApp.themeMode` (light-mode-first).
+  final ThemeController? themeController;
 
   @override
   State<ClaraApp> createState() => _ClaraAppState();
@@ -50,12 +60,42 @@ class _ClaraAppState extends State<ClaraApp> {
     // storage failures so a corrupt/expired session never crashes launch:
     // on failure we clear the store and fall through to the login screen.
     _hydration = widget.sessionStore.hydrate().catchError(
-      (_) => widget.sessionStore.clear(),
-    );
+          (_) => widget.sessionStore.clear(),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Experience_V3 redesign takes precedence when enabled (checked BEFORE the
+    // V2/legacy branches — a strict superset). It pins `themeMode` from the
+    // persisted theme preference (light-mode-first) and applies the polished
+    // web-matching palette. Locale wiring is applied when a controller exists.
+    final themeController = widget.themeController;
+    if (kMobileRedesignEnabled && themeController != null) {
+      final languageController = widget.languageController;
+      final listenables = <Listenable>[
+        themeController,
+        if (languageController != null) languageController,
+      ];
+      return ListenableBuilder(
+        listenable: Listenable.merge(listenables),
+        builder: (context, _) => MaterialApp(
+          title: 'CLARA Mobile',
+          theme: ClaraTheme.light(polished: true),
+          darkTheme: ClaraTheme.dark(polished: true),
+          themeMode: themeController.themeMode,
+          locale: languageController?.locale,
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const <Locale>[Locale('vi'), Locale('en')],
+          home: _buildHome(),
+        ),
+      );
+    }
+
     // Experience_V2 is purely additive and default OFF (Req 1.1, 1.2, 1.3): the
     // single compile-time gate selects the modern Material 3 theme + adaptive
     // shell root, otherwise the app stays byte-for-byte the legacy experience.
@@ -144,6 +184,13 @@ class _ClaraAppState extends State<ClaraApp> {
                 child: _authenticatedRoot(),
               );
             }
+            // Experience_V3 redesign: the polished, light-first sign-in.
+            if (kMobileRedesignEnabled) {
+              return LoginScreenV3(
+                apiClient: widget.apiClient,
+                sessionStore: widget.sessionStore,
+              );
+            }
             return LoginScreen(
               apiClient: widget.apiClient,
               sessionStore: widget.sessionStore,
@@ -160,6 +207,16 @@ class _ClaraAppState extends State<ClaraApp> {
   /// (Experience_V2): the first-run [OnboardingGate] wrapping the adaptive
   /// [AppShell] of primary destinations (Req 1.1–1.3, 3.5, 5.6).
   Widget _authenticatedRoot() {
+    // Experience_V3 redesign: the center-Chat adaptive shell root. Checked
+    // first so it wins when both the redesign and V2 flags are on.
+    if (kMobileRedesignEnabled) {
+      return RedesignRoot(
+        apiClient: widget.apiClient,
+        sessionStore: widget.sessionStore,
+        themeController: widget.themeController,
+        languageController: widget.languageController,
+      );
+    }
     if (!kMobileExperienceV2Enabled) {
       return DashboardScreen(
         apiClient: widget.apiClient,

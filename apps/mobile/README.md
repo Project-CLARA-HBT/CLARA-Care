@@ -1,9 +1,52 @@
-# CLARA Mobile (Flutter Starter)
+# CLARA Mobile (Flutter)
 
 This folder contains the Flutter client for CLARA mobile integration. New
 End_User-facing surfaces ship behind feature flags that default to OFF, so a
 plain build behaves exactly like the original six-screen app (login, research,
 CareGuard, council, dashboard, PHR) until a flag is explicitly enabled.
+
+## Experience_V3 redesign (`MOBILE_REDESIGN_ENABLED`)
+
+The modern, **light-mode-first** redesign (spec:
+`.kiro/specs/clara-mobile-redesign`) is gated by a single compile-time flag,
+`MOBILE_REDESIGN_ENABLED` (default OFF). It is a strict superset checked before
+the legacy `MOBILE_EXPERIENCE_V2_ENABLED` gate, and it is a **client-only**
+change — no CLARA_API contract is altered and every safety guardrail (consent
+gating, per-session Scribe consent, no-PII analytics, RBAC/capability gates,
+DDI two-medicine guard + severity floor, emergency fast-path, clinician-review
+directive) is preserved.
+
+When on, the authenticated root becomes `RedesignRoot` → `RedesignShell`, a
+navigation shell with a **centered circular Chat action** flanked by four
+destinations (Trang chủ, Tủ thuốc, Hồ sơ, Thêm), and `MaterialApp.themeMode` is
+pinned from a persisted preference that defaults to **light**
+(`ThemePreferenceStore`, changeable to Dark/System in Settings). Every surface
+is rebuilt on the shared `ClaraTokens` / web-matching palette design system:
+
+| Surface | File |
+| --- | --- |
+| Sign-in | `lib/experience/redesign/login_screen_v3.dart` |
+| Home (role-aware) | `lib/experience/redesign/home_screen_v3.dart` |
+| Chat (center action) | `lib/experience/redesign/chat_surface_v3.dart` |
+| Tủ thuốc (cabinet + DDI) | `lib/experience/redesign/cabinet_screen_v3.dart` |
+| Hồ sơ (PHR) | `lib/experience/redesign/phr_surface_v3.dart` |
+| Thêm (More) | `lib/experience/redesign/more_screen_v3.dart` |
+| Cài đặt (Settings) | `lib/experience/redesign/settings_screen_v3.dart` |
+| Hội chẩn AI (Council wizard) | `lib/experience/redesign/council_surface_v3.dart` |
+| Ghi chú (Scribe) | `lib/experience/redesign/scribe_surface_v3.dart` |
+
+Medical Scribe is enabled for **admin** as well as **doctor** in the redesign
+(fail-closed for other roles). Per-surface capability gates still flow through
+`MobileFeatureFlagResolver` (server `mobile/summary` flags + build defines), so
+a capability whose flag is off degrades to a calm, reachable placeholder.
+
+Run the redesign:
+
+```
+flutter run \
+  --dart-define=CLARA_API_BASE_URL=http://localhost:8100 \
+  --dart-define=MOBILE_REDESIGN_ENABLED=true
+```
 
 ## Included
 
@@ -90,6 +133,9 @@ Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |
 | ------------------------------------- | ------- |
+| `MOBILE_REDESIGN_ENABLED`             | Experience_V3 redesign root (light-first, centered-Chat shell) — see the section above |
+| `MOBILE_EXPERIENCE_V2_ENABLED`        | Legacy Experience_V2 shell (superseded by the redesign when both are on) |
+| `MOBILE_UX_POLISH_ENABLED`            | Web-matching palette for the V2/polished chat |
 | `COUNCIL_MOBILE_PARITY_ENABLED`       | Council case-based parity flow (otherwise the legacy `CouncilScreen`) |
 | `CAREGUARD_MOBILE_CABINET_ENABLED`    | CareGuard cabinet CRUD parity screen |
 

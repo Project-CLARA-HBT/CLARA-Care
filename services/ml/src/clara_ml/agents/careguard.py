@@ -624,6 +624,68 @@ def _detect_ddi_alerts(
     return alerts
 
 
+# Module-level on-disk DrugBank store (memory-safe SQLite pair index). Built
+# lazily on first use and reused thereafter; a build/lookup failure degrades to
+# no DrugBank contribution (curated-only), so this never crashes analysis.
+_DRUGBANK_STORE: DrugBankDdiStore | None = None
+_DRUGBANK_STORE_READY: bool = False
+
+
+def _get_drugbank_store() -> DrugBankDdiStore | None:
+    """Return the built DrugBank SQLite store, or None to degrade to curated-only.
+
+    The store is constructed once and its on-disk index is built once (idempotent:
+    a matching-version DB is reused without a rebuild). Any failure returns None.
+    """
+    global _DRUGBANK_STORE, _DRUGBANK_STORE_READY
+    if _DRUGBANK_STORE_READY:
+        return _DRUGBANK_STORE
+    try:
+        store = DrugBankDdiStore(
+            drugbank_dir=_DRUGBANK_DIR,
+            manifest_path=_DRUGBANK_MANIFEST_PATH,
+        )
+        built_version = store.ensure_built()
+        _DRUGBANK_STORE = store if built_version else None
+    except Exception:  # noqa: BLE001 - never let store init break analysis
+        _DRUGBANK_STORE = None
+    _DRUGBANK_STORE_READY = True
+    return _DRUGBANK_STORE
+
+
+def _drugbank_sqlite_alerts(
+    medications: list[str],
+    *,
+    existing_alerts: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], str]:
+    """DrugBank DDI alerts from the on-disk SQLite store + the built version label.
+
+    Curated Vietnamese rules always win on a conflicting pair, so any pair already
+    present in ``existing_alerts`` (the in-memory curated matches) is skipped here.
+    Emits alerts byte-compatible with the in-memory path. Never raises: a
+    missing/failed store yields no contribution and an empty version label so the
+    caller stays on the curated-only path.
+    """
+    store = _get_drugbank_store()
+    if store is None:
+        return [], ""
+    covered_pairs: set[frozenset[str]] = set()
+    for alert in existing_alerts:
+        meds = alert.get("medications")
+        if isinstance(meds, list) and len(meds) == 2:
+            covered_pairs.add(frozenset(str(m) for m in meds))
+    alerts: list[dict[str, Any]] = []
+    for meds, severity, message in store.lookup_pairs(medications):
+        if meds in covered_pairs:
+            continue
+        alerts.append(
+            _ddi_alert_from_rule(
+                InteractionRule(meds=meds, severity=severity, message=message)
+            )
+        )
+    return alerts, store.version
+
+
 def _build_ddi_pair_index(
     rules: list[InteractionRule],
 ) -> tuple[dict[frozenset[str], list[InteractionRule]], list[InteractionRule]]:
@@ -1075,6 +1137,22 @@ def run_careguard_analyze(payload: dict) -> dict:
         local_ddi_alerts = _detect_ddi_alerts_indexed(medications, pair_index, other_rules)
     else:
         local_ddi_alerts = _detect_ddi_alerts(medications, local_rules)
+
+    # Memory-safe DrugBank layer (Req: use DrugBank, not just local rules): the
+    # full DrugBank set is ~1.4M pairs and cannot be held in RAM on a small host,
+    # so it lives in an on-disk SQLite index and is queried per medication pair.
+    # Curated rules always win on a conflicting pair, so we only append DrugBank
+    # alerts for pairs the curated set does not already cover. Fully self-
+    # degrading: any store failure yields no contribution (curated-only).
+    drugbank_layer_version = ""
+    if settings.careguard_drugbank_sqlite_enabled:
+        drugbank_alerts, drugbank_layer_version = _drugbank_sqlite_alerts(
+            medications, existing_alerts=local_ddi_alerts
+        )
+        if drugbank_alerts:
+            local_ddi_alerts = [*local_ddi_alerts, *drugbank_alerts]
+        if drugbank_layer_version:
+            local_ddi_rules_version = f"{local_ddi_rules_version}+{drugbank_layer_version}"
     source_used = ["local_rules"]
     source_errors: dict[str, list[str]] = {}
     external_ddi_alerts: list[dict[str, Any]] = []

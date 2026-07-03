@@ -39,6 +39,16 @@ _FEATURE_FLAGS_BY_ROLE = {
         "careguard": True,
         "council": True,
         "system_monitor": True,
+        "chat_mobile_enabled": True,
+        "selfmed_cabinet_mobile_enabled": True,
+        "scribe_mobile_enabled": True,
+        "phr_enhanced_mobile_enabled": True,
+        "model_disclosure_mobile_enabled": True,
+        "transparency_notice_mobile_enabled": True,
+        "consent_center_mobile_enabled": True,
+        "sharing_mobile_enabled": True,
+        "mobile_ux_polish_enabled": True,
+        "research_mobile_deep": True,
     },
 }
 

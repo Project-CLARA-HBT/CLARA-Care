@@ -14,6 +14,7 @@ dependencies:
   http: ^1.2.2
   flutter_secure_storage: ^9.2.2
   markdown: ^7.3.1
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

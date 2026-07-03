@@ -6,6 +6,7 @@ import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/research_telemetry_gate.dart';
 import '../core/session_store.dart';
+import '../widgets/research_telemetry_panel.dart';
 
 /// Research execution modes, mirroring the web research surface. The internal
 /// values match the API `research_mode` enum; the labels use the Vietnamese
@@ -66,9 +67,8 @@ class ResearchProgress {
   factory ResearchProgress.fromSnapshot(Map<String, dynamic> snapshot) {
     final jobStatus = (snapshot['status'] ?? '').toString().trim();
     final progressRaw = snapshot['progress'];
-    final progress = progressRaw is Map
-        ? progressRaw.cast<String, dynamic>()
-        : snapshot;
+    final progress =
+        progressRaw is Map ? progressRaw.cast<String, dynamic>() : snapshot;
 
     final stagesRaw = progress['flow_stages'];
     final stages = <ResearchProgressStage>[];
@@ -111,12 +111,16 @@ class ResearchProgressStage {
 
   bool get isComplete {
     final normalized = status.toLowerCase();
-    return normalized == 'completed' || normalized == 'complete' || normalized == 'done';
+    return normalized == 'completed' ||
+        normalized == 'complete' ||
+        normalized == 'done';
   }
 
   bool get isActive {
     final normalized = status.toLowerCase();
-    return normalized == 'in_progress' || normalized == 'running' || normalized == 'active';
+    return normalized == 'in_progress' ||
+        normalized == 'running' ||
+        normalized == 'active';
   }
 
   bool get isError {
@@ -335,17 +339,17 @@ class _ResearchScreenState extends State<ResearchScreen> {
     _streamSub = widget.apiClient
         .streamResearchJob(accessToken: token, jobId: jobId)
         .listen(
-          _onStreamEvent,
-          onError: (Object error) {
-            final message = error is ApiException
-                ? error.message
-                : 'Mất kết nối tới phiên nghiên cứu.';
-            _setError(message);
-            _stopLoading();
-          },
-          onDone: _stopLoading,
-          cancelOnError: true,
-        );
+      _onStreamEvent,
+      onError: (Object error) {
+        final message = error is ApiException
+            ? error.message
+            : 'Mất kết nối tới phiên nghiên cứu.';
+        _setError(message);
+        _stopLoading();
+      },
+      onDone: _stopLoading,
+      cancelOnError: true,
+    );
   }
 
   void _onStreamEvent(SseEvent event) {
@@ -358,7 +362,8 @@ class _ResearchScreenState extends State<ResearchScreen> {
     }
 
     if (event.event == 'error') {
-      final message = (data['message'] ?? 'Phiên nghiên cứu gặp lỗi.').toString();
+      final message =
+          (data['message'] ?? 'Phiên nghiên cứu gặp lỗi.').toString();
       _setError(message);
       _stopLoading();
       return;
@@ -373,11 +378,14 @@ class _ResearchScreenState extends State<ResearchScreen> {
     if (status == 'completed') {
       final resultRaw = data['result'];
       setState(() {
-        _result = resultRaw is Map ? resultRaw.cast<String, dynamic>() : <String, dynamic>{};
+        _result = resultRaw is Map
+            ? resultRaw.cast<String, dynamic>()
+            : <String, dynamic>{};
       });
       _stopLoading();
     } else if (status == 'failed') {
-      final message = (data['error'] ?? 'Phiên nghiên cứu thất bại.').toString();
+      final message =
+          (data['error'] ?? 'Phiên nghiên cứu thất bại.').toString();
       _setError(message.isNotEmpty ? message : 'Phiên nghiên cứu thất bại.');
       _stopLoading();
     }
@@ -402,7 +410,13 @@ class _ResearchScreenState extends State<ResearchScreen> {
   }
 
   String _answerText(Map<String, dynamic> result) {
-    for (final key in ['answer_markdown', 'answer_md', 'answer', 'summary', 'message']) {
+    for (final key in [
+      'answer_markdown',
+      'answer_md',
+      'answer',
+      'summary',
+      'message'
+    ]) {
       final value = result[key];
       if (value is String && value.trim().isNotEmpty) {
         return value.trim();
@@ -422,9 +436,10 @@ class _ResearchScreenState extends State<ResearchScreen> {
         output.add(_Citation(title: item.trim()));
       } else if (item is Map) {
         final map = item.cast<String, dynamic>();
-        final title = (map['title'] ?? map['name'] ?? map['source'] ?? map['url'])
-            ?.toString()
-            .trim();
+        final title =
+            (map['title'] ?? map['name'] ?? map['source'] ?? map['url'])
+                ?.toString()
+                .trim();
         if (title != null && title.isNotEmpty) {
           output.add(_Citation(
             title: title,
@@ -528,7 +543,8 @@ class _ResearchScreenState extends State<ResearchScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Kết quả', style: Theme.of(context).textTheme.titleSmall),
+                      Text('Kết quả',
+                          style: Theme.of(context).textTheme.titleSmall),
                       const SizedBox(height: 8),
                       SelectableText(answer),
                     ],
@@ -556,6 +572,11 @@ class _ResearchScreenState extends State<ResearchScreen> {
                 ),
               ),
             ],
+            // Hidden-by-default technical telemetry (verification matrix,
+            // reasoning chain, sources) from the raw result envelope. Keeps the
+            // Pro/Deep evidence detail available on demand without inlining it
+            // into the answer body. Self-hides when there is nothing to show.
+            ResearchTelemetryPanel(envelope: result),
           ],
         ],
       ),
@@ -582,8 +603,9 @@ class _ProgressView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final note =
-        showDetailed ? progress.statusNote : stripTelemetryLabels(progress.statusNote);
+    final note = showDetailed
+        ? progress.statusNote
+        : stripTelemetryLabels(progress.statusNote);
 
     return Card(
       key: const Key('research-progress'),

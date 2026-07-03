@@ -70,7 +70,8 @@ class FakeApiClient extends ApiClient {
   /// Every call made to this fake, in order.
   final List<FakeApiInvocation> invocations = <FakeApiInvocation>[];
 
-  final Map<String, FakeApiResponder> _responders = <String, FakeApiResponder>{};
+  final Map<String, FakeApiResponder> _responders =
+      <String, FakeApiResponder>{};
 
   /// Fallback responder used when a called method has no specific stub.
   FakeApiResponder? defaultResponder;
@@ -166,7 +167,8 @@ class FakeApiClient extends ApiClient {
     required String email,
     required String password,
   }) async {
-    final data = await _dispatch('login', {'email': email, 'password': password});
+    final data =
+        await _dispatch('login', {'email': email, 'password': password});
     return LoginResponseData.fromJson(data);
   }
 
@@ -237,7 +239,8 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<Map<String, dynamic>> getCareguardCabinet({required String accessToken}) {
+  Future<Map<String, dynamic>> getCareguardCabinet(
+      {required String accessToken}) {
     return _dispatch('getCareguardCabinet', const {}, accessToken: accessToken);
   }
 
@@ -292,7 +295,8 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<Map<String, dynamic>> getLatestCouncilCase({required String accessToken}) {
+  Future<Map<String, dynamic>> getLatestCouncilCase(
+      {required String accessToken}) {
     return _dispatch('getLatestCouncilCase', const {},
         accessToken: accessToken);
   }
@@ -321,7 +325,8 @@ class FakeApiClient extends ApiClient {
     required int caseId,
     required Map<String, dynamic> payload,
   }) {
-    return _dispatch('updateCouncilCase', {'caseId': caseId, 'payload': payload},
+    return _dispatch(
+        'updateCouncilCase', {'caseId': caseId, 'payload': payload},
         accessToken: accessToken);
   }
 
@@ -390,6 +395,98 @@ class FakeApiClient extends ApiClient {
     required Map<String, dynamic> payload,
   }) {
     return _dispatch('updatePhrRecord', {'payload': payload},
+        accessToken: accessToken);
+  }
+
+  // --- Scribe ----------------------------------------------------------------
+
+  @override
+  Future<Map<String, dynamic>> listScribeSessions({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) {
+    return _dispatch('listScribeSessions', {'limit': limit, 'offset': offset},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createScribeSession({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _dispatch('createScribeSession', {'payload': payload},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getScribeSession({
+    required String accessToken,
+    required int sessionId,
+  }) {
+    return _dispatch('getScribeSession', {'sessionId': sessionId},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> transcribeScribeAudio({
+    required String accessToken,
+    required List<int> audioBytes,
+    String? filename,
+    String? language,
+    String? prompt,
+    int? chunkIndex,
+    int? sessionId,
+    bool? appendToSession,
+  }) {
+    return _dispatch(
+      'transcribeScribeAudio',
+      {
+        'audioBytes': audioBytes,
+        'filename': filename,
+        'language': language,
+        'prompt': prompt,
+        'chunkIndex': chunkIndex,
+        'sessionId': sessionId,
+        'appendToSession': appendToSession,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> regenerateScribeSession({
+    required String accessToken,
+    required int sessionId,
+    Map<String, dynamic> payload = const {},
+  }) {
+    return _dispatch(
+      'regenerateScribeSession',
+      {'sessionId': sessionId, 'payload': payload},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> captureScribeConsent({
+    required String accessToken,
+    required int sessionId,
+    String method = 'verbal',
+    String scope = 'encounter',
+  }) {
+    return _dispatch(
+      'captureScribeConsent',
+      {'sessionId': sessionId, 'method': method, 'scope': scope},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> revokeScribeConsent({
+    required String accessToken,
+    required int sessionId,
+  }) {
+    return _dispatch('revokeScribeConsent', {'sessionId': sessionId},
         accessToken: accessToken);
   }
 }

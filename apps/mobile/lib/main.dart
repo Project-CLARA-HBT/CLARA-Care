@@ -5,6 +5,7 @@ import 'core/api_client.dart';
 import 'core/feature_flags.dart';
 import 'core/session_store.dart';
 import 'experience/language_controller.dart';
+import 'experience/theme_controller.dart';
 
 // Default to the documented local dev API port (8100). The web app and API
 // docs (README) run the gateway on 8100; the previous 8000 default was config
@@ -30,10 +31,24 @@ void main() async {
   // the persisted preference before the first frame so the locale applies on
   // launch (Req 9.1, 9.2). When the flag is OFF we pass null, leaving the
   // legacy launch path byte-for-byte unchanged.
+  //
+  // The redesign (Experience_V3) also uses the language controller and adds an
+  // app-wide theme-mode controller (light-mode-first) hydrated before the first
+  // frame so the persisted theme applies on launch. Both are constructed when
+  // EITHER the redesign or the legacy V2 flag is on; the redesign path
+  // additionally wires the theme controller.
+  final bool needsLocaleWiring =
+      kMobileRedesignEnabled || kMobileExperienceV2Enabled;
   LanguageController? languageController;
-  if (kMobileExperienceV2Enabled) {
+  if (needsLocaleWiring) {
     languageController = LanguageController();
     await languageController.load();
+  }
+
+  ThemeController? themeController;
+  if (kMobileRedesignEnabled) {
+    themeController = ThemeController();
+    await themeController.load();
   }
 
   runApp(
@@ -41,6 +56,7 @@ void main() async {
       apiClient: apiClient,
       sessionStore: sessionStore,
       languageController: languageController,
+      themeController: themeController,
     ),
   );
 }

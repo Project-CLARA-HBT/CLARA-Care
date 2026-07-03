@@ -38,6 +38,7 @@ class DeepSeekClient:
         min_interval_seconds: float = 0.4,
         request_jitter_seconds: float = 0.15,
         audio_base_url: str = "",
+        fallback_model: str = "",
     ) -> None:
         self._api_key = api_key
         self._base_urls = self._parse_base_urls(base_url)
@@ -46,6 +47,11 @@ class DeepSeekClient:
             self._parse_base_urls(audio_base_url) if audio_base_url.strip() else []
         )
         self._model = model
+        # Optional secondary model tried once (across all bases) when the primary
+        # model fails everywhere — e.g. an upstream "temporarily unavailable"
+        # (503) for a heavy reasoning model. Empty ⇒ no fallback (single-model
+        # behavior preserved byte-for-byte).
+        self._fallback_model = (fallback_model or "").strip()
         # Bounded outbound timeout (Requirement 10.3): every httpx call below is
         # constructed with httpx.Client(timeout=self._timeout_seconds), so no
         # request can hang without bound. Retries are capped per base by
@@ -165,42 +171,52 @@ class DeepSeekClient:
         return breaker.call(func)
 
     def _post_json_with_failover(self, payload: dict[str, object]) -> dict[str, object]:
+        # Try the primary model across all bases; if it fails everywhere and a
+        # fallback model is configured, retry the whole base sweep once with the
+        # fallback model (e.g. primary reasoning model returns 503 "temporarily
+        # unavailable"). The payload's `model` is overridden per attempt.
+        models = [self._model]
+        if self._fallback_model and self._fallback_model != self._model:
+            models.append(self._fallback_model)
         errors: list[str] = []
         attempts = self._retries_per_base + 1
-        for base in self._base_urls:
-            url = self._chat_completions_url(base)
-            for attempt in range(attempts):
-                try:
-                    with self._request_slot():
-                        with httpx.Client(timeout=self._timeout_seconds) as client:
-                            response = client.post(
-                                url,
-                                headers={
-                                    "Authorization": f"Bearer {self._api_key}",
-                                    "Content-Type": "application/json",
-                                },
-                                json=payload,
-                            )
-                            response.raise_for_status()
-                    data = response.json()
-                    if not isinstance(data, dict):
-                        raise RuntimeError("DeepSeek response has invalid format")
-                    return data
-                except httpx.TimeoutException as exc:
-                    errors.append(f"timeout:{base}:#{attempt + 1}:{exc.__class__.__name__}")
-                except httpx.HTTPStatusError as exc:
-                    status_code = exc.response.status_code
-                    errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
-                    if status_code in self._AUTH_STATUS_CODES:
-                        # Credentials or gateway policy may differ by base URL.
-                        # Skip retries on this base and move to next configured base.
-                        break
-                    if status_code not in self._RETRYABLE_STATUS_CODES:
-                        raise
-                except httpx.HTTPError as exc:
-                    errors.append(f"http_error:{base}:#{attempt + 1}:{exc.__class__.__name__}")
-                if attempt < attempts - 1:
-                    sleep(self._retry_backoff_seconds * (attempt + 1))
+        for model in models:
+            model_payload = dict(payload)
+            model_payload["model"] = model
+            for base in self._base_urls:
+                url = self._chat_completions_url(base)
+                for attempt in range(attempts):
+                    try:
+                        with self._request_slot():
+                            with httpx.Client(timeout=self._timeout_seconds) as client:
+                                response = client.post(
+                                    url,
+                                    headers={
+                                        "Authorization": f"Bearer {self._api_key}",
+                                        "Content-Type": "application/json",
+                                    },
+                                    json=model_payload,
+                                )
+                                response.raise_for_status()
+                        data = response.json()
+                        if not isinstance(data, dict):
+                            raise RuntimeError("DeepSeek response has invalid format")
+                        return data
+                    except httpx.TimeoutException as exc:
+                        errors.append(f"timeout:{model}:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                    except httpx.HTTPStatusError as exc:
+                        status_code = exc.response.status_code
+                        errors.append(f"http_{status_code}:{model}:{base}:#{attempt + 1}")
+                        if status_code in self._AUTH_STATUS_CODES:
+                            # Credentials or gateway policy may differ by base URL.
+                            # Skip retries on this base and move to next configured base.
+                            break
+                        if status_code not in self._RETRYABLE_STATUS_CODES:
+                            raise
+                    except httpx.HTTPError as exc:
+                        errors.append(f"http_error:{model}:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                    if attempt < attempts - 1:
+                        sleep(self._retry_backoff_seconds * (attempt + 1))
         raise RuntimeError("deepseek_request_failed|" + "|".join(errors[:8]))
 
     @staticmethod
@@ -265,44 +281,50 @@ class DeepSeekClient:
         self,
         payload: dict[str, object],
     ) -> tuple[str, str]:
+        # Mirror _post_json_with_failover: sweep bases with the primary model,
+        # then once more with the fallback model when configured.
+        models = [self._model]
+        if self._fallback_model and self._fallback_model != self._model:
+            models.append(self._fallback_model)
         errors: list[str] = []
         attempts = self._retries_per_base + 1
-        stream_payload = {**payload, "stream": True}
-        for base in self._base_urls:
-            url = self._chat_completions_url(base)
-            for attempt in range(attempts):
-                try:
-                    with self._request_slot():
-                        with httpx.Client(timeout=self._timeout_seconds) as client:
-                            with client.stream(
-                                "POST",
-                                url,
-                                headers={
-                                    "Authorization": f"Bearer {self._api_key}",
-                                    "Content-Type": "application/json",
-                                },
-                                json=stream_payload,
-                            ) as response:
-                                response.raise_for_status()
-                                content, model = self._consume_chat_stream(response)
-                    if content:
-                        return content, model or self._model
-                    raise RuntimeError("DeepSeek stream content is empty")
-                except httpx.TimeoutException as exc:
-                    errors.append(f"timeout:{base}:#{attempt + 1}:{exc.__class__.__name__}")
-                except httpx.HTTPStatusError as exc:
-                    status_code = exc.response.status_code
-                    errors.append(f"http_{status_code}:{base}:#{attempt + 1}")
-                    if status_code in self._AUTH_STATUS_CODES:
-                        break
-                    if status_code not in self._RETRYABLE_STATUS_CODES:
-                        raise
-                except httpx.HTTPError as exc:
-                    errors.append(f"http_error:{base}:#{attempt + 1}:{exc.__class__.__name__}")
-                except RuntimeError as exc:
-                    errors.append(f"stream_error:{base}:#{attempt + 1}:{exc}")
-                if attempt < attempts - 1:
-                    sleep(self._retry_backoff_seconds * (attempt + 1))
+        for model in models:
+            stream_payload = {**payload, "model": model, "stream": True}
+            for base in self._base_urls:
+                url = self._chat_completions_url(base)
+                for attempt in range(attempts):
+                    try:
+                        with self._request_slot():
+                            with httpx.Client(timeout=self._timeout_seconds) as client:
+                                with client.stream(
+                                    "POST",
+                                    url,
+                                    headers={
+                                        "Authorization": f"Bearer {self._api_key}",
+                                        "Content-Type": "application/json",
+                                    },
+                                    json=stream_payload,
+                                ) as response:
+                                    response.raise_for_status()
+                                    content, resp_model = self._consume_chat_stream(response)
+                        if content:
+                            return content, resp_model or model
+                        raise RuntimeError("DeepSeek stream content is empty")
+                    except httpx.TimeoutException as exc:
+                        errors.append(f"timeout:{model}:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                    except httpx.HTTPStatusError as exc:
+                        status_code = exc.response.status_code
+                        errors.append(f"http_{status_code}:{model}:{base}:#{attempt + 1}")
+                        if status_code in self._AUTH_STATUS_CODES:
+                            break
+                        if status_code not in self._RETRYABLE_STATUS_CODES:
+                            raise
+                    except httpx.HTTPError as exc:
+                        errors.append(f"http_error:{model}:{base}:#{attempt + 1}:{exc.__class__.__name__}")
+                    except RuntimeError as exc:
+                        errors.append(f"stream_error:{model}:{base}:#{attempt + 1}:{exc}")
+                    if attempt < attempts - 1:
+                        sleep(self._retry_backoff_seconds * (attempt + 1))
         raise RuntimeError("deepseek_stream_failed|" + "|".join(errors[:8]))
 
     @classmethod

@@ -18,11 +18,30 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from clara_ml.agents import research_tier2 as rt
 from clara_ml.config import settings as app_settings
+
+
+@pytest.fixture(autouse=True)
+def _disable_clean_body():
+    """Isolate the true pre-feature (legacy dossier) path for this suite.
+
+    Clean-body Pro is the shipped default but DEFERS to an explicit
+    ``synthesis_v2`` opt-in; these tests assert the legacy baseline directly, so
+    the clean-body default must be off. Restored after every test so no other
+    suite inherits the override.
+    """
+
+    previous = app_settings.deep_beta_clean_body_enabled
+    app_settings.deep_beta_clean_body_enabled = False
+    try:
+        yield
+    finally:
+        app_settings.deep_beta_clean_body_enabled = previous
 
 # A broad comparison query (contains "So sánh") so the flag-ON path *would*
 # append query-type directives — making the flags-off / flag-on contrast

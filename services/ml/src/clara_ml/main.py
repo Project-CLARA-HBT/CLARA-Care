@@ -15,7 +15,11 @@ from clara_ml import admin_rag_handlers
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
 from clara_ml.agents.council_intake import run_council_intake
-from clara_ml.agents.research_tier2 import run_research_tier2
+from clara_ml.agents.research_tier2 import (
+    _build_source_aware_query_plan,
+    _refine_query_plan_with_llm,
+    run_research_tier2,
+)
 from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
@@ -25,6 +29,7 @@ from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.observability.tracing import init_tracing
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
+from clara_ml.rag.retrieval.text_utils import query_terms
 from clara_ml.rag.store.health import run_startup_self_check
 from clara_ml.routing import P1RoleIntentRouter
 from clara_ml.streaming.chat_stream import stream_chat_sse as chat_stream_sse
@@ -73,6 +78,42 @@ def _init_tracing() -> None:
     except Exception:  # noqa: BLE001 - tracing init must never crash startup
         logger.exception("Tracing initialization failed; tracing disabled")
         app.state.tracer = None
+
+
+@app.on_event("startup")
+def _warm_ddi_index() -> None:
+    """Pre-build the CareGuard DDI pair index in a background thread at startup.
+
+    With the DrugBank layer enabled the resolved rule set is ~1.4M rules, so the
+    first analysis that builds the pair index pays a one-time ~60s cost. Warming
+    it at boot (off the request path) means the first real DDI request is fast.
+    Runs only when both the DrugBank layer and the pair index are enabled; any
+    failure is swallowed so a warm-up problem never blocks startup or requests.
+    """
+
+    if not (settings.careguard_drugbank_enabled and settings.careguard_ddi_index_enabled):
+        return
+
+    def _warm() -> None:
+        try:
+            from clara_ml.agents.careguard import (
+                _resolve_ddi_pair_index,
+                _resolve_ddi_rules,
+            )
+
+            rules, version = _resolve_ddi_rules()
+            _resolve_ddi_pair_index(rules, version)
+            logger.info(
+                "CareGuard DDI pair index warmed at startup: %d rules (version=%s)",
+                len(rules),
+                version,
+            )
+        except Exception:  # noqa: BLE001 - warm-up must never crash the worker
+            logger.exception("CareGuard DDI index warm-up failed; will build lazily")
+
+    import threading
+
+    threading.Thread(target=_warm, name="ddi-index-warm", daemon=True).start()
 
 _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
@@ -144,6 +185,7 @@ def _build_deepseek_client() -> DeepSeekClient:
         api_key=settings.deepseek_api_key,
         base_url=settings.deepseek_base_url,
         model=settings.deepseek_model,
+        fallback_model=settings.deepseek_fallback_model,
         timeout_seconds=settings.deepseek_timeout_seconds,
         retries_per_base=settings.deepseek_retries_per_base,
         retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
@@ -166,6 +208,94 @@ def _flow_event(*, stage: str, status: str, source_count: int, note: str) -> dic
         "source_count": max(int(source_count), 0),
         "note": note,
     }
+
+
+def _build_chat_query_plan(
+    *,
+    query: str,
+    route_role: str,
+    route_intent: str,
+    llm_runtime: dict[str, str] | None,
+) -> tuple[dict[str, object], list[dict[str, object]]]:
+    """Refine a chat query into smaller, source-tuned keywords via one LLM pass.
+
+    Reuses the tier2 planner (``_build_source_aware_query_plan`` +
+    ``_refine_query_plan_with_llm``) so plain chat retrieval gets the same
+    per-source (internal/scientific/web) AND per-provider (pubmed/openfda/
+    searxng/...) query overrides the deep-research path already benefits from,
+    with keywords trimmed to a concise set.
+
+    Fail-soft and additive: on any error, or when the planner is disabled or the
+    LLM is unavailable, it returns an empty plan so the pipeline falls back to
+    its deterministic heuristic plan (byte-for-byte the prior behavior). Returns
+    the refined ``query_plan`` (or ``{}``) plus the ``llm_query_planner`` flow
+    events to surface in the live process panel.
+    """
+
+    flow_events: list[dict[str, object]] = []
+    if not settings.chat_llm_query_planner_enabled:
+        return {}, flow_events
+
+    try:
+        base_query_plan = _build_source_aware_query_plan(
+            topic=query,
+            research_mode="fast",
+            keywords=query_terms(query),
+        )
+    except Exception:  # noqa: BLE001 - never let planning break chat
+        return {}, flow_events
+
+    flow_events.append(
+        _flow_event(
+            stage="llm_query_planner",
+            status="started",
+            source_count=0,
+            note="Tinh chỉnh từ khoá truy vấn theo từng nguồn.",
+        )
+    )
+
+    try:
+        refined_plan, status = _refine_query_plan_with_llm(
+            topic=query,
+            research_mode="fast",
+            route_role=route_role,
+            route_intent=route_intent,
+            base_query_plan=base_query_plan,
+            keywords=query_terms(query)[:12],
+            llm_runtime=llm_runtime,
+        )
+    except Exception:  # noqa: BLE001 - defensive; fall back to heuristic plan
+        flow_events.append(
+            _flow_event(
+                stage="llm_query_planner",
+                status="degraded",
+                source_count=0,
+                note="Không tinh chỉnh được từ khoá; dùng kế hoạch mặc định.",
+            )
+        )
+        return {}, flow_events
+
+    planner_status = str(status.get("status") or "degraded")
+    if planner_status in {"completed", "recovered"}:
+        flow_events.append(
+            _flow_event(
+                stage="llm_query_planner",
+                status="completed",
+                source_count=0,
+                note="Đã tinh chỉnh từ khoá truy vấn cho từng nguồn.",
+            )
+        )
+        return refined_plan, flow_events
+
+    flow_events.append(
+        _flow_event(
+            stage="llm_query_planner",
+            status="degraded",
+            source_count=0,
+            note="Không tinh chỉnh được từ khoá; dùng kế hoạch mặc định.",
+        )
+    )
+    return {}, flow_events
 
 
 def _as_bool(value: object, default: bool) -> bool:
@@ -730,6 +860,23 @@ def routed_chat_infer(payload: dict) -> dict:
         retrieval_profile = "lifestyle_grounded"
         adjusted_web_retrieval_enabled = False
 
+    # One LLM pass to refine the raw query into smaller, source-tuned keywords
+    # and per-source/per-provider query overrides (fail-soft; empty plan means
+    # the pipeline uses its deterministic heuristic plan). Skipped for the
+    # minimal smalltalk profile, which does no external retrieval.
+    planner_query_plan: dict[str, object] = {}
+    planner_flow_events: list[dict[str, object]] = []
+    if retrieval_profile != "smalltalk_minimal":
+        planner_query_plan, planner_flow_events = _build_chat_query_plan(
+            query=pii.redacted_text,
+            route_role=route.role,
+            route_intent=route.intent,
+            llm_runtime=llm_runtime,
+        )
+    planner_hints: dict[str, Any] = {}
+    if planner_query_plan:
+        planner_hints["query_plan"] = planner_query_plan
+
     degraded_mode = False
     degraded_reason = ""
     try:
@@ -742,6 +889,7 @@ def routed_chat_infer(payload: dict) -> dict:
             file_retrieval_enabled=adjusted_file_retrieval_enabled,
             rag_sources=rag_sources,
             uploaded_documents=uploaded_documents,
+            planner_hints=planner_hints or None,
             strict_deepseek_required=settings.deepseek_required,
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
@@ -764,6 +912,7 @@ def routed_chat_infer(payload: dict) -> dict:
             file_retrieval_enabled=file_retrieval_enabled,
             rag_sources=rag_sources,
             uploaded_documents=uploaded_documents,
+            planner_hints=planner_hints or None,
             strict_deepseek_required=False,
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
@@ -793,6 +942,10 @@ def routed_chat_infer(payload: dict) -> dict:
         )
 
     flow_events = list(rag_result.flow_events)
+    # Surface the query-planner refinement steps at the front of the process
+    # timeline so the user sees keyword tuning before retrieval.
+    if planner_flow_events:
+        flow_events[0:0] = planner_flow_events
     if retrieval_profile != "standard":
         flow_events.insert(
             0,

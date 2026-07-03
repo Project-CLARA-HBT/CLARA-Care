@@ -16,6 +16,7 @@ import '../../core/a11y.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/end_user_safe_answer.dart';
 import '../../widgets/markdown_view.dart';
+import 'chat_flow_status.dart';
 
 /// A right-aligned user turn (Requirement 1.1). Solid brand fill with a tail
 /// corner flattened toward the trailing edge.
@@ -73,6 +74,7 @@ class AssistantBubble extends StatelessWidget {
     required this.isEnglish,
     required this.errorNote,
     required this.anyStreaming,
+    this.flowSteps = const <ChatFlowStep>[],
     this.onCopy,
     this.onRegenerate,
   });
@@ -83,6 +85,11 @@ class AssistantBubble extends StatelessWidget {
   final String? role;
   final bool isEnglish;
   final String? errorNote;
+
+  /// The live pipeline process (routing/retrieval/synthesis/verification/…)
+  /// distilled from the SSE `step` frames. Rendered above the answer so the
+  /// user sees which node CLARA is at, not just a spinner.
+  final List<ChatFlowStep> flowSteps;
 
   /// True when any turn in the conversation is streaming (disables regenerate).
   final bool anyStreaming;
@@ -98,6 +105,16 @@ class AssistantBubble extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final children = <Widget>[];
+
+    // Live pipeline process (which node CLARA is at). Shown while streaming and
+    // kept as a collapsible summary once the turn finishes.
+    if (flowSteps.isNotEmpty) {
+      children.add(ChatFlowStatusView(
+        steps: flowSteps,
+        isActive: isStreaming,
+        isEnglish: isEnglish,
+      ));
+    }
 
     if (isStreaming && text.isEmpty) {
       children.add(TypingIndicator(isEnglish: isEnglish));
@@ -216,8 +233,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final label =
-        widget.isEnglish ? 'CLARA is typing…' : 'CLARA đang trả lời…';
+    final label = widget.isEnglish ? 'CLARA is typing…' : 'CLARA đang trả lời…';
     return Semantics(
       liveRegion: true,
       label: label,

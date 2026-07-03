@@ -103,9 +103,26 @@ class Settings(BaseSettings):
         validation_alias="DEEPSEEK_BASE_URL",
     )
     deepseek_model: str = Field(default="deepseek-v3.2", validation_alias="DEEPSEEK_MODEL")
+    deepseek_fallback_model: str = Field(
+        # Secondary model tried when the primary model fails across all bases
+        # (e.g. upstream 5xx / "temporarily unavailable"). Empty disables the
+        # fallback so behavior is byte-for-byte the single-model path.
+        default="",
+        validation_alias="DEEPSEEK_FALLBACK_MODEL",
+    )
     deepseek_required: bool = Field(
         default=False,
         validation_alias="DEEPSEEK_REQUIRED",
+    )
+    chat_llm_query_planner_enabled: bool = Field(
+        # When true, plain chat (routed_chat_infer) runs the same LLM query
+        # planner used by research tier2 to refine the raw query into a smaller
+        # keyword set and concise per-source / per-provider queries before
+        # retrieval. Fail-soft: any planner error falls back to the heuristic
+        # base plan, so retrieval behavior is never worse than before. Kill
+        # switch defaults on; set to false to restore the pure-heuristic path.
+        default=True,
+        validation_alias="CHAT_LLM_QUERY_PLANNER_ENABLED",
     )
     deepseek_timeout_seconds: float = Field(
         default=45.0,
@@ -201,17 +218,54 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="DEEP_BETA_REPORT_LLM_ENABLED",
     )
-    # deep_beta report length floor. Raised to 8000 for the synthesis-v2 band so
-    # full-scope Pro answers can reach the 8,000-15,000 word target. Bounded
-    # 4000-12000 so a misconfiguration cannot push the floor above the realistic
-    # band or below a coherent dossier length.
+    # When true (default), CLARA Pro (deep_beta) writes a natural, reader-first
+    # explanatory answer in a single language at whatever length the content
+    # warrants, and NEVER pads the answer body with telemetry (multi-pass logs,
+    # reasoning-node matrices, claim-status/confusion matrices, source-profile
+    # tables). That technical material still flows in the response envelope
+    # (verification_matrix / citations / reasoning_steps / parallel_reasoning_
+    # nodes) so web + mobile can render it in a hidden-by-default telemetry
+    # panel. Set to false to restore the legacy dossier-with-appendix body.
+    deep_beta_clean_body_enabled: bool = Field(
+        default=True,
+        validation_alias="DEEP_BETA_CLEAN_BODY_ENABLED",
+    )
+    # Natural (non-padded) length band for the clean-body Pro answer. Used only
+    # when ``deep_beta_clean_body_enabled`` is true; the answer is guided to a
+    # readable long-form length instead of the 8,000-15,000 word dossier target,
+    # so it explains thoroughly without "padding to be long".
+    deep_beta_clean_body_min_words: int = Field(
+        default=500,
+        validation_alias="DEEP_BETA_CLEAN_BODY_MIN_WORDS",
+        ge=200,
+        le=4000,
+    )
+    deep_beta_clean_body_target_words: int = Field(
+        default=1100,
+        validation_alias="DEEP_BETA_CLEAN_BODY_TARGET_WORDS",
+        ge=300,
+        le=6000,
+    )
+    deep_beta_clean_body_max_words: int = Field(
+        default=2200,
+        validation_alias="DEEP_BETA_CLEAN_BODY_MAX_WORDS",
+        ge=500,
+        le=8000,
+    )
+    # deep_beta report length floor for the LEGACY dossier/synthesis-v2 band.
+    # Under the clean-body Pro default this floor is no longer used for the answer
+    # length (clean-body uses its own natural band), and the legacy scope-aware
+    # path already clamps this value into [4000, 12000] at runtime, so the field
+    # bound only needs to guard against absurd input. The lower bound is 1200
+    # (matching the legacy ``_resolve_deep_beta_word_budget`` ``hard_min``) so a
+    # latency-tuned deployment can set a smaller floor without crashing startup.
     deep_beta_report_min_words: int = Field(
         default=8000,
         validation_alias=AliasChoices(
             "DEEP_BETA_REPORT_MIN_WORDS",
             "DEEP_BETA_REPORT_MIN_CHARS",
         ),
-        ge=4000,
+        ge=1200,
         le=12000,
     )
     # Hard ceiling for the scope-aware budget band. Never exceeds 15000 words.
@@ -315,9 +369,17 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("EXTERNAL_DDI_ENABLED", "CAREGUARD_EXTERNAL_DDI_ENABLED"),
     )
-    # CareGuard optional DrugBank shard layer. Default OFF preserves byte-identical
-    # curated-Vietnamese-rules behavior; consumed by
-    # ``agents/careguard._resolve_ddi_rules`` via ``settings.careguard_drugbank_enabled``.
+    # CareGuard optional DrugBank shard layer. Default OFF.
+    #
+    # WARNING (memory): the current loader (``agents/careguard._resolve_ddi_rules``)
+    # merges the DrugBank shards fully IN MEMORY. The full shard set is ~1.4M
+    # interaction pairs and needs ~1.26 GB RSS once indexed. On a small host
+    # (e.g. the current deploy has <1 GB free) enabling this OOMs the ML
+    # container. Keep OFF until the loader is migrated to the on-disk SQLite
+    # pair-index (see ``scripts/data/drugbank_ingest.py`` follow-up: ~260 MB on
+    # disk, ~33 ms/lookup, constant memory), then this can default ON safely.
+    # Self-degrading: when the shards are absent/unparseable the resolver falls
+    # back to curated-only.
     careguard_drugbank_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_ENABLED"),
@@ -330,6 +392,23 @@ class Settings(BaseSettings):
     careguard_ddi_index_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DDI_INDEX_ENABLED"),
+    )
+    # Memory-safe DrugBank DDI layer via an on-disk SQLite pair index. Default ON.
+    #
+    # This is the production-safe alternative to the in-memory
+    # ``careguard_drugbank_enabled`` merge: instead of loading ~1.4M interaction
+    # pairs into RAM (~1.26 GB RSS), the DrugBank shards are compiled ONCE into a
+    # SQLite database (~260 MB on disk) and each analysis does an indexed lookup
+    # for only the handful of medication pairs it actually needs (~30 ms,
+    # constant memory). Curated Vietnamese rules still win on any conflicting
+    # pair. Fully self-degrading: when the shards/DB are absent or unbuildable,
+    # CareGuard transparently falls back to the curated-only in-memory path, so
+    # enabling by default is safe even in builds that ship without the shards.
+    # When both this and ``careguard_drugbank_enabled`` are on, the SQLite path
+    # takes precedence (the in-memory merge is skipped) to avoid the OOM risk.
+    careguard_drugbank_sqlite_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_SQLITE_ENABLED"),
     )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
