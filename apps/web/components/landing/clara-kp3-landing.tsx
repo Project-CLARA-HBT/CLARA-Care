@@ -238,16 +238,16 @@ export default function ClaraKp3Landing() {
             <div className="data-stream left-3/4" style={{ animationDelay: "2.2s" }} />
           </div>
 
-          <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-stretch min-[1120px]:gap-12">
-            <div className="w-full space-y-6 min-[1120px]:w-[48%] min-[1280px]:w-[46%]">
+          <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-center min-[1120px]:gap-12">
+            <div className="w-full space-y-6 min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-100/65 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
                 AI lâm sàng có trích dẫn nguồn
               </div>
 
               <h1
-                className="max-w-[18ch] font-black leading-[1.02] tracking-tight text-slate-900 min-[640px]:leading-[0.95] dark:text-slate-100"
-                style={{ fontSize: "clamp(2rem, 7vw, 4.5rem)" }}
+                className="font-black leading-[1.05] tracking-tight text-slate-900 min-[640px]:leading-[0.98] dark:text-slate-100"
+                style={{ fontSize: "clamp(1.9rem, 5.2vw, 4.25rem)" }}
               >
                 Hỏi đúng trọng tâm.
                 <br />
@@ -293,7 +293,7 @@ export default function ClaraKp3Landing() {
               </div>
             </div>
 
-            <div className="relative w-full self-start min-[1120px]:w-[52%] min-[1280px]:w-[54%]">
+            <div className="relative mx-auto w-full max-w-xl self-center min-[1120px]:mx-0 min-[1120px]:w-[46%] min-[1280px]:w-[44%]">
               <div className="absolute -inset-10 rounded-full bg-cyan-300/15 blur-[100px] dark:bg-cyan-700/20" />
 
               <div className="glass-panel relative overflow-hidden rounded-2xl border border-white/40 p-5 shadow-[0_32px_64px_-12px_rgba(0,218,243,0.15)] dark:border-cyan-500/30">
@@ -408,7 +408,7 @@ export default function ClaraKp3Landing() {
                   href={sponsor.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="glass-panel flex min-h-[120px] w-full max-w-xs items-center justify-center rounded-2xl border border-slate-200/40 p-4 transition-all hover:-translate-y-0.5 dark:border-slate-700/50"
+                  className="flex min-h-[120px] w-full max-w-xs items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-900 p-6 shadow-lg shadow-slate-900/10 transition-all hover:-translate-y-0.5 dark:bg-slate-950"
                 >
                   <Image
                     src={sponsor.logo}
