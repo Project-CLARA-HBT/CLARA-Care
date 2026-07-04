@@ -98,6 +98,19 @@ const NAV_ITEMS: NavigationItem[] = [
     },
   },
   {
+    href: "/community",
+    label: "Cộng đồng",
+    icon: "forum",
+    desc: "Cộng đồng sức khỏe CLARA",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Cộng đồng sức khỏe",
+      subtitle:
+        "Chia sẻ kinh nghiệm và hỗ trợ nhau. Không phải tư vấn y tế — nội dung được kiểm duyệt.",
+    },
+  },
+  {
     href: "/selfmed",
     label: "Tủ thuốc",
     icon: "pill",
