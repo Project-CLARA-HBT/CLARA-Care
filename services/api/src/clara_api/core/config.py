@@ -366,6 +366,13 @@ class Settings(BaseSettings):
         default="",
         validation_alias="GOOGLE_VISION_SERVICE_ACCOUNT_JSON",
     )
+    # Simple API-key auth for the Vision REST API (`?key=...`). When set, this is
+    # tried before service-account JWT auth: it needs no signed token and works
+    # for any project whose Vision API + billing are enabled for the key.
+    google_vision_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("GCP_VISION_API_KEY", "GOOGLE_VISION_API_KEY"),
+    )
     google_vision_timeout_seconds: float = Field(
         default=30.0,
         validation_alias="GOOGLE_VISION_TIMEOUT_SECONDS",

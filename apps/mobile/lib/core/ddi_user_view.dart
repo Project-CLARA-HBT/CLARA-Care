@@ -11,14 +11,56 @@
 // Pure Dart (no Flutter dependency) so it can be unit-tested without platform
 // channels and reused by both the model and offline-cache layers.
 
-/// A single user-facing interaction alert. Only a human-readable message and an
-/// optional detail line are exposed — never the contributing source set,
-/// raw severity, or any connector/runtime field (Requirement 3.4, 8.4).
+/// A single user-facing interaction alert. A human-readable message, an optional
+/// detail line, a coarse severity band, and the interacting medication names are
+/// exposed — never the contributing source set or any connector/runtime field
+/// (Requirement 3.4, 8.4). Severity is a coarse band (`critical`/`high`/`medium`
+/// /`low`/`unknown`) suitable for text+icon ranking, not a raw upstream code.
 class DdiAlert {
-  const DdiAlert({required this.message, this.details});
+  const DdiAlert({
+    required this.message,
+    this.details,
+    this.severity = 'unknown',
+    this.medications = const [],
+  });
 
   final String message;
   final String? details;
+  final String severity;
+  final List<String> medications;
+
+  /// Coarse severity rank for sorting (higher = more severe). Text+icon convey
+  /// meaning too, so this is never the sole signal (a11y).
+  int get severityRank {
+    switch (severity) {
+      case 'critical':
+        return 4;
+      case 'high':
+        return 3;
+      case 'medium':
+        return 2;
+      case 'low':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  /// Vietnamese-first severity label.
+  String get severityLabel {
+    switch (severity) {
+      case 'critical':
+        return 'Nghiêm trọng';
+      case 'high':
+        return 'Cao';
+      case 'medium':
+        return 'Trung bình';
+      case 'low':
+        return 'Thấp';
+      default:
+        return 'Chưa xác định';
+    }
+  }
 }
 
 /// End_User DDI projection: only risk level, alerts, recommendations, and
@@ -27,10 +69,18 @@ class DdiAlert {
 class DdiUserView {
   DdiUserView({
     required this.riskLevel,
-    required this.alerts,
+    required List<DdiAlert> alerts,
     required this.recommendations,
     required this.sources,
-  });
+  }) : alerts = _sortBySeverity(alerts);
+
+  /// Alerts sorted most-severe-first so the highest-risk interaction is always
+  /// surfaced at the top of the professional result view. Stable within a band.
+  static List<DdiAlert> _sortBySeverity(List<DdiAlert> input) {
+    final sorted = [...input];
+    sorted.sort((a, b) => b.severityRank.compareTo(a.severityRank));
+    return sorted;
+  }
 
   final String riskLevel;
   final List<DdiAlert> alerts;
@@ -45,7 +95,9 @@ class DdiUserView {
       'alerts': alerts
           .map((alert) => <String, dynamic>{
                 'message': alert.message,
-                'severity': riskLevel,
+                'severity': alert.severity,
+                if (alert.medications.isNotEmpty)
+                  'medications': alert.medications,
                 if (alert.details != null) 'details': alert.details,
               })
           .toList(),
@@ -69,6 +121,8 @@ class DdiUserView {
           alerts.add(DdiAlert(
             message: message,
             details: (details != null && details.isNotEmpty) ? details : null,
+            severity: _classifyRisk((map['severity'] ?? '').toString()),
+            medications: _stringList(map['medications']),
           ));
         }
       }
@@ -154,9 +208,15 @@ class DdiUserView {
                 (map['details'] ?? map['description'] ?? map['recommendation'])
                     ?.toString()
                     .trim();
+            // Per-alert severity: prefer the alert's own severity, else fall
+            // back to the overall risk tier. Medications name the interacting
+            // pair (DrugBank rows carry a sorted two-medication list).
+            final alertSeverity = (map['severity'] ?? riskTier)?.toString();
             alerts.add(DdiAlert(
               message: message,
               details: (details != null && details.isNotEmpty) ? details : null,
+              severity: _classifyRisk(alertSeverity),
+              medications: _stringList(map['medications']),
             ));
           }
         }

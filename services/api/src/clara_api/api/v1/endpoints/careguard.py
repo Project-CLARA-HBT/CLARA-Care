@@ -1355,23 +1355,38 @@ def _scan_with_google_vision(
     settings = get_settings()
     if not settings.google_vision_enabled:
         return None
+    api_key = settings.google_vision_api_key.strip()
     sa_json = settings.google_vision_service_account_json.strip()
-    if not sa_json:
+    # Need at least one credential path (simple API key OR a service account).
+    if not api_key and not sa_json:
         return None
     try:
-        from clara_api.core.google_vision_ocr import detect_text
+        from clara_api.core.google_vision_ocr import (
+            detect_text,
+            detect_text_with_api_key,
+        )
 
         language_hints = [
             lang.strip()
             for lang in settings.google_vision_language_hints.split(",")
             if lang.strip()
         ] or ["vi", "en"]
-        text = detect_text(
-            image_bytes=file_bytes,
-            service_account_json=sa_json,
-            language_hints=language_hints,
-            timeout_seconds=settings.google_vision_timeout_seconds,
-        )
+        # Prefer the simple API-key path when a key is configured (no billing-
+        # coupled OAuth service-account exchange); fall back to the SA JWT path.
+        if api_key:
+            text = detect_text_with_api_key(
+                image_bytes=file_bytes,
+                api_key=api_key,
+                language_hints=language_hints,
+                timeout_seconds=settings.google_vision_timeout_seconds,
+            )
+        else:
+            text = detect_text(
+                image_bytes=file_bytes,
+                service_account_json=sa_json,
+                language_hints=language_hints,
+                timeout_seconds=settings.google_vision_timeout_seconds,
+            )
         if text and len(text.strip()) >= 3:
             return text.strip(), "/v1/images:annotate", "google-cloud-vision"
     except Exception:

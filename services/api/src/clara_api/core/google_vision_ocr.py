@@ -71,6 +71,58 @@ def _get_access_token(service_account: dict[str, str]) -> str:
     return _cached_token["access_token"]
 
 
+def _build_annotate_body(
+    image_bytes: bytes,
+    language_hints: list[str] | None,
+) -> dict[str, Any]:
+    image_content = base64.b64encode(image_bytes).decode("utf-8")
+    request_body: dict[str, Any] = {
+        "requests": [
+            {
+                "image": {"content": image_content},
+                "features": [{"type": "DOCUMENT_TEXT_DETECTION", "maxResults": 1}],
+            }
+        ]
+    }
+    if language_hints:
+        request_body["requests"][0]["imageContext"] = {"languageHints": language_hints}
+    return request_body
+
+
+def detect_text_with_api_key(
+    image_bytes: bytes,
+    api_key: str,
+    *,
+    language_hints: list[str] | None = None,
+    timeout_seconds: float = 30.0,
+) -> str:
+    """Call Google Cloud Vision using a simple API key (``?key=...``).
+
+    This is the lightweight auth path: no service-account JWT/OAuth exchange. The
+    key is passed as a query parameter exactly as Google's REST reference shows.
+    Returns the extracted full text, or empty string / raises on failure (the
+    caller swallows exceptions and falls back to the next OCR engine).
+    """
+    request_body = _build_annotate_body(image_bytes, language_hints)
+    response = httpx.post(
+        _VISION_API_URL,
+        params={"key": api_key},
+        json=request_body,
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    data = response.json()
+    responses = data.get("responses", [])
+    if not responses:
+        return ""
+    first_response = responses[0]
+    if "error" in first_response:
+        raise RuntimeError(
+            f"Vision API error: {first_response['error'].get('message', 'unknown')}"
+        )
+    return first_response.get("fullTextAnnotation", {}).get("text", "").strip()
+
+
 def detect_text(
     image_bytes: bytes,
     service_account_json: str,
@@ -86,20 +138,7 @@ def detect_text(
     service_account = json.loads(service_account_json)
     access_token = _get_access_token(service_account)
 
-    image_content = base64.b64encode(image_bytes).decode("utf-8")
-
-    request_body: dict[str, Any] = {
-        "requests": [
-            {
-                "image": {"content": image_content},
-                "features": [{"type": "DOCUMENT_TEXT_DETECTION", "maxResults": 1}],
-            }
-        ]
-    }
-    if language_hints:
-        request_body["requests"][0]["imageContext"] = {
-            "languageHints": language_hints
-        }
+    request_body = _build_annotate_body(image_bytes, language_hints)
 
     # Bounded outbound timeout (Requirement 10.3): the Vision annotate call uses
     # an explicit timeout (default 30s, caller-overridable) so OCR cannot block

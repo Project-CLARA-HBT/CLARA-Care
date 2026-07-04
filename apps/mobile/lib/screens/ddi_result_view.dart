@@ -99,25 +99,7 @@ class DdiResultView extends StatelessWidget {
                   const Text('Chưa ghi nhận cảnh báo tương tác rõ ràng.')
                 else
                   ...view.alerts.map(
-                    (alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(alert.message,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600)),
-                          if (alert.details != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                alert.details!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    (alert) => _AlertTile(alert: alert),
                   ),
               ],
             ),
@@ -159,6 +141,121 @@ class DdiResultView extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A single interaction alert rendered professionally: a leading severity badge
+/// (color + icon + Vietnamese text so meaning is never color-only), the two
+/// interacting medications as chips, and the message + optional detail line.
+class _AlertTile extends StatelessWidget {
+  const _AlertTile({required this.alert});
+
+  final DdiAlert alert;
+
+  Color _severityColor(BuildContext context) {
+    switch (alert.severity) {
+      case 'critical':
+        return Colors.red.shade900;
+      case 'high':
+        return Colors.red.shade700;
+      case 'medium':
+        return Colors.orange.shade800;
+      case 'low':
+        return Colors.green.shade700;
+      default:
+        return Theme.of(context).colorScheme.outline;
+    }
+  }
+
+  IconData _severityIcon() {
+    switch (alert.severity) {
+      case 'critical':
+        return Icons.dangerous;
+      case 'high':
+        return Icons.warning_amber_rounded;
+      case 'medium':
+        return Icons.info_outline;
+      case 'low':
+        return Icons.check_circle_outline;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _severityColor(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(_severityIcon(), size: 18, color: color),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  alert.severityLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (alert.medications.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final med in alert.medications)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      med,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            alert.message,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          if (alert.details != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                alert.details!,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
