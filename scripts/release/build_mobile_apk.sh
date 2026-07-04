@@ -26,8 +26,11 @@ for a in 1 2 3; do "$FLUTTER" pub get 2>&1 | tail -6 && break; sleep 5; done
 echo "== build apk (redesign, base=$API_BASE) =="
 "$FLUTTER" build apk --release \
   --dart-define=MOBILE_REDESIGN_ENABLED=true \
+  --dart-define=MOBILE_LIQUID_GLASS_ENABLED=true \
   --dart-define=MOBILE_UX_POLISH_ENABLED=true \
   --dart-define=CHAT_MOBILE_ENABLED=true \
+  --dart-define=COUNCIL_MOBILE_PARITY_ENABLED=true \
+  --dart-define=CAREGUARD_MOBILE_CABINET_ENABLED=true \
   --dart-define=CLARA_API_BASE_URL="$API_BASE" 2>&1 | tail -40
 
 APK=build/app/outputs/flutter-apk/app-release.apk
