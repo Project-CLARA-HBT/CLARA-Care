@@ -703,6 +703,25 @@ class ApiClient {
     );
   }
 
+  /// Returns the current user's social profile (`GET /api/v1/social/me/profile`).
+  Future<Map<String, dynamic>> getSocialProfile({required String accessToken}) {
+    return _get('/api/v1/social/me/profile', accessToken: accessToken);
+  }
+
+  /// Updates the current user's social profile
+  /// (`PATCH /api/v1/social/me/profile`).
+  Future<Map<String, dynamic>> updateSocialProfile({
+    required String accessToken,
+    required String displayName,
+    required String bio,
+  }) {
+    return _patch(
+      '/api/v1/social/me/profile',
+      body: <String, dynamic>{'display_name': displayName, 'bio': bio},
+      accessToken: accessToken,
+    );
+  }
+
   static List<Map<String, dynamic>> _asMapList(Object? raw) {
     if (raw is! List) return const [];
     return raw.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();

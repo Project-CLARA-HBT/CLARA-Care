@@ -203,7 +203,17 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cộng đồng')),
+      appBar: AppBar(
+        title: const Text('Cộng đồng'),
+        actions: [
+          if (!_unavailable && !_loading)
+            IconButton(
+              onPressed: _openProfile,
+              icon: const Icon(Icons.account_circle_outlined),
+              tooltip: 'Hồ sơ cộng đồng',
+            ),
+        ],
+      ),
       floatingActionButton: (_unavailable || _loading)
           ? null
           : FloatingActionButton.extended(
@@ -338,6 +348,20 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
       ),
     );
     if (mutated == true) await _load();
+  }
+
+  Future<void> _openProfile() async {
+    final token = _token;
+    if (token == null) return;
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ProfileSheet(
+        apiClient: widget.apiClient,
+        accessToken: token,
+      ),
+    );
   }
 
   Future<void> _react(Map<String, dynamic> post) async {
@@ -785,6 +809,46 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
     }
   }
 
+  Future<void> _report() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Báo cáo bài viết'),
+        content: const Text(
+          'Báo cáo nội dung vi phạm quy tắc cộng đồng (kê đơn/chẩn đoán/liều '
+          'dùng cá nhân, spam, hoặc không phù hợp). Đội ngũ kiểm duyệt sẽ xem xét.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Báo cáo'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.apiClient.reportSocialContent(
+        accessToken: widget.accessToken,
+        targetType: 'post',
+        targetId: _postId,
+        reason: 'user_report',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi báo cáo. Cảm ơn bạn.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -812,6 +876,11 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                     child: Text('@$author',
                         style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+                  IconButton(
+                    onPressed: _report,
+                    icon: const Icon(Icons.flag_outlined),
+                    tooltip: 'Báo cáo',
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(_mutated),
@@ -914,6 +983,164 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Bottom sheet to view + edit the current user's community profile
+/// (display name + bio). PHR-isolated: no medical-record data is ever shown or
+/// editable here (spec R2/R10).
+class _ProfileSheet extends StatefulWidget {
+  const _ProfileSheet({required this.apiClient, required this.accessToken});
+
+  final ApiClient apiClient;
+  final String accessToken;
+
+  @override
+  State<_ProfileSheet> createState() => _ProfileSheetState();
+}
+
+class _ProfileSheetState extends State<_ProfileSheet> {
+  final _displayName = TextEditingController();
+  final _bio = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String _handle = '';
+  String _roleBadge = '';
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _displayName.dispose();
+    _bio.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final p = await widget.apiClient
+          .getSocialProfile(accessToken: widget.accessToken);
+      if (!mounted) return;
+      setState(() {
+        _handle = (p['handle'] ?? '').toString();
+        _roleBadge = (p['role_badge'] ?? '').toString();
+        _displayName.text = (p['display_name'] ?? '').toString();
+        _bio.text = (p['bio'] ?? '').toString();
+        _loading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.apiClient.updateSocialProfile(
+        accessToken: widget.accessToken,
+        displayName: _displayName.text.trim(),
+        bio: _bio.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã lưu hồ sơ cộng đồng.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _saving = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(ClaraTokens.spaceMd, ClaraTokens.spaceMd,
+          ClaraTokens.spaceMd, ClaraTokens.spaceMd + viewInsets),
+      child: _loading
+          ? const Padding(
+              padding: EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hồ sơ cộng đồng',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                if (_handle.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text('@$_handle',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                      if (_roleBadge.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _roleBadge == 'doctor'
+                                ? 'Bác sĩ'
+                                : _roleBadge == 'researcher'
+                                    ? 'Nhà nghiên cứu'
+                                    : _roleBadge,
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+                const SizedBox(height: ClaraTokens.spaceMd),
+                ClaraInput(label: 'Tên hiển thị', controller: _displayName),
+                const SizedBox(height: ClaraTokens.spaceSm),
+                ClaraInput(
+                    label: 'Giới thiệu (không chia sẻ thông tin y tế cá nhân)',
+                    controller: _bio,
+                    maxLines: 3),
+                if (_error != null) ...[
+                  const SizedBox(height: ClaraTokens.spaceSm),
+                  Text(_error!,
+                      style: TextStyle(color: theme.colorScheme.error)),
+                ],
+                const SizedBox(height: ClaraTokens.spaceMd),
+                ClaraButton.primary(
+                  label: 'Lưu hồ sơ',
+                  icon: Icons.save_outlined,
+                  loading: _saving,
+                  onPressed: _saving ? null : _save,
+                ),
+              ],
+            ),
     );
   }
 }
