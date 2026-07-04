@@ -24,6 +24,22 @@ from clara_ml.agents.careguard import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_legacy_in_memory_merge(monkeypatch):
+    """Isolate the legacy in-memory DrugBank merge path for this whole module.
+
+    These tests validate the original ``careguard_drugbank_enabled`` in-memory
+    merge. The newer memory-safe ``careguard_drugbank_sqlite_enabled`` layer
+    defaults ON and would otherwise find the real local shards and append a
+    ``+drugbank-*`` version suffix / extra alerts, breaking the byte-identical
+    curated-only assertions here. Pin the SQLite layer OFF and reset its cached
+    store so this module exercises only the legacy path it was written for.
+    """
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", False)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE", None)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE_READY", False)
+
+
 @pytest.fixture
 def reset_drugbank_cache():
     careguard._DRUGBANK_DDI_CACHE_MTIME_NS = None

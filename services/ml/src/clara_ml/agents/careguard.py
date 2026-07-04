@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from clara_ml.agents.careguard_ddi_store import DrugBankDdiStore
 from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
 

@@ -80,34 +80,37 @@ def _init_tracing() -> None:
         app.state.tracer = None
 
 
+
 @app.on_event("startup")
 def _warm_ddi_index() -> None:
-    """Pre-build the CareGuard DDI pair index in a background thread at startup.
+    """Pre-build the memory-safe DrugBank SQLite DDI index at startup.
 
-    With the DrugBank layer enabled the resolved rule set is ~1.4M rules, so the
-    first analysis that builds the pair index pays a one-time ~60s cost. Warming
-    it at boot (off the request path) means the first real DDI request is fast.
-    Runs only when both the DrugBank layer and the pair index are enabled; any
-    failure is swallowed so a warm-up problem never blocks startup or requests.
+    The DrugBank shard set compiles into an on-disk SQLite index (~248 MB) whose
+    first build costs a one-time ~60s. Building it in a background thread at boot
+    (off the request path) means the first real DDI request is fast; the build is
+    idempotent, so a subsequent boot with a matching-version DB returns instantly.
+    Runs only when the SQLite DrugBank layer is enabled; any failure is swallowed
+    so a warm-up problem never blocks startup or requests (CareGuard then simply
+    builds lazily / degrades to curated-only).
     """
 
-    if not (settings.careguard_drugbank_enabled and settings.careguard_ddi_index_enabled):
+    if not settings.careguard_drugbank_sqlite_enabled:
         return
 
     def _warm() -> None:
         try:
-            from clara_ml.agents.careguard import (
-                _resolve_ddi_pair_index,
-                _resolve_ddi_rules,
-            )
+            from clara_ml.agents.careguard import _get_drugbank_store
 
-            rules, version = _resolve_ddi_rules()
-            _resolve_ddi_pair_index(rules, version)
-            logger.info(
-                "CareGuard DDI pair index warmed at startup: %d rules (version=%s)",
-                len(rules),
-                version,
-            )
+            store = _get_drugbank_store()
+            if store is not None:
+                logger.info(
+                    "CareGuard DrugBank SQLite index warmed at startup (version=%s)",
+                    store.version,
+                )
+            else:
+                logger.info(
+                    "CareGuard DrugBank SQLite index unavailable; curated-only path active"
+                )
         except Exception:  # noqa: BLE001 - warm-up must never crash the worker
             logger.exception("CareGuard DDI index warm-up failed; will build lazily")
 
