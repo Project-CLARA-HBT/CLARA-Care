@@ -139,6 +139,10 @@ Database migrations run via Alembic from `services/api` (`alembic upgrade head`)
 - **Navigation** (`lib/navigation.config.ts`): roles `normal`/`researcher`/`doctor`/`admin`, all homing to `/chat` post-login. Nav routes: `/chat`, `/dashboard`, `/phr`, `/selfmed` (all roles), `/careguard` (`normal`/`doctor`/`admin`), `/council` and `/scribe` (`doctor`/`admin`), `/admin/overview`, `/admin/knowledge-sources`, `/admin/answer-flow`, `/admin/observability` (admin-only), and `/huong-dan` (help). Research is unified into Chat — the legacy `/research` route (and its sub-routes) is a server redirect to `/chat`.
 - **Surfaces**: Chat (routed ML chat + flow/policy context; `fast` runs the tier1 chat proxy while `deep`/`deep_beta` run tier2 research jobs with a realtime flow timeline and knowledge sources), SelfMed/CareGuard (cabinet + DDI + VN dictionary admin), Council (intake/consult/result), Scribe (SOAP), PHR (personal health record), and Workspace (folders/channels/share/export/notes).
 
+### CLARA_Social (health community platform, `SOCIAL_PLATFORM_ENABLED`, default OFF)
+
+An additive, flag-gated peer-support layer (spec `.kiro/specs/clara-health-social`). API router `/api/v1/social` (404 when the flag is off) covers consent (`social_participation_v1`), profiles (PHR-isolated), curated communities + join/leave, posts/comments/reactions, a recency feed, and reports + admin moderation queue. Every user-authored body is screened by ML `POST /v1/social/moderate` (reuses the legal hard-guard + emergency fast-path) BEFORE publish, failing closed. Web surface `apps/web/app/community`; mobile `SocialSurfaceV3` (flag `MOBILE_SOCIAL_ENABLED`). No PHR/medical-record data is reachable via any social route; moderation audit is PII-free.
+
 ### CLARA_Mobile (`apps/mobile`)
 
 Flutter client with core screens (login, dashboard, research, careguard, council) wired to the API via `ApiClient`. Not yet at full parity with web.
