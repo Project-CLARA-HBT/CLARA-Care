@@ -246,13 +246,11 @@ export default function ClaraKp3Landing() {
               </div>
 
               <h1
-                className="font-black leading-[1.05] tracking-tight text-slate-900 min-[640px]:leading-[0.98] dark:text-slate-100"
-                style={{ fontSize: "clamp(1.9rem, 5.2vw, 4.25rem)" }}
+                className="font-black leading-[1.08] tracking-tight text-slate-900 [text-wrap:balance] min-[640px]:leading-[0.98] dark:text-slate-100"
+                style={{ fontSize: "clamp(1.4rem, 6.4vw, 4.25rem)" }}
               >
-                Hỏi đúng trọng tâm.
-                <br />
-                <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>
-                <br />
+                Hỏi đúng trọng tâm.{" "}
+                <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>{" "}
                 Quyết định tự tin.
               </h1>
 
