@@ -54,12 +54,11 @@ export function middleware(request: NextRequest) {
   );
 
   if (isPublicPath(pathname)) {
-    if (hasSession && pathname === "/") {
-      const target = resolvePostLoginPath({
-        nextPath: request.nextUrl.searchParams.get("next")
-      });
-      return NextResponse.redirect(new URL(target, request.url));
-    }
+    // The landing page ("/") is ALWAYS shown, for both logged-out and
+    // logged-in visitors. We intentionally do NOT redirect an authenticated
+    // session away from "/" into the app: the marketing/landing surface should
+    // remain reachable at all times (the in-page CTAs route to the app). Only
+    // the auth forms bounce an already-authenticated user forward.
     if (hasSession && (pathname === "/login" || pathname === "/register")) {
       const target = resolvePostLoginPath({
         nextPath: request.nextUrl.searchParams.get("next")

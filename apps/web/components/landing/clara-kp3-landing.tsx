@@ -245,7 +245,10 @@ export default function ClaraKp3Landing() {
                 AI lâm sàng có trích dẫn nguồn
               </div>
 
-              <h1 className="max-w-[18ch] text-[2.6rem] font-black leading-[0.95] tracking-tight text-slate-900 min-[640px]:text-[3.6rem] min-[1280px]:text-[4.5rem] dark:text-slate-100">
+              <h1
+                className="max-w-[18ch] font-black leading-[1.02] tracking-tight text-slate-900 min-[640px]:leading-[0.95] dark:text-slate-100"
+                style={{ fontSize: "clamp(2rem, 7vw, 4.5rem)" }}
+              >
                 Hỏi đúng trọng tâm.
                 <br />
                 <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>
@@ -253,21 +256,21 @@ export default function ClaraKp3Landing() {
                 Quyết định tự tin.
               </h1>
 
-              <p className="max-w-[56ch] text-base font-medium leading-relaxed text-slate-600 min-[1280px]:text-lg dark:text-slate-300">
+              <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-slate-600 min-[640px]:text-base min-[1280px]:text-lg dark:text-slate-300">
                 CLARA là trợ lý y khoa cho <strong className="font-black text-slate-800 dark:text-slate-200">bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: tra cứu nhanh, mọi kết luận <strong className="font-black text-slate-800 dark:text-slate-200">truy ngược được nguồn</strong> và <strong className="font-black text-slate-800 dark:text-slate-200">kiểm chứng từng luận điểm</strong> — hỗ trợ quyết định an toàn hơn, không phải chatbot trả lời chung chung.
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/chat"
-                  className="group inline-flex items-center gap-2 rounded-xl bg-slate-900 px-8 py-4 text-base font-black text-white transition-all hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
+                  className="group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-4 text-base font-black text-white transition-all hover:bg-slate-800 min-[480px]:flex-none min-[480px]:px-8 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
                 >
                   Dùng thử CLARA Chat
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
                 </Link>
                 <a
                   href="#engine"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-8 py-4 text-base font-black text-slate-900 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-4 text-base font-black text-slate-900 transition-colors hover:bg-slate-100 min-[480px]:flex-none min-[480px]:px-8 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
                   <span className="material-symbols-outlined text-base">play_circle</span>
                   Xem cách hoạt động
@@ -425,7 +428,10 @@ export default function ClaraKp3Landing() {
 
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="engine">
           <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-black tracking-tight text-slate-900 min-[1024px]:text-5xl dark:text-slate-100">
+            <h2
+              className="mb-4 font-black tracking-tight text-slate-900 dark:text-slate-100"
+              style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
+            >
               CLARA xử lý một câu hỏi y khoa như thế nào?
             </h2>
             <p className="mx-auto max-w-3xl text-base font-medium text-slate-600 dark:text-slate-300">
@@ -500,7 +506,10 @@ export default function ClaraKp3Landing() {
               <div className="inline-flex rounded-full bg-slate-900 px-4 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white dark:bg-cyan-400 dark:text-slate-950">
                 Phân hệ hệ thống
               </div>
-              <h2 className="text-4xl font-black leading-tight tracking-tight text-slate-900 min-[1024px]:text-5xl dark:text-slate-100">
+              <h2
+                className="font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
+                style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
+              >
                 CLARA Chat
                 <br />
                 <span className="text-cyan-600 dark:text-cyan-300">Core Engine</span>
@@ -566,7 +575,10 @@ export default function ClaraKp3Landing() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="workflow">
-          <h2 className="mb-16 text-center text-4xl font-black leading-tight tracking-tight text-slate-900 min-[1024px]:text-5xl dark:text-slate-100">
+          <h2
+            className="mb-16 text-center font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
+            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
+          >
             Quy trình 3 bước từ
             <br />
             <span className="text-cyan-600 dark:text-cyan-300">câu hỏi đến quyết định có căn cứ</span>
@@ -615,7 +627,10 @@ export default function ClaraKp3Landing() {
           <div className="cyber-grid absolute inset-0 opacity-10" />
           <div className="relative z-10 mx-auto max-w-7xl px-4 min-[1024px]:px-8">
             <div className="mb-14 flex flex-col gap-6 min-[1024px]:flex-row min-[1024px]:items-end min-[1024px]:justify-between">
-              <h2 className="text-4xl font-black leading-tight tracking-tight min-[1024px]:text-5xl">
+              <h2
+                className="font-black leading-tight tracking-tight"
+                style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
+              >
                 Nguyên tắc thiết kế hệ thống
                 <br />
                 <span className="text-cyan-300">y tế chuẩn mực</span>
@@ -663,7 +678,10 @@ export default function ClaraKp3Landing() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8">
-          <h2 className="mb-4 text-center text-4xl font-black tracking-tight text-slate-900 min-[1024px]:text-5xl dark:text-slate-100">
+          <h2
+            className="mb-4 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
+            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
+          >
             Kịch bản sử dụng thực tế
           </h2>
           <p className="mb-14 text-center text-base font-medium text-slate-600 dark:text-slate-300">
@@ -700,7 +718,10 @@ export default function ClaraKp3Landing() {
           </div>
           <div className="relative z-10 mx-auto max-w-3xl px-4 text-center min-[1024px]:px-8">
             <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-400">Thử ngay</p>
-            <h2 className="mb-4 text-3xl font-black leading-tight tracking-tight text-white min-[640px]:text-4xl">
+            <h2
+              className="mb-4 font-black leading-tight tracking-tight text-white"
+              style={{ fontSize: "clamp(1.7rem, 5vw, 2.6rem)" }}
+            >
               Sẵn sàng thử CLARA với câu hỏi y khoa của bạn?
             </h2>
             <p className="mb-8 text-base font-medium leading-relaxed text-slate-300">
@@ -726,7 +747,12 @@ export default function ClaraKp3Landing() {
         </section>
 
         <section className="mx-auto max-w-3xl px-4 py-20 min-[1024px]:px-8" id="faq">
-          <h2 className="mb-10 text-center text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">Hỏi đáp</h2>
+          <h2
+            className="mb-10 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
+            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
+          >
+            Hỏi đáp
+          </h2>
           <div className="space-y-4">
             {FAQS.map((faq) => (
               <details key={faq.q} className="glass-panel overflow-hidden rounded-2xl border border-slate-300/35 dark:border-slate-700/45">
