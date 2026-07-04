@@ -163,3 +163,27 @@ export async function reportContent(input: {
     });
   });
 }
+
+export type SocialReport = {
+  id: number;
+  target_type: "post" | "comment";
+  target_id: number;
+  reason: string;
+  status: string;
+  created_at: string;
+};
+
+// Admin-only: the open moderation queue.
+export async function listReports(): Promise<SocialReport[]> {
+  return guarded(async () => {
+    const res = await api.get<SocialReport[]>("/social/moderation/reports");
+    return Array.isArray(res.data) ? res.data : [];
+  });
+}
+
+// Admin-only: resolve a report — "dismiss" keeps content, "remove" soft-deletes it.
+export async function actOnReport(reportId: number, action: "dismiss" | "remove"): Promise<void> {
+  await guarded(async () => {
+    await api.post(`/social/moderation/reports/${reportId}/action`, { action });
+  });
+}

@@ -225,6 +225,18 @@ const NAV_ITEMS: NavigationItem[] = [
     },
   },
   {
+    href: "/admin/community-moderation",
+    label: "Kiểm duyệt cộng đồng",
+    icon: "gavel",
+    desc: "Xử lý báo cáo nội dung cộng đồng",
+    group: "admin",
+    roles: ["admin"],
+    page: {
+      title: "Kiểm duyệt cộng đồng",
+      subtitle: "Xem xét và xử lý các báo cáo nội dung từ cộng đồng.",
+    },
+  },
+  {
     href: "/admin/analytics",
     label: "Phân tích sản phẩm",
     icon: "insights",

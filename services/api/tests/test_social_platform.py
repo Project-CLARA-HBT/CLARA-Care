@@ -186,3 +186,65 @@ def test_blocked_body_not_persisted(social_on, monkeypatch) -> None:
         },
     )
     assert resp.status_code == 422  # blocked by moderation, not persisted
+
+
+# --------------------------------------------------------------------------
+# Moderation queue: admin can dismiss/remove reported content (RBAC + audit)
+# --------------------------------------------------------------------------
+def test_report_then_admin_removes_content(social_on) -> None:
+    community_id = _seed_community()
+    # A member posts, another member reports it.
+    author = _auth("author@normal.clara")
+    client.post("/api/v1/social/consent", headers=author)
+    client.post(f"/api/v1/social/communities/{community_id}/join", headers=author)
+    post = client.post(
+        "/api/v1/social/posts",
+        headers=author,
+        json={
+            "community_id": community_id,
+            "title": "B\u00e0i vi\u1ebft b\u1ecb b\u00e1o c\u00e1o",
+            "body": "N\u1ed9i dung n\u00e0y s\u1ebd b\u1ecb b\u00e1o c\u00e1o.",
+        },
+    )
+    post_id = post.json()["id"]
+
+    reporter = _auth("reporter@normal.clara")
+    report = client.post(
+        "/api/v1/social/reports",
+        headers=reporter,
+        json={"target_type": "post", "target_id": post_id, "reason": "spam"},
+    )
+    assert report.status_code in (200, 201), report.text
+
+    # A non-admin may NOT see the moderation queue (RBAC).
+    denied = client.get("/api/v1/social/moderation/reports", headers=reporter)
+    assert denied.status_code == 403
+
+    # Admin sees the open report and removes the content.
+    settings = get_settings()
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": settings.auth_bootstrap_admin_email,
+            "password": settings.auth_bootstrap_admin_password,
+        },
+    )
+    assert admin_login.status_code == 200, admin_login.text
+    admin = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+    queue = client.get("/api/v1/social/moderation/reports", headers=admin)
+    assert queue.status_code == 200
+    open_reports = queue.json()
+    assert open_reports, "admin should see the open report"
+    report_id = open_reports[0]["id"]
+
+    action = client.post(
+        f"/api/v1/social/moderation/reports/{report_id}/action",
+        headers=admin,
+        json={"action": "remove"},
+    )
+    assert action.status_code == 200, action.text
+    assert action.json()["status"] == "resolved"
+
+    # The removed post no longer appears in the feed.
+    feed = client.get("/api/v1/social/feed", headers=author)
+    assert post_id not in [item["id"] for item in feed.json()]

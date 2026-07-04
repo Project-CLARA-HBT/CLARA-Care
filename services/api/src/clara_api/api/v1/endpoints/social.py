@@ -280,6 +280,12 @@ class ReportRequest(BaseModel):
     reason: str = Field(default="", max_length=280)
 
 
+class ModerationActionRequest(BaseModel):
+    # "dismiss" keeps the content and closes the report; "remove" soft-deletes
+    # the target (post/comment) and closes the report.
+    action: str = Field(description="dismiss | remove")
+
+
 # --------------------------------------------------------------------------
 # Profile helpers
 # --------------------------------------------------------------------------
@@ -771,10 +777,11 @@ def create_report(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Loại báo cáo không hợp lệ")
     db.add(
         SocialReport(
-            reporter_ref=_opaque_ref(user.id),
+            reporter_id=user.id,
             target_type=target_type,
             target_id=payload.target_id,
-            reason=payload.reason.strip()[:280],
+            reason=payload.reason.strip()[:32] or "other",
+            detail=payload.reason.strip()[:500],
         )
     )
     db.commit()
@@ -812,3 +819,57 @@ def list_reports(
         }
         for r in reports
     ]
+
+
+@router.post("/moderation/reports/{report_id}/action", response_model=dict[str, Any])
+def act_on_report(
+    report_id: int,
+    payload: ModerationActionRequest,
+    token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Resolve an open report (admin only).
+
+    ``dismiss`` closes the report leaving content intact. ``remove`` soft-deletes
+    the reported post/comment (sets ``is_deleted``/``moderation_status``) so it
+    leaves feeds immediately, then closes the report. Every action writes a
+    PII-free moderation-audit row (opaque actor ref, reason code only).
+    """
+    _require_social_enabled()
+    admin = _require_user(token, db)
+    action = payload.action.strip().lower()
+    if action not in {"dismiss", "remove"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="H\u00e0nh \u0111\u1ed9ng kh\u00f4ng h\u1ee3p l\u1ec7"
+        )
+    report = db.get(SocialReport, report_id)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kh\u00f4ng t\u00ecm th\u1ea5y b\u00e1o c\u00e1o")
+
+    if action == "remove":
+        if report.target_type == "post":
+            post = db.get(SocialPost, report.target_id)
+            if post is not None:
+                post.is_deleted = True
+                post.moderation_status = "removed"
+                db.add(post)
+        elif report.target_type == "comment":
+            comment = db.get(SocialComment, report.target_id)
+            if comment is not None:
+                comment.is_deleted = True
+                comment.moderation_status = "removed"
+                db.add(comment)
+
+    report.status = "resolved"
+    report.resolved_at = datetime.now(UTC)
+    db.add(report)
+    _record_moderation_audit(
+        db,
+        user_id=admin.id,
+        action=f"report_{action}",
+        target_type=report.target_type,
+        target_id=report.target_id,
+        reason=report.reason or "",
+    )
+    db.commit()
+    return {"id": report.id, "status": report.status, "action": action}
