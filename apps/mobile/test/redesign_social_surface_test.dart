@@ -70,5 +70,52 @@ void main() {
       expect(find.textContaining('Kinh nghiệm kiểm soát đường huyết'),
           findsOneWidget);
     });
+
+    testWidgets('tapping a post opens the detail sheet with its comments',
+        (tester) async {
+      final api = FakeApiClient();
+      api.socialConsent = {'granted': true};
+      api.socialCommunities = [
+        {
+          'id': 1,
+          'slug': 'dtd',
+          'name': 'Đái tháo đường',
+          'description': '',
+          'member_count': 3,
+          'joined': true
+        },
+      ];
+      api.socialFeed = [
+        {
+          'id': 10,
+          'community_id': 1,
+          'author_handle': 'clara7',
+          'title': 'Kinh nghiệm kiểm soát đường huyết',
+          'body': 'Chia sẻ của mình sau 6 tháng.',
+          'created_at': '2026-07-04T06:00:00',
+          'comment_count': 1,
+          'reaction_count': 4,
+        },
+      ];
+      api.socialComments = [
+        {
+          'id': 99,
+          'post_id': 10,
+          'author_handle': 'clara8',
+          'body': 'Cảm ơn bạn đã chia sẻ kinh nghiệm.',
+          'created_at': '2026-07-04T07:00:00',
+        },
+      ];
+      await tester.pumpWidget(_host(await build(api)));
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.textContaining('Kinh nghiệm kiểm soát đường huyết'));
+      await tester.pumpAndSettle();
+
+      // The detail sheet loads and renders the post's comment.
+      expect(find.textContaining('Cảm ơn bạn đã chia sẻ'), findsOneWidget);
+      expect(api.wasCalled('getSocialComments'), isTrue);
+    });
   });
 }

@@ -293,6 +293,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
                   child: _PostCard(
                     post: post,
                     onReact: () => _react(post),
+                    onOpen: () => _openPost(post),
                   ),
                 )),
         ],
@@ -318,6 +319,25 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
     }
+  }
+
+  Future<void> _openPost(Map<String, dynamic> post) async {
+    final token = _token;
+    if (token == null) return;
+    final id = post['id'];
+    if (id is! int) return;
+    if (!mounted) return;
+    final mutated = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PostDetailSheet(
+        apiClient: widget.apiClient,
+        accessToken: token,
+        post: post,
+        canParticipate: _consentGranted,
+      ),
+    );
+    if (mutated == true) await _load();
   }
 
   Future<void> _react(Map<String, dynamic> post) async {
@@ -425,10 +445,15 @@ class _CommunityChip extends StatelessWidget {
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post, required this.onReact});
+  const _PostCard({
+    required this.post,
+    required this.onReact,
+    required this.onOpen,
+  });
 
   final Map<String, dynamic> post;
   final VoidCallback onReact;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -437,8 +462,9 @@ class _PostCard extends StatelessWidget {
     final body = (post['body'] ?? '').toString();
     final author = (post['author_handle'] ?? 'ẩn danh').toString();
     final comments = post['comment_count'] ?? 0;
-    return ClaraCard.static_(
+    return ClaraCard(
       semanticLabel: title,
+      onTap: onOpen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -637,6 +663,255 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               onPressed: _submitting ? null : _submit,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A modal sheet showing a post in full with its comments, a supportive
+/// reaction, and (for participating members) a moderated comment composer.
+/// Pops `true` when the user added a comment/reaction so the feed can refresh.
+class _PostDetailSheet extends StatefulWidget {
+  const _PostDetailSheet({
+    required this.apiClient,
+    required this.accessToken,
+    required this.post,
+    required this.canParticipate,
+  });
+
+  final ApiClient apiClient;
+  final String accessToken;
+  final Map<String, dynamic> post;
+  final bool canParticipate;
+
+  @override
+  State<_PostDetailSheet> createState() => _PostDetailSheetState();
+}
+
+class _PostDetailSheetState extends State<_PostDetailSheet> {
+  final _comment = TextEditingController();
+  List<Map<String, dynamic>> _comments = const [];
+  bool _loading = true;
+  bool _submitting = false;
+  bool _mutated = false;
+  String? _error;
+  String? _commentError;
+
+  int get _postId => widget.post['id'] as int;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final comments = await widget.apiClient.getSocialComments(
+        accessToken: widget.accessToken,
+        postId: _postId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _comments = comments;
+        _loading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _submitComment() async {
+    final body = _comment.text.trim();
+    if (body.isEmpty) return;
+    setState(() {
+      _submitting = true;
+      _commentError = null;
+    });
+    try {
+      await widget.apiClient.addSocialComment(
+        accessToken: widget.accessToken,
+        postId: _postId,
+        body: body,
+      );
+      _comment.clear();
+      _mutated = true;
+      await _loadComments();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      // 422 ⇒ moderation block (prescribing/diagnosis/dosage or emergency).
+      setState(() {
+        _commentError = error.statusCode == 422
+            ? 'Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn '
+                'đoán/liều dùng) hoặc có dấu hiệu khẩn cấp.'
+            : error.message;
+      });
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _react() async {
+    try {
+      await widget.apiClient.addSocialReaction(
+        accessToken: widget.accessToken,
+        postId: _postId,
+        kind: 'helpful',
+      );
+      _mutated = true;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi phản hồi hữu ích.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final title = (widget.post['title'] ?? '').toString();
+    final body = (widget.post['body'] ?? '').toString();
+    final author = (widget.post['author_handle'] ?? 'ẩn danh').toString();
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {},
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: EdgeInsets.fromLTRB(ClaraTokens.spaceMd, ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd, viewInsets),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('@$author',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(_mutated),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Đóng',
+                  ),
+                ],
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    Text(title,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    Text(body, style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: widget.canParticipate ? _react : null,
+                        icon: const Icon(Icons.volunteer_activism_outlined,
+                            size: 18),
+                        label: const Text('Hữu ích'),
+                      ),
+                    ),
+                    const Divider(),
+                    Text('Bình luận',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.all(ClaraTokens.spaceMd),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_error != null)
+                      Text(_error!,
+                          style: TextStyle(color: theme.colorScheme.error))
+                    else if (_comments.isEmpty)
+                      Text('Chưa có bình luận. Hãy là người đầu tiên.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant))
+                    else
+                      ..._comments.map((c) => Padding(
+                            padding: const EdgeInsets.only(
+                                bottom: ClaraTokens.spaceSm),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    '@${(c['author_handle'] ?? '').toString()}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant)),
+                                Text((c['body'] ?? '').toString(),
+                                    style: theme.textTheme.bodyMedium),
+                              ],
+                            ),
+                          )),
+                  ],
+                ),
+              ),
+              if (widget.canParticipate) ...[
+                if (_commentError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(_commentError!,
+                        style: TextStyle(
+                            color: theme.colorScheme.error, fontSize: 12)),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClaraInput(
+                        label: 'Viết bình luận…',
+                        controller: _comment,
+                        maxLines: 2,
+                      ),
+                    ),
+                    const SizedBox(width: ClaraTokens.spaceSm),
+                    IconButton.filled(
+                      onPressed: _submitting ? null : _submitComment,
+                      icon: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send),
+                    ),
+                  ],
+                ),
+              ] else
+                Text('Tham gia cộng đồng để bình luận.',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
         ),
       ),
     );

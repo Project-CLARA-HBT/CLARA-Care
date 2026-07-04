@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import PostDetailDialog from "@/components/community/post-detail-dialog";
 import {
   SocialCommunity,
   SocialPost,
@@ -34,6 +35,7 @@ export default function CommunityPage() {
   const [composeBody, setComposeBody] = useState("");
   const [composeError, setComposeError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activePost, setActivePost] = useState<SocialPost | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,7 +101,7 @@ export default function CommunityPage() {
     setSubmitting(true);
     setComposeError(null);
     try {
-      await createPost({ community_id: composeCommunity, title: composeTitle, body: composeBody });
+      await createPost({ communityId: composeCommunity, title: composeTitle, body: composeBody });
       setComposeOpen(false);
       await load();
     } catch (err) {
@@ -210,14 +212,26 @@ export default function CommunityPage() {
               ) : (
                 <div className="space-y-3">
                   {feed.map((post) => (
-                    <article key={post.id} className="rounded-2xl border border-[var(--border-subtle)] p-4">
+                    <article
+                      key={post.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActivePost(post)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActivePost(post);
+                        }
+                      }}
+                      className="cursor-pointer rounded-2xl border border-[var(--border-subtle)] p-4 transition-colors hover:border-[var(--accent)]"
+                    >
                       <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                         <span className="font-medium text-[var(--text-primary)]">@{post.author_handle}</span>
                         <span>·</span>
                         <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
                       </div>
                       <h3 className="mt-2 font-semibold text-[var(--text-primary)]">{post.title}</h3>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{post.body}</p>
+                      <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{post.body}</p>
                       <div className="mt-3 flex gap-4 text-xs text-[var(--text-secondary)]">
                         <span>{post.comment_count} bình luận</span>
                         <span>{post.reaction_count} phản hồi tích cực</span>
@@ -290,6 +304,14 @@ export default function CommunityPage() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {activePost ? (
+        <PostDetailDialog
+          post={activePost}
+          canParticipate={consentGranted}
+          onClose={() => setActivePost(null)}
+        />
       ) : null}
     </PageShell>
   );

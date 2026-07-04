@@ -577,6 +577,10 @@ class FakeApiClient extends ApiClient {
     return socialComments;
   }
 
+  /// When set, `addSocialComment` throws this instead of succeeding (used to
+  /// exercise the moderation-block path).
+  Object? socialCommentError;
+
   @override
   Future<Map<String, dynamic>> addSocialComment({
     required String accessToken,
@@ -586,6 +590,7 @@ class FakeApiClient extends ApiClient {
     invocations.add(FakeApiInvocation(
         'addSocialComment', {'postId': postId, 'body': body},
         accessToken: accessToken));
+    if (socialCommentError != null) throw socialCommentError!;
     return <String, dynamic>{'id': 1, 'body': body};
   }
 
