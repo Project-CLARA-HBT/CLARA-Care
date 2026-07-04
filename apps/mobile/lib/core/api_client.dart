@@ -576,6 +576,139 @@ class ApiClient {
   }
 
   // ---------------------------------------------------------------------------
+  // Social platform ops (spec: clara-health-social). All routes 404 when the
+  // server-side `social_platform_enabled` flag is off, so callers must treat a
+  // NotFound as "feature unavailable" and hide the surface (fail-closed).
+  // ---------------------------------------------------------------------------
+
+  /// Returns the current user's social-participation consent status
+  /// (`GET /api/v1/social/consent`) → `{ consent_type, granted }`.
+  Future<Map<String, dynamic>> getSocialConsent({required String accessToken}) {
+    return _get('/api/v1/social/consent', accessToken: accessToken);
+  }
+
+  /// Grants social-participation consent (`POST /api/v1/social/consent`).
+  Future<Map<String, dynamic>> grantSocialConsent(
+      {required String accessToken}) {
+    return _post('/api/v1/social/consent',
+        body: const {}, accessToken: accessToken);
+  }
+
+  /// Lists curated communities (`GET /api/v1/social/communities`).
+  Future<List<Map<String, dynamic>>> listSocialCommunities({
+    required String accessToken,
+  }) async {
+    final res =
+        await _get('/api/v1/social/communities', accessToken: accessToken);
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Joins a community (`POST /api/v1/social/communities/{id}/join`).
+  Future<Map<String, dynamic>> joinSocialCommunity({
+    required String accessToken,
+    required int communityId,
+  }) {
+    return _post(
+      '/api/v1/social/communities/$communityId/join',
+      body: const {},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Returns the recency-ranked feed (`GET /api/v1/social/feed`).
+  Future<List<Map<String, dynamic>>> getSocialFeed({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final res = await _get(
+      '/api/v1/social/feed?limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Creates a post (`POST /api/v1/social/posts`). The server screens the body
+  /// through the moderation guard before persisting (422 when blocked).
+  Future<Map<String, dynamic>> createSocialPost({
+    required String accessToken,
+    required int communityId,
+    required String title,
+    required String body,
+  }) {
+    return _post(
+      '/api/v1/social/posts',
+      body: <String, dynamic>{
+        'community_id': communityId,
+        'title': title,
+        'body': body,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  /// Returns a post's comments (`GET /api/v1/social/posts/{id}/comments`).
+  Future<List<Map<String, dynamic>>> getSocialComments({
+    required String accessToken,
+    required int postId,
+  }) async {
+    final res = await _get(
+      '/api/v1/social/posts/$postId/comments',
+      accessToken: accessToken,
+    );
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Adds a comment (`POST /api/v1/social/posts/{id}/comments`), moderated.
+  Future<Map<String, dynamic>> addSocialComment({
+    required String accessToken,
+    required int postId,
+    required String body,
+  }) {
+    return _post(
+      '/api/v1/social/posts/$postId/comments',
+      body: <String, dynamic>{'body': body},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Adds a supportive reaction (`POST /api/v1/social/posts/{id}/reactions`).
+  Future<Map<String, dynamic>> addSocialReaction({
+    required String accessToken,
+    required int postId,
+    required String kind,
+  }) {
+    return _post(
+      '/api/v1/social/posts/$postId/reactions',
+      body: <String, dynamic>{'kind': kind},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Reports a post/comment (`POST /api/v1/social/reports`).
+  Future<Map<String, dynamic>> reportSocialContent({
+    required String accessToken,
+    required String targetType,
+    required int targetId,
+    String reason = '',
+  }) {
+    return _post(
+      '/api/v1/social/reports',
+      body: <String, dynamic>{
+        'target_type': targetType,
+        'target_id': targetId,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  static List<Map<String, dynamic>> _asMapList(Object? raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+  }
+
+  // ---------------------------------------------------------------------------
   // Self-med cabinet ops (clara-mobile-feature-parity Req 3.1, 3.2).
   //
   // The web "self-med" surface (`apps/web/lib/selfmed.ts`) is NOT backed by a

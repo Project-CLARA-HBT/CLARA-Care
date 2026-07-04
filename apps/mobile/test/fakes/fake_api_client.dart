@@ -489,4 +489,130 @@ class FakeApiClient extends ApiClient {
     return _dispatch('revokeScribeConsent', {'sessionId': sessionId},
         accessToken: accessToken);
   }
+
+  // --- Social platform -------------------------------------------------------
+  // The list-returning social methods can't route through the Map-typed
+  // `_dispatch`, so they use dedicated in-memory stub fields.
+
+  Map<String, dynamic> socialConsent = <String, dynamic>{'granted': false};
+  List<Map<String, dynamic>> socialCommunities = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> socialFeed = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> socialComments = <Map<String, dynamic>>[];
+  Object? socialError;
+
+  @override
+  Future<Map<String, dynamic>> getSocialConsent(
+      {required String accessToken}) async {
+    invocations.add(FakeApiInvocation('getSocialConsent', const {},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialConsent;
+  }
+
+  @override
+  Future<Map<String, dynamic>> grantSocialConsent(
+      {required String accessToken}) async {
+    invocations.add(FakeApiInvocation('grantSocialConsent', const {},
+        accessToken: accessToken));
+    socialConsent = <String, dynamic>{'granted': true};
+    return socialConsent;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listSocialCommunities(
+      {required String accessToken}) async {
+    invocations.add(FakeApiInvocation('listSocialCommunities', const {},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialCommunities;
+  }
+
+  @override
+  Future<Map<String, dynamic>> joinSocialCommunity({
+    required String accessToken,
+    required int communityId,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'joinSocialCommunity', {'communityId': communityId},
+        accessToken: accessToken));
+    return <String, dynamic>{'joined': true};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getSocialFeed({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'getSocialFeed', {'limit': limit, 'offset': offset},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialFeed;
+  }
+
+  @override
+  Future<Map<String, dynamic>> createSocialPost({
+    required String accessToken,
+    required int communityId,
+    required String title,
+    required String body,
+  }) async {
+    invocations.add(FakeApiInvocation(
+      'createSocialPost',
+      {'communityId': communityId, 'title': title, 'body': body},
+      accessToken: accessToken,
+    ));
+    if (socialError != null) throw socialError!;
+    return <String, dynamic>{'id': 1, 'title': title, 'body': body};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getSocialComments({
+    required String accessToken,
+    required int postId,
+  }) async {
+    invocations.add(FakeApiInvocation('getSocialComments', {'postId': postId},
+        accessToken: accessToken));
+    return socialComments;
+  }
+
+  @override
+  Future<Map<String, dynamic>> addSocialComment({
+    required String accessToken,
+    required int postId,
+    required String body,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'addSocialComment', {'postId': postId, 'body': body},
+        accessToken: accessToken));
+    return <String, dynamic>{'id': 1, 'body': body};
+  }
+
+  @override
+  Future<Map<String, dynamic>> addSocialReaction({
+    required String accessToken,
+    required int postId,
+    required String kind,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'addSocialReaction', {'postId': postId, 'kind': kind},
+        accessToken: accessToken));
+    return <String, dynamic>{'ok': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> reportSocialContent({
+    required String accessToken,
+    required String targetType,
+    required int targetId,
+    String reason = '',
+  }) async {
+    invocations.add(FakeApiInvocation(
+      'reportSocialContent',
+      {'targetType': targetType, 'targetId': targetId, 'reason': reason},
+      accessToken: accessToken,
+    ));
+    return <String, dynamic>{'reported': true};
+  }
 }

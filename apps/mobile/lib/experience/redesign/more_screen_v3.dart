@@ -26,6 +26,7 @@ import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import 'council_surface_v3.dart';
 import 'scribe_surface_v3.dart';
+import 'social_surface_v3.dart';
 import '../language_controller.dart';
 import '../theme_controller.dart';
 import 'settings_screen_v3.dart';
@@ -76,6 +77,21 @@ class MoreScreenV3 extends StatelessWidget {
 
   List<_MoreEntry> _entries() {
     final entries = <_MoreEntry>[];
+
+    // Community (health social platform) — gated by the mobile social flag.
+    if (kMobileSocialEnabled) {
+      entries.add(
+        _MoreEntry(
+          icon: Icons.forum_outlined,
+          title: 'Cộng đồng',
+          subtitle: 'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
+          builder: (_) => SocialSurfaceV3(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+          ),
+        ),
+      );
+    }
 
     // AI Council (doctor/admin via server `council` flag).
     entries.add(

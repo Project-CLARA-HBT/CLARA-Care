@@ -167,6 +167,17 @@ const bool kMobileRedesignEnabled = bool.fromEnvironment(
   defaultValue: false,
 );
 
+/// Build-time gate for the CLARA Health Social community surface on mobile
+/// (spec: .kiro/specs/clara-health-social). Default OFF (fail-closed): when off,
+/// no social entry is shown and no social route is called, so the app is
+/// byte-for-byte the current experience. The server also gates every
+/// `/api/v1/social/*` route behind its own `SOCIAL_PLATFORM_ENABLED` master
+/// flag (404 when off), so this client gate never exposes a disabled backend.
+const bool kMobileSocialEnabled = bool.fromEnvironment(
+  'MOBILE_SOCIAL_ENABLED',
+  defaultValue: false,
+);
+
 /// The single build-time gate for the modern Experience_V2 mobile UI/UX
 /// (Requirements 1.1, 1.6).
 ///
