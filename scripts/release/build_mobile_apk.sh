@@ -31,6 +31,7 @@ echo "== build apk (redesign, base=$API_BASE) =="
   --dart-define=CHAT_MOBILE_ENABLED=true \
   --dart-define=COUNCIL_MOBILE_PARITY_ENABLED=true \
   --dart-define=CAREGUARD_MOBILE_CABINET_ENABLED=true \
+  --dart-define=MOBILE_SOCIAL_ENABLED=true \
   --dart-define=CLARA_API_BASE_URL="$API_BASE" 2>&1 | tail -40
 
 APK=build/app/outputs/flutter-apk/app-release.apk
