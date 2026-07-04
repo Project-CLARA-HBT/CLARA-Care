@@ -418,6 +418,31 @@ class Settings(BaseSettings):
         le=365,
     )
 
+    # CLARA Health Social platform (spec: .kiro/specs/clara-health-social).
+    # Master flag defaults OFF: when off the /api/v1/social router returns 404
+    # for every route and no social table is read/written, so baseline behavior
+    # is byte-identical. Sub-flags gate feed personalization and AI assistance
+    # independently; both are inert while the master flag is off.
+    social_platform_enabled: bool = Field(
+        default=False,
+        validation_alias="SOCIAL_PLATFORM_ENABLED",
+    )
+    social_feed_personalization_enabled: bool = Field(
+        default=False,
+        validation_alias="SOCIAL_FEED_PERSONALIZATION_ENABLED",
+    )
+    social_ai_assist_enabled: bool = Field(
+        default=False,
+        validation_alias="SOCIAL_AI_ASSIST_ENABLED",
+    )
+    # Per-user write rate limit (posts+comments) per rolling minute.
+    social_write_rate_per_minute: int = Field(
+        default=8,
+        validation_alias="SOCIAL_WRITE_RATE_PER_MINUTE",
+        gt=0,
+        le=120,
+    )
+
     # --- Regulatory compliance (AI Law 134/2025 + PDPD 13/2023) feature flags ---
     # All additive + default OFF ⇒ byte-for-byte current behavior. When every
     # flag is off the compliance layer is inert (Requirement 8.1, 8.2).

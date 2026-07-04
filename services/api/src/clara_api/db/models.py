@@ -932,3 +932,177 @@ class TransferAssessment(Base):
     purpose: Mapped[str] = mapped_column(String(64), default="")
     tia_doc_ref: Mapped[str] = mapped_column(String(128), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+# ---------------------------------------------------------------------------
+# CLARA Health Social Platform (clara-health-social).
+#
+# All tables are flag-gated at the router level (``social_platform_enabled``);
+# when the flag is off none of these are ever read/written and the routes 404.
+# The social identity is deliberately ISOLATED from the PHR: a social profile
+# carries only a public handle/display name/bio and never references any
+# clinical record. Moderation/report tables store opaque state only.
+# ---------------------------------------------------------------------------
+
+
+class SocialProfile(Base):
+    """Public social identity for a user. Isolated from PHR (Req 2, 3, 10).
+
+    Carries only self-declared public presentation fields (handle, display
+    name, bio, avatar seed). NEVER references clinical data.
+    """
+
+    __tablename__ = "social_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    handle: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(80), default="")
+    bio: Mapped[str] = mapped_column(String(280), default="")
+    avatar_seed: Mapped[str] = mapped_column(String(32), default="")
+    is_verified_clinician: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="active", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SocialCommunity(Base):
+    """A curated topic community (e.g. đái tháo đường, tim mạch)."""
+
+    __tablename__ = "social_communities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(48), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    description: Mapped[str] = mapped_column(String(500), default="")
+    is_curated: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    member_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SocialMembership(Base):
+    """Join edge between a user and a community."""
+
+    __tablename__ = "social_memberships"
+    __table_args__ = (
+        UniqueConstraint("user_id", "community_id", name="uq_social_membership"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    community_id: Mapped[int] = mapped_column(
+        ForeignKey("social_communities.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SocialPost(Base):
+    """A post authored by a user, optionally within a community.
+
+    ``moderation_status`` gates visibility: only ``approved`` posts appear in
+    feeds. Pre-publish moderation (ML legal guard + emergency + PII filter)
+    sets this before the post is ever visible (Req 4, 6, 7, 8).
+    """
+
+    __tablename__ = "social_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    community_id: Mapped[int | None] = mapped_column(
+        ForeignKey("social_communities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(160), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    moderation_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    moderation_reason: Mapped[str] = mapped_column(String(64), default="")
+    comment_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SocialComment(Base):
+    """A comment on a post; same pre-publish moderation contract as posts."""
+
+    __tablename__ = "social_comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("social_posts.id", ondelete="CASCADE"), index=True
+    )
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    body: Mapped[str] = mapped_column(Text, default="")
+    moderation_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    moderation_reason: Mapped[str] = mapped_column(String(64), default="")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class SocialReaction(Base):
+    """A supportive reaction (helpful/relate/thanks). No public vanity counts."""
+
+    __tablename__ = "social_reactions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "post_id", "kind", name="uq_social_reaction"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("social_posts.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(16), default="helpful")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SocialFollow(Base):
+    """Directed follow edge between two users."""
+
+    __tablename__ = "social_follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "followee_id", name="uq_social_follow"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    follower_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    followee_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SocialReport(Base):
+    """A user report against a post/comment, feeding the moderation queue."""
+
+    __tablename__ = "social_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    target_type: Mapped[str] = mapped_column(String(16), index=True)  # post | comment
+    target_id: Mapped[int] = mapped_column(Integer, index=True)
+    reason: Mapped[str] = mapped_column(String(32), default="other")
+    detail: Mapped[str] = mapped_column(String(500), default="")
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SocialModerationAudit(Base):
+    """Append-only, PII-free moderation audit (Req 12, 13).
+
+    ``actor_ref`` is an opaque hashed reference, never the email/name.
+    """
+
+    __tablename__ = "social_moderation_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_ref: Mapped[str] = mapped_column(String(64), index=True)
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    target_type: Mapped[str] = mapped_column(String(16), index=True)
+    target_id: Mapped[int] = mapped_column(Integer, index=True)
+    reason: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

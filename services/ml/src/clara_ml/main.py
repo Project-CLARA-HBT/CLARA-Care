@@ -1097,6 +1097,38 @@ def research_tier2(payload: dict) -> dict:
         ) from exc
 
 
+@app.post("/v1/social/moderate")
+def social_moderate(payload: dict) -> dict:
+    """Screen a community post/comment body before it is published (social spec R4/R8).
+
+    Reuses the SAME safety primitives as chat/research so the community layer
+    cannot become a bypass around them:
+
+    * **Emergency fast-path** — acute-symptom text returns ``escalate`` +
+      ``emergency=true`` so the API surfaces the 115 escalation instead of
+      publishing it as ordinary content.
+    * **Legal hard-guard** — prescribing / diagnosis / personal-dosage intent
+      returns ``block`` (never published as visible content).
+    * Otherwise ``allow``.
+
+    Verdict contract: ``{action: allow|warn|block|escalate, reason, emergency}``.
+    Protected by the shared ``X-ML-Internal-Key`` gate (``/v1/`` prefix).
+    """
+    text = str(payload.get("text", "")).strip()
+    if not text:
+        return {"action": "block", "reason": "empty", "emergency": False}
+
+    route = router.route(text)
+    if route.emergency:
+        return {"action": "escalate", "reason": "emergency_symptoms", "emergency": True}
+
+    legal_guard_reason = _detect_legal_guard_violation(text, channel="social")
+    if legal_guard_reason:
+        return {"action": "block", "reason": legal_guard_reason, "emergency": False}
+
+    return {"action": "allow", "reason": "", "emergency": False}
+
+
 @app.post("/v1/careguard/analyze")
 def careguard_analyze(payload: dict) -> dict:
     return run_careguard_analyze(payload)
