@@ -229,9 +229,28 @@ async function bestEffortServerLogout(): Promise<void> {
   }
 }
 
+// Public routes never bounce to /login on an auth failure: the landing page and
+// other marketing/legal/help surfaces are meant to be viewable without a
+// session, so a background 401 (e.g. an optional summary fetch) must NOT eject
+// the visitor. Mirrors the middleware public-path set.
+const AUTH_FAILURE_REDIRECT_SKIP_PREFIXES = [
+  "/login",
+  "/register",
+  "/legal",
+  "/huong-dan",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/share/"
+];
+
 function redirectToLoginAfterAuthFailure(): void {
   if (typeof window === "undefined") return;
-  if (window.location.pathname.startsWith("/login")) return;
+  const path = window.location.pathname;
+  // The landing page ("/") is always allowed; other public surfaces are matched
+  // by prefix. Never redirect away from any of them.
+  if (path === "/") return;
+  if (AUTH_FAILURE_REDIRECT_SKIP_PREFIXES.some((p) => path.startsWith(p))) return;
   if (authFailureRedirectInProgress) return;
   authFailureRedirectInProgress = true;
   const next = `${window.location.pathname}${window.location.search}`;
