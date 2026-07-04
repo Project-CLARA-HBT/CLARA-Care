@@ -411,7 +411,13 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
           ],
         ),
       ),
-      const SizedBox(height: ClaraTokens.spaceLg),
+      const SizedBox(height: ClaraTokens.spaceMd),
+      ClaraButton.secondary(
+        label: 'Dùng ví dụ mẫu',
+        icon: Icons.lightbulb_outline,
+        onPressed: _isLoading ? null : _fillExampleCase,
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
       ClaraButton.primary(
         label: 'Tiếp tục',
         icon: Icons.arrow_forward,
@@ -419,6 +425,22 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
         onPressed: _isLoading ? null : _createCaseAndIntake,
       ),
     ];
+  }
+
+  /// Fills the intake form with a realistic sample case so first-time users can
+  /// see what a good submission looks like instead of facing empty fields.
+  /// Purely local; no network call, no analytics (the sample carries no PII).
+  void _fillExampleCase() {
+    _titleController.text = 'Đau ngực từng cơn kèm khó thở';
+    _transcriptController.text =
+        'Bệnh nhân nam 58 tuổi, đau ngực trái từng cơn 3 ngày nay, '
+        'lan lên vai trái, tăng khi gắng sức, kèm khó thở nhẹ và vã mồ hôi.';
+    _symptomsController.text =
+        'Đau ngực trái từng cơn\nKhó thở khi gắng sức\nVã mồ hôi';
+    _medicationsController.text = 'Amlodipine 5mg\nAspirin 81mg';
+    _historyController.text =
+        'Tăng huyết áp 5 năm, hút thuốc lá, tiền sử gia đình có bệnh mạch vành.';
+    if (mounted) setState(() {});
   }
 
   // --- Step 2: Chọn số chuyên khoa -------------------------------------------

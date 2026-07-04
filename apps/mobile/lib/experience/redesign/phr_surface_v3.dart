@@ -42,6 +42,7 @@ import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
+import 'phr_completeness.dart';
 
 /// The redesigned PHR ("Hồ sơ sức khỏe") surface. See file header.
 class PhrSurfaceV3 extends StatefulWidget {
@@ -89,7 +90,26 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
   void initState() {
     super.initState();
     getAnalyticsClient().captureScreenView(MobileAnalyticsEvents.phrViewed);
+    // Live-update the completeness meter as the user edits profile basics.
+    // Cheap (a fraction over ~12 fields) so an unthrottled rebuild is fine.
+    for (final c in [
+      _fullName,
+      _dob,
+      _gender,
+      _bloodType,
+      _height,
+      _weight,
+      _phone,
+      _emName,
+      _emPhone,
+    ]) {
+      c.addListener(_onProfileFieldChanged);
+    }
     _load();
+  }
+
+  void _onProfileFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -160,6 +180,26 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Computes the profile-completeness summary from the LIVE editor state
+  /// (controllers) merged with the record's entry lists, so the meter reflects
+  /// what the user currently sees/typed, not just the last-saved snapshot.
+  PhrCompleteness _computeCompleteness(PhrRecordModel record) {
+    return PhrCompleteness.compute(
+      fullName: _fullName.text,
+      dateOfBirth: _dob.text,
+      gender: _gender.text,
+      bloodType: _bloodType.text,
+      heightCm: _height.text,
+      weightKg: _weight.text,
+      phone: _phone.text,
+      emergencyContactName: _emName.text,
+      emergencyContactPhone: _emPhone.text,
+      allergyCount: record.allergies.length,
+      conditionCount: record.conditions.length,
+      medicationCount: record.medications.length,
+    );
   }
 
   void _captureProfile(PhrRecordModel r) {
@@ -286,6 +326,18 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
               horizontal: ClaraTokens.spaceMd,
             ),
             child: PhrDisclaimerBanner(text: _s.disclaimer),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ClaraTokens.spaceMd,
+            ),
+            child: PhrCompletenessCard(
+              completeness: _computeCompleteness(record),
+              title: 'Mức độ hoàn thiện hồ sơ',
+              completeMessage: 'Hồ sơ của bạn đã đầy đủ thông tin quan trọng.',
+              nextUpLabel: 'Nên bổ sung',
+            ),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
           if (_saveError != null)
