@@ -11,7 +11,6 @@ import type {
   Tier2Result,
 } from "@/components/research/lib/research-page-types";
 import type { ResearchTier2Result } from "@/lib/research";
-import type { ClinicalAnswerPackage } from "@/lib/chat";
 
 /**
  * Feature: clara-chat-redesign, Requirement 2.2 (typographic answer), 2.3/3.2
@@ -109,49 +108,6 @@ describe("AnswerRenderer", () => {
       "href",
       "https://pubmed.example/1",
     );
-  });
-
-  it("renders the five-part medical answer canvas for structured clinical answers", () => {
-    const clinicalAnswer: ClinicalAnswerPackage = {
-      schema_version: "1",
-      protocol: "medical-answer-harness",
-      triage: {
-        level: "urgent_review",
-        emergency: false,
-        policy_action: "Seek same-day assessment.",
-      },
-      claim_support: { status: "supported", evidence_ids: ["e1"] },
-      evidence_ledger: [
-        {
-          evidence_id: "e1",
-          title: "Guideline",
-          url: "https://example.test/guideline",
-        },
-      ],
-      uncertainty: { level: "moderate", reasons: ["No examination"] },
-      missing_information: [
-        { field: "temperature", why_it_matters: "changes urgency" },
-      ],
-      next_actions: [{ action: "Contact a clinician today", priority: "high" }],
-      provenance: { evidence_count: 1, fallback_used: false },
-    };
-    render(
-      <AnswerRenderer
-        result={{ ...makeTier1("Summary"), clinicalAnswer }}
-        uiLanguage="en"
-        role="normal"
-      />,
-    );
-    expect(
-      screen.getByRole("region", { name: /medical answer canvas/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Urgency")).toBeInTheDocument();
-    expect(screen.getByText("What to do next")).toBeInTheDocument();
-    expect(screen.getByText("Evidence behind this")).toBeInTheDocument();
-    expect(
-      screen.getByText("Uncertainty & missing context"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Medicine safety")).toBeInTheDocument();
   });
 
   it("surfaces research integrity metrics for deep results", () => {

@@ -57,11 +57,6 @@ import TelemetryPanelLazy from "@/app/chat/_v2/components/TelemetryPanelLazy";
 import { Badge, IconButton } from "@/app/chat/_v2/components/primitives";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
 import { useResolvedTheme } from "@/app/chat/_v2/theme/useResolvedTheme";
-import {
-  buildContextualMedicalQuery,
-  EMPTY_CLINICAL_CONTEXT,
-  type ClinicalContext,
-} from "@/app/chat/_v2/lib/clinical-context";
 
 /**
  * ChatShell — the rebuilt CLARA Chat (CHAT_V2) layout + orchestration.
@@ -92,9 +87,6 @@ export default function ChatShell() {
   const [retrievalStackMode, setRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
   const [personalMode, setPersonalMode] = useState(false);
-  const [clinicalContext, setClinicalContext] = useState<ClinicalContext>(
-    EMPTY_CLINICAL_CONTEXT,
-  );
 
   const [activeConversationId, setActiveConversationId] = useState<
     number | null
@@ -306,13 +298,7 @@ export default function ChatShell() {
       trackChatMessageSent({ mode, transport });
 
       try {
-        const apiMessage = buildContextualMedicalQuery(
-          message,
-          clinicalContext,
-          role,
-          uiLanguage,
-        );
-        const result = await stream.run(apiMessage, {
+        const result = await stream.run(message, {
           mode,
           retrievalStackMode,
           personalMode,
@@ -397,7 +383,6 @@ export default function ChatShell() {
     [
       activeConversationId,
       activeMeta,
-      clinicalContext,
       conversations,
       isEn,
       mode,
@@ -840,8 +825,6 @@ export default function ChatShell() {
             liveStatusNote={stream.statusNote}
             uiLanguage={uiLanguage}
             userRole={role}
-            clinicalContext={clinicalContext}
-            onChangeClinicalContext={setClinicalContext}
           />
         </main>
       </div>
