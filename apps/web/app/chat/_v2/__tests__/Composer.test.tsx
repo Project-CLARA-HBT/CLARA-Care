@@ -85,11 +85,11 @@ describe("Composer", () => {
 
   it("changes mode when a mode button is pressed (Req 4.4)", () => {
     const { props } = setup();
-    fireEvent.click(screen.getByRole("button", { name: "Pro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Research" }));
     expect(props.onChangeMode).toHaveBeenCalledWith("deep_beta");
   });
 
-  it("disables the personal toggle in fast mode and enables it otherwise", () => {
+  it("progressively reveals the personal-context toggle outside quick mode", () => {
     const { rerender } = render(
       <Composer
         query=""
@@ -107,7 +107,9 @@ describe("Composer", () => {
         uiLanguage="en"
       />,
     );
-    expect(screen.getByRole("button", { name: "Personal" })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Use my health profile" }),
+    ).not.toBeInTheDocument();
 
     rerender(
       <Composer
@@ -126,7 +128,9 @@ describe("Composer", () => {
         uiLanguage="en"
       />,
     );
-    expect(screen.getByRole("button", { name: "Personal" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Use my health profile" }),
+    ).toBeEnabled();
   });
 
   it("exposes the live status note through a polite live region (Req 5.2)", () => {

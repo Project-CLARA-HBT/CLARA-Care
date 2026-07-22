@@ -66,7 +66,11 @@ function ConversationSidebar(props: ConversationSidebarProps) {
     for (const item of conversations) {
       const bucket = toDayKey(toConversationTimestamp(item));
       if (bucket !== previousBucket) {
-        out.push({ kind: "header", key: `h-${bucket}-${item.conversation_id}`, label: bucket });
+        out.push({
+          kind: "header",
+          key: `h-${bucket}-${item.conversation_id}`,
+          label: bucket,
+        });
         previousBucket = bucket;
       }
       out.push({ kind: "item", key: `c-${item.conversation_id}`, item });
@@ -87,12 +91,22 @@ function ConversationSidebar(props: ConversationSidebarProps) {
   return (
     <nav
       aria-label={isEn ? "Conversations" : "Danh sách hội thoại"}
-      className="flex h-full min-h-0 flex-col gap-2 p-2.5"
+      className="flex h-full min-h-0 flex-col gap-2.5 bg-[var(--surface-sidebar)] p-3"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">
-          CLARA CHAT
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand-600)] text-white">
+            <span
+              className="material-symbols-outlined text-[17px]"
+              aria-hidden="true"
+            >
+              forum
+            </span>
+          </span>
+          <p className="text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+            CLARA
+          </p>
+        </div>
         <Button size="sm" variant="primary" onClick={onNewChat}>
           + {isEn ? "New" : "Mới"}
         </Button>
@@ -108,7 +122,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           value={searchText}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={isEn ? "Search chats..." : "Tìm cuộc trò chuyện..."}
-          className="min-h-[36px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus-visible:border-[color:var(--shell-border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
+          className="min-h-[38px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus-visible:border-[color:var(--brand-500)] focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]/20"
         />
         <span
           aria-hidden="true"
@@ -125,14 +139,20 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           onClick={onOpenFolders}
           className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2 text-left text-[12px] font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
         >
-          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined text-[18px]"
+          >
             folder
           </span>
-          {isEn ? "Folders & workspace" : "Thư mục & workspace"}
+          {isEn ? "Saved items" : "Nội dung đã lưu"}
         </button>
       ) : null}
 
-      <div ref={scrollRef} className="clara-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
+      <div
+        ref={scrollRef}
+        className="clara-scrollbar min-h-0 flex-1 overflow-y-auto pr-1"
+      >
         {isLoading ? (
           <p className="px-1 py-2 text-xs text-[var(--text-muted)]">
             {isEn ? "Loading..." : "Đang tải..."}
@@ -165,13 +185,17 @@ function ConversationSidebar(props: ConversationSidebarProps) {
                   ) : (
                     <button
                       type="button"
-                      aria-current={row.item.conversation_id === activeId ? "true" : undefined}
+                      aria-current={
+                        row.item.conversation_id === activeId
+                          ? "true"
+                          : undefined
+                      }
                       onClick={() => onSelect(row.item)}
                       className={[
-                        "mb-1 w-full rounded-xl border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]",
+                        "mb-1 w-full rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]",
                         row.item.conversation_id === activeId
-                          ? "border-[color:var(--shell-border-strong)] bg-[var(--surface-brand-soft)]"
-                          : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--shell-border-strong)]",
+                          ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]"
+                          : "border-transparent bg-transparent hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-panel)]",
                       ].join(" ")}
                     >
                       <p className="truncate text-[12px] font-semibold text-[var(--text-primary)]">
@@ -193,7 +217,11 @@ function ConversationSidebar(props: ConversationSidebarProps) {
             <p className="text-xs text-[var(--text-secondary)]">
               {isEn ? "No conversations yet." : "Chưa có hội thoại nào."}
             </p>
-            <IconButton label={isEn ? "New chat" : "Chat mới"} icon="add" onClick={onNewChat} />
+            <IconButton
+              label={isEn ? "New chat" : "Chat mới"}
+              icon="add"
+              onClick={onNewChat}
+            />
           </div>
         )}
       </div>

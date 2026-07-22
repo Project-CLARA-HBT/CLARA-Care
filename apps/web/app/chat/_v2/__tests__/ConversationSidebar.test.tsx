@@ -96,7 +96,7 @@ describe("ConversationSidebar", () => {
   it("exposes a folders entry point that opens the workspace (Req 2.4, 6.4)", () => {
     const props = baseProps();
     render(<ConversationSidebar {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: /Folders & workspace/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Saved items/i }));
     expect(props.onOpenFolders).toHaveBeenCalledTimes(1);
   });
 
@@ -104,7 +104,7 @@ describe("ConversationSidebar", () => {
     const props = baseProps();
     render(<ConversationSidebar {...props} onOpenFolders={undefined} />);
     expect(
-      screen.queryByRole("button", { name: /Folders & workspace/i }),
+      screen.queryByRole("button", { name: /Saved items/i }),
     ).not.toBeInTheDocument();
   });
 

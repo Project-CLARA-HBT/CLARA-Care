@@ -2,7 +2,7 @@ export default function PageShell({
   title,
   description,
   children,
-  variant = "card"
+  variant = "card",
 }: {
   title: string;
   description?: string;
@@ -11,13 +11,17 @@ export default function PageShell({
 }) {
   const hasHeading = Boolean(title?.trim()) || Boolean(description?.trim());
   const heading = (
-    <header className="page-intro">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.09em] text-[var(--text-brand)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-500)]" aria-hidden="true" />
-        <span>CLARA Care</span>
-      </div>
-      <h1 className="mt-3 text-[2rem] font-semibold leading-[1.15] tracking-[-0.035em] text-[var(--text-primary)] sm:text-[2.35rem]">{title}</h1>
-      {description ? <p className="mt-3 max-w-[72ch] text-base leading-7 text-[var(--text-secondary)]">{description}</p> : null}
+    <header className="page-intro max-w-4xl">
+      {title ? (
+        <h1 className="text-[1.8rem] font-semibold leading-[1.15] tracking-[-0.035em] text-[var(--text-primary)] sm:text-[2.15rem]">
+          {title}
+        </h1>
+      ) : null}
+      {description ? (
+        <p className="mt-2 max-w-[68ch] text-[15px] leading-6 text-[var(--text-secondary)]">
+          {description}
+        </p>
+      ) : null}
     </header>
   );
 

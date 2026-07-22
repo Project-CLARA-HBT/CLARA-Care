@@ -238,15 +238,17 @@ export default function AppShell({ children }: Props) {
           isWideWorkspace ? "max-w-[2520px]" : "max-w-[1840px]",
         ].join(" ")}
       >
-        <SidebarNav
-          role={role}
-          collapsed={isSidebarCollapsed}
-          onToggleCollapse={toggleSidebarCollapse}
-          themePreference={themePreference}
-          onThemeChange={handleThemeChange}
-          uiLanguage={uiLanguage}
-          onLanguageChange={handleLanguageChange}
-        />
+        {!isChatLayout ? (
+          <SidebarNav
+            role={role}
+            collapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebarCollapse}
+            themePreference={themePreference}
+            onThemeChange={handleThemeChange}
+            uiLanguage={uiLanguage}
+            onLanguageChange={handleLanguageChange}
+          />
+        ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col">
           {!isChatLayout ? (
@@ -259,38 +261,49 @@ export default function AppShell({ children }: Props) {
             />
           ) : null}
 
-          <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setIsMobileNavOpen(true)}
-              aria-label="Open navigation menu"
-              aria-expanded={isMobileNavOpen}
-              className="app-topbar-icon shrink-0"
-            >
-              <span className="material-symbols-outlined text-lg">menu</span>
-            </button>
+          {!isChatLayout ? (
+            <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(true)}
+                aria-label="Open navigation menu"
+                aria-expanded={isMobileNavOpen}
+                className="app-topbar-icon shrink-0"
+              >
+                <span className="material-symbols-outlined text-lg">menu</span>
+              </button>
 
-            <Link
-              href={getRoleHomePath(role)}
-              className="flex min-w-0 items-center gap-2.5"
-            >
-              <span className="app-brand-mark !h-9 !w-9">
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  clinical_notes
+              <Link
+                href={getRoleHomePath(role)}
+                className="flex min-w-0 items-center gap-2.5"
+              >
+                <span className="app-brand-mark !h-9 !w-9">
+                  <span
+                    className="material-symbols-outlined text-[16px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    clinical_notes
+                  </span>
                 </span>
-              </span>
-              <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                CLARA Care
-              </span>
-            </Link>
+                <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                  CLARA
+                </span>
+              </Link>
 
-            <Link href="/chat" className="app-mobile-ask" aria-label="Hỏi CLARA">
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">auto_awesome</span>
-            </Link>
-          </header>
+              <Link
+                href="/chat"
+                className="app-mobile-ask"
+                aria-label="Hỏi CLARA"
+              >
+                <span
+                  className="material-symbols-outlined text-[18px]"
+                  aria-hidden="true"
+                >
+                  auto_awesome
+                </span>
+              </Link>
+            </header>
+          ) : null}
 
           <main
             id="main-content"
@@ -316,209 +329,211 @@ export default function AppShell({ children }: Props) {
         </div>
       </div>
 
-      {isMobileNavOpen ? <div
-        className="fixed inset-0 z-[70] lg:hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Mobile navigation"
-      >
-        <button
-          type="button"
-          onClick={() => setIsMobileNavOpen(false)}
-          aria-label="Close mobile navigation"
-          className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
-        />
-        <aside
-          className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl"
+      {isMobileNavOpen ? (
+        <div
+          className="fixed inset-0 z-[70] lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
         >
-          <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="app-brand-mark shrink-0">
-                <span
-                  className="material-symbols-outlined text-[18px]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                  aria-hidden="true"
-                >
-                  clinical_notes
-                </span>
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                  CLARA Care
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Không gian chăm sóc
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsMobileNavOpen(false)}
-              aria-label="Close menu"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
-            >
-              <span className="material-symbols-outlined text-base">close</span>
-            </button>
-          </div>
-
-          <div className="mt-4 h-[calc(100%-126px)] space-y-4 overflow-y-auto pr-1 clara-scrollbar">
-            {mobileNavGroups.map((group) => (
-              <section key={group.key}>
-                <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  <span className="material-symbols-outlined text-[15px]">
-                    {getGroupMeta(group.key).icon}
+          <button
+            type="button"
+            onClick={() => setIsMobileNavOpen(false)}
+            aria-label="Close mobile navigation"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
+          />
+          <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="app-brand-mark shrink-0">
+                  <span
+                    className="material-symbols-outlined text-[18px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                    aria-hidden="true"
+                  >
+                    clinical_notes
                   </span>
-                  {group.label}
-                </p>
-                <nav className="space-y-2">
-                  {group.items.map((item) => {
-                    const active = isActiveRoute(pathname, item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        onClick={() => setIsMobileNavOpen(false)}
-                        className={[
-                          "block rounded-xl border px-3.5 py-3 transition",
-                          active
-                            ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]"
-                            : "border-transparent bg-transparent hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-panel)]",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex items-center gap-2">
-                            <span
-                              className={
-                                active
-                                  ? "material-symbols-outlined text-[18px] text-sky-700 dark:text-sky-200"
-                                  : "material-symbols-outlined text-[18px] text-[var(--text-muted)]"
-                              }
-                            >
-                              {item.icon}
-                            </span>
-                            <span
-                              className={
-                                active
-                                  ? "text-sm font-semibold text-sky-800 dark:text-sky-100"
-                                  : "text-sm font-semibold text-[var(--text-primary)]"
-                              }
-                            >
-                              {item.label}
-                            </span>
-                          </span>
-                          <span
-                            className={`h-2 w-2 rounded-full ${
-                              active
-                                ? "bg-sky-500 dark:bg-sky-300"
-                                : "bg-[var(--text-muted)]/55"
-                            }`}
-                          />
-                        </div>
-                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">
-                          {item.desc}
-                        </p>
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </section>
-            ))}
-          </div>
-
-          <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
-            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                Preferences
-              </p>
-              <div className="mt-1.5 flex items-center justify-between gap-2">
-                <div
-                  className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
-                  role="group"
-                  aria-label="Theme preferences"
-                >
-                  <span className="sr-only">Theme</span>
-                  {THEME_OPTIONS.map((option) => {
-                    const active = themePreference === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => handleThemeChange(option.value)}
-                        className={[
-                          "inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[11px] transition",
-                          active
-                            ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                        ].join(" ")}
-                        aria-label={`Theme ${option.label}`}
-                        aria-pressed={active}
-                        title={`Theme: ${option.label}`}
-                      >
-                        <i
-                          className={`fa ${option.iconClass} text-[13px]`}
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div
-                  className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
-                  role="group"
-                  aria-label="Language preferences"
-                >
-                  <span className="sr-only">Language</span>
-                  {LANGUAGE_OPTIONS.map((option) => {
-                    const active = uiLanguage === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => handleLanguageChange(option.value)}
-                        className={[
-                          "inline-flex min-h-[28px] min-w-[38px] items-center justify-center rounded-[6px] px-2 text-[11px] font-semibold transition",
-                          active
-                            ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                        ].join(" ")}
-                        aria-label={`Language ${option.label}`}
-                        aria-pressed={active}
-                        title={`Language: ${option.label}`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                    CLARA
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Trợ lý y tế của bạn
+                  </p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(false)}
+                aria-label="Close menu"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
+              >
+                <span className="material-symbols-outlined text-base">
+                  close
+                </span>
+              </button>
             </div>
 
-            <Link
-              href="/role-select"
-              onClick={() => setIsMobileNavOpen(false)}
-              className="flex min-h-[46px] items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
-            >
-              Switch role
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-500/10 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-700/70 dark:text-rose-300"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                logout
-              </span>
-              <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
-            </button>
-          </div>
-        </aside>
-      </div> : null}
+            <div className="mt-4 h-[calc(100%-126px)] space-y-4 overflow-y-auto pr-1 clara-scrollbar">
+              {mobileNavGroups.map((group) => (
+                <section key={group.key}>
+                  <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    <span className="material-symbols-outlined text-[15px]">
+                      {getGroupMeta(group.key).icon}
+                    </span>
+                    {group.label}
+                  </p>
+                  <nav className="space-y-2">
+                    {group.items.map((item) => {
+                      const active = isActiveRoute(pathname, item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          onClick={() => setIsMobileNavOpen(false)}
+                          className={[
+                            "block rounded-xl border px-3.5 py-3 transition",
+                            active
+                              ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]"
+                              : "border-transparent bg-transparent hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-panel)]",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={
+                                  active
+                                    ? "material-symbols-outlined text-[18px] text-sky-700 dark:text-sky-200"
+                                    : "material-symbols-outlined text-[18px] text-[var(--text-muted)]"
+                                }
+                              >
+                                {item.icon}
+                              </span>
+                              <span
+                                className={
+                                  active
+                                    ? "text-sm font-semibold text-sky-800 dark:text-sky-100"
+                                    : "text-sm font-semibold text-[var(--text-primary)]"
+                                }
+                              >
+                                {item.label}
+                              </span>
+                            </span>
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                active
+                                  ? "bg-sky-500 dark:bg-sky-300"
+                                  : "bg-[var(--text-muted)]/55"
+                              }`}
+                            />
+                          </div>
+                          <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                            {item.desc}
+                          </p>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </section>
+              ))}
+            </div>
 
-      <MobileBottomNav role={role} />
+            <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
+              <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                  Preferences
+                </p>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <div
+                    className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                    role="group"
+                    aria-label="Theme preferences"
+                  >
+                    <span className="sr-only">Theme</span>
+                    {THEME_OPTIONS.map((option) => {
+                      const active = themePreference === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleThemeChange(option.value)}
+                          className={[
+                            "inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[11px] transition",
+                            active
+                              ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                          ].join(" ")}
+                          aria-label={`Theme ${option.label}`}
+                          aria-pressed={active}
+                          title={`Theme: ${option.label}`}
+                        >
+                          <i
+                            className={`fa ${option.iconClass} text-[13px]`}
+                            aria-hidden="true"
+                          />
+                          <span className="sr-only">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
+                    role="group"
+                    aria-label="Language preferences"
+                  >
+                    <span className="sr-only">Language</span>
+                    {LANGUAGE_OPTIONS.map((option) => {
+                      const active = uiLanguage === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleLanguageChange(option.value)}
+                          className={[
+                            "inline-flex min-h-[28px] min-w-[38px] items-center justify-center rounded-[6px] px-2 text-[11px] font-semibold transition",
+                            active
+                              ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                          ].join(" ")}
+                          aria-label={`Language ${option.label}`}
+                          aria-pressed={active}
+                          title={`Language: ${option.label}`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/role-select"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex min-h-[46px] items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
+              >
+                Switch role
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-500/10 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-700/70 dark:text-rose-300"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  logout
+                </span>
+                <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      {!isChatLayout ? <MobileBottomNav role={role} /> : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -34,7 +35,10 @@ import { useChatStream } from "@/app/chat/_v2/hooks/useChatStream";
 import { useChatTurns } from "@/app/chat/_v2/hooks/useChatTurns";
 import { useConversations } from "@/app/chat/_v2/hooks/useConversations";
 import { useWorkspace } from "@/app/chat/_v2/hooks/useWorkspace";
-import { useCommandPalette, type CommandAction } from "@/app/chat/_v2/hooks/useCommandPalette";
+import {
+  useCommandPalette,
+  type CommandAction,
+} from "@/app/chat/_v2/hooks/useCommandPalette";
 import {
   asConversationId,
   isEditableElement,
@@ -44,6 +48,7 @@ import {
 import ConversationSidebar from "@/app/chat/_v2/components/ConversationSidebar";
 import MessageLog from "@/app/chat/_v2/components/MessageLog";
 import Composer from "@/app/chat/_v2/components/Composer";
+import ChatWelcome from "@/app/chat/_v2/components/ChatWelcome";
 import CommandPaletteLazy from "@/app/chat/_v2/components/CommandPaletteLazy";
 import WorkspaceDrawerLazy from "@/app/chat/_v2/components/WorkspaceDrawerLazy";
 import TelemetryPanelLazy from "@/app/chat/_v2/components/TelemetryPanelLazy";
@@ -81,16 +86,23 @@ export default function ChatShell() {
     useState<ResearchRetrievalStackMode>("auto");
   const [personalMode, setPersonalMode] = useState(false);
 
-  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-  const [activeMeta, setActiveMeta] = useState<WorkspaceConversationItem | null>(null);
-  const [searchResults, setSearchResults] = useState<WorkspaceConversationItem[] | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    number | null
+  >(null);
+  const [activeMeta, setActiveMeta] =
+    useState<WorkspaceConversationItem | null>(null);
+  const [searchResults, setSearchResults] = useState<
+    WorkspaceConversationItem[] | null
+  >(null);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const conversations = useConversations();
   const turns = useChatTurns();
   const stream = useChatStream();
-  const workspace = useWorkspace({ apiUnavailable: conversations.apiUnavailable });
+  const workspace = useWorkspace({
+    apiUnavailable: conversations.apiUnavailable,
+  });
 
   // Theme integration (Requirement 4.2, 4.5). Light/dark is driven entirely by
   // the app's shared token layer (`lib/theme.ts` + `globals.css`); the shell
@@ -107,6 +119,14 @@ export default function ChatShell() {
     const el = document.getElementById(COMPOSER_INPUT_ID);
     if (el instanceof HTMLTextAreaElement) el.focus();
   }, []);
+
+  const chooseStarterPrompt = useCallback(
+    (prompt: string) => {
+      setQuery(prompt);
+      window.setTimeout(focusComposer, 0);
+    },
+    [focusComposer],
+  );
 
   // Focus the sidebar conversation-search field (command-palette parity action
   // + Ctrl/⌘+K). On mobile the sidebar is an overlay, so open it first so the
@@ -125,10 +145,12 @@ export default function ChatShell() {
   const activeModeLabel = useMemo(() => toModeLabel(mode), [mode]);
   const latestAnswer = useMemo(
     () => latestAnswerFromTurn(turns.turns[turns.turns.length - 1] ?? null),
-    [turns.turns]
+    [turns.turns],
   );
   const latestTier2Result = useMemo(() => {
-    const found = [...turns.turns].reverse().find((item) => item.result.tier === "tier2");
+    const found = [...turns.turns]
+      .reverse()
+      .find((item) => item.result.tier === "tier2");
     return found && found.result.tier === "tier2" ? found.result : null;
   }, [turns.turns]);
 
@@ -207,17 +229,21 @@ export default function ChatShell() {
       try {
         await turns.load(conversationId);
       } catch (cause) {
-        setError(cause instanceof Error ? sanitizeUpstreamError(cause.message) : "");
+        setError(
+          cause instanceof Error ? sanitizeUpstreamError(cause.message) : "",
+        );
       }
       if (!conversations.apiUnavailable) {
         try {
-          await updateWorkspaceConversationMeta(conversationId, { touched: true });
+          await updateWorkspaceConversationMeta(conversationId, {
+            touched: true,
+          });
         } catch {
           // best-effort
         }
       }
     },
-    [conversations.apiUnavailable, turns]
+    [conversations.apiUnavailable, turns],
   );
 
   const newChat = useCallback(() => {
@@ -273,13 +299,13 @@ export default function ChatShell() {
             const persisted = await appendResearchConversationMessage(
               targetId,
               message,
-              result as unknown as Record<string, unknown>
+              result as unknown as Record<string, unknown>,
             );
             targetId = asConversationId(Number(persisted.id));
           } else {
             const persisted = await createResearchConversation(
               message,
-              result as unknown as Record<string, unknown>
+              result as unknown as Record<string, unknown>,
             );
             targetId = asConversationId(Number(persisted.id));
           }
@@ -305,7 +331,7 @@ export default function ChatShell() {
           setNotice(
             isEn
               ? "Answer saved locally; backend sync will recover later."
-              : "Đã lưu local; backend sync sẽ khôi phục sau."
+              : "Đã lưu local; backend sync sẽ khôi phục sau.",
           );
         }
 
@@ -332,7 +358,7 @@ export default function ChatShell() {
             ? sanitizeUpstreamError(cause.message)
             : isEn
               ? "Could not process the question."
-              : "Không thể xử lý câu hỏi."
+              : "Không thể xử lý câu hỏi.",
         );
       }
     },
@@ -349,7 +375,7 @@ export default function ChatShell() {
       turns,
       uiLanguage,
       workspace,
-    ]
+    ],
   );
 
   const copyShareUrl = useCallback(
@@ -361,7 +387,7 @@ export default function ChatShell() {
         window.prompt("Copy", url);
       }
     },
-    [isEn]
+    [isEn],
   );
 
   // --- Command palette -------------------------------------------------------
@@ -436,7 +462,7 @@ export default function ChatShell() {
               id,
               "docx",
               turns.turns,
-              activeMeta?.title || `Conversation ${id}`
+              activeMeta?.title || `Conversation ${id}`,
             );
           }
         },
@@ -453,7 +479,7 @@ export default function ChatShell() {
               id,
               "markdown",
               turns.turns,
-              activeMeta?.title || `Conversation ${id}`
+              activeMeta?.title || `Conversation ${id}`,
             );
           }
         },
@@ -475,13 +501,17 @@ export default function ChatShell() {
       },
       {
         id: "save-note",
-        label: isEn ? "Save latest answer as note" : "Lưu câu trả lời thành ghi chú",
+        label: isEn
+          ? "Save latest answer as note"
+          : "Lưu câu trả lời thành ghi chú",
         keywords: ["note", "save", "answer"],
         disabled: !latestAnswer.trim(),
         run: () => {
           void workspace
             .saveNote({
-              title: (turns.turns[turns.turns.length - 1]?.query ?? "Note").slice(0, 90),
+              title: (
+                turns.turns[turns.turns.length - 1]?.query ?? "Note"
+              ).slice(0, 90),
               contentMarkdown: latestAnswer,
               tags: ["answer", "auto"],
               conversationId: asConversationId(activeConversationId),
@@ -515,7 +545,10 @@ export default function ChatShell() {
       const key = event.key.toLowerCase();
       const withCommand = event.metaKey || event.ctrlKey;
       if (palette.isOpen) return;
-      if ((withCommand && event.shiftKey && key === "p") || (withCommand && key === "k")) {
+      if (
+        (withCommand && event.shiftKey && key === "p") ||
+        (withCommand && key === "k")
+      ) {
         event.preventDefault();
         palette.open();
         return;
@@ -525,7 +558,12 @@ export default function ChatShell() {
         newChat();
         return;
       }
-      if (!withCommand && !event.altKey && key === "/" && !isEditableElement(event.target)) {
+      if (
+        !withCommand &&
+        !event.altKey &&
+        key === "/" &&
+        !isEditableElement(event.target)
+      ) {
         event.preventDefault();
         focusComposer();
         return;
@@ -566,7 +604,9 @@ export default function ChatShell() {
         <aside
           className={[
             "fixed inset-y-0 left-0 z-50 w-[min(86vw,18rem)] border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition-transform duration-200 motion-reduce:transition-none lg:relative lg:z-0 lg:w-auto lg:translate-x-0",
-            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0",
+            isMobileSidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-[110%] lg:translate-x-0",
           ].join(" ")}
         >
           <ConversationSidebar
@@ -596,12 +636,25 @@ export default function ChatShell() {
                 className="lg:hidden"
                 onClick={openMobileSidebar}
               />
-              <h1 className="truncate text-sm font-bold text-[var(--text-primary)]">
-                {activeMeta?.title?.trim() || (isEn ? "New conversation" : "Cuộc trò chuyện mới")}
+              <h1 className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                {activeMeta?.title?.trim() || "CLARA"}
               </h1>
               <Badge tone="info">{activeModeLabel}</Badge>
             </div>
             <div className="flex items-center gap-1.5">
+              <Link
+                href="/dashboard"
+                aria-label={isEn ? "Open all tools" : "Mở các công cụ"}
+                title={isEn ? "All tools" : "Các công cụ"}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+              >
+                <span
+                  className="material-symbols-outlined text-[19px]"
+                  aria-hidden="true"
+                >
+                  apps
+                </span>
+              </Link>
               <IconButton
                 label={isEn ? "Command palette" : "Bảng lệnh"}
                 icon="bolt"
@@ -618,8 +671,14 @@ export default function ChatShell() {
           {/* Persistent medical disclaimer (Requirement 8.4). */}
           <p
             role="note"
-            className="border-b border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-1.5 text-center text-[11px] font-medium text-[var(--status-warn-text)]"
+            className="flex items-center justify-center gap-1.5 border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]"
           >
+            <span
+              className="material-symbols-outlined text-[14px]"
+              aria-hidden="true"
+            >
+              info
+            </span>
             {isEn
               ? "CLARA is an AI health information assistant, not a replacement for a clinician."
               : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
@@ -643,24 +702,26 @@ export default function ChatShell() {
           ) : null}
 
           {turns.turns.length ? (
-            <MessageLog turns={turns.turns} uiLanguage={uiLanguage} isRunning={stream.isRunning} />
+            <MessageLog
+              turns={turns.turns}
+              uiLanguage={uiLanguage}
+              isRunning={stream.isRunning}
+            />
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              <Badge tone="info">CLARA</Badge>
-              <h2 className="text-xl font-bold text-[var(--text-primary)]">
-                {isEn ? "How can CLARA help you today?" : "CLARA có thể giúp gì cho bạn?"}
-              </h2>
-              <p className="max-w-md text-sm text-[var(--text-secondary)]">
-                {isEn
-                  ? "Ask about medicine, symptoms, lab results, or drug interactions."
-                  : "Hỏi về thuốc, triệu chứng, kết quả xét nghiệm hoặc tương tác thuốc."}
-              </p>
-            </div>
+            <ChatWelcome
+              role={role}
+              uiLanguage={uiLanguage}
+              onChoosePrompt={chooseStarterPrompt}
+            />
           )}
 
           {role === "admin" && latestTier2Result ? (
             <div className="mx-auto w-full max-w-3xl px-3 pb-2">
-              <TelemetryPanelLazy role={role} result={latestTier2Result} uiLanguage={uiLanguage} />
+              <TelemetryPanelLazy
+                role={role}
+                result={latestTier2Result}
+                uiLanguage={uiLanguage}
+              />
             </div>
           ) : null}
 
@@ -678,6 +739,7 @@ export default function ChatShell() {
             onTogglePersonalMode={togglePersonalMode}
             liveStatusNote={stream.statusNote}
             uiLanguage={uiLanguage}
+            userRole={role}
           />
         </main>
       </div>

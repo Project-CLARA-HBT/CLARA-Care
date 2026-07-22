@@ -30,30 +30,51 @@ export default function AppTopbar({
 }: AppTopbarProps) {
   const pathname = usePathname();
   const page = getPageMeta(pathname);
-  const nextTheme: ThemePreference = themePreference === "dark" ? "light" : "dark";
-  const themeLabel = nextTheme === "dark" ? "Chuyển sang giao diện tối" : "Chuyển sang giao diện sáng";
+  const nextTheme: ThemePreference =
+    themePreference === "dark" ? "light" : "dark";
+  const themeLabel =
+    nextTheme === "dark"
+      ? "Chuyển sang giao diện tối"
+      : "Chuyển sang giao diện sáng";
 
   return (
     <header className="app-command-bar sticky top-0 z-40 hidden h-[4.5rem] items-center justify-between gap-5 border-b border-[color:var(--shell-border)] px-6 lg:flex xl:px-8">
       <div className="min-w-0">
-        <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]">
-          <span>CLARA Care</span>
-          <span aria-hidden="true">/</span>
-          <span>{ROLE_LABELS[role]}</span>
-        </div>
-        <p className="mt-1 truncate text-lg font-semibold tracking-[-0.015em] text-[var(--text-primary)]">
+        <p className="truncate text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
           {page.title}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
+          {ROLE_LABELS[role]}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <Link href="/chat" className="app-ask-button" aria-label="Mở CLARA Chat">
-          <span className="material-symbols-outlined text-[19px]" aria-hidden="true">auto_awesome</span>
+        <Link
+          href="/chat"
+          className="app-ask-button"
+          aria-label="Mở CLARA Chat"
+        >
+          <span
+            className="material-symbols-outlined text-[19px]"
+            aria-hidden="true"
+          >
+            auto_awesome
+          </span>
           <span>Hỏi CLARA</span>
         </Link>
 
-        <Link href="/huong-dan" className="app-topbar-icon" aria-label="Mở trung tâm hướng dẫn" title="Hướng dẫn">
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">help</span>
+        <Link
+          href="/huong-dan"
+          className="app-topbar-icon"
+          aria-label="Mở trung tâm hướng dẫn"
+          title="Hướng dẫn"
+        >
+          <span
+            className="material-symbols-outlined text-[20px]"
+            aria-hidden="true"
+          >
+            help
+          </span>
         </Link>
 
         <button
@@ -63,7 +84,10 @@ export default function AppTopbar({
           aria-label={themeLabel}
           title={themeLabel}
         >
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
+          <span
+            className="material-symbols-outlined text-[20px]"
+            aria-hidden="true"
+          >
             {themePreference === "dark" ? "light_mode" : "dark_mode"}
           </span>
         </button>
@@ -78,13 +102,28 @@ export default function AppTopbar({
           {uiLanguage.toUpperCase()}
         </button>
 
-        <Link href="/role-select" className="app-profile-chip" aria-label={`Vai trò hiện tại: ${ROLE_LABELS[role]}`}>
-          <span className="app-profile-avatar" aria-hidden="true">{ROLE_LABELS[role].slice(0, 1)}</span>
-          <span className="hidden text-left xl:block">
-            <span className="block text-xs font-semibold text-[var(--text-primary)]">CLARA Assistant</span>
-            <span className="block text-[11px] text-[var(--text-muted)]">{ROLE_LABELS[role]}</span>
+        <Link
+          href="/role-select"
+          className="app-profile-chip"
+          aria-label={`Vai trò hiện tại: ${ROLE_LABELS[role]}`}
+        >
+          <span className="app-profile-avatar" aria-hidden="true">
+            {ROLE_LABELS[role].slice(0, 1)}
           </span>
-          <span className="material-symbols-outlined hidden text-[17px] text-[var(--text-muted)] xl:block" aria-hidden="true">expand_more</span>
+          <span className="hidden text-left xl:block">
+            <span className="block text-xs font-semibold text-[var(--text-primary)]">
+              Tài khoản
+            </span>
+            <span className="block text-[11px] text-[var(--text-muted)]">
+              {ROLE_LABELS[role]}
+            </span>
+          </span>
+          <span
+            className="material-symbols-outlined hidden text-[17px] text-[var(--text-muted)] xl:block"
+            aria-hidden="true"
+          >
+            expand_more
+          </span>
         </Link>
       </div>
     </header>

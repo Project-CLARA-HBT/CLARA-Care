@@ -32,8 +32,18 @@ const GROUP_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
 };
 
 const ROLE_LABELS: Record<UILanguage, Record<UserRole, string>> = {
-  vi: { normal: "Cá nhân", researcher: "Nhà nghiên cứu", doctor: "Bác sĩ", admin: "Quản trị viên" },
-  en: { normal: "Personal", researcher: "Researcher", doctor: "Doctor", admin: "Administrator" },
+  vi: {
+    normal: "Cá nhân",
+    researcher: "Nhà nghiên cứu",
+    doctor: "Bác sĩ",
+    admin: "Quản trị viên",
+  },
+  en: {
+    normal: "Personal",
+    researcher: "Researcher",
+    doctor: "Doctor",
+    admin: "Administrator",
+  },
 };
 
 export default function SidebarNav({
@@ -61,27 +71,50 @@ export default function SidebarNav({
       ].join(" ")}
       aria-label={isEnglish ? "Primary navigation" : "Điều hướng chính"}
     >
-      <div className={[
-        "flex h-[4.5rem] shrink-0 items-center border-b border-[color:var(--shell-border)]",
-        collapsed ? "justify-center" : "gap-3 px-2",
-      ].join(" ")}>
-        <Link href="/chat" className="app-brand-mark" aria-label="CLARA Care">
-          <span className="material-symbols-outlined text-[21px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">
+      <div
+        className={[
+          "flex h-[4.5rem] shrink-0 items-center border-b border-[color:var(--shell-border)]",
+          collapsed ? "justify-center" : "gap-3 px-2",
+        ].join(" ")}
+      >
+        <Link href="/chat" className="app-brand-mark" aria-label="CLARA">
+          <span
+            className="material-symbols-outlined text-[21px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+            aria-hidden="true"
+          >
             health_and_safety
           </span>
         </Link>
         {!collapsed ? (
           <Link href="/chat" className="min-w-0">
-            <span className="block text-[17px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">CLARA Care</span>
-            <span className="block truncate text-[11px] font-medium text-[var(--text-muted)]">Safety-first medical AI</span>
+            <span className="block text-[17px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+              CLARA
+            </span>
+            <span className="block truncate text-[11px] font-medium text-[var(--text-muted)]">
+              Trợ lý y tế của bạn
+            </span>
           </Link>
         ) : null}
       </div>
 
       <div className="py-4">
-        <Link href="/chat" className={collapsed ? "app-new-chat !px-0" : "app-new-chat"} title={isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}>
-          <span className="material-symbols-outlined text-[19px]" aria-hidden="true">add_comment</span>
-          {!collapsed ? <span>{isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}</span> : null}
+        <Link
+          href="/chat"
+          className={collapsed ? "app-new-chat !px-0" : "app-new-chat"}
+          title={isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}
+        >
+          <span
+            className="material-symbols-outlined text-[19px]"
+            aria-hidden="true"
+          >
+            add_comment
+          </span>
+          {!collapsed ? (
+            <span>
+              {isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}
+            </span>
+          ) : null}
         </Link>
       </div>
 
@@ -93,7 +126,12 @@ export default function SidebarNav({
                 {GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label}
               </p>
             ) : null}
-            <nav className="space-y-1" aria-label={GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label}>
+            <nav
+              className="space-y-1"
+              aria-label={
+                GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label
+              }
+            >
               {group.items.map((item) => {
                 const active = isActiveRoute(pathname, item.href);
                 return (
@@ -110,13 +148,24 @@ export default function SidebarNav({
                   >
                     <span
                       className="material-symbols-outlined shrink-0 text-[20px]"
-                      style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                      style={
+                        active
+                          ? { fontVariationSettings: "'FILL' 1" }
+                          : undefined
+                      }
                       aria-hidden="true"
                     >
                       {item.icon}
                     </span>
-                    {!collapsed ? <span className="truncate">{item.label}</span> : null}
-                    {!collapsed && active ? <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--brand-600)]" aria-hidden="true" /> : null}
+                    {!collapsed ? (
+                      <span className="truncate">{item.label}</span>
+                    ) : null}
+                    {!collapsed && active ? (
+                      <span
+                        className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--brand-600)]"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                   </Link>
                 );
               })}
@@ -127,35 +176,54 @@ export default function SidebarNav({
 
       <div className="border-t border-[color:var(--shell-border)] py-3">
         <div className={collapsed ? "flex justify-center" : "px-1"}>
-          <div className={[
-            "flex items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
-            collapsed ? "h-11 w-11 justify-center" : "gap-3 p-2.5",
-          ].join(" ")}>
-            <span className="app-profile-avatar shrink-0" aria-hidden="true">{ROLE_LABELS[uiLanguage][role].slice(0, 1)}</span>
+          <div
+            className={[
+              "flex items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
+              collapsed ? "h-11 w-11 justify-center" : "gap-3 p-2.5",
+            ].join(" ")}
+          >
+            <span className="app-profile-avatar shrink-0" aria-hidden="true">
+              {ROLE_LABELS[uiLanguage][role].slice(0, 1)}
+            </span>
             {!collapsed ? (
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-[var(--text-primary)]">CLARA Assistant</span>
-                <span className="block truncate text-[11px] text-[var(--text-muted)]">{ROLE_LABELS[uiLanguage][role]}</span>
+                <span className="block truncate text-xs font-semibold text-[var(--text-primary)]">
+                  Tài khoản của bạn
+                </span>
+                <span className="block truncate text-[11px] text-[var(--text-muted)]">
+                  {ROLE_LABELS[uiLanguage][role]}
+                </span>
               </span>
             ) : null}
           </div>
         </div>
 
-        <div className={[
-          "mt-2 flex items-center",
-          collapsed ? "flex-col gap-1" : "justify-between px-1",
-        ].join(" ")}>
+        <div
+          className={[
+            "mt-2 flex items-center",
+            collapsed ? "flex-col gap-1" : "justify-between px-1",
+          ].join(" ")}
+        >
           <button
             type="button"
             onClick={onToggleCollapse}
             className="app-sidebar-action"
-            aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+            aria-label={
+              collapsed
+                ? "Mở rộng thanh điều hướng"
+                : "Thu gọn thanh điều hướng"
+            }
             title={collapsed ? "Mở rộng" : "Thu gọn"}
           >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+            <span
+              className="material-symbols-outlined text-[18px]"
+              aria-hidden="true"
+            >
               {collapsed ? "right_panel_open" : "left_panel_close"}
             </span>
-            {!collapsed ? <span>{isEnglish ? "Collapse" : "Thu gọn"}</span> : null}
+            {!collapsed ? (
+              <span>{isEnglish ? "Collapse" : "Thu gọn"}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -165,8 +233,17 @@ export default function SidebarNav({
             aria-label={isEnglish ? "Sign out" : "Đăng xuất"}
             title={isEnglish ? "Sign out" : "Đăng xuất"}
           >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
-            {!collapsed ? <span>{isLoggingOut ? "..." : isEnglish ? "Sign out" : "Đăng xuất"}</span> : null}
+            <span
+              className="material-symbols-outlined text-[18px]"
+              aria-hidden="true"
+            >
+              logout
+            </span>
+            {!collapsed ? (
+              <span>
+                {isLoggingOut ? "..." : isEnglish ? "Sign out" : "Đăng xuất"}
+              </span>
+            ) : null}
           </button>
         </div>
       </div>

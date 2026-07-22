@@ -1,11 +1,6 @@
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 export type NavGroupKey =
-  | "core"
-  | "research"
-  | "clinical"
-  | "medication"
-  | "admin"
-  | "support";
+  "core" | "research" | "clinical" | "medication" | "admin" | "support";
 
 export type PageMeta = {
   title: string;
@@ -59,7 +54,7 @@ const ROLE_HOME_PATHS: Record<UserRole, string> = {
 const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/chat",
-    label: "Chat",
+    label: "Hỏi CLARA",
     icon: "chat_paste_go",
     desc: "Hỏi đáp y tế hợp nhất",
     group: "core",
@@ -68,7 +63,7 @@ const NAV_ITEMS: NavigationItem[] = [
     page: {
       title: "CLARA Chat",
       subtitle:
-        "Không gian chat tập trung với 3 chế độ phản hồi: Nhanh, Sâu, Sâu mở rộng.",
+        "Hỏi đáp y tế rõ ràng, có bằng chứng và phù hợp với vai trò của bạn.",
     },
   },
   {
@@ -152,7 +147,7 @@ const NAV_ITEMS: NavigationItem[] = [
   },
   {
     href: "/council",
-    label: "Hội chẩn AI",
+    label: "Ca lâm sàng",
     icon: "groups",
     desc: "Nhiều góc nhìn chuyên khoa",
     group: "clinical",
@@ -164,7 +159,7 @@ const NAV_ITEMS: NavigationItem[] = [
   },
   {
     href: "/scribe",
-    label: "Medical Scribe",
+    label: "Ghi chú khám",
     icon: "clinical_notes",
     desc: "Ghi chép khám bệnh",
     group: "clinical",
