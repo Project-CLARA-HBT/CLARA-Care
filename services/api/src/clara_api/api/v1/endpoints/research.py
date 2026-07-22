@@ -217,6 +217,19 @@ _RESEARCH_JOB_RECOVERY_POLL_SECONDS = 30
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
 _ANSWER_LANGUAGE_ALLOWED = {"vi", "en"}
+_PROVIDER_SECRET_KEYS = frozenset(
+    {
+        "api_key",
+        "apikey",
+        "access_token",
+        "client_secret",
+        "password",
+        "secret",
+        "token",
+        "authorization",
+        "private_key",
+    }
+)
 
 
 async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -2468,6 +2481,75 @@ def _canonical_sha256(value: Any) -> str:
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
+def _sanitize_provider_secrets(value: Any) -> Any:
+    """Redact provider credentials before a request is persisted or hashed."""
+
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for raw_key, raw_value in value.items():
+            key = str(raw_key)
+            normalized_key = key.lower().replace("-", "_")
+            if normalized_key in _PROVIDER_SECRET_KEYS or any(
+                marker in normalized_key
+                for marker in ("api_key", "secret", "password", "access_token")
+            ):
+                sanitized[key] = "[REDACTED]"
+            else:
+                sanitized[key] = _sanitize_provider_secrets(raw_value)
+        return sanitized
+    if isinstance(value, list):
+        return [_sanitize_provider_secrets(item) for item in value]
+    if isinstance(value, tuple):
+        return [_sanitize_provider_secrets(item) for item in value]
+    return value
+
+
+def _apply_research_quality_gates(
+    result: dict[str, Any], *, request_payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach deterministic quality metadata and fail-closed degraded labels.
+
+    This is intentionally an internal harness gate: it never fabricates a
+    citation and never blocks a valid answer solely because a provider omitted
+    optional evidence. Instead, an answer that cannot demonstrate evidence
+    coverage is explicitly marked degraded for the UI and downstream policy.
+    """
+
+    gated = dict(result)
+    citations = gated.get("citations")
+    if not isinstance(citations, list):
+        citations = gated.get("sources") if isinstance(gated.get("sources"), list) else []
+    unsupported = gated.get("unsupported_claims")
+    unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
+    citation_count = len(citations)
+    answer_present = bool(
+        str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
+    )
+    mode = _coerce_research_mode(request_payload)
+    gate_reasons: list[str] = []
+    if mode in {"deep", "deep_beta"} and answer_present and citation_count == 0:
+        gate_reasons.append("no_citations")
+    if unsupported_count:
+        gate_reasons.append("unsupported_claims")
+    quality_gate = {
+        "schema_version": "1.0",
+        "passed": not gate_reasons,
+        "citation_count": citation_count,
+        "unsupported_claim_count": unsupported_count,
+        "answer_present": answer_present,
+        "reasons": gate_reasons,
+        "mode": mode,
+    }
+    metadata = dict(gated.get("metadata")) if isinstance(gated.get("metadata"), dict) else {}
+    metadata["quality_gate"] = quality_gate
+    gated["metadata"] = metadata
+    gated["quality_gate"] = quality_gate
+    if gate_reasons:
+        gated["degraded"] = True
+        gated["degraded_reason"] = ";".join(gate_reasons)
+    return gated
+
+
 def _build_research_run_manifest(
     *, job_id: str, request_payload: dict[str, Any], created_at: datetime
 ) -> dict[str, Any]:
@@ -2713,6 +2795,25 @@ def _run_research_job(job_id: str) -> None:
             request_payload=request_payload,
         )
         enriched = _attach_research_attribution(normalized)
+        enriched = _apply_research_quality_gates(
+            enriched,
+            request_payload=request_payload,
+        )
+        quality_gate = enriched.get("quality_gate")
+        _append_job_event(
+            db,
+            job=job,
+            stage="quality_gate",
+            status_text="completed"
+            if isinstance(quality_gate, dict) and quality_gate.get("passed")
+            else "degraded",
+            note=(
+                "Đã kiểm tra độ bao phủ citation và claim; kết quả đủ điều kiện."
+                if isinstance(quality_gate, dict) and quality_gate.get("passed")
+                else "Kết quả được gắn nhãn degraded vì chưa đủ bằng chứng kiểm chứng."
+            ),
+            payload={"quality_gate": quality_gate},
+        )
         completed_at = datetime.now(tz=UTC)
         job.result_json = enriched
         job.evidence_snapshot_json = _build_evidence_snapshot(
@@ -4686,6 +4787,7 @@ def create_research_tier2_job(
     input_payload["query"] = query_text
     input_payload["message"] = query_text
     upstream_payload = _build_tier2_upstream_payload(input_payload, db=db, user=user, token=token)
+    persisted_payload = _sanitize_provider_secrets(upstream_payload)
 
     now = datetime.now(tz=UTC)
     job_id = uuid4().hex
@@ -4695,12 +4797,12 @@ def create_research_tier2_job(
         role=token.role,
         status="queued",
         query_text=query_text,
-        request_payload=upstream_payload,
+        request_payload=persisted_payload,
         progress_json=_empty_job_progress(),
         result_json=None,
         run_manifest_json=_build_research_run_manifest(
             job_id=job_id,
-            request_payload=upstream_payload,
+            request_payload=persisted_payload,
             created_at=now,
         ),
         evidence_snapshot_json=None,

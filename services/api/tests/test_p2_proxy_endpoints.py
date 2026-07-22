@@ -924,6 +924,30 @@ def test_research_recovery_requeues_expired_lease_once(
         assert row.recovery_count == 1
 
 
+def test_research_harness_redacts_provider_secrets_and_marks_missing_evidence() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    payload = {
+        "query": "drug interaction",
+        "llm_runtime": {
+            "provider": "deepseek",
+            "api_key": "do-not-persist",
+            "nested": {"authorization": "Bearer do-not-persist"},
+        },
+    }
+    sanitized = research_endpoint._sanitize_provider_secrets(payload)
+    assert sanitized["llm_runtime"]["api_key"] == "[REDACTED]"
+    assert sanitized["llm_runtime"]["nested"]["authorization"] == "[REDACTED]"
+
+    result = research_endpoint._apply_research_quality_gates(
+        {"answer": "A conclusion without a source."},
+        request_payload={"research_mode": "deep"},
+    )
+    assert result["degraded"] is True
+    assert result["degraded_reason"] == "no_citations"
+    assert result["quality_gate"]["passed"] is False
+
+
 def test_research_tier2_job_stream_returns_progress_and_done() -> None:
     token = _login("alice@research.clara")
     now = datetime.now(tz=UTC)
