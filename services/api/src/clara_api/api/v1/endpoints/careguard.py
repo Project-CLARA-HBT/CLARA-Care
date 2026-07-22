@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_get, proxy_ml_post
 from clara_api.compliance.consent import PURPOSE_PERSONALIZATION
 from clara_api.compliance.service import ComplianceService
 from clara_api.compliance.transfer import LLM_PROCESSOR, LLM_PURPOSE
@@ -74,6 +74,23 @@ from clara_api.schemas import (
 )
 
 router = APIRouter()
+
+
+@router.get("/drugbank/status")
+def drugbank_status(
+    token: TokenPayload = Depends(require_roles("doctor", "researcher")),
+) -> dict[str, Any]:
+    """Content-free readiness and licensed artifact version for clinical audit."""
+
+    _ = token
+    details = proxy_ml_get("/health/details", timeout_seconds=10.0)
+    readiness = details.get("drugbank")
+    if not isinstance(readiness, dict):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DrugBank readiness is not reported by the ML service",
+        )
+    return readiness
 
 DRUG_ALIAS_MAP: dict[str, list[str]] = {
     "paracetamol": [
@@ -280,6 +297,11 @@ _MANUFACTURER_HINTS: tuple[str, ...] = (
 )
 
 _CAREGUARD_SOURCE_CATALOG: dict[str, dict[str, str]] = {
+    "drugbank": {
+        "id": "drugbank",
+        "name": "DrugBank Drug-Drug Interactions",
+        "type": "licensed_knowledge_base",
+    },
     "local_rules": {
         "id": "local_rules",
         "name": "CLARA Local DDI Rules",

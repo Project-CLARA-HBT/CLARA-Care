@@ -12,6 +12,34 @@ export type ChatResponse = {
   confidence?: number;
   emergency?: boolean;
   model_used?: string;
+  ml?: Record<string, unknown>;
+  clinical_answer_package?: ClinicalAnswerPackage;
+};
+
+export type ClinicalEvidenceRecord = {
+  evidence_id: string;
+  source?: string;
+  title?: string;
+  url?: string;
+  excerpt?: string;
+  trust_tier?: number;
+  effective_date?: string;
+};
+
+export type ClinicalAnswerPackage = {
+  schema_version: string;
+  protocol: string;
+  triage: { level: string; emergency: boolean; policy_action: string };
+  claim_support: {
+    status: string;
+    evidence_ids: string[];
+    verification?: { verdict?: string; severity?: string };
+  };
+  evidence_ledger: ClinicalEvidenceRecord[];
+  uncertainty: { level: string; reasons: string[] };
+  missing_information: Array<{ field: string; why_it_matters: string }>;
+  next_actions: Array<{ action: string; priority: string }>;
+  provenance: { model_used?: string; evidence_count: number; fallback_used: boolean };
 };
 
 export type ChatIntentDebug = Pick<ChatResponse, "role" | "intent" | "confidence" | "emergency" | "model_used">;
@@ -30,6 +58,16 @@ export function getChatIntentDebug(data: ChatResponse): ChatIntentDebug {
     emergency: data.emergency,
     model_used: data.model_used
   };
+}
+
+export function getClinicalAnswerPackage(data: ChatResponse): ClinicalAnswerPackage | null {
+  const direct = data.clinical_answer_package;
+  const nested = data.ml?.clinical_answer_package;
+  const candidate = direct ?? nested;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  const value = candidate as Partial<ClinicalAnswerPackage>;
+  if (!value.triage || !value.claim_support || !Array.isArray(value.evidence_ledger)) return null;
+  return candidate as ClinicalAnswerPackage;
 }
 
 export async function sendChatMessage(message: string): Promise<ChatResponse> {

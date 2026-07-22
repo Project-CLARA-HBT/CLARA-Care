@@ -202,6 +202,10 @@ class UnifiedContractMetadata(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    protocol: Literal["chat", "clinical_answer", "medication_review", "evidence_brief"] = (
+        "clinical_answer"
+    )
+    clinical_context: dict[str, Any] | None = None
 
 
 class ChatResponse(BaseModel):

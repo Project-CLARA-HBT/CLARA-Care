@@ -17,6 +17,7 @@ const sendChatMessage = vi.fn();
 const streamChatMessage = vi.fn();
 const getChatReply = vi.fn();
 const getChatIntentDebug = vi.fn(() => null);
+const getClinicalAnswerPackage = vi.fn(() => null);
 const resolveChatTransport = vi.fn();
 const normalizeResearchTier2 = vi.fn();
 const normalizeResearchTier2JobProgress = vi.fn(() => ({ statusNote: "" }));
@@ -27,6 +28,7 @@ vi.mock("@/lib/chat", () => ({
   streamChatMessage,
   getChatReply,
   getChatIntentDebug,
+  getClinicalAnswerPackage,
 }));
 
 vi.mock("@/lib/user-facing-text", () => ({

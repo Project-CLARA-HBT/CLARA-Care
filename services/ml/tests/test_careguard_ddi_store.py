@@ -79,6 +79,12 @@ def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
     assert meds == frozenset({"drugbankonly_a", "drugbankonly_b"})
     assert severity == "high"
     assert "DrugBank-only" in message
+    assert store.readiness() == {
+        "state": "ready",
+        "version": "drugbank-test-1",
+        "pair_count": 2,
+        "manifest_matches_index": True,
+    }
 
 
 def test_store_build_is_idempotent(tmp_path: Path) -> None:
@@ -134,6 +140,19 @@ def test_analyze_uses_sqlite_layer_and_curated_wins(tmp_path: Path, monkeypatch)
     ]
     assert ["drugbankonly_a", "drugbankonly_b"] in drug_pairs
     assert "+drugbank-test-1" in result["metadata"]["local_ddi_rules_version"]
+    drugbank_alert = next(
+        alert
+        for alert in result["ddi_alerts"]
+        if sorted(alert.get("medications", []))
+        == ["drugbankonly_a", "drugbankonly_b"]
+    )
+    assert drugbank_alert["source"] == "drugbank"
+    assert "drugbank" in result["metadata"]["source_used"]
+    assert result["metadata"]["drugbank"] == {
+        "state": "ready",
+        "version": "drugbank-test-1",
+        "matched_alert_count": 1,
+    }
 
     # Curated wins: warfarin+ibuprofen stays high (curated), never the low
     # DrugBank override, and only ONE alert is emitted for the pair.

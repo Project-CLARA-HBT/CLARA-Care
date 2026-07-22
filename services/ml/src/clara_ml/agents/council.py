@@ -1444,6 +1444,23 @@ def run_council(payload: dict) -> dict:
     result["clinician_review_required"] = True
     result["clinician_review_directive"] = CLINICIAN_REVIEW_DIRECTIVE
 
+    # Independent model assessments are additive and shadow-only until the
+    # clinical release gates in the backend specification pass. They receive a
+    # stable fact packet and cannot alter the deterministic emergency/DDI floor
+    # or the released Council recommendation.
+    if settings.council_llm_shadow_enabled:
+        from clara_ml.agents.council_model import run_model_council_shadow
+
+        result["model_council"] = run_model_council_shadow(
+            {
+                "symptoms": symptoms,
+                "labs": labs,
+                "medications": medications,
+                "history": history,
+            },
+            specialists,
+        )
+
     # --- Model & fallback disclosure (Requirement 6.1, 6.3) -----------------
     # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on (read
     # from the payload override, falling back to the ML settings — mirroring the

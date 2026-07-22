@@ -78,10 +78,14 @@ class CompositeAsr:
             yield AsrEvent(type="segment", segment=seg, text=seg.text, detail=dict(meta))
 
 
-def _provider_by_name(name: str) -> AsrProvider:
+def _provider_by_name(name: str, settings: Any | None = None) -> AsrProvider:
     key = (name or "").strip().lower()
     if key in ("google", "google_stt", "google_stt_v2", "chirp", "chirp3"):
-        return GoogleSttV2Asr()
+        return GoogleSttV2Asr(
+            project_id=str(getattr(settings, "scribe_google_project_id", "") or ""),
+            location=str(getattr(settings, "scribe_google_location", "us") or "us"),
+            recognizer=str(getattr(settings, "scribe_google_recognizer", "_") or "_"),
+        )
     if key in ("phowhisper", "pho_whisper", "pho-whisper", "vi_whisper"):
         return PhoWhisperAsr()
     # Default / unknown -> Whisper (the only fully-wired backend today).
@@ -93,6 +97,6 @@ def build_asr_provider(settings: Any) -> CompositeAsr:
 
     primary_name = str(getattr(settings, "scribe_asr_primary", "whisper") or "whisper")
     fallback_name = str(getattr(settings, "scribe_asr_fallback", "whisper") or "whisper")
-    primary = _provider_by_name(primary_name)
-    fallback = _provider_by_name(fallback_name)
+    primary = _provider_by_name(primary_name, settings)
+    fallback = _provider_by_name(fallback_name, settings)
     return CompositeAsr(primary, fallback)

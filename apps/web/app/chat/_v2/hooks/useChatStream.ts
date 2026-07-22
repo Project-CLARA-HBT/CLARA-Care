@@ -2,7 +2,13 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { getChatIntentDebug, getChatReply, sendChatMessage, streamChatMessage } from "@/lib/chat";
+import {
+  getChatIntentDebug,
+  getChatReply,
+  getClinicalAnswerPackage,
+  sendChatMessage,
+  streamChatMessage,
+} from "@/lib/chat";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   ResearchExecutionMode,
@@ -120,7 +126,13 @@ export function useChatStream(): UseChatStream {
           setStatus("done");
           setJobId(null);
           setStatusNote("");
-          return { tier: "tier1", answer: reply, debug: getChatIntentDebug(chatPayload) };
+          const clinicalAnswer = getClinicalAnswerPackage(chatPayload);
+          return {
+            tier: "tier1",
+            answer: reply,
+            debug: getChatIntentDebug(chatPayload),
+            ...(clinicalAnswer ? { clinicalAnswer } : {}),
+          };
         }
 
         // Deep / deep_beta: tier2 job create + poll/SSE via the existing runner.

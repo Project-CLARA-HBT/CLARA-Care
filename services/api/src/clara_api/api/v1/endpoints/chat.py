@@ -324,6 +324,9 @@ def _call_ml_service(
     role: str,
     rag_flow: RagFlowConfig,
     rag_sources: list[dict[str, Any]],
+    *,
+    protocol: str = "clinical_answer",
+    clinical_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     settings = get_settings()
     url = f"{settings.ml_service_url.rstrip('/')}/v1/chat/routed"
@@ -332,6 +335,8 @@ def _call_ml_service(
         "role": role,
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
+        "protocol": protocol,
+        "clinical_context": clinical_context,
     }
     safe_mode_timeout = max(3.0, min(settings.ml_service_timeout_seconds, 12.0))
 
@@ -364,7 +369,11 @@ def _call_ml_service(
     try:
         safe_mode_data = _post_to_ml(
             url,
-            _safe_mode_payload(message, role, rag_flow, rag_sources),
+            {
+                **_safe_mode_payload(message, role, rag_flow, rag_sources),
+                "protocol": protocol,
+                "clinical_context": clinical_context,
+            },
             safe_mode_timeout,
         )
         answer = safe_mode_data.get("answer")
@@ -490,7 +499,14 @@ def chat_completion(
             )
 
     try:
-        ml_response = _call_ml_service(payload.message, token.role, rag_flow, rag_sources)
+        ml_response = _call_ml_service(
+            payload.message,
+            token.role,
+            rag_flow,
+            rag_sources,
+            protocol=payload.protocol,
+            clinical_context=payload.clinical_context,
+        )
         model_used = ml_response.get("model_used")
         if (
             settings.deepseek_strict_mode
@@ -659,6 +675,8 @@ def chat_completion_stream(
         "role": token.role,
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
+        "protocol": payload.protocol,
+        "clinical_context": payload.clinical_context,
     }
     headers: dict[str, str] = {"Accept": "text/event-stream"}
     if settings.ml_internal_api_key.strip():

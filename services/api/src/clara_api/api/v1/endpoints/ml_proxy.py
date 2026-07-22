@@ -6,6 +6,33 @@ from fastapi import HTTPException, status
 from clara_api.core.config import get_settings
 
 
+def proxy_ml_get(ml_path: str, *, timeout_seconds: float | None = None) -> dict[str, Any]:
+    settings = get_settings()
+    url = f"{settings.ml_service_url.rstrip('/')}/{ml_path.lstrip('/')}"
+    headers: dict[str, str] = {}
+    if settings.ml_internal_api_key.strip():
+        headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
+    try:
+        response = httpx.get(
+            url,
+            headers=headers or None,
+            timeout=timeout_seconds or settings.ml_service_timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"ML service readiness unavailable: {exc.__class__.__name__}",
+        ) from exc
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="ML service returned unexpected readiness payload",
+        )
+    return data
+
+
 def _build_fail_soft_response(fail_soft_payload: dict[str, Any], reason: str) -> dict[str, Any]:
     response = dict(fail_soft_payload)
     response.setdefault("metadata", {})

@@ -87,6 +87,38 @@ def test_build_asr_provider_resolves_whisper_and_unknown(monkeypatch) -> None:
     assert out.segments == []
 
 
+def test_google_chirp_provider_uses_real_response_without_inventing_roles() -> None:
+    from types import SimpleNamespace
+
+    from clara_ml.scribe.asr.google_stt import GoogleSttV2Asr
+
+    class Client:
+        def __init__(self) -> None:
+            self.request = None
+
+        def recognize(self, *, request):
+            self.request = request
+            alternative = SimpleNamespace(
+                transcript="Bệnh nhân đau ngực",
+                confidence=0.91,
+            )
+            result = SimpleNamespace(
+                alternatives=[alternative],
+                result_end_offset=SimpleNamespace(seconds=2, nanos=500_000_000),
+                language_code="vi-VN",
+            )
+            return SimpleNamespace(results=[result])
+
+    client = Client()
+    provider = GoogleSttV2Asr(project_id="clinical-project", client=client)
+    output = provider.transcribe(b"real-audio", language="vi-VN", content_type="audio/webm")
+
+    assert output.text == "Bệnh nhân đau ngực"
+    assert output.segments[0].speaker == "unknown"
+    assert output.segments[0].end_ms == 2500
+    assert client.request["config"]["model"] == "chirp_3"
+
+
 class _FakeResponse:
     def __init__(self, *, json_data=None, status_code: int = 200, raise_exc=None):
         self._json = json_data

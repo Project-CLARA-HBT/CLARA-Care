@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import secrets
 from time import perf_counter
+from typing import Any
 import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
@@ -21,6 +22,7 @@ from clara_ml.agents.research_tier2 import (
     run_research_tier2,
 )
 from clara_ml.agents.scribe_soap import run_scribe_soap
+from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.llm.deepseek_client import DeepSeekClient
@@ -633,6 +635,8 @@ def health() -> dict[str, str]:
 
 @app.get("/health/details")
 def health_details() -> dict:
+    from clara_ml.agents.careguard import get_drugbank_readiness
+
     return {
         "status": "ok",
         "service": "clara-ml",
@@ -641,6 +645,7 @@ def health_details() -> dict:
         "router_ready": hasattr(router, "route"),
         "rag_ready": hasattr(rag_pipeline, "run") and rag_pipeline.retriever is not None,
         "prompt_loader_ready": hasattr(prompt_loader, "load"),
+        "drugbank": get_drugbank_readiness(),
     }
 
 
@@ -696,6 +701,11 @@ def routed_chat_infer(payload: dict) -> dict:
 
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
+    protocol = str(payload.get("protocol", "clinical_answer")).strip().lower()
+    if protocol not in {"chat", "clinical_answer", "medication_review", "evidence_brief"}:
+        protocol = "clinical_answer"
+    clinical_context_raw = payload.get("clinical_context")
+    clinical_context = clinical_context_raw if isinstance(clinical_context_raw, dict) else None
     llm_runtime = _resolve_llm_runtime_from_rag_flow(rag_flow)
     role_router_enabled = _as_bool(rag_flow.get("role_router_enabled"), True)
     intent_router_enabled = _as_bool(rag_flow.get("intent_router_enabled"), True)
@@ -1003,8 +1013,7 @@ def routed_chat_infer(payload: dict) -> dict:
     if factcheck and factcheck.severity == "high":
         default_action = "warn"
 
-    return _ensure_policy_contract(
-        {
+    response_payload: dict[str, object] = {
             "role": route.role,
             "intent": route.intent,
             "confidence": route.confidence,
@@ -1037,9 +1046,30 @@ def routed_chat_infer(payload: dict) -> dict:
                 "llm_model": llm_runtime.get("model", ""),
                 "llm_base_url": llm_runtime.get("base_url", ""),
             },
-        },
-        default_action=default_action,
+        }
+    factcheck_payload = factcheck.as_dict() if factcheck else None
+    answer_package = build_clinical_answer_package(
+        answer=answer,
+        intent=route.intent,
+        emergency=False,
+        policy_action=default_action,
+        model_used=rag_result.model_used,
+        retrieved_context=rag_result.retrieved_context,
+        factcheck=factcheck_payload,
+        clinical_context=clinical_context,
+        protocol=protocol,
     )
+    if answer_package is not None:
+        response_payload["clinical_answer_package"] = answer_package
+        response_payload["citations"] = [
+            {
+                "source": item.get("title") or item.get("source") or item["evidence_id"],
+                "url": item.get("url"),
+                "evidence_id": item["evidence_id"],
+            }
+            for item in answer_package["evidence_ledger"]
+        ]
+    return _ensure_policy_contract(response_payload, default_action=default_action)
 
 
 def _labs_rows_to_numeric_map(rows: object) -> dict[str, float]:
@@ -1140,6 +1170,35 @@ def scribe_soap(payload: dict) -> dict:
     return run_scribe_soap(transcript)
 
 
+def _build_scribe_note_generator():
+    """Build the real model-backed note generator used by production workflows.
+
+    ``NoteGenerator`` still owns strict template coercion and its extractive,
+    no-fabrication degraded path.  The network/model seam is supplied here so
+    the normal runtime no longer silently instantiates the deterministic-only
+    generator.
+    """
+
+    from clara_ml.scribe.generator import NoteGenerator
+
+    client = _build_deepseek_client()
+
+    def complete(prompt: str) -> str:
+        response = client.generate(
+            prompt,
+            system_prompt=(
+                "You are CLARA Scribe, a clinical documentation assistant. "
+                "Return only the requested JSON. Use only facts documented in "
+                "the transcript; never infer diagnoses, findings, medications, "
+                "allergies, doses, or plans."
+            ),
+            max_tokens=2600,
+        )
+        return response.content
+
+    return NoteGenerator(llm_complete=complete)
+
+
 @app.post("/v1/scribe/note")
 def scribe_note(payload: dict) -> dict:
     """Generate a structured note for a requested template (Requirement 6).
@@ -1151,13 +1210,12 @@ def scribe_note(payload: dict) -> dict:
 
     transcript = str(payload.get("transcript", "")).strip()
     template_id = str(payload.get("template_id", "") or "soap").strip() or "soap"
-    from clara_ml.scribe.generator import NoteGenerator
-
-    note = NoteGenerator().generate(transcript, template_id)
+    note = _build_scribe_note_generator().generate(transcript, template_id)
     return {
         "template_id": note.template_id,
         "sections": dict(note.sections),
         "insufficient_input": bool(note.insufficient_input),
+        "metadata": dict(note.metadata),
     }
 
 
@@ -1382,12 +1440,15 @@ async def scribe_stream(
         raise HTTPException(status_code=415, detail=f"Unsupported audio content type: {audio_content_type}")
 
     from clara_ml.scribe.asr import build_asr_provider
-    from clara_ml.scribe.generator import NoteGenerator
     from clara_ml.streaming.scribe_stream import stream_scribe_sse
 
     resolved_language = (language or settings.scribe_asr_language).strip() or "vi"
     asr = build_asr_provider(settings)
-    generator = NoteGenerator() if settings.rag_scribe_templates_enabled else None
+    generator = (
+        _build_scribe_note_generator()
+        if settings.rag_scribe_templates_enabled
+        else None
+    )
     _ = session_id  # reserved for persistence wiring (API layer)
 
     return StreamingResponse(

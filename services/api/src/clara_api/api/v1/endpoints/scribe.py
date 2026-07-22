@@ -169,8 +169,40 @@ def _serialize_session(item: ScribeSession) -> ScribeSessionResponse:
 
 
 def _generate_soap(transcript: str) -> dict[str, Any]:
-    payload = proxy_ml_post("/v1/scribe/soap", {"transcript": transcript})
-    return _normalize_soap_payload(payload)
+    """Generate SOAP through the real template-aware, model-backed ML path.
+
+    The legacy ML ``/scribe/soap`` route remains for contract compatibility,
+    but production session workflows must not use its heuristic assessment/plan
+    generator because that path can introduce content not stated in the
+    transcript.  ``/scribe/note`` is strict-template and degrades only to an
+    extractive transcript-derived draft.
+    """
+
+    payload = proxy_ml_post(
+        "/v1/scribe/note",
+        {"transcript": transcript, "template_id": "soap"},
+    )
+    sections = payload.get("sections")
+    if not isinstance(sections, dict):
+        # Compatibility for older ML deployments during rolling upgrades. This
+        # accepts only the established SOAP keys; it does not synthesize them.
+        legacy_keys = {"subjective", "objective", "assessment", "plan"}
+        sections = payload if legacy_keys.issubset(payload) else None
+    if not isinstance(sections, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Scribe note service returned an invalid SOAP payload.",
+        )
+    normalized = {
+        "subjective": str(sections.get("Subjective", sections.get("subjective", ""))).strip(),
+        "objective": str(sections.get("Objective", sections.get("objective", ""))).strip(),
+        "assessment": str(sections.get("Assessment", sections.get("assessment", ""))).strip(),
+        "plan": str(sections.get("Plan", sections.get("plan", ""))).strip(),
+    }
+    metadata = payload.get("metadata")
+    if isinstance(metadata, dict):
+        normalized["metadata"] = metadata
+    return normalized
 
 
 def _generate_note_sections(transcript: str, template_id: str) -> dict[str, Any]:
@@ -183,8 +215,6 @@ def _generate_note_sections(transcript: str, template_id: str) -> dict[str, Any]
     """
 
     tpl = (template_id or "soap").strip() or "soap"
-    if tpl == "soap":
-        return _generate_soap(transcript)
     payload = proxy_ml_post("/v1/scribe/note", {"transcript": transcript, "template_id": tpl})
     sections = payload.get("sections")
     if isinstance(sections, dict) and sections:
@@ -487,13 +517,17 @@ def list_scribe_sessions(
         ).scalar_one()
         or 0
     )
-    rows = db.execute(
-        select(ScribeSession)
-        .where(ScribeSession.user_id == user.id)
-        .order_by(ScribeSession.updated_at.desc())
-        .offset(offset)
-        .limit(limit)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(ScribeSession)
+            .where(ScribeSession.user_id == user.id)
+            .order_by(ScribeSession.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
     return ScribeSessionListResponse(
         items=[_serialize_session(item) for item in rows], total=int(total)
     )
@@ -698,25 +732,31 @@ def get_scribe_analytics_derived(
     """
 
     user = _get_user_by_token(db, token)
-    sessions = db.execute(
-        select(ScribeSession)
-        .where(ScribeSession.user_id == user.id)
-        .order_by(ScribeSession.updated_at.desc())
-        .limit(limit)
-    ).scalars().all()
+    sessions = (
+        db.execute(
+            select(ScribeSession)
+            .where(ScribeSession.user_id == user.id)
+            .order_by(ScribeSession.updated_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
 
     encounters: list[ScribeEncounterMetrics] = []
     per_encounter_metrics: list[dict[str, float]] = []
     for item in sessions:
-        version_rows = db.execute(
-            select(ScribeNoteVersion)
-            .where(ScribeNoteVersion.session_id == item.id)
-            .order_by(ScribeNoteVersion.version_no.asc())
-        ).scalars().all()
-        note_versions = [{"sections": row.sections_json} for row in version_rows]
-        metrics = derive_encounter_metrics(
-            note_versions=note_versions, asr_meta=item.asr_meta_json
+        version_rows = (
+            db.execute(
+                select(ScribeNoteVersion)
+                .where(ScribeNoteVersion.session_id == item.id)
+                .order_by(ScribeNoteVersion.version_no.asc())
+            )
+            .scalars()
+            .all()
         )
+        note_versions = [{"sections": row.sections_json} for row in version_rows]
+        metrics = derive_encounter_metrics(note_versions=note_versions, asr_meta=item.asr_meta_json)
         if not metrics:
             # No derivable signal for this encounter — omit it entirely rather than
             # emit an all-null row (omit-on-missing, Req 10.4).
@@ -800,29 +840,34 @@ def get_scribe_analytics_quality(
 
     settings = get_settings()
     if not settings.rag_scribe_quality_metrics_enabled:
-        raise HTTPException(
-            status_code=404, detail="Scribe quality metrics are disabled."
-        )
+        raise HTTPException(status_code=404, detail="Scribe quality metrics are disabled.")
 
     user = _get_user_by_token(db, token)
-    sessions = db.execute(
-        select(ScribeSession)
-        .where(ScribeSession.user_id == user.id)
-        .order_by(ScribeSession.updated_at.desc())
-        .limit(limit)
-    ).scalars().all()
+    sessions = (
+        db.execute(
+            select(ScribeSession)
+            .where(ScribeSession.user_id == user.id)
+            .order_by(ScribeSession.updated_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
 
     encounters: list[ScribeQualityMetrics] = []
     per_encounter_metrics: list[dict[str, float]] = []
     for item in sessions:
-        version_rows = db.execute(
-            select(ScribeNoteVersion)
-            .where(ScribeNoteVersion.session_id == item.id)
-            .order_by(ScribeNoteVersion.version_no.asc())
-        ).scalars().all()
+        version_rows = (
+            db.execute(
+                select(ScribeNoteVersion)
+                .where(ScribeNoteVersion.session_id == item.id)
+                .order_by(ScribeNoteVersion.version_no.asc())
+            )
+            .scalars()
+            .all()
+        )
         note_versions = [
-            {"sections": row.sections_json, "grounding": row.grounding_json}
-            for row in version_rows
+            {"sections": row.sections_json, "grounding": row.grounding_json} for row in version_rows
         ]
         metrics = compute_scribe_metrics(
             {"note_versions": note_versions, "asr_meta": item.asr_meta_json}
@@ -908,11 +953,15 @@ def _record_audit(
 
 
 def _active_consent(db: Session, session_id: int) -> ScribeConsent | None:
-    row = db.execute(
-        select(ScribeConsent)
-        .where(ScribeConsent.session_id == session_id, ScribeConsent.revoked_at.is_(None))
-        .order_by(ScribeConsent.id.desc())
-    ).scalars().first()
+    row = (
+        db.execute(
+            select(ScribeConsent)
+            .where(ScribeConsent.session_id == session_id, ScribeConsent.revoked_at.is_(None))
+            .order_by(ScribeConsent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     return row
 
 
@@ -973,11 +1022,7 @@ def _scribe_flow_event(
 def _coarse_flow_note(action: str, detail: dict[str, Any]) -> str:
     """Render a PII-free flow-event note from whitelisted coarse audit detail (Req 10.1)."""
 
-    parts = [
-        f"{key}={detail[key]}"
-        for key in _FLOW_NOTE_KEYS
-        if detail.get(key) not in (None, "")
-    ]
+    parts = [f"{key}={detail[key]}" for key in _FLOW_NOTE_KEYS if detail.get(key) not in (None, "")]
     return ", ".join(parts) or action
 
 
@@ -1046,7 +1091,10 @@ def capture_consent(
     db.flush()
     item.consent_id = consent.id
     _record_audit(
-        db, session_id=item.id, actor=user.id, action="consent_captured",
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="consent_captured",
         detail={"method": consent.method, "scope": consent.scope},
     )
     db.commit()
@@ -1082,7 +1130,10 @@ def revoke_consent(
     # Flag the session: no active consent remains (Requirement 4.4).
     item.consent_id = None
     _record_audit(
-        db, session_id=item.id, actor=user.id, action="consent_revoked",
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="consent_revoked",
         detail={"consent_id": consent.id, "method": consent.method, "scope": consent.scope},
     )
     db.commit()
@@ -1132,9 +1183,7 @@ def generate_note_version(
     # always insert a new row with the next incremented version_no.
     next_version = (
         db.execute(
-            select(func.count(ScribeNoteVersion.id)).where(
-                ScribeNoteVersion.session_id == item.id
-            )
+            select(func.count(ScribeNoteVersion.id)).where(ScribeNoteVersion.session_id == item.id)
         ).scalar_one()
         or 0
     ) + 1
@@ -1175,8 +1224,12 @@ def generate_note_version(
     # transition; on a regenerate while already in_review it records the edit with
     # from_status == to_status (no transition, but the version is preserved).
     _record_audit(
-        db, session_id=item.id, actor=user.id, action="note_generated",
-        from_status=prev_status, to_status=item.status,
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="note_generated",
+        from_status=prev_status,
+        to_status=item.status,
         detail={"version_no": int(next_version), "template_id": template_id[:64]},
     )
     item.last_processed_at = datetime.now(tz=UTC)
@@ -1185,9 +1238,7 @@ def generate_note_version(
     return _serialize_session(item)
 
 
-def _get_note_version(
-    db: Session, *, session_id: int, version_no: int
-) -> ScribeNoteVersion | None:
+def _get_note_version(db: Session, *, session_id: int, version_no: int) -> ScribeNoteVersion | None:
     """Fetch a specific note version for a session (owner-scoping done by caller)."""
 
     return db.execute(
@@ -1327,22 +1378,48 @@ def sign_note(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Không thể ký từ trạng thái '{item.status}'.",
         )
-    latest = db.execute(
-        select(ScribeNoteVersion)
-        .where(ScribeNoteVersion.session_id == item.id)
-        .order_by(ScribeNoteVersion.version_no.desc())
-    ).scalars().first()
+    latest = (
+        db.execute(
+            select(ScribeNoteVersion)
+            .where(ScribeNoteVersion.session_id == item.id)
+            .order_by(ScribeNoteVersion.version_no.desc())
+        )
+        .scalars()
+        .first()
+    )
     if latest is None:
         raise HTTPException(status_code=400, detail="Chưa có note version để ký.")
     if latest.signed:
         raise HTTPException(status_code=409, detail="Note version đã được ký (immutable).")
+    if settings.rag_scribe_grounding_enabled:
+        grounding = latest.grounding_json
+        if not isinstance(grounding, dict) or not bool(grounding.get("enabled")):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Không thể ký khi note chưa có báo cáo grounding hợp lệ.",
+            )
+        unresolved = grounding.get("unverified_candidates")
+        if isinstance(unresolved, list) and unresolved:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Không thể ký khi còn nhận định quan trọng chưa được đối chiếu với transcript."
+                ),
+            )
     latest.signed = True
     latest.signed_at = datetime.now(tz=UTC)
     latest.signed_by = user.id
     prev = item.status
     item.status = "signed"
-    _record_audit(db, session_id=item.id, actor=user.id, action="note_signed",
-                  from_status=prev, to_status="signed", detail={"version_no": latest.version_no})
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="note_signed",
+        from_status=prev,
+        to_status="signed",
+        detail={"version_no": latest.version_no},
+    )
     db.commit()
     db.refresh(item)
     return _serialize_session(item)
@@ -1375,9 +1452,7 @@ def amend_note(
     soap = _generate_soap(transcript) if transcript else (item.soap_json or {})
     next_version = (
         db.execute(
-            select(func.count(ScribeNoteVersion.id)).where(
-                ScribeNoteVersion.session_id == item.id
-            )
+            select(func.count(ScribeNoteVersion.id)).where(ScribeNoteVersion.session_id == item.id)
         ).scalar_one()
         or 0
     ) + 1
@@ -1392,9 +1467,15 @@ def amend_note(
     )
     item.soap_json = soap
     item.status = "amended"
-    _record_audit(db, session_id=item.id, actor=user.id, action="note_amended",
-                  from_status="signed", to_status="amended",
-                  detail={"version_no": int(next_version)})
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="note_amended",
+        from_status="signed",
+        to_status="amended",
+        detail={"version_no": int(next_version)},
+    )
     db.commit()
     db.refresh(item)
     return _serialize_session(item)
@@ -1408,7 +1489,9 @@ def _addenda_for_version(db: Session, *, note_version_id: int) -> list[ScribeAdd
             select(ScribeAddendum)
             .where(ScribeAddendum.note_version_id == note_version_id)
             .order_by(ScribeAddendum.id.asc())
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
 
@@ -1541,11 +1624,15 @@ def get_audit_trail(
 
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
-    rows = db.execute(
-        select(ScribeAudit)
-        .where(ScribeAudit.session_id == item.id)
-        .order_by(ScribeAudit.id.asc())
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(ScribeAudit)
+            .where(ScribeAudit.session_id == item.id)
+            .order_by(ScribeAudit.id.asc())
+        )
+        .scalars()
+        .all()
+    )
     return {
         "session_id": item.id,
         "entries": [
@@ -1629,14 +1716,10 @@ def relabel_segment(
 
     segments = _session_segments(item)
     if segments is None or segment_index < 0 or segment_index >= len(segments):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Segment không tồn tại."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Segment không tồn tại.")
 
     target = segments[segment_index]
-    from_speaker = (
-        str(target.get("speaker", "unknown")) if isinstance(target, dict) else "unknown"
-    )
+    from_speaker = str(target.get("speaker", "unknown")) if isinstance(target, dict) else "unknown"
     to_speaker = request.speaker
 
     # Rebuild the segments list preserving text + ordering exactly; mutate ONLY
@@ -1687,14 +1770,18 @@ def _signed_note_version(db: Session, session_id: int) -> ScribeNoteVersion | No
     sourced here. Prefers the highest ``version_no`` signed row.
     """
 
-    return db.execute(
-        select(ScribeNoteVersion)
-        .where(
-            ScribeNoteVersion.session_id == session_id,
-            ScribeNoteVersion.signed.is_(True),
+    return (
+        db.execute(
+            select(ScribeNoteVersion)
+            .where(
+                ScribeNoteVersion.session_id == session_id,
+                ScribeNoteVersion.signed.is_(True),
+            )
+            .order_by(ScribeNoteVersion.version_no.desc())
         )
-        .order_by(ScribeNoteVersion.version_no.desc())
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
 
 
 def _clinician_label(db: Session, user_id: int | None) -> str:
@@ -1825,11 +1912,7 @@ def _fhir_narrative(text: str) -> dict[str, str]:
 
     return {
         "status": "generated",
-        "div": (
-            '<div xmlns="http://www.w3.org/1999/xhtml">'
-            f"{escape(text)}"
-            "</div>"
-        ),
+        "div": (f'<div xmlns="http://www.w3.org/1999/xhtml">{escape(text)}</div>'),
     }
 
 
@@ -2069,17 +2152,22 @@ def export_note(
         filename = f"{_slug_export_name(item.title or 'clinical-note')}.docx"
         response = Response(
             content=docx_bytes,
-            media_type=(
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            ),
+            media_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     else:
         response = {"format": "md", "markdown": markdown}
 
     if can_transition(item.status, "exported"):
-        _record_audit(db, session_id=item.id, actor=user.id, action="note_exported",
-                      from_status=item.status, to_status="exported", detail={"format": fmt})
+        _record_audit(
+            db,
+            session_id=item.id,
+            actor=user.id,
+            action="note_exported",
+            from_status=item.status,
+            to_status="exported",
+            detail={"format": fmt},
+        )
         item.status = "exported"
         db.commit()
     return response

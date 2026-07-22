@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getChatReply, streamChatMessage, type ChatStreamStep } from "@/lib/chat";
+import {
+  getChatReply,
+  getClinicalAnswerPackage,
+  streamChatMessage,
+  type ChatStreamStep,
+} from "@/lib/chat";
 
 vi.mock("@/lib/http-client", () => ({ default: { post: vi.fn() } }));
 vi.mock("@/lib/auth-store", () => ({
@@ -28,6 +33,30 @@ describe("getChatReply", () => {
     expect(getChatReply({ reply: "a", answer: "b" })).toBe("a");
     expect(getChatReply({ answer: "b" })).toBe("b");
     expect(getChatReply({})).toBeNull();
+  });
+});
+
+describe("getClinicalAnswerPackage", () => {
+  const clinicalPackage = {
+    schema_version: "1.0",
+    protocol: "clinical_answer",
+    triage: { level: "routine", emergency: false, policy_action: "allow" },
+    claim_support: { status: "supported", evidence_ids: ["E1"] },
+    evidence_ledger: [],
+    uncertainty: { level: "low", reasons: [] },
+    missing_information: [],
+    next_actions: [],
+    provenance: { evidence_count: 0, fallback_used: false },
+  };
+
+  it("reads both direct streaming and nested API envelopes", () => {
+    expect(getClinicalAnswerPackage({ clinical_answer_package: clinicalPackage })).toBe(
+      clinicalPackage
+    );
+    expect(getClinicalAnswerPackage({ ml: { clinical_answer_package: clinicalPackage } })).toBe(
+      clinicalPackage
+    );
+    expect(getClinicalAnswerPackage({})).toBeNull();
   });
 });
 

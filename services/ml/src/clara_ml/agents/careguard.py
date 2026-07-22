@@ -597,7 +597,11 @@ def _localize_ddi_message(message: object) -> str:
     return "Hai thuốc này có thể tương tác với nhau. Nên hỏi bác sĩ hoặc dược sĩ để kiểm tra lại."
 
 
-def _ddi_alert_from_rule(rule: InteractionRule) -> dict[str, Any]:
+def _ddi_alert_from_rule(
+    rule: InteractionRule,
+    *,
+    source: str = "local_rules",
+) -> dict[str, Any]:
     """Build the End_User-localized alert dict for a matched interaction rule.
 
     Shared by both the linear (``_detect_ddi_alerts``) and pair-indexed
@@ -609,7 +613,7 @@ def _ddi_alert_from_rule(rule: InteractionRule) -> dict[str, Any]:
         "severity": rule.severity,
         "medications": sorted(rule.meds),
         "message": _localize_ddi_message(rule.message),
-        "source": "local_rules",
+        "source": source,
     }
 
 
@@ -681,10 +685,32 @@ def _drugbank_sqlite_alerts(
             continue
         alerts.append(
             _ddi_alert_from_rule(
-                InteractionRule(meds=meds, severity=severity, message=message)
+                InteractionRule(meds=meds, severity=severity, message=message),
+                source="drugbank",
             )
         )
     return alerts, store.version
+
+
+def get_drugbank_readiness() -> dict[str, object]:
+    """Return a content-free readiness projection for the licensed DDI index."""
+
+    if not settings.careguard_drugbank_sqlite_enabled:
+        return {
+            "state": "disabled",
+            "version": "",
+            "pair_count": 0,
+            "manifest_matches_index": False,
+        }
+    store = _get_drugbank_store()
+    if store is None:
+        return {
+            "state": "unavailable",
+            "version": "",
+            "pair_count": 0,
+            "manifest_matches_index": False,
+        }
+    return store.readiness()
 
 
 def _build_ddi_pair_index(
@@ -1146,6 +1172,7 @@ def run_careguard_analyze(payload: dict) -> dict:
     # alerts for pairs the curated set does not already cover. Fully self-
     # degrading: any store failure yields no contribution (curated-only).
     drugbank_layer_version = ""
+    drugbank_alerts: list[dict[str, Any]] = []
     if settings.careguard_drugbank_sqlite_enabled:
         drugbank_alerts, drugbank_layer_version = _drugbank_sqlite_alerts(
             medications, existing_alerts=local_ddi_alerts
@@ -1155,6 +1182,8 @@ def run_careguard_analyze(payload: dict) -> dict:
         if drugbank_layer_version:
             local_ddi_rules_version = f"{local_ddi_rules_version}+{drugbank_layer_version}"
     source_used = ["local_rules"]
+    if drugbank_layer_version:
+        source_used.append("drugbank")
     source_errors: dict[str, list[str]] = {}
     external_ddi_alerts: list[dict[str, Any]] = []
     openfda_alerts: list[dict[str, Any]] = []
@@ -1251,6 +1280,17 @@ def run_careguard_analyze(payload: dict) -> dict:
             "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
             "source_used": source_used,
             "source_errors": source_errors,
+            "drugbank": {
+                "state": "ready"
+                if drugbank_layer_version
+                else (
+                    "disabled"
+                    if not settings.careguard_drugbank_sqlite_enabled
+                    else "unavailable"
+                ),
+                "version": drugbank_layer_version,
+                "matched_alert_count": len(drugbank_alerts),
+            },
             "openfda_pairs_checked": openfda_pairs_checked,
             "openfda_alert_count": len(openfda_alerts),
             "rxnav_status": rxnav_status,

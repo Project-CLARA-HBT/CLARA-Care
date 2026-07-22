@@ -750,6 +750,16 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
     )
+    council_llm_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_LLM_SHADOW_ENABLED",
+    )
+    council_llm_max_tokens: int = Field(
+        default=1200,
+        validation_alias="COUNCIL_LLM_MAX_TOKENS",
+        ge=400,
+        le=4000,
+    )
 
     # --- Council upgrade feature flags (additive; default OFF) ---------------
     # ML-side gates for the Council upgrade, mirroring the COUNCIL_NEURAL_*
@@ -843,6 +853,15 @@ class Settings(BaseSettings):
     )
     scribe_asr_language: str = Field(
         default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
+    )
+    scribe_google_project_id: str = Field(
+        default="", validation_alias="SCRIBE_GOOGLE_PROJECT_ID"
+    )
+    scribe_google_location: str = Field(
+        default="us", validation_alias="SCRIBE_GOOGLE_LOCATION"
+    )
+    scribe_google_recognizer: str = Field(
+        default="_", validation_alias="SCRIBE_GOOGLE_RECOGNIZER"
     )
     # Code-switching: when true (default) the Vietnamese ASR provider is asked to keep
     # embedded English drug/procedure tokens verbatim rather than transliterating them

@@ -1021,7 +1021,9 @@ class SocialPost(Base):
     moderation_reason: Mapped[str] = mapped_column(String(64), default="")
     comment_count: Mapped[int] = mapped_column(Integer, default=0)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -1041,7 +1043,9 @@ class SocialComment(Base):
     moderation_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
     moderation_reason: Mapped[str] = mapped_column(String(64), default="")
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class SocialReaction(Base):
@@ -1106,3 +1110,179 @@ class SocialModerationAudit(Base):
     target_id: Mapped[int] = mapped_column(Integer, index=True)
     reason: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClinicalCase(Base):
+    """Owner-scoped longitudinal container shared by CLARA clinical workflows."""
+
+    __tablename__ = "clinical_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    case_type: Mapped[str] = mapped_column(String(32), default="general", index=True)
+    metadata_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ClinicalContextSnapshot(Base):
+    """Immutable, provenance-bearing clinical context supplied to a workflow."""
+
+    __tablename__ = "clinical_context_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    source_type: Mapped[str] = mapped_column(String(32), index=True)
+    schema_version: Mapped[str] = mapped_column(String(32), default="1.0")
+    context_json: Mapped[dict | list] = mapped_column(JSON)
+    provenance_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class ClinicalWorkflowRun(Base):
+    """Durable execution record; never represents work that was not performed."""
+
+    __tablename__ = "clinical_workflow_runs"
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_user_id", "idempotency_key", name="uq_clinical_workflow_owner_idempotency"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
+    )
+    owner_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    context_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clinical_context_snapshots.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    protocol: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128))
+    request_json: Mapped[dict | list] = mapped_column(JSON)
+    result_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ClinicalStageRun(Base):
+    __tablename__ = "clinical_stage_runs"
+    __table_args__ = (
+        UniqueConstraint("workflow_run_id", "stage_key", name="uq_clinical_stage_run_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workflow_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    stage_key: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    metrics_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EvidenceRecord(Base):
+    """Normalized evidence ledger entry with retrieval and citation provenance."""
+
+    __tablename__ = "clinical_evidence_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
+    )
+    workflow_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    source_type: Mapped[str] = mapped_column(String(32), index=True)
+    source_id: Mapped[str] = mapped_column(String(512), default="")
+    title: Mapped[str] = mapped_column(String(500), default="")
+    citation_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    excerpt: Mapped[str] = mapped_column(Text, default="")
+    evidence_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class ClinicalClaim(Base):
+    __tablename__ = "clinical_claims"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
+    )
+    workflow_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    claim_type: Mapped[str] = mapped_column(String(32), index=True)
+    statement: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="unverified", index=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    evidence_ids_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    rationale_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClinicalArtifact(Base):
+    __tablename__ = "clinical_artifacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
+    )
+    workflow_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    artifact_type: Mapped[str] = mapped_column(String(48), index=True)
+    schema_version: Mapped[str] = mapped_column(String(32), default="1.0")
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    content_json: Mapped[dict | list] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class ClinicalReviewAction(Base):
+    """Append-only human review, correction, sign-off, or override record."""
+
+    __tablename__ = "clinical_review_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    artifact_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_artifacts.id", ondelete="CASCADE"), index=True
+    )
+    reviewer_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(24), index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    patch_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )

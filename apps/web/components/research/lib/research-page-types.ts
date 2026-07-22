@@ -1,10 +1,11 @@
-import { getChatIntentDebug } from "@/lib/chat";
+import { ClinicalAnswerPackage, getChatIntentDebug } from "@/lib/chat";
 import { ResearchTier2Result } from "@/lib/research";
 
 export type Tier1Result = {
   tier: "tier1";
   answer: string;
   debug: ReturnType<typeof getChatIntentDebug> | null;
+  clinicalAnswer?: ClinicalAnswerPackage;
 };
 
 export type Tier2Result = {

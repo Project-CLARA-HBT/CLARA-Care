@@ -61,6 +61,50 @@ class DrugBankDdiStore:
         """The manifest/version label of the built index (empty until built)."""
         return self._version
 
+    def readiness(self) -> dict[str, object]:
+        """Return a content-free operational readiness projection.
+
+        Licensed interaction text and filesystem paths are deliberately omitted.
+        A positive pair count and identical manifest/index versions are required
+        before the dataset may report ``ready``.
+        """
+
+        manifest_version = self._read_manifest_version() or ""
+        database_version = self._existing_db_version() or ""
+        pair_count = 0
+        if self._db_path.exists():
+            try:
+                conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+                try:
+                    row = conn.execute(
+                        "SELECT value FROM meta WHERE key = 'pair_count'"
+                    ).fetchone()
+                    pair_count = int(row[0]) if row and str(row[0]).isdigit() else 0
+                finally:
+                    conn.close()
+            except (sqlite3.Error, OSError, ValueError):
+                pair_count = 0
+
+        ready = bool(
+            manifest_version
+            and database_version == manifest_version
+            and pair_count > 0
+        )
+        if ready:
+            state = "ready"
+        elif manifest_version or database_version or self._db_path.exists():
+            state = "degraded"
+        else:
+            state = "unavailable"
+        return {
+            "state": state,
+            "version": database_version or manifest_version,
+            "pair_count": pair_count,
+            "manifest_matches_index": bool(
+                manifest_version and database_version == manifest_version
+            ),
+        }
+
     # -- manifest ---------------------------------------------------------
 
     def _read_manifest_version(self) -> str | None:
