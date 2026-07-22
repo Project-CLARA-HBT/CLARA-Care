@@ -81,6 +81,7 @@ services:
       - ../../.env
     environment:
       ENV: ${ENV:-production}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:?ML_INTERNAL_API_KEY is required}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.vip/v1}
