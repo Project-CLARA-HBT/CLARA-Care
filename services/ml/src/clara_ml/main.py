@@ -26,7 +26,8 @@ from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.llm.deepseek_client import DeepSeekClient
-from clara_ml.medical_answer_v2 import build_medical_answer_v2, detect_emergency_red_flags
+from clara_ml.medical_answer_v2 import build_medical_answer_v2
+from clara_ml.medical_harness import postprocess_stages, preflight_harness
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.observability.tracing import init_tracing
@@ -751,13 +752,15 @@ def routed_chat_infer(payload: dict) -> dict:
         if "uploaded_documents" in rag_flow
         else payload.get("uploaded_documents")
     )
-    pii = redact_pii(query)
-    route = router.route(pii.redacted_text, role_hint=role_hint)
-    emergency_red_flags = detect_emergency_red_flags(pii.redacted_text)
-    if emergency_red_flags and not route.emergency:
-        route.intent = "emergency_triage"
-        route.emergency = True
-        route.confidence = max(route.confidence, 0.995)
+    preflight = preflight_harness(
+        query=query,
+        role_hint=role_hint,
+        clinical_context=clinical_context,
+        router=router,
+    )
+    pii = preflight.pii
+    route = preflight.route
+    emergency_red_flags = preflight.red_flags
 
     if route.emergency:
         emergency_answer = (
@@ -780,7 +783,13 @@ def routed_chat_infer(payload: dict) -> dict:
             factcheck=None,
             clinical_context=clinical_context,
             missing_information=[],
-            careguard=None,
+            careguard=preflight.careguard,
+            harness_stages=postprocess_stages(
+                preflight=preflight,
+                evidence_count=0,
+                factcheck_verdict="not_run",
+                degraded=False,
+            ),
         )
         return _ensure_policy_contract(
             {
@@ -1087,22 +1096,6 @@ def routed_chat_infer(payload: dict) -> dict:
     )
     if answer_package is not None:
         response_payload["clinical_answer_package"] = answer_package
-        careguard_result: dict[str, Any] | None = None
-        if clinical_context and clinical_context.get("medications"):
-            try:
-                careguard_result = run_careguard_analyze(
-                    {
-                        "medications": clinical_context.get("medications", []),
-                        "allergies": clinical_context.get("allergies", []),
-                        "symptoms": clinical_context.get("symptoms", []),
-                        "labs": clinical_context.get("labs", {}),
-                        # DrugBank + curated sources remain active. Live upstream
-                        # calls must not make the answer gate non-deterministic.
-                        "external_ddi_enabled": False,
-                    }
-                )
-            except Exception:  # noqa: BLE001 - fail closed in the v2 contract
-                logger.exception("CareGuard context check failed")
         response_payload["medical_answer_v2"] = build_medical_answer_v2(
             answer=answer,
             audience=route.role,
@@ -1115,7 +1108,13 @@ def routed_chat_infer(payload: dict) -> dict:
             factcheck=factcheck_payload,
             clinical_context=clinical_context,
             missing_information=answer_package["missing_information"],
-            careguard=careguard_result,
+            careguard=preflight.careguard,
+            harness_stages=postprocess_stages(
+                preflight=preflight,
+                evidence_count=len(answer_package["evidence_ledger"]),
+                factcheck_verdict=str((factcheck_payload or {}).get("verdict") or "not_run"),
+                degraded=bool(answer_package["provenance"].get("fallback_used")),
+            ),
         )
         response_payload["citations"] = [
             {

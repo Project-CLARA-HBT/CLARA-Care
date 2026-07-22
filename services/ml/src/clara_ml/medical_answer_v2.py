@@ -271,6 +271,7 @@ def build_medical_answer_v2(
     clinical_context: dict[str, Any] | None,
     missing_information: list[dict[str, str]],
     careguard: dict[str, Any] | None = None,
+    harness_stages: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build and validate the stable v2 artifact from real pipeline outputs."""
 
@@ -317,6 +318,7 @@ def build_medical_answer_v2(
             "evidence_count": len(evidence),
             "factcheck_verdict": str((factcheck or {}).get("verdict") or "not_run"),
             "careguard_status": medication_safety["status"],
+            "harness_stages": harness_stages or [],
         },
     )
     return artifact.model_dump(mode="json")
