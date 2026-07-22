@@ -26,6 +26,7 @@ from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.medical_answer_v2 import build_medical_answer_v2, detect_emergency_red_flags
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.observability.tracing import init_tracing
@@ -752,18 +753,43 @@ def routed_chat_infer(payload: dict) -> dict:
     )
     pii = redact_pii(query)
     route = router.route(pii.redacted_text, role_hint=role_hint)
+    emergency_red_flags = detect_emergency_red_flags(pii.redacted_text)
+    if emergency_red_flags and not route.emergency:
+        route.intent = "emergency_triage"
+        route.emergency = True
+        route.confidence = max(route.confidence, 0.995)
 
     if route.emergency:
+        emergency_answer = (
+            "Possible emergency detected. Call local emergency services immediately "
+            "or go to the nearest ER."
+        )
+        medical_answer_v2 = build_medical_answer_v2(
+            answer=emergency_answer,
+            audience=(
+                role_hint
+                if role_hint in {"normal", "researcher", "doctor", "admin"}
+                else "normal"
+            ),
+            intent="emergency_triage",
+            urgency_level="emergency",
+            emergency_red_flags=emergency_red_flags or ["router_emergency_signal"],
+            policy_action="escalate",
+            model_used="emergency-fastpath-v1",
+            evidence_ledger=[],
+            factcheck=None,
+            clinical_context=clinical_context,
+            missing_information=[],
+            careguard=None,
+        )
         return _ensure_policy_contract(
             {
                 "role": route.role,
                 "intent": route.intent,
                 "confidence": route.confidence,
                 "emergency": True,
-                "answer": (
-                    "Possible emergency detected. Call local emergency services immediately "
-                    "or go to the nearest ER."
-                ),
+                "answer": emergency_answer,
+                "medical_answer_v2": medical_answer_v2,
                 "retrieved_ids": [],
                 "model_used": "emergency-fastpath-v1",
                 "flow_events": [
@@ -1061,6 +1087,36 @@ def routed_chat_infer(payload: dict) -> dict:
     )
     if answer_package is not None:
         response_payload["clinical_answer_package"] = answer_package
+        careguard_result: dict[str, Any] | None = None
+        if clinical_context and clinical_context.get("medications"):
+            try:
+                careguard_result = run_careguard_analyze(
+                    {
+                        "medications": clinical_context.get("medications", []),
+                        "allergies": clinical_context.get("allergies", []),
+                        "symptoms": clinical_context.get("symptoms", []),
+                        "labs": clinical_context.get("labs", {}),
+                        # DrugBank + curated sources remain active. Live upstream
+                        # calls must not make the answer gate non-deterministic.
+                        "external_ddi_enabled": False,
+                    }
+                )
+            except Exception:  # noqa: BLE001 - fail closed in the v2 contract
+                logger.exception("CareGuard context check failed")
+        response_payload["medical_answer_v2"] = build_medical_answer_v2(
+            answer=answer,
+            audience=route.role,
+            intent=route.intent,
+            urgency_level=answer_package["triage"]["level"],
+            emergency_red_flags=[],
+            policy_action=default_action,
+            model_used=rag_result.model_used,
+            evidence_ledger=answer_package["evidence_ledger"],
+            factcheck=factcheck_payload,
+            clinical_context=clinical_context,
+            missing_information=answer_package["missing_information"],
+            careguard=careguard_result,
+        )
         response_payload["citations"] = [
             {
                 "source": item.get("title") or item.get("source") or item["evidence_id"],

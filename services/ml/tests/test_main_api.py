@@ -398,6 +398,9 @@ def test_routed_chat_infer_emergency_fast_path():
     assert body["intent"] == "emergency_triage"
     assert body["model_used"] == "emergency-fastpath-v1"
     assert body["retrieved_ids"] == []
+    assert body["medical_answer_v2"]["schema_version"] == "medical_answer_v2"
+    assert body["medical_answer_v2"]["urgency"]["level"] == "emergency"
+    assert body["medical_answer_v2"]["actions_now"]
 
 
 def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
