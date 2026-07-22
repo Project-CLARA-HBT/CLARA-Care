@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from clara_api.api.router import api_router
+from clara_api.api.v1.endpoints.research import start_research_job_recovery
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
@@ -224,6 +225,7 @@ def init_db_schema() -> None:
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
+    start_research_job_recovery()
 
 
 @app.exception_handler(ClaraAPIError)

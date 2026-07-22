@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from html import unescape
 from html.parser import HTMLParser
 from io import BytesIO
-from threading import Lock
+from threading import Lock, Thread
 from typing import Any
 from urllib.parse import quote, urljoin, urlparse
 from uuid import uuid4
@@ -22,7 +22,7 @@ import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi import Query as FastAPIQuery
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
@@ -210,6 +210,10 @@ _research_job_executor = ThreadPoolExecutor(
 )
 _research_job_futures: dict[str, Future[Any]] = {}
 _research_job_lock = Lock()
+_research_recovery_lock = Lock()
+_research_recovery_started = False
+_RESEARCH_JOB_LEASE_SECONDS = 120
+_RESEARCH_JOB_RECOVERY_POLL_SECONDS = 30
 _RESEARCH_MODE_ALLOWED = {"fast", "deep", "deep_beta"}
 _RETRIEVAL_STACK_MODE_ALLOWED = {"auto", "full"}
 _ANSWER_LANGUAGE_ALLOWED = {"vi", "en"}
@@ -2383,6 +2387,8 @@ def _append_job_event(
     progress["reasoning_steps"] = list(reasoning_steps[-40:])
     job.progress_json = json.loads(json.dumps(progress, ensure_ascii=False))
     job.updated_at = datetime.now(tz=UTC)
+    if job.status == "running":
+        job.lease_heartbeat_at = job.updated_at
     db.add(job)
     db.commit()
 
@@ -2444,7 +2450,75 @@ def _serialize_research_job(
         progress=progress,
         result=result,
         error=job.error_text or None,
+        run_manifest=(
+            job.run_manifest_json if isinstance(job.run_manifest_json, dict) else None
+        ),
+        evidence_snapshot=(
+            job.evidence_snapshot_json
+            if isinstance(job.evidence_snapshot_json, dict)
+            else None
+        ),
+        attempt_count=int(job.attempt_count or 0),
+        recovery_count=int(job.recovery_count or 0),
     )
+
+
+def _canonical_sha256(value: Any) -> str:
+    serialized = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _build_research_run_manifest(
+    *, job_id: str, request_payload: dict[str, Any], created_at: datetime
+) -> dict[str, Any]:
+    """Create a privacy-conscious, immutable description of an execution request."""
+
+    return {
+        "schema_version": "1.0",
+        "run_id": job_id,
+        "created_at": created_at.isoformat(),
+        "input_sha256": _canonical_sha256(request_payload),
+        "research_mode": _coerce_research_mode(request_payload),
+        "source_mode": str(request_payload.get("source_mode") or "hybrid"),
+        "retrieval_stack_mode": str(
+            request_payload.get("retrieval_stack_mode") or "auto"
+        ),
+        "answer_language": str(
+            request_payload.get("ui_language")
+            or request_payload.get("answer_language")
+            or "vi"
+        ),
+        "selected_sources": {
+            "knowledge_source_ids": list(request_payload.get("source_ids") or []),
+            "source_hubs": list(request_payload.get("source_hub_sources") or []),
+            "uploaded_file_ids": list(request_payload.get("uploaded_file_ids") or []),
+        },
+    }
+
+
+def _build_evidence_snapshot(
+    *, job_id: str, result: dict[str, Any], captured_at: datetime
+) -> dict[str, Any]:
+    """Freeze the exact evidence references used by a completed synthesis."""
+
+    citations = result.get("citations")
+    sources = result.get("sources")
+    registry = result.get("citation_registry")
+    snapshot_payload = {
+        "citations": citations if isinstance(citations, list) else [],
+        "sources": sources if isinstance(sources, list) else [],
+        "citation_registry": registry if isinstance(registry, list) else [],
+        "retrieval_trace": result.get("retrieval_trace")
+        if isinstance(result.get("retrieval_trace"), (dict, list))
+        else None,
+    }
+    return {
+        "schema_version": "1.0",
+        "run_id": job_id,
+        "captured_at": captured_at.isoformat(),
+        "evidence_sha256": _canonical_sha256(snapshot_payload),
+        **snapshot_payload,
+    }
 
 
 def _build_fail_soft_response_local(
@@ -2539,19 +2613,39 @@ def _invoke_ml_tier2_with_progress(
     return data
 
 
+def _claim_research_job(db: Session, *, job_id: str, worker_id: str) -> bool:
+    """Atomically claim a queued job so API workers cannot execute it twice."""
+
+    now = datetime.now(tz=UTC)
+    claimed = db.execute(
+        update(ResearchJob)
+        .where(ResearchJob.job_id == job_id, ResearchJob.status == "queued")
+        .values(
+            status="running",
+            worker_id=worker_id,
+            lease_heartbeat_at=now,
+            started_at=now,
+            updated_at=now,
+            attempt_count=ResearchJob.attempt_count + 1,
+            error_text="",
+        )
+    )
+    db.commit()
+    return bool(claimed.rowcount)
+
+
 def _run_research_job(job_id: str) -> None:
     db = SessionLocal()
+    worker_id = f"research-{os.getpid()}-{uuid4().hex[:12]}"
     try:
+        if not _claim_research_job(db, job_id=job_id, worker_id=worker_id):
+            return
         settings = get_settings()
         job = db.execute(
             select(ResearchJob).where(ResearchJob.job_id == job_id)
         ).scalar_one_or_none()
         if job is None:
             return
-        job.status = "running"
-        job.started_at = datetime.now(tz=UTC)
-        db.add(job)
-        db.commit()
         _append_job_event(
             db,
             job=job,
@@ -2619,9 +2713,17 @@ def _run_research_job(job_id: str) -> None:
             request_payload=request_payload,
         )
         enriched = _attach_research_attribution(normalized)
+        completed_at = datetime.now(tz=UTC)
         job.result_json = enriched
+        job.evidence_snapshot_json = _build_evidence_snapshot(
+            job_id=job_id,
+            result=enriched,
+            captured_at=completed_at,
+        )
         job.status = "completed"
-        job.completed_at = datetime.now(tz=UTC)
+        job.completed_at = completed_at
+        job.worker_id = None
+        job.lease_heartbeat_at = None
         db.add(job)
         db.commit()
         _append_job_event(
@@ -2666,6 +2768,8 @@ def _run_research_job(job_id: str) -> None:
                 job.status = "failed"
                 job.error_text = str(exc)
                 job.completed_at = datetime.now(tz=UTC)
+                job.worker_id = None
+                job.lease_heartbeat_at = None
                 db.add(job)
                 db.commit()
                 _append_job_event(
@@ -2706,6 +2810,75 @@ def _count_pending_research_jobs() -> int:
         for job_id in stale_job_ids:
             _research_job_futures.pop(job_id, None)
         return len(_research_job_futures)
+
+
+def recover_research_jobs_once() -> int:
+    """Requeue abandoned leases and dispatch every durable queued job.
+
+    The status transition is database-backed, while ``_claim_research_job`` is
+    atomic. Consequently this remains safe when several API processes run the
+    recovery pass concurrently.
+    """
+
+    cutoff = datetime.now(tz=UTC) - timedelta(seconds=_RESEARCH_JOB_LEASE_SECONDS)
+    now = datetime.now(tz=UTC)
+    with SessionLocal() as db:
+        db.execute(
+            update(ResearchJob)
+            .where(
+                ResearchJob.status == "running",
+                or_(
+                    ResearchJob.lease_heartbeat_at.is_(None),
+                    ResearchJob.lease_heartbeat_at < cutoff,
+                ),
+            )
+            .values(
+                status="queued",
+                worker_id=None,
+                lease_heartbeat_at=None,
+                updated_at=now,
+                recovery_count=ResearchJob.recovery_count + 1,
+            )
+        )
+        db.commit()
+        job_ids = list(
+            db.scalars(
+                select(ResearchJob.job_id)
+                .where(ResearchJob.status == "queued")
+                .order_by(ResearchJob.created_at.asc())
+                .limit(_RESEARCH_JOB_MAX_PENDING)
+            ).all()
+        )
+
+    dispatched = 0
+    for durable_job_id in job_ids:
+        try:
+            _queue_research_job(str(durable_job_id))
+            dispatched += 1
+        except RuntimeError:
+            break
+    return dispatched
+
+
+def start_research_job_recovery() -> None:
+    """Start the daemon that makes queued/restarted research runs recoverable."""
+
+    global _research_recovery_started
+    with _research_recovery_lock:
+        if _research_recovery_started:
+            return
+        _research_recovery_started = True
+
+    def _sweep() -> None:
+        while True:
+            try:
+                recover_research_jobs_once()
+            except Exception:
+                # Recovery is best-effort per sweep; the next interval retries.
+                pass
+            time.sleep(_RESEARCH_JOB_RECOVERY_POLL_SECONDS)
+
+    Thread(target=_sweep, name="research-job-recovery", daemon=True).start()
 
 
 _SOURCE_HUB_CATALOG: tuple[SourceHubCatalogEntry, ...] = (
@@ -4525,6 +4698,12 @@ def create_research_tier2_job(
         request_payload=upstream_payload,
         progress_json=_empty_job_progress(),
         result_json=None,
+        run_manifest_json=_build_research_run_manifest(
+            job_id=job_id,
+            request_payload=upstream_payload,
+            created_at=now,
+        ),
+        evidence_snapshot_json=None,
         error_text="",
         created_at=now,
         updated_at=now,

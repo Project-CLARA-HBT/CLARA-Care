@@ -293,7 +293,15 @@ class ResearchJob(Base):
     request_payload: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     progress_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     result_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    run_manifest_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    evidence_snapshot_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     error_text: Mapped[str] = mapped_column(Text, default="")
+    worker_id: Mapped[str | None] = mapped_column(String(96), nullable=True, index=True)
+    lease_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    recovery_count: Mapped[int] = mapped_column(Integer, default=0)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

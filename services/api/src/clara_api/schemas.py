@@ -778,6 +778,10 @@ class ResearchTier2JobResponse(BaseModel):
     progress: dict[str, object] = Field(default_factory=dict)
     result: dict[str, object] | None = None
     error: str | None = None
+    run_manifest: dict[str, object] | None = None
+    evidence_snapshot: dict[str, object] | None = None
+    attempt_count: int = 0
+    recovery_count: int = 0
 
 
 class ResearchClarifyRequest(BaseModel):

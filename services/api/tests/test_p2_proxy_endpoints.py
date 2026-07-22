@@ -503,6 +503,11 @@ def test_research_tier2_job_create_and_get(monkeypatch: pytest.MonkeyPatch) -> N
     assert payload.get("status") in {"queued", "running", "completed"}
     assert payload.get("query") == "Tương tác Warfarin với thuốc giảm đau phổ biến"
     assert isinstance(payload.get("progress"), dict)
+    assert payload["run_manifest"]["schema_version"] == "1.0"
+    assert payload["run_manifest"]["research_mode"] == "deep"
+    assert len(payload["run_manifest"]["input_sha256"]) == 64
+    assert payload["attempt_count"] == 0
+    assert payload["recovery_count"] == 0
 
     job_id = payload["job_id"]
     get_response = client.get(
@@ -866,6 +871,57 @@ def test_research_job_progress_falls_back_to_estimator_without_ml_stage_signal(
             and item.get("status") == "in_progress"
             for item in flow_events
         )
+        assert isinstance(row.evidence_snapshot_json, dict)
+        assert row.evidence_snapshot_json["run_id"] == job_id
+        assert len(row.evidence_snapshot_json["evidence_sha256"]) == 64
+        assert row.attempt_count == 1
+
+
+def test_research_recovery_requeues_expired_lease_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    _login("alice@research.clara")
+    now = datetime.now(tz=UTC)
+    job_id = "job-expired-lease-recovery"
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.email == "alice@research.clara").first()
+        assert user is not None
+        db.add(
+            ResearchJob(
+                job_id=job_id,
+                user_id=user.id,
+                role="researcher",
+                status="running",
+                query_text="recover this run",
+                request_payload={"query": "recover this run"},
+                progress_json=_minimal_progress(now),
+                result_json=None,
+                error_text="",
+                worker_id="dead-worker",
+                lease_heartbeat_at=now - research_endpoint.timedelta(minutes=10),
+                attempt_count=1,
+                recovery_count=0,
+                created_at=now,
+                updated_at=now,
+                started_at=now,
+                completed_at=None,
+            )
+        )
+        db.commit()
+
+    dispatched: list[str] = []
+    monkeypatch.setattr(research_endpoint, "_queue_research_job", dispatched.append)
+
+    assert research_endpoint.recover_research_jobs_once() == 1
+    assert dispatched == [job_id]
+    with SessionLocal() as db:
+        row = db.query(ResearchJob).filter(ResearchJob.job_id == job_id).one()
+        assert row.status == "queued"
+        assert row.worker_id is None
+        assert row.lease_heartbeat_at is None
+        assert row.recovery_count == 1
 
 
 def test_research_tier2_job_stream_returns_progress_and_done() -> None:
