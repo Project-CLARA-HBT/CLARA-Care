@@ -11,6 +11,7 @@ import type {
   Tier2Result,
 } from "@/components/research/lib/research-page-types";
 import type { ResearchTier2Result } from "@/lib/research";
+import type { ClinicalAnswerPackage } from "@/lib/chat";
 
 /**
  * Feature: clara-chat-redesign, Requirement 2.2 (typographic answer), 2.3/3.2
@@ -109,6 +110,67 @@ describe("AnswerRenderer", () => {
       "https://pubmed.example/1",
     );
   });
+
+  it("renders the five-part medical answer canvas for structured clinical answers", () => {
+    const clinicalAnswer: ClinicalAnswerPackage = {
+      schema_version: "1",
+      protocol: "medical-answer-harness",
+      triage: {
+        level: "urgent_review",
+        emergency: false,
+        policy_action: "Seek same-day assessment.",
+      },
+      claim_support: { status: "supported", evidence_ids: ["e1"] },
+      evidence_ledger: [
+        {
+          evidence_id: "e1",
+          title: "Guideline",
+          url: "https://example.test/guideline",
+        },
+      ],
+      uncertainty: { level: "moderate", reasons: ["No examination"] },
+      missing_information: [
+        { field: "temperature", why_it_matters: "changes urgency" },
+      ],
+      next_actions: [{ action: "Contact a clinician today", priority: "high" }],
+      provenance: { evidence_count: 1, fallback_used: false },
+    };
+    render(
+      <AnswerRenderer
+        result={{ ...makeTier1("Summary"), clinicalAnswer }}
+        uiLanguage="en"
+        role="normal"
+      />,
+    );
+    expect(
+      screen.getByRole("region", { name: /medical answer canvas/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Urgency")).toBeInTheDocument();
+    expect(screen.getByText("What to do next")).toBeInTheDocument();
+    expect(screen.getByText("Evidence behind this")).toBeInTheDocument();
+    expect(
+      screen.getByText("Uncertainty & missing context"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Medicine safety")).toBeInTheDocument();
+  });
+
+  it("surfaces research integrity metrics for deep results", () => {
+    render(
+      <AnswerRenderer
+        result={makeTier2({
+          answer: "Evidence synthesis",
+          deepPassCount: 2,
+          verificationStatus: { verdict: "supported" },
+        })}
+        uiLanguage="en"
+        role="researcher"
+      />,
+    );
+    expect(
+      screen.getByRole("region", { name: /research integrity/i }),
+    ).toHaveTextContent("supported");
+    expect(screen.getByText("Deep passes")).toBeInTheDocument();
+  });
 });
 
 describe("FlowTimeline", () => {
@@ -166,6 +228,27 @@ describe("TurnView", () => {
     render(<TurnView turn={turn} uiLanguage="en" />);
     expect(screen.getByText("What is metformin?")).toBeInTheDocument();
     expect(screen.getByText("It is a diabetes medicine.")).toBeInTheDocument();
+  });
+
+  it("lets a user escalate an answer into the existing research workflow", () => {
+    const onLaunchResearch = vi.fn();
+    const turn: ConversationItem = {
+      id: "t-research",
+      query: "Does metformin reduce cardiovascular risk?",
+      result: makeTier1("It depends on the population."),
+      createdAt: Date.now(),
+    };
+    render(
+      <TurnView
+        turn={turn}
+        uiLanguage="en"
+        onLaunchResearch={onLaunchResearch}
+      />,
+    );
+    screen
+      .getByRole("button", { name: /Investigate with Medical Research/i })
+      .click();
+    expect(onLaunchResearch).toHaveBeenCalledWith(turn.query);
   });
 
   it("isolates a render failure to a per-turn error boundary", () => {

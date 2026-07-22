@@ -9,6 +9,8 @@ import type {
   ResearchRetrievalStackMode,
 } from "@/lib/research";
 import { IconButton } from "@/app/chat/_v2/components/primitives";
+import ClinicalContextPanel from "@/app/chat/_v2/components/ClinicalContextPanel";
+import type { ClinicalContext } from "@/app/chat/_v2/lib/clinical-context";
 
 /**
  * Answer-first composer for the rebuilt CLARA Chat (CHAT_V2).
@@ -43,6 +45,8 @@ export type ComposerProps = {
   liveStatusNote: string;
   uiLanguage: UILanguage;
   userRole?: UserRole;
+  clinicalContext?: ClinicalContext;
+  onChangeClinicalContext?: (context: ClinicalContext) => void;
 };
 
 function Composer(props: ComposerProps) {
@@ -61,6 +65,8 @@ function Composer(props: ComposerProps) {
     liveStatusNote,
     uiLanguage,
     userRole = "normal",
+    clinicalContext,
+    onChangeClinicalContext,
   } = props;
   const isEn = uiLanguage === "en";
   const isFast = mode === "fast";
@@ -119,6 +125,17 @@ function Composer(props: ComposerProps) {
             }
             className="min-h-[58px] max-h-40 w-full resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
           />
+
+          {clinicalContext && onChangeClinicalContext ? (
+            <div className="px-0.5 pb-2">
+              <ClinicalContextPanel
+                context={clinicalContext}
+                onChange={onChangeClinicalContext}
+                role={userRole}
+                uiLanguage={uiLanguage}
+              />
+            </div>
+          ) : null}
 
           <div className="flex items-end justify-between gap-2 border-t border-[color:var(--shell-border)] px-0.5 pt-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">

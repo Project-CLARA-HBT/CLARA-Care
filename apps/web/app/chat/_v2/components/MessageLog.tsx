@@ -4,6 +4,7 @@ import { memo, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { UILanguage } from "@/lib/ui-language";
+import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import TurnView from "@/app/chat/_v2/components/TurnView";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
@@ -21,9 +22,17 @@ export type MessageLogProps = {
   turns: ConversationItem[];
   uiLanguage: UILanguage;
   isRunning?: boolean;
+  role?: UserRole;
+  onLaunchResearch?: (query: string) => void;
 };
 
-function MessageLog({ turns, uiLanguage, isRunning = false }: MessageLogProps) {
+function MessageLog({
+  turns,
+  uiLanguage,
+  isRunning = false,
+  role = "normal",
+  onLaunchResearch,
+}: MessageLogProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -77,7 +86,12 @@ function MessageLog({ turns, uiLanguage, isRunning = false }: MessageLogProps) {
               }}
               className="pb-4"
             >
-              <TurnView turn={turn} uiLanguage={uiLanguage} />
+              <TurnView
+                turn={turn}
+                uiLanguage={uiLanguage}
+                role={role}
+                onLaunchResearch={onLaunchResearch}
+              />
             </div>
           );
         })}

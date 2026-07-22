@@ -57,6 +57,11 @@ import TelemetryPanelLazy from "@/app/chat/_v2/components/TelemetryPanelLazy";
 import { Badge, IconButton } from "@/app/chat/_v2/components/primitives";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
 import { useResolvedTheme } from "@/app/chat/_v2/theme/useResolvedTheme";
+import {
+  buildContextualMedicalQuery,
+  EMPTY_CLINICAL_CONTEXT,
+  type ClinicalContext,
+} from "@/app/chat/_v2/lib/clinical-context";
 
 /**
  * ChatShell — the rebuilt CLARA Chat (CHAT_V2) layout + orchestration.
@@ -87,6 +92,9 @@ export default function ChatShell() {
   const [retrievalStackMode, setRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
   const [personalMode, setPersonalMode] = useState(false);
+  const [clinicalContext, setClinicalContext] = useState<ClinicalContext>(
+    EMPTY_CLINICAL_CONTEXT,
+  );
 
   const [activeConversationId, setActiveConversationId] = useState<
     number | null
@@ -129,6 +137,20 @@ export default function ChatShell() {
       window.setTimeout(focusComposer, 0);
     },
     [focusComposer],
+  );
+
+  const launchResearch = useCallback(
+    (sourceQuery: string) => {
+      setMode("deep_beta");
+      setQuery(sourceQuery);
+      setNotice(
+        uiLanguage === "en"
+          ? "Research mode is ready. Refine the question or run it now."
+          : "Đã sẵn sàng chế độ Nghiên cứu. Bạn có thể chỉnh câu hỏi hoặc chạy ngay.",
+      );
+      window.setTimeout(focusComposer, 0);
+    },
+    [focusComposer, uiLanguage],
   );
 
   // Focus the sidebar conversation-search field (command-palette parity action
@@ -284,7 +306,13 @@ export default function ChatShell() {
       trackChatMessageSent({ mode, transport });
 
       try {
-        const result = await stream.run(message, {
+        const apiMessage = buildContextualMedicalQuery(
+          message,
+          clinicalContext,
+          role,
+          uiLanguage,
+        );
+        const result = await stream.run(apiMessage, {
           mode,
           retrievalStackMode,
           personalMode,
@@ -369,12 +397,14 @@ export default function ChatShell() {
     [
       activeConversationId,
       activeMeta,
+      clinicalContext,
       conversations,
       isEn,
       mode,
       personalMode,
       query,
       retrievalStackMode,
+      role,
       stream,
       turns,
       uiLanguage,
@@ -774,6 +804,8 @@ export default function ChatShell() {
               turns={turns.turns}
               uiLanguage={uiLanguage}
               isRunning={stream.isRunning}
+              role={role}
+              onLaunchResearch={launchResearch}
             />
           ) : (
             <ChatWelcome
@@ -808,6 +840,8 @@ export default function ChatShell() {
             liveStatusNote={stream.statusNote}
             uiLanguage={uiLanguage}
             userRole={role}
+            clinicalContext={clinicalContext}
+            onChangeClinicalContext={setClinicalContext}
           />
         </main>
       </div>

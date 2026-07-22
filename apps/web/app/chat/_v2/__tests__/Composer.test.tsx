@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import Composer, {
   type ComposerProps,
 } from "@/app/chat/_v2/components/Composer";
+import { EMPTY_CLINICAL_CONTEXT } from "@/app/chat/_v2/lib/clinical-context";
 
 /**
  * Feature: clara-chat-redesign, Requirement 3.5 (responsive composer during a
@@ -148,5 +149,15 @@ describe("Composer", () => {
     const textarea = screen.getByLabelText(/medical question/i);
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
     expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it("offers role-specific structured research framing without blocking a simple question", () => {
+    setup({
+      userRole: "researcher",
+      clinicalContext: EMPTY_CLINICAL_CONTEXT,
+      onChangeClinicalContext: vi.fn(),
+    });
+    expect(screen.getByText("Frame the research question")).toBeInTheDocument();
+    expect(screen.getByText("Optional")).toBeInTheDocument();
   });
 });

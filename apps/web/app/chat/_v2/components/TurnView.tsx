@@ -3,6 +3,7 @@
 import { Component, memo, type ReactNode } from "react";
 
 import type { UILanguage } from "@/lib/ui-language";
+import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import AnswerRenderer from "@/app/chat/_v2/components/AnswerRenderer";
 import FlowTimeline from "@/app/chat/_v2/components/FlowTimeline";
@@ -20,7 +21,10 @@ type TurnErrorBoundaryProps = {
   fallbackLabel: string;
 };
 
-class TurnErrorBoundary extends Component<TurnErrorBoundaryProps, { hasError: boolean }> {
+class TurnErrorBoundary extends Component<
+  TurnErrorBoundaryProps,
+  { hasError: boolean }
+> {
   constructor(props: TurnErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -48,14 +52,24 @@ class TurnErrorBoundary extends Component<TurnErrorBoundaryProps, { hasError: bo
 export type TurnViewProps = {
   turn: ConversationItem;
   uiLanguage: UILanguage;
+  role?: UserRole;
+  onLaunchResearch?: (query: string) => void;
 };
 
-function TurnView({ turn, uiLanguage }: TurnViewProps) {
+function TurnView({
+  turn,
+  uiLanguage,
+  role = "normal",
+  onLaunchResearch,
+}: TurnViewProps) {
   const isEn = uiLanguage === "en";
   const tier2Result = turn.result.tier === "tier2" ? turn.result : null;
 
   return (
-    <article className="space-y-3" aria-label={isEn ? "Conversation turn" : "Lượt trò chuyện"}>
+    <article
+      className="space-y-3"
+      aria-label={isEn ? "Conversation turn" : "Lượt trò chuyện"}
+    >
       {turn.query.trim() ? (
         <div className="flex justify-end">
           <div className="max-w-[85%] rounded-2xl rounded-tr-sm border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-4 py-2.5 text-sm text-[var(--text-primary)]">
@@ -75,12 +89,43 @@ function TurnView({ turn, uiLanguage }: TurnViewProps) {
           {tier2Result ? (
             <div className="space-y-3">
               <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
-              <AnswerRenderer result={turn.result} uiLanguage={uiLanguage} />
+              <AnswerRenderer
+                result={turn.result}
+                uiLanguage={uiLanguage}
+                role={role}
+              />
             </div>
           ) : (
-            <AnswerRenderer result={turn.result} uiLanguage={uiLanguage} />
+            <AnswerRenderer
+              result={turn.result}
+              uiLanguage={uiLanguage}
+              role={role}
+            />
           )}
         </TurnErrorBoundary>
+        {onLaunchResearch && turn.query.trim() ? (
+          <div className="mt-3 flex justify-end border-t border-[color:var(--shell-border)] pt-2.5">
+            <button
+              type="button"
+              onClick={() => onLaunchResearch(turn.query)}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-brand)] transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+            >
+              <span
+                className="material-symbols-outlined text-[16px]"
+                aria-hidden="true"
+              >
+                biotech
+              </span>
+              {tier2Result
+                ? isEn
+                  ? "Refine with a new evidence run"
+                  : "Tinh chỉnh bằng lượt nghiên cứu mới"
+                : isEn
+                  ? "Investigate with Medical Research"
+                  : "Nghiên cứu y khoa chuyên sâu"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </article>
   );

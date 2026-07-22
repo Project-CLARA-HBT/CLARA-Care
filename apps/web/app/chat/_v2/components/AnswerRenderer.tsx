@@ -8,7 +8,12 @@ import type { UILanguage } from "@/lib/ui-language";
 import type { ResearchResult } from "@/components/research/lib/research-page-types";
 import { isDegradedAnswer } from "@/app/chat/_v2/lib/chat-format";
 import { Badge } from "@/app/chat/_v2/components/primitives";
-import { citationRegistryAnchorId, injectTracedClaimAnchors } from "@/lib/research";
+import {
+  citationRegistryAnchorId,
+  injectTracedClaimAnchors,
+} from "@/lib/research";
+import type { UserRole } from "@/lib/auth-store";
+import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
 
 /**
  * Typographic answer renderer for the rebuilt CLARA Chat (CHAT_V2).
@@ -28,25 +33,28 @@ import { citationRegistryAnchorId, injectTracedClaimAnchors } from "@/lib/resear
 export type AnswerRendererProps = {
   result: ResearchResult;
   uiLanguage: UILanguage;
+  role?: UserRole;
 };
 
-function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
+function AnswerRenderer({
+  result,
+  uiLanguage,
+  role = "normal",
+}: AnswerRendererProps) {
   const degraded = isDegradedAnswer(result);
   const baseAnswer = result.answer?.trim() || "";
   const citations = result.tier === "tier2" ? result.citations : [];
-  const tracedClaims = result.tier === "tier2" ? result.tracedClaims ?? [] : [];
-  const citationRegistry = result.tier === "tier2" ? result.citationRegistry ?? [] : [];
+  const tracedClaims =
+    result.tier === "tier2" ? (result.tracedClaims ?? []) : [];
+  const citationRegistry =
+    result.tier === "tier2" ? (result.citationRegistry ?? []) : [];
   const answer =
     tracedClaims.length && citationRegistry.length
       ? injectTracedClaimAnchors(baseAnswer, tracedClaims, citationRegistry)
       : baseAnswer;
   const isEn = uiLanguage === "en";
-  const clinicalAnswer = result.tier === "tier1" ? result.clinicalAnswer : undefined;
-  const triageTone = clinicalAnswer?.triage.emergency
-    ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
-    : clinicalAnswer?.triage.level === "urgent_review"
-      ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
-      : "border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  const clinicalAnswer =
+    result.tier === "tier1" ? result.clinicalAnswer : undefined;
 
   return (
     <div className="space-y-2">
@@ -67,110 +75,62 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
       </div>
 
       {clinicalAnswer ? (
+        <MedicalAnswerCanvas
+          answer={clinicalAnswer}
+          role={role}
+          uiLanguage={uiLanguage}
+        />
+      ) : null}
+
+      {result.tier === "tier2" ? (
         <section
-          className="mt-4 space-y-3 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3.5"
-          aria-label={isEn ? "Clinical answer workbench" : "Bàn làm việc câu trả lời lâm sàng"}
+          className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3"
+          aria-label={isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                {isEn ? "Clinical evidence workbench" : "Bàn làm việc bằng chứng lâm sàng"}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-brand)]">
+                {isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
               </p>
-              <p className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">
-                {isEn ? "Decision-ready answer package" : "Gói trả lời sẵn sàng để rà soát"}
-              </p>
-            </div>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${triageTone}`}>
-              {clinicalAnswer.triage.level.replaceAll("_", " ")}
-            </span>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                {isEn ? "Evidence" : "Bằng chứng"}
-              </p>
-              <p className="mt-1 text-base font-semibold text-[var(--text-primary)]">
-                {clinicalAnswer.provenance.evidence_count}
-              </p>
-            </div>
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                {isEn ? "Claim support" : "Mức hỗ trợ"}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-[var(--text-primary)]">
-                {clinicalAnswer.claim_support.status.replaceAll("_", " ")}
-              </p>
-            </div>
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                {isEn ? "Uncertainty" : "Độ bất định"}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-[var(--text-primary)]">
-                {clinicalAnswer.uncertainty.level.replaceAll("_", " ")}
-              </p>
-            </div>
-          </div>
-
-          {clinicalAnswer.next_actions.length ? (
-            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2.5">
-              <p className="text-[11px] font-semibold text-[var(--text-primary)]">
-                {isEn ? "Recommended next step" : "Bước tiếp theo được đề xuất"}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                {clinicalAnswer.next_actions[0].action}
-              </p>
-            </div>
-          ) : null}
-
-          {clinicalAnswer.evidence_ledger.length ? (
-            <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2.5">
-              <summary className="cursor-pointer text-[11px] font-semibold text-[var(--text-primary)]">
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                 {isEn
-                  ? `Evidence ledger (${clinicalAnswer.evidence_ledger.length})`
-                  : `Sổ bằng chứng (${clinicalAnswer.evidence_ledger.length})`}
-              </summary>
-              <ol className="mt-2 space-y-2">
-                {clinicalAnswer.evidence_ledger.map((item) => (
-                  <li key={item.evidence_id} className="text-xs leading-5 text-[var(--text-secondary)]">
-                    <span className="font-semibold text-[var(--text-primary)]">{item.evidence_id}</span>{" "}
-                    {item.url ? (
-                      <a className="text-[var(--text-brand)] hover:underline" href={item.url} target="_blank" rel="noreferrer">
-                        {item.title || item.source || item.url}
-                      </a>
-                    ) : (
-                      <span>{item.title || item.source || "—"}</span>
-                    )}
-                    {typeof item.trust_tier === "number" ? (
-                      <span className="text-[var(--text-muted)]"> · Tier {item.trust_tier}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          ) : (
-            <p className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs text-[var(--status-warn-text)]">
-              {isEn
-                ? "No retrievable evidence was available. Do not treat this output as decision-ready."
-                : "Chưa truy xuất được bằng chứng. Không sử dụng kết quả này như một quyết định hoàn chỉnh."}
+                  ? "Inspect what supports the answer—not only the prose."
+                  : "Kiểm tra nền tảng của câu trả lời, không chỉ nội dung diễn giải."}
+              </p>
+            </div>
+            {result.policyAction ? (
+              <Badge
+                tone={result.policyAction === "allow" ? "success" : "warn"}
+              >
+                {result.policyAction}
+              </Badge>
+            ) : null}
+          </div>
+          <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <ResearchMetric
+              label={isEn ? "Sources" : "Nguồn"}
+              value={result.citations.length}
+            />
+            <ResearchMetric
+              label={isEn ? "Traced claims" : "Luận điểm truy vết"}
+              value={result.tracedClaims.length}
+            />
+            <ResearchMetric
+              label={isEn ? "Deep passes" : "Lượt phân tích"}
+              value={result.deepPassCount ?? 0}
+            />
+            <ResearchMetric
+              label={isEn ? "Verification" : "Kiểm chứng"}
+              value={
+                result.verificationStatus?.verdict ??
+                (isEn ? "Not reported" : "Chưa báo cáo")
+              }
+            />
+          </div>
+          {result.verificationStatus?.note ? (
+            <p className="mt-2 rounded-xl bg-[var(--surface-panel)] px-3 py-2 text-xs leading-5 text-[var(--text-secondary)]">
+              {result.verificationStatus.note}
             </p>
-          )}
-
-          {clinicalAnswer.missing_information.length ? (
-            <details className="px-1 text-xs text-[var(--text-secondary)]">
-              <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">
-                {isEn
-                  ? `Case context to add (${clinicalAnswer.missing_information.length})`
-                  : `Ngữ cảnh ca bệnh cần bổ sung (${clinicalAnswer.missing_information.length})`}
-              </summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                {clinicalAnswer.missing_information.map((item) => (
-                  <li key={item.field}>
-                    <strong>{item.field}</strong> — {item.why_it_matters}
-                  </li>
-                ))}
-              </ul>
-            </details>
           ) : null}
         </section>
       ) : null}
@@ -184,7 +144,8 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
             {citationRegistry.map((entry, index) => {
               const meta = [
                 entry.sourceType,
-                typeof entry.trustTier === "number" && Number.isFinite(entry.trustTier)
+                typeof entry.trustTier === "number" &&
+                Number.isFinite(entry.trustTier)
                   ? `Tier ${entry.trustTier}`
                   : null,
                 entry.publishedAt,
@@ -195,7 +156,9 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
                   id={citationRegistryAnchorId(entry.citationId)}
                   className="scroll-mt-24 text-[12px] leading-5 text-[var(--text-secondary)]"
                 >
-                  <span className="font-semibold text-[var(--text-primary)]">[{index + 1}]</span>{" "}
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    [{index + 1}]
+                  </span>{" "}
                   {entry.url ? (
                     <a
                       href={entry.url}
@@ -209,10 +172,16 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
                     <span>{entry.title || entry.studyId || "—"}</span>
                   )}
                   {entry.studyId && entry.title ? (
-                    <span className="font-mono text-[var(--text-muted)]"> · {entry.studyId}</span>
+                    <span className="font-mono text-[var(--text-muted)]">
+                      {" "}
+                      · {entry.studyId}
+                    </span>
                   ) : null}
                   {meta.length ? (
-                    <span className="text-[var(--text-muted)]"> · {meta.join(" · ")}</span>
+                    <span className="text-[var(--text-muted)]">
+                      {" "}
+                      · {meta.join(" · ")}
+                    </span>
                   ) : null}
                 </li>
               );
@@ -224,12 +193,19 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
       {citations.length ? (
         <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {isEn ? `References (${citations.length})` : `Nguồn tham khảo (${citations.length})`}
+            {isEn
+              ? `References (${citations.length})`
+              : `Nguồn tham khảo (${citations.length})`}
           </summary>
           <ol className="mt-2 space-y-1.5">
             {citations.map((citation, index) => (
-              <li key={`${citation.title}-${index}`} className="text-[12px] leading-5 text-[var(--text-secondary)]">
-                <span className="font-semibold text-[var(--text-primary)]">[{index + 1}]</span>{" "}
+              <li
+                key={`${citation.title}-${index}`}
+                className="text-[12px] leading-5 text-[var(--text-secondary)]"
+              >
+                <span className="font-semibold text-[var(--text-primary)]">
+                  [{index + 1}]
+                </span>{" "}
                 {citation.url ? (
                   <a
                     href={citation.url}
@@ -243,13 +219,35 @@ function AnswerRenderer({ result, uiLanguage }: AnswerRendererProps) {
                   <span>{citation.title || citation.source || "—"}</span>
                 )}
                 {citation.source && citation.title ? (
-                  <span className="text-[var(--text-muted)]"> · {citation.source}</span>
+                  <span className="text-[var(--text-muted)]">
+                    {" "}
+                    · {citation.source}
+                  </span>
                 ) : null}
               </li>
             ))}
           </ol>
         </details>
       ) : null}
+    </div>
+  );
+}
+
+function ResearchMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-xs font-semibold text-[var(--text-primary)]">
+        {value}
+      </p>
     </div>
   );
 }
