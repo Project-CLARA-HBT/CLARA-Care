@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
+import AppTopbar from "@/components/navigation/app-topbar";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import { getRole } from "@/lib/auth-store";
 import { beginLogout } from "@/lib/logout";
@@ -248,13 +249,23 @@ export default function AppShell({ children }: Props) {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[color:var(--shell-border)] bg-[var(--surface-header)] px-4 shadow-sm lg:hidden">
+          {!isChatLayout ? (
+            <AppTopbar
+              role={role}
+              themePreference={themePreference}
+              onThemeChange={handleThemeChange}
+              uiLanguage={uiLanguage}
+              onLanguageChange={handleLanguageChange}
+            />
+          ) : null}
+
+          <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
               aria-label="Open navigation menu"
               aria-expanded={isMobileNavOpen}
-              className="fluent-icon-button shrink-0"
+              className="app-topbar-icon shrink-0"
             >
               <span className="material-symbols-outlined text-lg">menu</span>
             </button>
@@ -263,7 +274,7 @@ export default function AppShell({ children }: Props) {
               href={getRoleHomePath(role)}
               className="flex min-w-0 items-center gap-2.5"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
+              <span className="app-brand-mark !h-9 !w-9">
                 <span
                   className="material-symbols-outlined text-[16px]"
                   style={{ fontVariationSettings: "'FILL' 1" }}
@@ -271,32 +282,32 @@ export default function AppShell({ children }: Props) {
                   clinical_notes
                 </span>
               </span>
-              <span className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                Clara Care
+              <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                CLARA Care
               </span>
             </Link>
 
-            <span className="inline-flex min-w-[38px] justify-center rounded-full border border-[color:var(--shell-border)] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
-              {uiLanguage.toUpperCase()}
-            </span>
+            <Link href="/chat" className="app-mobile-ask" aria-label="Hỏi CLARA">
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">auto_awesome</span>
+            </Link>
           </header>
 
           <main
             id="main-content"
             tabIndex={-1}
             className={[
-              "flex-1 px-2.5 sm:px-3",
+              "app-content-canvas flex-1 px-2.5 sm:px-3",
               isImmersiveLayout
                 ? isChatLayout
                   ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0 sm:pb-20 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
                   : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
-                : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-4 sm:px-6 sm:pb-32 sm:pt-6 lg:px-8 lg:pb-10 lg:pt-6",
+                : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-12 lg:pt-8 xl:px-10",
             ].join(" ")}
           >
             <div
               className={[
                 "w-full",
-                isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1360px]",
+                isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1440px]",
               ].join(" ")}
             >
               {children}
@@ -318,11 +329,11 @@ export default function AppShell({ children }: Props) {
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
         />
         <aside
-          className="absolute left-0 top-0 h-full w-[min(88vw,380px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl"
+          className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl"
         >
           <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-[#2f4d67] shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-100">
+              <span className="app-brand-mark shrink-0">
                 <span
                   className="material-symbols-outlined text-[18px]"
                   style={{ fontVariationSettings: "'FILL' 1" }}
@@ -333,7 +344,7 @@ export default function AppShell({ children }: Props) {
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                  Clara Care
+                  CLARA Care
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
                   Không gian chăm sóc
@@ -369,10 +380,10 @@ export default function AppShell({ children }: Props) {
                         aria-current={active ? "page" : undefined}
                         onClick={() => setIsMobileNavOpen(false)}
                         className={[
-                          "block rounded-xl border px-3.5 py-2.5 transition",
+                          "block rounded-xl border px-3.5 py-3 transition",
                           active
-                            ? "border-sky-200/80 bg-sky-500/10 dark:border-sky-500/30 dark:bg-sky-500/10"
-                            : "border-transparent bg-[var(--surface-panel)] hover:border-[color:var(--shell-border)]",
+                            ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]"
+                            : "border-transparent bg-transparent hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-panel)]",
                         ].join(" ")}
                       >
                         <div className="flex items-center justify-between gap-2">
