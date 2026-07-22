@@ -55,6 +55,9 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - clara_api_data:/data
+    networks:
+      - default
+      - clara_local
     # Container healthcheck (Requirement 6.4). Uses the static /health liveness
     # endpoint (unchanged shape) via the in-image python interpreter, since the
     # slim base image ships no curl/wget. Additive: orchestration liveness only.
@@ -121,6 +124,9 @@ services:
       ML_UVICORN_WORKERS: ${ML_UVICORN_WORKERS:-8}
     depends_on:
       - searxng
+    networks:
+      - default
+      - clara_local
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
     # Container healthcheck (Requirement 6.4). Uses the ML /health liveness
@@ -177,3 +183,8 @@ services:
 
 volumes:
   clara_api_data:
+
+networks:
+  clara_local:
+    external: true
+    name: clara-local_default
