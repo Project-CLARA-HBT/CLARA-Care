@@ -8,35 +8,35 @@
   --workspace-gutter-lg: 1.75rem;
   --workspace-gutter-2xl: 2.25rem;
   --touch-target-min: 44px;
-  --shell-nav-width: 16rem;
+  --shell-nav-width: 17rem;
 
   /* Foundation */
-  --color-bg: #f7f9fb;
-  --bg-canvas: #f7f9fb;
-  --bg-elev-1: rgba(255, 255, 255, 0.82);
-  --bg-elev-2: rgba(255, 255, 255, 0.9);
+  --color-bg: #f5f5f5;
+  --bg-canvas: #f5f5f5;
+  --bg-elev-1: #ffffff;
+  --bg-elev-2: #ffffff;
   --bg-elev-3: #ffffff;
 
   /* Text */
-  --text-primary: #1f2937;
-  --text-secondary: #374151;
-  --text-muted: #4b5563;
-  --text-brand: #1E40AF;
+  --text-primary: #242424;
+  --text-secondary: #424242;
+  --text-muted: #616161;
+  --text-brand: #0f548c;
 
   /* Shell surfaces */
-  --surface-sidebar: rgba(239, 246, 255, 0.95);
-  --surface-header: rgba(255, 255, 255, 0.92);
-  --surface-panel: rgba(255, 255, 255, 0.95);
-  --surface-muted: #EFF6FF;
-  --surface-brand-soft: #DBEAFE;
-  --shell-border: rgba(59, 130, 246, 0.14);
-  --shell-border-strong: rgba(37, 99, 235, 0.45);
+  --surface-sidebar: #fafafa;
+  --surface-header: #ffffff;
+  --surface-panel: #ffffff;
+  --surface-muted: #f0f0f0;
+  --surface-brand-soft: #ebf3fc;
+  --shell-border: #d1d1d1;
+  --shell-border-strong: #8a8886;
 
   /* Brand + status */
-  --brand-500: #3B82F6;
-  --brand-600: #2563EB;
-  --brand-700: #1D4ED8;
-  --accent-500: #b7c8e1;
+  --brand-500: #2886c8;
+  --brand-600: #0f6cbd;
+  --brand-700: #0f548c;
+  --accent-500: #5b5fc7;
   --success-500: #16a34a;
   --warn-500: #f59e0b;
   --danger-500: #dc2626;
@@ -64,15 +64,15 @@
   --blur-lg: 24px;
 
   /* Radius */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   /* Shadows */
-  --shadow-soft: 0 12px 28px -22px rgba(15, 23, 42, 0.4);
-  --shadow-float: 0 24px 60px -38px rgba(37, 99, 235, 0.35);
-  --shadow-hero: 0 34px 88px -42px rgba(37, 99, 235, 0.45);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-float: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --shadow-hero: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
   --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.28);
   --shadow-chrome: 0 20px 54px -34px rgba(37, 99, 235, 0.40);
 
@@ -82,7 +82,7 @@
   --focus-ring-offset: 2px;
 
   --font-sans:
-    "Manrope",
+    "Segoe UI Variable",
     "Segoe UI",
     ui-sans-serif,
     system-ui,
@@ -91,7 +91,7 @@
     Arial,
     sans-serif;
   --font-display:
-    "Manrope",
+    "Segoe UI Variable Display",
     "Segoe UI",
     ui-sans-serif,
     system-ui,
@@ -119,6 +119,124 @@
     --workspace-gutter: 1.625rem;
     --workspace-gutter-lg: 2.25rem;
     --workspace-gutter-2xl: 2.75rem;
+  }
+}
+
+/* Fluent experience unification -------------------------------------------------
+ * Compatibility layer for feature surfaces that predate the shared Fluent
+ * foundation. It deliberately removes decorative glass/glow treatments while
+ * keeping their layout and behavior contracts intact.
+ */
+.clara-glass-panel,
+.glass-card,
+.glass-surface-1,
+.glass-surface-2,
+.glass-surface-3,
+.chrome-panel,
+.research-panel-modern,
+.dashboard-holo-panel,
+.dashboard-strip-panel,
+.dashboard-side-panel {
+  border: 1px solid var(--shell-border);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chrome-shell::before,
+.research-workspace::before,
+.dashboard-atmosphere::before,
+.dashboard-atmosphere::after {
+  display: none;
+}
+
+.clara-glow-cyan,
+.glow-cyan {
+  box-shadow: none;
+}
+
+.clinical-gradient {
+  background: var(--brand-600);
+}
+
+.research-hero-heading,
+.med-gradient-text {
+  color: var(--text-primary);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.dashboard-live-pill::before {
+  animation: none;
+  box-shadow: none;
+}
+
+.fluent-card {
+  border: 1px solid var(--shell-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-soft);
+}
+
+.fluent-card-subtle {
+  border: 1px solid var(--shell-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+}
+
+.fluent-button-primary,
+.fluent-button-secondary,
+.fluent-icon-button {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.fluent-button-primary {
+  border: 1px solid var(--brand-700);
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.fluent-button-primary:hover {
+  background: var(--brand-700);
+}
+
+.fluent-button-secondary,
+.fluent-icon-button {
+  border: 1px solid var(--shell-border);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+
+.fluent-button-secondary:hover,
+.fluent-icon-button:hover {
+  border-color: var(--shell-border-strong);
+  background: var(--surface-muted);
+}
+
+.fluent-icon-button {
+  width: var(--touch-target-min);
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -163,22 +281,22 @@ html[data-theme="dark"] .medical-markdown::before {
 html.dark,
 html[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #111a2d;
-  --bg-canvas: #111a2d;
-  --bg-elev-1: rgba(29, 40, 63, 0.72);
-  --bg-elev-2: rgba(33, 46, 71, 0.9);
-  --bg-elev-3: #1d2840;
-  --text-primary: #dae2fd;
-  --text-secondary: #c3c6d0;
-  --text-muted: #8d919a;
-  --text-brand: #93C5FD;
-  --surface-sidebar: rgba(15, 25, 50, 0.94);
-  --surface-header: rgba(20, 30, 60, 0.82);
-  --surface-panel: rgba(25, 38, 72, 0.86);
-  --surface-muted: rgba(40, 58, 100, 0.76);
-  --surface-brand-soft: rgba(59, 130, 246, 0.18);
-  --shell-border: rgba(59, 130, 246, 0.22);
-  --shell-border-strong: rgba(99, 155, 255, 0.48);
+  --color-bg: #1b1a19;
+  --bg-canvas: #1b1a19;
+  --bg-elev-1: #242424;
+  --bg-elev-2: #292929;
+  --bg-elev-3: #303030;
+  --text-primary: #ffffff;
+  --text-secondary: #d6d6d6;
+  --text-muted: #b3b3b3;
+  --text-brand: #75b6e7;
+  --surface-sidebar: #202020;
+  --surface-header: #242424;
+  --surface-panel: #292929;
+  --surface-muted: #333333;
+  --surface-brand-soft: #0f3b5f;
+  --shell-border: #484848;
+  --shell-border-strong: #8a8886;
   --status-ok-bg: rgba(16, 185, 129, 0.24);
   --status-ok-border: rgba(16, 185, 129, 0.42);
   --status-ok-text: #6ee7b7;
@@ -218,11 +336,7 @@ body {
   min-height: 100vh;
   color: var(--text-primary);
   background-color: var(--bg-canvas);
-  background-image:
-    radial-gradient(40rem 20rem at 100% 0%, rgb(59 130 246 / 6%), transparent 60%),
-    radial-gradient(30rem 16rem at 0% 100%, rgb(37 99 235 / 4%), transparent 64%),
-    linear-gradient(180deg, #f0f6ff 0%, #e8f0fe 100%);
-  background-attachment: fixed;
+  background-image: none;
   font-family: var(--font-sans);
   line-height: 1.5;
   font-feature-settings: "rlig" 1, "calt" 1;
@@ -733,10 +847,7 @@ html[data-theme="dark"] .input:focus-visible {
 
 html.dark body,
 html[data-theme="dark"] body {
-  background-image:
-    radial-gradient(48rem 28rem at 100% 0%, rgb(40 217 243 / 9%), transparent 62%),
-    radial-gradient(36rem 22rem at 0% 100%, rgb(183 200 225 / 6%), transparent 68%),
-    linear-gradient(180deg, #0f1629 0%, #111a2d 54%, #111a2d 100%);
+  background-image: none;
 }
 
 html.dark .chrome-shell .bg-white,
@@ -1817,4 +1928,44 @@ html[data-theme="dark"] .dashboard-strip-panel {
   .clara-section-strong {
     padding-block: clamp(6rem, 5vw, 8.5rem);
   }
+}
+
+/* Keep legacy feature surfaces visually aligned after their older declarations. */
+.clara-glass-panel,
+.glass-card,
+.glass-surface-1,
+.glass-surface-2,
+.glass-surface-3,
+.chrome-panel,
+.research-panel-modern,
+.dashboard-holo-panel,
+.dashboard-strip-panel,
+.dashboard-side-panel,
+html.dark .chrome-panel,
+html[data-theme="dark"] .chrome-panel,
+html.dark .research-panel-modern,
+html[data-theme="dark"] .research-panel-modern,
+html.dark .dashboard-holo-panel,
+html[data-theme="dark"] .dashboard-holo-panel,
+html.dark .dashboard-strip-panel,
+html[data-theme="dark"] .dashboard-strip-panel {
+  border: 1px solid var(--shell-border);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chrome-shell::before,
+.research-workspace::before,
+.dashboard-atmosphere::before,
+.dashboard-atmosphere::after {
+  display: none;
+}
+
+.research-hero-heading,
+.med-gradient-text {
+  color: var(--text-primary);
+  background: none;
+  -webkit-text-fill-color: currentColor;
 }

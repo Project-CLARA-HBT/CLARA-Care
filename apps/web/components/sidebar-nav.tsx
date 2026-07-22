@@ -126,20 +126,20 @@ export default function SidebarNav({
   return (
     <aside
       className={[
-        "sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] py-4 backdrop-blur-xl transition-[width,padding] lg:flex lg:flex-col",
-        collapsed ? "w-[4.5rem] px-2" : "w-64 px-4",
+        "sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] py-3 transition-[width,padding] lg:flex lg:flex-col",
+        collapsed ? "w-[4.5rem] px-2" : "w-[17rem] px-3",
       ].join(" ")}
     >
       <div className={["mb-5 flex items-center", collapsed ? "justify-center" : "gap-3 px-2"].join(" ")}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_10px_28px_-18px_rgba(37,99,235,0.7)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-600)] text-white shadow-sm">
           <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             clinical_notes
           </span>
         </div>
         {!collapsed ? (
           <div>
-            <h1 className="text-[1.3rem] leading-none font-bold tracking-[-0.02em] text-[var(--text-brand)]">ClaraCare</h1>
-            <p className="mt-1 text-sm font-medium text-[var(--text-muted)]">{sidebarTitle}</p>
+            <h1 className="text-lg font-semibold leading-none tracking-[-0.01em] text-[var(--text-primary)]">CLARA Care</h1>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{sidebarTitle}</p>
           </div>
         ) : null}
       </div>
@@ -157,7 +157,7 @@ export default function SidebarNav({
                     type="button"
                     onClick={() => onThemeChange(option.value)}
                     className={[
-                      "inline-flex h-5 w-5 items-center justify-center rounded-[5px] text-[9px] transition",
+                    "inline-flex h-9 w-9 items-center justify-center rounded-md text-xs transition",
                       active ? "bg-blue-600 text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-brand)]",
                     ].join(" ")}
                     aria-label={`Theme ${option.label[uiLanguage]}`}
@@ -181,7 +181,7 @@ export default function SidebarNav({
                     type="button"
                     onClick={() => onLanguageChange(option.value)}
                     className={[
-                      "inline-flex min-h-[20px] min-w-[28px] items-center justify-center rounded-[5px] px-1 text-[9px] font-semibold transition",
+                      "inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md px-1 text-xs font-semibold transition",
                       active ? "bg-blue-600 text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-brand)]",
                     ].join(" ")}
                     aria-label={`Language ${option.label}`}
@@ -199,7 +199,7 @@ export default function SidebarNav({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:bg-blue-50 hover:text-[var(--text-brand)]"
+          className="fluent-icon-button !h-9 !min-h-9 !w-9"
           aria-label={collapsed ? expandLabel : collapseLabel}
           title={collapsed ? expandLabel : collapseLabel}
         >
@@ -229,11 +229,11 @@ export default function SidebarNav({
                     aria-current={active ? "page" : undefined}
                     title={itemLabel}
                     className={[
-                      "group relative flex items-center rounded-xl py-2 text-sm transition-colors",
+                      "group relative flex min-h-11 items-center rounded-md py-2 text-sm transition-colors",
                       collapsed ? "justify-center px-2" : "gap-3 px-3",
                       active
                         ? "bg-[var(--surface-brand-soft)] font-semibold text-[var(--text-brand)] shadow-[inset_3px_0_0_0_var(--brand-600)]"
-                        : "font-medium text-[var(--text-secondary)] hover:bg-blue-50 hover:text-[var(--text-brand)]",
+                        : "font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
                     ].join(" ")}
                   >
                     <span

@@ -142,6 +142,10 @@ export default function AppShell({ children }: Props) {
   }, []);
 
   useEffect(() => {
+    document.documentElement.lang = uiLanguage;
+  }, [uiLanguage]);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY);
       setIsSidebarCollapsed(raw === "1");
@@ -214,7 +218,7 @@ export default function AppShell({ children }: Props) {
     return (
       <main
         id="main-content"
-        className="h-[100dvh] min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+        className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
       >
         {children}
       </main>
@@ -244,13 +248,13 @@ export default function AppShell({ children }: Props) {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)]/92 px-4 backdrop-blur lg:hidden">
+          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[color:var(--shell-border)] bg-[var(--surface-header)] px-4 shadow-sm lg:hidden">
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
               aria-label="Open navigation menu"
               aria-expanded={isMobileNavOpen}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
+              className="fluent-icon-button shrink-0"
             >
               <span className="material-symbols-outlined text-lg">menu</span>
             </button>
@@ -301,12 +305,8 @@ export default function AppShell({ children }: Props) {
         </div>
       </div>
 
-      <div
-        className={`fixed inset-0 z-[70] transition duration-200 lg:hidden ${
-          isMobileNavOpen
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
-        }`}
+      {isMobileNavOpen ? <div
+        className="fixed inset-0 z-[70] lg:hidden"
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
@@ -318,9 +318,7 @@ export default function AppShell({ children }: Props) {
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
         />
         <aside
-          className={`absolute left-0 top-0 h-full w-[min(88vw,380px)] border-r border-[color:var(--shell-border)] bg-blue-50 px-4 pb-5 pt-4 transition duration-250 dark:bg-slate-900 ${
-            isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className="absolute left-0 top-0 h-full w-[min(88vw,380px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl"
         >
           <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
             <div className="flex min-w-0 items-center gap-3">
@@ -507,7 +505,7 @@ export default function AppShell({ children }: Props) {
             </button>
           </div>
         </aside>
-      </div>
+      </div> : null}
 
       <MobileBottomNav role={role} />
     </div>
