@@ -10,6 +10,8 @@ import {
 } from "react";
 
 import { getRole, type UserRole } from "@/lib/auth-store";
+import { beginLogout } from "@/lib/logout";
+import { getNavItemsByRole } from "@/lib/navigation.config";
 import { trackChatMessageSent } from "@/lib/analytics/events";
 import { sanitizeUpstreamError, toModeLabel } from "@/lib/user-facing-text";
 import {
@@ -96,6 +98,7 @@ export default function ChatShell() {
   >(null);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isAppMenuOpen, setIsAppMenuOpen] = useState(false);
 
   const conversations = useConversations();
   const turns = useChatTurns();
@@ -140,6 +143,7 @@ export default function ChatShell() {
   }, []);
 
   const isEn = uiLanguage === "en";
+  const appNavItems = useMemo(() => getNavItemsByRole(role), [role]);
   // User-facing mode label (Req 4.4): never expose the internal mode string,
   // always present the Vietnamese End_User label via the shared mapping.
   const activeModeLabel = useMemo(() => toModeLabel(mode), [mode]);
@@ -642,10 +646,12 @@ export default function ChatShell() {
               <Badge tone="info">{activeModeLabel}</Badge>
             </div>
             <div className="flex items-center gap-1.5">
-              <Link
-                href="/dashboard"
+              <button
+                type="button"
                 aria-label={isEn ? "Open all tools" : "Mở các công cụ"}
+                aria-expanded={isAppMenuOpen}
                 title={isEn ? "All tools" : "Các công cụ"}
+                onClick={() => setIsAppMenuOpen((open) => !open)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
               >
                 <span
@@ -654,7 +660,7 @@ export default function ChatShell() {
                 >
                   apps
                 </span>
-              </Link>
+              </button>
               <IconButton
                 label={isEn ? "Command palette" : "Bảng lệnh"}
                 icon="bolt"
@@ -667,6 +673,68 @@ export default function ChatShell() {
               />
             </div>
           </header>
+
+          {isAppMenuOpen ? (
+            <div
+              className="absolute right-3 top-[3.35rem] z-30 w-[min(92vw,22rem)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl shadow-slate-950/10"
+              role="dialog"
+              aria-label={isEn ? "CLARA tools" : "Công cụ CLARA"}
+            >
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  {isEn ? "CLARA tools" : "Công cụ CLARA"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAppMenuOpen(false)}
+                  className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                >
+                  {isEn ? "Close" : "Đóng"}
+                </button>
+              </div>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {appNavItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsAppMenuOpen(false)}
+                    className="flex items-start gap-2 rounded-xl px-2.5 py-2 text-left hover:bg-[var(--surface-muted)]"
+                  >
+                    <span
+                      className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--text-brand)]"
+                      aria-hidden="true"
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--text-primary)]">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-[11px] text-[var(--text-muted)]">
+                        {item.desc}
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-[color:var(--shell-border)] px-2 pt-2">
+                <Link
+                  href="/account/data"
+                  onClick={() => setIsAppMenuOpen(false)}
+                  className="text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  {isEn ? "Account" : "Tài khoản"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => beginLogout()}
+                  className="text-xs font-semibold text-[var(--status-danger-text)]"
+                >
+                  {isEn ? "Sign out" : "Đăng xuất"}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {/* Persistent medical disclaimer (Requirement 8.4). */}
           <p

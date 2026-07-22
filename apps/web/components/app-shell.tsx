@@ -1,13 +1,19 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { isAxiosError } from "axios";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import AppTopbar from "@/components/navigation/app-topbar";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
-import { getRole } from "@/lib/auth-store";
+import {
+  clearTokens,
+  getRole,
+  setRole as setStoredRole,
+} from "@/lib/auth-store";
+import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
   getNavItemsByRole,
@@ -75,6 +81,7 @@ export default function AppShell({ children }: Props) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
+  const [isSessionChecked, setIsSessionChecked] = useState(false);
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
@@ -86,9 +93,56 @@ export default function AppShell({ children }: Props) {
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
 
   useEffect(() => {
-    setRole(getRole());
-    setIsRoleHydrated(true);
-  }, [pathname]);
+    let active = true;
+    const hydrateSession = async () => {
+      if (isPublicRoute(pathname)) {
+        setRole(getRole());
+        setIsRoleHydrated(true);
+        setIsSessionChecked(true);
+        return;
+      }
+      // Local storage is only a presentation hint. The API session is
+      // authoritative so a stale cookie or a new browser cannot silently
+      // downgrade a doctor/researcher/admin to the normal route guard.
+      try {
+        const response = await api.get<{ role?: UserRole }>("/auth/me", {
+          timeout: 15000,
+        });
+        const serverRole = response.data?.role;
+        if (
+          active &&
+          (serverRole === "normal" ||
+            serverRole === "researcher" ||
+            serverRole === "doctor" ||
+            serverRole === "admin")
+        ) {
+          setStoredRole(serverRole);
+          setRole(serverRole);
+        } else if (active) {
+          setRole(getRole());
+        }
+      } catch (error) {
+        const status = isAxiosError(error)
+          ? Number(error.response?.status ?? 0)
+          : 0;
+        if (active && status === 401) {
+          clearTokens();
+          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          return;
+        }
+        if (active) setRole(getRole());
+      } finally {
+        if (active) {
+          setIsRoleHydrated(true);
+          setIsSessionChecked(true);
+        }
+      }
+    };
+    void hydrateSession();
+    return () => {
+      active = false;
+    };
+  }, [pathname, router]);
 
   useEffect(() => {
     setIsMobileNavOpen(false);
@@ -174,13 +228,13 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
-    if (!isRoleHydrated) return;
+    if (!isRoleHydrated || !isSessionChecked) return;
     const allowed = roleNavItems.some((item) =>
       isActiveRoute(pathname, item.href),
     );
     if (allowed) return;
     router.replace(getRoleHomePath(role));
-  }, [isRoleHydrated, pathname, role, roleNavItems, router]);
+  }, [isRoleHydrated, isSessionChecked, pathname, role, roleNavItems, router]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);

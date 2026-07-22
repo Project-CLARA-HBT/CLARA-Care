@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import ResearchWorkspace from "../research-workspace";
 
-export default function ResearchRedirectPage() {
-  redirect("/chat");
+export default function ResearchCitationsPage() {
+  return <ResearchWorkspace initialTab="search" />;
 }
