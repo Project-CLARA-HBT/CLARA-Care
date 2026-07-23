@@ -2632,32 +2632,30 @@ def _apply_research_quality_gates(
         metadata["fallback_used"] = True
         metadata["degraded_path"] = True
         gated["metadata"] = metadata
-        # Deep Research must abstain instead of releasing confident prose when
-        # it has no registered evidence or the verifier found zero support.
-        if (
-            "no_citations" in gate_reasons
-            or "no_retrieved_evidence" in gate_reasons
-            or "zero_claim_support" in gate_reasons
-        ):
-            language = str(
-                request_payload.get("ui_language")
-                or request_payload.get("answer_language")
-                or "vi"
-            ).lower()
-            safe_answer = (
-                "CLARA could not retrieve enough verifiable evidence for this research "
-                "request. No clinical conclusion is released. Please retry or narrow the "
-                "question; for care decisions, consult a qualified clinician."
-                if language == "en"
-                else "CLARA chưa truy xuất được đủ bằng chứng có thể kiểm chứng cho yêu cầu "
-                "nghiên cứu này. Hệ thống không phát hành kết luận y khoa. Vui lòng thử lại "
-                "hoặc thu hẹp câu hỏi; với quyết định điều trị, hãy trao đổi với bác sĩ."
-            )
-            gated["answer"] = safe_answer
-            gated["answer_markdown"] = safe_answer
-            gated["citations"] = real_citations
-            gated["sources"] = real_citations
-            gated["policy_action"] = "warn"
+        # A failed medical-evidence gate is a release block, not merely a badge.
+        # Even when some citations or claims are supported, never publish the
+        # remaining confident factual prose while unsupported claims survive.
+        # Keep the evidence and verifier diagnostics so the UI can explain the
+        # abstention and a researcher can refine the request.
+        language = str(
+            request_payload.get("ui_language")
+            or request_payload.get("answer_language")
+            or "vi"
+        ).lower()
+        safe_answer = (
+            "CLARA could not retrieve enough verifiable evidence for this research "
+            "request. No clinical conclusion is released. Please retry or narrow the "
+            "question; for care decisions, consult a qualified clinician."
+            if language == "en"
+            else "CLARA chưa truy xuất được đủ bằng chứng có thể kiểm chứng cho yêu cầu "
+            "nghiên cứu này. Hệ thống không phát hành kết luận y khoa. Vui lòng thử lại "
+            "hoặc thu hẹp câu hỏi; với quyết định điều trị, hãy trao đổi với bác sĩ."
+        )
+        gated["answer"] = safe_answer
+        gated["answer_markdown"] = safe_answer
+        gated["citations"] = real_citations
+        gated["sources"] = real_citations
+        gated["policy_action"] = "warn"
     return gated
 
 

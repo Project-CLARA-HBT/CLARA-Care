@@ -1934,10 +1934,12 @@ def _sanitize_provider_query_overrides(
     value: Any,
     *,
     fallback: dict[str, dict[str, str]],
+    scientific_must_keep_terms: list[str] | None = None,
 ) -> dict[str, dict[str, str]]:
     if not isinstance(value, dict):
         return fallback
 
+    must_keep_terms = scientific_must_keep_terms or []
     normalized: dict[str, dict[str, str]] = {}
     for category_raw, provider_map in value.items():
         category = str(category_raw or "").strip().lower()
@@ -1951,6 +1953,11 @@ def _sanitize_provider_query_overrides(
             query_text = " ".join(str(query_raw or "").split()).strip()
             if not provider or not query_text:
                 continue
+            if category == "scientific" and provider in {"pubmed", "europepmc"}:
+                query_text = _compact_scientific_provider_query(
+                    query_text,
+                    must_keep_terms=must_keep_terms,
+                )
             row[provider] = query_text[:360]
         if row:
             normalized[category] = row
@@ -1964,6 +1971,65 @@ def _sanitize_provider_query_overrides(
         if merged_row:
             merged[category] = merged_row
     return merged or fallback
+
+
+def _sanitize_llm_must_keep_terms(payload: dict[str, Any], *, original_query: str) -> list[str]:
+    """Accept only planner-selected terms copied verbatim from the user question.
+
+    Entity selection stays LLM-first: this function does not infer entities or
+    trial-name patterns. It merely verifies that the planner copied each proposed
+    term from the original query before the term can anchor provider queries.
+    """
+
+    proposed = payload.get("must_keep_terms")
+    if not isinstance(proposed, list):
+        proposed = payload.get("keywords") if isinstance(payload.get("keywords"), list) else []
+    original_folded = original_query.casefold()
+    verified: list[str] = []
+    seen: set[str] = set()
+    for item in proposed:
+        term = " ".join(str(item or "").split()).strip()
+        folded = term.casefold()
+        if not term or len(term) > 64 or folded not in original_folded or folded in seen:
+            continue
+        seen.add(folded)
+        verified.append(term)
+        if len(verified) >= 8:
+            break
+    return verified
+
+
+def _compact_scientific_provider_query(
+    query_text: str,
+    *,
+    must_keep_terms: list[str],
+    max_words: int = 18,
+    max_chars: int = 160,
+) -> str:
+    """Bound a planner-written scientific query while retaining its LLM anchors."""
+
+    selected: list[str] = []
+    seen: set[str] = set()
+
+    def add(part: str) -> None:
+        normalized = " ".join(str(part or "").split()).strip()
+        if not normalized:
+            return
+        folded = normalized.casefold()
+        if folded in seen:
+            return
+        candidate = " ".join([*selected, normalized])
+        candidate_words = sum(len(item.split()) for item in [*selected, normalized])
+        if candidate_words > max_words or len(candidate) > max_chars:
+            return
+        seen.add(folded)
+        selected.append(normalized)
+
+    for term in must_keep_terms:
+        add(term)
+    for token in str(query_text or "").split():
+        add(token)
+    return " ".join(selected)
 
 
 def _build_source_aware_query_plan(
@@ -2224,7 +2290,14 @@ def _sanitize_llm_query_plan_payload(
     if not isinstance(payload, dict):
         raise ValueError("Planner output must be a JSON object")
 
-    required_keys = {"canonical_query", "language_hint", "keywords", "source_queries", "decomposition"}
+    required_keys = {
+        "canonical_query",
+        "language_hint",
+        "must_keep_terms",
+        "keywords",
+        "source_queries",
+        "decomposition",
+    }
     if not required_keys.issubset(set(payload.keys())):
         raise ValueError("Planner output missing required keys")
 
@@ -2267,6 +2340,7 @@ def _sanitize_llm_query_plan_payload(
         field_name="source_queries.scientific",
         limit=8,
     )
+    llm_scientific_seed = scientific_queries[0]
     web_queries = _sanitize_required_query_entries(
         source_queries_raw.get("web"),
         field_name="source_queries.web",
@@ -2318,9 +2392,17 @@ def _sanitize_llm_query_plan_payload(
         is_nutrition_query=bool(base_query_plan.get("is_nutrition_query")),
         is_comparison_query=bool(base_query_plan.get("is_comparison_query")),
     )
+    must_keep_terms = _sanitize_llm_must_keep_terms(payload, original_query=original_query)
+    concise_scientific_query = _compact_scientific_provider_query(
+        llm_scientific_seed,
+        must_keep_terms=must_keep_terms,
+    )
+    fallback_provider_queries["scientific"]["pubmed"] = concise_scientific_query
+    fallback_provider_queries["scientific"]["europepmc"] = concise_scientific_query
     provider_queries = _sanitize_provider_query_overrides(
         payload.get("provider_queries"),
         fallback=fallback_provider_queries,
+        scientific_must_keep_terms=must_keep_terms,
     )
 
     return {
@@ -2342,6 +2424,7 @@ def _sanitize_llm_query_plan_payload(
             "deep_beta_pass_queries": deep_beta_pass_queries,
         },
         "provider_queries": provider_queries,
+        "must_keep_terms": must_keep_terms,
         "research_mode": research_mode,
         "query_terms": keywords[:10],
     }
@@ -4779,6 +4862,7 @@ def _refine_query_plan_with_llm(
         "{\n"
         '  "canonical_query": "string",\n'
         '  "language_hint": "vi|en|mixed",\n'
+        '  "must_keep_terms": ["exact named trial/drug/entity copied from topic"],\n'
         '  "keywords": ["..."],\n'
         '  "source_queries": {\n'
         '    "internal": ["..."],\n'
@@ -4796,9 +4880,14 @@ def _refine_query_plan_with_llm(
         "}\n"
         "Constraints:\n"
         "- keywords length <= 12\n"
+        "- must_keep_terms contains the important named trials, drugs, and populations copied "
+        "verbatim from topic; never translate, normalize, or rename them\n"
         "- keep clinical safety terms when query is medication-related\n"
         "- return at least one query per source and decomposition list\n"
-        "- provider_queries is optional; if provided, map each provider to concise query\n"
+        "- provider_queries is optional; PubMed and Europe PMC queries must be concise search "
+        "phrases, at most 18 whitespace-delimited words and 160 characters\n"
+        "- every PubMed and Europe PMC query must contain every must_keep_terms item verbatim; "
+        "omit background prose, question wording, and implementation boilerplate\n"
         "- return valid JSON only\n\n"
         f"topic={topic}\n"
         f"research_mode={research_mode}\n"
@@ -4809,8 +4898,12 @@ def _refine_query_plan_with_llm(
     )
     compact_recovery_prompt = (
         "Return STRICT JSON only for retrieval planning.\n"
-        "Required keys: canonical_query, language_hint, keywords, source_queries, decomposition.\n"
+        "Required keys: canonical_query, language_hint, must_keep_terms, keywords, "
+        "source_queries, provider_queries, decomposition.\n"
         "Do not add explanations.\n"
+        "Copy named trials/drugs/entities from topic verbatim into must_keep_terms.\n"
+        "PubMed and Europe PMC provider queries must contain every must_keep_terms item verbatim "
+        "and be at most 18 words / 160 characters.\n"
         "Ensure source_queries contains internal/scientific/web with at least one query each.\n"
         "Ensure decomposition contains deep_pass_queries/deep_beta_pass_queries with at least one query each.\n"
         f"topic={topic}\n"

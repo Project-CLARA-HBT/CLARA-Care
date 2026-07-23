@@ -1009,6 +1009,64 @@ def test_research_harness_rejects_unresolvable_or_mixed_unsupported_evidence() -
     assert "No clinical conclusion is released" in result["answer"]
 
 
+def test_deep_research_abstains_with_citations_when_unsupported_claims_survive() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    citations = [
+        {
+            "source": "pubmed",
+            "pmid": f"pmid-{index}",
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{30_000_000 + index}/",
+        }
+        for index in range(10)
+    ]
+    verification_matrix = {
+        "summary": {
+            "total_claims": 10,
+            "supported_claims": 1,
+            "unsupported_claims": 9,
+            "support_ratio": 0.1,
+        },
+        "rows": [
+            {"claim": "Supported context.", "support_status": "supported"},
+            *[
+                {
+                    "claim": f"Unsupported factual percentage {index}%.",
+                    "support_status": "insufficient",
+                }
+                for index in range(1, 10)
+            ],
+        ],
+    }
+    confident_answer = (
+        "DAPA-CKD reduced the outcome by 39%, while EMPA-KIDNEY reduced it by 28%."
+    )
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": confident_answer,
+            "answer_markdown": confident_answer,
+            "citations": citations,
+            "verification_matrix": verification_matrix,
+            "source_target_achieved": {"achieved_document_count": 29},
+            "metadata": {"retrieval_route": "scientific-heavy"},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert result["quality_gate"]["reasons"] == ["unsupported_claims"]
+    assert result["quality_gate"]["unsupported_claim_count"] == 9
+    assert "39%" not in result["answer"]
+    assert "28%" not in result["answer"]
+    assert "No clinical conclusion is released" in result["answer"]
+    assert result["citations"] == citations
+    assert result["verification_matrix"] == verification_matrix
+    assert result["metadata"]["retrieval_route"] == "scientific-heavy"
+    assert result["policy_action"] == "warn"
+    assert result["degraded"] is True
+
+
 def test_research_harness_abstains_when_documents_have_no_citations() -> None:
     from clara_api.api.v1.endpoints import research as research_endpoint
 

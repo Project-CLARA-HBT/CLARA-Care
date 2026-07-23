@@ -832,6 +832,7 @@ def test_llm_query_plan_preserves_original_trial_and_drug_entities():
         {
             "canonical_query": "kidney cardiovascular prevention evidence",
             "language_hint": "en",
+            "must_keep_terms": ["SGLT2", "DAPA-CKD", "EMPA-KIDNEY"],
             "keywords": ["kidney", "cardiovascular", "prevention"],
             "source_queries": {
                 "internal": ["kidney evidence"],
@@ -854,6 +855,62 @@ def test_llm_query_plan_preserves_original_trial_and_drug_entities():
     assert original in refined["decomposition"]["deep_pass_queries"]
 
 
+@pytest.mark.parametrize("include_provider_queries", [True, False])
+def test_llm_query_plan_builds_concise_trial_preserving_scientific_provider_queries(
+    include_provider_queries: bool,
+):
+    topic = (
+        "Hiệu quả SGLT2 trong CKD không đái tháo đường: "
+        "so sánh DAPA-CKD và EMPA-KIDNEY"
+    )
+    base = tier2._build_source_aware_query_plan(
+        topic=topic,
+        research_mode="deep",
+        keywords=["SGLT2", "CKD", "DAPA-CKD", "EMPA-KIDNEY"],
+    )
+    payload = {
+        "canonical_query": "SGLT2 kidney outcome trials in non-diabetic CKD",
+        "language_hint": "mixed",
+        "must_keep_terms": ["DAPA-CKD", "EMPA-KIDNEY"],
+        "keywords": ["SGLT2", "CKD", "DAPA-CKD", "EMPA-KIDNEY"],
+        "source_queries": {
+            "internal": ["SGLT2 CKD trial comparison"],
+            "scientific": [
+                "DAPA-CKD EMPA-KIDNEY SGLT2 non-diabetic CKD renal cardiovascular outcomes"
+            ],
+            "web": ["DAPA-CKD EMPA-KIDNEY clinical interpretation"],
+        },
+        "decomposition": {
+            "deep_pass_queries": ["DAPA-CKD EMPA-KIDNEY primary outcomes"],
+            "deep_beta_pass_queries": ["DAPA-CKD EMPA-KIDNEY subgroup outcomes"],
+        },
+    }
+    if include_provider_queries:
+        noisy = (
+            "Please search the biomedical literature and comprehensively identify every "
+            "randomized controlled trial systematic review guideline subgroup implementation "
+            "consideration and safety outcome relevant to non-diabetic chronic kidney disease "
+            "with DAPA-CKD and EMPA-KIDNEY"
+        )
+        payload["provider_queries"] = {
+            "scientific": {"pubmed": noisy, "europepmc": noisy}
+        }
+
+    refined = tier2._sanitize_llm_query_plan_payload(
+        payload,
+        base_query_plan=base,
+        research_mode="deep",
+    )
+
+    scientific = refined["provider_queries"]["scientific"]
+    for provider in ("pubmed", "europepmc"):
+        query = scientific[provider]
+        assert "DAPA-CKD" in query
+        assert "EMPA-KIDNEY" in query
+        assert len(query) <= 160
+        assert len(query.split()) <= 18
+
+
 def test_llm_query_plan_keeps_original_question_at_length_boundary():
     original = (
         "So sánh SGLT2 trong DAPA-CKD và EMPA-KIDNEY cho bệnh thận mạn CKD"
@@ -867,6 +924,7 @@ def test_llm_query_plan_keeps_original_question_at_length_boundary():
         {
             "canonical_query": "x" * 318,
             "language_hint": "vi",
+            "must_keep_terms": ["SGLT2", "DAPA-CKD", "EMPA-KIDNEY", "CKD"],
             "keywords": ["kidney"],
             "source_queries": {
                 "internal": ["internal"],
@@ -896,6 +954,7 @@ def test_run_research_tier2_llm_query_planner_success_path(monkeypatch):
                     "{\n"
                     '  "canonical_query": "warfarin interaction with ibuprofen bleeding risk guidance",\n'
                     '  "language_hint": "mixed",\n'
+                    '  "must_keep_terms": ["warfarin", "ibuprofen"],\n'
                     '  "keywords": ["warfarin", "ibuprofen", "interaction", "bleeding", "guideline"],\n'
                     '  "source_queries": {\n'
                     '    "internal": ["warfarin ibuprofen warning"],\n'
@@ -996,7 +1055,9 @@ def test_run_research_tier2_llm_query_planner_success_path(monkeypatch):
     assert "llm_query_planner_enabled" in result["metadata"]["planner_trace"]["planner_hints"][
         "reason_codes"
     ]
-    assert result["query_plan"]["canonical_query"].startswith("warfarin interaction")
+    canonical_query = result["query_plan"]["canonical_query"]
+    assert canonical_query.startswith("Tương tác warfarin với ibuprofen")
+    assert "warfarin interaction with ibuprofen bleeding risk guidance" in canonical_query
     assert len(result["query_plan"]["source_queries"]["internal"]) >= 1
     llm_events = [event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"]
     assert any(event.get("status") == "completed" for event in llm_events)
