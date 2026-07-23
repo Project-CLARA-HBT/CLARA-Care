@@ -5,6 +5,8 @@ const ACCESS_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_ACCESS_COOKIE ?? "clara_access_token";
 const REFRESH_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_REFRESH_COOKIE ?? "clara_refresh_token";
+const CLIENT_SESSION_COOKIE_NAME =
+  process.env.NEXT_PUBLIC_AUTH_CLIENT_SESSION_COOKIE ?? "clara_client_session";
 const AUTH_BYPASS_ENABLED =
   process.env.AUTH_BYPASS === "true" ||
   process.env.NEXT_PUBLIC_AUTH_BYPASS === "true";
@@ -43,7 +45,12 @@ export function middleware(request: NextRequest) {
 
   const hasSession = Boolean(
     request.cookies.get(ACCESS_COOKIE_NAME)?.value ||
-    request.cookies.get(REFRESH_COOKIE_NAME)?.value,
+    request.cookies.get(REFRESH_COOKIE_NAME)?.value ||
+    // This browser-written cookie is only a routing hint. It never grants API
+    // access: AppShell immediately validates protected pages through /auth/me.
+    // Keeping it here lets cookie-backed sessions recover through /auth/refresh
+    // instead of being rejected by the edge before client hydration.
+    request.cookies.get(CLIENT_SESSION_COOKIE_NAME)?.value,
   );
 
   if (isPublicPath(pathname)) {

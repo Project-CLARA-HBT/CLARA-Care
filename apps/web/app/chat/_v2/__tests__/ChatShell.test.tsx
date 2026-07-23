@@ -166,6 +166,22 @@ describe("ChatShell — accessibility scaffolding", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps primary product navigation and theme control visible in chat", async () => {
+    await renderShell();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+    expect(screen.getByRole("link", { name: "Research" })).toHaveAttribute(
+      "href",
+      "/research",
+    );
+    expect(
+      screen.getByRole("button", { name: /switch to dark mode/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open all tools/i })).toBeInTheDocument();
+  });
+
   it("focuses the composer when the '/' shortcut is pressed (Req 5.1/5.4)", async () => {
     await renderShell();
     const composer = screen.getByLabelText(/your medical question/i);

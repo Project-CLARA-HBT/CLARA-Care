@@ -20,6 +20,11 @@ import {
   type UILanguage,
 } from "@/lib/ui-language";
 import {
+  applyThemePreference,
+  saveThemePreference,
+  type ThemePreference,
+} from "@/lib/theme";
+import {
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
   appendResearchConversationMessage,
@@ -178,6 +183,13 @@ export default function ChatShell() {
     setRole(getRole());
     return onUILanguageChange((language) => setUiLanguage(language));
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    const nextTheme: ThemePreference =
+      resolvedTheme === "dark" ? "light" : "dark";
+    saveThemePreference(nextTheme);
+    applyThemePreference(nextTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
     void conversations.load();
@@ -661,19 +673,52 @@ export default function ChatShell() {
               <Badge tone="info">{activeModeLabel}</Badge>
             </div>
             <div className="flex items-center gap-1.5">
+              <nav
+                aria-label={isEn ? "Primary navigation" : "Điều hướng chính"}
+                className="hidden items-center gap-1 md:flex"
+              >
+                <Link
+                  href="/dashboard"
+                  className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                >
+                  {isEn ? "Dashboard" : "Tổng quan"}
+                </Link>
+                <Link
+                  href="/research"
+                  className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                >
+                  {isEn ? "Research" : "Nghiên cứu"}
+                </Link>
+              </nav>
+              <IconButton
+                label={
+                  resolvedTheme === "dark"
+                    ? isEn
+                      ? "Switch to light mode"
+                      : "Chuyển sang giao diện sáng"
+                    : isEn
+                      ? "Switch to dark mode"
+                      : "Chuyển sang giao diện tối"
+                }
+                icon={resolvedTheme === "dark" ? "light_mode" : "dark_mode"}
+                onClick={toggleTheme}
+              />
               <button
                 type="button"
                 aria-label={isEn ? "Open all tools" : "Mở các công cụ"}
                 aria-expanded={isAppMenuOpen}
                 title={isEn ? "All tools" : "Các công cụ"}
                 onClick={() => setIsAppMenuOpen((open) => !open)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] px-2.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
               >
                 <span
                   className="material-symbols-outlined text-[19px]"
                   aria-hidden="true"
                 >
                   apps
+                </span>
+                <span className="hidden text-xs font-semibold sm:inline">
+                  {isEn ? "Tools" : "Công cụ"}
                 </span>
               </button>
               <IconButton

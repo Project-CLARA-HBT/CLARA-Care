@@ -40,15 +40,15 @@ export const PUBLIC_ROUTES = new Set([
   "/verify-email",
 ]);
 
-export const DEFAULT_POST_LOGIN_PATH = "/chat";
+export const DEFAULT_POST_LOGIN_PATH = "/dashboard";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/chat",
-  researcher: "/chat",
-  doctor: "/chat",
-  admin: "/chat",
+  normal: "/dashboard",
+  researcher: "/dashboard",
+  doctor: "/dashboard",
+  admin: "/dashboard",
 };
 
 const NAV_ITEMS: NavigationItem[] = [
@@ -77,6 +77,19 @@ const NAV_ITEMS: NavigationItem[] = [
     page: {
       title: "Tổng quan công việc",
       subtitle: "Theo dõi nhanh các tác vụ chăm sóc và vận hành trong ngày.",
+    },
+  },
+  {
+    href: "/research",
+    label: "Nghiên cứu",
+    icon: "science",
+    desc: "Tổng hợp và kiểm chứng bằng chứng",
+    group: "research",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
+    page: {
+      title: "CLARA Research",
+      subtitle: "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
     },
   },
   {
