@@ -292,72 +292,66 @@ export default function AppShell({ children }: Props) {
           isWideWorkspace ? "max-w-[2520px]" : "max-w-[1840px]",
         ].join(" ")}
       >
-        {!isChatLayout ? (
-          <SidebarNav
+        <SidebarNav
+          role={role}
+          collapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebarCollapse}
+          themePreference={themePreference}
+          onThemeChange={handleThemeChange}
+          uiLanguage={uiLanguage}
+          onLanguageChange={handleLanguageChange}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AppTopbar
             role={role}
-            collapsed={isSidebarCollapsed}
-            onToggleCollapse={toggleSidebarCollapse}
             themePreference={themePreference}
             onThemeChange={handleThemeChange}
             uiLanguage={uiLanguage}
             onLanguageChange={handleLanguageChange}
           />
-        ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          {!isChatLayout ? (
-            <AppTopbar
-              role={role}
-              themePreference={themePreference}
-              onThemeChange={handleThemeChange}
-              uiLanguage={uiLanguage}
-              onLanguageChange={handleLanguageChange}
-            />
-          ) : null}
+          <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileNavOpen}
+              className="app-topbar-icon shrink-0"
+            >
+              <span className="material-symbols-outlined text-lg">menu</span>
+            </button>
 
-          {!isChatLayout ? (
-            <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
-              <button
-                type="button"
-                onClick={() => setIsMobileNavOpen(true)}
-                aria-label="Open navigation menu"
-                aria-expanded={isMobileNavOpen}
-                className="app-topbar-icon shrink-0"
-              >
-                <span className="material-symbols-outlined text-lg">menu</span>
-              </button>
-
-              <Link
-                href={getRoleHomePath(role)}
-                className="flex min-w-0 items-center gap-2.5"
-              >
-                <span className="app-brand-mark !h-9 !w-9">
-                  <span
-                    className="material-symbols-outlined text-[16px]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    clinical_notes
-                  </span>
-                </span>
-                <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                  CLARA
-                </span>
-              </Link>
-
-              <Link
-                href="/chat"
-                className="app-mobile-ask"
-                aria-label="Hỏi CLARA"
-              >
+            <Link
+              href={getRoleHomePath(role)}
+              className="flex min-w-0 items-center gap-2.5"
+            >
+              <span className="app-brand-mark !h-9 !w-9">
                 <span
-                  className="material-symbols-outlined text-[18px]"
-                  aria-hidden="true"
+                  className="material-symbols-outlined text-[16px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  auto_awesome
+                  clinical_notes
                 </span>
-              </Link>
-            </header>
-          ) : null}
+              </span>
+              <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                CLARA
+              </span>
+            </Link>
+
+            <Link
+              href="/chat"
+              className="app-mobile-ask"
+              aria-label="Hỏi CLARA"
+            >
+              <span
+                className="material-symbols-outlined text-[18px]"
+                aria-hidden="true"
+              >
+                auto_awesome
+              </span>
+            </Link>
+          </header>
 
           <main
             id="main-content"
@@ -587,7 +581,7 @@ export default function AppShell({ children }: Props) {
         </div>
       ) : null}
 
-      {!isChatLayout ? <MobileBottomNav role={role} /> : null}
+      <MobileBottomNav role={role} />
     </div>
   );
 }

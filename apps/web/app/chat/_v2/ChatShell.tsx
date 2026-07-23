@@ -610,10 +610,10 @@ export default function ChatShell() {
 
   return (
     <div
-      data-theme={resolvedTheme}
+      data-resolved-theme={resolvedTheme}
       data-reduced-motion={prefersReducedMotion ? "true" : "false"}
       style={{ fontFamily: "var(--font-chat)" }}
-      className="clara-chat-v2 relative flex h-[100dvh] min-h-[640px] flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)] motion-reduce:transition-none [&_*]:motion-reduce:!animate-none"
+      className="clara-chat-v2 relative flex h-[calc(100dvh-8.2rem)] min-h-[36rem] flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)] motion-reduce:transition-none lg:h-[calc(100dvh-4.5rem)] [&_*]:motion-reduce:!animate-none"
     >
       <a
         href="#chat-v2-main"
@@ -622,22 +622,22 @@ export default function ChatShell() {
         {isEn ? "Skip to conversation" : "Tới khung trò chuyện"}
       </a>
 
-      <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[18rem_minmax(0,1fr)]">
         {/* Sidebar (overlay on mobile, fixed column on desktop). */}
         {isMobileSidebarOpen ? (
           <button
             type="button"
             aria-label={isEn ? "Close sidebar" : "Đóng sidebar"}
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
+            className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] xl:hidden"
           />
         ) : null}
         <aside
           className={[
-            "fixed inset-y-0 left-0 z-50 w-[min(86vw,18rem)] border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition-transform duration-200 motion-reduce:transition-none lg:relative lg:z-0 lg:w-auto lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 w-[min(86vw,18rem)] border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition-transform duration-200 motion-reduce:transition-none xl:relative xl:z-0 xl:w-auto xl:translate-x-0",
             isMobileSidebarOpen
               ? "translate-x-0"
-              : "-translate-x-[110%] lg:translate-x-0",
+              : "-translate-x-[110%] xl:translate-x-0",
           ].join(" ")}
         >
           <ConversationSidebar
@@ -664,7 +664,7 @@ export default function ChatShell() {
               <IconButton
                 label={isEn ? "Open sidebar" : "Mở sidebar"}
                 icon="menu"
-                className="lg:hidden"
+                className="xl:hidden"
                 onClick={openMobileSidebar}
               />
               <h1 className="truncate text-sm font-semibold text-[var(--text-primary)]">

@@ -735,8 +735,6 @@ html[data-theme="dark"] .clara-chat-v2 {
 }
 
 .clara-chat-v2 {
-  --bg-canvas: #f7f9fc;
-  --surface-sidebar: #f3f6fb;
   background:
     radial-gradient(
       48rem 24rem at 82% -8%,
@@ -748,7 +746,6 @@ html[data-theme="dark"] .clara-chat-v2 {
 
 html.dark .clara-chat-v2,
 html[data-theme="dark"] .clara-chat-v2 {
-  --surface-sidebar: #202020;
   background: var(--bg-canvas);
 }
 
