@@ -85,7 +85,7 @@ class InMemoryRetriever:
         *,
         limit: int,
     ) -> list[tuple[float, str, Document, int]]:
-        """Interleave source buckets and their lexical head/tail candidates."""
+        """Interleave the strongest candidates from each source/origin bucket."""
 
         buckets: dict[str, list[tuple[float, str, Document, int]]] = {}
         for row in ranked_rows:
@@ -94,13 +94,11 @@ class InMemoryRetriever:
             origin = str(metadata.get("retrieval_origin") or "existing")
             buckets.setdefault(f"{source}:{origin}", []).append(row)
         selected: list[tuple[float, str, Document, int]] = []
-        take_tail = False
         while len(selected) < max(int(limit), 0) and any(buckets.values()):
             for rows in buckets.values():
                 if not rows or len(selected) >= limit:
                     continue
-                selected.append(rows.pop(-1 if take_tail else 0))
-            take_tail = not take_tail
+                selected.append(rows.pop(0))
         return selected
 
     @staticmethod
@@ -243,6 +241,8 @@ class InMemoryRetriever:
             llm_info: dict[str, Any] = {"status": "skipped"}
             llm_scores: dict[str, float] = {}
             llm_latency_ms = 0.0
+            llm_rejected_count = 0
+            llm_unscored_count = 0
             diversified_pool: list[tuple[float, str, Document, int]] = []
             if neural_reranker.llm_enabled and ranked_rows:
                 pool_limit = min(
@@ -263,12 +263,18 @@ class InMemoryRetriever:
                     combined_rows: list[tuple[float, str, Document, int]] = []
                     for lexical_score, doc_id, doc, trace_index in ranked_rows:
                         llm_score = llm_scores.get(doc.id)
+                        if llm_score is None:
+                            llm_unscored_count += 1
+                            score_trace[trace_index]["rerank_llm_score"] = None
+                            score_trace[trace_index]["rejected_by_llm_not_scored"] = True
+                            continue
+                        if float(llm_score) < neural_reranker.llm_min_score:
+                            llm_rejected_count += 1
+                            score_trace[trace_index]["rerank_llm_score"] = float(llm_score)
+                            score_trace[trace_index]["rejected_by_llm_relevance_floor"] = True
+                            continue
                         normalized_lexical = neural_reranker._squash_score(lexical_score)
-                        combined_score = (
-                            (0.20 * normalized_lexical) + (0.80 * llm_score)
-                            if llm_score is not None
-                            else 0.10 * normalized_lexical
-                        )
+                        combined_score = (0.20 * normalized_lexical) + (0.80 * llm_score)
                         metadata = dict(doc.metadata or {})
                         metadata["score"] = float(combined_score)
                         metadata["rerank_llm_score"] = (
@@ -292,7 +298,7 @@ class InMemoryRetriever:
                 score_trace[row[3]]["selected"] = True
             ranked = [row[2] for row in selected_rows]
             neural_rerank = {
-                "rerank_enabled": bool(neural_reranker.llm_enabled),
+                "rerank_enabled": bool(llm_scores),
                 "rerank_model": (
                     str(llm_info.get("model") or neural_reranker.model_name)
                     if llm_scores
@@ -323,6 +329,9 @@ class InMemoryRetriever:
                 "rerank_llm_used": bool(llm_scores),
                 "rerank_llm_status": llm_info.get("status"),
                 "rerank_llm_error": llm_info.get("error"),
+                "rerank_llm_min_score": neural_reranker.llm_min_score,
+                "rerank_llm_rejected_count": llm_rejected_count,
+                "rerank_llm_unscored_count": llm_unscored_count,
             }
         biomedical_rerank = {
             "enabled": bool(settings.rag_biomedical_rerank_enabled),

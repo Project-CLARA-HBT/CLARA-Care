@@ -47,6 +47,7 @@ class NeuralReranker:
         llm_enabled: bool | None = None,
         llm_timeout_ms: int | None = None,
         llm_top_n: int | None = None,
+        llm_min_score: float | None = None,
         cache_enabled: bool | None = None,
         cache_ttl_seconds: int | None = None,
         cache_max_entries: int | None = None,
@@ -74,6 +75,17 @@ class NeuralReranker:
         self.llm_top_n = max(
             1,
             int(settings.rag_reranker_llm_top_n if llm_top_n is None else llm_top_n),
+        )
+        self.llm_min_score = max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    settings.rag_reranker_llm_min_score
+                    if llm_min_score is None
+                    else llm_min_score
+                ),
+            ),
         )
         self.cache_enabled = bool(
             settings.rag_reranker_cache_enabled

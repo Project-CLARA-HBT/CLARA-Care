@@ -257,6 +257,12 @@ def test_degraded_llm_reranker_can_correct_lexical_order() -> None:
     assert trace["rerank"]["neural"]["rerank_input_count"] == 4
     assert trace["rerank"]["neural"]["rerank_applied_count"] == 2
     assert trace["rerank"]["neural"]["rerank_latency_ms"] >= 0.0
+    assert trace["rerank"]["neural"]["rerank_llm_min_score"] == 0.55
+    assert trace["rerank"]["neural"]["rerank_llm_rejected_count"] == 1
+    assert trace["rerank"]["neural"]["rerank_llm_unscored_count"] == 9
+    rows_by_id = {row["doc_id"]: row for row in trace["score_trace"]}
+    assert rows_by_id["lexical-decoy"]["rejected_by_llm_relevance_floor"] is True
+    assert rows_by_id["unscored-high-lexical-0"]["rejected_by_llm_not_scored"] is True
 
 
 def test_degraded_llm_reranker_failure_falls_back_to_original_query_lexical_order() -> None:

@@ -658,6 +658,12 @@ class Settings(BaseSettings):
         ge=1,
         le=24,
     )
+    rag_reranker_llm_min_score: float = Field(
+        default=0.55,
+        validation_alias="RAG_RERANKER_LLM_MIN_SCORE",
+        ge=0.0,
+        le=1.0,
+    )
     rag_reranker_llm_timeout_ms: int = Field(
         default=900,
         validation_alias="RAG_RERANKER_LLM_TIMEOUT_MS",
