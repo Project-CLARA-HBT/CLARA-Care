@@ -422,6 +422,12 @@ def test_emergency_fast_path_preserves_declared_normal_audience():
     assert body["role"] == "normal"
     assert body["medical_answer_v2"]["audience"] == "normal"
     assert body["medical_answer_v2"]["urgency"]["level"] == "emergency"
+    acuity_stage = next(
+        stage
+        for stage in body["medical_answer_v2"]["run_manifest"]["harness_stages"]
+        if stage["stage"] == "intent_acuity"
+    )
+    assert acuity_stage["role"] == "normal"
 
 
 def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
