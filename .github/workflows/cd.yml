@@ -137,6 +137,13 @@ jobs:
           retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
           retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
 
+      - name: Apply staging database migrations
+        run: |
+          set -euo pipefail
+          compose=(docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml)
+          "${compose[@]}" exec -T api alembic upgrade head
+          "${compose[@]}" exec -T api alembic current
+
       - name: Run staging smoke checks
         run: |
           set -euo pipefail
@@ -332,6 +339,15 @@ jobs:
           docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml config >/dev/null
           retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
           retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
+
+      - name: Apply production database migrations
+        run: |
+          set -euo pipefail
+          # The verified backup above is the rollback boundary. The migration
+          # runs from the just-deployed API image before shallow health checks.
+          compose=(docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml)
+          "${compose[@]}" exec -T api alembic upgrade head
+          "${compose[@]}" exec -T api alembic current
 
       - name: Run production smoke checks
         run: |

@@ -438,6 +438,14 @@ fi
 
 bridge_api_to_postgres_network
 
+# The application image and database schema are one release unit. Run migrations
+# before any health or functional smoke check so a new API cannot be reported
+# healthy while authenticated feature routes still fail on missing columns.
+echo "[migration] upgrading database schema to head"
+"${COMPOSE[@]}" exec -T api alembic upgrade head
+echo "[migration] current database revision"
+"${COMPOSE[@]}" exec -T api alembic current
+
 wait_json "http://127.0.0.1:8100/health" '"status":"ok"'
 wait_json "http://127.0.0.1:8110/health" '"status":"ok"'
 wait_json "http://127.0.0.1:3100" "<html" 25 2
