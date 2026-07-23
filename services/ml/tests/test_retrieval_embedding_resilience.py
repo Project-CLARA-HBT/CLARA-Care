@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -9,6 +11,7 @@ from clara_ml.rag.embedder import EmbeddingUnavailableError
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.in_memory import InMemoryRetriever
+from clara_ml.rag.retrieval.reranker import NeuralReranker
 from clara_ml.rag.retrieval.source_router import decide_source_route
 
 
@@ -124,6 +127,7 @@ def test_underfilled_persistent_web_request_falls_through_to_full_hybrid() -> No
     result = pipe._persistent_retrieve(
         "SGLT2 chronic kidney disease",
         top_k=5,
+        ranking_query="Compare DAPA-CKD and EMPA-KIDNEY",
         rag_sources=[],
         scientific_query="DAPA-CKD EMPA-KIDNEY",
         scientific_provider_query_overrides=None,
@@ -133,6 +137,168 @@ def test_underfilled_persistent_web_request_falls_through_to_full_hybrid() -> No
     )
 
     assert result is None
+
+
+def test_external_fetch_query_is_separate_from_original_ranking_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retriever = InMemoryRetriever([], embedder=_Embedding503())  # type: ignore[arg-type]
+    retriever.reranker.llm_enabled = False
+    fetch_query = "renal cardiovascular outcomes limitations safety"
+    original_query = "Compare DAPA-CKD and EMPA-KIDNEY in non-diabetic CKD"
+    captured: dict[str, Any] = {}
+
+    def _fetch(**kwargs: Any) -> list[Document]:
+        captured.update(kwargs)
+        return [
+            Document(
+                id="generic-diet",
+                text=(
+                    "Mediterranean diet renal cardiovascular outcomes limitations "
+                    "and safety implementation."
+                ),
+                metadata={"source": "pubmed", "url": "https://pubmed.example/diet"},
+            ),
+            Document(
+                id="trial-evidence",
+                text=(
+                    "DAPA-CKD and EMPA-KIDNEY enrolled chronic kidney disease "
+                    "populations including participants without diabetes."
+                ),
+                metadata={"source": "europepmc", "url": "https://europepmc.example/trials"},
+            ),
+        ]
+
+    monkeypatch.setattr(
+        retriever.external_gateway,
+        "retrieve_scientific_with_telemetry",
+        _fetch,
+    )
+
+    docs = retriever.retrieve_external_scientific(
+        fetch_query,
+        ranking_query_override=original_query,
+        top_k=1,
+    )
+
+    assert captured["query"] == fetch_query
+    assert [doc.id for doc in docs] == ["trial-evidence"]
+    assert docs[0].metadata["url"] == "https://europepmc.example/trials"
+    assert retriever.last_trace["fetch_query"] == fetch_query
+    assert retriever.last_trace["ranking_query"] == original_query
+    assert retriever.last_trace["index_phase"]["fetch_query"] == fetch_query
+    assert retriever.last_trace["index_phase"]["ranking_query"] == original_query
+
+
+def test_degraded_llm_reranker_can_correct_lexical_order() -> None:
+    class _CorrectingClient:
+        def generate(self, **_kwargs: Any) -> SimpleNamespace:
+            return SimpleNamespace(
+                content=json.dumps(
+                    {
+                        "scores": [
+                            {"doc_id": "lexical-decoy", "score": 0.05},
+                            {"doc_id": "direct-trial", "score": 0.98},
+                        ]
+                    }
+                ),
+                model="biomedical-reranker-test",
+            )
+
+    retriever = InMemoryRetriever([], embedder=_Embedding503())  # type: ignore[arg-type]
+    retriever.reranker = NeuralReranker(
+        enabled=True,
+        strategy="llm_hybrid",
+        llm_enabled=True,
+        llm_top_n=4,
+        llm_client=_CorrectingClient(),  # type: ignore[arg-type]
+        embedder=_Embedding503(),  # type: ignore[arg-type]
+    )
+    candidates = [
+        Document(
+            id="lexical-decoy",
+            text="DAPA-CKD EMPA-KIDNEY DAPA-CKD EMPA-KIDNEY general commentary.",
+            metadata={"source": "pubmed", "url": "https://pubmed.example/decoy"},
+        ),
+        Document(
+            id="direct-trial",
+            text="Prespecified kidney endpoints from the pivotal randomized publication.",
+            metadata={"source": "pubmed", "url": "https://pubmed.example/direct"},
+        ),
+        *[
+            Document(
+                id=f"unscored-high-lexical-{index}",
+                text=(
+                    "DAPA-CKD EMPA-KIDNEY primary trial evidence outcomes CKD "
+                    f"generic commentary {index}."
+                ),
+                metadata={
+                    "source": "pubmed",
+                    "url": f"https://pubmed.example/unscored-{index}",
+                },
+            )
+            for index in range(9)
+        ],
+    ]
+
+    ranked, trace = retriever._index_candidates(
+        query="generic outcomes",
+        ranking_query_override="Compare DAPA-CKD and EMPA-KIDNEY primary trial evidence",
+        candidates=candidates,
+        top_k=1,
+        rag_sources=None,
+        rag_reranker_enabled=True,
+    )
+
+    assert [doc.id for doc in ranked] == ["direct-trial"]
+    assert ranked[0].metadata["url"] == "https://pubmed.example/direct"
+    assert trace["ranking_fallback"] == "llm_dominant_degraded"
+    assert trace["rerank"]["neural"]["rerank_llm_used"] is True
+    assert trace["rerank"]["neural"]["rerank_input_count"] == 4
+    assert trace["rerank"]["neural"]["rerank_applied_count"] == 2
+    assert trace["rerank"]["neural"]["rerank_latency_ms"] >= 0.0
+
+
+def test_degraded_llm_reranker_failure_falls_back_to_original_query_lexical_order() -> None:
+    class _BrokenClient:
+        def generate(self, **_kwargs: Any) -> SimpleNamespace:
+            raise TimeoutError("reranker unavailable")
+
+    retriever = InMemoryRetriever([], embedder=_Embedding503())  # type: ignore[arg-type]
+    retriever.reranker = NeuralReranker(
+        enabled=True,
+        strategy="llm_hybrid",
+        llm_enabled=True,
+        llm_top_n=8,
+        llm_client=_BrokenClient(),  # type: ignore[arg-type]
+        embedder=_Embedding503(),  # type: ignore[arg-type]
+    )
+    candidates = [
+        Document(
+            id="generic-diet",
+            text="Mediterranean diet and population cardiovascular health.",
+            metadata={"source": "pubmed", "url": "https://pubmed.example/diet"},
+        ),
+        Document(
+            id="trial-evidence",
+            text="DAPA-CKD and EMPA-KIDNEY evidence in non-diabetic CKD.",
+            metadata={"source": "europepmc", "url": "https://europepmc.example/trials"},
+        ),
+    ]
+
+    ranked, trace = retriever._index_candidates(
+        query="generic cardiovascular evidence",
+        ranking_query_override="DAPA-CKD EMPA-KIDNEY non-diabetic CKD",
+        candidates=candidates,
+        top_k=1,
+        rag_sources=None,
+        rag_reranker_enabled=True,
+    )
+
+    assert [doc.id for doc in ranked] == ["trial-evidence"]
+    assert trace["ranking_fallback"] == "deterministic_lexical"
+    assert trace["rerank"]["neural"]["rerank_llm_used"] is False
+    assert "TimeoutError" in trace["rerank"]["neural"]["rerank_llm_error"]
 
 
 class _FastRescueRetriever:
@@ -202,6 +368,8 @@ class _FastRescueRetriever:
 def test_fast_zero_internal_results_get_one_bounded_external_rescue(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    original_query = "Compare DAPA-CKD and EMPA-KIDNEY in non-diabetic CKD"
+    scientific_fetch_query = "renal cardiovascular outcomes limitations safety"
     retriever = _FastRescueRetriever()
     pipe = RagPipelineP1(
         retriever=retriever,  # type: ignore[arg-type]
@@ -213,18 +381,33 @@ def test_fast_zero_internal_results_get_one_bounded_external_rescue(
     monkeypatch.setattr(settings, "rag_biomed_graph_enabled", False)
 
     result = pipe.run(
-        "Current evidence for SGLT2 inhibitors in chronic kidney disease",
+        original_query,
         planner_hints={
             "research_mode": "fast",
             "scientific_retrieval_enabled": False,
             "web_retrieval_enabled": False,
             "file_retrieval_enabled": True,
+            "query_plan": {
+                "original_query": original_query,
+                "source_queries": {
+                    "internal": ["SGLT2 CKD"],
+                    "scientific": [scientific_fetch_query],
+                    "web": ["SGLT2 CKD evidence"],
+                },
+                "decomposition": {
+                    "fast_pass_queries": [scientific_fetch_query],
+                    "deep_pass_queries": [scientific_fetch_query],
+                    "deep_beta_pass_queries": [scientific_fetch_query],
+                },
+            },
         },
     )
 
     assert result.retrieved_ids == ["pubmed-rescue-1"]
     assert len(retriever.hybrid_calls) == 1
     call = retriever.hybrid_calls[0]
+    assert call["query"] == scientific_fetch_query
+    assert call["ranking_query_override"] == original_query
     assert call["top_k"] <= 3
     assert call["scientific_retrieval_enabled"] is True
     assert call["web_retrieval_enabled"] is True

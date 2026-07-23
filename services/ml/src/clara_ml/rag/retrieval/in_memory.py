@@ -71,6 +71,39 @@ class InMemoryRetriever:
         return counts
 
     @staticmethod
+    def _with_retrieval_origin(docs: list[Document], *, origin: str) -> list[Document]:
+        tagged: list[Document] = []
+        for doc in docs:
+            metadata = dict(doc.metadata or {})
+            metadata["retrieval_origin"] = origin
+            tagged.append(Document(id=doc.id, text=doc.text, metadata=metadata))
+        return tagged
+
+    @staticmethod
+    def _diversified_degraded_pool(
+        ranked_rows: list[tuple[float, str, Document, int]],
+        *,
+        limit: int,
+    ) -> list[tuple[float, str, Document, int]]:
+        """Interleave source buckets and their lexical head/tail candidates."""
+
+        buckets: dict[str, list[tuple[float, str, Document, int]]] = {}
+        for row in ranked_rows:
+            metadata = row[2].metadata or {}
+            source = str(metadata.get("source") or "unknown")
+            origin = str(metadata.get("retrieval_origin") or "existing")
+            buckets.setdefault(f"{source}:{origin}", []).append(row)
+        selected: list[tuple[float, str, Document, int]] = []
+        take_tail = False
+        while len(selected) < max(int(limit), 0) and any(buckets.values()):
+            for rows in buckets.values():
+                if not rows or len(selected) >= limit:
+                    continue
+                selected.append(rows.pop(-1 if take_tail else 0))
+            take_tail = not take_tail
+        return selected
+
+    @staticmethod
     def _source_errors_from_provider_events(
         provider_events: list[dict[str, Any]],
     ) -> dict[str, list[str]]:
@@ -128,12 +161,14 @@ class InMemoryRetriever:
         self,
         *,
         query: str,
+        ranking_query_override: str | None = None,
         candidates: list[Document],
         top_k: int,
         rag_sources: object,
         rag_reranker_enabled: bool | None = None,
     ) -> tuple[list[Document], dict[str, Any]]:
         started = perf_counter()
+        ranking_query = str(ranking_query_override or "").strip() or query
         deduped = dedupe_documents(candidates)
         score_trace: list[dict[str, Any]] = []
         source_policies = self.builder.parse_source_policies(rag_sources)
@@ -141,7 +176,7 @@ class InMemoryRetriever:
         ranking_error: str | None = None
         try:
             ranked = self.scorer.score_documents(
-                query,
+                ranking_query,
                 deduped,
                 top_k=top_k,
                 source_policies=source_policies,
@@ -150,7 +185,7 @@ class InMemoryRetriever:
             neural_reranker = self._resolve_neural_reranker(
                 enabled_override=rag_reranker_enabled,
             )
-            rerank_result = neural_reranker.rerank(query, ranked, top_k=top_k)
+            rerank_result = neural_reranker.rerank(ranking_query, ranked, top_k=top_k)
             ranked = rerank_result.documents
             neural_rerank = (
                 rerank_result.metadata if isinstance(rerank_result.metadata, dict) else {}
@@ -181,7 +216,7 @@ class InMemoryRetriever:
                     text=doc.text,
                     metadata=current_query_metadata,
                 )
-                score = self.reranker._placeholder_score(query, current_query_doc)
+                score = self.reranker._placeholder_score(ranking_query, current_query_doc)
                 score *= safe_weight(policy.get("weight", 1.0), default=1.0)
                 metadata = dict(doc.metadata or {})
                 metadata["score"] = float(score)
@@ -202,25 +237,92 @@ class InMemoryRetriever:
                     (float(score), str(doc.id), degraded_doc, len(score_trace) - 1)
                 )
             ranked_rows.sort(key=lambda row: (-row[0], row[1]))
+            neural_reranker = self._resolve_neural_reranker(
+                enabled_override=rag_reranker_enabled,
+            )
+            llm_info: dict[str, Any] = {"status": "skipped"}
+            llm_scores: dict[str, float] = {}
+            llm_latency_ms = 0.0
+            diversified_pool: list[tuple[float, str, Document, int]] = []
+            if neural_reranker.llm_enabled and ranked_rows:
+                pool_limit = min(
+                    len(ranked_rows),
+                    max(int(top_k), min(neural_reranker.llm_top_n, 24)),
+                )
+                diversified_pool = self._diversified_degraded_pool(
+                    ranked_rows,
+                    limit=pool_limit,
+                )
+                llm_started = perf_counter()
+                llm_scores, llm_info = neural_reranker._llm_score_documents(
+                    query=ranking_query,
+                    documents=[row[2] for row in diversified_pool],
+                )
+                llm_latency_ms = round((perf_counter() - llm_started) * 1000.0, 3)
+                if llm_scores:
+                    combined_rows: list[tuple[float, str, Document, int]] = []
+                    for lexical_score, doc_id, doc, trace_index in ranked_rows:
+                        llm_score = llm_scores.get(doc.id)
+                        normalized_lexical = neural_reranker._squash_score(lexical_score)
+                        combined_score = (
+                            (0.20 * normalized_lexical) + (0.80 * llm_score)
+                            if llm_score is not None
+                            else 0.10 * normalized_lexical
+                        )
+                        metadata = dict(doc.metadata or {})
+                        metadata["score"] = float(combined_score)
+                        metadata["rerank_llm_score"] = (
+                            float(llm_score) if llm_score is not None else None
+                        )
+                        metadata["ranking_fallback"] = "llm_dominant_degraded"
+                        reranked_doc = Document(id=doc.id, text=doc.text, metadata=metadata)
+                        score_trace[trace_index]["final_score"] = float(combined_score)
+                        score_trace[trace_index]["rerank_llm_score"] = (
+                            float(llm_score) if llm_score is not None else None
+                        )
+                        combined_rows.append(
+                            (float(combined_score), doc_id, reranked_doc, trace_index)
+                        )
+                    ranked_rows = sorted(
+                        combined_rows,
+                        key=lambda row: (-row[0], row[1]),
+                    )
             selected_rows = ranked_rows[: max(int(top_k), 0)]
             for row in selected_rows:
                 score_trace[row[3]]["selected"] = True
             ranked = [row[2] for row in selected_rows]
             neural_rerank = {
-                "rerank_enabled": False,
-                "rerank_model": "deterministic-lexical-v1",
-                "rerank_strategy": "lexical",
-                "rerank_latency_ms": 0.0,
-                "rerank_topn": len(ranked),
-                "rerank_timeout_ms": 0,
-                "rerank_input_count": len(deduped),
+                "rerank_enabled": bool(neural_reranker.llm_enabled),
+                "rerank_model": (
+                    str(llm_info.get("model") or neural_reranker.model_name)
+                    if llm_scores
+                    else "deterministic-lexical-v1"
+                ),
+                "rerank_strategy": (
+                    "llm_dominant_degraded" if llm_scores else "lexical"
+                ),
+                "rerank_latency_ms": llm_latency_ms,
+                "rerank_topn": len(diversified_pool),
+                "rerank_timeout_ms": (
+                    neural_reranker.llm_timeout_ms
+                    if neural_reranker.llm_enabled
+                    else 0
+                ),
+                "rerank_input_count": len(diversified_pool),
                 "rerank_output_count": len(ranked),
-                "rerank_applied_count": len(ranked),
-                "rerank_timed_out": False,
-                "rerank_reason": "embedding_unavailable_lexical_fallback",
+                "rerank_applied_count": len(llm_scores),
+                "rerank_timed_out": "TimeoutError"
+                in str(llm_info.get("error") or ""),
+                "rerank_reason": (
+                    "embedding_unavailable_llm_rerank"
+                    if llm_scores
+                    else "embedding_unavailable_lexical_fallback"
+                ),
                 "rerank_error": ranking_error,
                 "rerank_cache_hit": False,
-                "rerank_llm_used": False,
+                "rerank_llm_used": bool(llm_scores),
+                "rerank_llm_status": llm_info.get("status"),
+                "rerank_llm_error": llm_info.get("error"),
             }
         biomedical_rerank = {
             "enabled": bool(settings.rag_biomedical_rerank_enabled),
@@ -233,6 +335,8 @@ class InMemoryRetriever:
             ),
         }
         index_trace = {
+            "fetch_query": query,
+            "ranking_query": ranking_query,
             "before_dedupe_count": len(candidates),
             "after_dedupe_count": len(deduped),
             "selected_count": len(ranked),
@@ -240,7 +344,13 @@ class InMemoryRetriever:
             "ranking_degraded": ranking_degraded,
             "ranking_error": ranking_error,
             "ranking_fallback": (
-                "deterministic_lexical" if ranking_degraded else None
+                (
+                    "llm_dominant_degraded"
+                    if bool(neural_rerank.get("rerank_llm_used"))
+                    else "deterministic_lexical"
+                )
+                if ranking_degraded
+                else None
             ),
             "rerank": {
                 **biomedical_rerank,
@@ -263,6 +373,7 @@ class InMemoryRetriever:
         query: str,
         top_k: int = 3,
         *,
+        ranking_query_override: str | None = None,
         timeout_seconds: float = 1.2,
         rag_sources: object = None,
         allowed_providers: set[str] | None = None,
@@ -279,8 +390,10 @@ class InMemoryRetriever:
             allowed_providers=allowed_providers,
             provider_query_overrides=provider_query_overrides,
         )
+        docs = self._with_retrieval_origin(docs, origin="live_scientific")
         ranked, index_trace = self._index_candidates(
             query=query,
+            ranking_query_override=ranking_query_override,
             candidates=docs,
             top_k=max(top_k, 1),
             rag_sources=rag_sources,
@@ -306,6 +419,8 @@ class InMemoryRetriever:
         self.last_trace = {
             "mode": "external_scientific",
             "query": query,
+            "fetch_query": query,
+            "ranking_query": str(ranking_query_override or "").strip() or query,
             "requested_top_k": int(top_k),
             "raw_documents_count": len(docs),
             "deduped_documents_count": int(index_trace["after_dedupe_count"]),
@@ -341,6 +456,7 @@ class InMemoryRetriever:
         query: str,
         top_k: int = 3,
         *,
+        ranking_query_override: str | None = None,
         file_retrieval_enabled: bool = True,
         rag_sources: object = None,
         uploaded_documents: object = None,
@@ -351,6 +467,8 @@ class InMemoryRetriever:
             self.last_trace = {
                 "mode": "internal",
                 "query": query,
+                "fetch_query": query,
+                "ranking_query": str(ranking_query_override or "").strip() or query,
                 "requested_top_k": int(top_k),
                 "selected_documents_count": 0,
                 "search_phase": {
@@ -395,6 +513,7 @@ class InMemoryRetriever:
 
         ranked, index_phase = self._index_candidates(
             query=query,
+            ranking_query_override=ranking_query_override,
             candidates=candidates,
             top_k=top_k,
             rag_sources=rag_sources,
@@ -409,6 +528,8 @@ class InMemoryRetriever:
         self.last_trace = {
             "mode": "internal",
             "query": query,
+            "fetch_query": query,
+            "ranking_query": str(ranking_query_override or "").strip() or query,
             "requested_top_k": int(top_k),
             "file_retrieval_enabled": bool(file_retrieval_enabled),
             "candidate_counts": counts,
@@ -442,6 +563,7 @@ class InMemoryRetriever:
         query: str,
         top_k: int = 3,
         *,
+        ranking_query_override: str | None = None,
         scientific_retrieval_enabled: bool = False,
         web_retrieval_enabled: bool = False,
         file_retrieval_enabled: bool = True,
@@ -456,6 +578,8 @@ class InMemoryRetriever:
             self.last_trace = {
                 "mode": "hybrid",
                 "query": query,
+                "fetch_query": query,
+                "ranking_query": str(ranking_query_override or "").strip() or query,
                 "requested_top_k": int(top_k),
                 "selected_documents_count": 0,
                 "search_phase": {
@@ -533,6 +657,10 @@ class InMemoryRetriever:
                     allowed_providers=allowed_scientific_providers,
                     provider_query_overrides=provider_query_overrides,
                 )
+                scientific_docs = self._with_retrieval_origin(
+                    scientific_docs,
+                    origin="live_scientific",
+                )
                 staged_docs.extend(scientific_docs)
                 after_external_scientific_count = len(staged_docs)
                 provider_events = (
@@ -576,6 +704,10 @@ class InMemoryRetriever:
                     crawl_enabled=settings.searxng_crawl_enabled,
                     crawl_top_k=settings.searxng_crawl_top_k,
                     crawl_timeout_seconds=settings.searxng_crawl_timeout_seconds,
+                )
+                searxng_docs = self._with_retrieval_origin(
+                    searxng_docs,
+                    origin="live_web",
                 )
                 staged_docs.extend(searxng_docs)
                 web_trace = {
@@ -625,6 +757,7 @@ class InMemoryRetriever:
 
         ranked, index_phase = self._index_candidates(
             query=query,
+            ranking_query_override=ranking_query_override,
             candidates=staged_docs,
             top_k=top_k,
             rag_sources=rag_sources,
@@ -645,6 +778,8 @@ class InMemoryRetriever:
         self.last_trace = {
             "mode": "hybrid",
             "query": query,
+            "fetch_query": query,
+            "ranking_query": str(ranking_query_override or "").strip() or query,
             "requested_top_k": int(top_k),
             "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
             "web_retrieval_enabled": bool(web_retrieval_effective),

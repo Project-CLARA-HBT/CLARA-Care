@@ -2108,6 +2108,7 @@ class RagPipelineP1:
         query: str,
         top_k: int,
         *,
+        ranking_query: str,
         rag_sources: object,
         scientific_provider_query_overrides: dict[str, Any] | None,
         rag_reranker_enabled: bool | None,
@@ -2126,6 +2127,7 @@ class RagPipelineP1:
                 self.retriever.retrieve_external_scientific(
                     query,
                     top_k=max(int(top_k), 1),
+                    ranking_query_override=ranking_query,
                     rag_sources=rag_sources,
                     provider_query_overrides=scientific_provider_query_overrides or None,
                     rag_reranker_enabled=rag_reranker_enabled,
@@ -2169,6 +2171,7 @@ class RagPipelineP1:
         query: str,
         *,
         top_k: int,
+        ranking_query: str,
         rag_sources: object,
         scientific_query: str,
         scientific_provider_query_overrides: dict[str, Any] | None,
@@ -2218,6 +2221,7 @@ class RagPipelineP1:
             gap_docs = self._gap_fill_live_connectors(
                 scientific_query,
                 top_k,
+                ranking_query=ranking_query,
                 rag_sources=rag_sources,
                 scientific_provider_query_overrides=scientific_provider_query_overrides,
                 rag_reranker_enabled=rag_reranker_enabled,
@@ -2500,6 +2504,7 @@ class RagPipelineP1:
         internal_query = self._source_query(query_plan, "internal", query)
         scientific_query = self._source_query(query_plan, "scientific", query)
         web_query = self._source_query(query_plan, "web", query)
+        ranking_query = str(query_plan.get("original_query") or "").strip() or query
         provider_query_overrides_raw = (
             query_plan.get("provider_queries") if isinstance(query_plan, dict) else {}
         )
@@ -2538,6 +2543,8 @@ class RagPipelineP1:
             "source_errors": {},
             "fallback_reason": None,
             "query_plan": query_plan,
+            "fetch_query": scientific_query,
+            "ranking_query": ranking_query,
             "provider_query_overrides": {
                 "scientific": scientific_provider_query_overrides,
                 "web": web_provider_query_overrides,
@@ -2618,6 +2625,7 @@ class RagPipelineP1:
                     persistent_docs = self._persistent_retrieve(
                         internal_query,
                         top_k=internal_top_k,
+                        ranking_query=ranking_query,
                         rag_sources=rag_sources,
                         scientific_query=scientific_query,
                         scientific_provider_query_overrides=scientific_provider_query_overrides,
@@ -2638,6 +2646,7 @@ class RagPipelineP1:
                         docs = self.retriever.retrieve_internal(
                             internal_query,
                             top_k=internal_top_k,
+                            ranking_query_override=ranking_query,
                             file_retrieval_enabled=file_retrieval_enabled,
                             rag_sources=rag_sources,
                             uploaded_documents=uploaded_documents,
@@ -2886,6 +2895,7 @@ class RagPipelineP1:
                 try:
                     retrieve_kwargs: dict[str, Any] = {
                         "top_k": external_top_k,
+                        "ranking_query_override": ranking_query,
                         "scientific_retrieval_enabled": True,
                         "web_retrieval_enabled": external_web_enabled,
                         "file_retrieval_enabled": file_retrieval_enabled,
@@ -2906,7 +2916,12 @@ class RagPipelineP1:
                         key: value
                         for key, value in retrieve_kwargs.items()
                         if key
-                        not in {"provider_query_overrides", "web_query_override", "rag_reranker_enabled"}
+                        not in {
+                            "ranking_query_override",
+                            "provider_query_overrides",
+                            "web_query_override",
+                            "rag_reranker_enabled",
+                        }
                     }
                     docs = self.retriever.retrieve(
                         scientific_query,

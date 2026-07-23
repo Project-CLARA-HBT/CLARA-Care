@@ -592,7 +592,10 @@ class NeuralReranker:
             "}\n"
             "Rules:\n"
             "- score in [0,1]\n"
-            "- prioritize direct medication safety and interaction relevance\n\n"
+            "- prioritize direct biomedical relevance to the exact named trials, drugs, "
+            "populations, outcomes, and safety question in the query\n"
+            "- down-rank generic background that only matches broad facets but does not "
+            "address the query's exact clinical entities\n\n"
             f"query={query}\n"
             f"candidates={json.dumps(prompt_docs, ensure_ascii=False)}\n"
         )
