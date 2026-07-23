@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 import logging
 from pathlib import Path
 import re
@@ -151,7 +152,6 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
             (
                 r"(\blieu\b|\bdos(?:e|age)\b|\buong\s*may\b|"
                 r"\bbao\s*nhieu\s*(vien|mg|g|mcg|ml)\b|\bmay\s*(vien|mg|g|mcg|ml)\b|"
-                r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|ml|vien)\s*(moi\s*ngay|\/ngay|daily)?\b|"
                 r"\bx\s*\d+\s*(vien|mg|g|mcg|ml)\b|"
                 r"\bdose\s*for\s*me\b)"
             ),
@@ -454,10 +454,111 @@ def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str |
     normalized, folded = _normalize_guard_texts(query)
     if not normalized:
         return None
+    educational_diagnosis = any(
+        phrase in folded
+        for phrase in (
+            "chan doan phan biet",
+            "differential diagnosis",
+            "diagnostic accuracy",
+            "diagnostic criteria",
+            "diagnostic workup",
+            "evidence for diagnosis",
+            "guideline for diagnosis",
+        )
+    )
+    personalized_diagnosis = any(
+        phrase in folded
+        for phrase in (
+            "toi co phai",
+            "toi bi",
+            "toi mac",
+            "benh cua toi",
+            "chan doan cho toi",
+            "hay chan doan",
+            "do i have",
+            "diagnose me",
+            "am i suffering",
+        )
+    )
     for pattern, reason in _LEGAL_GUARD_PATTERNS:
         if pattern.search(normalized) or pattern.search(folded):
+            if reason == "diagnosis_request" and educational_diagnosis and not personalized_diagnosis:
+                continue
             return reason
     return None
+
+
+def _classify_medical_request_with_llm(
+    query: str,
+    *,
+    role_hint: str | None,
+) -> dict[str, Any]:
+    """Use the configured LLM as the primary semantic safety/intent classifier.
+
+    This distinguishes medication history from a request to alter treatment and
+    educational diagnostic discussion from a demand for a definitive personal
+    diagnosis. It intentionally returns a small closed schema; no generated
+    clinical prose is trusted at this stage.
+    """
+
+    response = _build_deepseek_client().generate(
+        json.dumps(
+            {
+                "message": query,
+                "declared_audience": role_hint or "normal",
+            },
+            ensure_ascii=False,
+        ),
+        system_prompt=(
+            "You are the semantic safety router for a medical assistant. Classify the "
+            "user's actual intent from full context, in Vietnamese or English. A stated "
+            "current medicine/dose is context, not automatically a dosing request. "
+            "Educational differential diagnosis, evidence review, and questions about "
+            "what clinicians may evaluate are allowed. Block only direct requests for a "
+            "new prescription, a personalized dose/start/stop/change instruction, or a "
+            "definitive personal diagnosis. Detect urgent red flags even when phrased "
+            "indirectly. Return JSON only with keys action, reason, emergency, confidence. "
+            "action must be allow or block. reason must be one of none, "
+            "prescription_request, dosage_request, diagnosis_request, emergency."
+        ),
+        max_tokens=180,
+    )
+    raw = response.content.strip()
+    if raw.startswith("```"):
+        raw = raw.removeprefix("```json").removeprefix("```").strip()
+        if raw.endswith("```"):
+            raw = raw[:-3].strip()
+    start = raw.find("{")
+    if start < 0:
+        raise ValueError("Medical intent classifier did not return JSON")
+    parsed, _ = json.JSONDecoder().raw_decode(raw[start:])
+    if not isinstance(parsed, dict):
+        raise ValueError("Medical intent classifier returned a non-object")
+
+    action = str(parsed.get("action") or "").strip().lower()
+    reason = str(parsed.get("reason") or "").strip().lower()
+    emergency = bool(parsed.get("emergency")) or reason == "emergency"
+    if action not in {"allow", "block"}:
+        raise ValueError("Medical intent classifier returned invalid action")
+    if reason not in {
+        "none",
+        "prescription_request",
+        "dosage_request",
+        "diagnosis_request",
+        "emergency",
+    }:
+        raise ValueError("Medical intent classifier returned invalid reason")
+    try:
+        confidence = max(0.0, min(1.0, float(parsed.get("confidence") or 0.0)))
+    except (TypeError, ValueError):
+        confidence = 0.0
+    return {
+        "action": "allow" if emergency else action,
+        "reason": reason,
+        "emergency": emergency,
+        "confidence": confidence,
+        "model_used": response.model,
+    }
 
 
 def _normalize_policy_action(value: object, *, default: str) -> str:
@@ -697,9 +798,27 @@ def rag_poc(payload: dict) -> dict:
 def routed_chat_infer(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
-    legal_guard_reason = _detect_legal_guard_violation(query, channel="chat")
-    if legal_guard_reason:
-        return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
+    # Emergency triage must outrank the legal/prescribing guard. Otherwise a
+    # red-flag message that also mentions a diagnosis or an existing medication
+    # dose can be reduced to a generic refusal with no urgent action.
+    safety_route = router.route(query, role_hint=role_hint)
+    semantic_route: dict[str, Any] | None = None
+    if not safety_route.emergency:
+        try:
+            semantic_route = _classify_medical_request_with_llm(
+                redact_pii(query).redacted_text,
+                role_hint=role_hint,
+            )
+            legal_guard_reason = (
+                str(semantic_route["reason"])
+                if semantic_route["action"] == "block"
+                else None
+            )
+        except Exception:  # noqa: BLE001 - deterministic guard is the safe outage path
+            logger.warning("Medical semantic router unavailable; using safety fallback")
+            legal_guard_reason = _detect_legal_guard_violation(query, channel="chat")
+        if legal_guard_reason:
+            return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
 
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
@@ -761,6 +880,24 @@ def routed_chat_infer(payload: dict) -> dict:
     pii = preflight.pii
     route = preflight.route
     emergency_red_flags = preflight.red_flags
+    if semantic_route and semantic_route.get("emergency"):
+        route.role = (
+            role_hint
+            if role_hint in {"normal", "researcher", "doctor"}
+            else route.role
+        )
+        route.intent = "emergency_triage"
+        route.confidence = max(route.confidence, float(semantic_route["confidence"]))
+        route.emergency = True
+        emergency_red_flags = [*emergency_red_flags, "llm_semantic_emergency_signal"]
+        preflight.stages.append(
+            {
+                "stage": "llm_semantic_safety_router",
+                "status": "escalate",
+                "confidence": semantic_route["confidence"],
+                "model_used": semantic_route["model_used"],
+            }
+        )
 
     if route.emergency:
         emergency_answer = (

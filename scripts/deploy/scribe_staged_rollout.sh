@@ -74,6 +74,38 @@ all_flags() {
   done
 }
 
+# Production-facing clinical workflows that have online API/ML implementations.
+# The offline Scribe eval gate is deliberately excluded: it is a release/CI
+# check, not a runtime user feature. Council flags are included so one atomic
+# rollout can enable and health-check the complete clinician workspace.
+clinical_platform_flags() {
+  cat <<'FLAGS'
+RAG_SCRIBE_CONSENT_REQUIRED
+RAG_SCRIBE_TEMPLATES_ENABLED
+RAG_SCRIBE_CODING_ENABLED
+RAG_SCRIBE_SIGN_WORKFLOW_ENABLED
+RAG_SCRIBE_EXPORT_ENABLED
+RAG_SCRIBE_FHIR_EXPORT_ENABLED
+RAG_SCRIBE_DIARIZATION_ENABLED
+RAG_SCRIBE_STREAMING_ENABLED
+RAG_SCRIBE_GROUNDING_ENABLED
+RAG_SCRIBE_STRUCTURED_EXTRACTION_ENABLED
+RAG_SCRIBE_EM_CPT_CODING_ENABLED
+RAG_SCRIBE_QUALITY_METRICS_ENABLED
+RAG_SCRIBE_WER_REPORTING_ENABLED
+RAG_SCRIBE_FHIR_COMPOSITION_ENABLED
+RAG_SCRIBE_ADDENDUM_ENABLED
+RAG_SCRIBE_SPECIALTY_TEMPLATES_ENABLED
+COUNCIL_STREAMING_ENABLED
+COUNCIL_RUN_HISTORY_ENABLED
+COUNCIL_OVERSIGHT_ENABLED
+COUNCIL_RESILIENCE_ENABLED
+COUNCIL_MODEL_DISCLOSURE_ENABLED
+COUNCIL_OBSERVABILITY_ENABLED
+COUNCIL_MOBILE_PARITY_ENABLED
+FLAGS
+}
+
 log()  { echo "[scribe-rollout] $*"; }
 warn() { echo "[scribe-rollout][warn] $*" >&2; }
 die()  { echo "[scribe-rollout][error] $*" >&2; exit 1; }
@@ -209,6 +241,27 @@ rollback_all() {
   log "rollback-all complete: all scribe flags OFF, legacy behavior restored (Req 11.2/11.3)"
 }
 
+enable_platform() {
+  log "=== enable-platform ($(dry_note)) :: Scribe + Council online workflows ==="
+  mapfile -t flags < <(clinical_platform_flags)
+  disk_precheck
+  if ! is_apply; then
+    log "[dry-run] would backup .env, set ${#flags[@]} flags=true, and redeploy once"
+    printf '  %s\n' "${flags[@]}"
+    return 0
+  fi
+  backup_env
+  apply_flags true "${flags[@]}"
+  if ! redeploy; then
+    warn "clinical platform redeploy failed; auto-rolling back this flag set"
+    apply_flags false "${flags[@]}"
+    redeploy || warn "rollback redeploy also failed — investigate manually"
+    die "clinical platform rollout failed and was rolled back"
+  fi
+  disk_precheck
+  log "clinical platform workflows enabled successfully"
+}
+
 print_plan() {
   echo "Clara Scribe staged rollout plan (deploy order per stage: ${DEPLOY_ORDER[*]})"
   echo "Mode: $(dry_note)  |  ENV_FILE: ${ENV_FILE}"
@@ -219,6 +272,7 @@ print_plan() {
   done
   echo
   echo "enable:  APPLY=true $0 enable <stage>"
+  echo "enable all online Scribe + Council workflows: APPLY=true $0 enable-platform"
   echo "disable: APPLY=true $0 disable <stage>"
   echo "rollback all to legacy: APPLY=true $0 rollback-all"
 }
@@ -228,6 +282,7 @@ main() {
   case "${cmd}" in
     plan)         print_plan ;;
     enable)       [[ $# -ge 2 ]] || die "usage: $0 enable <stage>"; enable_stage "$2" ;;
+    enable-platform) enable_platform ;;
     disable)      [[ $# -ge 2 ]] || die "usage: $0 disable <stage>"; disable_stage "$2" ;;
     rollback-all) rollback_all ;;
     -h|--help)    print_plan ;;

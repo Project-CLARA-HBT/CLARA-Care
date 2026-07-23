@@ -60,6 +60,21 @@ def health() -> dict:
     }
 
 
+@app.get("/ready")
+def ready() -> dict:
+    """Load the configured model before reporting transcription readiness."""
+    started = time.perf_counter()
+    _get_model()
+    return {
+        "status": "ready",
+        "service": "clara-asr-whisper",
+        "model": WHISPER_MODEL,
+        "device": WHISPER_DEVICE,
+        "loaded": True,
+        "load_ms": int((time.perf_counter() - started) * 1000),
+    }
+
+
 @app.post("/v1/audio/transcriptions")
 async def transcribe(
     file: UploadFile,

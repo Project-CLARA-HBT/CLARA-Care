@@ -2228,9 +2228,14 @@ def _sanitize_llm_query_plan_payload(
     if not required_keys.issubset(set(payload.keys())):
         raise ValueError("Planner output missing required keys")
 
+    original_query = str(base_query_plan.get("original_query") or "").strip()
     canonical_query = " ".join(str(payload.get("canonical_query") or "").split()).strip()
     if not canonical_query:
         raise ValueError("Planner output missing canonical_query")
+    # Preserve the user's complete question as the immutable semantic anchor.
+    # The LLM may expand/translate it, but its generated plan cannot erase trial
+    # names, drugs, population details, or qualifiers supplied by the user.
+    canonical_query = f"{original_query} {canonical_query}".strip()
     canonical_query = canonical_query[:320]
 
     language_hint_raw = str(payload.get("language_hint") or "").strip().lower()
@@ -2240,6 +2245,10 @@ def _sanitize_llm_query_plan_payload(
     if not isinstance(keywords_raw, list):
         raise ValueError("Planner output keywords must be list")
     keywords = _dedupe_query_list([str(item) for item in keywords_raw], limit=12)
+    keywords = _dedupe_query_list(
+        [*query_terms(original_query), *keywords],
+        limit=12,
+    )
     if not keywords:
         keywords = _dedupe_query_list(query_terms(canonical_query), limit=12)
     if not keywords:
@@ -2278,6 +2287,23 @@ def _sanitize_llm_query_plan_payload(
         field_name="decomposition.deep_beta_pass_queries",
         limit=deep_beta_limit,
     )
+    # The original multilingual question is an immutable retrieval anchor. LLM
+    # planning may expand or translate it, but must not erase trial names, drug
+    # classes, or other user-supplied entities.
+    internal_queries = _dedupe_query_list([original_query, *internal_queries], limit=8)
+    scientific_queries = _dedupe_query_list(
+        [original_query, canonical_query, *scientific_queries],
+        limit=8,
+    )
+    web_queries = _dedupe_query_list([original_query, canonical_query, *web_queries], limit=8)
+    deep_pass_queries = _dedupe_query_list(
+        [original_query, canonical_query, *deep_pass_queries],
+        limit=12,
+    )
+    deep_beta_pass_queries = _dedupe_query_list(
+        [original_query, canonical_query, *deep_beta_pass_queries],
+        limit=deep_beta_limit,
+    )
     fast_pass_queries = _dedupe_query_list(
         [canonical_query, base_query_plan.get("original_query"), " ".join(keywords[:6])],
         limit=4,
@@ -2298,7 +2324,7 @@ def _sanitize_llm_query_plan_payload(
     )
 
     return {
-        "original_query": str(base_query_plan.get("original_query") or canonical_query),
+        "original_query": original_query or canonical_query,
         "canonical_query": canonical_query,
         "language_hint": language_hint,
         "is_ddi_query": bool(base_query_plan.get("is_ddi_query")),
@@ -7225,14 +7251,10 @@ def _ensure_markdown_structure(
         answer_language=answer_language,
     )
     if all(_has_markdown_heading(cleaned, heading) for heading in required_headings):
-        completed = _cleanup_markdown_noise(cleaned)
-        if research_mode in {"deep", "deep_beta"}:
-            completed = _inject_research_plan_section(
-                completed,
-                plan_markdown=plan_markdown,
-                answer_language=answer_language,
-            )
-        return completed
+        # The execution plan remains available in structured metadata for
+        # transparency/debugging. Do not inject internal planner boilerplate into
+        # an already complete reader-facing report.
+        return _cleanup_markdown_noise(cleaned)
 
     analysis_block = cleaned
     if "\n" not in analysis_block:
@@ -9088,24 +9110,18 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
         )
 
-    if llm_status in {"completed", "recovered"}:
+    if llm_status == "completed":
         planner_hints["query_plan"] = llm_plan
         planner_hints["reason_codes"] = [
             *planner_hints.get("reason_codes", []),
-            "llm_query_planner_enabled"
-            if llm_status == "completed"
-            else "llm_query_planner_recovered",
+            "llm_query_planner_enabled",
         ]
         flow_events.append(
             _event(
                 stage="llm_query_planner",
                 status="completed",
                 source_count=0,
-                note=(
-                    "LLM query planner refinement completed."
-                    if llm_status == "completed"
-                    else "LLM query planner recovered with deterministic base plan."
-                ),
+                note="LLM query planner refinement completed.",
                 component="planner",
                 payload={
                     "model_used": llm_plan_status.get("model_used"),
@@ -9115,7 +9131,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
         )
     else:
-        planner_hints["query_plan"] = base_query_plan
+        # A "recovered" result is the deterministic base plan, not an LLM
+        # success. Keep telemetry honest so operators can distinguish semantic
+        # planning from outage recovery.
+        planner_hints["query_plan"] = llm_plan if llm_status == "recovered" else base_query_plan
         if llm_attempted:
             planner_hints["reason_codes"] = [
                 *planner_hints.get("reason_codes", []),

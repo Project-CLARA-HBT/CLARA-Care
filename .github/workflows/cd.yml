@@ -69,7 +69,7 @@ jobs:
           set -euo pipefail
           image_tag="${{ steps.ctx.outputs.image_tag }}"
           repo="${{ steps.ctx.outputs.registry_repo }}"
-          for svc in api ml web; do
+          for svc in api ml asr web; do
             image="${repo}/clara-${svc}:${image_tag}"
             echo "Checking image: ${image}"
             docker manifest inspect "${image}" >/dev/null
@@ -107,6 +107,7 @@ jobs:
           {
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
+            echo "ASR_IMAGE=${REGISTRY_REPO}/clara-asr:${IMAGE_TAG}"
             echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
             # Requirement 6.6: do NOT force the implicit SQLite database fallback.
             # The deploy stack defaults DATABASE_FALLBACK_ENABLED to false; any
@@ -151,7 +152,7 @@ jobs:
           wait_http() {
             local url="$1"
             local name="$2"
-            local attempts=20
+            local attempts=60
             local i=1
             while [ "$i" -le "$attempts" ]; do
               if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
@@ -169,6 +170,7 @@ jobs:
           wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "api-root-health"
           wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "api-v1-health"
           wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "ml-health"
+          wait_http "http://127.0.0.1:${APP_ASR_PORT:-8190}/ready" "asr-ready"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "web-home"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "web-research"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "web-research-deepdive"
@@ -238,6 +240,7 @@ jobs:
           {
             echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
             echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
+            echo "ASR_IMAGE=${REGISTRY_REPO}/clara-asr:${IMAGE_TAG}"
             echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
             # Requirement 6.6: do NOT force the implicit SQLite database fallback
             # in production. The deploy stack defaults DATABASE_FALLBACK_ENABLED to
@@ -356,7 +359,7 @@ jobs:
           wait_http() {
             local url="$1"
             local name="$2"
-            local attempts=20
+            local attempts=60
             local i=1
             while [ "$i" -le "$attempts" ]; do
               if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
@@ -374,6 +377,7 @@ jobs:
           wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "prod-api-root-health"
           wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "prod-api-v1-health"
           wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "prod-ml-health"
+          wait_http "http://127.0.0.1:${APP_ASR_PORT:-8190}/ready" "prod-asr-ready"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "prod-web-home"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "prod-web-research"
           wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "prod-web-research-deepdive"

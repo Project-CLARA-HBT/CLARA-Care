@@ -5,7 +5,7 @@ usage() {
   cat <<USAGE
 Usage: $0 --release-tag <vX.Y.Z> --commit-sha <sha> --registry <registry>/<owner>/<repo>
 
-Builds and pushes api/ml/web images to GHCR (or compatible OCI registry).
+Builds and pushes api/ml/asr/web images to GHCR (or compatible OCI registry).
 Tags pushed per service:
 - sha-<shortsha>
 - <release-tag>
@@ -74,13 +74,15 @@ manifest_dir="release-artifacts"
 mkdir -p "$manifest_dir"
 manifest_path="$manifest_dir/image-manifest-${release_tag}.json"
 
-services=("api" "ml" "web")
+services=("api" "ml" "asr" "web")
 dockerfiles=(
   "services/api/Dockerfile"
   "services/ml/Dockerfile"
+  "services/asr/Dockerfile"
   "apps/web/Dockerfile"
 )
 contexts=(
+  "."
   "."
   "."
   "."

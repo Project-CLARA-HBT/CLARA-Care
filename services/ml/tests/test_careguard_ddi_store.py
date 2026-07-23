@@ -7,8 +7,8 @@ integration into ``run_careguard_analyze`` via the
 
 * The store builds a SQLite index from shard files and looks up pairs
   order-independently.
-* Curated Vietnamese rules always win on a conflicting pair (the SQLite layer is
-  skipped for pairs the curated matcher already covers).
+* A ready DrugBank index is authoritative for conflicting pairs and its
+  provenance is preserved in the public result.
 * A missing/malformed manifest or shard degrades to no contribution (never
   raises, never fabricates an all-clear), so CareGuard falls back to curated-only.
 * The build is idempotent: a matching-version DB is reused without a rebuild.
@@ -119,7 +119,7 @@ def test_store_degrades_on_malformed_shard(tmp_path: Path) -> None:
     assert store.ensure_built() is None
 
 
-def test_analyze_uses_sqlite_layer_and_curated_wins(tmp_path: Path, monkeypatch) -> None:
+def test_analyze_uses_authoritative_sqlite_layer(tmp_path: Path, monkeypatch) -> None:
     drugbank_dir = _write_shards(tmp_path)
     # Point the module-level store at the temp shards and reset the cached store.
     monkeypatch.setattr(careguard, "_DRUGBANK_DIR", drugbank_dir)
@@ -154,10 +154,15 @@ def test_analyze_uses_sqlite_layer_and_curated_wins(tmp_path: Path, monkeypatch)
         "matched_alert_count": 1,
     }
 
-    # Curated wins: warfarin+ibuprofen stays high (curated), never the low
-    # DrugBank override, and only ONE alert is emitted for the pair.
+    # DrugBank wins on an overlapping pair: only one licensed alert is emitted,
+    # and neither its source nor severity is replaced by the curated fallback.
+    class _UnexpectedExternalClient:
+        def __init__(self, **_kwargs) -> None:
+            raise AssertionError("external DDI must not run when DrugBank is ready")
+
+    monkeypatch.setattr(careguard, "DrugSourceClient", _UnexpectedExternalClient)
     result2 = careguard.run_careguard_analyze(
-        {"medications": ["warfarin", "ibuprofen"], "external_ddi_enabled": False}
+        {"medications": ["warfarin", "ibuprofen"], "external_ddi_enabled": True}
     )
     wi_alerts = [
         a
@@ -165,7 +170,52 @@ def test_analyze_uses_sqlite_layer_and_curated_wins(tmp_path: Path, monkeypatch)
         if a.get("type") == "drug_drug" and sorted(a["medications"]) == ["ibuprofen", "warfarin"]
     ]
     assert len(wi_alerts) == 1
-    assert wi_alerts[0]["severity"] in {"high", "critical"}
+    assert wi_alerts[0]["severity"] == "low"
+    assert wi_alerts[0]["source"] == "drugbank"
+    assert wi_alerts[0]["source_version"] == "drugbank-test-1"
+    assert wi_alerts[0]["source_statement"] == "This should NOT override the curated Vietnamese rule."
+    assert wi_alerts[0]["reference"] == {
+        "source": "DrugBank",
+        "version": "drugbank-test-1",
+        "medication_pair": ["ibuprofen", "warfarin"],
+    }
+    assert result2["metadata"]["source_used"] == ["drugbank"]
+    assert result2["metadata"]["fallback_used"] is False
+    assert result2["metadata"]["drugbank"]["matched_alert_count"] == 1
+
+
+def test_ready_drugbank_skips_external_enrichment_without_fallback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    monkeypatch.setattr(careguard, "_DRUGBANK_DIR", drugbank_dir)
+    monkeypatch.setattr(careguard, "_DRUGBANK_MANIFEST_PATH", drugbank_dir / "manifest.json")
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE", None)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE_READY", False)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", True)
+
+    class _UnexpectedExternalClient:
+        def __init__(self, **_kwargs) -> None:
+            raise AssertionError("external DDI must not run when DrugBank is ready")
+
+    monkeypatch.setattr(careguard, "DrugSourceClient", _UnexpectedExternalClient)
+
+    result = careguard.run_careguard_analyze(
+        {
+            "medications": ["drugbankonly_a", "drugbankonly_b"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    assert result["metadata"]["source_used"] == ["drugbank"]
+    assert result["metadata"]["source_errors"] == {}
+    assert result["metadata"]["fallback_used"] is False
+    assert result["metadata"]["drugbank"] == {
+        "state": "ready",
+        "version": "drugbank-test-1",
+        "matched_alert_count": 1,
+    }
 
 
 def test_analyze_flag_off_is_curated_only(tmp_path: Path, monkeypatch) -> None:

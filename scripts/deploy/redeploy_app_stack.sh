@@ -431,9 +431,9 @@ cd "${ROOT_DIR}"
 
 echo "[deploy] using env file: ${ENV_FILE}"
 if [[ "${SKIP_BUILD}" == "true" ]]; then
-  "${COMPOSE[@]}" up -d api ml web
+  "${COMPOSE[@]}" up -d api asr ml web
 else
-  "${COMPOSE[@]}" up -d --build api ml web
+  "${COMPOSE[@]}" up -d --build api asr ml web
 fi
 
 bridge_api_to_postgres_network
@@ -448,6 +448,7 @@ echo "[migration] current database revision"
 
 wait_json "http://127.0.0.1:8100/health" '"status":"ok"'
 wait_json "http://127.0.0.1:8110/health" '"status":"ok"'
+wait_json "http://127.0.0.1:${APP_ASR_PORT:-8190}/ready" '"status":"ready"' 40 5
 wait_json "http://127.0.0.1:3100" "<html" 25 2
 wait_json "http://127.0.0.1:3100/research" "<html" 25 2
 wait_json "http://127.0.0.1:3100/research/deepdive" "<html" 25 2

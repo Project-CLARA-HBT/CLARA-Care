@@ -2519,18 +2519,100 @@ def _apply_research_quality_gates(
     citations = gated.get("citations")
     if not isinstance(citations, list):
         citations = gated.get("sources") if isinstance(gated.get("sources"), list) else []
+    def is_resolvable_citation(item: Any) -> bool:
+        if not isinstance(item, dict):
+            return False
+        source = str(item.get("source") or "").strip().lower()
+        if source in {"", "system_fallback", "fallback", "unknown"}:
+            return False
+        # A label alone is not evidence. Require a stable retriever/study ID or
+        # a resolvable URL so fabricated source names cannot pass the gate.
+        return any(
+            str(item.get(key) or "").strip()
+            for key in ("source_id", "study_id", "pmid", "doi", "url")
+        )
+
+    def safe_nonnegative_int(value: Any) -> int:
+        if isinstance(value, bool):
+            return 0
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return 0
+        if not math.isfinite(numeric) or numeric < 0:
+            return 0
+        return int(numeric)
+
+    real_citations = [item for item in citations if is_resolvable_citation(item)]
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
-    citation_count = len(citations)
+    citation_count = len(real_citations)
     answer_present = bool(
         str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
     )
     mode = _coerce_research_mode(request_payload)
+    verification_matrix = (
+        gated.get("verification_matrix")
+        if isinstance(gated.get("verification_matrix"), dict)
+        else {}
+    )
+    verification_summary = (
+        verification_matrix.get("summary")
+        if isinstance(verification_matrix.get("summary"), dict)
+        else {}
+    )
+    verification_rows = (
+        verification_matrix.get("rows")
+        if isinstance(verification_matrix.get("rows"), list)
+        else []
+    )
+    unsupported_from_verifier = sum(
+        1
+        for row in verification_rows
+        if isinstance(row, dict)
+        and str(
+            row.get("support_status") or row.get("status") or row.get("verdict") or ""
+        )
+        .strip()
+        .lower()
+        in {"unsupported", "insufficient", "contradicted", "failed", "error"}
+    )
+    unsupported_count = max(unsupported_count, unsupported_from_verifier)
+    metadata_input = gated.get("metadata") if isinstance(gated.get("metadata"), dict) else {}
+    source_target = (
+        gated.get("source_target_achieved")
+        if isinstance(gated.get("source_target_achieved"), dict)
+        else metadata_input.get("source_target_achieved")
+        if isinstance(metadata_input.get("source_target_achieved"), dict)
+        else {}
+    )
+    achieved_documents = safe_nonnegative_int(source_target.get("achieved_document_count"))
+    retrieved_ids = gated.get("retrieved_ids")
+    has_retrieved_evidence = bool(
+        achieved_documents > 0
+        or (isinstance(retrieved_ids, list) and any(str(item).strip() for item in retrieved_ids))
+        or real_citations
+    )
+    support_ratio_raw = verification_summary.get("support_ratio")
+    support_ratio = (
+        float(support_ratio_raw)
+        if isinstance(support_ratio_raw, (int, float))
+        else None
+    )
     gate_reasons: list[str] = []
     if mode in {"deep", "deep_beta"} and answer_present and citation_count == 0:
         gate_reasons.append("no_citations")
+    if mode in {"deep", "deep_beta"} and answer_present and not has_retrieved_evidence:
+        gate_reasons.append("no_retrieved_evidence")
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
+    if (
+        mode in {"deep", "deep_beta"}
+        and answer_present
+        and support_ratio is not None
+        and support_ratio <= 0.0
+    ):
+        gate_reasons.append("zero_claim_support")
     quality_gate = {
         "schema_version": "1.0",
         "passed": not gate_reasons,
@@ -2540,13 +2622,43 @@ def _apply_research_quality_gates(
         "reasons": gate_reasons,
         "mode": mode,
     }
-    metadata = dict(gated.get("metadata")) if isinstance(gated.get("metadata"), dict) else {}
+    metadata = dict(metadata_input)
     metadata["quality_gate"] = quality_gate
     gated["metadata"] = metadata
     gated["quality_gate"] = quality_gate
     if gate_reasons:
         gated["degraded"] = True
         gated["degraded_reason"] = ";".join(gate_reasons)
+        gated["fallback_used"] = True
+        metadata["fallback_used"] = True
+        metadata["degraded_path"] = True
+        gated["metadata"] = metadata
+        # Deep Research must abstain instead of releasing confident prose when
+        # it has no registered evidence or the verifier found zero support.
+        if mode in {"deep", "deep_beta"} and (
+            "no_citations" in gate_reasons
+            or "no_retrieved_evidence" in gate_reasons
+            or "zero_claim_support" in gate_reasons
+        ):
+            language = str(
+                request_payload.get("ui_language")
+                or request_payload.get("answer_language")
+                or "vi"
+            ).lower()
+            safe_answer = (
+                "CLARA could not retrieve enough verifiable evidence for this research "
+                "request. No clinical conclusion is released. Please retry or narrow the "
+                "question; for care decisions, consult a qualified clinician."
+                if language == "en"
+                else "CLARA chưa truy xuất được đủ bằng chứng có thể kiểm chứng cho yêu cầu "
+                "nghiên cứu này. Hệ thống không phát hành kết luận y khoa. Vui lòng thử lại "
+                "hoặc thu hẹp câu hỏi; với quyết định điều trị, hãy trao đổi với bác sĩ."
+            )
+            gated["answer"] = safe_answer
+            gated["answer_markdown"] = safe_answer
+            gated["citations"] = real_citations
+            gated["sources"] = real_citations
+            gated["policy_action"] = "warn"
     return gated
 
 

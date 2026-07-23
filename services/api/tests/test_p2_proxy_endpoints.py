@@ -944,8 +944,85 @@ def test_research_harness_redacts_provider_secrets_and_marks_missing_evidence() 
         request_payload={"research_mode": "deep"},
     )
     assert result["degraded"] is True
-    assert result["degraded_reason"] == "no_citations"
+    assert "no_citations" in result["degraded_reason"]
+    assert "no_retrieved_evidence" in result["degraded_reason"]
     assert result["quality_gate"]["passed"] is False
+    assert "không phát hành kết luận y khoa" in result["answer"]
+
+
+def test_research_harness_rejects_system_fallback_as_real_evidence() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "Unsupported confident conclusion.",
+            "citations": [
+                {
+                    "source_id": "fallback-safe-1",
+                    "source": "system_fallback",
+                    "title": "Safety fallback notice",
+                }
+            ],
+            "verification_matrix": {
+                "summary": {"support_ratio": 0.0},
+                "rows": [{"support_status": "insufficient"}],
+            },
+            "source_target_achieved": {"achieved_document_count": 0},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert result["quality_gate"]["citation_count"] == 0
+    assert set(result["quality_gate"]["reasons"]) >= {
+        "no_citations",
+        "no_retrieved_evidence",
+        "unsupported_claims",
+        "zero_claim_support",
+    }
+    assert result["citations"] == []
+    assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_rejects_unresolvable_or_mixed_unsupported_evidence() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "Confident but incompletely supported conclusion.",
+            "citations": [{"source": "made_up"}],
+            "verification_matrix": {
+                "summary": {"support_ratio": 0.5},
+                "rows": [
+                    {"support_status": "supported"},
+                    {"support_status": "insufficient"},
+                ],
+            },
+            "source_target_achieved": {"achieved_document_count": "unknown"},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert result["quality_gate"]["citation_count"] == 0
+    assert "unsupported_claims" in result["quality_gate"]["reasons"]
+    assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_abstains_when_documents_have_no_citations() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "Confident uncited conclusion.",
+            "retrieved_ids": ["doc-1"],
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["reasons"] == ["no_citations"]
+    assert "No clinical conclusion is released" in result["answer"]
 
 
 def test_research_tier2_job_stream_returns_progress_and_done() -> None:

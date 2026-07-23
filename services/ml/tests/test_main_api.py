@@ -1,7 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from clara_ml.main import app
+from clara_ml.main import (
+    _classify_medical_request_with_llm,
+    _detect_legal_guard_violation,
+    app,
+)
 from clara_ml.observability import InMemoryMetricsCollector, metrics_collector
 
 client = TestClient(app)
@@ -415,6 +419,96 @@ def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
     assert body["emergency"] is False
     assert body["retrieved_ids"] == []
     assert "không có thẩm quyền kê đơn" in body["answer"].lower()
+
+
+def test_routed_chat_existing_dose_context_does_not_bypass_triage():
+    response = client.post(
+        "/v1/chat/routed",
+        json={
+            "query": (
+                "Nam 58 tuổi tăng huyết áp, đang dùng lisinopril 10 mg mỗi ngày, "
+                "đau ngực khi gắng sức và đỡ khi nghỉ. Cần làm gì tiếp theo?"
+            )
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] != "medical_policy_refusal"
+    assert body["model_used"] != "legal-hard-guard-v1"
+
+
+@pytest.mark.parametrize(
+    ("model_payload", "expected_action", "expected_reason"),
+    [
+        (
+            {
+                "action": "allow",
+                "reason": "none",
+                "emergency": False,
+                "confidence": 0.97,
+            },
+            "allow",
+            "none",
+        ),
+        (
+            {
+                "action": "block",
+                "reason": "dosage_request",
+                "emergency": False,
+                "confidence": 0.96,
+            },
+            "block",
+            "dosage_request",
+        ),
+    ],
+)
+def test_medical_semantic_router_uses_llm_context(
+    monkeypatch: pytest.MonkeyPatch,
+    model_payload: dict,
+    expected_action: str,
+    expected_reason: str,
+):
+    class _SemanticClient:
+        def generate(self, *_args, **_kwargs):
+            from types import SimpleNamespace
+            import json
+
+            return SimpleNamespace(
+                content=json.dumps(model_payload),
+                model="semantic-router-test",
+            )
+
+    monkeypatch.setattr("clara_ml.main._build_deepseek_client", _SemanticClient)
+    result = _classify_medical_request_with_llm(
+        "Tôi đang dùng lisinopril 10 mg; đây là thông tin bệnh sử.",
+        role_hint="normal",
+    )
+
+    assert result["action"] == expected_action
+    assert result["reason"] == expected_reason
+    assert result["model_used"] == "semantic-router-test"
+
+
+def test_routed_chat_emergency_triage_outranks_diagnosis_guard():
+    response = client.post(
+        "/v1/chat/routed",
+        json={"query": "Tôi đau ngực dữ dội và khó thở, hãy chẩn đoán cho tôi."},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["emergency"] is True
+    assert body["intent"] == "emergency_triage"
+    assert body["policy_action"] == "escalate"
+
+
+def test_research_allows_educational_differential_diagnosis():
+    assert (
+        _detect_legal_guard_violation(
+            "Tổng quan chẩn đoán phân biệt đau ngực dựa trên guideline.",
+            channel="research",
+        )
+        is None
+    )
 
 
 def test_routed_chat_infer_recovers_with_degraded_mode(monkeypatch: pytest.MonkeyPatch):

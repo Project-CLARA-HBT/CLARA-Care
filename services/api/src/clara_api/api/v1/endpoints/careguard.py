@@ -903,8 +903,15 @@ def _attach_careguard_attribution(
         source_used=source_used,
         external_ddi_enabled=external_ddi_enabled,
     )
-    has_external_source = any(source.get("id") not in {"local_rules"} for source in sources)
-    mode = "external_plus_local" if has_external_source else "local_only"
+    source_ids = {str(source.get("id") or "") for source in sources}
+    if source_ids == {"drugbank"}:
+        mode = "drugbank_only"
+    elif "local_rules" in source_ids and len(source_ids) > 1:
+        mode = "external_plus_local"
+    elif "local_rules" in source_ids:
+        mode = "local_only"
+    else:
+        mode = "external_only"
     fallback_used = bool(response.get("fallback_used") or metadata_obj.get("fallback_used"))
 
     attribution = build_attribution(

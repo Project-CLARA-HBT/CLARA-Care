@@ -819,6 +819,74 @@ def test_build_source_aware_query_plan_handles_vi_en_ddi():
     assert "searxng" in web_provider_queries
 
 
+def test_llm_query_plan_preserves_original_trial_and_drug_entities():
+    base = tier2._build_source_aware_query_plan(
+        topic=(
+            "Hiệu quả SGLT2 trong CKD không đái tháo đường: "
+            "so sánh DAPA-CKD và EMPA-KIDNEY"
+        ),
+        research_mode="deep",
+        keywords=["kidney", "cardiovascular", "evidence"],
+    )
+    refined = tier2._sanitize_llm_query_plan_payload(
+        {
+            "canonical_query": "kidney cardiovascular prevention evidence",
+            "language_hint": "en",
+            "keywords": ["kidney", "cardiovascular", "prevention"],
+            "source_queries": {
+                "internal": ["kidney evidence"],
+                "scientific": ["kidney randomized trial"],
+                "web": ["kidney guideline"],
+            },
+            "decomposition": {
+                "deep_pass_queries": ["kidney outcomes"],
+                "deep_beta_pass_queries": ["kidney subgroup outcomes"],
+            },
+        },
+        base_query_plan=base,
+        research_mode="deep",
+    )
+
+    for entity in ("SGLT2", "DAPA-CKD", "EMPA-KIDNEY"):
+        assert entity in refined["canonical_query"]
+    original = base["original_query"]
+    assert original in refined["source_queries"]["scientific"]
+    assert original in refined["decomposition"]["deep_pass_queries"]
+
+
+def test_llm_query_plan_keeps_original_question_at_length_boundary():
+    original = (
+        "So sánh SGLT2 trong DAPA-CKD và EMPA-KIDNEY cho bệnh thận mạn CKD"
+    )
+    base = tier2._build_source_aware_query_plan(
+        topic=original,
+        research_mode="deep",
+        keywords=["kidney"],
+    )
+    refined = tier2._sanitize_llm_query_plan_payload(
+        {
+            "canonical_query": "x" * 318,
+            "language_hint": "vi",
+            "keywords": ["kidney"],
+            "source_queries": {
+                "internal": ["internal"],
+                "scientific": ["scientific"],
+                "web": ["web"],
+            },
+            "decomposition": {
+                "deep_pass_queries": ["deep"],
+                "deep_beta_pass_queries": ["deep beta"],
+            },
+        },
+        base_query_plan=base,
+        research_mode="deep",
+    )
+
+    assert refined["canonical_query"].startswith(original)
+    assert len(refined["canonical_query"]) <= 320
+    assert original in refined["source_queries"]["scientific"]
+
+
 def test_run_research_tier2_llm_query_planner_success_path(monkeypatch):
     class _FakePlannerClient:
         def generate(self, prompt: str, system_prompt: str | None = None) -> SimpleNamespace:
@@ -2603,7 +2671,7 @@ def test_ensure_markdown_structure_deep_english_avoids_vietnamese_fallback_text(
     assert "Theo dõi định kỳ" not in structured
 
 
-def test_ensure_markdown_structure_deep_beta_english_injects_english_research_plan() -> None:
+def test_ensure_markdown_structure_deep_beta_keeps_internal_plan_out_of_report() -> None:
     structured = tier2._ensure_markdown_structure(
         topic="Compare DASH and Mediterranean diet for blood pressure control",
         answer=(
@@ -2623,8 +2691,8 @@ def test_ensure_markdown_structure_deep_beta_english_injects_english_research_pl
         answer_language="en",
     )
 
-    assert "## Research plan" in structured
-    assert "1. Define the core principles, signature food groups, and health goals of the DASH diet." in structured
+    assert "## Research plan" not in structured
+    assert "Define the core principles" not in structured
     assert "## Kế hoạch nghiên cứu" not in structured
     assert "Xác định nguyên tắc cốt lõi" not in structured
     assert "Kết quả kỳ vọng" not in structured

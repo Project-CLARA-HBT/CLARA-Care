@@ -134,7 +134,10 @@ services:
       SEARXNG_CRAWL_ALLOWED_DOMAINS: ${SEARXNG_CRAWL_ALLOWED_DOMAINS:-who.int,nih.gov,ncbi.nlm.nih.gov,pubmed.ncbi.nlm.nih.gov,open.fda.gov,fda.gov,dailymed.nlm.nih.gov,clinicaltrials.gov,ema.europa.eu,bmj.com,thelancet.com}
       ML_UVICORN_WORKERS: ${ML_UVICORN_WORKERS:-1}
     depends_on:
-      - searxng
+      asr:
+        condition: service_healthy
+      searxng:
+        condition: service_started
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
     logging: *default-logging
@@ -165,8 +168,18 @@ services:
       # cache model HuggingFace — chỉ download lần đầu
       - clara_asr_models:/root/.cache/huggingface
     ports:
-      - "127.0.0.1:${APP_ASR_PORT:-8090}:8090"
+      - "127.0.0.1:${APP_ASR_PORT:-8190}:8090"
     logging: *default-logging
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8090/ready', timeout=120)"
+      interval: 30s
+      timeout: 120s
+      retries: 3
+      start_period: 180s
 
   searxng:
     image: searxng/searxng:latest

@@ -665,11 +665,14 @@ def _drugbank_sqlite_alerts(
 ) -> tuple[list[dict[str, Any]], str]:
     """DrugBank DDI alerts from the on-disk SQLite store + the built version label.
 
-    Curated Vietnamese rules always win on a conflicting pair, so any pair already
-    present in ``existing_alerts`` (the in-memory curated matches) is skipped here.
-    Emits alerts byte-compatible with the in-memory path. Never raises: a
-    missing/failed store yields no contribution and an empty version label so the
-    caller stays on the curated-only path.
+    ``existing_alerts`` is retained for backward-compatible callers that want to
+    suppress already-covered pairs. The production analysis passes an empty list
+    because DrugBank is authoritative whenever its full index is ready.
+
+    Each hit carries record-level provenance: the licensed source, artifact
+    version, normalized pair, and original DrugBank interaction statement. Never
+    raises: a missing/failed store yields no contribution and an empty version
+    label so the caller can fail closed or use its explicitly marked fallback.
     """
     store = _get_drugbank_store()
     if store is None:
@@ -683,12 +686,22 @@ def _drugbank_sqlite_alerts(
     for meds, severity, message in store.lookup_pairs(medications):
         if meds in covered_pairs:
             continue
-        alerts.append(
-            _ddi_alert_from_rule(
-                InteractionRule(meds=meds, severity=severity, message=message),
-                source="drugbank",
-            )
+        alert = _ddi_alert_from_rule(
+            InteractionRule(meds=meds, severity=severity, message=message),
+            source="drugbank",
         )
+        alert.update(
+            {
+                "source_version": store.version,
+                "source_statement": message,
+                "reference": {
+                    "source": "DrugBank",
+                    "version": store.version,
+                    "medication_pair": sorted(meds),
+                },
+            }
+        )
+        alerts.append(alert)
     return alerts, store.version
 
 
@@ -841,13 +854,22 @@ def _merge_drug_alerts(
 
         existing = merged_by_pair.get(key)
         if existing is None:
-            merged_by_pair[key] = {
+            merged_alert: dict[str, Any] = {
                 "type": "drug_drug",
                 "severity": incoming_severity,
                 "medications": list(key),
                 "message": incoming_message,
                 "_sources": incoming_sources,
             }
+            if "drugbank" in incoming_sources:
+                for provenance_key in (
+                    "source_version",
+                    "source_statement",
+                    "reference",
+                ):
+                    if alert.get(provenance_key) is not None:
+                        merged_alert[provenance_key] = alert[provenance_key]
+            merged_by_pair[key] = merged_alert
             return
 
         # Severity floor (max-severity-per-pair) + openFDA message protection.
@@ -858,6 +880,14 @@ def _merge_drug_alerts(
         existing_sources = existing.setdefault("_sources", set())
         if isinstance(existing_sources, set):
             existing_sources.update(incoming_sources)
+        if "drugbank" in incoming_sources:
+            for provenance_key in (
+                "source_version",
+                "source_statement",
+                "reference",
+            ):
+                if alert.get(provenance_key) is not None:
+                    existing[provenance_key] = alert[provenance_key]
 
     for alert in local_alerts:
         ingest(alert, default_source="local_rules")
@@ -1141,15 +1171,38 @@ def run_careguard_analyze(payload: dict) -> dict:
 
     local_rules, local_ddi_rules_version = _resolve_ddi_rules()
 
-    # Fail-closed for safety (Req 6.4 / 6.5): if the curated rule store itself is
-    # unreadable/empty we must not fabricate an all-clear. `_load_local_ddi_rules`
-    # returns an empty list when `careguard_ddi_rules.v1.json` cannot be read or
-    # parsed (and no prior good copy is cached); detect that here and return a
-    # safe, non-committal Vietnamese result instead of an empty "no interaction"
-    # one. Checked against the curated store specifically so a missing optional
-    # DrugBank layer never triggers fail-closed.
+    # Keep track of the fallback store separately. A healthy full DrugBank index
+    # is sufficient to run DDI even if this small curated fallback is absent.
+    # We fail closed below only when neither source can be used.
     curated_rules, _ = _load_local_ddi_rules()
-    if not curated_rules:
+
+    if curated_rules and settings.careguard_ddi_index_enabled:
+        pair_index, other_rules = _resolve_ddi_pair_index(local_rules, local_ddi_rules_version)
+        local_ddi_alerts = _detect_ddi_alerts_indexed(medications, pair_index, other_rules)
+    elif curated_rules:
+        local_ddi_alerts = _detect_ddi_alerts(medications, local_rules)
+    else:
+        local_ddi_alerts = []
+
+    # Memory-safe DrugBank layer: the full DrugBank set is ~1.4M pairs and cannot
+    # be held in RAM on a small host, so it lives in an on-disk SQLite index and
+    # is queried per medication pair. When that licensed index is ready it is the
+    # authoritative DDI source. Curated local rules are retained only as a
+    # fail-safe for deployments where DrugBank is disabled or unavailable; they
+    # must never mask DrugBank provenance for a pair present in the full index.
+    drugbank_layer_version = ""
+    drugbank_alerts: list[dict[str, Any]] = []
+    if settings.careguard_drugbank_sqlite_enabled:
+        drugbank_alerts, drugbank_layer_version = _drugbank_sqlite_alerts(
+            medications, existing_alerts=[]
+        )
+        if drugbank_layer_version:
+            local_ddi_rules_version = f"{local_ddi_rules_version}+{drugbank_layer_version}"
+            # A ready DrugBank index was queried for every medication pair. Its
+            # hits (including an empty set) are authoritative; do not manufacture
+            # or override licensed results with local rules.
+            local_ddi_alerts = drugbank_alerts
+    if not drugbank_layer_version and not curated_rules:
         return _rules_unavailable_result(
             raw_medications=raw_medications,
             medications=medications,
@@ -1158,32 +1211,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             external_ddi_flag_source=external_ddi_flag_source,
             local_ddi_rules_version=local_ddi_rules_version,
         )
-
-    if settings.careguard_ddi_index_enabled:
-        pair_index, other_rules = _resolve_ddi_pair_index(local_rules, local_ddi_rules_version)
-        local_ddi_alerts = _detect_ddi_alerts_indexed(medications, pair_index, other_rules)
-    else:
-        local_ddi_alerts = _detect_ddi_alerts(medications, local_rules)
-
-    # Memory-safe DrugBank layer (Req: use DrugBank, not just local rules): the
-    # full DrugBank set is ~1.4M pairs and cannot be held in RAM on a small host,
-    # so it lives in an on-disk SQLite index and is queried per medication pair.
-    # Curated rules always win on a conflicting pair, so we only append DrugBank
-    # alerts for pairs the curated set does not already cover. Fully self-
-    # degrading: any store failure yields no contribution (curated-only).
-    drugbank_layer_version = ""
-    drugbank_alerts: list[dict[str, Any]] = []
-    if settings.careguard_drugbank_sqlite_enabled:
-        drugbank_alerts, drugbank_layer_version = _drugbank_sqlite_alerts(
-            medications, existing_alerts=local_ddi_alerts
-        )
-        if drugbank_alerts:
-            local_ddi_alerts = [*local_ddi_alerts, *drugbank_alerts]
-        if drugbank_layer_version:
-            local_ddi_rules_version = f"{local_ddi_rules_version}+{drugbank_layer_version}"
-    source_used = ["local_rules"]
-    if drugbank_layer_version:
-        source_used.append("drugbank")
+    source_used = ["drugbank"] if drugbank_layer_version else ["local_rules"]
     source_errors: dict[str, list[str]] = {}
     external_ddi_alerts: list[dict[str, Any]] = []
     openfda_alerts: list[dict[str, Any]] = []
@@ -1192,7 +1220,11 @@ def run_careguard_analyze(payload: dict) -> dict:
     rxnav_status = ""
     needs_external_lookup = len(set(medications)) >= 2
 
-    if needs_external_lookup and external_ddi_enabled:
+    # The licensed full DrugBank index is authoritative. RxNav/openFDA are only
+    # fallback enrichments when that index is unavailable; allowing a same-pair
+    # external alert to raise severity or replace the message would make the
+    # displayed claim inconsistent with its DrugBank reference.
+    if needs_external_lookup and external_ddi_enabled and not drugbank_layer_version:
         try:
             # Favor deterministic fallback behavior on slow upstreams by avoiding retry storms.
             external = DrugSourceClient(
@@ -1210,7 +1242,7 @@ def run_careguard_analyze(payload: dict) -> dict:
                     source_used.append(source_name)
         except Exception as exc:  # pragma: no cover - defensive hard-crash guard
             source_errors["external"] = [f"unhandled_error:{exc.__class__.__name__}"]
-    elif needs_external_lookup:
+    elif needs_external_lookup and not drugbank_layer_version:
         source_errors["external"] = ["disabled_by_config"]
 
     normalization_pair_coverage_low = bool(raw_medications) and len(set(medications)) < 2
@@ -1250,8 +1282,16 @@ def run_careguard_analyze(payload: dict) -> dict:
     )
 
     external_source_used = any(source in {"rxnav", "openfda"} for source in source_used)
+    non_optional_source_errors = dict(source_errors)
+    if drugbank_layer_version:
+        # External enrichment is optional once the full DrugBank index has been
+        # checked. An intentionally disabled/unavailable enrichment source does
+        # not mean the authoritative DDI lookup fell back.
+        non_optional_source_errors.pop("external", None)
     fallback_used = needs_external_lookup and (
-        not external_source_used or bool(source_errors) or normalization_pair_coverage_low
+        (not drugbank_layer_version and not external_source_used)
+        or bool(non_optional_source_errors)
+        or normalization_pair_coverage_low
     )
 
     return {
