@@ -1025,6 +1025,32 @@ def test_research_harness_abstains_when_documents_have_no_citations() -> None:
     assert "No clinical conclusion is released" in result["answer"]
 
 
+def test_fast_research_abstains_when_retrieval_and_verification_are_empty() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "Generic confident medical answer.",
+            "citations": [],
+            "verification_matrix": {
+                "summary": {"support_ratio": 0.0},
+                "rows": [{"support_status": "insufficient"}],
+            },
+            "source_target_achieved": {"achieved_document_count": 0},
+        },
+        request_payload={"research_mode": "fast", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert set(result["quality_gate"]["reasons"]) >= {
+        "no_citations",
+        "no_retrieved_evidence",
+        "unsupported_claims",
+        "zero_claim_support",
+    }
+    assert "No clinical conclusion is released" in result["answer"]
+
+
 def test_research_tier2_job_stream_returns_progress_and_done() -> None:
     token = _login("alice@research.clara")
     now = datetime.now(tz=UTC)

@@ -2600,15 +2600,14 @@ def _apply_research_quality_gates(
         else None
     )
     gate_reasons: list[str] = []
-    if mode in {"deep", "deep_beta"} and answer_present and citation_count == 0:
+    if answer_present and citation_count == 0:
         gate_reasons.append("no_citations")
-    if mode in {"deep", "deep_beta"} and answer_present and not has_retrieved_evidence:
+    if answer_present and not has_retrieved_evidence:
         gate_reasons.append("no_retrieved_evidence")
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
     if (
-        mode in {"deep", "deep_beta"}
-        and answer_present
+        answer_present
         and support_ratio is not None
         and support_ratio <= 0.0
     ):
@@ -2635,7 +2634,7 @@ def _apply_research_quality_gates(
         gated["metadata"] = metadata
         # Deep Research must abstain instead of releasing confident prose when
         # it has no registered evidence or the verifier found zero support.
-        if mode in {"deep", "deep_beta"} and (
+        if (
             "no_citations" in gate_reasons
             or "no_retrieved_evidence" in gate_reasons
             or "zero_claim_support" in gate_reasons
