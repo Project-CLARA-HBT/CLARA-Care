@@ -162,33 +162,50 @@ class InMemoryRetriever:
             # deterministic lexical score and make the degradation explicit.
             ranking_degraded = True
             ranking_error = "EmbeddingUnavailableError"
-            ranked_rows: list[tuple[float, str, Document]] = []
+            ranked_rows: list[tuple[float, str, Document, int]] = []
             for raw_doc in deduped:
                 doc = self.scorer._normalize_document(raw_doc)
                 source_key = str((doc.metadata or {}).get("source") or "").strip().lower()
                 policy = source_policies.get(source_key, {"enabled": True, "weight": 1.0})
                 if not bool(policy.get("enabled", True)):
                     continue
-                score = self.reranker._placeholder_score(query, doc)
+                # Stored scores describe an earlier query or ranking pass. Reusing
+                # them here lets stale persistent rows dominate fresh provider
+                # evidence precisely when the embedding service is unavailable.
+                # Preserve attribution metadata, but recompute degraded ranking
+                # solely from the current query and configured source weight.
+                current_query_metadata = dict(doc.metadata or {})
+                current_query_metadata["score"] = 0.0
+                current_query_doc = Document(
+                    id=doc.id,
+                    text=doc.text,
+                    metadata=current_query_metadata,
+                )
+                score = self.reranker._placeholder_score(query, current_query_doc)
                 score *= safe_weight(policy.get("weight", 1.0), default=1.0)
                 metadata = dict(doc.metadata or {})
                 metadata["score"] = float(score)
                 metadata["ranking_degraded"] = True
                 metadata["ranking_fallback"] = "deterministic_lexical"
                 degraded_doc = Document(id=doc.id, text=doc.text, metadata=metadata)
-                ranked_rows.append((float(score), str(doc.id), degraded_doc))
                 score_trace.append(
                     {
                         "doc_id": doc.id,
                         "source": source_key or "unknown",
                         "final_score": float(score),
-                        "selected": True,
+                        "selected": False,
                         "ranking_degraded": True,
                         "ranking_fallback": "deterministic_lexical",
                     }
                 )
+                ranked_rows.append(
+                    (float(score), str(doc.id), degraded_doc, len(score_trace) - 1)
+                )
             ranked_rows.sort(key=lambda row: (-row[0], row[1]))
-            ranked = [row[2] for row in ranked_rows[: max(int(top_k), 0)]]
+            selected_rows = ranked_rows[: max(int(top_k), 0)]
+            for row in selected_rows:
+                score_trace[row[3]]["selected"] = True
+            ranked = [row[2] for row in selected_rows]
             neural_rerank = {
                 "rerank_enabled": False,
                 "rerank_model": "deterministic-lexical-v1",

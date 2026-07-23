@@ -78,6 +78,37 @@ def test_external_documents_survive_embedding_503_with_degraded_telemetry(
     assert retriever.last_trace["source_attempts"][0]["status"] == "completed"
 
 
+def test_embedding_503_fallback_ignores_stale_scores_and_marks_only_top_k() -> None:
+    retriever = InMemoryRetriever([], embedder=_Embedding503())  # type: ignore[arg-type]
+    stale = Document(
+        id="persistent-stale",
+        text="Mediterranean diet patterns in population health.",
+        metadata={"source": "pubmed", "score": 0.9},
+    )
+    relevant = Document(
+        id="europepmc-live",
+        text=(
+            "DAPA-CKD and EMPA-KIDNEY evidence for SGLT2 inhibitors "
+            "in chronic kidney disease."
+        ),
+        metadata={"source": "europepmc", "score": 0.0},
+    )
+
+    ranked, trace = retriever._index_candidates(
+        query="Compare DAPA-CKD and EMPA-KIDNEY SGLT2 kidney evidence",
+        candidates=[stale, relevant],
+        top_k=1,
+        rag_sources=None,
+    )
+
+    assert [doc.id for doc in ranked] == ["europepmc-live"]
+    rows_by_id = {row["doc_id"]: row for row in trace["score_trace"]}
+    assert rows_by_id["europepmc-live"]["selected"] is True
+    assert rows_by_id["persistent-stale"]["selected"] is False
+    assert rows_by_id["persistent-stale"]["final_score"] < 0.9
+    assert sum(bool(row["selected"]) for row in trace["score_trace"]) == 1
+
+
 class _EmptyPersistentRetriever:
     def retrieve(self, *_args: Any, **_kwargs: Any) -> list[Document]:
         return []
