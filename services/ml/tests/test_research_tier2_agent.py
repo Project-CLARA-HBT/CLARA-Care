@@ -907,8 +907,51 @@ def test_llm_query_plan_builds_concise_trial_preserving_scientific_provider_quer
         query = scientific[provider]
         assert "DAPA-CKD" in query
         assert "EMPA-KIDNEY" in query
+        assert " OR " in query
+        assert " AND " not in query
         assert len(query) <= 160
         assert len(query.split()) <= 18
+    assert "[Title/Abstract]" in scientific["pubmed"]
+    assert "TITLE_ABS:" in scientific["europepmc"]
+
+
+def test_llm_query_plan_preserves_valid_provider_boolean_syntax():
+    topic = "So sánh DAPA-CKD và EMPA-KIDNEY"
+    base = tier2._build_source_aware_query_plan(
+        topic=topic,
+        research_mode="deep",
+        keywords=["DAPA-CKD", "EMPA-KIDNEY"],
+    )
+    pubmed_query = '("DAPA-CKD"[Title/Abstract] OR "EMPA-KIDNEY"[Title/Abstract])'
+    europepmc_query = '(TITLE_ABS:"DAPA-CKD" OR TITLE_ABS:"EMPA-KIDNEY")'
+    refined = tier2._sanitize_llm_query_plan_payload(
+        {
+            "canonical_query": "DAPA-CKD versus EMPA-KIDNEY outcomes",
+            "language_hint": "mixed",
+            "must_keep_terms": ["DAPA-CKD", "EMPA-KIDNEY"],
+            "keywords": ["DAPA-CKD", "EMPA-KIDNEY"],
+            "source_queries": {
+                "internal": ["DAPA-CKD EMPA-KIDNEY"],
+                "scientific": ["DAPA-CKD EMPA-KIDNEY outcomes"],
+                "web": ["DAPA-CKD EMPA-KIDNEY comparison"],
+            },
+            "provider_queries": {
+                "scientific": {
+                    "pubmed": pubmed_query,
+                    "europepmc": europepmc_query,
+                }
+            },
+            "decomposition": {
+                "deep_pass_queries": ["DAPA-CKD EMPA-KIDNEY outcomes"],
+                "deep_beta_pass_queries": ["DAPA-CKD EMPA-KIDNEY limitations"],
+            },
+        },
+        base_query_plan=base,
+        research_mode="deep",
+    )
+
+    assert refined["provider_queries"]["scientific"]["pubmed"] == pubmed_query
+    assert refined["provider_queries"]["scientific"]["europepmc"] == europepmc_query
 
 
 def test_llm_query_plan_keeps_original_question_at_length_boundary():

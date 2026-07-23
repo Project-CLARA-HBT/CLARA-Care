@@ -1954,8 +1954,9 @@ def _sanitize_provider_query_overrides(
             if not provider or not query_text:
                 continue
             if category == "scientific" and provider in {"pubmed", "europepmc"}:
-                query_text = _compact_scientific_provider_query(
+                query_text = _sanitize_scientific_boolean_query(
                     query_text,
+                    provider=provider,
                     must_keep_terms=must_keep_terms,
                 )
             row[provider] = query_text[:360]
@@ -2030,6 +2031,54 @@ def _compact_scientific_provider_query(
     for token in str(query_text or "").split():
         add(token)
     return " ".join(selected)
+
+
+def _sanitize_scientific_boolean_query(
+    query_text: str,
+    *,
+    provider: str,
+    must_keep_terms: list[str],
+    max_words: int = 18,
+    max_chars: int = 160,
+) -> str:
+    """Keep a valid LLM OR query, otherwise rebuild only from its verified anchors."""
+
+    normalized = " ".join(str(query_text or "").split()).strip()
+    operator_tokens = {token.upper() for token in normalized.split()}
+    has_all_terms = all(term.casefold() in normalized.casefold() for term in must_keep_terms)
+    valid_or_query = (
+        bool(must_keep_terms)
+        and "OR" in operator_tokens
+        and "AND" not in operator_tokens
+        and has_all_terms
+        and len(normalized.split()) <= max_words
+        and len(normalized) <= max_chars
+    )
+    if valid_or_query:
+        return normalized
+
+    if not must_keep_terms:
+        return _compact_scientific_provider_query(
+            normalized,
+            must_keep_terms=[],
+            max_words=max_words,
+            max_chars=max_chars,
+        )
+
+    if provider == "pubmed":
+        clauses = [f'"{term}"[Title/Abstract]' for term in must_keep_terms]
+        targeted = f"({' OR '.join(clauses)})"
+    else:
+        clauses = [f'TITLE_ABS:"{term}"' for term in must_keep_terms]
+        targeted = f"({' OR '.join(clauses)})"
+    if len(targeted.split()) <= max_words and len(targeted) <= max_chars:
+        return targeted
+
+    portable_clauses = [f'"{term}"' for term in must_keep_terms]
+    portable = f"({' OR '.join(portable_clauses)})"
+    if len(portable.split()) <= max_words and len(portable) <= max_chars:
+        return portable
+    raise ValueError("Planner must_keep_terms cannot fit provider query bounds")
 
 
 def _build_source_aware_query_plan(
@@ -2393,12 +2442,16 @@ def _sanitize_llm_query_plan_payload(
         is_comparison_query=bool(base_query_plan.get("is_comparison_query")),
     )
     must_keep_terms = _sanitize_llm_must_keep_terms(payload, original_query=original_query)
-    concise_scientific_query = _compact_scientific_provider_query(
+    fallback_provider_queries["scientific"]["pubmed"] = _sanitize_scientific_boolean_query(
         llm_scientific_seed,
+        provider="pubmed",
         must_keep_terms=must_keep_terms,
     )
-    fallback_provider_queries["scientific"]["pubmed"] = concise_scientific_query
-    fallback_provider_queries["scientific"]["europepmc"] = concise_scientific_query
+    fallback_provider_queries["scientific"]["europepmc"] = _sanitize_scientific_boolean_query(
+        llm_scientific_seed,
+        provider="europepmc",
+        must_keep_terms=must_keep_terms,
+    )
     provider_queries = _sanitize_provider_query_overrides(
         payload.get("provider_queries"),
         fallback=fallback_provider_queries,
@@ -4887,7 +4940,10 @@ def _refine_query_plan_with_llm(
         "- provider_queries is optional; PubMed and Europe PMC queries must be concise search "
         "phrases, at most 18 whitespace-delimited words and 160 characters\n"
         "- every PubMed and Europe PMC query must contain every must_keep_terms item verbatim; "
-        "omit background prose, question wording, and implementation boilerplate\n"
+        "combine those items with uppercase OR, not implicit whitespace/AND; omit background "
+        "prose, question wording, and implementation boilerplate\n"
+        '- PubMed example: ("TRIAL-A"[Title/Abstract] OR "TRIAL-B"[Title/Abstract]); '
+        'Europe PMC example: (TITLE_ABS:"TRIAL-A" OR TITLE_ABS:"TRIAL-B")\n'
         "- return valid JSON only\n\n"
         f"topic={topic}\n"
         f"research_mode={research_mode}\n"
@@ -4903,7 +4959,8 @@ def _refine_query_plan_with_llm(
         "Do not add explanations.\n"
         "Copy named trials/drugs/entities from topic verbatim into must_keep_terms.\n"
         "PubMed and Europe PMC provider queries must contain every must_keep_terms item verbatim "
-        "and be at most 18 words / 160 characters.\n"
+        "joined with uppercase OR (not whitespace/AND), use provider field syntax where "
+        "supported, and be at most 18 words / 160 characters.\n"
         "Ensure source_queries contains internal/scientific/web with at least one query each.\n"
         "Ensure decomposition contains deep_pass_queries/deep_beta_pass_queries with at least one query each.\n"
         f"topic={topic}\n"
