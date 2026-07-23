@@ -161,6 +161,7 @@ def stream_scribe_sse(
     serialized_segments: list[dict[str, Any]] = []
     asr_meta: dict[str, Any] = {"provider": "", "language": language, "degraded_count": 0}
     stream_failure: str | None = None
+    batch_already_attempted = False
     produced = False
 
     # (1) Streaming path — drive the provider's stream(...) when available
@@ -190,6 +191,7 @@ def stream_scribe_sse(
 
                 if etype == "error":
                     stream_failure = str(detail.get("reason") or "asr_stream_error")
+                    batch_already_attempted = bool(detail.get("batch_attempted"))
                     break
                 if etype == "partial":
                     yield sse_event(
@@ -224,6 +226,12 @@ def stream_scribe_sse(
 
     # (2) Batch fallback — used for the legacy (no stream(...)) path and when the
     # streaming provider produced no usable segments (Requirement 1.5).
+    if not produced and batch_already_attempted:
+        yield sse_event(
+            "error",
+            {"message": "scribe streaming unavailable", "error": stream_failure},
+        )
+        return
     if not produced:
         try:
             result = asr.transcribe(audio, language=language, content_type=content_type)

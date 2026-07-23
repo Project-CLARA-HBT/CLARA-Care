@@ -69,7 +69,10 @@ class CompositeAsr:
         audio = b"".join(audio_iter)
         result = self.transcribe(audio, language=language, content_type="application/octet-stream")
         if not result.segments:
-            yield AsrEvent(type="error", detail={"reason": "asr_unavailable"})
+            yield AsrEvent(
+                type="error",
+                detail={"reason": "asr_unavailable", "batch_attempted": True},
+            )
             return
         # Carry provider/language on each event so the SSE layer can record
         # accurate ASR metadata (provider, language, degraded count — Req 2.5).
