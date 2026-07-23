@@ -34,6 +34,8 @@ the module is unit-testable with fakes.
 from __future__ import annotations
 
 import logging
+from queue import Empty, Queue
+from threading import Thread
 import time
 from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
@@ -47,6 +49,42 @@ __all__ = ["stream_scribe_sse"]
 
 _DEFAULT_SEGMENT_DELAY = 0.02
 _DEFAULT_TOKEN_DELAY = 0.018
+_DEFAULT_HEARTBEAT_SECONDS = 10.0
+
+
+def _stream_events_with_heartbeats(
+    stream_fn: Callable[..., Any],
+    audio: bytes,
+    *,
+    language: str,
+    heartbeat_seconds: float,
+) -> Iterator[tuple[str, Any]]:
+    """Run blocking ASR off-generator and keep the SSE connection observable."""
+
+    queue: Queue[tuple[str, Any]] = Queue()
+
+    def produce() -> None:
+        try:
+            for event in stream_fn([audio], language=language):
+                queue.put(("event", event))
+        except Exception as exc:  # noqa: BLE001 - re-raised in relay thread
+            queue.put(("error", exc))
+        finally:
+            queue.put(("done", None))
+
+    Thread(target=produce, name="scribe-asr-stream", daemon=True).start()
+    interval = max(float(heartbeat_seconds), 0.05)
+    while True:
+        try:
+            kind, value = queue.get(timeout=interval)
+        except Empty:
+            yield "heartbeat", None
+            continue
+        if kind == "done":
+            return
+        if kind == "error":
+            raise value
+        yield kind, value
 
 
 def _flow_event(*, stage: str, status: str, source_count: int, note: str) -> dict[str, Any]:
@@ -107,6 +145,7 @@ def stream_scribe_sse(
     diarization_enabled: bool = True,
     segment_delay: float = _DEFAULT_SEGMENT_DELAY,
     token_delay: float = _DEFAULT_TOKEN_DELAY,
+    heartbeat_seconds: float = _DEFAULT_HEARTBEAT_SECONDS,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Iterator[str]:
     """Yield the SSE frames for one streamed scribe transcription (+ optional note).
@@ -130,7 +169,18 @@ def stream_scribe_sse(
     stream_fn = getattr(asr, "stream", None)
     if callable(stream_fn):
         try:
-            for event in stream_fn([audio], language=language):
+            for item_type, event in _stream_events_with_heartbeats(
+                stream_fn,
+                audio,
+                language=language,
+                heartbeat_seconds=heartbeat_seconds,
+            ):
+                if item_type == "heartbeat":
+                    yield sse_event(
+                        "heartbeat",
+                        {"stage": "transcribe", "status": "running"},
+                    )
+                    continue
                 etype = getattr(event, "type", "")
                 detail = getattr(event, "detail", {}) or {}
                 if detail.get("provider"):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -223,6 +224,38 @@ def test_streaming_path_emits_partial_then_segment_then_done() -> None:
     assert done["transcript"] == "bệnh nhân ho khám phổi rõ"
     assert done["asr_meta"]["provider"] == "phowhisper"
     assert done["asr_meta"]["language"] == "vi"
+
+
+def test_streaming_emits_heartbeat_while_blocking_asr_runs() -> None:
+    class _SlowStreamAsr:
+        def stream(self, audio_iter, *, language):  # noqa: ANN001
+            time.sleep(0.08)
+            yield AsrEvent(
+                type="segment",
+                segment=AsrSegment(text="transcript"),
+                text="transcript",
+                detail={"provider": "whisper", "language": language},
+            )
+
+        def transcribe(self, audio, *, language, content_type):  # noqa: ANN001
+            raise AssertionError("successful stream must not run batch fallback")
+
+    frames = list(
+        stream_scribe_sse(
+            b"audio",
+            language="vi",
+            asr=_SlowStreamAsr(),
+            segment_delay=0,
+            token_delay=0,
+            heartbeat_seconds=0.02,
+            sleep=_no_sleep,
+        )
+    )
+
+    kinds = _kinds(frames)
+    assert "heartbeat" in kinds
+    assert kinds[-1] == "done"
+    assert _data(frames[-1])["transcript"] == "transcript"
 
 
 def test_streaming_unavailable_falls_back_to_batch_then_done() -> None:

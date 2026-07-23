@@ -880,12 +880,9 @@ def routed_chat_infer(payload: dict) -> dict:
     pii = preflight.pii
     route = preflight.route
     emergency_red_flags = preflight.red_flags
+    if role_hint in {"normal", "researcher", "doctor"}:
+        route.role = role_hint
     if semantic_route and semantic_route.get("emergency"):
-        route.role = (
-            role_hint
-            if role_hint in {"normal", "researcher", "doctor"}
-            else route.role
-        )
         route.intent = "emergency_triage"
         route.confidence = max(route.confidence, float(semantic_route["confidence"]))
         route.emergency = True

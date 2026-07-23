@@ -98,5 +98,11 @@ def build_asr_provider(settings: Any) -> CompositeAsr:
     primary_name = str(getattr(settings, "scribe_asr_primary", "whisper") or "whisper")
     fallback_name = str(getattr(settings, "scribe_asr_fallback", "whisper") or "whisper")
     primary = _provider_by_name(primary_name, settings)
-    fallback = _provider_by_name(fallback_name, settings)
+    # Do not call the same remote/local decoder twice. A same-name "fallback"
+    # only doubles latency and CPU while providing no independent recovery path.
+    fallback = (
+        None
+        if primary_name.strip().lower() == fallback_name.strip().lower()
+        else _provider_by_name(fallback_name, settings)
+    )
     return CompositeAsr(primary, fallback)

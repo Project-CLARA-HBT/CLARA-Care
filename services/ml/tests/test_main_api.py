@@ -407,6 +407,23 @@ def test_routed_chat_infer_emergency_fast_path():
     assert body["medical_answer_v2"]["actions_now"]
 
 
+def test_emergency_fast_path_preserves_declared_normal_audience():
+    response = client.post(
+        "/v1/chat/routed",
+        json={
+            "query": "Tôi đau ngực dữ dội, khó thở và vã mồ hôi.",
+            "role": "normal",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["emergency"] is True
+    assert body["role"] == "normal"
+    assert body["medical_answer_v2"]["audience"] == "normal"
+    assert body["medical_answer_v2"]["urgency"]["level"] == "emergency"
+
+
 def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
     response = client.post(
         "/v1/chat/routed",

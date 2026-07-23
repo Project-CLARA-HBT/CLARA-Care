@@ -78,6 +78,7 @@ def test_build_asr_provider_resolves_whisper_and_unknown(monkeypatch) -> None:
     monkeypatch.setattr(settings, "scribe_asr_fallback", "whisper", raising=False)
     comp = build_asr_provider(settings)
     assert isinstance(comp, CompositeAsr)
+    assert comp._fallback is None
 
     monkeypatch.setattr(settings, "scribe_asr_primary", "totally-unknown", raising=False)
     comp2 = build_asr_provider(settings)

@@ -37,8 +37,14 @@ class WhisperDeepSeekAsr:
             api_key=settings.deepseek_api_key,
             base_url=settings.deepseek_base_url,
             model=settings.deepseek_model,
-            timeout_seconds=settings.deepseek_timeout_seconds,
-            retries_per_base=settings.deepseek_retries_per_base,
+            # Local CPU Whisper can legitimately take longer than a text LLM
+            # request. Give it one bounded attempt; retrying the same audio while
+            # the first decode still consumes CPU creates a timeout storm.
+            timeout_seconds=max(
+                float(settings.deepseek_timeout_seconds),
+                float(settings.scribe_asr_timeout_seconds),
+            ),
+            retries_per_base=0,
             retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
             max_concurrency=settings.llm_global_max_concurrency,
             min_interval_seconds=settings.llm_global_min_interval_seconds,

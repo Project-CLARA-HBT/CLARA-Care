@@ -854,6 +854,9 @@ class Settings(BaseSettings):
     scribe_asr_language: str = Field(
         default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
     )
+    scribe_asr_timeout_seconds: float = Field(
+        default=150.0, validation_alias="SCRIBE_ASR_TIMEOUT_SECONDS"
+    )
     scribe_google_project_id: str = Field(
         default="", validation_alias="SCRIBE_GOOGLE_PROJECT_ID"
     )
