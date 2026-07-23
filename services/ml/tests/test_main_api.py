@@ -444,7 +444,7 @@ def test_routed_chat_existing_dose_context_does_not_bypass_triage():
             {
                 "action": "allow",
                 "reason": "none",
-                "emergency": False,
+                "emergency": "false",
                 "confidence": 0.97,
             },
             "allow",

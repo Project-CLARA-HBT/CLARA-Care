@@ -537,7 +537,7 @@ def _classify_medical_request_with_llm(
 
     action = str(parsed.get("action") or "").strip().lower()
     reason = str(parsed.get("reason") or "").strip().lower()
-    emergency = bool(parsed.get("emergency")) or reason == "emergency"
+    emergency = _as_bool(parsed.get("emergency"), False) or reason == "emergency"
     if action not in {"allow", "block"}:
         raise ValueError("Medical intent classifier returned invalid action")
     if reason not in {
