@@ -4,14 +4,14 @@ from time import perf_counter
 from typing import Any
 
 from clara_ml.config import settings
-from clara_ml.rag.embedder import HttpEmbeddingClient
+from clara_ml.rag.embedder import EmbeddingUnavailableError, HttpEmbeddingClient
 
 from .document_builder import DocumentBuilder
 from .domain import Document
 from .external_gateway import ExternalSourceGateway
 from .reranker import NeuralReranker
 from .score_engine import DocumentScorer
-from .text_utils import dedupe_documents, query_terms
+from .text_utils import dedupe_documents, query_terms, safe_weight
 
 
 class InMemoryRetriever:
@@ -136,19 +136,75 @@ class InMemoryRetriever:
         started = perf_counter()
         deduped = dedupe_documents(candidates)
         score_trace: list[dict[str, Any]] = []
-        ranked = self.scorer.score_documents(
-            query,
-            deduped,
-            top_k=top_k,
-            source_policies=self.builder.parse_source_policies(rag_sources),
-            score_trace=score_trace,
-        )
-        neural_reranker = self._resolve_neural_reranker(
-            enabled_override=rag_reranker_enabled,
-        )
-        rerank_result = neural_reranker.rerank(query, ranked, top_k=top_k)
-        ranked = rerank_result.documents
-        neural_rerank = rerank_result.metadata if isinstance(rerank_result.metadata, dict) else {}
+        source_policies = self.builder.parse_source_policies(rag_sources)
+        ranking_degraded = False
+        ranking_error: str | None = None
+        try:
+            ranked = self.scorer.score_documents(
+                query,
+                deduped,
+                top_k=top_k,
+                source_policies=source_policies,
+                score_trace=score_trace,
+            )
+            neural_reranker = self._resolve_neural_reranker(
+                enabled_override=rag_reranker_enabled,
+            )
+            rerank_result = neural_reranker.rerank(query, ranked, top_k=top_k)
+            ranked = rerank_result.documents
+            neural_rerank = (
+                rerank_result.metadata if isinstance(rerank_result.metadata, dict) else {}
+            )
+        except EmbeddingUnavailableError:
+            # External connectors may already have returned useful, attributable
+            # evidence before the dense embedding service fails. Never discard
+            # those documents: retain them with the reranker's existing
+            # deterministic lexical score and make the degradation explicit.
+            ranking_degraded = True
+            ranking_error = "EmbeddingUnavailableError"
+            ranked_rows: list[tuple[float, str, Document]] = []
+            for raw_doc in deduped:
+                doc = self.scorer._normalize_document(raw_doc)
+                source_key = str((doc.metadata or {}).get("source") or "").strip().lower()
+                policy = source_policies.get(source_key, {"enabled": True, "weight": 1.0})
+                if not bool(policy.get("enabled", True)):
+                    continue
+                score = self.reranker._placeholder_score(query, doc)
+                score *= safe_weight(policy.get("weight", 1.0), default=1.0)
+                metadata = dict(doc.metadata or {})
+                metadata["score"] = float(score)
+                metadata["ranking_degraded"] = True
+                metadata["ranking_fallback"] = "deterministic_lexical"
+                degraded_doc = Document(id=doc.id, text=doc.text, metadata=metadata)
+                ranked_rows.append((float(score), str(doc.id), degraded_doc))
+                score_trace.append(
+                    {
+                        "doc_id": doc.id,
+                        "source": source_key or "unknown",
+                        "final_score": float(score),
+                        "selected": True,
+                        "ranking_degraded": True,
+                        "ranking_fallback": "deterministic_lexical",
+                    }
+                )
+            ranked_rows.sort(key=lambda row: (-row[0], row[1]))
+            ranked = [row[2] for row in ranked_rows[: max(int(top_k), 0)]]
+            neural_rerank = {
+                "rerank_enabled": False,
+                "rerank_model": "deterministic-lexical-v1",
+                "rerank_strategy": "lexical",
+                "rerank_latency_ms": 0.0,
+                "rerank_topn": len(ranked),
+                "rerank_timeout_ms": 0,
+                "rerank_input_count": len(deduped),
+                "rerank_output_count": len(ranked),
+                "rerank_applied_count": len(ranked),
+                "rerank_timed_out": False,
+                "rerank_reason": "embedding_unavailable_lexical_fallback",
+                "rerank_error": ranking_error,
+                "rerank_cache_hit": False,
+                "rerank_llm_used": False,
+            }
         biomedical_rerank = {
             "enabled": bool(settings.rag_biomedical_rerank_enabled),
             "alpha": float(settings.rag_biomedical_rerank_alpha),
@@ -164,6 +220,11 @@ class InMemoryRetriever:
             "after_dedupe_count": len(deduped),
             "selected_count": len(ranked),
             "duration_ms": round((perf_counter() - started) * 1000.0, 3),
+            "ranking_degraded": ranking_degraded,
+            "ranking_error": ranking_error,
+            "ranking_fallback": (
+                "deterministic_lexical" if ranking_degraded else None
+            ),
             "rerank": {
                 **biomedical_rerank,
                 "neural": neural_rerank,
@@ -214,6 +275,10 @@ class InMemoryRetriever:
             else []
         )
         source_errors = self._source_errors_from_provider_events(provider_events)
+        if bool(index_trace.get("ranking_degraded")):
+            source_errors.setdefault("embedding", []).append(
+                str(index_trace.get("ranking_error") or "EmbeddingUnavailableError")
+            )
         search_phase = {
             "query_terms": query_terms(query),
             "connectors_attempted": provider_events,
@@ -318,6 +383,11 @@ class InMemoryRetriever:
             rag_sources=rag_sources,
             rag_reranker_enabled=rag_reranker_enabled,
         )
+        if bool(index_phase.get("ranking_degraded")):
+            internal_source_errors = search_phase.setdefault("source_errors", {})
+            internal_source_errors.setdefault("embedding", []).append(
+                str(index_phase.get("ranking_error") or "EmbeddingUnavailableError")
+            )
         counts["total_after_dedupe"] = int(index_phase["after_dedupe_count"])
         self.last_trace = {
             "mode": "internal",
@@ -543,6 +613,11 @@ class InMemoryRetriever:
             rag_sources=rag_sources,
             rag_reranker_enabled=rag_reranker_enabled,
         )
+        if bool(index_phase.get("ranking_degraded")):
+            source_errors.setdefault("embedding", []).append(
+                str(index_phase.get("ranking_error") or "EmbeddingUnavailableError")
+            )
+            search_phase["source_errors"] = source_errors
         candidate_counts = {
             "after_internal": internal_counts["total_before_dedupe"],
             "after_external_scientific": after_external_scientific_count,

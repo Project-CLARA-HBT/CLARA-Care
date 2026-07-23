@@ -11393,7 +11393,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "rxnorm",
             "external_scientific",
         }
-        web_provider_keys = {"searxng", "searxng-crawl", "web_crawl"}
+        web_provider_keys = {"searxng", "searxng-search", "searxng-crawl", "web_crawl"}
         stack_coverage_raw = {
             "vector_internal_used": "internal_corpus" in provider_keys,
             "graph_used": bool(retrieval_trace.get("graphrag_enabled")),

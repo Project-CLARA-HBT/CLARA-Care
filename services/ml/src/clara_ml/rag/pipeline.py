@@ -329,7 +329,7 @@ class RagPipelineP1:
         "rxnorm",
         "external_scientific",
     }
-    _WEB_PROVIDER_KEYS = {"searxng", "searxng-crawl", "web_crawl"}
+    _WEB_PROVIDER_KEYS = {"searxng", "searxng-search", "searxng-crawl", "web_crawl"}
 
     def __init__(
         self,
@@ -1929,6 +1929,33 @@ class RagPipelineP1:
             merged.append(doc)
         return merged
 
+    @staticmethod
+    def _bounded_fast_rescue_sources(rag_sources: object) -> list[dict[str, Any]]:
+        """Limit a zero-result Fast rescue to two scientific sources plus web."""
+
+        allowed = {"pubmed", "europepmc", "searxng"}
+        selected: list[dict[str, Any]] = []
+        if isinstance(rag_sources, list):
+            for item in rag_sources:
+                if not isinstance(item, dict):
+                    continue
+                source_id = str(item.get("id") or item.get("source") or "").strip().lower()
+                if source_id in allowed and bool(item.get("enabled", True)):
+                    selected.append(dict(item))
+        if selected:
+            return selected
+        return [
+            {
+                "id": source_id,
+                "name": source_id,
+                "enabled": True,
+                "priority": index,
+                "weight": 1.0,
+                "category": "web_search" if source_id == "searxng" else "literature",
+            }
+            for index, source_id in enumerate(("pubmed", "europepmc", "searxng"), start=1)
+        ]
+
     # ------------------------------------------------------------------
     # Persistent (P2) retrieval routing + gap-fill (task 5.11)
     # ------------------------------------------------------------------
@@ -2146,6 +2173,8 @@ class RagPipelineP1:
         scientific_query: str,
         scientific_provider_query_overrides: dict[str, Any] | None,
         rag_reranker_enabled: bool | None,
+        scientific_retrieval_enabled: bool,
+        web_retrieval_enabled: bool,
     ) -> List[Document] | None:
         """Persistent (embed-query-only) retrieval with live-connector gap-fill.
 
@@ -2179,7 +2208,13 @@ class RagPipelineP1:
             return None
 
         # Gap-fill (Req 3.5): top up via live connectors when coverage is short.
-        if self._persistent_needs_gap_fill(docs):
+        # When web retrieval is requested, fall through to the existing complete
+        # hybrid path so both scientific connectors and SearXNG participate.
+        # Treat an underfilled persistent result as a miss, never as a successful
+        # terminal result that suppresses external retrieval.
+        if self._persistent_needs_gap_fill(docs) and web_retrieval_enabled:
+            return None
+        if self._persistent_needs_gap_fill(docs) and scientific_retrieval_enabled:
             gap_docs = self._gap_fill_live_connectors(
                 scientific_query,
                 top_k,
@@ -2190,6 +2225,8 @@ class RagPipelineP1:
             if gap_docs:
                 docs = self._merge_documents_by_id([*docs, *gap_docs])
                 self._schedule_async_persist(scientific_query, gap_docs)
+        if self._persistent_needs_gap_fill(docs):
+            return None
 
         return docs
 
@@ -2585,6 +2622,8 @@ class RagPipelineP1:
                         scientific_query=scientific_query,
                         scientific_provider_query_overrides=scientific_provider_query_overrides,
                         rag_reranker_enabled=rag_reranker_enabled,
+                        scientific_retrieval_enabled=scientific_retrieval_enabled,
+                        web_retrieval_enabled=web_retrieval_enabled,
                     )
                 if persistent_docs is not None:
                     # Persistent embed-query-only path (Req 3.1/3.2): exactly one
@@ -2750,9 +2789,45 @@ class RagPipelineP1:
         retrieval_trace["relevance"] = round(float(relevance_score), 4)
         low_context_before_external = relevance_score < threshold
         retrieval_trace["low_context_before_external"] = low_context_before_external
+        zero_context_fast_rescue = bool(
+            not docs
+            and not persistent_used
+            and orchestrator_mode == "fast"
+            and external_connectors_runtime_enabled
+            and not scientific_retrieval_enabled
+            and not web_retrieval_enabled
+        )
+        external_scientific_enabled = bool(
+            scientific_retrieval_enabled or zero_context_fast_rescue
+        )
+        external_web_enabled = bool(web_retrieval_enabled or zero_context_fast_rescue)
+        external_top_k = (
+            min(max(int(hybrid_top_k), 1), 3)
+            if zero_context_fast_rescue
+            else hybrid_top_k
+        )
+        external_rag_sources = (
+            self._bounded_fast_rescue_sources(rag_sources)
+            if zero_context_fast_rescue
+            else rag_sources
+        )
+        retrieval_trace["zero_context_fast_rescue"] = {
+            "attempted": zero_context_fast_rescue,
+            "reason": "fast_internal_zero_results" if zero_context_fast_rescue else None,
+            "top_k": external_top_k if zero_context_fast_rescue else None,
+            "sources": (
+                [
+                    str(item.get("id") or item.get("source") or "")
+                    for item in external_rag_sources
+                    if isinstance(item, dict)
+                ]
+                if zero_context_fast_rescue and isinstance(external_rag_sources, list)
+                else []
+            ),
+        }
         should_force_external = (
             not persistent_used
-            and scientific_retrieval_enabled
+            and external_scientific_enabled
             and external_connectors_runtime_enabled
             and self._should_force_external_retrieval(query, docs)
         )
@@ -2761,7 +2836,7 @@ class RagPipelineP1:
         if (
             not persistent_used
             and (low_context_before_external or should_force_external)
-            and scientific_retrieval_enabled
+            and external_scientific_enabled
             and external_connectors_runtime_enabled
         ):
             external_attempted = True
@@ -2777,10 +2852,11 @@ class RagPipelineP1:
                     ),
                     component="retrieval",
                 payload={
-                    "top_k": hybrid_top_k,
-                    "web_retrieval_enabled": web_retrieval_enabled,
+                    "top_k": external_top_k,
+                    "web_retrieval_enabled": external_web_enabled,
                     "low_context_before_external": low_context_before_external,
                     "should_force_external": should_force_external,
+                    "zero_context_fast_rescue": zero_context_fast_rescue,
                     "resolved_query": scientific_query,
                     "web_query_override": web_query_override,
                     "provider_query_overrides": scientific_provider_query_overrides,
@@ -2797,9 +2873,10 @@ class RagPipelineP1:
                     component="retrieval",
                     payload={
                         "phase": "hybrid_external",
-                        "top_k": hybrid_top_k,
+                        "top_k": external_top_k,
                         "scientific_retrieval_enabled": True,
-                        "web_retrieval_enabled": web_retrieval_enabled,
+                        "web_retrieval_enabled": external_web_enabled,
+                        "zero_context_fast_rescue": zero_context_fast_rescue,
                         "resolved_query": scientific_query,
                         "original_query": query,
                     },
@@ -2808,11 +2885,11 @@ class RagPipelineP1:
             try:
                 try:
                     retrieve_kwargs: dict[str, Any] = {
-                        "top_k": hybrid_top_k,
+                        "top_k": external_top_k,
                         "scientific_retrieval_enabled": True,
-                        "web_retrieval_enabled": web_retrieval_enabled,
+                        "web_retrieval_enabled": external_web_enabled,
                         "file_retrieval_enabled": file_retrieval_enabled,
-                        "rag_sources": rag_sources,
+                        "rag_sources": external_rag_sources,
                         "uploaded_documents": uploaded_documents,
                         "provider_query_overrides": scientific_provider_query_overrides,
                         "web_query_override": web_query_override,
@@ -2855,7 +2932,7 @@ class RagPipelineP1:
                     "query": scientific_query,
                     "original_query": query,
                     "query_terms": hybrid_search.get("query_terms", []),
-                    "top_k": hybrid_top_k,
+                    "top_k": external_top_k,
                     "phase": "hybrid_external",
                     "total_candidates": hybrid_search.get("total_candidates", len(docs)),
                     "duration_ms": hybrid_search.get("duration_ms"),
@@ -2901,7 +2978,7 @@ class RagPipelineP1:
                         docs=docs,
                         note="Hybrid evidence index/rerank started.",
                         component="retrieval",
-                        payload={"phase": "hybrid_external", "top_k": hybrid_top_k},
+                        payload={"phase": "hybrid_external", "top_k": external_top_k},
                     )
                 )
                 flow_events.append(
@@ -3100,10 +3177,11 @@ class RagPipelineP1:
                 "query": scientific_query if external_attempted else internal_query,
                 "original_query": query,
                 "keywords": sorted(self._tokenize(query)),
-                "top_k": hybrid_top_k if external_attempted else internal_top_k,
-                "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
-                "web_retrieval_enabled": bool(web_retrieval_enabled),
+                "top_k": external_top_k if external_attempted else internal_top_k,
+                "scientific_retrieval_enabled": bool(external_scientific_enabled),
+                "web_retrieval_enabled": bool(external_web_enabled),
                 "file_retrieval_enabled": bool(file_retrieval_enabled),
+                "zero_context_fast_rescue": zero_context_fast_rescue,
             }
         )
         if isinstance(retrieval_trace["search_plan"], dict):

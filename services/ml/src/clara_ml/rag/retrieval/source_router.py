@@ -102,9 +102,9 @@ def route_retrieval_sources(
         confidence = 0.74
         reasons.append("connectors_disabled_internal_focus")
     else:
-        route = "internal-heavy"
-        confidence = 0.75
-        reasons.append("internal_priority_default")
+        route = "scientific-heavy"
+        confidence = 0.82
+        reasons.append("multi_source_scientific_priority")
 
     # Policy constraints
     if route == "web-assisted" and not web_enabled:
