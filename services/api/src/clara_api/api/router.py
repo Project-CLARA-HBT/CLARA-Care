@@ -8,6 +8,7 @@ from clara_api.api.v1.endpoints import (
     careguard,
     chat,
     clinical_workbench,
+    connected_health,
     council,
     health,
     mobile,
@@ -30,6 +31,9 @@ api_router.include_router(
     clinical_workbench.router, prefix="/clinical-workbench", tags=["clinical-workbench"]
 )
 api_router.include_router(phr.router, prefix="/phr", tags=["phr"])
+api_router.include_router(
+    connected_health.router, prefix="/connectors", tags=["connected-health"]
+)
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(research.router, prefix="/research", tags=["research"])
 api_router.include_router(careguard.router, prefix="/careguard", tags=["careguard"])
