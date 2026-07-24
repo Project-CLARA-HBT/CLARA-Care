@@ -1228,6 +1228,11 @@ Before claims of improved outcomes:
 
 ## 22. Delivery plan
 
+The implementation-ready work packages, data/API contracts, test matrices, rollout
+steps, rollback paths and exit evidence for every phase are defined in:
+
+- [CLARA LifeMap — Detailed Phase Execution Specification](./clara-lifemap-phase-execution-spec-2026-07-25.md)
+
 ### Phase 0 — contracts and safety foundations
 
 - finalize truth/provenance model;
@@ -1372,4 +1377,3 @@ Internal product rule:
 
 > A message is temporary. A confirmed health event, episode, task and decision
 > ledger are durable.
-
