@@ -826,6 +826,7 @@ def rag_poc(payload: dict) -> dict:
 def routed_chat_infer(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
+    ui_language = "en" if str(payload.get("ui_language", "vi")).strip().lower() == "en" else "vi"
     # Emergency triage must outrank the legal/prescribing guard. Otherwise a
     # red-flag message that also mentions a diagnosis or an existing medication
     # dose can be reduced to a generic refusal with no urgent action.
@@ -930,7 +931,12 @@ def routed_chat_infer(payload: dict) -> dict:
     if route.emergency:
         emergency_answer = (
             "Possible emergency detected. Call local emergency services immediately "
-            "or go to the nearest ER."
+            "or go to the nearest emergency department."
+            if ui_language == "en"
+            else (
+                "Có thể đây là tình trạng cấp cứu. Hãy gọi ngay số cấp cứu tại địa phương "
+                "hoặc đến khoa Cấp cứu gần nhất."
+            )
         )
         medical_answer_v2 = build_medical_answer_v2(
             answer=emergency_answer,
@@ -955,6 +961,7 @@ def routed_chat_infer(payload: dict) -> dict:
                 factcheck_verdict="not_run",
                 degraded=False,
             ),
+            answer_language=ui_language,
         )
         return _ensure_policy_contract(
             {

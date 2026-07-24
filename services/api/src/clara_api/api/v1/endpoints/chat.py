@@ -325,6 +325,7 @@ def _call_ml_service(
     rag_flow: RagFlowConfig,
     rag_sources: list[dict[str, Any]],
     *,
+    ui_language: str = "vi",
     protocol: str = "clinical_answer",
     clinical_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -333,6 +334,7 @@ def _call_ml_service(
     request_payload = {
         "query": message,
         "role": role,
+        "ui_language": ui_language,
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
         "protocol": protocol,
@@ -504,6 +506,7 @@ def chat_completion(
             token.role,
             rag_flow,
             rag_sources,
+            ui_language=payload.ui_language,
             protocol=payload.protocol,
             clinical_context=payload.clinical_context,
         )
@@ -673,6 +676,7 @@ def chat_completion_stream(
     request_payload = {
         "query": payload.message,
         "role": token.role,
+        "ui_language": payload.ui_language,
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
         "protocol": payload.protocol,

@@ -2069,12 +2069,12 @@ export default function ChatWorkspacePage() {
             onError: (msg) => {
               throw new Error(msg || "chat stream error");
             },
-          });
+          }, uiLanguage);
         } catch {
           donePayload = null; // force non-streaming fallback below
         }
 
-        const chatPayload = donePayload ?? (await sendChatMessage(message));
+        const chatPayload = donePayload ?? (await sendChatMessage(message, uiLanguage));
         const reply = getChatReply(chatPayload) ?? (streamedAnswer.trim() || null);
         if (!reply) {
           throw new Error("Chưa có phản hồi chat hợp lệ.");

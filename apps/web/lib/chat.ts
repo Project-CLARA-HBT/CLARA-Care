@@ -1,5 +1,6 @@
 import api from "@/lib/http-client";
 import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import type { UILanguage } from "@/lib/ui-language";
 
 export type ChatResponse = {
   message?: string;
@@ -70,8 +71,11 @@ export function getClinicalAnswerPackage(data: ChatResponse): ClinicalAnswerPack
   return candidate as ClinicalAnswerPackage;
 }
 
-export async function sendChatMessage(message: string): Promise<ChatResponse> {
-  const response = await api.post("/chat", { message });
+export async function sendChatMessage(
+  message: string,
+  uiLanguage: UILanguage = "vi"
+): Promise<ChatResponse> {
+  const response = await api.post("/chat", { message, ui_language: uiLanguage });
   return (response.data ?? {}) as ChatResponse;
 }
 
@@ -129,7 +133,8 @@ function parseSseFrame(block: string): { event: string; data: string } | null {
  */
 export async function streamChatMessage(
   message: string,
-  handlers: ChatStreamHandlers
+  handlers: ChatStreamHandlers,
+  uiLanguage: UILanguage = "vi"
 ): Promise<void> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -145,7 +150,7 @@ export async function streamChatMessage(
     method: "POST",
     headers,
     credentials: "include",
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, ui_language: uiLanguage }),
     signal: handlers.signal,
   });
 

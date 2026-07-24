@@ -405,6 +405,24 @@ def test_routed_chat_infer_emergency_fast_path():
     assert body["medical_answer_v2"]["schema_version"] == "medical_answer_v2"
     assert body["medical_answer_v2"]["urgency"]["level"] == "emergency"
     assert body["medical_answer_v2"]["actions_now"]
+    assert "cấp cứu" in body["answer"].lower()
+    assert "cấp cứu" in body["medical_answer_v2"]["actions_now"][0].lower()
+
+
+def test_routed_chat_emergency_fast_path_respects_explicit_english_ui():
+    response = client.post(
+        "/v1/chat/routed",
+        json={
+            "query": "Severe chest pain and shortness of breath.",
+            "ui_language": "en",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["emergency"] is True
+    assert "emergency" in body["answer"].lower()
+    assert "emergency" in body["medical_answer_v2"]["actions_now"][0].lower()
 
 
 def test_emergency_fast_path_preserves_declared_normal_audience():

@@ -272,6 +272,7 @@ def build_medical_answer_v2(
     missing_information: list[dict[str, str]],
     careguard: dict[str, Any] | None = None,
     harness_stages: list[dict[str, Any]] | None = None,
+    answer_language: str = "vi",
 ) -> dict[str, Any]:
     """Build and validate the stable v2 artifact from real pipeline outputs."""
 
@@ -290,9 +291,15 @@ def build_medical_answer_v2(
             "emergency": emergency,
             "policy_action": policy_action,
         },
-        actions_now=["Call local emergency services now or go to the nearest emergency department."]
-        if emergency
-        else [],
+        actions_now=(
+            [
+                "Call local emergency services now or go to the nearest emergency department."
+                if answer_language == "en"
+                else "Gọi ngay số cấp cứu tại địa phương hoặc đến khoa Cấp cứu gần nhất."
+            ]
+            if emergency
+            else []
+        ),
         actions_today=[] if emergency else [claim.text for claim in claims if claim.decision_ready],
         monitoring=[],
         red_flags=emergency_red_flags,

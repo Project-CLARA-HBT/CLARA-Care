@@ -202,6 +202,7 @@ class UnifiedContractMetadata(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    ui_language: Literal["vi", "en"] = "vi"
     protocol: Literal["chat", "clinical_answer", "medication_review", "evidence_brief"] = (
         "clinical_answer"
     )
