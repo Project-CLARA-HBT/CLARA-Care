@@ -2926,3 +2926,24 @@ def test_deep_aggregate_retains_pass_context_when_final_gate_is_not_verified(
     assert [row["id"] for row in merged] == ["final-1", "pass-1"]
     assert policy["applied"] is False
     assert policy["reason"] == "final_context_below_minimum"
+
+
+def test_query_planner_runtime_override_has_clinically_usable_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tier2.settings, "deepseek_timeout_seconds", 30.0)
+    monkeypatch.setattr(tier2.settings, "llm_deepseek_only", True)
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "configured-key")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://llm.example/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "medical-planner")
+
+    client = tier2._build_query_planner_client(
+        llm_runtime={
+            "api_key": "request-key",
+            "base_url": "https://runtime-llm.example/v1",
+            "model": "runtime-medical-planner",
+        }
+    )
+
+    assert client is not None
+    assert client._timeout_seconds == 25.0

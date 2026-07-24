@@ -2577,9 +2577,14 @@ def _build_query_planner_client(
     _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
     if not api_key or not base_url or not model:
         return None
-    timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), 20.0))
+    # Query planning controls every downstream biomedical connector. The former
+    # 10-second runtime-override ceiling caused otherwise healthy LLM requests
+    # to fall back to the heuristic plan, losing provider-specific Boolean
+    # queries and exact trial anchors. Keep the call bounded, but allow the same
+    # latency envelope observed for successful production reranking.
+    timeout_seconds = max(5.0, min(float(settings.deepseek_timeout_seconds), 30.0))
     if _has_request_runtime_override(llm_runtime):
-        timeout_seconds = min(timeout_seconds, 10.0)
+        timeout_seconds = min(timeout_seconds, 25.0)
     retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
     return DeepSeekClient(
         api_key=api_key,
