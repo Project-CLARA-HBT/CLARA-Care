@@ -18,13 +18,12 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
-import '../../screens/careguard_screen.dart';
 import '../../screens/consent_center_screen.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
-import 'council_surface_v3.dart';
+import '../connected_health/connected_health_screen.dart';
 import 'scribe_surface_v3.dart';
 import 'social_surface_v3.dart';
 import '../language_controller.dart';
@@ -93,13 +92,13 @@ class MoreScreenV3 extends StatelessWidget {
       );
     }
 
-    // AI Council (doctor/admin via server `council` flag).
+    // Connected health is an optional personal-data feature for all roles.
     entries.add(
       _MoreEntry(
-        icon: Icons.groups_outlined,
-        title: 'Hội chẩn AI',
-        subtitle: 'Tổng hợp ý kiến nhiều chuyên khoa',
-        builder: (_) => CouncilSurfaceV3(
+        icon: Icons.monitor_heart_outlined,
+        title: 'Dữ liệu sức khỏe',
+        subtitle: 'Quản lý các nguồn bạn đã cho phép kết nối',
+        builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
         ),
@@ -121,19 +120,6 @@ class MoreScreenV3 extends StatelessWidget {
         ),
       );
     }
-
-    // CareGuard interaction check (available broadly; the screen guards itself).
-    entries.add(
-      _MoreEntry(
-        icon: Icons.shield_outlined,
-        title: 'Kiểm tra tương tác thuốc',
-        subtitle: 'Phân tích an toàn khi dùng nhiều thuốc',
-        builder: (_) => CareguardScreen(
-          apiClient: apiClient,
-          sessionStore: sessionStore,
-        ),
-      ),
-    );
 
     // Consent center (gated).
     if (resolver.consentCenterEnabled) {

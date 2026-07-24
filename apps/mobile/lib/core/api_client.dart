@@ -1127,6 +1127,71 @@ class ApiClient {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Connected-health control plane. These methods intentionally expose only
+  // CLARA's provider-neutral API model; native SDK objects never leave the
+  // Android bridge or enter screens.
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getConnectorCapabilities({
+    required String accessToken,
+  }) async {
+    final data = await _get(
+      '/api/v1/connectors/capabilities',
+      accessToken: accessToken,
+    );
+    return _asMapList(data['items'] ?? data['data']);
+  }
+
+  Future<List<Map<String, dynamic>>> listConnectedHealthSources({
+    required String accessToken,
+  }) async {
+    final data = await _get('/api/v1/connectors', accessToken: accessToken);
+    return _asMapList(data['items'] ?? data['data']);
+  }
+
+  Future<Map<String, dynamic>> pauseConnectedHealthSource({
+    required String accessToken,
+    required String connectorId,
+  }) {
+    return _post(
+      '/api/v1/connectors/$connectorId/pause',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> resumeConnectedHealthSource({
+    required String accessToken,
+    required String connectorId,
+  }) {
+    return _post(
+      '/api/v1/connectors/$connectorId/resume',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> disconnectConnectedHealthSource({
+    required String accessToken,
+    required String connectorId,
+  }) {
+    return _delete(
+      '/api/v1/connectors/$connectorId',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteConnectedHealthImportedData({
+    required String accessToken,
+    required String connectorId,
+  }) {
+    return _delete(
+      '/api/v1/connectors/$connectorId/imported-data',
+      accessToken: accessToken,
+    );
+  }
+
   /// Persists the owner's full PHR profile via the server-validated
   /// `PUT /record` contract (personal-health-record Requirement 17.2). The
   /// server enforces field length/range and severity/status domains; validation
