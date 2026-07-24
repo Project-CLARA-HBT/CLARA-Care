@@ -2901,17 +2901,25 @@ class RagPipelineP1:
                 else []
             ),
         }
-        should_force_external = (
-            not persistent_used
+        # The persistent index is an internal candidate source, not a substitute
+        # for source families explicitly required by a Deep scientific plan.
+        # Previously `persistent_used` suppressed PubMed/Europe PMC entirely,
+        # even when the planner had emitted provider-specific trial queries.
+        deep_scientific_plan = bool(
+            orchestrator_mode == "deep"
             and external_scientific_enabled
             and external_connectors_runtime_enabled
-            and self._should_force_external_retrieval(query, docs)
+        )
+        should_force_external = (
+            external_scientific_enabled
+            and external_connectors_runtime_enabled
+            and (deep_scientific_plan or self._should_force_external_retrieval(query, docs))
         )
         retrieval_trace["should_force_external"] = should_force_external
+        retrieval_trace["deep_scientific_plan"] = deep_scientific_plan
 
         if (
-            not persistent_used
-            and (low_context_before_external or should_force_external)
+            (low_context_before_external or should_force_external)
             and external_scientific_enabled
             and external_connectors_runtime_enabled
         ):

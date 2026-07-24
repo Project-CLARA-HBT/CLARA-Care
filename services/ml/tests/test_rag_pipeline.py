@@ -622,3 +622,80 @@ def test_rag_pipeline_full_stack_request_does_not_override_runtime_disable_flags
     assert retrieval_trace.get("graphrag_enabled") is False
     assert retrieval_trace.get("runtime_flags", {}).get("rag_graphrag_enabled") is False
     assert retrieval_trace.get("external_attempted") is False
+
+
+def test_deep_scientific_plan_runs_external_connectors_after_persistent_candidates(
+    monkeypatch,
+):
+    class _ScientificRetriever:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.last_trace: dict = {}
+
+        def retrieve(self, query: str, **kwargs) -> list[Document]:
+            self.calls += 1
+            self.last_trace = {
+                "search_phase": {
+                    "total_candidates": 1,
+                    "connectors_attempted": [
+                        {"provider": "pubmed", "status": "completed", "result_count": 1}
+                    ],
+                    "source_errors": {},
+                },
+                "index_phase": {"selected_count": 1},
+            }
+            return [
+                Document(
+                    id="pubmed-32970396",
+                    text="DAPA-CKD primary trial abstract and kidney outcome.",
+                    metadata={"source": "pubmed", "pmid": "32970396", "score": 0.9},
+                )
+            ]
+
+    retriever = _ScientificRetriever()
+    pipe = RagPipelineP0(retriever=retriever, deepseek_api_key="")
+    monkeypatch.setattr(settings, "rag_external_connectors_enabled", True)
+    monkeypatch.setattr(pipe, "_persistent_retrieval_active", lambda: True)
+    monkeypatch.setattr(
+        pipe,
+        "_persistent_retrieve",
+        lambda *args, **kwargs: [
+            Document(
+                id="persistent-openfda",
+                text="Unrelated indexed medicine context.",
+                metadata={"source": "openfda", "score": 0.7},
+            )
+        ],
+    )
+
+    result = pipe.run(
+        "Compare DAPA-CKD and EMPA-KIDNEY",
+        planner_hints={
+            "research_mode": "deep",
+            "query_plan": {
+                "original_query": "Compare DAPA-CKD and EMPA-KIDNEY",
+                "canonical_query": "DAPA-CKD EMPA-KIDNEY",
+                "source_queries": {
+                    "internal": ["DAPA-CKD EMPA-KIDNEY"],
+                    "scientific": ["DAPA-CKD EMPA-KIDNEY"],
+                    "web": ["DAPA-CKD EMPA-KIDNEY"],
+                },
+                "provider_queries": {
+                    "scientific": {
+                        "pubmed": '("DAPA-CKD"[Title/Abstract] OR '
+                        '"EMPA-KIDNEY"[Title/Abstract])'
+                    }
+                },
+                "decomposition": {},
+            },
+        },
+        scientific_retrieval_enabled=True,
+        web_retrieval_enabled=False,
+    )
+
+    trace = result.context_debug["retrieval_trace"]
+    assert retriever.calls == 1
+    assert trace["retrieval_path"] == "persistent"
+    assert trace["deep_scientific_plan"] is True
+    assert trace["external_attempted"] is True
+    assert result.retrieved_ids == ["pubmed-32970396"]
