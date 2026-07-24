@@ -71,3 +71,12 @@ class ImportedDataDeletionResponse(BaseModel):
     connector_id: str
     deleted_observations: int
     invalidated_aggregates: int
+
+
+class ConnectorImportResponse(BaseModel):
+    batch_id: str
+    idempotent_replay: bool = False
+    accepted_count: int
+    rejected_count: int
+    upserted_count: int
+    tombstoned_count: int

@@ -6,12 +6,18 @@ from sqlalchemy.orm import Session
 
 from clara_api.connected_health.control import (
     ConnectorCapabilityResponse,
+    ConnectorImportResponse,
     ConnectorOperationResponse,
     ConnectorResponse,
     DeviceConnectorCreateRequest,
     ImportedDataDeletionResponse,
 )
-from clara_api.connected_health.schemas import ConnectorProvider, HealthRecordType
+from clara_api.connected_health.ingestion import import_batch
+from clara_api.connected_health.schemas import (
+    ConnectorImportBatch,
+    ConnectorProvider,
+    HealthRecordType,
+)
 from clara_api.connected_health.service import (
     create_device_connector,
     delete_imported_data,
@@ -103,6 +109,22 @@ def create_device(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> ConnectorResponse:
     return create_device_connector(db, user=_user(db, token), payload=payload)
+
+
+@router.post("/{connector_id}/imports", response_model=ConnectorImportResponse)
+def import_connector_records(
+    connector_id: int,
+    payload: ConnectorImportBatch,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> ConnectorImportResponse:
+    user = _user(db, token)
+    return import_batch(
+        db,
+        connector=owned_connector(db, connector_id=connector_id, user=user),
+        user=user,
+        payload=payload,
+    )
 
 
 @router.post("/{connector_id}/sync", response_model=ConnectorOperationResponse)

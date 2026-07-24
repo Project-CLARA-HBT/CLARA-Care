@@ -7,7 +7,10 @@ from clara_api.db.models import (
     ConnectorAccount,
     ConnectorAuditEvent,
     ConnectorConsent,
+    ConnectorSyncCursor,
     User,
+    WearableObservation,
+    WearableObservationVersion,
 )
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
@@ -41,6 +44,33 @@ def _create(token: str, *, subject: str = "android-device-1"):
             "data_types": ["steps", "heart_rate", "sleep"],
         },
     )
+
+
+def _record_payload(connector_id: str, profile_id: str, *, raw_hash: str, steps: int = 1200):
+    return {
+        "schema_version": "1.0",
+        "idempotency_key": "batch_import_1",
+        "profile_id": profile_id,
+        "connector_id": connector_id,
+        "provider": "health_connect",
+        "cursor": "cursor-1",
+        "records": [
+            {
+                "schema_version": "1.0",
+                "profile_id": profile_id,
+                "connector_id": connector_id,
+                "provider": "health_connect",
+                "provider_record_id": "steps-record-1",
+                "record_type": "steps",
+                "value": {"scalar": steps, "unit": "count"},
+                "observed_start": "2026-07-25T01:00:00Z",
+                "observed_end": "2026-07-25T02:00:00Z",
+                "data_origin": "com.example.health",
+                "recording_method": "automatic",
+                "provenance": {"adapter_version": "1.0", "raw_hash": raw_hash},
+            }
+        ],
+    }
 
 
 def test_capabilities_are_authenticated_and_explicit() -> None:
@@ -180,3 +210,109 @@ def test_device_connector_rejects_duplicate_scope_values() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
+    token = _login("connector-import@example.com")
+    connector_id = _create(token).json()["id"]
+    with SessionLocal() as db:
+        account = db.get(ConnectorAccount, int(connector_id))
+        assert account is not None
+        profile_id = str(account.profile_id)
+
+    first_payload = _record_payload(
+        connector_id,
+        profile_id,
+        raw_hash="sha256:" + "a" * 64,
+    )
+    first = client.post(
+        f"/api/v1/connectors/{connector_id}/imports",
+        headers=_auth(token),
+        json=first_payload,
+    )
+    assert first.status_code == 200, first.text
+    assert first.json() == {
+        "batch_id": "1",
+        "idempotent_replay": False,
+        "accepted_count": 1,
+        "rejected_count": 0,
+        "upserted_count": 1,
+        "tombstoned_count": 0,
+    }
+
+    replay = client.post(
+        f"/api/v1/connectors/{connector_id}/imports",
+        headers=_auth(token),
+        json=first_payload,
+    )
+    assert replay.status_code == 200
+    assert replay.json()["idempotent_replay"] is True
+
+    changed = _record_payload(
+        connector_id,
+        profile_id,
+        raw_hash="sha256:" + "b" * 64,
+        steps=1400,
+    )
+    changed["idempotency_key"] = "batch_import_2"
+    second = client.post(
+        f"/api/v1/connectors/{connector_id}/imports",
+        headers=_auth(token),
+        json=changed,
+    )
+    assert second.status_code == 200
+    assert second.json()["upserted_count"] == 1
+
+    with SessionLocal() as db:
+        observation = db.execute(select(WearableObservation)).scalar_one()
+        version = db.execute(select(WearableObservationVersion)).scalar_one()
+        cursor = db.execute(select(ConnectorSyncCursor)).scalar_one()
+    assert observation.value_json == {"scalar": 1400.0, "components": None, "unit": "count"}
+    assert observation.version_no == 2
+    assert version.version_no == 1
+    assert cursor.cursor == "cursor-1"
+
+    changed["idempotency_key"] = "batch_import_1"
+    conflict = client.post(
+        f"/api/v1/connectors/{connector_id}/imports",
+        headers=_auth(token),
+        json=changed,
+    )
+    assert conflict.status_code == 409
+
+
+def test_import_blocks_revoked_or_unconsented_data_types() -> None:
+    token = _login("connector-import-consent@example.com")
+    connector_id = _create(token).json()["id"]
+    with SessionLocal() as db:
+        account = db.get(ConnectorAccount, int(connector_id))
+        assert account is not None
+        profile_id = str(account.profile_id)
+
+    payload = _record_payload(
+        connector_id,
+        profile_id,
+        raw_hash="sha256:" + "c" * 64,
+    )
+    payload["records"][0]["record_type"] = "blood_glucose"
+    payload["records"][0]["value"] = {"scalar": 5.4, "unit": "mmol/L"}
+    assert (
+        client.post(
+            f"/api/v1/connectors/{connector_id}/imports",
+            headers=_auth(token),
+            json=payload,
+        ).status_code
+        == 403
+    )
+
+    client.delete(f"/api/v1/connectors/{connector_id}", headers=_auth(token))
+    payload["records"][0]["record_type"] = "steps"
+    payload["records"][0]["value"] = {"scalar": 100, "unit": "count"}
+    assert (
+        client.post(
+            f"/api/v1/connectors/{connector_id}/imports",
+            headers=_auth(token),
+            json=payload,
+        ).status_code
+        == 409
+    )
