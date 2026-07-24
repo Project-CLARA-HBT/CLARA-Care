@@ -2,7 +2,7 @@
 
 Date: 2026-07-24  
 Production: `https://theclaracare.com`  
-Release under validation: `d17faff4` plus final citation/hydration patch
+Final production release: `5c3068fb`
 
 ## Executive verdict
 
