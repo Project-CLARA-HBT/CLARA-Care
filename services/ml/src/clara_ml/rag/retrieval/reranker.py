@@ -591,6 +591,13 @@ class NeuralReranker:
                 "doc_id": str(item.id),
                 "text": " ".join(str(item.text or "").split())[:700],
                 "source": str((item.metadata or {}).get("source") or ""),
+                "title": str((item.metadata or {}).get("title") or ""),
+                "source_type": str((item.metadata or {}).get("source_type") or ""),
+                "study_design": str((item.metadata or {}).get("study_design") or ""),
+                "publication_types": (item.metadata or {}).get("publication_types") or [],
+                "pmid": str((item.metadata or {}).get("pmid") or ""),
+                "doi": str((item.metadata or {}).get("doi") or ""),
+                "nct_ids": (item.metadata or {}).get("nct_ids") or [],
             }
             for item in selected
         ]
@@ -606,6 +613,8 @@ class NeuralReranker:
             "- score in [0,1]\n"
             "- prioritize direct biomedical relevance to the exact named trials, drugs, "
             "populations, outcomes, and safety question in the query\n"
+            "- for an explicitly named trial, prioritize its primary trial report over "
+            "editorials, reviews, commentaries, and peer-review artifacts\n"
             "- down-rank generic background that only matches broad facets but does not "
             "address the query's exact clinical entities\n\n"
             f"query={query}\n"

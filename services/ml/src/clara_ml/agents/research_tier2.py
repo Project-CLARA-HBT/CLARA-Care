@@ -6806,13 +6806,41 @@ def _aggregate_retrieved_context_after_final_gate(
         rag_result,
         research_mode=research_mode,
     )
-    merged = _merge_retrieved_context(
-        final_context,
-        [] if final_context_only else deep_pass_contexts,
-    )
+    pass_contexts = deep_pass_contexts
+    preserved_primary_trials: list[dict[str, Any]] = []
+    if final_context_only:
+        # A final relevance pass may remove exploratory material, but it must
+        # not erase verified primary RCTs found by targeted deep passes. This
+        # relies on provider publication metadata, not query regex hints.
+        trusted_scientific_sources = {"pubmed", "europepmc"}
+        accepted_designs = {"randomized_controlled_trial", "clinical_trial"}
+        candidates = [
+            row
+            for rows in deep_pass_contexts
+            if isinstance(rows, list)
+            for row in rows
+            if isinstance(row, dict)
+            and str(row.get("source") or "").strip().lower() in trusted_scientific_sources
+            and (
+                str(row.get("source_type") or "").strip().lower() == "primary_trial"
+                or str(row.get("study_design") or "").strip().lower() in accepted_designs
+            )
+        ]
+        candidates.sort(
+            key=lambda row: _safe_float(row.get("score"), 0.0),
+            reverse=True,
+        )
+        preserved_primary_trials = candidates[:4]
+        pass_contexts = [preserved_primary_trials] if preserved_primary_trials else []
+
+    merged = _merge_retrieved_context(final_context, pass_contexts)
     policy["deep_pass_context_count"] = sum(
         len(rows) for rows in deep_pass_contexts if isinstance(rows, list)
     )
+    policy["preserved_primary_trial_count"] = len(preserved_primary_trials)
+    policy["preserved_primary_trial_ids"] = [
+        str(row.get("id") or "") for row in preserved_primary_trials
+    ]
     policy["effective_merged_count"] = len(merged)
     return merged, policy
 

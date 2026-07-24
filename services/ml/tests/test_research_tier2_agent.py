@@ -2874,6 +2874,18 @@ def test_deep_aggregate_keeps_only_final_llm_floor_evidence(
             "url": "https://pubmed.ncbi.nlm.nih.gov/999/",
         }
     ]
+    earlier_primary_trial = {
+        "id": "pubmed-32970396",
+        "source": "pubmed",
+        "title": "Dapagliflozin in Patients with Chronic Kidney Disease",
+        "text": "Randomized trial evidence.",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/32970396/",
+        "score": 0.92,
+        "pmid": "32970396",
+        "doi": "10.1056/NEJMoa2024816",
+        "source_type": "primary_trial",
+        "study_design": "randomized_controlled_trial",
+    }
     rag_result = SimpleNamespace(
         retrieved_context=final_rows,
         context_debug={
@@ -2897,15 +2909,22 @@ def test_deep_aggregate_keeps_only_final_llm_floor_evidence(
 
     merged, policy = tier2._aggregate_retrieved_context_after_final_gate(
         rag_result,
-        [earlier_off_target],
+        [earlier_off_target, [earlier_primary_trial]],
         research_mode="deep",
     )
 
-    assert [row["id"] for row in merged] == ["final-1", "final-2", "final-3"]
+    assert [row["id"] for row in merged] == [
+        "final-1",
+        "final-2",
+        "final-3",
+        "pubmed-32970396",
+    ]
     assert policy["name"] == "final_llm_relevance_floor"
     assert policy["applied"] is True
-    assert policy["deep_pass_context_count"] == 1
-    assert policy["effective_merged_count"] == 3
+    assert policy["deep_pass_context_count"] == 2
+    assert policy["preserved_primary_trial_count"] == 1
+    assert policy["preserved_primary_trial_ids"] == ["pubmed-32970396"]
+    assert policy["effective_merged_count"] == 4
 
 
 def test_deep_aggregate_retains_pass_context_when_final_gate_is_not_verified(

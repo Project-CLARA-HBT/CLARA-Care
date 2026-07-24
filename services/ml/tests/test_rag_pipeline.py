@@ -34,6 +34,64 @@ def test_rag_pipeline_returns_sources_and_answer():
     assert result.model_used == "local-synth-v1"
 
 
+def test_serialize_context_preserves_primary_trial_provenance():
+    rows = RagPipelineP0._serialize_context(
+        [
+            Document(
+                id="pubmed-32970396",
+                text="DAPA-CKD abstract",
+                metadata={
+                    "source": "pubmed",
+                    "title": "Dapagliflozin in Patients with Chronic Kidney Disease",
+                    "pmid": "32970396",
+                    "doi": "10.1056/NEJMoa2024816",
+                    "nct_ids": ["NCT03036150"],
+                    "publication_types": ["Randomized Controlled Trial"],
+                    "source_type": "primary_trial",
+                    "study_design": "randomized_controlled_trial",
+                },
+            )
+        ]
+    )
+
+    assert rows[0]["pmid"] == "32970396"
+    assert rows[0]["doi"] == "10.1056/NEJMoa2024816"
+    assert rows[0]["nct_ids"] == ["NCT03036150"]
+    assert rows[0]["source_type"] == "primary_trial"
+    assert rows[0]["study_design"] == "randomized_controlled_trial"
+
+
+def test_degraded_pool_reserves_primary_trials_before_editorial():
+    def _row(score: float, doc_id: str, source_type: str):
+        return (
+            score,
+            doc_id,
+            Document(
+                id=doc_id,
+                text=doc_id,
+                metadata={
+                    "source": "pubmed",
+                    "retrieval_origin": "external_scientific",
+                    "source_type": source_type,
+                },
+            ),
+            0,
+        )
+
+    ranked = [
+        _row(0.99, "pubmed-editorial", "evidence_synthesis"),
+        _row(0.61, "pubmed-dapa-ckd", "primary_trial"),
+        _row(0.49, "pubmed-empa-kidney", "primary_trial"),
+    ]
+
+    selected = RagPipelineP0().retriever._diversified_degraded_pool(ranked, limit=2)
+
+    assert [row[1] for row in selected] == [
+        "pubmed-dapa-ckd",
+        "pubmed-empa-kidney",
+    ]
+
+
 def test_build_prompt_formats_variables():
     rendered = build_prompt(
         role="doctor",

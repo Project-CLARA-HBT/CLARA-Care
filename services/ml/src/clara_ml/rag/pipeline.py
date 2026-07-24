@@ -1886,6 +1886,17 @@ class RagPipelineP1:
                     # signal attached by the hybrid retriever's provenance.
                     "trust_tier": metadata.get("trust_tier"),
                     "effective_date": metadata.get("effective_date"),
+                    # Preserve scientific provenance through every deep-pass
+                    # handoff. Dropping these fields made pivotal trials
+                    # indistinguishable from reviews during final aggregation.
+                    "title": metadata.get("title"),
+                    "pmid": metadata.get("pmid"),
+                    "pmcid": metadata.get("pmcid"),
+                    "doi": metadata.get("doi"),
+                    "nct_ids": metadata.get("nct_ids") or [],
+                    "publication_types": metadata.get("publication_types") or [],
+                    "source_type": metadata.get("source_type"),
+                    "study_design": metadata.get("study_design"),
                 }
             )
         return serialized

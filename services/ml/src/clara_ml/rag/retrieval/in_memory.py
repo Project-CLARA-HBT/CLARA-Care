@@ -85,16 +85,39 @@ class InMemoryRetriever:
         *,
         limit: int,
     ) -> list[tuple[float, str, Document, int]]:
-        """Interleave the strongest candidates from each source/origin bucket."""
+        """Reserve primary trials, then interleave source/origin buckets.
+
+        When embeddings are unavailable, a high-lexical editorial must not use
+        the only PubMed slot and prevent pivotal primary trials from ever
+        reaching the LLM reranker.
+        """
+
+        bounded_limit = max(int(limit), 0)
+        primary_trial_rows = [
+            row
+            for row in ranked_rows
+            if str((row[2].metadata or {}).get("source") or "").strip().lower()
+            in {"pubmed", "europepmc"}
+            and (
+                str((row[2].metadata or {}).get("source_type") or "").strip().lower()
+                == "primary_trial"
+                or str((row[2].metadata or {}).get("study_design") or "").strip().lower()
+                in {"randomized_controlled_trial", "clinical_trial"}
+            )
+        ]
+        reserved = primary_trial_rows[: min(bounded_limit, 4)]
+        reserved_ids = {row[1] for row in reserved}
 
         buckets: dict[str, list[tuple[float, str, Document, int]]] = {}
         for row in ranked_rows:
+            if row[1] in reserved_ids:
+                continue
             metadata = row[2].metadata or {}
             source = str(metadata.get("source") or "unknown")
             origin = str(metadata.get("retrieval_origin") or "existing")
             buckets.setdefault(f"{source}:{origin}", []).append(row)
-        selected: list[tuple[float, str, Document, int]] = []
-        while len(selected) < max(int(limit), 0) and any(buckets.values()):
+        selected = list(reserved)
+        while len(selected) < bounded_limit and any(buckets.values()):
             for rows in buckets.values():
                 if not rows or len(selected) >= limit:
                     continue
