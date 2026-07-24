@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.connected_health.control import ConnectorImportResponse
+from clara_api.connected_health.projection import recompute_steps_daily_aggregates
 from clara_api.connected_health.schemas import ConnectorImportBatch as ImportPayload
 from clara_api.connected_health.service import active_consent, audit
 from clara_api.db.models import (
@@ -126,6 +127,7 @@ def import_batch(
     db.add(batch)
     db.flush()
     accepted = upserted = tombstoned = 0
+    affected_steps_dates = set()
 
     for record in payload.records:
         current = db.execute(
@@ -159,6 +161,8 @@ def import_batch(
             db.add(current)
             upserted += 1
         elif current.raw_hash != record.provenance.raw_hash or not current.is_active:
+            if current.record_type == "steps":
+                affected_steps_dates.add(current.observed_start.date())
             db.add(
                 WearableObservationVersion(
                     observation_id=current.id,
@@ -182,6 +186,8 @@ def import_batch(
             current.deleted_at = None
             upserted += 1
         accepted += 1
+        if record.record_type.value == "steps":
+            affected_steps_dates.add(record.observed_start.date())
 
     for tombstone in payload.tombstones:
         current = db.execute(
@@ -203,6 +209,16 @@ def import_batch(
             current.is_active = False
             current.deleted_at = tombstone.deleted_at
             tombstoned += 1
+            if current.record_type == "steps":
+                affected_steps_dates.add(current.observed_start.date())
+
+    db.flush()
+    if affected_steps_dates:
+        recompute_steps_daily_aggregates(
+            db,
+            profile_id=connector.profile_id,
+            affected_dates=affected_steps_dates,
+        )
 
     if payload.cursor is not None:
         for record_type in requested_types:

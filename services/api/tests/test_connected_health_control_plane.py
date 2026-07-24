@@ -9,6 +9,8 @@ from clara_api.db.models import (
     ConnectorConsent,
     ConnectorSyncCursor,
     User,
+    WearableAggregateContribution,
+    WearableDailyAggregate,
     WearableObservation,
     WearableObservationVersion,
 )
@@ -267,10 +269,15 @@ def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
         observation = db.execute(select(WearableObservation)).scalar_one()
         version = db.execute(select(WearableObservationVersion)).scalar_one()
         cursor = db.execute(select(ConnectorSyncCursor)).scalar_one()
+        aggregate = db.execute(select(WearableDailyAggregate)).scalar_one()
+        contribution = db.execute(select(WearableAggregateContribution)).scalar_one()
     assert observation.value_json == {"scalar": 1400.0, "components": None, "unit": "count"}
     assert observation.version_no == 2
     assert version.version_no == 1
     assert cursor.cursor == "cursor-1"
+    assert aggregate.value_json == {"scalar": 1400.0, "unit": "count"}
+    assert aggregate.primary_origin == "com.example.health"
+    assert contribution.observation_id == observation.id
 
     changed["idempotency_key"] = "batch_import_1"
     conflict = client.post(
@@ -279,6 +286,41 @@ def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
         json=changed,
     )
     assert conflict.status_code == 409
+
+
+def test_steps_projection_never_sums_overlapping_records() -> None:
+    token = _login("connector-overlap@example.com")
+    connector_id = _create(token).json()["id"]
+    with SessionLocal() as db:
+        account = db.get(ConnectorAccount, int(connector_id))
+        assert account is not None
+        profile_id = str(account.profile_id)
+    payload = _record_payload(
+        connector_id,
+        profile_id,
+        raw_hash="sha256:" + "d" * 64,
+        steps=500,
+    )
+    duplicate_interval = dict(payload["records"][0])
+    duplicate_interval["provider_record_id"] = "steps-record-2"
+    duplicate_interval["value"] = {"scalar": 800, "unit": "count"}
+    duplicate_interval["provenance"] = {
+        "adapter_version": "1.0",
+        "raw_hash": "sha256:" + "e" * 64,
+    }
+    payload["records"].append(duplicate_interval)
+
+    response = client.post(
+        f"/api/v1/connectors/{connector_id}/imports",
+        headers=_auth(token),
+        json=payload,
+    )
+    assert response.status_code == 200, response.text
+    with SessionLocal() as db:
+        aggregate = db.execute(select(WearableDailyAggregate)).scalar_one()
+        contributions = list(db.execute(select(WearableAggregateContribution)).scalars())
+    assert aggregate.value_json == {"scalar": 800.0, "unit": "count"}
+    assert len(contributions) == 1
 
 
 def test_import_blocks_revoked_or_unconsented_data_types() -> None:
