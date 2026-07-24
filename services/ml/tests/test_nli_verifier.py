@@ -74,11 +74,13 @@ def test_summarize_and_contradiction_summary_contract() -> None:
 
 def test_verify_claims_llm_override_can_change_verdict() -> None:
     class _FakeLlmClient:
-        def generate(self, prompt: str, system_prompt: str | None = None):  # noqa: ARG002
+        def generate(self, prompt: str, system_prompt: str | None = None):
             class _Response:
                 content = (
                     '{"rows":[{"claim_index":0,"support_status":"contradicted",'
-                    '"confidence":0.77,"evidence_ref":"doc-1","rationale":"Conflict detected"}]}'
+                    '"confidence":0.77,"evidence_ref":"doc-1",'
+                    '"evidence_quote":"Paracetamol does not increase bleeding risk with warfarin.",'
+                    '"rationale":"Conflict detected"}]}'
                 )
                 model = "fake-llm"
 
@@ -89,10 +91,7 @@ def test_verify_claims_llm_override_can_change_verdict() -> None:
         evidence_rows=[
             {
                 "ref": "doc-1",
-                "text": (
-                    "Tai lieu cho thay paracetamol co the tang nguy co chay mau "
-                    "khi dung cung warfarin."
-                ),
+                "text": "Paracetamol does not increase bleeding risk with warfarin.",
             }
         ],
         llm_enabled=True,
@@ -106,9 +105,9 @@ def test_verify_claims_llm_override_can_change_verdict() -> None:
     assert row["confidence"] >= 0.7
 
 
-def test_verify_claims_llm_failure_falls_back_to_heuristic() -> None:
+def test_verify_claims_llm_failure_fails_closed_to_insufficient() -> None:
     class _BrokenLlmClient:
-        def generate(self, prompt: str, system_prompt: str | None = None):  # noqa: ARG002
+        def generate(self, prompt: str, system_prompt: str | None = None):
             raise RuntimeError("upstream_error")
 
     rows = verify_claims(
@@ -127,4 +126,99 @@ def test_verify_claims_llm_failure_falls_back_to_heuristic() -> None:
     )
     assert len(rows) == 1
     row = rows[0].as_dict()
-    assert row["support_status"] == "supported"
+    assert row["support_status"] == "insufficient"
+    assert row["evidence_ref"] is None
+
+
+def test_heuristic_polarity_mismatch_is_insufficient_not_contradicted() -> None:
+    rows = verify_claims(
+        claims=["SGLT2 inhibitors reduce kidney disease progression."],
+        evidence_rows=[
+            {
+                "ref": "review-1",
+                "text": (
+                    "SGLT2 inhibitors reduce kidney disease progression. "
+                    "Participants without diabetes were also included, and an unrelated "
+                    "subgroup had increased event reporting."
+                ),
+            }
+        ],
+        llm_enabled=False,
+    )
+
+    assert rows[0].support_status == "insufficient"
+    assert rows[0].nli_label == "insufficient"
+
+
+def test_llm_verdict_without_reference_is_downgraded() -> None:
+    class _NoRefClient:
+        def generate(self, prompt: str, system_prompt: str | None = None):
+            class _Response:
+                content = (
+                    '{"rows":[{"claim_index":0,"support_status":"supported",'
+                    '"confidence":0.91,"evidence_quote":"DAPA-CKD reduced kidney outcomes.",'
+                    '"rationale":"Supported"}]}'
+                )
+                model = "fake-llm"
+
+            return _Response()
+
+    rows = verify_claims(
+        claims=["DAPA-CKD reduced kidney outcomes."],
+        evidence_rows=[{"ref": "trial-1", "text": "DAPA-CKD reduced kidney outcomes."}],
+        llm_enabled=True,
+        llm_client=_NoRefClient(),
+    )
+
+    assert rows[0].support_status == "insufficient"
+    assert rows[0].evidence_ref is None
+
+
+def test_llm_verdict_with_invalid_quote_is_downgraded() -> None:
+    class _InvalidQuoteClient:
+        def generate(self, prompt: str, system_prompt: str | None = None):
+            class _Response:
+                content = (
+                    '{"rows":[{"claim_index":0,"support_status":"supported",'
+                    '"confidence":0.91,"evidence_ref":"trial-1",'
+                    '"evidence_quote":"This quote is not in the evidence.",'
+                    '"rationale":"Supported"}]}'
+                )
+                model = "fake-llm"
+
+            return _Response()
+
+    rows = verify_claims(
+        claims=["DAPA-CKD reduced kidney outcomes."],
+        evidence_rows=[{"ref": "trial-1", "text": "DAPA-CKD reduced kidney outcomes."}],
+        llm_enabled=True,
+        llm_client=_InvalidQuoteClient(),
+    )
+
+    assert rows[0].support_status == "insufficient"
+    assert rows[0].evidence_ref is None
+
+
+def test_llm_low_confidence_contradiction_is_downgraded() -> None:
+    class _LowConfidenceClient:
+        def generate(self, prompt: str, system_prompt: str | None = None):
+            class _Response:
+                content = (
+                    '{"rows":[{"claim_index":0,"support_status":"contradicted",'
+                    '"confidence":0.2,"evidence_ref":"trial-1",'
+                    '"evidence_quote":"DAPA-CKD did not reduce kidney outcomes.",'
+                    '"rationale":"Conflict"}]}'
+                )
+                model = "fake-llm"
+
+            return _Response()
+
+    rows = verify_claims(
+        claims=["DAPA-CKD reduced kidney outcomes."],
+        evidence_rows=[{"ref": "trial-1", "text": "DAPA-CKD did not reduce kidney outcomes."}],
+        llm_enabled=True,
+        llm_client=_LowConfidenceClient(),
+    )
+
+    assert rows[0].support_status == "insufficient"
+    assert rows[0].evidence_ref is None

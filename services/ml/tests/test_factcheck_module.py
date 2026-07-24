@@ -45,7 +45,7 @@ def test_fides_lite_passes_when_claim_matches_evidence() -> None:
     assert result.contradiction_summary["has_contradiction"] is False
 
 
-def test_fides_lite_detects_contradiction_and_exports_details() -> None:
+def test_fides_lite_heuristic_polarity_mismatch_is_insufficient() -> None:
     result = run_fides_lite(
         answer="Paracetamol khong lam tang nguy co chay mau khi dung cung warfarin.",
         retrieved_context=[
@@ -59,11 +59,24 @@ def test_fides_lite_detects_contradiction_and_exports_details() -> None:
             }
         ],
     )
-    assert result.verdict == "fail"
-    assert result.contradiction_summary["has_contradiction"] is True
-    assert result.contradiction_summary["contradiction_count"] >= 1
-    assert len(result.contradiction_summary["details"]) >= 1
+    assert result.verdict == "warn"
+    assert result.contradiction_summary["has_contradiction"] is False
+    assert result.contradiction_summary["contradiction_count"] == 0
     matrix_row = result.verification_matrix[0]
-    assert matrix_row["support_status"] == "contradicted"
+    assert matrix_row["support_status"] == "insufficient"
     assert matrix_row["evidence_ref"] == "doc-2"
     assert matrix_row["rationale"]
+
+
+def test_fides_lite_preserves_hyphenated_medical_entities() -> None:
+    answer = (
+        "DAPA-CKD and EMPA-KIDNEY studied SGLT2 inhibitors in non-diabetic "
+        "chronic kidney disease and end-stage outcomes."
+    )
+    result = run_fides_lite(
+        answer=answer,
+        retrieved_context=[{"id": "trial-1", "source": "pubmed", "text": answer}],
+    )
+
+    assert result.total_claims == 1
+    assert result.verification_matrix[0]["claim"] == answer.removesuffix(".")

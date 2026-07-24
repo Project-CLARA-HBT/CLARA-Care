@@ -81,6 +81,62 @@ def test_attach_attribution_preserves_optional_tier2_fields():
     citation = enriched["citations"][0]
     assert citation["study_id"] == "PMID:12345678"
     assert citation["trust_tier"] == 1
+    assert citation["source_id"] == "c1"
+    assert citation["title"] == "A study"
+    assert citation["relevance"] == "high"
+    assert enriched["attribution"]["citations"] == [
+        {
+            "source": "pubmed",
+            "url": "https://example.org/a",
+            "study_id": "PMID:12345678",
+            "source_type": "systematic_review",
+            "trust_tier": 1,
+            "published_at": "2023-04-01",
+        }
+    ]
+
+
+def test_attribution_and_fail_closed_gate_keep_rich_source_id_citations_without_urls():
+    citations = [
+        {
+            "source_id": f"source-{index}",
+            "source": "pubmed" if index < 2 else "uploaded",
+            "title": f"Evidence {index}",
+            "url": f"https://example.org/{index}" if index < 2 else "",
+            "relevance": f"Supports claim {index}",
+        }
+        for index in range(4)
+    ]
+    enriched = research_endpoints._attach_research_attribution(
+        {
+            "tier": "tier2",
+            "research_mode": "deep",
+            "answer": "A conclusion requiring a fail-closed response.",
+            "answer_markdown": "A conclusion requiring a fail-closed response.",
+            "citations": citations,
+            "verification_matrix": {
+                "summary": {"support_ratio": 0.5},
+                "rows": [
+                    {"support_status": "supported"},
+                    {"support_status": "insufficient"},
+                ],
+            },
+        }
+    )
+
+    assert enriched["citations"] == citations
+    assert len(enriched["attribution"]["citations"]) == 4
+    assert set(enriched["attribution"]["citations"][2]) == {"source"}
+
+    gated = research_endpoints._apply_research_quality_gates(
+        enriched,
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert gated["quality_gate"]["passed"] is False
+    assert gated["quality_gate"]["citation_count"] == 4
+    assert gated["citations"] == citations
+    assert gated["sources"] == citations
 
 
 def test_legacy_result_without_optional_fields_stays_legacy_shaped():

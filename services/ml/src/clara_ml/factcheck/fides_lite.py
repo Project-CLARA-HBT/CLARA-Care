@@ -8,9 +8,14 @@ from clara_ml.config import settings
 
 from .nli_verifier import (
     build_contradiction_summary as build_nli_contradiction_summary,
+)
+from .nli_verifier import (
     summarize_verification_matrix as summarize_nli_matrix,
+)
+from .nli_verifier import (
     verify_claims,
 )
+
 
 @dataclass
 class FactCheckResult:
@@ -74,7 +79,14 @@ def _tokenize(text: str) -> set[str]:
 
 
 def _split_claims(answer: str) -> list[str]:
-    raw_chunks = re.split(r"[.!?\n\r•\-]+", answer)
+    # A hyphen inside a clinical entity is not a claim boundary.  Splitting on
+    # every ``-`` corrupts names such as DAPA-CKD and EMPA-KIDNEY, and also
+    # changes the meaning of terms such as non-diabetic and end-stage.
+    raw_chunks = re.split(
+        r"(?:[.!?\n\r•]+|^\s*[-*]\s+)",
+        answer,
+        flags=re.MULTILINE,
+    )
     claims: list[str] = []
     seen: set[str] = set()
     for chunk in raw_chunks:
@@ -234,10 +246,7 @@ def _has_contradiction(claim: str, evidence: str, overlap_ratio: float) -> bool:
 
     if claim_increase and evidence_decrease and overlap_ratio >= 0.24:
         return True
-    if claim_decrease and evidence_increase and overlap_ratio >= 0.24:
-        return True
-
-    return False
+    return bool(claim_decrease and evidence_increase and overlap_ratio >= 0.24)
 
 
 def _has_citations(answer: str, context_ids: list[str]) -> bool:
@@ -349,10 +358,7 @@ def run_fides_lite(
     nli_strategy = str(settings.rag_nli_strategy or "").strip().lower()
     llm_nli_enabled = bool(
         nli_runtime_enabled
-        and (
-            settings.rag_nli_llm_enabled
-            or nli_strategy in {"llm", "llm_hybrid", "hybrid_llm"}
-        )
+        and (settings.rag_nli_llm_enabled or nli_strategy in {"llm", "llm_hybrid", "hybrid_llm"})
     )
     llm_nli_timeout_ms = int(settings.rag_nli_llm_timeout_ms)
 

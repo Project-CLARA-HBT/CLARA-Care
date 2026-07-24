@@ -8,7 +8,6 @@ from typing import Any
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 
-
 _NEGATION_TERMS = {
     "khong",
     "không",
@@ -26,7 +25,14 @@ _INCREASE_TERMS = {"tang", "tăng", "increase", "increased", "higher", "cao"}
 _DECREASE_TERMS = {"giam", "giảm", "decrease", "reduced", "lower", "thap"}
 _DOSAGE_TERMS = {"liều", "lieu", "dose", "dosage", "mg", "viên", "vien", "uống", "uong"}
 _INTERACTION_TERMS = {"tương", "tac", "interaction", "ddi", "dùng", "cùng", "warfarin", "aspirin"}
-_CONTRAINDICATION_TERMS = {"chống", "chong", "contraindication", "contraindicated", "không nên", "avoid"}
+_CONTRAINDICATION_TERMS = {
+    "chống",
+    "chong",
+    "contraindication",
+    "contraindicated",
+    "không nên",
+    "avoid",
+}
 
 
 @dataclass
@@ -129,9 +135,7 @@ def _has_contradiction(claim: str, evidence: str, overlap_ratio: float) -> bool:
 
     if claim_increase and evidence_decrease and overlap_ratio >= 0.24:
         return True
-    if claim_decrease and evidence_increase and overlap_ratio >= 0.24:
-        return True
-    return False
+    return bool(claim_decrease and evidence_increase and overlap_ratio >= 0.24)
 
 
 def _claim_confidence(*, overlap_ratio: float, support_status: str) -> float:
@@ -145,7 +149,9 @@ def _claim_confidence(*, overlap_ratio: float, support_status: str) -> float:
     return max(0.05, min(0.98, score))
 
 
-def _status_rationale(*, support_status: str, overlap_ratio: float, evidence_ref: str | None) -> str:
+def _status_rationale(
+    *, support_status: str, overlap_ratio: float, evidence_ref: str | None
+) -> str:
     if support_status == "supported":
         return f"Claim được evidence hỗ trợ (overlap={overlap_ratio:.2f}, ref={evidence_ref or 'n/a'})."
     if support_status == "contradicted":
@@ -163,8 +169,11 @@ def classify_claim(
     evidence_text = matched_evidence.get("text", "") if matched_evidence else ""
     contradiction = _has_contradiction(claim, evidence_text, overlap_ratio)
     if contradiction:
-        nli_label = "contradicted"
-        support_status = "contradicted"
+        # Token-level polarity is only a signal that semantic verification is
+        # needed.  A negation or direction word elsewhere in a long abstract
+        # must never be promoted to a clinical contradiction.
+        nli_label = "insufficient"
+        support_status = "insufficient"
     elif overlap_ratio >= support_threshold:
         nli_label = "supported"
         support_status = "supported"
@@ -180,6 +189,11 @@ def classify_claim(
         overlap_ratio=overlap_ratio,
         evidence_ref=evidence_ref,
     )
+    if contradiction:
+        rationale = (
+            "Lexical polarity mismatch detected; semantic verification is required "
+            "before asserting contradiction."
+        )
     return ClaimVerdict(
         claim=claim,
         claim_type=infer_claim_type(claim),
@@ -263,8 +277,7 @@ def _llm_verify_claims(
         for item in evidence_rows[:16]
     ]
     system_prompt = (
-        "You are a strict clinical NLI verifier. Return STRICT JSON only. "
-        "Do not include markdown."
+        "You are a strict clinical NLI verifier. Return STRICT JSON only. Do not include markdown."
     )
     prompt = (
         "Verify each claim against the provided evidence list.\n"
@@ -275,7 +288,8 @@ def _llm_verify_claims(
         '      "claim_index": 0,\n'
         '      "support_status": "supported|contradicted|insufficient",\n'
         '      "confidence": 0.0,\n'
-        '      "evidence_ref": "optional-ref",\n'
+        '      "evidence_ref": "required-ref-for-supported-or-contradicted",\n'
+        '      "evidence_quote": "exact supporting or conflicting quote",\n'
         '      "rationale": "short reason"\n'
         "    }\n"
         "  ]\n"
@@ -283,6 +297,8 @@ def _llm_verify_claims(
         "Rules:\n"
         "- If evidence does not clearly support claim, use insufficient.\n"
         "- Use contradicted only when evidence clearly conflicts.\n"
+        "- supported and contradicted require a valid evidence_ref and an exact "
+        "verbatim evidence_quote copied from that referenced evidence.\n"
         "- confidence range [0,1].\n\n"
         f"claims={json.dumps(claims, ensure_ascii=False)}\n"
         f"evidence={json.dumps(evidence_compact, ensure_ascii=False)}\n"
@@ -294,7 +310,11 @@ def _llm_verify_claims(
     rows = payload.get("rows", []) if isinstance(payload, dict) else []
     if not isinstance(rows, list):
         return {}
-    available_refs = {str(item.get("ref") or "").strip() for item in evidence_rows}
+    available_evidence = {
+        str(item.get("ref") or "").strip(): str(item.get("text") or "")
+        for item in evidence_rows
+        if str(item.get("ref") or "").strip()
+    }
     normalized: dict[int, dict[str, Any]] = {}
     for row in rows:
         if not isinstance(row, dict):
@@ -308,16 +328,40 @@ def _llm_verify_claims(
         support_status = _normalize_llm_support_status(row.get("support_status"))
         confidence = _clamp_confidence(row.get("confidence"), default=0.5)
         evidence_ref = str(row.get("evidence_ref") or "").strip() or None
-        if evidence_ref and evidence_ref not in available_refs:
+        evidence_quote = str(row.get("evidence_quote") or "").strip()
+        evidence_text = available_evidence.get(evidence_ref or "", "")
+        valid_grounding = bool(
+            evidence_ref and evidence_text and evidence_quote and evidence_quote in evidence_text
+        )
+        if evidence_ref and evidence_ref not in available_evidence:
             evidence_ref = None
+        if support_status in {"supported", "contradicted"} and not valid_grounding:
+            support_status = "insufficient"
+            evidence_ref = None
+            evidence_quote = ""
         rationale = _compact_snippet(str(row.get("rationale") or ""), max_len=200)
         normalized[claim_index] = {
             "support_status": support_status,
             "confidence": confidence,
             "evidence_ref": evidence_ref,
+            "evidence_quote": evidence_quote,
             "rationale": rationale or "LLM NLI verification applied.",
         }
     return normalized
+
+
+def _insufficient_verdict(base: ClaimVerdict, *, rationale: str) -> ClaimVerdict:
+    return ClaimVerdict(
+        claim=base.claim,
+        claim_type=base.claim_type,
+        nli_label="insufficient",
+        support_status="insufficient",
+        confidence=min(base.confidence, 0.5),
+        overlap_score=base.overlap_score,
+        evidence_ref=None,
+        evidence_snippet="",
+        rationale=rationale,
+    )
 
 
 def _apply_llm_nli_overrides(
@@ -327,31 +371,57 @@ def _apply_llm_nli_overrides(
     evidence_rows: list[dict[str, str]],
 ) -> list[ClaimVerdict]:
     if not llm_rows:
-        return base_rows
+        return [
+            _insufficient_verdict(
+                base,
+                rationale="LLM NLI returned no valid verdict; evidence remains insufficient.",
+            )
+            for base in base_rows
+        ]
     evidence_map = {
-        str(item.get("ref") or "").strip(): _compact_snippet(
-            str(item.get("text") or ""),
-            max_len=180,
-        )
+        str(item.get("ref") or "").strip(): str(item.get("text") or "")
         for item in evidence_rows
+        if str(item.get("ref") or "").strip()
     }
+    min_confidence = max(0.0, min(1.0, float(settings.rag_nli_min_confidence)))
     merged: list[ClaimVerdict] = []
     for idx, base in enumerate(base_rows):
         override = llm_rows.get(idx)
         if not override:
-            merged.append(base)
+            merged.append(
+                _insufficient_verdict(
+                    base,
+                    rationale="LLM NLI omitted this claim; evidence remains insufficient.",
+                )
+            )
             continue
         status = str(override.get("support_status") or base.support_status).strip().lower()
-        evidence_ref = str(override.get("evidence_ref") or "").strip() or base.evidence_ref
-        evidence_snippet = evidence_map.get(evidence_ref or "", base.evidence_snippet or "")
+        confidence = _clamp_confidence(override.get("confidence"), default=base.confidence)
+        evidence_ref = str(override.get("evidence_ref") or "").strip() or None
+        evidence_quote = str(override.get("evidence_quote") or "").strip()
+        evidence_text = evidence_map.get(evidence_ref or "", "")
+        valid_grounding = bool(
+            evidence_ref and evidence_text and evidence_quote and evidence_quote in evidence_text
+        )
+        if status in {"supported", "contradicted"} and (
+            not valid_grounding or confidence < min_confidence
+        ):
+            status = "insufficient"
+            evidence_ref = None
+            evidence_quote = ""
+        evidence_snippet = _compact_snippet(evidence_quote, max_len=180) if evidence_quote else ""
         rationale = str(override.get("rationale") or "").strip() or base.rationale
+        if status == "insufficient" and not valid_grounding:
+            rationale = "LLM NLI verdict lacked a valid evidence reference and exact quote."
+        elif status == "insufficient" and confidence < min_confidence:
+            rationale = "LLM NLI confidence was below the configured evidence threshold."
         merged.append(
             ClaimVerdict(
                 claim=base.claim,
                 claim_type=base.claim_type,
                 nli_label=status,
                 support_status=status,
-                confidence=_clamp_confidence(override.get("confidence"), default=base.confidence),
+                confidence=confidence,
                 overlap_score=base.overlap_score,
                 evidence_ref=evidence_ref,
                 evidence_snippet=evidence_snippet,
@@ -431,7 +501,7 @@ def build_verification_matrix(
         "rows": rows,
         "summary": summary,
         "contradiction_summary": contradiction,
-}
+    }
 
 
 def verify_claims(
@@ -449,9 +519,7 @@ def verify_claims(
     if not allow_llm:
         return base_rows
 
-    timeout_ms = int(
-        settings.rag_nli_llm_timeout_ms if llm_timeout_ms is None else llm_timeout_ms
-    )
+    timeout_ms = int(settings.rag_nli_llm_timeout_ms if llm_timeout_ms is None else llm_timeout_ms)
     timeout_ms = max(100, timeout_ms)
     try:
         llm_rows = _llm_verify_claims(
@@ -465,8 +533,14 @@ def verify_claims(
             llm_rows=llm_rows,
             evidence_rows=evidence_rows,
         )
-    except Exception:
-        return base_rows
+    except Exception:  # noqa: BLE001 - any provider/parse failure must fail closed
+        return [
+            _insufficient_verdict(
+                base,
+                rationale="LLM NLI was unavailable; evidence remains insufficient.",
+            )
+            for base in base_rows
+        ]
 
 
 def summarize_verification_matrix(
@@ -479,7 +553,9 @@ def summarize_verification_matrix(
         inferred_total = max(int(total_claims), int(summary.get("total_claims") or 0))
         supported = int(summary.get("supported_claims") or 0)
         contradicted = int(summary.get("contradicted_claims") or 0)
-        unsupported = max(inferred_total - supported - contradicted, int(summary.get("unsupported_claims") or 0))
+        unsupported = max(
+            inferred_total - supported - contradicted, int(summary.get("unsupported_claims") or 0)
+        )
         support_ratio = supported / max(inferred_total, 1) if inferred_total > 0 else 0.0
         summary = {
             **summary,

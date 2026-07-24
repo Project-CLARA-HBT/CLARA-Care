@@ -1780,6 +1780,7 @@ def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
 
 def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
     normalized = _canonicalize_research_payload_contract(normalized)
+    rich_citations = normalized.get("citations")
     metadata_obj = (
         normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
     )
@@ -1843,7 +1844,10 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
         source_errors=source_errors,
         fallback_used=fallback_used,
     )
-    return attach_attribution(normalized, attribution=attribution)
+    response = attach_attribution(normalized, attribution=attribution)
+    if isinstance(rich_citations, list):
+        response["citations"] = rich_citations
+    return response
 
 
 def _coerce_personal_mode(value: Any) -> bool:
