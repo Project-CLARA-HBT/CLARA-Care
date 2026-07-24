@@ -307,6 +307,11 @@ class Settings(BaseSettings):
         validation_alias="ML_SERVICE_TIMEOUT_SECONDS",
         gt=0,
     )
+    ml_scribe_timeout_seconds: float = Field(
+        default=180.0,
+        validation_alias="ML_SCRIBE_TIMEOUT_SECONDS",
+        gt=0,
+    )
     ml_research_timeout_seconds: float = Field(
         default=300.0,
         validation_alias="ML_RESEARCH_TIMEOUT_SECONDS",

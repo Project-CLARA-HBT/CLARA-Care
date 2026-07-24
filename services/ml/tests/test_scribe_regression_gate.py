@@ -34,7 +34,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from clara_ml.config import settings
-from clara_ml.main import app
+from clara_ml.main import _build_scribe_audio_client, app
 
 client = TestClient(app)
 
@@ -101,6 +101,68 @@ def test_legacy_transcribe_route_still_mounted() -> None:
 
     resp = client.post("/v1/scribe/transcribe", data={"language": "vi"})
     assert resp.status_code == 422, resp.text
+
+
+def test_batch_transcribe_client_uses_asr_timeout_without_retry() -> None:
+    """CPU Whisper gets its dedicated budget without duplicate decode attempts."""
+
+    resolved = _build_scribe_audio_client()
+
+    assert resolved._timeout_seconds == max(
+        settings.deepseek_timeout_seconds,
+        settings.scribe_asr_timeout_seconds,
+    )
+    assert resolved._retries_per_base == 0
+
+
+def test_batch_transcribe_uses_dedicated_audio_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The mounted batch route uses the bounded Scribe client and returns its text."""
+
+    class _AudioClient:
+        @staticmethod
+        def transcribe_audio(**kwargs) -> str:  # noqa: ANN003
+            assert kwargs["audio_bytes"] == b"audio-bytes"
+            assert kwargs["model"] == settings.deepseek_audio_model
+            return "Bệnh nhân đau đầu nhẹ."
+
+    monkeypatch.setattr(
+        "clara_ml.main._build_scribe_audio_client",
+        lambda: _AudioClient(),
+    )
+    response = client.post(
+        "/v1/scribe/transcribe",
+        files={"audio_file": ("encounter.wav", b"audio-bytes", "audio/wav")},
+        data={"language": "vi"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["text"] == "Bệnh nhân đau đầu nhẹ."
+    assert response.json()["no_speech_detected"] is False
+
+
+def test_batch_transcribe_returns_typed_no_speech_for_valid_empty_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _SilentAudioClient:
+        @staticmethod
+        def transcribe_audio(**kwargs) -> str:  # noqa: ANN003,ARG004
+            raise RuntimeError("DeepSeek transcription result is empty")
+
+    monkeypatch.setattr(
+        "clara_ml.main._build_scribe_audio_client",
+        lambda: _SilentAudioClient(),
+    )
+    response = client.post(
+        "/v1/scribe/transcribe",
+        files={"audio_file": ("silence.wav", b"valid-silent-audio", "audio/wav")},
+        data={"language": "vi"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["text"] == ""
+    assert response.json()["no_speech_detected"] is True
 
 
 def _wave2_flags_off(monkeypatch: pytest.MonkeyPatch) -> None:

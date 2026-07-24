@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from clara_api.core.config import get_settings
 from clara_api.main import app
 
 client = TestClient(app)
@@ -41,6 +42,7 @@ def test_scribe_transcribe_accepts_webm_with_codec_param(monkeypatch) -> None:
     class _MockAsyncClient:
         def __init__(self, timeout: float):
             self.timeout = timeout
+            assert timeout == get_settings().ml_scribe_timeout_seconds
 
         async def __aenter__(self):
             return self
@@ -80,4 +82,3 @@ def test_scribe_transcribe_rejects_unsupported_mime_with_param() -> None:
     )
     assert response.status_code == 415
     assert "Unsupported audio content type" in response.json()["detail"]
-

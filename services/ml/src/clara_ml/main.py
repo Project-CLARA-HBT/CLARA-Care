@@ -12,6 +12,7 @@ import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from clara_ml import admin_rag_handlers
 from clara_ml.agents.careguard import run_careguard_analyze
@@ -195,6 +196,33 @@ def _build_deepseek_client() -> DeepSeekClient:
         fallback_model=settings.deepseek_fallback_model,
         timeout_seconds=settings.deepseek_timeout_seconds,
         retries_per_base=settings.deepseek_retries_per_base,
+        retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+        max_concurrency=settings.llm_global_max_concurrency,
+        min_interval_seconds=settings.llm_global_min_interval_seconds,
+        request_jitter_seconds=settings.llm_global_jitter_seconds,
+        audio_base_url=settings.deepseek_audio_base_url,
+    )
+
+
+def _build_scribe_audio_client() -> DeepSeekClient:
+    """Build the batch Scribe client with the ASR-specific latency budget.
+
+    Local CPU Whisper routinely takes longer than a text-model request.  The
+    streaming/provider path already uses ``scribe_asr_timeout_seconds`` and
+    disables duplicate retries; keep the legacy batch endpoint on the same
+    contract instead of inheriting the shorter generic LLM timeout.
+    """
+
+    return DeepSeekClient(
+        api_key=settings.deepseek_api_key,
+        base_url=settings.deepseek_base_url,
+        model=settings.deepseek_model,
+        fallback_model=settings.deepseek_fallback_model,
+        timeout_seconds=max(
+            float(settings.deepseek_timeout_seconds),
+            float(settings.scribe_asr_timeout_seconds),
+        ),
+        retries_per_base=0,
         retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
         max_concurrency=settings.llm_global_max_concurrency,
         min_interval_seconds=settings.llm_global_min_interval_seconds,
@@ -1580,9 +1608,13 @@ async def scribe_transcribe(
         or "Medical consultation audio in Vietnamese. Return complete transcript text only."
     )
 
+    no_speech_detected = False
     try:
         started_at = perf_counter()
-        transcript_text = _build_deepseek_client().transcribe_audio(
+        # ``DeepSeekClient`` uses blocking HTTP.  Keep the ML event loop
+        # responsive while CPU Whisper performs a potentially long decode.
+        transcript_text = await run_in_threadpool(
+            _build_scribe_audio_client().transcribe_audio,
             audio_bytes=audio_bytes,
             filename=audio_file.filename or "scribe-audio.webm",
             content_type=audio_content_type,
@@ -1592,10 +1624,23 @@ async def scribe_transcribe(
         )
         processing_ms = max((perf_counter() - started_at) * 1000.0, 0.0)
     except (RuntimeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=f"Scribe transcription failed: {exc}") from exc
+        # This exact error is emitted only after the ASR upstream returned a
+        # valid JSON payload whose transcript was empty. Treat confirmed
+        # silence/no-speech as a typed successful result; all transport,
+        # provider, parsing, and decode failures remain 502.
+        if str(exc) == "DeepSeek transcription result is empty":
+            transcript_text = ""
+            no_speech_detected = True
+            processing_ms = max((perf_counter() - started_at) * 1000.0, 0.0)
+        else:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Scribe transcription failed: {exc}",
+            ) from exc
 
     return {
         "text": transcript_text,
+        "no_speech_detected": no_speech_detected,
         "language": resolved_language or "",
         "model_used": settings.deepseek_audio_model,
         "chunk_index": chunk_index,

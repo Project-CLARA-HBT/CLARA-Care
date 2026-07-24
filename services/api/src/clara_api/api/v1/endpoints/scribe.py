@@ -417,7 +417,10 @@ async def _call_scribe_transcribe_ml(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=settings.ml_service_timeout_seconds) as client:
+        # The ML Scribe endpoint can spend up to its ASR-specific CPU budget
+        # decoding audio.  Keep the outer API timeout above that inner budget;
+        # the generic 60-second ML timeout can cancel a healthy Whisper decode.
+        async with httpx.AsyncClient(timeout=settings.ml_scribe_timeout_seconds) as client:
             request_kwargs: dict[str, Any] = {"data": data, "files": files}
             if headers:
                 request_kwargs["headers"] = headers
