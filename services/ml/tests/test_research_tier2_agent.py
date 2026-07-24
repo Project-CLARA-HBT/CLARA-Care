@@ -2851,3 +2851,78 @@ def test_resolve_report_style_profile_by_mode() -> None:
     assert isinstance(deep_profile["must_do"], list) and deep_profile["must_do"]
     assert isinstance(beta_profile["avoid"], list) and beta_profile["avoid"]
     assert any("contradiction" in str(item).lower() for item in beta_profile["must_do"])
+
+
+def test_deep_aggregate_keeps_only_final_llm_floor_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tier2.settings, "rag_min_results", 3)
+    final_rows = [
+        {
+            "id": f"final-{index}",
+            "source": "pubmed",
+            "text": f"Direct DAPA-CKD or EMPA-KIDNEY evidence {index}",
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{index}/",
+        }
+        for index in range(1, 4)
+    ]
+    earlier_off_target = [
+        {
+            "id": "pass-diet",
+            "source": "pubmed",
+            "text": "Mediterranean diet background",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/999/",
+        }
+    ]
+    rag_result = SimpleNamespace(
+        retrieved_context=final_rows,
+        context_debug={
+            "retrieval_trace": {
+                "hybrid": {
+                    "index_phase": {
+                        "ranking_fallback": "llm_dominant_degraded",
+                        "rerank": {
+                            "neural": {
+                                "rerank_llm_used": True,
+                                "rerank_llm_min_score": 0.55,
+                                "rerank_llm_rejected_count": 7,
+                                "rerank_llm_unscored_count": 423,
+                            }
+                        },
+                    }
+                }
+            }
+        },
+    )
+
+    merged, policy = tier2._aggregate_retrieved_context_after_final_gate(
+        rag_result,
+        [earlier_off_target],
+        research_mode="deep",
+    )
+
+    assert [row["id"] for row in merged] == ["final-1", "final-2", "final-3"]
+    assert policy["name"] == "final_llm_relevance_floor"
+    assert policy["applied"] is True
+    assert policy["deep_pass_context_count"] == 1
+    assert policy["effective_merged_count"] == 3
+
+
+def test_deep_aggregate_retains_pass_context_when_final_gate_is_not_verified(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tier2.settings, "rag_min_results", 3)
+    rag_result = SimpleNamespace(
+        retrieved_context=[{"id": "final-1", "source": "pubmed"}],
+        context_debug={"retrieval_trace": {}},
+    )
+
+    merged, policy = tier2._aggregate_retrieved_context_after_final_gate(
+        rag_result,
+        [[{"id": "pass-1", "source": "europepmc"}]],
+        research_mode="deep",
+    )
+
+    assert [row["id"] for row in merged] == ["final-1", "pass-1"]
+    assert policy["applied"] is False
+    assert policy["reason"] == "final_context_below_minimum"

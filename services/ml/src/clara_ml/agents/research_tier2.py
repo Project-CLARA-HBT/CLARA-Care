@@ -6715,6 +6715,103 @@ def _merge_retrieved_context(
     return merged
 
 
+def _final_context_passed_llm_relevance_floor(
+    rag_result: Any,
+    *,
+    research_mode: str,
+) -> tuple[bool, dict[str, Any]]:
+    """Use only the final evidence set when its LLM relevance gate succeeded.
+
+    Deep retrieval passes intentionally explore broad facets. They remain in the
+    audit trace, but must not reintroduce documents rejected by the final,
+    original-question LLM relevance gate.
+    """
+
+    context = (
+        rag_result.retrieved_context
+        if isinstance(getattr(rag_result, "retrieved_context", None), list)
+        else []
+    )
+    policy = {
+        "name": "merge_all_passes",
+        "applied": False,
+        "final_context_count": len(context),
+        "minimum_context_count": max(int(settings.rag_min_results), 1),
+        "reason": "final_llm_floor_not_verified",
+    }
+    if research_mode not in {"deep", "deep_beta"}:
+        policy["reason"] = "not_deep_mode"
+        return False, policy
+    if len(context) < policy["minimum_context_count"]:
+        policy["reason"] = "final_context_below_minimum"
+        return False, policy
+
+    context_debug = (
+        rag_result.context_debug
+        if isinstance(getattr(rag_result, "context_debug", None), dict)
+        else {}
+    )
+    retrieval_debug = (
+        context_debug.get("retrieval_trace")
+        if isinstance(context_debug.get("retrieval_trace"), dict)
+        else {}
+    )
+    for path in ("hybrid", "internal"):
+        retriever_trace = retrieval_debug.get(path)
+        if not isinstance(retriever_trace, dict):
+            continue
+        index_phase = retriever_trace.get("index_phase")
+        if not isinstance(index_phase, dict):
+            continue
+        rerank = index_phase.get("rerank")
+        rerank = rerank.get("neural") if isinstance(rerank, dict) else None
+        if not isinstance(rerank, dict):
+            continue
+        if not bool(rerank.get("rerank_llm_used")):
+            continue
+        if str(index_phase.get("ranking_fallback") or "") != "llm_dominant_degraded":
+            continue
+        policy.update(
+            {
+                "name": "final_llm_relevance_floor",
+                "applied": True,
+                "reason": "final_context_passed_llm_relevance_floor",
+                "trace_path": path,
+                "llm_min_score": rerank.get("rerank_llm_min_score"),
+                "llm_rejected_count": rerank.get("rerank_llm_rejected_count"),
+                "llm_unscored_count": rerank.get("rerank_llm_unscored_count"),
+            }
+        )
+        return True, policy
+    return False, policy
+
+
+def _aggregate_retrieved_context_after_final_gate(
+    rag_result: Any,
+    deep_pass_contexts: list[list[dict[str, Any]]],
+    *,
+    research_mode: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    final_context = (
+        rag_result.retrieved_context
+        if isinstance(getattr(rag_result, "retrieved_context", None), list)
+        else []
+    )
+    final_context_only, policy = _final_context_passed_llm_relevance_floor(
+        rag_result,
+        research_mode=research_mode,
+    )
+    merged = _merge_retrieved_context(
+        final_context,
+        [] if final_context_only else deep_pass_contexts,
+    )
+    policy["deep_pass_context_count"] = sum(
+        len(rows) for rows in deep_pass_contexts if isinstance(rows, list)
+    )
+    policy["effective_merged_count"] = len(merged)
+    return merged, policy
+
+
 def _is_drug_interaction_query(topic: str) -> bool:
     return bool(analyze_query_profile(topic).get("is_ddi_query"))
 
@@ -10602,7 +10699,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         retrieval_trace["chain_status"] = deep_beta_chain_status
     flow_events.extend(_normalize_retrieval_events(rag_result.flow_events))
 
-    merged_context = _merge_retrieved_context(rag_result.retrieved_context, deep_pass_contexts)
+    merged_context, aggregate_context_policy = _aggregate_retrieved_context_after_final_gate(
+        rag_result,
+        deep_pass_contexts,
+        research_mode=research_mode,
+    )
+    retrieval_trace["aggregate_context_policy"] = aggregate_context_policy
     filtered_context = _filter_context_for_topic(topic, merged_context)
     if filtered_context:
         effective_context = filtered_context
