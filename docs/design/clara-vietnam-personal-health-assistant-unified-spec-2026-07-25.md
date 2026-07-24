@@ -2,11 +2,11 @@
 
 ## Unified Product, UX, Clinical Safety and Technical Specification
 
-Status: implementation-ready product specification  
-Version: 1.1  
-Date: 2026-07-25  
-Primary market: Viet Nam  
-Primary language: Vietnamese  
+Status: implementation-ready product specification
+Version: 1.1
+Date: 2026-07-25
+Primary market: Viet Nam
+Primary language: Vietnamese
 Companion decision report:
 [Market Positioning Decision Report](../reports/clara-vietnam-market-positioning-decision-report-2026-07-25.md)
 

@@ -2,12 +2,12 @@
 
 ## Technical Design
 
-Status: implementation-ready  
-Version: 1.0  
-Date: 2026-07-25  
-Applies to: CLARA Flutter mobile app and FastAPI platform  
+Status: implementation-ready
+Version: 1.0
+Date: 2026-07-25
+Applies to: CLARA Flutter mobile app and FastAPI platform
 Parent specification:
-[CLARA Viet Nam Personal Health Assistant](clara-vietnam-personal-health-assistant-unified-spec-2026-07-25.md)  
+[CLARA Viet Nam Personal Health Assistant](clara-vietnam-personal-health-assistant-unified-spec-2026-07-25.md)
 Execution backlog:
 [Wearable and Health Data Implementation Task List](clara-wearable-health-integration-task-list-2026-07-25.md)
 
@@ -568,4 +568,3 @@ must not emulate a vendor response or substitute fake production data.
 - [Wear OS Health Services](https://developer.android.com/health-and-fitness/health-services)
 - [Fitbit Web API authorization](https://dev.fitbit.com/build/reference/web-api/authorization/)
 - [Fitbit Web API explorer](https://dev.fitbit.com/build/reference/web-api/explore/)
-

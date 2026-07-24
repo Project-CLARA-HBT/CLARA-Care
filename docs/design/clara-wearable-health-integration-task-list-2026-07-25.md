@@ -2,11 +2,11 @@
 
 ## Implementation Task List
 
-Status: ready for estimation and assignment  
-Version: 1.0  
-Date: 2026-07-25  
+Status: ready for estimation and assignment
+Version: 1.0
+Date: 2026-07-25
 Technical design:
-[Wearable and Health Data Integration Technical Design](clara-wearable-health-integration-technical-design-2026-07-25.md)  
+[Wearable and Health Data Integration Technical Design](clara-wearable-health-integration-technical-design-2026-07-25.md)
 Parent specification:
 [CLARA Viet Nam Personal Health Assistant](clara-vietnam-personal-health-assistant-unified-spec-2026-07-25.md)
 
@@ -1110,4 +1110,3 @@ Start in this order:
 
 This sequence produces a safe vertical Health Connect slice while Huawei vendor
 access proceeds in parallel, without prematurely building Fitbit or Wear OS.
-

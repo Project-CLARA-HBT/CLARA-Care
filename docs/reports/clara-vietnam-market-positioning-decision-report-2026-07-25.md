@@ -1,9 +1,9 @@
 # CLARA Viet Nam — Market Positioning Decision Report
 
-Status: final positioning decision  
-Date: 2026-07-25  
-Primary market: Viet Nam  
-Expansion horizon: Southeast Asia  
+Status: final positioning decision
+Date: 2026-07-25
+Primary market: Viet Nam
+Expansion horizon: Southeast Asia
 Companion research:
 [Deep Market Research Dossier](../design/clara-market-research-positioning-and-requirements-2026-07-25.md)
 

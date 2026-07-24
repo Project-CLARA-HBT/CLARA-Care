@@ -1,9 +1,9 @@
 # CLARA Personal Health — Deep Market Research Dossier
 
-Status: research complete; product changes intentionally not yet committed  
-Date: 2026-07-25  
-Decision horizon: 2026-2029  
-Primary market: Viet Nam, with a Southeast Asia expansion path  
+Status: research complete; product changes intentionally not yet committed
+Date: 2026-07-25
+Decision horizon: 2026-2029
+Primary market: Viet Nam, with a Southeast Asia expansion path
 Audience: Founders, Product, Clinical Safety, Engineering, ML, Regulatory,
 Partnerships and Growth
 
@@ -513,30 +513,30 @@ quarterly.
 Based on competitor usage research, Vietnamese market structure and health-literacy
 evidence, the strongest jobs are:
 
-1. **Something changed. Is it important?**  
+1. **Something changed. Is it important?**
    Interpret a symptom, result, prescription, discharge paper or wearable signal
    in personal context.
 
-2. **What is the smallest safe next step?**  
+2. **What is the smallest safe next step?**
    Decide whether to observe, self-care, contact a clinician, repeat a measurement,
    obtain a test or seek urgent care.
 
-3. **Help me take care of someone else.**  
+3. **Help me take care of someone else.**
    Coordinate medicines, records, appointments and warning signs for a child,
    parent or partner.
 
-4. **Help me use a short medical visit well.**  
+4. **Help me use a short medical visit well.**
    Reconstruct the timeline, identify the unresolved questions and leave with a
    clear plan.
 
-5. **Do not let this get lost.**  
+5. **Do not let this get lost.**
    Track a new medicine, test result, referral, follow-up or warning sign until the
    state is known.
 
-6. **Tell me what changed over time, not every number.**  
+6. **Tell me what changed over time, not every number.**
    Surface meaningful deltas and explain uncertainty.
 
-7. **Help me choose a feasible local path.**  
+7. **Help me choose a feasible local path.**
    Consider location, price, insurance, language, availability and caregiving
    constraints.
 
@@ -804,24 +804,24 @@ Implications:
 
 Ranked for validation:
 
-1. **B2B2C sponsored household benefit**  
+1. **B2B2C sponsored household benefit**
    Employers, providers, insurers or membership programs fund the core service.
    Advantage: trusted distribution and lower consumer acquisition cost.
 
-2. **Provider/lab/pharmacy continuity layer**  
+2. **Provider/lab/pharmacy continuity layer**
    A partner pays for completed follow-up, medication reconciliation, visit
    preparation or appropriate escalation. Contracts should be linked to engagement
    or outcome measures, not generated messages.
 
-3. **Freemium household subscription**  
+3. **Freemium household subscription**
    Free interpretation and emergency guidance; paid family coordination, advanced
    longitudinal review, service concierge and clinician review.
 
-4. **Transactional care navigation**  
+4. **Transactional care navigation**
    Booking or service revenue can subsidize the product, but ranking must remain
    clinically neutral and disclose commercial relationships.
 
-5. **Research/evidence professional tier**  
+5. **Research/evidence professional tier**
    CLARA Research can be sold separately to researchers and clinicians. It should
    not subsidize unsafe consumer medical claims.
 
@@ -862,24 +862,24 @@ These claims are weak, imprecise or unsafe.
 
 The proposed wedge has five mutually reinforcing parts:
 
-1. **Vietnamese health-document intelligence**  
+1. **Vietnamese health-document intelligence**
    High-accuracy extraction, normalization and plain-language interpretation of
    local prescriptions, discharge summaries, lab formats and photographed paper.
 
-2. **Household care graph**  
+2. **Household care graph**
    Consent-aware relationships among people, medicines, providers, episodes,
    responsibilities and handoffs—without merging identities or exposing data.
 
-3. **Local action graph**  
+3. **Local action graph**
    A current map of appropriate providers, services, tests, pharmacies, prices,
    insurance/benefit constraints, access conditions and completion callbacks.
 
-4. **Recommendation accountability**  
+4. **Recommendation accountability**
    Every recommendation states why it applies, what evidence and personal facts it
    uses, what could change it, when it expires and how success or harm will be
    observed.
 
-5. **Outcome network**  
+5. **Outcome network**
    The system learns from confirmed completion, clinician correction, repeated
    results and patient-reported benefit—not from engagement alone.
 
