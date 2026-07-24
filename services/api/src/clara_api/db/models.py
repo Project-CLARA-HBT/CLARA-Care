@@ -869,6 +869,261 @@ class PhrObservation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ConnectorAccount(Base):
+    """A user-authorized, profile-scoped external health data source."""
+
+    __tablename__ = "connector_accounts"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "provider",
+            "external_subject_ref",
+            name="uq_connector_account_profile_provider_subject",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), index=True)
+    external_subject_ref: Mapped[str] = mapped_column(String(255), default="")
+    display_label: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(32), default="available", index=True)
+    scopes_json: Mapped[list[str] | dict | None] = mapped_column(JSON, nullable=True)
+    data_types_json: Mapped[list[str] | dict | None] = mapped_column(JSON, nullable=True)
+    token_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    token_key_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ConnectorConsent(Base):
+    """Append-only connector data-type and purpose grant."""
+
+    __tablename__ = "connector_consents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connector_id: Mapped[int] = mapped_column(
+        ForeignKey("connector_accounts.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    consent_version: Mapped[str] = mapped_column(String(32))
+    purposes_json: Mapped[list[str] | dict] = mapped_column(JSON)
+    data_types_json: Mapped[list[str] | dict] = mapped_column(JSON)
+    access_direction: Mapped[str] = mapped_column(String(16), default="read")
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ConnectorSyncCursor(Base):
+    __tablename__ = "connector_sync_cursors"
+    __table_args__ = (
+        UniqueConstraint(
+            "connector_id", "data_type", name="uq_connector_sync_cursor_type"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connector_id: Mapped[int] = mapped_column(
+        ForeignKey("connector_accounts.id", ondelete="CASCADE"), index=True
+    )
+    data_type: Mapped[str] = mapped_column(String(64))
+    cursor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    window_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    window_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ConnectorImportBatch(Base):
+    __tablename__ = "connector_import_batches"
+    __table_args__ = (
+        UniqueConstraint(
+            "connector_id", "idempotency_key", name="uq_connector_import_idempotency"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connector_id: Mapped[int] = mapped_column(
+        ForeignKey("connector_accounts.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128))
+    payload_hash: Mapped[str] = mapped_column(String(72))
+    status: Mapped[str] = mapped_column(String(24), default="received", index=True)
+    accepted_count: Mapped[int] = mapped_column(Integer, default=0)
+    rejected_count: Mapped[int] = mapped_column(Integer, default=0)
+    upserted_count: Mapped[int] = mapped_column(Integer, default=0)
+    tombstoned_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WearableObservation(Base):
+    __tablename__ = "wearable_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "connector_id",
+            "data_origin",
+            "provider_record_id",
+            name="uq_wearable_observation_provider_record",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    connector_id: Mapped[int] = mapped_column(
+        ForeignKey("connector_accounts.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), index=True)
+    provider_record_id: Mapped[str] = mapped_column(String(512))
+    data_origin: Mapped[str] = mapped_column(String(255))
+    record_type: Mapped[str] = mapped_column(String(64), index=True)
+    value_json: Mapped[dict] = mapped_column(JSON)
+    observed_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    observed_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    zone_offset_start: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    zone_offset_end: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    device_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recording_method: Mapped[str] = mapped_column(String(24), default="unknown")
+    quality_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    provider_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    raw_hash: Mapped[str] = mapped_column(String(72))
+    version_no: Mapped[int] = mapped_column(Integer, default=1)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class WearableObservationVersion(Base):
+    """Append-only prior canonical observation value."""
+
+    __tablename__ = "wearable_observation_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "observation_id", "version_no", name="uq_wearable_observation_version"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    observation_id: Mapped[int] = mapped_column(
+        ForeignKey("wearable_observations.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer)
+    snapshot_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WearableDailyAggregate(Base):
+    __tablename__ = "wearable_daily_aggregates"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "record_type",
+            "local_date",
+            name="uq_wearable_daily_aggregate",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    record_type: Mapped[str] = mapped_column(String(64), index=True)
+    local_date: Mapped[date] = mapped_column(Date, index=True)
+    value_json: Mapped[dict] = mapped_column(JSON)
+    primary_origin: Mapped[str] = mapped_column(String(255))
+    coverage_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    policy_version: Mapped[str] = mapped_column(String(32))
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class WearableAggregateContribution(Base):
+    __tablename__ = "wearable_aggregate_contributions"
+    __table_args__ = (
+        UniqueConstraint(
+            "aggregate_id",
+            "observation_id",
+            name="uq_wearable_aggregate_contribution",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    aggregate_id: Mapped[int] = mapped_column(
+        ForeignKey("wearable_daily_aggregates.id", ondelete="CASCADE"), index=True
+    )
+    observation_id: Mapped[int] = mapped_column(
+        ForeignKey("wearable_observations.id", ondelete="CASCADE"), index=True
+    )
+
+
+class ConnectorAuditEvent(Base):
+    """PII-minimized connector control and purpose-use audit."""
+
+    __tablename__ = "connector_audit_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connector_id: Mapped[int | None] = mapped_column(
+        ForeignKey("connector_accounts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    profile_id: Mapped[int | None] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    purpose: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConnectorOAuthTransaction(Base):
+    __tablename__ = "connector_oauth_transactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), index=True)
+    state_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    pkce_verifier_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    redirect_uri: Mapped[str] = mapped_column(String(1024))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class PhrReminder(Base):
     """Medication reminder / refill / caregiver-nudge configuration."""
 
