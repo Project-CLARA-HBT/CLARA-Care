@@ -222,7 +222,11 @@ def init_db_schema() -> None:
         )
     except PhrMigrationGuardError as exc:
         raise RuntimeError(str(exc)) from exc
-    Base.metadata.create_all(bind=engine)
+    # Production schema changes are owned exclusively by Alembic. Keeping
+    # create_all in local/test preserves their convenient empty-DB bootstrap
+    # without allowing a production startup to race ahead of a migration.
+    if settings.environment.strip().lower() != "production":
+        Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
     start_research_job_recovery()

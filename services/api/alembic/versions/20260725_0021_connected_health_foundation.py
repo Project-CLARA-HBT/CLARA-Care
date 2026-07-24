@@ -14,12 +14,40 @@ down_revision = "20260722_0020"
 branch_labels = None
 depends_on = None
 
+_TABLES = {
+    "connector_accounts",
+    "connector_consents",
+    "connector_sync_cursors",
+    "connector_import_batches",
+    "wearable_observations",
+    "wearable_observation_versions",
+    "wearable_daily_aggregates",
+    "wearable_aggregate_contributions",
+    "connector_audit_events",
+    "connector_oauth_transactions",
+}
+
 
 def _fk(name: str, target: str, ondelete: str = "CASCADE") -> sa.ForeignKey:
     return sa.ForeignKey(target, name=name, ondelete=ondelete)
 
 
 def upgrade() -> None:
+    existing = set(sa.inspect(op.get_bind()).get_table_names())
+    adopted = existing & _TABLES
+    if adopted:
+        if adopted == _TABLES:
+            # Older production startup code called Base.metadata.create_all
+            # after checking the Alembic-managed PHR schema. That could create
+            # this complete model set before the migration command ran. Adopt
+            # only a complete set; a partial set must be repaired explicitly.
+            return
+        missing = ", ".join(sorted(_TABLES - adopted))
+        raise RuntimeError(
+            "partial connected-health schema detected; "
+            f"refusing unsafe automatic adoption (missing: {missing})"
+        )
+
     op.create_table(
         "connector_accounts",
         sa.Column("id", sa.Integer(), primary_key=True),

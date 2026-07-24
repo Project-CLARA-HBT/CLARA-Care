@@ -65,6 +65,9 @@ def test_connected_health_migration_roundtrip(engine: sa.Engine) -> None:
         context = MigrationContext.configure(connection)
         with Operations.context(context):
             migration.upgrade()
+            # Production historically ran metadata.create_all before Alembic.
+            # A complete pre-existing model set must be safely adopted.
+            migration.upgrade()
         connection.commit()
 
         inspector = sa.inspect(connection)
@@ -87,3 +90,17 @@ def test_connected_health_migration_roundtrip(engine: sa.Engine) -> None:
         tables = set(sa.inspect(connection).get_table_names())
         assert not (_CONNECTED_HEALTH_TABLES & tables)
         assert {"users", "phr_profiles"} <= tables
+
+
+def test_connected_health_migration_rejects_partial_adoption(engine: sa.Engine) -> None:
+    migration = _load_migration()
+
+    with engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE connector_accounts (id INTEGER PRIMARY KEY)"))
+
+    with engine.connect() as connection:
+        context = MigrationContext.configure(connection)
+        with Operations.context(context), pytest.raises(
+            RuntimeError, match="partial connected-health schema"
+        ):
+            migration.upgrade()
