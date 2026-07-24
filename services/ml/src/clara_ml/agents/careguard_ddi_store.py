@@ -72,6 +72,7 @@ class DrugBankDdiStore:
         manifest_version = self._read_manifest_version() or ""
         database_version = self._existing_db_version() or ""
         pair_count = 0
+        pair_table_readable = False
         if self._db_path.exists():
             try:
                 conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
@@ -80,15 +81,23 @@ class DrugBankDdiStore:
                         "SELECT value FROM meta WHERE key = 'pair_count'"
                     ).fetchone()
                     pair_count = int(row[0]) if row and str(row[0]).isdigit() else 0
+                    # Validate the interaction table itself, not only its
+                    # self-reported metadata. ``LIMIT 1`` is constant-time on
+                    # the indexed table and catches a corrupt/incomplete DB
+                    # whose meta table still looks healthy.
+                    conn.execute("SELECT 1 FROM ddi_pairs LIMIT 1").fetchone()
+                    pair_table_readable = True
                 finally:
                     conn.close()
             except (sqlite3.Error, OSError, ValueError):
                 pair_count = 0
+                pair_table_readable = False
 
         ready = bool(
             manifest_version
             and database_version == manifest_version
             and pair_count > 0
+            and pair_table_readable
         )
         if ready:
             state = "ready"

@@ -90,6 +90,14 @@ def drugbank_status(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DrugBank readiness is not reported by the ML service",
         )
+    if readiness.get("required") is True and readiness.get("state") != "ready":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "drugbank_required_unavailable",
+                "readiness": readiness,
+            },
+        )
     return readiness
 
 DRUG_ALIAS_MAP: dict[str, list[str]] = {
@@ -899,12 +907,26 @@ def _attach_careguard_attribution(
     metadata_obj = metadata if isinstance(metadata, dict) else {}
     source_used = normalize_source_used(metadata_obj.get("source_used"))
     source_errors = normalize_source_errors(metadata_obj.get("source_errors"))
-    sources = _resolve_careguard_sources(
-        source_used=source_used,
-        external_ddi_enabled=external_ddi_enabled,
+    ddi_status = response.get("ddi_status")
+    if not isinstance(ddi_status, dict):
+        metadata_ddi_status = metadata_obj.get("ddi_status")
+        ddi_status = metadata_ddi_status if isinstance(metadata_ddi_status, dict) else {}
+    ddi_unavailable = (
+        ddi_status.get("state") == "unavailable"
+        and ddi_status.get("conclusion_available") is False
+    )
+    sources = (
+        []
+        if ddi_unavailable
+        else _resolve_careguard_sources(
+            source_used=source_used,
+            external_ddi_enabled=external_ddi_enabled,
+        )
     )
     source_ids = {str(source.get("id") or "") for source in sources}
-    if source_ids == {"drugbank"}:
+    if ddi_unavailable:
+        mode = "unavailable"
+    elif source_ids == {"drugbank"}:
         mode = "drugbank_only"
     elif "local_rules" in source_ids and len(source_ids) > 1:
         mode = "external_plus_local"

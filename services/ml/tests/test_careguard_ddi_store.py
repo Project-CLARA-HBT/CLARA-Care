@@ -17,10 +17,14 @@ integration into ``run_careguard_analyze`` via the
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 from clara_ml.agents import careguard
 from clara_ml.agents.careguard_ddi_store import DrugBankDdiStore
+from clara_ml.config import Settings
 
 
 def _write_shards(root: Path, *, version: str = "drugbank-test-1") -> Path:
@@ -62,6 +66,16 @@ def _store_for(drugbank_dir: Path) -> DrugBankDdiStore:
         drugbank_dir=drugbank_dir,
         manifest_path=drugbank_dir / "manifest.json",
     )
+
+
+def test_drugbank_required_config_defaults_off_and_accepts_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CAREGUARD_DRUGBANK_REQUIRED", raising=False)
+    assert Settings(_env_file=None).careguard_drugbank_required is False
+
+    monkeypatch.setenv("CAREGUARD_DRUGBANK_REQUIRED", "true")
+    assert Settings(_env_file=None).careguard_drugbank_required is True
 
 
 def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
@@ -117,6 +131,25 @@ def test_store_degrades_on_malformed_shard(tmp_path: Path) -> None:
 
     store = _store_for(drugbank_dir)
     assert store.ensure_built() is None
+
+
+def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
+    tmp_path: Path,
+) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    store = _store_for(drugbank_dir)
+    assert store.ensure_built() == "drugbank-test-1"
+
+    with sqlite3.connect(drugbank_dir / "ddi_index.sqlite") as conn:
+        conn.execute("DROP TABLE ddi_pairs")
+        conn.commit()
+
+    assert store.readiness() == {
+        "state": "degraded",
+        "version": "drugbank-test-1",
+        "pair_count": 0,
+        "manifest_matches_index": True,
+    }
 
 
 def test_analyze_uses_authoritative_sqlite_layer(tmp_path: Path, monkeypatch) -> None:
@@ -216,6 +249,125 @@ def test_ready_drugbank_skips_external_enrichment_without_fallback(
         "version": "drugbank-test-1",
         "matched_alert_count": 1,
     }
+
+
+def test_required_drugbank_unavailable_fails_closed_without_ddi_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", True)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_required", True)
+    monkeypatch.setattr(careguard, "_drugbank_sqlite_alerts", lambda *_args, **_kwargs: ([], ""))
+    monkeypatch.setattr(
+        careguard,
+        "get_drugbank_readiness",
+        lambda: {
+            "state": "unavailable",
+            "version": "",
+            "pair_count": 0,
+            "manifest_matches_index": False,
+            "required": True,
+        },
+    )
+
+    class _UnexpectedExternalClient:
+        def __init__(self, **_kwargs) -> None:
+            raise AssertionError("strict DrugBank mode must not call external DDI")
+
+    monkeypatch.setattr(careguard, "DrugSourceClient", _UnexpectedExternalClient)
+
+    result = careguard.run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "allergies": ["warfarin"],
+            "symptoms": ["chest pain"],
+            "labs": {"egfr": 20},
+            "external_ddi_enabled": True,
+        }
+    )
+
+    assert result["ddi_status"] == {
+        "state": "unavailable",
+        "conclusion_available": False,
+        "required_source": "drugbank",
+        "reason": "drugbank_unavailable",
+    }
+    assert not any(alert.get("type") == "drug_drug" for alert in result["ddi_alerts"])
+    assert any(alert.get("type") == "drug_allergy" for alert in result["ddi_alerts"])
+    assert result["risk"]["level"] == "high"
+    assert "critical_symptom:chest pain" in result["risk"]["factors"]
+    assert "lab_flag:severe_renal_impairment" in result["risk"]["factors"]
+    assert "không có tương tác" in result["recommendation"]
+    assert result["metadata"]["source_used"] == []
+    assert result["metadata"]["source_errors"] == {
+        "drugbank": ["required_source_unavailable"]
+    }
+    assert result["metadata"]["fallback_used"] is True
+    assert result["metadata"]["degraded"] is True
+
+
+def test_required_drugbank_manifest_mismatch_reports_degraded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", True)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_required", True)
+    monkeypatch.setattr(careguard, "_drugbank_sqlite_alerts", lambda *_args, **_kwargs: ([], ""))
+    monkeypatch.setattr(
+        careguard,
+        "get_drugbank_readiness",
+        lambda: {
+            "state": "degraded",
+            "version": "drugbank-stale",
+            "pair_count": 2,
+            "manifest_matches_index": False,
+            "required": True,
+        },
+    )
+
+    result = careguard.run_careguard_analyze(
+        {
+            "medications": ["warfarin", "ibuprofen"],
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["risk"]["level"] == "unknown"
+    assert result["ddi_alerts"] == []
+    assert result["ddi_status"]["reason"] == "drugbank_degraded"
+    assert result["metadata"]["drugbank"]["manifest_matches_index"] is False
+    assert result["metadata"]["source_errors"] == {
+        "drugbank": ["required_source_degraded"]
+    }
+
+
+def test_required_ready_empty_result_remains_authoritative(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    monkeypatch.setattr(careguard, "_DRUGBANK_DIR", drugbank_dir)
+    monkeypatch.setattr(careguard, "_DRUGBANK_MANIFEST_PATH", drugbank_dir / "manifest.json")
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE", None)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE_READY", False)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", True)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_required", True)
+
+    class _UnexpectedExternalClient:
+        def __init__(self, **_kwargs) -> None:
+            raise AssertionError("ready empty DrugBank result must remain authoritative")
+
+    monkeypatch.setattr(careguard, "DrugSourceClient", _UnexpectedExternalClient)
+    result = careguard.run_careguard_analyze(
+        {
+            "medications": ["paracetamol", "loratadine"],
+            "external_ddi_enabled": True,
+        }
+    )
+
+    assert result["metadata"]["source_used"] == ["drugbank"]
+    assert result["metadata"]["fallback_used"] is False
+    assert result["metadata"]["drugbank"]["state"] == "ready"
+    assert not any(alert.get("type") == "drug_drug" for alert in result["ddi_alerts"])
+    assert "ddi_status" not in result
 
 
 def test_analyze_flag_off_is_curated_only(tmp_path: Path, monkeypatch) -> None:

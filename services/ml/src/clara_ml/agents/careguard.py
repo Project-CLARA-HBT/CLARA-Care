@@ -677,6 +677,13 @@ def _drugbank_sqlite_alerts(
     store = _get_drugbank_store()
     if store is None:
         return [], ""
+    readiness = store.readiness()
+    if (
+        readiness.get("state") != "ready"
+        or not readiness.get("manifest_matches_index")
+        or not readiness.get("version")
+    ):
+        return [], ""
     covered_pairs: set[frozenset[str]] = set()
     for alert in existing_alerts:
         meds = alert.get("medications")
@@ -714,6 +721,7 @@ def get_drugbank_readiness() -> dict[str, object]:
             "version": "",
             "pair_count": 0,
             "manifest_matches_index": False,
+            "required": bool(settings.careguard_drugbank_required),
         }
     store = _get_drugbank_store()
     if store is None:
@@ -722,8 +730,11 @@ def get_drugbank_readiness() -> dict[str, object]:
             "version": "",
             "pair_count": 0,
             "manifest_matches_index": False,
+            "required": bool(settings.careguard_drugbank_required),
         }
-    return store.readiness()
+    readiness = store.readiness()
+    readiness["required"] = bool(settings.careguard_drugbank_required)
+    return readiness
 
 
 def _build_ddi_pair_index(
@@ -1100,6 +1111,138 @@ _RULES_UNAVAILABLE_RECOMMENDATION = (
     "sau và hỏi bác sĩ hoặc dược sĩ trước khi dùng nhiều thuốc cùng lúc."
 )
 
+_DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION = (
+    "Hiện chưa thể hoàn tất kiểm tra tương tác thuốc vì dữ liệu DrugBank bắt buộc "
+    "không sẵn sàng hoặc chưa vượt qua kiểm tra toàn vẹn. Đây KHÔNG phải là kết "
+    "luận \"không có tương tác\". Không tự bắt đầu, ngừng hoặc thay đổi thuốc dựa "
+    "trên kết quả này; vui lòng thử lại và hỏi bác sĩ hoặc dược sĩ."
+)
+
+
+def _drugbank_required_unavailable_result(
+    *,
+    raw_medications: list[str],
+    medications: list[str],
+    allergies: list[str],
+    symptoms: list[str],
+    labs: object,
+    vn_dictionary_metadata: dict[str, Any],
+    external_ddi_enabled: bool,
+    external_ddi_flag_source: str,
+    local_ddi_rules_version: str,
+    readiness: dict[str, object],
+) -> dict:
+    """Fail closed when a required DrugBank index is not operational.
+
+    Drug-drug conclusions are deliberately empty and neither curated rules nor
+    external providers are consulted. Independent, deterministic safety checks
+    remain active so a DrugBank outage cannot hide a declared allergy,
+    recognized emergency symptom, or supported lab-risk flag.
+    """
+
+    allergy_alerts = _detect_allergy_conflicts(medications, allergies)
+    critical_symptoms = _critical_symptom_hits(symptoms)
+    lab_flags = _lab_risk_flags(labs)
+    score, independent_level = _risk_from_signals(
+        allergy_alerts,
+        critical_symptoms,
+        lab_flags,
+    )
+    has_independent_signal = bool(allergy_alerts or critical_symptoms or lab_flags)
+    if has_independent_signal:
+        level = (
+            independent_level
+            if _SEVERITY_RANK[independent_level] >= _SEVERITY_RANK["medium"]
+            else "medium"
+        )
+    else:
+        level = "unknown"
+
+    factors = [f"critical_symptom:{item}" for item in critical_symptoms]
+    factors.extend(f"lab_flag:{item}" for item in lab_flags)
+    factors.extend(
+        f"alert:{alert['type']}:{_normalize_severity(alert.get('severity'))}"
+        for alert in allergy_alerts
+    )
+    factors.append("ddi_check:drugbank_unavailable")
+
+    if critical_symptoms:
+        independent_recommendation = _recommendation_for(
+            level,
+            allergy_alerts,
+            critical_symptoms,
+        )
+        recommendation = (
+            f"{independent_recommendation} "
+            f"{_DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION}"
+        )
+    elif allergy_alerts:
+        recommendation = (
+            "Phát hiện thuốc trùng với dị ứng đã khai báo; không dùng thuốc đó và "
+            "hãy liên hệ bác sĩ hoặc dược sĩ. "
+            f"{_DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION}"
+        )
+    else:
+        recommendation = _DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION
+
+    readiness_state = str(readiness.get("state") or "unavailable")
+    ddi_status = {
+        "state": "unavailable",
+        "conclusion_available": False,
+        "required_source": "drugbank",
+        "reason": f"drugbank_{readiness_state}",
+    }
+    return {
+        "risk": {
+            "level": level,
+            "score": score,
+            "factors": factors,
+        },
+        # This legacy field also carries non-DDI allergy alerts. It never
+        # contains a ``drug_drug`` item on the strict unavailable path.
+        "ddi_alerts": allergy_alerts,
+        "ddi_status": ddi_status,
+        "recommendation": recommendation,
+        "metadata": {
+            "pipeline": "p2-careguard-ddi-standard-v2",
+            "fallback_used": True,
+            "degraded": True,
+            "ddi_status": ddi_status,
+            "drugbank_required": True,
+            "external_ddi_enabled": external_ddi_enabled,
+            "external_ddi_flag_source": external_ddi_flag_source,
+            "local_ddi_rules_version": local_ddi_rules_version,
+            "vn_dictionary_version": vn_dictionary_metadata.get("version", "unknown"),
+            "vn_dictionary_record_count": vn_dictionary_metadata.get("record_count", 0),
+            "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
+            "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
+            "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
+            "normalization_confidence": vn_dictionary_metadata.get(
+                "normalization_confidence", 0.0
+            ),
+            "normalization_pair_coverage_low": False,
+            "normalized_medication_count": len(medications),
+            "raw_medication_count": len(raw_medications),
+            "normalized_inputs": vn_dictionary_metadata.get("normalized_inputs", []),
+            "source_used": [],
+            "source_errors": {
+                "drugbank": [f"required_source_{readiness_state}"],
+            },
+            "drugbank": {
+                "state": readiness_state,
+                "version": str(readiness.get("version") or ""),
+                "pair_count": int(readiness.get("pair_count") or 0),
+                "manifest_matches_index": bool(
+                    readiness.get("manifest_matches_index")
+                ),
+                "matched_alert_count": 0,
+            },
+            "openfda_pairs_checked": 0,
+            "openfda_alert_count": 0,
+            "rxnav_status": "",
+        },
+    }
+
 
 def _rules_unavailable_result(
     *,
@@ -1202,6 +1345,19 @@ def run_careguard_analyze(payload: dict) -> dict:
             # hits (including an empty set) are authoritative; do not manufacture
             # or override licensed results with local rules.
             local_ddi_alerts = drugbank_alerts
+    if settings.careguard_drugbank_required and not drugbank_layer_version:
+        return _drugbank_required_unavailable_result(
+            raw_medications=raw_medications,
+            medications=medications,
+            allergies=allergies,
+            symptoms=symptoms,
+            labs=labs,
+            vn_dictionary_metadata=vn_dictionary_metadata,
+            external_ddi_enabled=external_ddi_enabled,
+            external_ddi_flag_source=external_ddi_flag_source,
+            local_ddi_rules_version=local_ddi_rules_version,
+            readiness=get_drugbank_readiness(),
+        )
     if not drugbank_layer_version and not curated_rules:
         return _rules_unavailable_result(
             raw_medications=raw_medications,

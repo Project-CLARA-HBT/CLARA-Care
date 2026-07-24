@@ -410,6 +410,16 @@ class Settings(BaseSettings):
         default=True,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_SQLITE_ENABLED"),
     )
+    # Clinical deployments may require the licensed DrugBank SQLite index as
+    # the only source of drug-drug interaction conclusions. When enabled, an
+    # unavailable/degraded/disabled index fails closed: local curated rules and
+    # external DDI services are not used as substitutes. Non-DDI checks such as
+    # declared-allergy conflicts, emergency symptoms, and lab-risk flags still
+    # run and remain visible.
+    careguard_drugbank_required: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_REQUIRED"),
+    )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
         validation_alias=AliasChoices(
