@@ -201,9 +201,7 @@ class CouncilCase(Base):
     # this to ``paused`` so the final recommendation renders as "not yet confirmed".
     # Written only when COUNCIL_OVERSIGHT_ENABLED is on; null/``none`` preserves
     # today's behavior.
-    oversight_state: Mapped[str | None] = mapped_column(
-        String(16), nullable=True, default="none"
-    )
+    oversight_state: Mapped[str | None] = mapped_column(String(16), nullable=True, default="none")
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -706,9 +704,7 @@ class WorkspaceConversationShare(Base):
     __tablename__ = "workspace_conversation_shares"
     __table_args__ = (
         UniqueConstraint("session_id", name="uq_workspace_conversation_shares_session"),
-        UniqueConstraint(
-            "research_job_id", name="uq_workspace_conversation_shares_research_job"
-        ),
+        UniqueConstraint("research_job_id", name="uq_workspace_conversation_shares_research_job"),
         UniqueConstraint("share_token", name="uq_workspace_conversation_shares_token"),
     )
 
@@ -869,6 +865,129 @@ class PhrObservation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class LifeMapEvent(Base):
+    """Versioned personal health fact; a draft is never silently promoted."""
+
+    __tablename__ = "lifemap_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    truth_state: Mapped[str] = mapped_column(String(24), index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON)
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    source_kind: Mapped[str] = mapped_column(String(32), default="reported", index=True)
+    version_no: Mapped[int] = mapped_column(Integer, default=1)
+    supersedes_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LifeMapEpisode(Base):
+    """A user-owned care loop, deliberately separate from a diagnosis."""
+
+    __tablename__ = "lifemap_episodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    goal: Mapped[str] = mapped_column(Text, default="")
+    priority: Mapped[str] = mapped_column(String(16), default="routine", index=True)
+    outcome_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    handoff_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    version_no: Mapped[int] = mapped_column(Integer, default=1)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LifeMapCareTask(Base):
+    """An explicit, trackable next action in a care loop."""
+
+    __tablename__ = "lifemap_care_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(24), default="proposed", index=True)
+    due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completion_evidence_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LifeMapDecisionLedger(Base):
+    """Structured decision rationale, never private model chain-of-thought."""
+
+    __tablename__ = "lifemap_decision_ledger"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    decision_type: Mapped[str] = mapped_column(String(64), index=True)
+    disposition: Mapped[str] = mapped_column(String(24), index=True)
+    inputs_json: Mapped[dict] = mapped_column(JSON)
+    rationale_json: Mapped[dict] = mapped_column(JSON)
+    evidence_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    policy_version: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LifeMapOutboxEvent(Base):
+    """Transactional integration event emitted alongside LifeMap mutations."""
+
+    __tablename__ = "lifemap_outbox_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    aggregate_type: Mapped[str] = mapped_column(String(64), index=True)
+    aggregate_id: Mapped[str] = mapped_column(String(64), index=True)
+    event_type: Mapped[str] = mapped_column(String(96), index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ConnectorAccount(Base):
     """A user-authorized, profile-scoped external health data source."""
 
@@ -883,9 +1002,7 @@ class ConnectorAccount(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -897,9 +1014,7 @@ class ConnectorAccount(Base):
     data_types_json: Mapped[list[str] | dict | None] = mapped_column(JSON, nullable=True)
     token_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     token_key_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    last_synced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -915,25 +1030,19 @@ class ConnectorConsent(Base):
     connector_id: Mapped[int] = mapped_column(
         ForeignKey("connector_accounts.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     consent_version: Mapped[str] = mapped_column(String(32))
     purposes_json: Mapped[list[str] | dict] = mapped_column(JSON)
     data_types_json: Mapped[list[str] | dict] = mapped_column(JSON)
     access_direction: Mapped[str] = mapped_column(String(16), default="read")
-    granted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ConnectorSyncCursor(Base):
     __tablename__ = "connector_sync_cursors"
     __table_args__ = (
-        UniqueConstraint(
-            "connector_id", "data_type", name="uq_connector_sync_cursor_type"
-        ),
+        UniqueConstraint("connector_id", "data_type", name="uq_connector_sync_cursor_type"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -952,9 +1061,7 @@ class ConnectorSyncCursor(Base):
 class ConnectorImportBatch(Base):
     __tablename__ = "connector_import_batches"
     __table_args__ = (
-        UniqueConstraint(
-            "connector_id", "idempotency_key", name="uq_connector_import_idempotency"
-        ),
+        UniqueConstraint("connector_id", "idempotency_key", name="uq_connector_import_idempotency"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1025,9 +1132,7 @@ class WearableObservationVersion(Base):
 
     __tablename__ = "wearable_observation_versions"
     __table_args__ = (
-        UniqueConstraint(
-            "observation_id", "version_no", name="uq_wearable_observation_version"
-        ),
+        UniqueConstraint("observation_id", "version_no", name="uq_wearable_observation_version"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1109,9 +1214,7 @@ class ConnectorOAuthTransaction(Base):
     __tablename__ = "connector_oauth_transactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1251,9 +1354,7 @@ class SocialMembership(Base):
     """Join edge between a user and a community."""
 
     __tablename__ = "social_memberships"
-    __table_args__ = (
-        UniqueConstraint("user_id", "community_id", name="uq_social_membership"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "community_id", name="uq_social_membership"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -1315,9 +1416,7 @@ class SocialReaction(Base):
     """A supportive reaction (helpful/relate/thanks). No public vanity counts."""
 
     __tablename__ = "social_reactions"
-    __table_args__ = (
-        UniqueConstraint("user_id", "post_id", "kind", name="uq_social_reaction"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "post_id", "kind", name="uq_social_reaction"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -1332,9 +1431,7 @@ class SocialFollow(Base):
     """Directed follow edge between two users."""
 
     __tablename__ = "social_follows"
-    __table_args__ = (
-        UniqueConstraint("follower_id", "followee_id", name="uq_social_follow"),
-    )
+    __table_args__ = (UniqueConstraint("follower_id", "followee_id", name="uq_social_follow"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     follower_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)

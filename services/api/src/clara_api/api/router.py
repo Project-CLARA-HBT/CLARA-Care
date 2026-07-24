@@ -11,8 +11,10 @@ from clara_api.api.v1.endpoints import (
     connected_health,
     council,
     health,
+    lifemap,
     mobile,
     phr,
+    profiles,
     research,
     scribe,
     search,
@@ -24,6 +26,8 @@ from clara_api.compliance.api import router as compliance_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, tags=["health"])
+api_router.include_router(profiles.router, tags=["profiles"])
+api_router.include_router(lifemap.router, prefix="/lifemap", tags=["lifemap"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
