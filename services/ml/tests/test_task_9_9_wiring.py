@@ -29,7 +29,6 @@ from clara_ml.rag.pipeline import RagPipelineP0
 from clara_ml.rag.store.cache import SemanticQueryCache
 from clara_ml.rag.store.corpus_stats import CorpusStats, CorpusStatsSource
 
-
 # ---------------------------------------------------------------------------
 # Semantic query cache wiring in the pipeline (Requirement 12.2)
 # ---------------------------------------------------------------------------
@@ -83,6 +82,53 @@ def test_semantic_cache_lookup_treats_empty_as_miss() -> None:
     RagPipelineP0._semantic_cache_store(cache, "q", [])
     assert cache.get("q") is None
     assert RagPipelineP0._semantic_cache_lookup(cache, "q") is None
+
+
+def test_semantic_cache_key_separates_retrieval_policy_and_provider_plan() -> None:
+    base = {
+        "internal_query": "DAPA-CKD EMPA-KIDNEY",
+        "ranking_query": "Compare DAPA-CKD and EMPA-KIDNEY",
+        "query_plan": {"canonical_query": "SGLT2 trials"},
+        "rag_sources": ["pubmed"],
+        "internal_top_k": 10,
+        "scientific_retrieval_enabled": True,
+        "web_retrieval_enabled": False,
+        "file_retrieval_enabled": False,
+        "rag_reranker_enabled": True,
+        "scientific_provider_query_overrides": {
+            "pubmed": '("DAPA-CKD"[Title/Abstract] OR "EMPA-KIDNEY"[Title/Abstract])'
+        },
+    }
+
+    key = RagPipelineP0._semantic_cache_key(**base)
+    assert key == RagPipelineP0._semantic_cache_key(**base)
+    assert key != RagPipelineP0._semantic_cache_key(**{**base, "internal_top_k": 20})
+    assert key != RagPipelineP0._semantic_cache_key(
+        **{
+            **base,
+            "scientific_provider_query_overrides": {"pubmed": '"DAPA-CKD"[Title/Abstract]'},
+        }
+    )
+    assert key != RagPipelineP0._semantic_cache_key(
+        **{**base, "rag_sources": ["pubmed", "europepmc"]}
+    )
+
+
+def test_semantic_cache_is_bypassed_for_uploaded_documents() -> None:
+    cache = SemanticQueryCache(enabled=True)
+    pipe = RagPipelineP0(deepseek_api_key="", semantic_cache=cache)
+    upload = {
+        "file_id": "owner-private-file",
+        "filename": "private-note.txt",
+        "text": "Owner-scoped private medical evidence.",
+    }
+
+    first = pipe.run(_QUERY, uploaded_documents=[upload])
+    second = pipe.run(_QUERY, uploaded_documents=[upload])
+
+    assert first.context_debug["retrieval_trace"]["semantic_cache_hit"] is False
+    assert second.context_debug["retrieval_trace"]["semantic_cache_hit"] is False
+    assert second.context_debug["retrieval_trace"]["semantic_cache_owner_scoped_bypass"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -139,9 +185,7 @@ def test_run_incremental_ingestion_drives_injected_scheduler(monkeypatch) -> Non
     scheduler = _RecordingScheduler({"openfda": {"ok": True}})
     now = datetime(2026, 5, 20, tzinfo=timezone.utc)
 
-    reports = run_incremental_ingestion(
-        scheduler=scheduler, orchestrator=orchestrator, now=now
-    )
+    reports = run_incremental_ingestion(scheduler=scheduler, orchestrator=orchestrator, now=now)
 
     assert reports == {"openfda": {"ok": True}}
     assert scheduler.received["orchestrator"] is orchestrator
@@ -153,7 +197,9 @@ def test_scheduler_run_due_resumes_each_source_from_watermark(monkeypatch) -> No
 
     monkeypatch.setattr(settings, "rag_ingestion_enabled", True, raising=False)
     schedules = [
-        SourceSchedule(source_key="openfda", enabled=True, last_run_at=None, watermark="wm-openfda"),
+        SourceSchedule(
+            source_key="openfda", enabled=True, last_run_at=None, watermark="wm-openfda"
+        ),
         SourceSchedule(source_key="pubmed", enabled=True, last_run_at=None, watermark=""),
         SourceSchedule(source_key="off", enabled=False, last_run_at=None, watermark="x"),
     ]

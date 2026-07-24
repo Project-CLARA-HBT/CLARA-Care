@@ -1,16 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from time import perf_counter
 from typing import TYPE_CHECKING, Any, List, Protocol
-import unicodedata
 from uuid import uuid4
-
-from clara_ml.config import settings
-from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
 
 # Import-ordering fix (task 5.11): eagerly initialize the ``rag.store`` package
 # before the ``graphrag``/``retriever`` chain below pulls in ``rag.embedder``.
@@ -23,6 +22,8 @@ from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
 # this module's imports simply reuse the cached modules. This only reorders
 # initialization of modules that are loaded transitively regardless.
 import clara_ml.rag.store  # noqa: E402,F401  (side-effect import; see note above)
+from clara_ml.config import settings
+from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
 from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.rag.retriever import Document, InMemoryRetriever
@@ -644,7 +645,9 @@ class RagPipelineP1:
     @staticmethod
     def _source_query(query_plan: dict[str, Any], source_key: str, fallback: str) -> str:
         source_queries = (
-            query_plan.get("source_queries") if isinstance(query_plan.get("source_queries"), dict) else {}
+            query_plan.get("source_queries")
+            if isinstance(query_plan.get("source_queries"), dict)
+            else {}
         )
         selected = source_queries.get(source_key)
         if isinstance(selected, list):
@@ -859,7 +862,9 @@ class RagPipelineP1:
             "query_focus": str(hints.get("query_focus") or "default"),
             "ddi_critical_query": bool(hints.get("ddi_critical_query")),
             "reason_codes": reason_codes,
-            "query_plan": hints.get("query_plan") if isinstance(hints.get("query_plan"), dict) else {},
+            "query_plan": hints.get("query_plan")
+            if isinstance(hints.get("query_plan"), dict)
+            else {},
             "retrieval_stack_mode": retrieval_stack_mode,
             "retrieval_budget": retrieval_budget,
             "graphrag_enabled_override": _as_optional_bool(hints.get("graphrag_enabled_override")),
@@ -945,9 +950,7 @@ class RagPipelineP1:
 
         decomposition = query_plan.get("decomposition") if isinstance(query_plan, dict) else {}
         deep_pass_queries = (
-            decomposition.get("deep_pass_queries")
-            if isinstance(decomposition, dict)
-            else []
+            decomposition.get("deep_pass_queries") if isinstance(decomposition, dict) else []
         )
         if isinstance(deep_pass_queries, list) and len(deep_pass_queries) >= 6:
             score += 1
@@ -1062,7 +1065,9 @@ class RagPipelineP1:
     ) -> dict[str, Any]:
         requested_internal = max(1, min(12, int(requested_internal_top_k)))
         requested_hybrid = max(1, min(12, int(requested_hybrid_top_k)))
-        normalized_stack_mode = "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
+        normalized_stack_mode = (
+            "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
+        )
         complexity = cls._infer_retrieval_complexity(
             query_profile=query_profile,
             planner_hints=planner_hints,
@@ -1247,11 +1252,7 @@ class RagPipelineP1:
                 "requested": normalized_stack_mode,
                 "effective": (
                     "full"
-                    if (
-                        normalized_stack_mode == "full"
-                        and resolved_scientific
-                        and resolved_web
-                    )
+                    if (normalized_stack_mode == "full" and resolved_scientific and resolved_web)
                     else "auto"
                 ),
             },
@@ -1412,7 +1413,7 @@ class RagPipelineP1:
         raw_text = str(doc.text or "").strip()
         text = raw_text
         if len(text) > RagPipelineP1._PROMPT_MAX_DOC_CHARS:
-            text = f"{text[:RagPipelineP1._PROMPT_MAX_DOC_CHARS].rstrip()}..."
+            text = f"{text[: RagPipelineP1._PROMPT_MAX_DOC_CHARS].rstrip()}..."
         return f"- ({doc.id}) [{meta_bits}] {text}"
 
     @classmethod
@@ -1628,9 +1629,7 @@ class RagPipelineP1:
         runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
         return max(2.0, min(runtime_timeout_seconds, 18.0))
 
-    def resolve_llm_client(
-        self, llm_runtime: Any, settings: Any = None
-    ) -> LlmGenerator | None:
+    def resolve_llm_client(self, llm_runtime: Any, settings: Any = None) -> LlmGenerator | None:
         """Resolve the LLM client a request should use (Requirement 2.3, Property 2).
 
         - When ``LLM_DEEPSEEK_ONLY`` is enabled and ``llm_runtime`` matches the
@@ -1672,9 +1671,7 @@ class RagPipelineP1:
                 return None
         return self._llm_client
 
-    def _resolve_runtime_llm_client(
-        self, llm_runtime: Any
-    ) -> tuple[LlmGenerator | None, str]:
+    def _resolve_runtime_llm_client(self, llm_runtime: Any) -> tuple[LlmGenerator | None, str]:
         """Resolve the LLM client + api key that ``run`` should use.
 
         Thin integration seam over :meth:`resolve_llm_client` that also resolves
@@ -1712,7 +1709,9 @@ class RagPipelineP1:
         )
 
     @staticmethod
-    def _safe_helpful_answer(query: str, docs: List[Document], *, answer_language: str = "vi") -> str:
+    def _safe_helpful_answer(
+        query: str, docs: List[Document], *, answer_language: str = "vi"
+    ) -> str:
         if docs:
             summary = " ".join(doc.text for doc in docs[:2]).strip()
             summary = " ".join(summary.split())
@@ -2099,9 +2098,7 @@ class RagPipelineP1:
         if len(docs) < min_results:
             return True
         trust_floor = int(getattr(settings, "rag_trust_floor", 4) or 4)
-        return bool(docs) and all(
-            not self._meets_trust_floor(doc, trust_floor) for doc in docs
-        )
+        return bool(docs) and all(not self._meets_trust_floor(doc, trust_floor) for doc in docs)
 
     def _gap_fill_live_connectors(
         self,
@@ -2199,9 +2196,7 @@ class RagPipelineP1:
             from clara_ml.rag.store.hybrid_retriever import RetrievalFilters
 
             filters = RetrievalFilters(trust_tier_max=int(settings.rag_trust_floor))
-            docs = list(
-                retriever.retrieve(query, top_k=max(int(top_k), 1), filters=filters)
-            )
+            docs = list(retriever.retrieve(query, top_k=max(int(top_k), 1), filters=filters))
         except Exception as exc:
             # Never crash the request path: degrade to the legacy retriever.
             logger.warning(
@@ -2353,6 +2348,56 @@ class RagPipelineP1:
         except Exception:  # pragma: no cover - cache write must never crash run()
             pass
 
+    @staticmethod
+    def _semantic_cache_key(
+        *,
+        internal_query: str,
+        ranking_query: str,
+        query_plan: dict[str, Any],
+        rag_sources: object,
+        internal_top_k: int,
+        scientific_retrieval_enabled: bool,
+        web_retrieval_enabled: bool,
+        file_retrieval_enabled: bool,
+        rag_reranker_enabled: bool,
+        scientific_provider_query_overrides: dict[str, Any],
+    ) -> str:
+        """Build a policy/version-aware exact cache key.
+
+        A normalized query alone is not a safe retrieval identity: two runs can
+        share wording while using different source policies, provider queries,
+        top-k values, rerankers, or corpus/index versions.  Only the digest is
+        stored, so source selections and planner details are not exposed as a
+        cache key.
+        """
+
+        payload = {
+            "schema": "retrieval-cache-v2",
+            "internal_query": internal_query,
+            "ranking_query": ranking_query,
+            "query_plan": query_plan,
+            "rag_sources": rag_sources,
+            "internal_top_k": int(internal_top_k),
+            "scientific_retrieval_enabled": bool(scientific_retrieval_enabled),
+            "web_retrieval_enabled": bool(web_retrieval_enabled),
+            "file_retrieval_enabled": bool(file_retrieval_enabled),
+            "rag_reranker_enabled": bool(rag_reranker_enabled),
+            "scientific_provider_query_overrides": scientific_provider_query_overrides,
+            "embedding_model": str(getattr(settings, "embedding_model", "")),
+            "embedding_dimension": int(getattr(settings, "rag_embedding_dim", 0) or 0),
+            "persistent_retrieval": bool(
+                getattr(settings, "rag_persistent_retrieval_enabled", False)
+            ),
+        }
+        canonical = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
     def run(
         self,
         query: str,
@@ -2477,14 +2522,14 @@ class RagPipelineP1:
             external_connectors_enabled=external_connectors_runtime_enabled,
         )
         internal_top_k = int(
-            orchestrator_plan.get("top_k", {}).get("adjusted", {}).get(
-                "internal", requested_internal_top_k
-            )
+            orchestrator_plan.get("top_k", {})
+            .get("adjusted", {})
+            .get("internal", requested_internal_top_k)
         )
         hybrid_top_k = int(
-            orchestrator_plan.get("top_k", {}).get("adjusted", {}).get(
-                "hybrid", requested_hybrid_top_k
-            )
+            orchestrator_plan.get("top_k", {})
+            .get("adjusted", {})
+            .get("hybrid", requested_hybrid_top_k)
         )
         resolved_toggles = orchestrator_plan.get("connector_toggles", {}).get("resolved", {})
         scientific_retrieval_enabled = bool(resolved_toggles.get("scientific"))
@@ -2509,9 +2554,7 @@ class RagPipelineP1:
             query_plan.get("provider_queries") if isinstance(query_plan, dict) else {}
         )
         provider_query_overrides = (
-            provider_query_overrides_raw
-            if isinstance(provider_query_overrides_raw, dict)
-            else {}
+            provider_query_overrides_raw if isinstance(provider_query_overrides_raw, dict) else {}
         )
         scientific_provider_query_overrides = (
             provider_query_overrides.get("scientific")
@@ -2605,10 +2648,26 @@ class RagPipelineP1:
         # Semantic query cache (task 9.9, Req 12.2). ``None`` when disabled, in
         # which case the block below is byte-identical to the legacy path.
         semantic_cache = self._resolve_semantic_cache()
+        # Uploaded evidence is owner/conversation scoped, but this legacy cache
+        # has no tenant identity. Never cache or reuse those runs.
+        if uploaded_documents:
+            semantic_cache = None
+        semantic_cache_key = self._semantic_cache_key(
+            internal_query=internal_query,
+            ranking_query=ranking_query,
+            query_plan=query_plan,
+            rag_sources=rag_sources,
+            internal_top_k=internal_top_k,
+            scientific_retrieval_enabled=scientific_retrieval_enabled,
+            web_retrieval_enabled=web_retrieval_enabled,
+            file_retrieval_enabled=file_retrieval_enabled,
+            rag_reranker_enabled=rag_reranker_runtime,
+            scientific_provider_query_overrides=scientific_provider_query_overrides,
+        )
         semantic_cache_hit = False
         try:
             cached_docs = (
-                self._semantic_cache_lookup(semantic_cache, internal_query)
+                self._semantic_cache_lookup(semantic_cache, semantic_cache_key)
                 if semantic_cache is not None
                 else None
             )
@@ -2666,7 +2725,7 @@ class RagPipelineP1:
                 # equivalent query can be served from cache (Req 12.2). No-op when
                 # the cache is disabled (``semantic_cache`` is None).
                 if semantic_cache is not None:
-                    self._semantic_cache_store(semantic_cache, internal_query, docs)
+                    self._semantic_cache_store(semantic_cache, semantic_cache_key, docs)
         except Exception as exc:
             retrieval_trace["internal_error"] = exc.__class__.__name__
             retrieval_trace["source_errors"] = {"internal_retrieval": [exc.__class__.__name__]}
@@ -2700,8 +2759,20 @@ class RagPipelineP1:
                     payload={"phase": "internal", "selected_count": 0},
                 )
             )
-        retrieval_trace["internal"] = self._extract_retriever_trace(self.retriever)
+        retrieval_trace["internal"] = (
+            {
+                "cache": {
+                    "schema": "retrieval-cache-v2",
+                    "key_sha256": semantic_cache_key,
+                    "document_count": len(docs),
+                }
+            }
+            if semantic_cache_hit
+            else self._extract_retriever_trace(self.retriever)
+        )
         retrieval_trace["semantic_cache_hit"] = semantic_cache_hit
+        retrieval_trace["semantic_cache_key_sha256"] = semantic_cache_key
+        retrieval_trace["semantic_cache_owner_scoped_bypass"] = bool(uploaded_documents)
         retrieval_trace["retrieval_path"] = (
             "semantic_cache"
             if semantic_cache_hit
@@ -2806,14 +2877,10 @@ class RagPipelineP1:
             and not scientific_retrieval_enabled
             and not web_retrieval_enabled
         )
-        external_scientific_enabled = bool(
-            scientific_retrieval_enabled or zero_context_fast_rescue
-        )
+        external_scientific_enabled = bool(scientific_retrieval_enabled or zero_context_fast_rescue)
         external_web_enabled = bool(web_retrieval_enabled or zero_context_fast_rescue)
         external_top_k = (
-            min(max(int(hybrid_top_k), 1), 3)
-            if zero_context_fast_rescue
-            else hybrid_top_k
+            min(max(int(hybrid_top_k), 1), 3) if zero_context_fast_rescue else hybrid_top_k
         )
         external_rag_sources = (
             self._bounded_fast_rescue_sources(rag_sources)
@@ -2860,18 +2927,18 @@ class RagPipelineP1:
                         "medical connectors."
                     ),
                     component="retrieval",
-                payload={
-                    "top_k": external_top_k,
-                    "web_retrieval_enabled": external_web_enabled,
-                    "low_context_before_external": low_context_before_external,
-                    "should_force_external": should_force_external,
-                    "zero_context_fast_rescue": zero_context_fast_rescue,
-                    "resolved_query": scientific_query,
-                    "web_query_override": web_query_override,
-                    "provider_query_overrides": scientific_provider_query_overrides,
-                    "original_query": query,
-                },
-            )
+                    payload={
+                        "top_k": external_top_k,
+                        "web_retrieval_enabled": external_web_enabled,
+                        "low_context_before_external": low_context_before_external,
+                        "should_force_external": should_force_external,
+                        "zero_context_fast_rescue": zero_context_fast_rescue,
+                        "resolved_query": scientific_query,
+                        "web_query_override": web_query_override,
+                        "provider_query_overrides": scientific_provider_query_overrides,
+                        "original_query": query,
+                    },
+                )
             )
             flow_events.append(
                 self._flow_event(
@@ -2973,9 +3040,7 @@ class RagPipelineP1:
                 )
                 relevance_score = self._context_relevance(query, docs)
                 retrieval_trace["relevance"] = round(float(relevance_score), 4)
-                hybrid_candidate_count = int(
-                    hybrid_search.get("total_candidates") or len(docs)
-                )
+                hybrid_candidate_count = int(hybrid_search.get("total_candidates") or len(docs))
                 flow_events.append(
                     self._flow_event(
                         stage="evidence_search",
@@ -3257,10 +3322,14 @@ class RagPipelineP1:
         for attempt in retrieval_trace.get("source_attempts", []):
             if not isinstance(attempt, dict):
                 continue
-            provider_key = str(attempt.get("provider") or attempt.get("source") or "").strip().lower()
+            provider_key = (
+                str(attempt.get("provider") or attempt.get("source") or "").strip().lower()
+            )
             if provider_key:
                 provider_keys.add(provider_key)
-        vector_internal_used = bool(retrieval_trace.get("internal")) or ("internal_corpus" in provider_keys)
+        vector_internal_used = bool(retrieval_trace.get("internal")) or (
+            "internal_corpus" in provider_keys
+        )
         scientific_used = bool(provider_keys.intersection(self._SCIENTIFIC_PROVIDER_KEYS))
         web_used = bool(provider_keys.intersection(self._WEB_PROVIDER_KEYS))
         graph_used = bool(retrieval_trace.get("graphrag_enabled"))
@@ -3283,12 +3352,7 @@ class RagPipelineP1:
             if not used
         ]
         stack_mode_effective = (
-            "full"
-            if (
-                requested_stack_mode == "full"
-                and not missing_stack_components
-            )
-            else "auto"
+            "full" if (requested_stack_mode == "full" and not missing_stack_components) else "auto"
         )
         stack_mode_reason_codes: list[str] = [f"stack_mode_requested_{requested_stack_mode}"]
         if stack_mode_effective == "full":
@@ -3459,9 +3523,15 @@ class RagPipelineP1:
                     )
                 )
                 long_form_generation = self._is_long_form_orchestrator_mode(orchestrator_mode)
-                requested_research_mode = str(
-                    normalized_hints.get("research_mode") or query_plan.get("research_mode") or ""
-                ).strip().lower()
+                requested_research_mode = (
+                    str(
+                        normalized_hints.get("research_mode")
+                        or query_plan.get("research_mode")
+                        or ""
+                    )
+                    .strip()
+                    .lower()
+                )
                 prompt = (
                     self._build_prompt(
                         query,

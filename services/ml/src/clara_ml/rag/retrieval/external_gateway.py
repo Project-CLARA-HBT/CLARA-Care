@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import html
 import json
+import logging
+import random
 import re
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from threading import Lock
 from time import monotonic, perf_counter, sleep
-import random
 from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlparse
@@ -18,10 +20,13 @@ from clara_ml.config import settings
 from .domain import Document
 from .text_utils import analyze_query_profile, first_text, query_terms
 
+logger = logging.getLogger(__name__)
+
 
 class ExternalSourceGateway:
     PUBMED_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     PUBMED_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+    PUBMED_EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     EUROPEPMC_SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     OPENALEX_WORKS_URL = "https://api.openalex.org/works"
     CROSSREF_WORKS_URL = "https://api.crossref.org/works"
@@ -191,6 +196,141 @@ class ExternalSourceGateway:
         return query
 
     @staticmethod
+    def _xml_text(element: ET.Element | None) -> str:
+        if element is None:
+            return ""
+        return " ".join("".join(element.itertext()).split()).strip()
+
+    @staticmethod
+    def _normalized_publication_types(value: Any) -> list[str]:
+        if isinstance(value, dict):
+            value = value.get("pubType")
+        if not isinstance(value, list):
+            value = [value] if value else []
+        return list(
+            dict.fromkeys(
+                text
+                for item in value
+                if (text := " ".join(str(item or "").split()).strip())
+            )
+        )
+
+    @staticmethod
+    def _study_provenance(publication_types: list[str]) -> tuple[str, str]:
+        normalized = {item.casefold() for item in publication_types}
+        if "randomized controlled trial" in normalized:
+            return "primary_trial", "randomized_controlled_trial"
+        if "clinical trial" in normalized:
+            return "primary_trial", "clinical_trial"
+        if "observational study" in normalized:
+            return "primary_research", "observational_study"
+        if "meta-analysis" in normalized:
+            return "evidence_synthesis", "meta_analysis"
+        if "systematic review" in normalized:
+            return "evidence_synthesis", "systematic_review"
+        if normalized.intersection({"practice guideline", "guideline"}):
+            return "guideline", "guideline"
+        if "review" in normalized:
+            return "evidence_synthesis", "review"
+        return "journal_article", ""
+
+    @staticmethod
+    def _normalized_nct_ids(values: Any) -> list[str]:
+        if not isinstance(values, (list, tuple, set)):
+            values = [values] if values else []
+        output: list[str] = []
+        for value in values:
+            candidate = "".join(str(value or "").strip().upper().split())
+            suffix = candidate[3:] if candidate.startswith("NCT") else ""
+            if len(suffix) == 8 and suffix.isdigit() and candidate not in output:
+                output.append(candidate)
+        return output
+
+    @classmethod
+    def _parse_pubmed_efetch(cls, raw_xml: str) -> dict[str, dict[str, Any]]:
+        root = ET.fromstring(raw_xml)
+        hydrated: dict[str, dict[str, Any]] = {}
+        for article_node in root.findall(".//PubmedArticle"):
+            citation = article_node.find("./MedlineCitation")
+            article = citation.find("./Article") if citation is not None else None
+            pmid = cls._xml_text(citation.find("./PMID") if citation is not None else None)
+            if not pmid or article is None:
+                continue
+
+            title = cls._xml_text(article.find("./ArticleTitle"))
+            abstract_sections: list[str] = []
+            for abstract_node in article.findall("./Abstract/AbstractText"):
+                section_text = cls._xml_text(abstract_node)
+                if not section_text:
+                    continue
+                label = " ".join(str(abstract_node.get("Label") or "").split()).strip()
+                abstract_sections.append(f"{label}: {section_text}" if label else section_text)
+
+            publication_types = cls._normalized_publication_types(
+                [
+                    cls._xml_text(item)
+                    for item in article.findall("./PublicationTypeList/PublicationType")
+                ]
+            )
+            source_type, study_design = cls._study_provenance(publication_types)
+
+            doi = ""
+            for article_id in article_node.findall("./PubmedData/ArticleIdList/ArticleId"):
+                if str(article_id.get("IdType") or "").strip().casefold() == "doi":
+                    doi = cls._xml_text(article_id)
+                    if doi:
+                        break
+            if not doi:
+                for location_id in article.findall("./ELocationID"):
+                    if str(location_id.get("EIdType") or "").strip().casefold() == "doi":
+                        doi = cls._xml_text(location_id)
+                        if doi:
+                            break
+
+            accession_values = [
+                cls._xml_text(item)
+                for item in citation.findall("./DataBankList/DataBank/AccessionNumberList/AccessionNumber")
+            ]
+
+            hydrated[pmid] = {
+                "title": title,
+                "abstract": "\n".join(abstract_sections),
+                "doi": doi,
+                "nct_ids": cls._normalized_nct_ids(accession_values),
+                "publication_types": publication_types,
+                "source_type": source_type,
+                "study_design": study_design,
+            }
+        return hydrated
+
+    def _fetch_pubmed_hydration(
+        self,
+        pmids: list[str],
+        *,
+        timeout_seconds: float,
+    ) -> dict[str, dict[str, Any]]:
+        if not pmids:
+            return {}
+        fetch_url = f"{self.PUBMED_EFETCH_URL}?" + urlencode(
+            {
+                "db": "pubmed",
+                "retmode": "xml",
+                "id": ",".join(pmids),
+            }
+        )
+        try:
+            raw_xml = self._fetch_text(fetch_url, timeout_seconds)
+            return self._parse_pubmed_efetch(raw_xml) if raw_xml.strip() else {}
+        except Exception as exc:  # noqa: BLE001 - optional hydration must fail soft
+            # EFetch is an additive hydration step. Preserve the pre-existing
+            # ESearch/ESummary result when it is temporarily unavailable.
+            logger.warning(
+                "pubmed_efetch_hydration_failed",
+                extra={"error": exc.__class__.__name__, "pmid_count": len(pmids)},
+            )
+            return {}
+
+    @staticmethod
     def _normalize_provider_query_overrides(
         value: dict[str, str] | None,
     ) -> dict[str, str]:
@@ -301,20 +441,36 @@ class ExternalSourceGateway:
         records = summary_payload.get("result", {})
         if not isinstance(records, dict):
             return []
+        hydration = self._fetch_pubmed_hydration(
+            [str(pmid) for pmid in id_list],
+            timeout_seconds=timeout_seconds,
+        )
 
         docs: list[Document] = []
+        seen_pmids: set[str] = set()
         for pmid in id_list:
-            record = records.get(str(pmid), {})
+            normalized_pmid = str(pmid)
+            if normalized_pmid in seen_pmids:
+                continue
+            seen_pmids.add(normalized_pmid)
+            record = records.get(normalized_pmid, {})
             if not isinstance(record, dict):
                 continue
 
-            title = str(record.get("title") or "").strip()
+            hydrated = hydration.get(normalized_pmid, {})
+            title = first_text(hydrated.get("title"), record.get("title"))
             if not title:
                 continue
 
             journal = str(record.get("fulljournalname") or record.get("source") or "").strip()
             pub_date = str(record.get("pubdate") or "").strip()
-            text = ". ".join(part for part in [title, journal, pub_date] if part)
+            abstract = str(hydrated.get("abstract") or "").strip()
+            text = ". ".join(part for part in [title, abstract, journal, pub_date] if part)
+            publication_types = self._normalized_publication_types(
+                hydrated.get("publication_types")
+                or record.get("pubtype")
+            )
+            source_type, study_design = self._study_provenance(publication_types)
             docs.append(
                 Document(
                     id=f"pubmed-{pmid}",
@@ -323,6 +479,13 @@ class ExternalSourceGateway:
                         "source": "pubmed",
                         "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
                         "score": 0.0,
+                        "title": title,
+                        "pmid": normalized_pmid,
+                        "doi": str(hydrated.get("doi") or "").strip(),
+                        "nct_ids": self._normalized_nct_ids(hydrated.get("nct_ids")),
+                        "publication_types": publication_types,
+                        "source_type": source_type,
+                        "study_design": study_design,
                     },
                 )
             )
@@ -358,6 +521,7 @@ class ExternalSourceGateway:
             return []
 
         docs: list[Document] = []
+        seen_ids: set[str] = set()
         for item in result_list:
             if not isinstance(item, dict):
                 continue
@@ -367,10 +531,18 @@ class ExternalSourceGateway:
             title = str(item.get("title") or "").strip()
             if not source_id or not title:
                 continue
+            document_id = f"europepmc-{source}-{source_id}"
+            if document_id in seen_ids:
+                continue
+            seen_ids.add(document_id)
 
             journal = str(item.get("journalTitle") or "").strip()
             pub_year = str(item.get("pubYear") or "").strip()
-            text = ". ".join(part for part in [title, journal, pub_year] if part)
+            abstract = str(item.get("abstractText") or "").strip()
+            text = ". ".join(part for part in [title, abstract, journal, pub_year] if part)
+            publication_types = self._normalized_publication_types(item.get("pubTypeList"))
+            source_type, study_design = self._study_provenance(publication_types)
+            pmid = str(item.get("pmid") or (source_id if source == "med" else "")).strip()
             url = (
                 f"https://pubmed.ncbi.nlm.nih.gov/{source_id}/"
                 if source == "med"
@@ -378,9 +550,24 @@ class ExternalSourceGateway:
             )
             docs.append(
                 Document(
-                    id=f"europepmc-{source}-{source_id}",
+                    id=document_id,
                     text=text,
-                    metadata={"source": "europepmc", "url": url, "score": 0.0},
+                    metadata={
+                        "source": "europepmc",
+                        "url": url,
+                        "score": 0.0,
+                        "title": title,
+                        "pmid": pmid,
+                        "pmcid": str(item.get("pmcid") or "").strip(),
+                        "doi": str(item.get("doi") or "").strip(),
+                        "nct_ids": self._normalized_nct_ids(
+                            item.get("clinicalTrialNumber")
+                            or item.get("clinicalTrialNumbers")
+                        ),
+                        "publication_types": publication_types,
+                        "source_type": source_type,
+                        "study_design": study_design,
+                    },
                 )
             )
 

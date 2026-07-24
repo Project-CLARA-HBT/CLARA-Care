@@ -222,3 +222,50 @@ def test_llm_low_confidence_contradiction_is_downgraded() -> None:
 
     assert rows[0].support_status == "insufficient"
     assert rows[0].evidence_ref is None
+
+
+def test_llm_nli_repairs_missing_grounding_and_receives_late_abstract_evidence() -> None:
+    late_quote = (
+        "The primary composite kidney outcome was significantly lower in the treatment group."
+    )
+    evidence_text = ("Background context without outcome data. " * 12) + late_quote
+
+    class _RepairClient:
+        def __init__(self) -> None:
+            self.prompts: list[str] = []
+
+        def generate(self, prompt: str, system_prompt: str | None = None):
+            self.prompts.append(prompt)
+
+            class _Response:
+                content = ""
+                model = "fake-llm"
+
+            response = _Response()
+            if len(self.prompts) == 1:
+                response.content = (
+                    '{"rows":[{"claim_index":0,"support_status":"supported",'
+                    '"confidence":0.92,"rationale":"Missing grounding"}]}'
+                )
+            else:
+                response.content = (
+                    '{"rows":[{"claim_index":0,"support_status":"supported",'
+                    '"confidence":0.92,"evidence_ref":"trial-1",'
+                    f'"evidence_quote":"{late_quote}",'
+                    '"rationale":"Outcome is directly stated"}]}'
+                )
+            return response
+
+    client = _RepairClient()
+    rows = verify_claims(
+        claims=["Treatment reduced the primary composite kidney outcome."],
+        evidence_rows=[{"ref": "trial-1", "text": evidence_text}],
+        llm_enabled=True,
+        llm_client=client,
+    )
+
+    assert len(client.prompts) == 2
+    assert late_quote in client.prompts[0]
+    assert rows[0].support_status == "supported"
+    assert rows[0].evidence_ref == "trial-1"
+    assert rows[0].evidence_snippet == late_quote

@@ -269,12 +269,18 @@ def _llm_verify_claims(
 ) -> dict[int, dict[str, Any]]:
     if not claims:
         return {}
+    # Prefixes of 240 characters routinely contain only a paper title and
+    # background sentence, making outcome/safety claims unverifiable even when
+    # the retrieved abstract is correct. Keep a bounded but clinically useful
+    # source excerpt. A plain slice is intentional: unlike `_compact_snippet`,
+    # it does not append synthetic ellipses that can never be validated as an
+    # exact quote against the immutable evidence text.
     evidence_compact = [
         {
             "ref": str(item.get("ref") or "").strip(),
-            "text": _compact_snippet(str(item.get("text") or ""), max_len=240),
+            "text": str(item.get("text") or "")[:2400],
         }
-        for item in evidence_rows[:16]
+        for item in evidence_rows[:12]
     ]
     system_prompt = (
         "You are a strict clinical NLI verifier. Return STRICT JSON only. Do not include markdown."
@@ -304,49 +310,81 @@ def _llm_verify_claims(
         f"evidence={json.dumps(evidence_compact, ensure_ascii=False)}\n"
     )
     client = llm_client or _build_nli_client(timeout_ms=timeout_ms)
-    response = client.generate(prompt=prompt, system_prompt=system_prompt)
-    cleaned = _strip_markdown_fence(response.content)
-    payload = json.loads(cleaned)
-    rows = payload.get("rows", []) if isinstance(payload, dict) else []
-    if not isinstance(rows, list):
-        return {}
     available_evidence = {
         str(item.get("ref") or "").strip(): str(item.get("text") or "")
         for item in evidence_rows
         if str(item.get("ref") or "").strip()
     }
-    normalized: dict[int, dict[str, Any]] = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        try:
-            claim_index = int(row.get("claim_index"))
-        except (TypeError, ValueError):
-            continue
-        if claim_index < 0 or claim_index >= len(claims):
-            continue
-        support_status = _normalize_llm_support_status(row.get("support_status"))
-        confidence = _clamp_confidence(row.get("confidence"), default=0.5)
-        evidence_ref = str(row.get("evidence_ref") or "").strip() or None
-        evidence_quote = str(row.get("evidence_quote") or "").strip()
-        evidence_text = available_evidence.get(evidence_ref or "", "")
-        valid_grounding = bool(
-            evidence_ref and evidence_text and evidence_quote and evidence_quote in evidence_text
-        )
-        if evidence_ref and evidence_ref not in available_evidence:
-            evidence_ref = None
-        if support_status in {"supported", "contradicted"} and not valid_grounding:
-            support_status = "insufficient"
-            evidence_ref = None
-            evidence_quote = ""
-        rationale = _compact_snippet(str(row.get("rationale") or ""), max_len=200)
-        normalized[claim_index] = {
-            "support_status": support_status,
-            "confidence": confidence,
-            "evidence_ref": evidence_ref,
-            "evidence_quote": evidence_quote,
-            "rationale": rationale or "LLM NLI verification applied.",
-        }
+
+    def _parse_rows(content: str) -> tuple[dict[int, dict[str, Any]], set[int]]:
+        cleaned = _strip_markdown_fence(content)
+        payload = json.loads(cleaned)
+        rows = payload.get("rows", []) if isinstance(payload, dict) else []
+        if not isinstance(rows, list):
+            return {}, set(range(len(claims)))
+        parsed: dict[int, dict[str, Any]] = {}
+        needs_repair: set[int] = set(range(len(claims)))
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            try:
+                claim_index = int(row.get("claim_index"))
+            except (TypeError, ValueError):
+                continue
+            if claim_index < 0 or claim_index >= len(claims):
+                continue
+            support_status = _normalize_llm_support_status(row.get("support_status"))
+            confidence = _clamp_confidence(row.get("confidence"), default=0.5)
+            evidence_ref = str(row.get("evidence_ref") or "").strip() or None
+            evidence_quote = str(row.get("evidence_quote") or "").strip()
+            evidence_text = available_evidence.get(evidence_ref or "", "")
+            valid_grounding = bool(
+                evidence_ref
+                and evidence_text
+                and evidence_quote
+                and evidence_quote in evidence_text
+            )
+            if evidence_ref and evidence_ref not in available_evidence:
+                evidence_ref = None
+            if support_status in {"supported", "contradicted"} and not valid_grounding:
+                support_status = "insufficient"
+                evidence_ref = None
+                evidence_quote = ""
+            else:
+                needs_repair.discard(claim_index)
+            rationale = _compact_snippet(str(row.get("rationale") or ""), max_len=200)
+            parsed[claim_index] = {
+                "support_status": support_status,
+                "confidence": confidence,
+                "evidence_ref": evidence_ref,
+                "evidence_quote": evidence_quote,
+                "rationale": rationale or "LLM NLI verification applied.",
+            }
+        return parsed, needs_repair
+
+    response = client.generate(prompt=prompt, system_prompt=system_prompt)
+    normalized, needs_repair = _parse_rows(response.content)
+    if not needs_repair:
+        return normalized
+
+    repair_claims = [
+        {"claim_index": index, "claim": claims[index]} for index in sorted(needs_repair)
+    ]
+    repair_prompt = (
+        "Repair only the omitted or ungrounded clinical NLI rows below.\n"
+        "Return the same STRICT JSON rows schema. Preserve each original claim_index.\n"
+        "For supported or contradicted, evidence_ref must exactly match a provided ref "
+        "and evidence_quote must be a character-for-character contiguous substring of "
+        "that evidence text. Never paraphrase the quote. If no such quote exists, return "
+        "insufficient with empty evidence_ref and evidence_quote.\n"
+        f"claims={json.dumps(repair_claims, ensure_ascii=False)}\n"
+        f"evidence={json.dumps(evidence_compact, ensure_ascii=False)}\n"
+    )
+    repair_response = client.generate(prompt=repair_prompt, system_prompt=system_prompt)
+    repaired, _ = _parse_rows(repair_response.content)
+    for index in needs_repair:
+        if index in repaired:
+            normalized[index] = repaired[index]
     return normalized
 
 
