@@ -171,6 +171,7 @@ def test_retrieve_pubmed_hydrates_dapa_ckd_abstract_and_identifiers(monkeypatch)
         calls.append(url)
         assert "efetch.fcgi" in url
         assert "32970396" in url
+        assert timeout_seconds == 12.0
         return dapa_efetch
 
     monkeypatch.setattr(ExternalSourceGateway, "_fetch_json", staticmethod(_fake_fetch_json))

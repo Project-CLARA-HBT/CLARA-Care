@@ -53,6 +53,11 @@ class Citation:
     source_type: str | None = None
     trust_tier: int | None = None
     published_at: str | None = None  # publication / effective date
+    pmid: str | None = None
+    doi: str | None = None
+    nct_ids: list[str] | None = None
+    study_design: str | None = None
+    publication_types: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -145,6 +150,11 @@ _OPTIONAL_CITATION_KEYS: tuple[str, ...] = (
     "source_type",
     "trust_tier",
     "published_at",
+    "pmid",
+    "doi",
+    "nct_ids",
+    "study_design",
+    "publication_types",
 )
 
 
@@ -5914,9 +5924,33 @@ def _build_citations(
                 title=title,
                 url=url,
                 relevance=relevance,
+                study_id=_first_nonempty_text(
+                    item.get("pmid"),
+                    item.get("doi"),
+                    source_id,
+                ),
                 trust_tier=_row_trust_tier(item) if rank_enabled else None,
-                source_type=_row_source_type(item) if rank_enabled else None,
+                source_type=_row_source_type(item),
                 published_at=_row_effective_date(item) if rank_enabled else None,
+                pmid=_first_nonempty_text(item.get("pmid")) or None,
+                doi=_first_nonempty_text(item.get("doi")) or None,
+                nct_ids=(
+                    [str(value) for value in item.get("nct_ids", []) if str(value).strip()]
+                    if isinstance(item.get("nct_ids"), list)
+                    else None
+                )
+                or None,
+                study_design=_first_nonempty_text(item.get("study_design")) or None,
+                publication_types=(
+                    [
+                        str(value)
+                        for value in item.get("publication_types", [])
+                        if str(value).strip()
+                    ]
+                    if isinstance(item.get("publication_types"), list)
+                    else None
+                )
+                or None,
             )
         )
 

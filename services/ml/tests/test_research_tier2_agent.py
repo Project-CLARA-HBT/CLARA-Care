@@ -173,6 +173,37 @@ def test_build_citations_expands_pool_for_deep_beta_only() -> None:
     assert beta_citations[-1].source_id == "doc-24"
 
 
+def test_build_citations_surfaces_primary_trial_identifiers() -> None:
+    citations = tier2._build_citations(
+        "DAPA-CKD",
+        [
+            {
+                "id": "pubmed-32970396",
+                "source": "pubmed",
+                "title": "Dapagliflozin in Patients with Chronic Kidney Disease",
+                "text": "Trial abstract.",
+                "url": "https://pubmed.ncbi.nlm.nih.gov/32970396/",
+                "pmid": "32970396",
+                "doi": "10.1056/NEJMoa2024816",
+                "nct_ids": ["NCT03036150"],
+                "source_type": "primary_trial",
+                "study_design": "randomized_controlled_trial",
+                "publication_types": ["Randomized Controlled Trial"],
+            }
+        ],
+        [],
+        research_mode="deep",
+    )
+
+    payload = tier2._citation_as_payload(citations[0])
+    assert payload["study_id"] == "32970396"
+    assert payload["pmid"] == "32970396"
+    assert payload["doi"] == "10.1056/NEJMoa2024816"
+    assert payload["nct_ids"] == ["NCT03036150"]
+    assert payload["source_type"] == "primary_trial"
+    assert payload["study_design"] == "randomized_controlled_trial"
+
+
 def test_build_planner_hints_applies_latency_guard_for_fast_ddi_query():
     hints = tier2._build_planner_hints(
         topic="Tương tác warfarin với ibuprofen ở người cao tuổi",

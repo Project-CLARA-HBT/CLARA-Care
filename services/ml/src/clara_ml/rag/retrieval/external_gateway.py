@@ -319,7 +319,12 @@ class ExternalSourceGateway:
             }
         )
         try:
-            raw_xml = self._fetch_text(fetch_url, timeout_seconds)
+            # EFetch returns the large abstract/provenance payload and is
+            # consistently slower than ESearch/ESummary. Give this single
+            # bounded hydration call enough time without relaxing other
+            # connector deadlines.
+            hydration_timeout = min(max(float(timeout_seconds), 12.0), 20.0)
+            raw_xml = self._fetch_text(fetch_url, hydration_timeout)
             return self._parse_pubmed_efetch(raw_xml) if raw_xml.strip() else {}
         except Exception as exc:  # noqa: BLE001 - optional hydration must fail soft
             # EFetch is an additive hydration step. Preserve the pre-existing
