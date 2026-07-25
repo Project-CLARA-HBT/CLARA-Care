@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
 import {
@@ -14,6 +14,8 @@ import {
   createEvidenceQuestion,
   deleteEvidenceSubscription,
   getEvidenceDetails,
+  isEvidenceRunTerminal,
+  pollEvidenceRun,
   runEvidenceQuestion,
   subscribeToEvidenceRun,
   type EvidenceApplicability,
@@ -165,7 +167,9 @@ export default function LivingEvidencePage() {
   const [subscription, setSubscription] = useState<EvidenceSubscription | null>(null);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [error, setError] = useState("");
+  const pollControllerRef = useRef<AbortController | null>(null);
 
   const loadEpisodes = useCallback(async () => {
     setLoadingEpisodes(true);
@@ -182,10 +186,12 @@ export default function LivingEvidencePage() {
   }, []);
 
   useEffect(() => { void loadEpisodes(); }, [loadEpisodes]);
+  useEffect(() => () => pollControllerRef.current?.abort(), []);
 
   const createQuestion = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedEpisodeId || !questionText.trim()) return;
+    pollControllerRef.current?.abort();
     setSaving(true);
     setError("");
     try {
@@ -223,19 +229,45 @@ export default function LivingEvidencePage() {
 
   const runResearch = async () => {
     if (!question?.confirmed) return;
+    pollControllerRef.current?.abort();
+    const controller = new AbortController();
+    pollControllerRef.current = controller;
     setRunning(true);
+    setPollAttempt(0);
     setError("");
+    setMatrix(null);
+    setApplicability(null);
+    setContradictions(null);
     try {
-      const nextRun = await runEvidenceQuestion(question.id);
-      setRun(nextRun);
-      const details = await getEvidenceDetails(nextRun.id);
+      const createdRun = await runEvidenceQuestion(question.id);
+      setRun(createdRun);
+      const completedRun = isEvidenceRunTerminal(createdRun)
+        ? createdRun
+        : await pollEvidenceRun(createdRun.id, {
+          signal: controller.signal,
+          onUpdate: (updatedRun, attempt) => {
+            setRun(updatedRun);
+            setPollAttempt(attempt);
+          },
+        });
+      setRun(completedRun);
+      if (completedRun.status.toLowerCase() !== "completed") {
+        throw new Error("Quá trình truy xuất bằng chứng không hoàn tất. Không có kết luận y khoa nào được phát hành.");
+      }
+      const details = await getEvidenceDetails(completedRun.id);
       setMatrix(details.matrix);
       setApplicability(details.applicability);
       setContradictions(details.contradictions);
     } catch (cause) {
-      setError(toMessage(cause, "Chưa thể truy xuất bằng chứng đã kiểm chứng."));
+      if (!(cause instanceof Error && cause.name === "AbortError")) {
+        setRun((current) => current && isEvidenceRunTerminal(current) ? current : null);
+        setError(toMessage(cause, "Chưa thể truy xuất bằng chứng đã kiểm chứng."));
+      }
     } finally {
-      setRunning(false);
+      if (pollControllerRef.current === controller) {
+        pollControllerRef.current = null;
+        setRunning(false);
+      }
     }
   };
 
@@ -268,8 +300,40 @@ export default function LivingEvidencePage() {
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <main className="space-y-5">
-          {error ? <InlineError message={error} onRetry={() => void loadEpisodes()} /> : null}
-          {run ? (
+          {error ? <InlineError message={error} onRetry={() => void (question?.confirmed ? runResearch() : loadEpisodes())} /> : null}
+          {running ? (
+            <SurfaceCard className="overflow-hidden">
+              <div role="status" aria-live="polite">
+                <div className="border-b border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)]/55 px-5 py-4">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined mt-0.5 animate-spin text-[var(--brand-700)] dark:text-sky-200" aria-hidden="true">progress_activity</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Đang xử lý chuyên sâu</p>
+                      <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{question?.question}</h2>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                        {pollAttempt === 0
+                          ? "Đang khởi tạo run và gửi câu hỏi đến hệ thống truy xuất."
+                          : pollAttempt < 15
+                            ? "Đang tìm và phân loại guideline, nghiên cứu gốc, tổng quan và bình luận."
+                            : pollAttempt < 60
+                              ? "Đang kiểm tra provenance, chất lượng nguồn và các điểm mâu thuẫn."
+                              : "Đang hoàn tất ma trận bằng chứng và hiệu chỉnh độ không chắc chắn."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
+                    <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--brand-500)]" />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+                    {pollAttempt > 0 ? `Đã cập nhật tiến trình ${pollAttempt} lần. ` : ""}
+                    Tác vụ có thể mất vài phút. Bạn không cần gửi lại câu hỏi.
+                  </p>
+                </div>
+              </div>
+            </SurfaceCard>
+          ) : run ? (
             <SurfaceCard className="overflow-hidden">
               <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">

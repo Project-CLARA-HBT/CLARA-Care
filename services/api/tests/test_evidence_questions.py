@@ -127,11 +127,17 @@ def test_evidence_question_requires_confirmation_then_releases_provenance_only(m
         headers={**owner, "Idempotency-Key": f"run-{suffix}"},
     )
     assert run.status_code == 202, run.text
-    assert run.json()["release_status"] == "evidence_available"
-    assert run.json()["evidence_count"] == 3
+    assert run.json()["status"] == "running"
+    assert run.json()["release_status"] == "pending"
+    assert run.json()["evidence_count"] == 0
     assert "answer" not in run.json()
     run_id = run.json()["id"]
 
+    completed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=owner)
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["release_status"] == "evidence_available"
+    assert completed.json()["evidence_count"] == 3
     matrix = client.get(f"/api/v1/evidence-runs/{run_id}/matrix", headers=owner)
     assert matrix.status_code == 200
     assert set(matrix.json()["source_classes"]) == {
@@ -204,11 +210,121 @@ def test_evidence_run_abstains_when_research_falls_back(monkeypatch) -> None:
         headers={**headers, "Idempotency-Key": f"fallback-{suffix}"},
     )
     assert run.status_code == 202
-    assert run.json()["release_status"] == "evidence_unavailable"
+    assert run.json()["release_status"] == "pending"
     assert run.json()["evidence_count"] == 0
+    completed = client.get(f"/api/v1/evidence-runs/{run.json()['id']}", headers=headers)
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["release_status"] == "evidence_unavailable"
     matrix = client.get(f"/api/v1/evidence-runs/{run.json()['id']}/matrix", headers=headers)
     assert matrix.json()["source_classes"] == {}
     assert matrix.json()["unavailable_reason"]
+
+
+def test_evidence_run_enqueues_once_and_worker_uses_durable_run(monkeypatch) -> None:
+    suffix = uuid4().hex
+    headers = _headers(f"evidence-async-{suffix}@normal.clara")
+    episode_id = _episode(headers, suffix)
+    question = client.post(
+        f"/api/v1/episodes/{episode_id}/evidence-questions",
+        headers=headers,
+        json={
+            "question": "Bằng chứng kiểm soát huyết áp tại nhà là gì?",
+            "population_context": "Người lớn có tăng huyết áp.",
+            "outcomes": ["huyết áp"],
+            "time_horizon": "12 tháng",
+            "confirmed": True,
+        },
+    )
+    assert question.status_code == 201
+
+    enqueued: list[tuple[int, dict]] = []
+    worker = evidence_questions._execute_evidence_run
+    monkeypatch.setattr(
+        evidence_questions,
+        "_execute_evidence_run",
+        lambda run_id, token_data: enqueued.append((run_id, token_data)),
+    )
+    request_headers = {**headers, "Idempotency-Key": f"async-{suffix}"}
+    started = client.post(
+        f"/api/v1/evidence-questions/{question.json()['id']}/run",
+        headers=request_headers,
+    )
+    assert started.status_code == 202
+    assert started.json()["status"] == "running"
+    assert started.json()["release_status"] == "pending"
+    assert len(enqueued) == 1
+    run_id = int(started.json()["id"])
+
+    observed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    assert observed.status_code == 200
+    assert observed.json()["status"] == "running"
+
+    replay = client.post(
+        f"/api/v1/evidence-questions/{question.json()['id']}/run",
+        headers=request_headers,
+    )
+    assert replay.status_code == 202
+    assert replay.json()["idempotent_replay"] is True
+    assert len(enqueued) == 1
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research.research_tier2",
+        lambda *_args, **_kwargs: _verified_result(),
+    )
+    # Simulate the post-response worker using only durable ID + copied auth context.
+    worker(run_id, enqueued[0][1])
+
+    completed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["release_status"] == "evidence_available"
+    assert completed.json()["evidence_count"] == 3
+
+
+def test_evidence_background_failure_is_observable(monkeypatch) -> None:
+    suffix = uuid4().hex
+    headers = _headers(f"evidence-worker-failure-{suffix}@normal.clara")
+    episode_id = _episode(headers, suffix)
+    question = client.post(
+        f"/api/v1/episodes/{episode_id}/evidence-questions",
+        headers=headers,
+        json={
+            "question": "Bằng chứng nào phù hợp cho theo dõi triệu chứng?",
+            "population_context": "Người lớn.",
+            "outcomes": ["triệu chứng"],
+            "time_horizon": "4 tuần",
+            "confirmed": True,
+        },
+    )
+    assert question.status_code == 201
+    captured: list[tuple[int, dict]] = []
+    worker = evidence_questions._execute_evidence_run
+    monkeypatch.setattr(
+        evidence_questions,
+        "_execute_evidence_run",
+        lambda run_id, token_data: captured.append((run_id, token_data)),
+    )
+    started = client.post(
+        f"/api/v1/evidence-questions/{question.json()['id']}/run",
+        headers={**headers, "Idempotency-Key": f"worker-failure-{suffix}"},
+    )
+    assert started.status_code == 202
+    run_id = int(started.json()["id"])
+    token_data = captured[0][1]
+
+    def _fail(*_args, **_kwargs):
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.research.research_tier2",
+        _fail,
+    )
+    worker(run_id, token_data)
+    failed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    assert failed.status_code == 200
+    assert failed.json()["status"] == "failed"
+    assert failed.json()["release_status"] == "evidence_unavailable"
+    assert failed.json()["evidence_count"] == 0
 
 
 def test_guideline_artifact_only_exposes_curator_published_rows() -> None:

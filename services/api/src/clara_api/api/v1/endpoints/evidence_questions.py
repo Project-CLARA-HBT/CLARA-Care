@@ -18,7 +18,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -37,7 +37,7 @@ from clara_api.db.models import (
     LifeMapEpisode,
     PhrProfile,
 )
-from clara_api.db.session import get_db
+from clara_api.db.session import SessionLocal, get_db
 
 router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -335,17 +335,27 @@ def _run_summary(
 ) -> dict[str, Any]:
     summary = run.result_summary_json if isinstance(run.result_summary_json, dict) else {}
     rows = evidence or []
+    pending = run.status in {"queued", "running"}
     return {
         "id": str(run.id),
         "evidence_question_id": str(run.case_id),
         "status": run.status,
-        "release_status": summary.get("release_status", "evidence_unavailable"),
+        "release_status": summary.get(
+            "release_status", "pending" if pending else "evidence_unavailable"
+        ),
         "evidence_count": (
             len(rows) if evidence is not None else int(summary.get("evidence_count", 0))
         ),
         "source_class_counts": summary.get("source_class_counts", {}),
         "uncertainty": summary.get("uncertainty", []),
-        "safe_message": summary.get("safe_message", "No clinical conclusion is released."),
+        "safe_message": summary.get(
+            "safe_message",
+            (
+                "Verified evidence retrieval is still running."
+                if pending
+                else "No clinical conclusion is released."
+            ),
+        ),
         "created_at": run.created_at,
         "completed_at": run.completed_at,
     }
@@ -401,6 +411,154 @@ def _structured_contradictions(
                 }
             )
     return normalized
+
+
+def _execute_evidence_run(run_id: int, token_data: dict[str, Any]) -> None:
+    """Execute one persisted evidence run outside the request DB session.
+
+    FastAPI invokes this through ``BackgroundTasks`` after the 202 response is
+    sent.  A fresh session is essential: request-scoped sessions are closed as
+    soon as the response lifecycle finishes.
+    """
+
+    with SessionLocal() as db:
+        try:
+            run = db.execute(
+                select(ClinicalWorkflowRun)
+                .where(ClinicalWorkflowRun.id == run_id)
+                .with_for_update()
+            ).scalar_one_or_none()
+            if run is None or run.protocol != _PROTOCOL or run.status != "running":
+                # Missing, completed, failed, or duplicate worker delivery: no-op.
+                return
+            stage = db.execute(
+                select(ClinicalStageRun).where(
+                    ClinicalStageRun.workflow_run_id == run.id,
+                    ClinicalStageRun.stage_key == "research_retrieval",
+                )
+            ).scalar_one()
+            question_case = db.get(ClinicalCase, run.case_id)
+            if question_case is None:
+                raise RuntimeError("Evidence question was removed before retrieval")
+            question = _question_data(question_case)
+
+            # Import lazily so the existing Research endpoint remains the single
+            # retrieval/harness owner. Its answer prose is intentionally discarded.
+            from clara_api.api.v1.endpoints.research import research_tier2
+
+            research_result = research_tier2(
+                {
+                    "query": str(question.get("question") or ""),
+                    "research_mode": "deep",
+                    "retrieval_stack_mode": "full",
+                    "ui_language": "vi",
+                    "source_mode": "scientific",
+                    "output_profile": "researcher",
+                },
+                token=TokenPayload(token_data),
+                db=db,
+            )
+            accepted, rejection_reasons = _accepted_evidence(
+                research_result.get("citations"), research_result=research_result
+            )
+            release_status = (
+                "evidence_available"
+                if accepted and not rejection_reasons
+                else "evidence_unavailable"
+            )
+            accepted_ids = {item["citation_id"] for item in accepted if item["citation_id"]}
+            contradictions = _structured_contradictions(research_result, accepted_ids)
+            source_counts: dict[str, int] = defaultdict(int)
+            retrieved_at = datetime.now(UTC)
+            if release_status == "evidence_available":
+                for item in accepted:
+                    source_counts[item["source_class"]] += 1
+                    db.add(
+                        EvidenceRecord(
+                            case_id=question_case.id,
+                            workflow_run_id=run.id,
+                            source_type=item["source_class"],
+                            source_id=(
+                                item["identifiers"].get("study_id")
+                                or item["identifiers"].get("source_id")
+                                or item["identifiers"].get("pmid")
+                                or item["identifiers"].get("doi")
+                                or item["identifiers"].get("nct")
+                                or ""
+                            ),
+                            title=item["title"],
+                            citation_json={
+                                "provider": item["provider"],
+                                "source_class": item["source_class"],
+                                "study_design": item["study_design"],
+                                "identifiers": item["identifiers"],
+                                "url": item["url"],
+                                "published_at": item["published_at"],
+                                "trust_tier": item["trust_tier"],
+                                "retrieval_query": question.get("question"),
+                                "retrieval_at": retrieved_at.isoformat(),
+                            },
+                            excerpt=item["excerpt"],
+                            evidence_level=item["source_class"],
+                        )
+                    )
+            run.status = "completed"
+            run.completed_at = datetime.now(UTC)
+            run.result_summary_json = {
+                "release_status": release_status,
+                "evidence_count": (
+                    len(accepted) if release_status == "evidence_available" else 0
+                ),
+                "source_class_counts": dict(source_counts),
+                "rejection_reasons": rejection_reasons,
+                "contradictions": contradictions,
+                "uncertainty": _uncertainty(
+                    question,
+                    release_status=release_status,
+                    structured_contradictions=bool(contradictions),
+                ),
+                "safe_message": (
+                    "Evidence records are available for inspection. CLARA has not generated "
+                    "individual treatment advice."
+                    if release_status == "evidence_available"
+                    else (
+                        "No clinical conclusion is released because verified evidence "
+                        "provenance was unavailable or incomplete."
+                    )
+                ),
+            }
+            stage.status = "completed"
+            stage.completed_at = run.completed_at
+            db.commit()
+        except Exception:
+            db.rollback()
+            run = db.get(ClinicalWorkflowRun, run_id)
+            if run is None or run.status != "running":
+                return
+            stage = db.execute(
+                select(ClinicalStageRun).where(
+                    ClinicalStageRun.workflow_run_id == run.id,
+                    ClinicalStageRun.stage_key == "research_retrieval",
+                )
+            ).scalar_one_or_none()
+            run.status = "failed"
+            run.failure_code = "research_unavailable"
+            run.completed_at = datetime.now(UTC)
+            run.result_summary_json = {
+                "release_status": "evidence_unavailable",
+                "evidence_count": 0,
+                "source_class_counts": {},
+                "uncertainty": [],
+                "safe_message": (
+                    "No clinical conclusion is released because verified evidence retrieval "
+                    "failed."
+                ),
+            }
+            if stage is not None:
+                stage.status = "failed"
+                stage.error_code = "research_unavailable"
+                stage.completed_at = run.completed_at
+            db.commit()
 
 
 @router.post("/episodes/{episode_id}/evidence-questions", status_code=status.HTTP_201_CREATED)
@@ -462,11 +620,12 @@ def update_evidence_question(
 @router.post("/evidence-questions/{question_id}/run", status_code=status.HTTP_202_ACCEPTED)
 def run_evidence_question(
     question_id: int,
+    background_tasks: BackgroundTasks,
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
-    """Run the existing deep Research pipeline, then release *only* verified rows."""
+    """Persist and enqueue deep Research, returning before retrieval starts."""
 
     user, profile = _user_profile(db, token)
     question_case = _question_case(db, user.id, question_id)
@@ -514,125 +673,41 @@ def run_evidence_question(
         status="running",
         started_at=now,
     )
-    db.add(run)
-    db.flush()
-    stage.workflow_run_id = run.id
-    db.add(stage)
-    db.commit()
-
     try:
-        # Import lazily so the existing Research endpoint remains the single
-        # retrieval/harness owner.  Its answer prose is intentionally discarded.
-        from clara_api.api.v1.endpoints.research import research_tier2
-
-        research_result = research_tier2(
-            {
-                "query": str(question.get("question") or ""),
-                "research_mode": "deep",
-                "retrieval_stack_mode": "full",
-                "ui_language": "vi",
-                "source_mode": "scientific",
-                "output_profile": "researcher",
-            },
-            token=token,
-            db=db,
-        )
-        accepted, rejection_reasons = _accepted_evidence(
-            research_result.get("citations"), research_result=research_result
-        )
-        release_status = (
-            "evidence_available"
-            if accepted and not rejection_reasons
-            else "evidence_unavailable"
-        )
-        accepted_ids = {item["citation_id"] for item in accepted if item["citation_id"]}
-        contradictions = _structured_contradictions(research_result, accepted_ids)
-        source_counts: dict[str, int] = defaultdict(int)
-        if release_status == "evidence_available":
-            for item in accepted:
-                source_counts[item["source_class"]] += 1
-                db.add(
-                    EvidenceRecord(
-                        case_id=question_case.id,
-                        workflow_run_id=run.id,
-                        source_type=item["source_class"],
-                        source_id=(
-                            item["identifiers"].get("study_id")
-                            or item["identifiers"].get("source_id")
-                            or item["identifiers"].get("pmid")
-                            or item["identifiers"].get("doi")
-                            or item["identifiers"].get("nct")
-                            or ""
-                        ),
-                        title=item["title"],
-                        citation_json={
-                            "provider": item["provider"],
-                            "source_class": item["source_class"],
-                            "study_design": item["study_design"],
-                            "identifiers": item["identifiers"],
-                            "url": item["url"],
-                            "published_at": item["published_at"],
-                            "trust_tier": item["trust_tier"],
-                            "retrieval_query": question.get("question"),
-                            "retrieval_at": now.isoformat(),
-                        },
-                        excerpt=item["excerpt"],
-                        evidence_level=item["source_class"],
-                    )
-                )
-        run.status = "completed"
-        run.completed_at = datetime.now(UTC)
-        run.result_summary_json = {
-            "release_status": release_status,
-            "evidence_count": len(accepted) if release_status == "evidence_available" else 0,
-            "source_class_counts": dict(source_counts),
-            "rejection_reasons": rejection_reasons,
-            "contradictions": contradictions,
-            "uncertainty": _uncertainty(
-                question,
-                release_status=release_status,
-                structured_contradictions=bool(contradictions),
-            ),
-            "safe_message": (
-                "Evidence records are available for inspection. CLARA has not generated "
-                "individual treatment advice."
-                if release_status == "evidence_available"
-                else (
-                    "No clinical conclusion is released because verified evidence provenance "
-                    "was unavailable or incomplete."
-                )
-            ),
-        }
-        stage.status = "completed"
-        stage.completed_at = run.completed_at
+        db.add(run)
+        db.flush()
+        stage.workflow_run_id = run.id
+        db.add(stage)
         db.commit()
-        evidence = list(
-            db.execute(
-                select(EvidenceRecord)
-                .where(EvidenceRecord.workflow_run_id == run.id)
-                .order_by(EvidenceRecord.id)
-            ).scalars()
-        )
-        return {**_run_summary(run, evidence), "idempotent_replay": False}
-    except Exception:
+    except IntegrityError:
+        # A concurrent request may pass the read check before the unique
+        # (owner, idempotency key) constraint commits. Resolve it as the same
+        # idempotent replay instead of leaking a database error.
         db.rollback()
-        run = db.get(ClinicalWorkflowRun, run.id)
-        stage = db.execute(
-            select(ClinicalStageRun).where(
-                ClinicalStageRun.workflow_run_id == run.id,
-                ClinicalStageRun.stage_key == "research_retrieval",
+        existing = db.execute(
+            select(ClinicalWorkflowRun).where(
+                ClinicalWorkflowRun.owner_user_id == user.id,
+                ClinicalWorkflowRun.idempotency_key == idempotency_key,
             )
-        ).scalar_one()
-        run.status = "failed"
-        run.failure_code = "research_unavailable"
-        run.completed_at = datetime.now(UTC)
-        stage.status = "failed"
-        stage.error_code = "research_unavailable"
-        stage.completed_at = run.completed_at
-        db.commit()
+        ).scalar_one_or_none()
+        if (
+            existing is not None
+            and existing.case_id == question_case.id
+            and existing.protocol == _PROTOCOL
+        ):
+            return {**_run_summary(existing), "idempotent_replay": True}
         raise HTTPException(
-            status_code=503, detail="Verified evidence retrieval is currently unavailable"
+            status_code=409, detail="Idempotency-Key was used for another request"
         ) from None
+    db.refresh(run)
+    # The worker needs only the stable subject and role, not the complete JWT
+    # claims (expiry, token ID, issuer).
+    background_tasks.add_task(
+        _execute_evidence_run,
+        run.id,
+        {"sub": token.sub, "role": token.role},
+    )
+    return {**_run_summary(run), "idempotent_replay": False}
 
 
 @router.get("/evidence-runs/{run_id}")

@@ -75,6 +75,15 @@ export type EvidenceSubscription = {
   delivery_channel: string;
 };
 
+export type EvidenceRunPollingOptions = {
+  intervalMs?: number;
+  maxAttempts?: number;
+  signal?: AbortSignal;
+  onUpdate?: (run: EvidenceRun, attempt: number) => void;
+};
+
+const TERMINAL_EVIDENCE_RUN_STATUSES = new Set(["completed", "failed", "cancelled", "canceled"]);
+
 function idempotencyKey(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -111,6 +120,64 @@ export async function runEvidenceQuestion(questionId: string): Promise<EvidenceR
       { headers: { "Idempotency-Key": idempotencyKey() } },
     )
   ).data;
+}
+
+export async function getEvidenceRun(runId: string): Promise<EvidenceRun> {
+  return (await api.get<EvidenceRun>(`/evidence-runs/${encodeURIComponent(runId)}`)).data;
+}
+
+export function isEvidenceRunTerminal(run: EvidenceRun): boolean {
+  return TERMINAL_EVIDENCE_RUN_STATUSES.has(run.status.toLowerCase());
+}
+
+function abortError(): Error {
+  const error = new Error("Đã dừng theo dõi tiến trình truy xuất bằng chứng.");
+  error.name = "AbortError";
+  return error;
+}
+
+function waitForNextPoll(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(abortError());
+  if (milliseconds <= 0) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      signal?.removeEventListener("abort", handleAbort);
+      resolve();
+    }, milliseconds);
+    const handleAbort = () => {
+      window.clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", handleAbort);
+      reject(abortError());
+    };
+    signal?.addEventListener("abort", handleAbort, { once: true });
+  });
+}
+
+export async function pollEvidenceRun(
+  runId: string,
+  {
+    intervalMs = 2_000,
+    maxAttempts = 180,
+    signal,
+    onUpdate,
+  }: EvidenceRunPollingOptions = {},
+): Promise<EvidenceRun> {
+  if (maxAttempts < 1) {
+    throw new Error("Số lần kiểm tra tiến trình phải lớn hơn 0.");
+  }
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (signal?.aborted) throw abortError();
+    await waitForNextPoll(attempt === 1 ? 0 : intervalMs, signal);
+    const run = await getEvidenceRun(runId);
+    onUpdate?.(run, attempt);
+    if (isEvidenceRunTerminal(run)) return run;
+  }
+
+  throw new Error(
+    "Quá trình tổng hợp đang mất nhiều thời gian hơn dự kiến. Run vẫn được lưu; bạn có thể thử lại sau.",
+  );
 }
 
 export async function getEvidenceDetails(runId: string): Promise<{
