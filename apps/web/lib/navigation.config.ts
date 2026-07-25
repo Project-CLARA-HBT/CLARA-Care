@@ -40,12 +40,12 @@ export const PUBLIC_ROUTES = new Set([
   "/verify-email",
 ]);
 
-export const DEFAULT_POST_LOGIN_PATH = "/dashboard";
+export const DEFAULT_POST_LOGIN_PATH = "/today";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/dashboard",
+  normal: "/today",
   researcher: "/dashboard",
   doctor: "/dashboard",
   admin: "/dashboard",
@@ -105,6 +105,30 @@ const NAV_ITEMS: NavigationItem[] = [
     },
   },
   {
+    href: "/visits",
+    label: "Chuẩn bị đi khám",
+    icon: "event_available",
+    desc: "Câu hỏi và Visit Pack của bạn",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Chuẩn bị buổi khám",
+      subtitle: "Gom đúng thông tin bạn muốn mang đến buổi khám.",
+    },
+  },
+  {
+    href: "/family",
+    label: "Family Circle",
+    icon: "family_restroom",
+    desc: "Chia sẻ tối thiểu với người hỗ trợ",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Family Circle",
+      subtitle: "Kiểm soát ai được xem hoặc hỗ trợ đúng một việc.",
+    },
+  },
+  {
     href: "/research",
     label: "Nghiên cứu",
     icon: "science",
@@ -115,6 +139,18 @@ const NAV_ITEMS: NavigationItem[] = [
     page: {
       title: "CLARA Research",
       subtitle: "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
+    },
+  },
+  {
+    href: "/evidence",
+    label: "Bằng chứng cập nhật",
+    icon: "fact_check",
+    desc: "Câu hỏi LifeMap với nguồn kiểm chứng",
+    group: "research",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Bằng chứng đang cập nhật",
+      subtitle: "Gắn câu hỏi với hành trình, xem nguồn và phần chưa chắc chắn.",
     },
   },
   {
