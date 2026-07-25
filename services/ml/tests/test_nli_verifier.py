@@ -130,7 +130,7 @@ def test_verify_claims_llm_failure_fails_closed_to_insufficient() -> None:
     assert row["evidence_ref"] is None
 
 
-def test_heuristic_polarity_mismatch_is_insufficient_not_contradicted() -> None:
+def test_unrelated_sentence_polarity_does_not_override_direct_support() -> None:
     rows = verify_claims(
         claims=["SGLT2 inhibitors reduce kidney disease progression."],
         evidence_rows=[
@@ -146,8 +146,8 @@ def test_heuristic_polarity_mismatch_is_insufficient_not_contradicted() -> None:
         llm_enabled=False,
     )
 
-    assert rows[0].support_status == "insufficient"
-    assert rows[0].nli_label == "insufficient"
+    assert rows[0].support_status == "supported"
+    assert rows[0].nli_label == "supported"
 
 
 def test_llm_verdict_without_reference_is_downgraded() -> None:

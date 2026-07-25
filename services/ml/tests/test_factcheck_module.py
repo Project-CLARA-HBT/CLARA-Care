@@ -45,7 +45,7 @@ def test_fides_lite_passes_when_claim_matches_evidence() -> None:
     assert result.contradiction_summary["has_contradiction"] is False
 
 
-def test_fides_lite_heuristic_polarity_mismatch_is_insufficient() -> None:
+def test_fides_lite_direct_high_overlap_safety_conflict_blocks() -> None:
     result = run_fides_lite(
         answer="Paracetamol khong lam tang nguy co chay mau khi dung cung warfarin.",
         retrieved_context=[
@@ -59,11 +59,11 @@ def test_fides_lite_heuristic_polarity_mismatch_is_insufficient() -> None:
             }
         ],
     )
-    assert result.verdict == "warn"
-    assert result.contradiction_summary["has_contradiction"] is False
-    assert result.contradiction_summary["contradiction_count"] == 0
+    assert result.verdict == "fail"
+    assert result.contradiction_summary["has_contradiction"] is True
+    assert result.contradiction_summary["contradiction_count"] == 1
     matrix_row = result.verification_matrix[0]
-    assert matrix_row["support_status"] == "insufficient"
+    assert matrix_row["support_status"] == "contradicted"
     assert matrix_row["evidence_ref"] == "doc-2"
     assert matrix_row["rationale"]
 

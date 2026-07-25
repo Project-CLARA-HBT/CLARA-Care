@@ -230,7 +230,10 @@ def _scenario(draw: st.DrawFn):
 # Feature: rag-knowledge-pipeline, Property 20: Citation / provenance integrity
 # Validates: Requirements 7.6
 @_PBT_SETTINGS
-@given(scenario=_scenario(), query=st.text(min_size=1, max_size=24))
+@given(
+    scenario=_scenario(),
+    query=st.text(min_size=1, max_size=24).filter(lambda value: bool(value.strip())),
+)
 def test_property20_every_result_carries_traceable_provenance(scenario, query: str) -> None:
     dense_rows, sparse_rows, provenance_by_id, candidate_ids, top_k, tier_ranking = scenario
 

@@ -116,12 +116,29 @@ def _contains_any(tokens: set[str], lexicon: set[str]) -> bool:
     return bool(tokens.intersection(lexicon))
 
 
+def _most_relevant_sentence(claim: str, evidence: str) -> str:
+    """Localize polarity checks so an unrelated abstract sentence cannot flip a claim."""
+
+    claim_tokens = _tokenize(claim)
+    sentences = [
+        item.strip()
+        for item in re.split(r"(?<=[.!?;])\s+|\n+", str(evidence or ""))
+        if item.strip()
+    ]
+    if not sentences or not claim_tokens:
+        return str(evidence or "")
+    return max(
+        sentences,
+        key=lambda item: len(claim_tokens.intersection(_tokenize(item))),
+    )
+
+
 def _has_contradiction(claim: str, evidence: str, overlap_ratio: float) -> bool:
     if not evidence or overlap_ratio < 0.16:
         return False
 
     claim_tokens = _tokenize(claim)
-    evidence_tokens = _tokenize(evidence)
+    evidence_tokens = _tokenize(_most_relevant_sentence(claim, evidence))
 
     claim_has_negation = _contains_any(claim_tokens, _NEGATION_TERMS)
     evidence_has_negation = _contains_any(evidence_tokens, _NEGATION_TERMS)
