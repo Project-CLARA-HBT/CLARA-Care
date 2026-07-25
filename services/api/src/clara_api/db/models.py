@@ -1016,6 +1016,217 @@ class MedicationCourse(Base):
     )
 
 
+class LifeMapVisit(Base):
+    """A profile-owned appointment workflow, never a clinical encounter claim."""
+
+    __tablename__ = "lifemap_visits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    visit_type: Mapped[str] = mapped_column(String(64), default="other", index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    goal: Mapped[str] = mapped_column(Text, default="")
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="planning", index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class VisitConcern(Base):
+    """A user-authored concern for a visit; it does not establish a diagnosis."""
+
+    __tablename__ = "visit_concerns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    text: Mapped[str] = mapped_column(Text)
+    priority: Mapped[str] = mapped_column(String(24), default="routine", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VisitEpisodeLink(Base):
+    """Explicit link between a visit and a profile-owned LifeMap episode."""
+
+    __tablename__ = "visit_episode_links"
+    __table_args__ = (
+        UniqueConstraint("visit_id", "episode_id", name="uq_visit_episode_links_visit_episode"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VisitPackVersion(Base):
+    """Immutable, explicitly selected Visit Pack snapshot once approved."""
+
+    __tablename__ = "visit_pack_versions"
+    __table_args__ = (
+        UniqueConstraint("visit_id", "version_no", name="uq_visit_pack_versions_visit_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    selection_json: Mapped[dict] = mapped_column(JSON)
+    contents_json: Mapped[dict] = mapped_column(JSON)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VisitConsent(Base):
+    """Affirmative, visit-specific consent. Withdrawal invalidates processing."""
+
+    __tablename__ = "visit_consents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    policy_version: Mapped[str] = mapped_column(String(64))
+    granted_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoke_reason: Mapped[str] = mapped_column(String(255), default="")
+
+
+class VisitShare(Base):
+    """Revocable, time-bounded capability to one immutable approved pack version."""
+
+    __tablename__ = "visit_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pack_version_id: Mapped[int] = mapped_column(
+        ForeignKey("visit_pack_versions.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoke_reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FamilyInvitation(Base):
+    """One-time, recipient-bound invitation. The plaintext capability is never stored."""
+
+    __tablename__ = "family_invitations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    inviter_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    recipient_email: Mapped[str] = mapped_column(String(255), index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    proposed_scope_json: Mapped[dict] = mapped_column(JSON)
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accepted_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FamilyAccessGrant(Base):
+    """Object/action/purpose scoped relationship grant with authoritative revocation."""
+
+    __tablename__ = "family_access_grants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    grantor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    grantee_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    object_type: Mapped[str] = mapped_column(String(32), index=True)
+    object_id: Mapped[str] = mapped_column(String(64), index=True)
+    allowed_actions_json: Mapped[list[str]] = mapped_column(JSON)
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    grant_version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(24), default="active", index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoke_reason: Mapped[str] = mapped_column(String(255), default="")
+    invitation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("family_invitations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FamilyAccessLog(Base):
+    """Append-only access decision ledger; denial is as important as success."""
+
+    __tablename__ = "family_access_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    grant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("family_access_grants.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    object_type: Mapped[str] = mapped_column(String(32), index=True)
+    object_id: Mapped[str] = mapped_column(String(64), index=True)
+    action: Mapped[str] = mapped_column(String(64), index=True)
+    outcome: Mapped[str] = mapped_column(String(16), index=True)
+    purpose: Mapped[str] = mapped_column(String(64), default="")
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ConnectorAccount(Base):
     """A user-authorized, profile-scoped external health data source."""
 
@@ -1615,6 +1826,61 @@ class EvidenceRecord(Base):
     evidence_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     retrieved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class EvidenceRunSubscription(Base):
+    """Revocable opt-in for material updates to one evidence run."""
+
+    __tablename__ = "evidence_run_subscriptions"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "workflow_run_id", name="uq_evidence_run_subscription_user_run"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    workflow_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(24), default="active", index=True)
+    delivery_channel: Mapped[str] = mapped_column(String(32), default="in_app")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class GuidelineArtifact(Base):
+    """Curated, versioned guideline registry; drafts never reach consumer reads."""
+
+    __tablename__ = "guideline_artifacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(500))
+    source_provider: Mapped[str] = mapped_column(String(64), index=True)
+    source_url: Mapped[str] = mapped_column(String(2_000))
+    source_section: Mapped[str] = mapped_column(String(500), default="")
+    jurisdiction: Mapped[str] = mapped_column(String(120), default="", index=True)
+    version: Mapped[str] = mapped_column(String(128), default="")
+    publication_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    review_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    intended_population_json: Mapped[dict | list] = mapped_column(JSON)
+    eligibility_logic_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    action_options_json: Mapped[dict | list] = mapped_column(JSON)
+    certainty: Mapped[str] = mapped_column(String(32), default="")
+    content_json: Mapped[dict | list] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    approved_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
 
