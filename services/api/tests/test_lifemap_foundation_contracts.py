@@ -128,3 +128,23 @@ def test_care_loop_is_idempotent_and_visible_in_today() -> None:
     )
     assert replay.status_code == 200
     assert replay.json()["idempotent_replay"] is True
+
+
+def test_confirmed_medication_course_is_profile_scoped() -> None:
+    token = _login("medication-course@example.com")
+    headers = _auth(token)
+    assert (
+        client.put(
+            "/api/v1/phr/record", headers=headers, json={"full_name": "Medication User"}
+        ).status_code
+        == 200
+    )
+    created = client.post(
+        "/api/v1/medication-courses",
+        headers={**headers, "Idempotency-Key": "med-1"},
+        json={"medication_name": "Metformin", "drugbank_id": "DB00331", "dose_text": "500 mg"},
+    )
+    assert created.status_code == 201
+    assert created.json()["truth_state"] == "confirmed"
+    listed = client.get("/api/v1/medication-courses", headers=headers)
+    assert [row["id"] for row in listed.json()] == [created.json()["id"]]
