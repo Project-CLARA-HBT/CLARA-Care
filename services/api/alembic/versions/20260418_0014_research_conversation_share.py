@@ -60,7 +60,14 @@ def upgrade() -> None:
                 sa.Column(
                     "research_job_id",
                     sa.Integer(),
-                    sa.ForeignKey("research_jobs.id", ondelete="CASCADE"),
+                    sa.ForeignKey(
+                        "research_jobs.id",
+                        name=(
+                            "fk_workspace_conversation_shares_"
+                            "research_job_id_research_jobs"
+                        ),
+                        ondelete="CASCADE",
+                    ),
                     nullable=True,
                 )
             )
