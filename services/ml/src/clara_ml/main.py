@@ -541,6 +541,10 @@ def _classify_medical_request_with_llm(
             "You are the semantic safety router for a medical assistant. Classify the "
             "user's actual intent from full context, in Vietnamese or English. A stated "
             "current medicine/dose is context, not automatically a dosing request. "
+            "Interpret negation and temporal context: symptoms explicitly denied are not "
+            "active red flags. Do not label a stable, asymptomatic elevated home reading "
+            "as an emergency solely because hypertension or a blood-pressure value is "
+            "mentioned; reserve emergency=true for an active time-critical presentation. "
             "Educational differential diagnosis, evidence review, and questions about "
             "what clinicians may evaluate are allowed. Block only direct requests for a "
             "new prescription, a personalized dose/start/stop/change instruction, or a "
@@ -827,27 +831,29 @@ def routed_chat_infer(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     role_hint = str(payload.get("role", "")).strip().lower() or None
     ui_language = "en" if str(payload.get("ui_language", "vi")).strip().lower() == "en" else "vi"
-    # Emergency triage must outrank the legal/prescribing guard. Otherwise a
-    # red-flag message that also mentions a diagnosis or an existing medication
-    # dose can be reduced to a generic refusal with no urgent action.
+    # Contextual semantic triage is primary. The deterministic router remains a
+    # fail-safe floor only when the closed-schema LLM classifier is unavailable;
+    # it must not turn explicitly negated symptoms into an emergency.
     safety_route = router.route(query, role_hint=role_hint)
     semantic_route: dict[str, Any] | None = None
-    if not safety_route.emergency:
-        try:
-            semantic_route = _classify_medical_request_with_llm(
-                redact_pii(query).redacted_text,
-                role_hint=role_hint,
-            )
-            legal_guard_reason = (
-                str(semantic_route["reason"])
-                if semantic_route["action"] == "block"
-                else None
-            )
-        except Exception:  # noqa: BLE001 - deterministic guard is the safe outage path
-            logger.warning("Medical semantic router unavailable; using safety fallback")
+    try:
+        semantic_route = _classify_medical_request_with_llm(
+            redact_pii(query).redacted_text,
+            role_hint=role_hint,
+        )
+        legal_guard_reason = (
+            str(semantic_route["reason"])
+            if semantic_route["action"] == "block"
+            else None
+        )
+    except Exception:  # noqa: BLE001 - deterministic guard is the safe outage path
+        logger.warning("Medical semantic router unavailable; using safety fallback")
+        if not safety_route.emergency:
             legal_guard_reason = _detect_legal_guard_violation(query, channel="chat")
-        if legal_guard_reason:
-            return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
+        else:
+            legal_guard_reason = None
+    if legal_guard_reason and not (semantic_route and semantic_route.get("emergency")):
+        return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
 
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
@@ -905,6 +911,12 @@ def routed_chat_infer(payload: dict) -> dict:
         role_hint=role_hint,
         clinical_context=clinical_context,
         router=router,
+        semantic_emergency=(
+            bool(semantic_route["emergency"])
+            if semantic_route is not None
+            and float(semantic_route.get("confidence") or 0.0) >= 0.7
+            else None
+        ),
     )
     pii = preflight.pii
     route = preflight.route

@@ -169,11 +169,12 @@ def classify_claim(
     evidence_text = matched_evidence.get("text", "") if matched_evidence else ""
     contradiction = _has_contradiction(claim, evidence_text, overlap_ratio)
     if contradiction:
-        # Token-level polarity is only a signal that semantic verification is
-        # needed.  A negation or direction word elsewhere in a long abstract
-        # must never be promoted to a clinical contradiction.
-        nli_label = "insufficient"
-        support_status = "insufficient"
+        # This is a conservative outage floor for a high-overlap polarity
+        # conflict. The production semantic NLI pass may clear it only with a
+        # grounded verdict and exact evidence quote; an unavailable verifier
+        # must never silently downgrade a possible medication-safety conflict.
+        nli_label = "contradicted"
+        support_status = "contradicted"
     elif overlap_ratio >= support_threshold:
         nli_label = "supported"
         support_status = "supported"
@@ -410,9 +411,13 @@ def _apply_llm_nli_overrides(
 ) -> list[ClaimVerdict]:
     if not llm_rows:
         return [
-            _insufficient_verdict(
-                base,
-                rationale="LLM NLI returned no valid verdict; evidence remains insufficient.",
+            (
+                base
+                if base.support_status == "contradicted"
+                else _insufficient_verdict(
+                    base,
+                    rationale="LLM NLI returned no valid verdict; evidence remains insufficient.",
+                )
             )
             for base in base_rows
         ]
@@ -427,7 +432,9 @@ def _apply_llm_nli_overrides(
         override = llm_rows.get(idx)
         if not override:
             merged.append(
-                _insufficient_verdict(
+                base
+                if base.support_status == "contradicted"
+                else _insufficient_verdict(
                     base,
                     rationale="LLM NLI omitted this claim; evidence remains insufficient.",
                 )
@@ -573,9 +580,13 @@ def verify_claims(
         )
     except Exception:  # noqa: BLE001 - any provider/parse failure must fail closed
         return [
-            _insufficient_verdict(
-                base,
-                rationale="LLM NLI was unavailable; evidence remains insufficient.",
+            (
+                base
+                if base.support_status == "contradicted"
+                else _insufficient_verdict(
+                    base,
+                    rationale="LLM NLI was unavailable; evidence remains insufficient.",
+                )
             )
             for base in base_rows
         ]

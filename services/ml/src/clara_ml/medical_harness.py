@@ -46,8 +46,15 @@ def preflight_harness(
     role_hint: str | None,
     clinical_context: dict[str, Any] | None,
     router: P1RoleIntentRouter,
+    semantic_emergency: bool | None = None,
 ) -> HarnessPreflight:
-    """Run all deterministic gates that must precede retrieval and generation."""
+    """Run safety gates before retrieval and generation.
+
+    ``semantic_emergency`` is the closed-schema verdict from the primary LLM
+    triage pass. When present it owns contextual interpretation (including
+    negated symptoms); deterministic phrase matching remains only the outage
+    floor when the semantic pass is unavailable.
+    """
 
     stages: list[dict[str, Any]] = []
     pii = redact_pii(query)
@@ -63,7 +70,11 @@ def preflight_harness(
         }
     )
     red_flags = detect_emergency_red_flags(pii.redacted_text)
-    if red_flags and not route.emergency:
+    if semantic_emergency is False:
+        route.emergency = False
+        if route.intent == "emergency_triage":
+            route.intent = "symptom_triage"
+    elif semantic_emergency is True or (red_flags and not route.emergency):
         route.intent = "emergency_triage"
         route.emergency = True
         route.confidence = max(route.confidence, 0.995)

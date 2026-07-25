@@ -39,6 +39,24 @@ def test_preflight_runs_deterministic_medication_gate_and_missing_info() -> None
     assert {item["field"] for item in result.missing_information} >= {"age", "allergies"}
 
 
+def test_semantic_triage_clears_negated_emergency_phrases() -> None:
+    result = preflight_harness(
+        query=(
+            "Huyết áp ở nhà khoảng 150/95 nhưng tôi không đau ngực hay khó thở. "
+            "Tôi nên làm gì tiếp theo?"
+        ),
+        role_hint="normal",
+        clinical_context={},
+        router=P1RoleIntentRouter(),
+        semantic_emergency=False,
+    )
+
+    assert result.route.emergency is False
+    assert result.route.intent == "symptom_triage"
+    assert result.stages[2]["status"] == "clear"
+    assert result.stages[2]["retrieval_bypassed"] is False
+
+
 def test_postprocess_exposes_stage_metadata_without_user_input() -> None:
     result = preflight_harness(
         query="Tôi bị sốt, cần biết nên làm gì",
