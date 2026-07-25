@@ -36,7 +36,8 @@ def _build_app() -> FastAPI:
 def test_route_label_uses_template_not_raw_path_id_or_query() -> None:
     # Snapshot baseline so the assertions are robust to shared store state.
     store = get_api_metrics_store()
-    before = store.snapshot()["by_route"].get("/items/{item_id}", 0)
+    baseline_by_route = dict(store.snapshot()["by_route"])
+    before = baseline_by_route.get("/items/{item_id}", 0)
 
     app = _build_app()
     client = TestClient(app)
@@ -53,7 +54,17 @@ def test_route_label_uses_template_not_raw_path_id_or_query() -> None:
     assert by_route.get("/items/{item_id}", 0) == before + 1
 
     # ...and no raw path/id/query value leaks into any route label.
-    route_labels = " ".join(by_route.keys())
+    # Inspect only labels whose counters changed during this request. The
+    # process-wide store legitimately contains static routes such as
+    # ``/verify-email`` from earlier tests; those names are not leaked query
+    # parameters and must not make this test order-dependent.
+    changed_route_labels = [
+        label
+        for label, count in by_route.items()
+        if count > baseline_by_route.get(label, 0)
+    ]
+    route_labels = " ".join(changed_route_labels)
+    assert "/items/{item_id}" in changed_route_labels
     assert secret_id not in route_labels
     assert "ssn" not in route_labels
     assert "email" not in route_labels

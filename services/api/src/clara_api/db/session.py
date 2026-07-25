@@ -14,7 +14,13 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 def _engine_kwargs_for(url: str, settings=None) -> dict[str, object]:
     if settings is None:
         settings = get_settings()
-    kwargs: dict[str, object] = {"pool_pre_ping": bool(settings.db_pool_pre_ping)}
+    # Keep this helper compatible with deliberately minimal settings doubles
+    # used by startup/fallback probes.  The fallback values are SQLAlchemy's
+    # defaults and match ``Settings``, so a partial settings object cannot turn
+    # a database-outage check into an unrelated AttributeError.
+    kwargs: dict[str, object] = {
+        "pool_pre_ping": bool(getattr(settings, "db_pool_pre_ping", True))
+    }
     if url.startswith("sqlite"):
         # SQLite uses a non-QueuePool by default; the QueuePool sizing knobs do
         # not apply, so only the connect_args/pre_ping behavior is preserved.
@@ -22,11 +28,12 @@ def _engine_kwargs_for(url: str, settings=None) -> dict[str, object]:
     else:
         # Apply connection-pool sizing for server-backed databases. Defaults equal
         # SQLAlchemy's own defaults, so an unconfigured deployment is unchanged.
-        kwargs["pool_size"] = settings.db_pool_size
-        kwargs["max_overflow"] = settings.db_max_overflow
-        kwargs["pool_timeout"] = settings.db_pool_timeout
-        if settings.db_pool_recycle >= 0:
-            kwargs["pool_recycle"] = settings.db_pool_recycle
+        kwargs["pool_size"] = int(getattr(settings, "db_pool_size", 5))
+        kwargs["max_overflow"] = int(getattr(settings, "db_max_overflow", 10))
+        kwargs["pool_timeout"] = int(getattr(settings, "db_pool_timeout", 30))
+        pool_recycle = int(getattr(settings, "db_pool_recycle", -1))
+        if pool_recycle >= 0:
+            kwargs["pool_recycle"] = pool_recycle
     return kwargs
 
 
