@@ -11,6 +11,7 @@ import {
 } from "@/lib/navigation.config";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
+import type { ProfileContextProfile } from "@/lib/profile-context";
 
 type SidebarNavProps = {
   role: UserRole;
@@ -20,6 +21,7 @@ type SidebarNavProps = {
   onThemeChange: (value: ThemePreference) => void;
   uiLanguage: UILanguage;
   onLanguageChange: (value: UILanguage) => void;
+  activeProfile?: ProfileContextProfile | null;
 };
 
 const GROUP_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
@@ -51,6 +53,7 @@ export default function SidebarNav({
   collapsed = false,
   onToggleCollapse,
   uiLanguage,
+  activeProfile = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const groups = getGroupedNavItems(role);
@@ -188,10 +191,14 @@ export default function SidebarNav({
             {!collapsed ? (
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-semibold text-[var(--text-primary)]">
-                  Tài khoản của bạn
+                  {activeProfile?.display_name ?? "Tài khoản của bạn"}
                 </span>
                 <span className="block truncate text-[11px] text-[var(--text-muted)]">
-                  {ROLE_LABELS[uiLanguage][role]}
+                  {activeProfile?.kind === "shared"
+                    ? isEnglish
+                      ? "Shared access"
+                      : "Quyền được chia sẻ"
+                    : ROLE_LABELS[uiLanguage][role]}
                 </span>
               </span>
             ) : null}

@@ -33,6 +33,12 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.lifemap.visit_family_service import (
+    DomainNotFoundError,
+    DomainValidationError,
+    assert_scribe_session_visit_consent,
+    require_active_visit_scribe_consent,
+)
 from clara_api.schemas import (
     ScribeAddendumListResponse,
     ScribeAddendumResponse,
@@ -64,6 +70,7 @@ class ScribeSessionCreateRequest(BaseModel):
     title: str = Field(default="", max_length=255)
     transcript: str = Field(default="", max_length=100000)
     auto_generate_soap: bool = True
+    visit_id: int | None = Field(default=None, gt=0)
 
 
 class ScribeSessionUpdateRequest(BaseModel):
@@ -126,6 +133,21 @@ def _get_owned_session(db: Session, *, user_id: int, session_id: int) -> ScribeS
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tồn tại")
     return item
+
+
+def _require_live_visit_consent_for_session(
+    db: Session, *, user: User, item: ScribeSession
+) -> None:
+    """Block provider work for a visit session immediately after consent withdrawal."""
+
+    try:
+        assert_scribe_session_visit_consent(db, owner=user, session=item)
+    except DomainNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found"
+        ) from error
+    except DomainValidationError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
 
 
 def _as_json_object(value: Any) -> dict[str, Any] | None:
@@ -546,9 +568,21 @@ def create_scribe_session(
     transcript = request.transcript.strip()
     title = request.title.strip() or "Untitled session"
     now = datetime.now(tz=UTC)
+    visit_consent_id: int | None = None
+    if request.visit_id is not None:
+        try:
+            visit_consent_id = require_active_visit_scribe_consent(
+                db, owner=user, visit_id=request.visit_id
+            ).id
+        except DomainNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visit not found") from error
+        except DomainValidationError as error:
+            raise HTTPException(status_code=403, detail=str(error)) from error
 
     session_item = ScribeSession(
         user_id=user.id,
+        visit_id=request.visit_id,
+        visit_consent_id=visit_consent_id,
         title=title,
         status="draft",
         transcript=transcript,
@@ -587,6 +621,7 @@ def update_scribe_session(
 ) -> ScribeSessionResponse:
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
 
     if request.title is not None:
         item.title = request.title.strip() or item.title
@@ -617,6 +652,7 @@ def regenerate_scribe_session(
 ) -> ScribeSessionResponse:
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
 
     transcript = (request.transcript or item.transcript).strip()
     if not transcript:
@@ -1162,6 +1198,7 @@ def generate_note_version(
         raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
 
     _require_consent(db, settings, item.id)
 
@@ -1446,6 +1483,7 @@ def amend_note(
         raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
     if not can_transition(item.status, "amended"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -2246,6 +2284,16 @@ def _persist_stream_segments(
             item = db.get(ScribeSession, session_id)
             if item is None:
                 return
+            if item.visit_id is not None:
+                actor = db.get(User, actor_id) if actor_id is not None else None
+                if actor is None:
+                    return
+                try:
+                    assert_scribe_session_visit_consent(db, owner=actor, session=item)
+                except (DomainNotFoundError, DomainValidationError):
+                    # Consent may be revoked while the upstream stream is still
+                    # draining; do not persist its terminal PHI after revocation.
+                    return
             new_meta = dict(item.asr_meta_json) if isinstance(item.asr_meta_json, dict) else {}
             for key in ("provider", "language", "degraded_count"):
                 if key in asr_meta:
@@ -2271,6 +2319,23 @@ def _persist_stream_segments(
         logger.warning("scribe_stream_persist_failed session_id=%s", session_id)
 
 
+def _stream_visit_consent_still_active(*, session_id: int, actor_id: int | None) -> bool:
+    """Fresh-transaction consent recheck used while relaying a long Scribe stream."""
+
+    try:
+        with SessionLocal() as db:
+            item = db.get(ScribeSession, session_id)
+            if item is None or item.visit_id is None:
+                return item is not None
+            actor = db.get(User, actor_id) if actor_id is not None else None
+            if actor is None:
+                return False
+            assert_scribe_session_visit_consent(db, owner=actor, session=item)
+            return True
+    except (DomainNotFoundError, DomainValidationError):
+        return False
+
+
 @router.post("/sessions/{session_id}/stream")
 async def scribe_session_stream(
     session_id: int,
@@ -2287,6 +2352,7 @@ async def scribe_session_stream(
         raise HTTPException(status_code=404, detail="Scribe streaming is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
     _require_consent(db, settings, item.id)
 
     audio_bytes = await audio_file.read()
@@ -2327,6 +2393,13 @@ async def scribe_session_stream(
                         return
                     for chunk in up.iter_raw():
                         if chunk:
+                            if not _stream_visit_consent_still_active(
+                                session_id=session_pk, actor_id=actor_id
+                            ):
+                                yield (
+                                    b'event: error\ndata: {"message":"visit consent withdrawn"}\n\n'
+                                )
+                                return
                             buffer_parts.append(chunk.decode("utf-8", errors="ignore"))
                             yield chunk
         except Exception as exc:  # noqa: BLE001 - terminal error frame

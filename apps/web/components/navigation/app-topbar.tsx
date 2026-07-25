@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { getPageMeta, type UserRole } from "@/lib/navigation.config";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
+import type { ProfileContextProfile } from "@/lib/profile-context";
 
 type AppTopbarProps = {
   role: UserRole;
@@ -12,6 +13,11 @@ type AppTopbarProps = {
   onThemeChange: (value: ThemePreference) => void;
   uiLanguage: UILanguage;
   onLanguageChange: (value: UILanguage) => void;
+  profiles?: ProfileContextProfile[];
+  activeProfileId?: string | null;
+  onProfileChange?: (profileId: string) => void;
+  isProfileChanging?: boolean;
+  familyNotificationCount?: number;
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -27,6 +33,11 @@ export default function AppTopbar({
   onThemeChange,
   uiLanguage,
   onLanguageChange,
+  profiles = [],
+  activeProfileId = null,
+  onProfileChange,
+  isProfileChanging = false,
+  familyNotificationCount = 0,
 }: AppTopbarProps) {
   const pathname = usePathname();
   const page = getPageMeta(pathname);
@@ -49,6 +60,27 @@ export default function AppTopbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        {profiles.length > 0 ? (
+          <label className="hidden max-w-[17rem] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 xl:flex">
+            <span className="material-symbols-outlined text-[18px] text-[var(--brand-600)]" aria-hidden="true">
+              person_pin_circle
+            </span>
+            <span className="sr-only">Hồ sơ đang dùng</span>
+            <select
+              aria-label="Hồ sơ đang dùng"
+              value={activeProfileId ?? ""}
+              disabled={isProfileChanging || !onProfileChange}
+              onChange={(event) => onProfileChange?.(event.target.value)}
+              className="max-w-[12.5rem] bg-transparent text-xs font-semibold text-[var(--text-primary)] outline-none disabled:cursor-wait"
+            >
+              {profiles.map((profile) => (
+                <option key={profile.id} value={profile.id} disabled={profile.kind !== "self"}>
+                  {profile.kind === "shared" ? "Được chia sẻ · " : ""}{profile.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <Link
           href="/chat"
           className="app-ask-button"
@@ -75,6 +107,26 @@ export default function AppTopbar({
           >
             help
           </span>
+        </Link>
+
+        <Link
+          href="/family"
+          className="app-topbar-icon relative"
+          aria-label={
+            familyNotificationCount > 0
+              ? `${familyNotificationCount} nhiệm vụ chăm sóc được chia sẻ đang chờ`
+              : "Family Circle"
+          }
+          title="Family Circle"
+        >
+          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
+            family_restroom
+          </span>
+          {familyNotificationCount > 0 ? (
+            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-rose-600 px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">
+              {familyNotificationCount > 9 ? "9+" : familyNotificationCount}
+            </span>
+          ) : null}
         </Link>
 
         <button
@@ -112,7 +164,7 @@ export default function AppTopbar({
           </span>
           <span className="hidden text-left xl:block">
             <span className="block text-xs font-semibold text-[var(--text-primary)]">
-              Tài khoản
+              {profiles.find((profile) => profile.id === activeProfileId)?.display_name ?? "Tài khoản"}
             </span>
             <span className="block text-[11px] text-[var(--text-muted)]">
               {ROLE_LABELS[role]}

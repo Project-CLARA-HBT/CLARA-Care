@@ -65,6 +65,15 @@ class ScribeSession(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
+    # A visit-bound session is permitted to process PHI only while the linked,
+    # affirmative VisitConsent remains active. Legacy standalone Scribe sessions
+    # remain unbound rather than being silently assigned to a visit.
+    visit_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    visit_consent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("visit_consents.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(255), default="")
     status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
     transcript: Mapped[str] = mapped_column(Text, default="")
@@ -1147,6 +1156,125 @@ class VisitShare(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class VisitIntakeAnswer(Base):
+    """A user-controlled answer in the short, adaptive pre-visit intake.
+
+    The question text, reason and skip/unknown decision are persisted together so
+    later pack creation can explain what was asked without inventing a clinical
+    assessment from the answer.
+    """
+
+    __tablename__ = "visit_intake_answers"
+    __table_args__ = (
+        UniqueConstraint("visit_id", "question_key", name="uq_visit_intake_answer_question"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    question_key: Mapped[str] = mapped_column(String(96))
+    question_text: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str] = mapped_column(String(500), default="")
+    answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_state: Mapped[str] = mapped_column(String(24), default="answered", index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class VisitDocument(Base):
+    """Bounded visit document text/metadata with explicit provenance and lifecycle.
+
+    This deliberately stores no claimed OCR/extraction result. Binary-object
+    storage can be added behind this record later; a document remains an external
+    or unsigned draft until an authorized workflow records otherwise.
+    """
+
+    __tablename__ = "visit_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(255))
+    document_kind: Mapped[str] = mapped_column(
+        String(48), default="external_user_uploaded", index=True
+    )
+    media_type: Mapped[str] = mapped_column(String(128), default="text/plain")
+    text_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON)
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    content_digest: Mapped[str] = mapped_column(String(128), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="external_unverified", index=True)
+    scribe_session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("scribe_sessions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    withdraw_reason: Mapped[str] = mapped_column(String(255), default="")
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deletion_reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class VisitPlanDraft(Base):
+    """Candidate post-visit plan, never an instruction until explicit confirmation."""
+
+    __tablename__ = "visit_plan_drafts"
+    __table_args__ = (
+        UniqueConstraint(
+            "visit_id",
+            "confirmation_key",
+            name="uq_visit_plan_drafts_visit_confirmation_key",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("visit_documents.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), default="extraction_unavailable", index=True)
+    extraction_provider: Mapped[str] = mapped_column(String(64), default="unavailable")
+    candidates_json: Mapped[list | dict] = mapped_column(JSON)
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    confirmed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmation_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    confirmation_request_digest: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    confirmation_result_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    withdraw_reason: Mapped[str] = mapped_column(String(255), default="")
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class FamilyInvitation(Base):
     """One-time, recipient-bound invitation. The plaintext capability is never stored."""
 
@@ -1176,6 +1304,11 @@ class FamilyAccessGrant(Base):
     """Object/action/purpose scoped relationship grant with authoritative revocation."""
 
     __tablename__ = "family_access_grants"
+    __table_args__ = (
+        # A one-time invitation may materialize exactly one grant. NULL remains
+        # valid for future grants created without an invitation.
+        UniqueConstraint("invitation_id", name="uq_family_access_grants_invitation"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     grantor_user_id: Mapped[int] = mapped_column(
@@ -1840,9 +1973,7 @@ class EvidenceRunSubscription(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )

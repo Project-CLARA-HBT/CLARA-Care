@@ -11,6 +11,8 @@ from clara_api.core.config import get_settings
 from clara_api.db import models as _db_models  # noqa: F401
 from clara_api.db.base import Base
 from clara_api.db.session import SessionLocal, engine
+from clara_api.observability import admin_audit as _admin_audit  # noqa: F401
+from clara_api.observability import alerts as _alerts  # noqa: F401
 from clara_api.observability import flow_event_sink as _flow_event_sink  # noqa: F401
 
 

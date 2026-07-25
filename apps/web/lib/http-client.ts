@@ -7,6 +7,7 @@ import {
   setAccessToken,
   setRefreshToken
 } from "@/lib/auth-store";
+import { getActiveProfileId } from "@/lib/profile-context";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -288,6 +289,13 @@ api.interceptors.request.use(async (config) => {
   }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // This is a presentation/cache partition hint, never an authorization
+  // credential. The API resolves it only against owned profiles or live grants.
+  const activeProfileId = getActiveProfileId();
+  if (activeProfileId) {
+    config.headers["X-CLARA-Profile-Context"] = activeProfileId;
   }
 
   if (isUnsafe) {

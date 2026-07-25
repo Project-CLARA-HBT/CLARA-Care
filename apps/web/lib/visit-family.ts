@@ -21,6 +21,60 @@ export type VisitShare = {
   expires_at: string;
 };
 
+export type VisitIntakeQuestion = {
+  key: string;
+  text: string;
+  reason: string;
+};
+
+export type VisitIntakeResult = {
+  id: string;
+  question_key: string;
+  response_state: "answered" | "skipped" | "unknown";
+  progress: { answered: number; total: number };
+  next_question: VisitIntakeQuestion | null;
+  complete: boolean;
+};
+
+export type VisitDocument = {
+  id: string;
+  title: string;
+  document_kind: string;
+  media_type: string;
+  status: string;
+  content_digest: string;
+  metadata: Record<string, unknown>;
+  text_content: string | null;
+  provenance: Record<string, unknown>;
+  withdrawn_at: string | null;
+  deleted_at: string | null;
+};
+
+export type VisitPlanCandidate = {
+  id: string;
+  text?: string;
+  source_span?: string;
+  kind?: string;
+  [key: string]: unknown;
+};
+
+export type VisitPlanDraft = {
+  id: string;
+  status: string;
+  extraction_provider: string;
+  candidates: VisitPlanCandidate[];
+  safe_unavailable: boolean;
+  reason?: string;
+};
+
+export type VisitPlanConfirmation = {
+  id: string;
+  status: string;
+  task_ids: string[];
+  task_status: string;
+  episode_event_ids: string[];
+};
+
 export type FamilyGrant = {
   id: string;
   grantee_user_id?: string;
@@ -45,6 +99,17 @@ export type FamilyAccessLog = {
   created_at: string;
 };
 
+export type FamilyNotification = {
+  id: string;
+  kind: "delegated_care_task" | string;
+  profile_id: string;
+  task_id: string;
+  purpose: string;
+  expires_at: string;
+  action: "complete_task" | string;
+  message: string;
+};
+
 export async function listVisits(): Promise<Visit[]> {
   return (await api.get<Visit[]>("/visits")).data;
 }
@@ -64,6 +129,113 @@ export async function addVisitConcern(
   priority: string,
 ): Promise<void> {
   await api.post(`/visits/${encodeURIComponent(visitId)}/concerns`, { text, priority });
+}
+
+export async function answerVisitIntake(
+  visitId: string,
+  input: {
+    question_key: string;
+    response_state: "answered" | "skipped" | "unknown";
+    answer_text?: string;
+  },
+): Promise<VisitIntakeResult> {
+  return (
+    await api.post<VisitIntakeResult>(
+      `/visits/${encodeURIComponent(visitId)}/intake/answers`,
+      input,
+    )
+  ).data;
+}
+
+export async function listVisitDocuments(visitId: string): Promise<VisitDocument[]> {
+  return (await api.get<VisitDocument[]>(`/visits/${encodeURIComponent(visitId)}/documents`))
+    .data;
+}
+
+export async function createVisitDocument(
+  visitId: string,
+  input: {
+    title: string;
+    text_content?: string;
+    media_type?: string;
+    metadata?: Record<string, unknown>;
+    scribe_session_id?: number;
+  },
+): Promise<VisitDocument> {
+  return (
+    await api.post<VisitDocument>(`/visits/${encodeURIComponent(visitId)}/documents`, {
+      ...input,
+      media_type: input.media_type ?? "text/plain",
+      metadata: input.metadata ?? {},
+    })
+  ).data;
+}
+
+export async function withdrawVisitDocument(
+  visitId: string,
+  documentId: string,
+  reason = "owner_withdrew",
+): Promise<VisitDocument> {
+  return (
+    await api.post<VisitDocument>(
+      `/visits/${encodeURIComponent(visitId)}/documents/${encodeURIComponent(documentId)}/withdraw`,
+      { reason },
+    )
+  ).data;
+}
+
+export async function deleteVisitDocument(
+  visitId: string,
+  documentId: string,
+  reason = "owner_requested_deletion",
+): Promise<VisitDocument> {
+  return (
+    await api.delete<VisitDocument>(
+      `/visits/${encodeURIComponent(visitId)}/documents/${encodeURIComponent(documentId)}`,
+      { data: { reason } },
+    )
+  ).data;
+}
+
+export async function extractVisitPlan(
+  visitId: string,
+  documentId: string,
+): Promise<VisitPlanDraft> {
+  return (
+    await api.post<VisitPlanDraft>(`/visits/${encodeURIComponent(visitId)}/plan/extract`, {
+      document_id: Number(documentId),
+    })
+  ).data;
+}
+
+export async function withdrawVisitPlan(
+  visitId: string,
+  draftId: string,
+  reason = "owner_withdrew",
+): Promise<{ id: string; status: string; withdrawn_at: string | null }> {
+  return (
+    await api.post(
+      `/visits/${encodeURIComponent(visitId)}/plan/${encodeURIComponent(draftId)}/withdraw`,
+      { reason },
+    )
+  ).data;
+}
+
+export async function confirmVisitPlan(
+  visitId: string,
+  input: {
+    draft_id: number;
+    candidate_ids: string[];
+    task_status?: string;
+    episode_id?: number;
+  },
+): Promise<VisitPlanConfirmation> {
+  return (
+    await api.post<VisitPlanConfirmation>(
+      `/visits/${encodeURIComponent(visitId)}/plan/confirm`,
+      input,
+    )
+  ).data;
 }
 
 export async function createVisitPack(
@@ -110,6 +282,21 @@ export async function listFamilyRelationships(): Promise<FamilyGrant[]> {
   return (await api.get<FamilyGrant[]>("/family/relationships")).data;
 }
 
+export async function listFamilyNotifications(): Promise<FamilyNotification[]> {
+  return (await api.get<FamilyNotification[]>("/family/notifications")).data;
+}
+
+export async function acknowledgeFamilyNotification(
+  grantId: string,
+  taskId: string,
+  purpose: string,
+): Promise<void> {
+  await api.post(
+    `/family/notifications/${encodeURIComponent(grantId)}/${encodeURIComponent(taskId)}/acknowledge`,
+    { purpose },
+  );
+}
+
 export async function listFamilyAccessLog(): Promise<FamilyAccessLog[]> {
   return (await api.get<FamilyAccessLog[]>("/family/access-log")).data;
 }
@@ -130,7 +317,9 @@ export async function createFamilyInvitation(input: {
 export async function acceptFamilyInvitation(token: string): Promise<FamilyGrant> {
   return (
     await api.post<FamilyGrant>(
-      `/family/invitations/${encodeURIComponent(token)}/accept`,
+      "/family/invitations/accept",
+      undefined,
+      { headers: { "X-Family-Invitation-Token": token } },
     )
   ).data;
 }

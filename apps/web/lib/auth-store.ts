@@ -7,6 +7,8 @@ const CLIENT_SESSION_COOKIE =
   process.env.NEXT_PUBLIC_AUTH_CLIENT_SESSION_COOKIE?.trim() || "clara_client_session";
 const CSRF_COOKIE_NAME =
   process.env.NEXT_PUBLIC_AUTH_CSRF_COOKIE?.trim() || "clara_csrf_token";
+const ACTIVE_PROFILE_STORAGE_KEY = "clara_active_profile_id";
+const PROFILE_CACHE_PREFIX = "clara_profile_cache:";
 
 let accessTokenMemory: string | null = null;
 let refreshTokenMemory: string | null = null;
@@ -98,6 +100,17 @@ export function clearTokens(): void {
   tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
   tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
   tryRemoveStorageItem(window.localStorage, ROLE_KEY);
+  tryRemoveStorageItem(window.localStorage, ACTIVE_PROFILE_STORAGE_KEY);
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+      for (const key of keys) {
+        if (key?.startsWith(PROFILE_CACHE_PREFIX)) tryRemoveStorageItem(storage, key);
+      }
+    } catch {
+      // Ignore storage failures; logout must still clear the auth credentials.
+    }
+  }
   setClientSessionCookie(false);
 }
 

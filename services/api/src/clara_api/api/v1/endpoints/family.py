@@ -2,24 +2,28 @@
 
 from __future__ import annotations
 
+import hmac
+import json
+import math
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import FamilyAccessGrant, PhrProfile
+from clara_api.db.models import FamilyAccessGrant, LifeMapCareTask, PhrProfile
 from clara_api.db.session import get_db
 from clara_api.lifemap.visit_family_service import (
     DomainAuthorizationError,
     DomainNotFoundError,
     DomainValidationError,
     accept_family_invitation,
+    acknowledge_care_task_notification,
     complete_delegated_task,
     create_family_invitation,
     list_family_access_log,
@@ -52,8 +56,73 @@ class DelegationRequest(BaseModel):
 
 
 class CompleteTaskRequest(BaseModel):
-    purpose: str
+    purpose: str = Field(min_length=2, max_length=64)
     evidence: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("evidence")
+    @classmethod
+    def evidence_is_bounded_json(cls, value: dict[str, Any]) -> dict[str, Any]:
+        _validate_bounded_evidence(value)
+        _bounded_evidence_bytes(value)
+        return value
+
+
+class InvitationAcceptRequest(BaseModel):
+    """Capability supplied out of the URL so it does not enter route logs."""
+
+    token: str = Field(min_length=32, max_length=512)
+
+
+class NotificationAcknowledgementRequest(BaseModel):
+    purpose: str = Field(min_length=2, max_length=64)
+
+
+MAX_EVIDENCE_BYTES = 16_000
+MAX_EVIDENCE_DEPTH = 4
+MAX_EVIDENCE_COLLECTION_ITEMS = 50
+MAX_EVIDENCE_STRING_CHARS = 2_000
+MAX_EVIDENCE_KEY_CHARS = 128
+
+
+def _validate_bounded_evidence(value: Any, *, depth: int = 0) -> None:
+    """Keep caregiver attestation evidence useful without accepting a record dump."""
+
+    if depth > MAX_EVIDENCE_DEPTH:
+        raise ValueError("Evidence is too deeply nested")
+    if value is None or isinstance(value, (bool, int)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("Evidence numbers must be finite")
+        return
+    if isinstance(value, str):
+        if len(value) > MAX_EVIDENCE_STRING_CHARS:
+            raise ValueError("Evidence text is too long")
+        return
+    if isinstance(value, list):
+        if len(value) > MAX_EVIDENCE_COLLECTION_ITEMS:
+            raise ValueError("Evidence contains too many items")
+        for item in value:
+            _validate_bounded_evidence(item, depth=depth + 1)
+        return
+    if isinstance(value, dict):
+        if len(value) > MAX_EVIDENCE_COLLECTION_ITEMS:
+            raise ValueError("Evidence contains too many fields")
+        for key, item in value.items():
+            if not isinstance(key, str) or len(key) > MAX_EVIDENCE_KEY_CHARS:
+                raise ValueError("Evidence field names are invalid")
+            _validate_bounded_evidence(item, depth=depth + 1)
+        return
+    raise ValueError("Evidence contains an unsupported value")
+
+
+def _bounded_evidence_bytes(value: dict[str, Any]) -> None:
+    try:
+        encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise ValueError("Evidence must be JSON serializable") from error
+    if len(encoded) > MAX_EVIDENCE_BYTES:
+        raise ValueError("Evidence is too large")
 
 
 def _raise(error: Exception) -> None:
@@ -101,15 +170,27 @@ def create_invitation(
         _raise(error)
 
 
-@router.post("/invitations/{invitation_token}/accept", status_code=status.HTTP_201_CREATED)
+@router.post("/invitations/accept", status_code=status.HTTP_201_CREATED)
 def accept_invitation(
-    invitation_token: str,
+    payload: InvitationAcceptRequest | None = None,
+    x_family_invitation_token: str | None = Header(
+        default=None, alias="X-Family-Invitation-Token"
+    ),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
+    """Accept an invitation without putting its capability in an URL."""
+
+    body_token = payload.token if payload is not None else None
+    header_token = x_family_invitation_token.strip() if x_family_invitation_token else None
+    if body_token and header_token and not hmac.compare_digest(body_token, header_token):
+        raise HTTPException(status_code=422, detail="Invitation capability inputs do not match")
+    raw_token = header_token or body_token
+    if not raw_token:
+        raise HTTPException(status_code=422, detail="Invitation capability is required")
     recipient = current_user(db, token)
     try:
-        grant = accept_family_invitation(db, recipient=recipient, raw_token=invitation_token)
+        grant = accept_family_invitation(db, recipient=recipient, raw_token=raw_token)
         db.commit()
         return {
             "id": str(grant.id),
@@ -125,6 +206,28 @@ def accept_invitation(
         _raise(error)
 
 
+@router.post("/invitations/{invitation_token}/accept", deprecated=True)
+def accept_invitation_legacy_url(
+    invitation_token: str,
+    _token: TokenPayload = USER,
+) -> None:
+    """Safe compatibility response for clients that still put capabilities in URLs.
+
+    Deliberately do not process the capability: accepting it would preserve the
+    query/path logging exposure this API change removes.  The secret is neither
+    echoed nor added to audit records.
+    """
+
+    del invitation_token
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail=(
+            "Use POST /family/invitations/accept with the capability in JSON "
+            "or X-Family-Invitation-Token"
+        ),
+    )
+
+
 @router.get("/relationships")
 def relationships(
     db: Session = Depends(get_db), token: TokenPayload = USER
@@ -137,6 +240,7 @@ def relationships(
             FamilyAccessGrant.grantee_user_id == user.id,
             FamilyAccessGrant.status == "active",
             FamilyAccessGrant.revoked_at.is_(None),
+            FamilyAccessGrant.starts_at <= now,
             FamilyAccessGrant.expires_at > now,
         )
         .order_by(FamilyAccessGrant.id.desc())
@@ -153,6 +257,114 @@ def relationships(
         }
         for grant in grants
     ]
+
+
+@router.get("/notifications")
+def family_notifications(
+    db: Session = Depends(get_db), token: TokenPayload = USER
+) -> list[dict[str, Any]]:
+    """Return minimal in-app cards from live, explicitly delegated tasks only.
+
+    There is no queued notification payload to clean up after revocation. A
+    card is calculated against the active grant and the current task state on
+    every request, so it disappears on revoke, expiry, or completion. Task
+    titles, clinical notes, patient names, and free text intentionally never
+    leave this endpoint.
+    """
+
+    caregiver = current_user(db, token)
+    now = datetime.now(UTC)
+    grants = list(
+        db.execute(
+            select(FamilyAccessGrant)
+            .where(
+                FamilyAccessGrant.grantee_user_id == caregiver.id,
+                FamilyAccessGrant.object_type == "care_task",
+                FamilyAccessGrant.status == "active",
+                FamilyAccessGrant.revoked_at.is_(None),
+                FamilyAccessGrant.starts_at <= now,
+                FamilyAccessGrant.expires_at > now,
+            )
+            .order_by(FamilyAccessGrant.expires_at, FamilyAccessGrant.id)
+        ).scalars()
+    )
+    cards: list[dict[str, Any]] = []
+    for grant in grants:
+        actions = grant.allowed_actions_json if isinstance(grant.allowed_actions_json, list) else []
+        # A card is not a permission escalation: both seeing the task and
+        # completing it have to be in the grant's exact action list.
+        if "view" not in actions or "complete_task" not in actions:
+            continue
+        try:
+            task_id = int(grant.object_id)
+        except (TypeError, ValueError):
+            continue
+        task = db.execute(
+            select(LifeMapCareTask).where(
+                LifeMapCareTask.id == task_id,
+                LifeMapCareTask.profile_id == grant.profile_id,
+                LifeMapCareTask.status == "accepted",
+            )
+        ).scalar_one_or_none()
+        if task is None:
+            continue
+        cards.append(
+            {
+                "id": f"family-task:{grant.id}:{task.id}:v{grant.grant_version}",
+                "kind": "delegated_care_task",
+                "profile_id": str(grant.profile_id),
+                "task_id": str(task.id),
+                "purpose": grant.purpose,
+                "expires_at": grant.expires_at,
+                "action": "complete_task",
+                "message": "Một nhiệm vụ chăm sóc đang chờ bạn xác nhận.",
+            }
+        )
+    return cards
+
+
+@router.post("/notifications/{grant_id}/{task_id}/acknowledge")
+def acknowledge_notification(
+    grant_id: int,
+    task_id: int,
+    payload: NotificationAcknowledgementRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, str]:
+    """Audit an acknowledgement after rechecking the live grant.
+
+    ``grant_id`` is checked in addition to the service's exact object/action
+    check so an old card cannot be acknowledged through a replacement grant.
+    """
+
+    caregiver = current_user(db, token)
+    grant = db.execute(
+        select(FamilyAccessGrant).where(
+            FamilyAccessGrant.id == grant_id,
+            FamilyAccessGrant.grantee_user_id == caregiver.id,
+            FamilyAccessGrant.status == "active",
+            FamilyAccessGrant.revoked_at.is_(None),
+            FamilyAccessGrant.expires_at > datetime.now(UTC),
+            FamilyAccessGrant.object_type == "care_task",
+            FamilyAccessGrant.object_id == str(task_id),
+            FamilyAccessGrant.purpose == payload.purpose,
+        )
+    ).scalar_one_or_none()
+    if grant is None:
+        raise HTTPException(status_code=403, detail="Family notification is no longer authorized")
+    try:
+        acknowledge_care_task_notification(
+            db,
+            caregiver=caregiver,
+            profile_id=grant.profile_id,
+            task_id=task_id,
+            purpose=payload.purpose,
+        )
+        db.commit()
+        return {"status": "acknowledged"}
+    except (DomainAuthorizationError, DomainNotFoundError, DomainValidationError) as error:
+        db.rollback()
+        _raise(error)
 
 
 @router.get("/access-grants")

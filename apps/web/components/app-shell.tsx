@@ -35,6 +35,13 @@ import {
   saveUILanguage,
   type UILanguage,
 } from "@/lib/ui-language";
+import {
+  getActiveProfileId,
+  setActiveProfileId,
+  type ProfileContext,
+} from "@/lib/profile-context";
+import { activateOwnedProfile, getProfileContext } from "@/lib/profile-context-api";
+import { listFamilyNotifications } from "@/lib/visit-family";
 
 type Props = {
   children: ReactNode;
@@ -82,6 +89,9 @@ export default function AppShell({ children }: Props) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
+  const [profileContext, setProfileContext] = useState<ProfileContext | null>(null);
+  const [isProfileChanging, setIsProfileChanging] = useState(false);
+  const [familyNotificationCount, setFamilyNotificationCount] = useState(0);
 
   const hideSidebar = isPublicRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
@@ -143,6 +153,44 @@ export default function AppShell({ children }: Props) {
       active = false;
     };
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (hideSidebar || !isSessionChecked) {
+      if (hideSidebar) {
+        setProfileContext(null);
+        setFamilyNotificationCount(0);
+      }
+      return;
+    }
+    let active = true;
+    const loadProfileContext = async () => {
+      try {
+        const [context, notifications] = await Promise.all([
+          getProfileContext(),
+          listFamilyNotifications().catch(() => []),
+        ]);
+        if (!active) return;
+        // A revoked/expired shared profile is resolved by the server back to a
+        // safe context. Persist exactly that answer and discard old UI caches.
+        if (context.reset_required || context.active_profile_id !== getActiveProfileId()) {
+          setActiveProfileId(context.active_profile_id);
+        }
+        setProfileContext(context);
+        setFamilyNotificationCount(notifications.length);
+      } catch {
+        // Profile context is additive. The existing authenticated shell stays
+        // usable if an older API deployment does not expose this endpoint.
+        if (active) {
+          setProfileContext(null);
+          setFamilyNotificationCount(0);
+        }
+      }
+    };
+    void loadProfileContext();
+    return () => {
+      active = false;
+    };
+  }, [hideSidebar, isSessionChecked]);
 
   useEffect(() => {
     setIsMobileNavOpen(false);
@@ -269,6 +317,36 @@ export default function AppShell({ children }: Props) {
     beginLogout();
   };
 
+  const handleProfileChange = async (profileId: string) => {
+    if (!profileId || profileId === profileContext?.active_profile_id || isProfileChanging) return;
+    const target = profileContext?.profiles.find((profile) => profile.id === profileId);
+    // Shared profiles are display contexts only in this release. A selection
+    // cannot turn a narrow Family grant into a whole-record workspace.
+    if (!target || target.kind !== "self") return;
+    setIsProfileChanging(true);
+    try {
+      const activation = await activateOwnedProfile(profileId);
+      setActiveProfileId(activation.active_profile_id);
+      const context = await getProfileContext();
+      setProfileContext(context);
+      setIsMobileNavOpen(false);
+      // Route replacement remounts feature pages, so component-local arrays
+      // cannot paint the previous profile while the new context is active.
+      router.replace("/today");
+      router.refresh();
+    } finally {
+      setIsProfileChanging(false);
+    }
+  };
+
+  const activeProfile = useMemo(
+    () =>
+      profileContext?.profiles.find(
+        (profile) => profile.id === profileContext.active_profile_id,
+      ) ?? null,
+    [profileContext],
+  );
+
   if (hideSidebar) {
     return (
       <main
@@ -300,6 +378,7 @@ export default function AppShell({ children }: Props) {
           onThemeChange={handleThemeChange}
           uiLanguage={uiLanguage}
           onLanguageChange={handleLanguageChange}
+          activeProfile={activeProfile}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -309,6 +388,11 @@ export default function AppShell({ children }: Props) {
             onThemeChange={handleThemeChange}
             uiLanguage={uiLanguage}
             onLanguageChange={handleLanguageChange}
+            profiles={profileContext?.profiles}
+            activeProfileId={profileContext?.active_profile_id}
+            onProfileChange={handleProfileChange}
+            isProfileChanging={isProfileChanging}
+            familyNotificationCount={familyNotificationCount}
           />
 
           <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
@@ -335,7 +419,7 @@ export default function AppShell({ children }: Props) {
                 </span>
               </span>
               <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                CLARA
+                {activeProfile?.display_name ?? "CLARA"}
               </span>
             </Link>
 
