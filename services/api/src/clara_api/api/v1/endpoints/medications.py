@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.medication_safety import router as medication_safety_router
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
@@ -14,6 +15,7 @@ from clara_api.db.models import MedicationCourse, PhrProfile
 from clara_api.db.session import get_db
 
 router = APIRouter()
+router.include_router(medication_safety_router, prefix="/safety", tags=["medication-safety"])
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 
 

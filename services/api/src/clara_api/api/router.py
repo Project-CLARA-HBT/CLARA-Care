@@ -12,6 +12,7 @@ from clara_api.api.v1.endpoints import (
     council,
     health,
     lifemap,
+    lifemap_insights,
     medications,
     mobile,
     phr,
@@ -29,6 +30,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(profiles.router, tags=["profiles"])
 api_router.include_router(lifemap.router, prefix="/lifemap", tags=["lifemap"])
+api_router.include_router(lifemap_insights.router, tags=["lifemap-insights"])
 api_router.include_router(medications.router, prefix="/medication-courses", tags=["medications"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
@@ -37,9 +39,7 @@ api_router.include_router(
     clinical_workbench.router, prefix="/clinical-workbench", tags=["clinical-workbench"]
 )
 api_router.include_router(phr.router, prefix="/phr", tags=["phr"])
-api_router.include_router(
-    connected_health.router, prefix="/connectors", tags=["connected-health"]
-)
+api_router.include_router(connected_health.router, prefix="/connectors", tags=["connected-health"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(research.router, prefix="/research", tags=["research"])
 api_router.include_router(careguard.router, prefix="/careguard", tags=["careguard"])
