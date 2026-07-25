@@ -80,6 +80,31 @@ const NAV_ITEMS: NavigationItem[] = [
     },
   },
   {
+    href: "/today",
+    label: "Hôm nay",
+    icon: "today",
+    desc: "Việc chăm sóc bạn đã chấp nhận",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
+    page: {
+      title: "Hôm nay",
+      subtitle: "Các việc chăm sóc đã được bạn chấp nhận.",
+    },
+  },
+  {
+    href: "/lifemap",
+    label: "LifeMap",
+    icon: "route",
+    desc: "Hành trình chăm sóc của bạn",
+    group: "core",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "LifeMap",
+      subtitle: "Tổ chức điều bạn muốn theo dõi thành hành trình nhỏ.",
+    },
+  },
+  {
     href: "/research",
     label: "Nghiên cứu",
     icon: "science",
@@ -129,6 +154,18 @@ const NAV_ITEMS: NavigationItem[] = [
     page: {
       title: "Tủ thuốc của tôi",
       subtitle: "Quản lý thuốc đang dùng và quét toa thuốc từ ảnh.",
+    },
+  },
+  {
+    href: "/medicines",
+    label: "Thuốc của tôi",
+    icon: "medication",
+    desc: "Thuốc đã xác nhận và DrugBank DDI",
+    group: "medication",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Thuốc của tôi",
+      subtitle: "Theo dõi thuốc đã xác nhận và kiểm tra DrugBank.",
     },
   },
   {
