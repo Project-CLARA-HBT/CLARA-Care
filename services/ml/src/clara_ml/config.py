@@ -255,17 +255,17 @@ class Settings(BaseSettings):
     # deep_beta report length floor for the LEGACY dossier/synthesis-v2 band.
     # Under the clean-body Pro default this floor is no longer used for the answer
     # length (clean-body uses its own natural band), and the legacy scope-aware
-    # path already clamps this value into [4000, 12000] at runtime, so the field
-    # bound only needs to guard against absurd input. The lower bound is 1200
-    # (matching the legacy ``_resolve_deep_beta_word_budget`` ``hard_min``) so a
-    # latency-tuned deployment can set a smaller floor without crashing startup.
+    # The synthesis-v2 budget contract is 4000..12000 words.  The legacy
+    # resolver may use a lower internal fallback for historical requests, but a
+    # configured synthesis report floor below 4000 is invalid rather than an
+    # implicit latency tuning knob.
     deep_beta_report_min_words: int = Field(
         default=8000,
         validation_alias=AliasChoices(
             "DEEP_BETA_REPORT_MIN_WORDS",
             "DEEP_BETA_REPORT_MIN_CHARS",
         ),
-        ge=1200,
+        ge=4000,
         le=12000,
     )
     # Hard ceiling for the scope-aware budget band. Never exceeds 15000 words.

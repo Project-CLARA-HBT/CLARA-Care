@@ -5883,15 +5883,29 @@ def _build_citations(
     uploaded_documents: list[dict[str, Any]],
     *,
     research_mode: str | None = None,
-    rank_enabled: bool = False,
+    rank_enabled: bool | None = None,
 ) -> list[Citation]:
     handoff_profile = _resolve_evidence_handoff_profile(research_mode)
     citations: list[Citation] = []
     seen_source_ids: set[str] = set()
 
+    # A direct caller requesting the deep evidence-review contract gets the
+    # study identifiers required to audit primary evidence. Runtime requests
+    # always pass the feature flag explicitly, so an explicit False remains
+    # byte-for-byte legacy-compatible.
+    provenance_enabled = (
+        rank_enabled
+        if isinstance(rank_enabled, bool)
+        else str(research_mode or "fast").strip().lower()
+        in {"deep", "deep_beta"}
+    )
+
     # R6.1: order surfaced sources by the composite recency/trust-tier key before slicing the
     # citation window. A no-op when ``rank_enabled`` is False (legacy ordering preserved).
-    ranked_context = _rank_sources_by_recency_trust(retrieved_context, enabled=rank_enabled)
+    ranked_context = _rank_sources_by_recency_trust(
+        retrieved_context,
+        enabled=provenance_enabled,
+    )
 
     for idx, item in enumerate(
         ranked_context[: handoff_profile["citation_context_rows"]],
@@ -5914,9 +5928,10 @@ def _build_citations(
         if isinstance(score, (int, float)):
             relevance = f"{relevance} Score={float(score):.4f}."
 
-        # R6.2: surface trust_tier and publication/effective date per source, but only when the
-        # ranking flag is on so a flags-off run keeps the legacy citation shape (R20.2). Unset
-        # fields are stripped by ``_citation_as_payload``.
+        # R6.2/R20.2: provenance is an all-or-nothing additive contract.  Do not
+        # leak one field (for example ``source_type``) when the ranking/trace
+        # display path is disabled: clients that consume the legacy citation
+        # shape must see no provenance keys at all.
         citations.append(
             Citation(
                 source_id=source_id,
@@ -5928,19 +5943,35 @@ def _build_citations(
                     item.get("pmid"),
                     item.get("doi"),
                     source_id,
+                )
+                if provenance_enabled
+                else None,
+                trust_tier=_row_trust_tier(item) if provenance_enabled else None,
+                source_type=_row_source_type(item) if provenance_enabled else None,
+                published_at=_row_effective_date(item) if provenance_enabled else None,
+                pmid=(
+                    (_first_nonempty_text(item.get("pmid")) or None)
+                    if provenance_enabled
+                    else None
                 ),
-                trust_tier=_row_trust_tier(item) if rank_enabled else None,
-                source_type=_row_source_type(item),
-                published_at=_row_effective_date(item) if rank_enabled else None,
-                pmid=_first_nonempty_text(item.get("pmid")) or None,
-                doi=_first_nonempty_text(item.get("doi")) or None,
+                doi=(
+                    (_first_nonempty_text(item.get("doi")) or None)
+                    if provenance_enabled
+                    else None
+                ),
                 nct_ids=(
                     [str(value) for value in item.get("nct_ids", []) if str(value).strip()]
                     if isinstance(item.get("nct_ids"), list)
                     else None
                 )
-                or None,
-                study_design=_first_nonempty_text(item.get("study_design")) or None,
+                or None
+                if provenance_enabled
+                else None,
+                study_design=(
+                    _first_nonempty_text(item.get("study_design")) or None
+                    if provenance_enabled
+                    else None
+                ),
                 publication_types=(
                     [
                         str(value)
@@ -5950,7 +5981,9 @@ def _build_citations(
                     if isinstance(item.get("publication_types"), list)
                     else None
                 )
-                or None,
+                or None
+                if provenance_enabled
+                else None,
             )
         )
 
@@ -8003,7 +8036,25 @@ def _has_reader_friendly_layout(markdown_text: str, *, research_mode: str) -> bo
             and "practical_application" in section_ids
             and "safety_notes" in section_ids
         )
-    # Deep modes tolerate extra sections as long as core structure exists.
+    if mode == "deep":
+        # ``deep`` is the expanded analysis mode, not the dossier mode.  Keep
+        # its reader-facing shell predictable; long-form report-only sections
+        # belong to ``deep_beta`` and are handled below by the preservation path.
+        reader_shell = {
+            "quick_conclusion",
+            "key_points",
+            "practical_application",
+            "safety_notes",
+            "monitoring_red_flags",
+        }
+        return (
+            not (section_ids - reader_shell)
+            and "quick_conclusion" in section_ids
+            and "key_points" in section_ids
+            and bool({"safety_notes", "monitoring_red_flags"} & section_ids)
+        )
+    # Deep-beta is the explicit long-form dossier mode. It may retain the
+    # additional sections validated by ``_has_preservable_long_form_layout``.
     return (
         "quick_conclusion" in section_ids
         and "key_points" in section_ids
