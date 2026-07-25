@@ -29,7 +29,7 @@ from clara_api.core.security import (
     decode_refresh_token,
 )
 from clara_api.core.session_security import session_security
-from clara_api.db.models import AuthToken, User, UserConsent
+from clara_api.db.models import AuthToken, PhrProfile, User, UserConsent
 from clara_api.db.session import get_db
 from clara_api.schemas import (
     ChangePasswordRequest,
@@ -447,6 +447,11 @@ def register(
     )
     try:
         db.add(user)
+        db.flush()
+        # Provision only the empty identity boundary required by LifeMap.  This
+        # contains no inferred conditions, medicines, measurements, or other
+        # synthetic health data; users remain the sole source of clinical facts.
+        db.add(PhrProfile(user_id=user.id, full_name=user.full_name))
         db.commit()
         db.refresh(user)
     except SQLAlchemyError as exc:

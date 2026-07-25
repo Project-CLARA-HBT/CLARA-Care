@@ -41,6 +41,15 @@ def test_register_verify_and_login_flow() -> None:
     assert payload["subject"] == email
     assert payload["role"] == "normal"
 
+    # A new user can use the default post-login Today/Visit surfaces without a
+    # hidden prerequisite trip through the PHR editor.
+    visits_response = client.get(
+        "/api/v1/visits",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert visits_response.status_code == 200
+    assert visits_response.json() == []
+
 
 def test_forgot_reset_and_change_password_flow() -> None:
     email = f"user-{uuid4().hex[:8]}@example.com"
