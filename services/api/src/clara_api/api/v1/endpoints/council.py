@@ -693,7 +693,11 @@ def run_council_case(
             detail="Case chưa có dữ liệu đầu vào để chạy council.",
         )
 
-    service = CouncilOrchestrationService()
+    # Keep the endpoint's proxy dependency injectable.  The orchestration
+    # service owns retries/metrics, while this explicit binding lets controlled
+    # tests and deployments substitute the same proxy seam without a live ML
+    # call or a second, divergent execution path.
+    service = CouncilOrchestrationService(proxy=proxy_ml_post)
     _run_started = perf_counter()
     raw_result = service.run_with_policy(current_payload)
     _run_latency_ms = (perf_counter() - _run_started) * 1000.0

@@ -179,7 +179,7 @@ def _create_case(token: str) -> int:
 def test_blocking_run_records_run_metrics_when_flag_on(set_flags, monkeypatch) -> None:
     set_flags(council_observability_enabled=True)
     monkeypatch.setattr(
-        "clara_api.core.council_orchestration.proxy_ml_post",
+        "clara_api.api.v1.endpoints.council.proxy_ml_post",
         lambda _path, _payload: dict(_FAKE_RESULT),
     )
     store = get_council_metrics_store()
@@ -207,7 +207,7 @@ def test_blocking_run_records_run_metrics_when_flag_on(set_flags, monkeypatch) -
 
 def test_blocking_run_emits_nothing_when_flag_off(monkeypatch) -> None:
     monkeypatch.setattr(
-        "clara_api.core.council_orchestration.proxy_ml_post",
+        "clara_api.api.v1.endpoints.council.proxy_ml_post",
         lambda _path, _payload: dict(_FAKE_RESULT),
     )
     store = get_council_metrics_store()

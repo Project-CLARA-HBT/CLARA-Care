@@ -136,20 +136,26 @@ def _as_json_object(value: Any) -> dict[str, Any] | None:
 
 def _normalize_soap_payload(payload: dict[str, Any]) -> dict[str, Any]:
     soap_nested = _as_json_object(payload.get("soap"))
-    normalized: dict[str, Any] = {
-        "subjective": payload.get("subjective"),
-        "objective": payload.get("objective"),
-        "assessment": payload.get("assessment"),
-        "plan": payload.get("plan"),
-        "S": payload.get("S"),
-        "O": payload.get("O"),
-        "A": payload.get("A"),
-        "P": payload.get("P"),
+    source = soap_nested or payload
+    canonical_keys = {
+        "subjective": ("Subjective", "subjective", "S"),
+        "objective": ("Objective", "objective", "O"),
+        "assessment": ("Assessment", "assessment", "A"),
+        "plan": ("Plan", "plan", "P"),
     }
-    if soap_nested:
-        for key in ("subjective", "objective", "assessment", "plan", "S", "O", "A", "P"):
-            if normalized.get(key) in (None, "") and soap_nested.get(key) not in (None, ""):
-                normalized[key] = soap_nested.get(key)
+    normalized: dict[str, Any] = {}
+    for field, candidates in canonical_keys.items():
+        normalized[field] = next(
+            (source[key] for key in candidates if source.get(key) not in (None, "")), ""
+        )
+    normalized.update(
+        {
+            "S": normalized["subjective"],
+            "O": normalized["objective"],
+            "A": normalized["assessment"],
+            "P": normalized["plan"],
+        }
+    )
     return normalized
 
 
@@ -193,16 +199,10 @@ def _generate_soap(transcript: str) -> dict[str, Any]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Scribe note service returned an invalid SOAP payload.",
         )
-    normalized = {
-        "subjective": str(sections.get("Subjective", sections.get("subjective", ""))).strip(),
-        "objective": str(sections.get("Objective", sections.get("objective", ""))).strip(),
-        "assessment": str(sections.get("Assessment", sections.get("assessment", ""))).strip(),
-        "plan": str(sections.get("Plan", sections.get("plan", ""))).strip(),
-    }
-    metadata = payload.get("metadata")
-    if isinstance(metadata, dict):
-        normalized["metadata"] = metadata
-    return normalized
+    # Session CRUD retains the legacy SOAP contract (long and short keys only).
+    # Model metadata belongs to its dedicated persistence paths and must not leak
+    # into the user-facing legacy ``soap`` object.
+    return _normalize_soap_payload(sections)
 
 
 def _generate_note_sections(transcript: str, template_id: str) -> dict[str, Any]:
@@ -1836,6 +1836,22 @@ def _attribution_text(settings: Any) -> str:
     )
 
 
+def _export_sections(sections: dict[str, Any]) -> dict[str, Any]:
+    """Remove legacy SOAP aliases from a clinical-document export.
+
+    Session CRUD intentionally exposes both ``subjective`` and ``S`` aliases for
+    compatibility.  A signed note/export, however, has four SOAP template
+    sections; exporting aliases as separate sections would duplicate clinical
+    content and violate the Composition's one-section-per-template contract.
+    """
+
+    canonical = {"subjective", "objective", "assessment", "plan"}
+    aliases = {"S", "O", "A", "P"}
+    if canonical.issubset(sections) and aliases.intersection(sections):
+        return {key: value for key, value in sections.items() if key not in aliases}
+    return sections
+
+
 def _note_to_markdown(
     item: ScribeSession,
     *,
@@ -1857,7 +1873,7 @@ def _note_to_markdown(
     alters the signed note (Req 18.3).
     """
 
-    soap = _as_json_object(item.soap_json) or {}
+    soap = _export_sections(_as_json_object(item.soap_json) or {})
     lines = [f"# {item.title or 'Clinical note'}", ""]
 
     if encounter:
@@ -1941,12 +1957,13 @@ def _fhir_composition(
     No live EHR write (Req 17.5) — this is a JSON shape only.
     """
 
+    export_sections = _export_sections(sections)
     composition_sections = [
         {
             "title": str(key),
             "text": _fhir_narrative("" if value is None else str(value)),
         }
-        for key, value in sections.items()
+        for key, value in export_sections.items()
         if value is not None
     ]
     # Addenda are emitted as additional, clearly demarcated time-stamped sections

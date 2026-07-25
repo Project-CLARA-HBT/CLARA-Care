@@ -393,9 +393,10 @@ def test_wave2_endpoints_cooperate_end_to_end(monkeypatch) -> None:
     qenc = encounters[0]
     # Grounded-claim rate sourced from this note's grounding_json.
     assert qenc["grounded_claim_rate"] == 1.0
-    # Structural proxy is the fraction of populated note sections (the SOAP-normalized
-    # sections dict carries both full + single-letter keys; half are filled).
-    assert qenc["pdqi9_structural_proxy"] == 0.5
+    # The canonical SOAP template has four populated sections. Alias keys are
+    # only part of the legacy session CRUD projection, not persisted note
+    # template sections, so completeness is measured against these four.
+    assert qenc["pdqi9_structural_proxy"] == 1.0
     assert qenc["degraded_rate"] == 0.5  # one of two segments degraded
     # PII-free: no seeded transcript/patient token survives anywhere in the payload.
     serialized = json.dumps(qbody)

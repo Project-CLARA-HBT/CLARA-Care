@@ -163,22 +163,41 @@ def iter_api_routes(application: Any) -> Iterator[Any]:
     """
 
     seen: set[tuple[str, str]] = set()
-    for route in getattr(application, "routes", []):
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if not path or not methods:
-            continue
-        if _is_double_prefixed(path):
-            continue
-        for method in methods:
-            if method in _IGNORED_METHODS:
+
+    def _candidates(route: Any) -> Iterator[Any]:
+        """Yield concrete routes from classic and FastAPI lazy router includes.
+
+        FastAPI 0.116+ keeps ``include_router`` entries as private lazy
+        ``_IncludedRouter`` values. Their public ``effective_route_contexts``
+        method is the framework-supported way to obtain the resolved path,
+        methods and dependency tree. Older FastAPI releases still expose
+        concrete routes directly, so retain that path without importing a
+        private FastAPI implementation type.
+        """
+
+        contexts = getattr(route, "effective_route_contexts", None)
+        if callable(contexts):
+            yield from contexts()
+            return
+        yield route
+
+    for outer_route in getattr(application, "routes", []):
+        for route in _candidates(outer_route):
+            path = getattr(route, "path", None)
+            methods = getattr(route, "methods", None)
+            if not path or not methods:
                 continue
-            key = (method, path)
-            if key in seen:
+            if _is_double_prefixed(path):
                 continue
-            seen.add(key)
-            yield route
-            break  # one route object covers all its methods
+            for method in methods:
+                if method in _IGNORED_METHODS:
+                    continue
+                key = (method, path)
+                if key in seen:
+                    continue
+                seen.add(key)
+                yield route
+                break  # one route object covers all its methods
 
 
 # ---------------------------------------------------------------------------
