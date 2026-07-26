@@ -21,6 +21,8 @@ import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../connected_health/connected_health_screen.dart';
 import '../language_controller.dart';
+import 'family_surface.dart';
+import 'visits_surface.dart';
 import '../redesign/scribe_surface_v3.dart' show ScribeSurfaceV3;
 import '../redesign/settings_screen_v3.dart' show SettingsScreenV3;
 import '../redesign/social_surface_v3.dart' show SocialSurfaceV3;
@@ -71,6 +73,32 @@ class ProfileHub extends StatelessWidget {
 
   List<_ProfileEntry> _entries() {
     final entries = <_ProfileEntry>[];
+
+    // Visit preparation — collecting concerns/intake for an appointment.
+    entries.add(
+      _ProfileEntry(
+        icon: Icons.event_note_outlined,
+        title: 'Chuẩn bị đi khám',
+        subtitle: 'Gom câu hỏi và thông tin cho buổi khám',
+        builder: (_) => VisitsSurface(
+          apiClient: apiClient,
+          sessionStore: sessionStore,
+        ),
+      ),
+    );
+
+    // Family Circle — minimal, revocable, consent-based sharing.
+    entries.add(
+      _ProfileEntry(
+        icon: Icons.family_restroom_outlined,
+        title: 'Người thân & chia sẻ',
+        subtitle: 'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
+        builder: (_) => FamilySurface(
+          apiClient: apiClient,
+          sessionStore: sessionStore,
+        ),
+      ),
+    );
 
     if (kMobileSocialEnabled) {
       entries.add(

@@ -149,12 +149,11 @@ class ApiClient {
     http.Client? httpClient,
     Duration requestTimeout = const Duration(seconds: 30),
     Duration streamIdleTimeout = const Duration(seconds: 60),
-    AuthSessionHooks? authHooks,
+    this.authHooks,
   })  : _baseUrl = _trimTrailingSlash(baseUrl),
         _httpClient = httpClient ?? http.Client(),
         _requestTimeout = requestTimeout,
-        _streamIdleTimeout = streamIdleTimeout,
-        _authHooks = authHooks;
+        _streamIdleTimeout = streamIdleTimeout;
 
   final String _baseUrl;
   final http.Client _httpClient;
@@ -163,7 +162,7 @@ class ApiClient {
   /// (Req 6.2, 6.3). Null until attached (default), keeping the legacy path
   /// untouched. Settable so the store and client can be constructed in either
   /// order (e.g. wired together in `main`).
-  AuthSessionHooks? _authHooks;
+  AuthSessionHooks? authHooks;
 
   /// De-duplicates concurrent refreshes: parallel authenticated requests that
   /// all see an expired token (or all receive 401) share a single in-flight
@@ -182,8 +181,7 @@ class ApiClient {
     return 'm-${DateTime.now().microsecondsSinceEpoch}-$_idempotencyCounter';
   }
 
-  set authHooks(AuthSessionHooks? hooks) => _authHooks = hooks;
-  AuthSessionHooks? get authHooks => _authHooks;
+
 
   /// Maximum time to await a single request/response round-trip before it is
   /// surfaced as a recoverable [ApiException] instead of hanging (Req 9.2).
@@ -1348,6 +1346,163 @@ class ApiClient {
     );
   }
 
+  // --- Visits (clara-mobile-unified) ----------------------------------------
+
+  /// Lists the user's visit-prep sessions. Requires an existing PHR profile
+  /// (the server returns 409 when none exists yet — the caller routes that to
+  /// onboarding). A visit helps prepare for a doctor's appointment; it is not
+  /// medical advice or a diagnosis.
+  Future<Map<String, dynamic>> getVisits({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/visits', accessToken: accessToken);
+  }
+
+  /// Fetches a single visit by id.
+  Future<Map<String, dynamic>> getVisit(
+    String visitId, {
+    required String accessToken,
+  }) {
+    return _get('/api/v1/visits/$visitId', accessToken: accessToken);
+  }
+
+  /// Creates a visit-prep session from a user-authored payload.
+  Future<Map<String, dynamic>> createVisit({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/visits',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Adds a concern to a visit.
+  Future<Map<String, dynamic>> addVisitConcern({
+    required String accessToken,
+    required String visitId,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/concerns',
+      body: payload,
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Submits intake answers for a visit.
+  Future<Map<String, dynamic>> submitVisitIntakeAnswers({
+    required String accessToken,
+    required String visitId,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/intake/answers',
+      body: payload,
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Generates the shareable visit pack (the prep summary for the appointment).
+  Future<Map<String, dynamic>> createVisitPack({
+    required String accessToken,
+    required String visitId,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/pack',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  // --- Family (clara-mobile-unified) ----------------------------------------
+
+  /// Lists the user's family relationships (minimal, consent-based sharing).
+  Future<Map<String, dynamic>> getFamilyRelationships({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/family/relationships', accessToken: accessToken);
+  }
+
+  /// Lists pending family notifications awaiting acknowledgement.
+  Future<Map<String, dynamic>> getFamilyNotifications({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/family/notifications', accessToken: accessToken);
+  }
+
+  /// Acknowledges ("Đã xem") a family notification for a given grant + task.
+  Future<Map<String, dynamic>> acknowledgeFamilyNotification({
+    required String accessToken,
+    required String grantId,
+    required String taskId,
+  }) {
+    return _post(
+      '/api/v1/family/notifications/$grantId/$taskId/acknowledge',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Lists the active access grants shared with the user's supporters.
+  Future<Map<String, dynamic>> getFamilyAccessGrants({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/family/access-grants', accessToken: accessToken);
+  }
+
+  /// Revokes a family access grant.
+  Future<Map<String, dynamic>> revokeFamilyAccessGrant({
+    required String accessToken,
+    required String grantId,
+  }) {
+    return _delete(
+      '/api/v1/family/access-grants/$grantId',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Fetches the access log (who viewed what, and when).
+  Future<Map<String, dynamic>> getFamilyAccessLog({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/family/access-log', accessToken: accessToken);
+  }
+
+  /// Invites a supporter to a minimal, consent-based sharing relationship.
+  Future<Map<String, dynamic>> createFamilyInvitation({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/family/invitations',
+      body: payload,
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Accepts a family invitation. The invitation token travels in the
+  /// `X-Family-Invitation-Token` header rather than the URL.
+  Future<Map<String, dynamic>> acceptFamilyInvitation({
+    required String accessToken,
+    required String invitationToken,
+  }) {
+    return _post(
+      '/api/v1/family/invitations/accept',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'X-Family-Invitation-Token': invitationToken,
+      },
+    );
+  }
+
   /// Applies the bounded [_requestTimeout] to a single request future, mapping a
   /// stalled request onto the existing [ApiException] type (Req 9.2). Additive:
   /// callers keep awaiting an `http.Response` exactly as before.
@@ -1374,7 +1529,7 @@ class ApiClient {
     String? accessToken,
     Future<http.Response> Function(String? token) send,
   ) async {
-    final hooks = _authHooks;
+    final hooks = authHooks;
 
     // Fast path: unauthenticated request or no refresh wiring — unchanged.
     if (hooks == null || accessToken == null || accessToken.isEmpty) {
@@ -1423,7 +1578,7 @@ class ApiClient {
   }
 
   Future<String?> _doRefresh() async {
-    final hooks = _authHooks;
+    final hooks = authHooks;
     if (hooks == null) {
       return null;
     }
