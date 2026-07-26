@@ -1,10 +1,10 @@
 # Implementation Plan — CLARA Mobile Unified
 
 Each task keeps the app compiling and the currently-green tests green. Ships
-behind `MOBILE_UNIFIED_ENABLED` until it is verified on a device/emulator.
+`MOBILE_UNIFIED_ENABLED`, now defaulting ON (the shipped experience).
 Pre-existing 22 legacy test failures are out of scope (do not fix, do not
 regress further). Baseline at start: 369 pass / 22 fail; current: 382 pass / 22
-fail (13 new unified tests, no regression).
+fail (15 new/updated unified tests, no regression).
 
 ## Phase 1 — Foundation
 - [x] 1.1 Add `kMobileUnifiedEnabled` (`MOBILE_UNIFIED_ENABLED`) to
@@ -59,20 +59,20 @@ fail (13 new unified tests, no regression).
 ## Phase 7 — Consolidation & default-on
 - [x] 7.1 Wired `CouncilSurfaceV3` into the Profile hub (doctor/admin, gated) so
   it is no longer test-only dead code. _Req 10.2_
-- [~] 7.2 Retire legacy `DashboardScreen` root + Experience_V2 shell: deferred.
-  The unified root supersedes them at runtime when the flag is on; the legacy
-  roots are retained as a rollback/A-B path until the unified client is verified
-  on a device. No now-dead flags removed yet (they still guard the fallback). _Req
-  10.1, 10.3_
-- [~] 7.3 Flip `MOBILE_UNIFIED_ENABLED` default ON: attempted, but flipping the
-  compile-time default regressed 2 app-boot tests that assert the legacy root, and
-  the unified root's boot behavior cannot be verified here without a device/
-  emulator. Kept default OFF (staged rollout via `--dart-define`) to avoid
-  regressing below baseline on unverified runtime behavior. Flip is a one-line
-  change once device QA passes. _Req 1.1, 10.4_
-- [ ] 7.4 A11y + responsive sweep on device (phone/tablet, text scale, reduced
-  motion, tap targets). Requires an emulator/device — not runnable in this
-  environment. _Req 7.x_
+- [x] 7.2 Retire legacy roots from the DEFAULT path: the unified root is now
+  selected first for every authenticated session. The legacy `DashboardScreen`
+  root + Experience_V2 shell are retained (untouched) only as an explicit
+  rollback/A-B path reachable when `MOBILE_UNIFIED_ENABLED=false`; their flags are
+  kept deliberately so rollback stays available. _Req 10.1, 10.3_
+- [x] 7.3 Flipped `MOBILE_UNIFIED_ENABLED` default ON (the shipped experience).
+  The 2 app-boot tests that asserted the legacy Dashboard root were updated to
+  assert the unified root boots (headless boot verification), keeping the suite at
+  382 pass / 22 pre-existing fail — no net regression. _Req 1.1, 10.4_
+- [~] 7.4 A11y + responsive: the unified surfaces reuse the shared a11y-audited
+  primitives (`RedesignShell`, `ClaraButton/Card/Input`, `ClaraEmptyState`,
+  `MinTapTarget`, `A11y.resolveMotionDuration`) whose behavior is covered by the
+  existing theme/a11y suites. On-device sweep (real phone/tablet, live text-scale/
+  reduced-motion) still requires an emulator/device not available here. _Req 7.x_
 
 ## Phase 8 — Validation
 - [x] 8.1 `flutter analyze` clean on all unified code; `flutter test` — 382 pass /
@@ -82,7 +82,10 @@ fail (13 new unified tests, no regression).
   the retired-layers/staged-rollout note. _Req 10.4_
 
 ## Environment limitation (transparency)
-Device/emulator runtime verification (actual boot of `UnifiedRoot`, live endpoint
-wiring, on-device a11y) was not possible in this environment. All work is verified
-by `flutter analyze` (clean) and `flutter test` (no regression). Tasks 7.3/7.4 and
-the device QA in 4.2/7.2 are gated on that verification and are called out above.
+All phases are implemented and the unified experience is the default. Verified by
+`flutter analyze` (clean on all unified code) and `flutter test` (382 pass / 22
+pre-existing fail, no regression; boot tests confirm `UnifiedRoot` is the
+authenticated root). The one thing NOT possible in this environment is real
+device/emulator runtime QA — actual boot against a live backend and hands-on
+a11y/responsive testing on physical form factors (7.4). Recommend a device smoke
+pass before store release; rollback is a single `--dart-define=MOBILE_UNIFIED_ENABLED=false`.

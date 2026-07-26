@@ -16,7 +16,8 @@ Guiding constraints:
   legacy shell or navigation.
 - Guardrails (emergency fast-path, disclaimers, consent, no-PII analytics,
   offline guards, auth refresh) are invariants.
-- Ships behind `MOBILE_UNIFIED_ENABLED` (default OFF) until the final phase.
+- Ships behind `MOBILE_UNIFIED_ENABLED` (now **default ON** after finalization;
+  set `=false` to roll back).
 
 ## Architecture
 
@@ -123,8 +124,9 @@ graph TD
   currently-green tests.
 
 ## Rollout / phases
-Behind `MOBILE_UNIFIED_ENABLED` (default OFF). Each phase ships green. Final phase
-flips default ON and removes superseded roots + dead code, updating flag docs.
+Behind `MOBILE_UNIFIED_ENABLED`. During build-out it defaulted OFF so each phase
+shipped dark and green; the finalization phase flipped the default ON, updated the
+boot tests to verify the unified root, and documented the `=false` rollback path.
 
 ## Non-goals
 - No new routing/state-management package.

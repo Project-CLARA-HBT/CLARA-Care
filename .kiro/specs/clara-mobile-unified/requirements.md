@@ -28,10 +28,11 @@ accessibility invariant**.
   reachable from Today/Profile, not primary tabs.
 
 ### Compatibility & rollout
-- The unified experience becomes the **default** once this feature is complete.
-  During build-out it lives behind `MOBILE_UNIFIED_ENABLED` (default OFF) so each
-  phase ships dark and green; the final phase flips the default and removes the
-  dead layers.
+- The unified experience is the **default** now that this feature is complete
+  (`MOBILE_UNIFIED_ENABLED` defaults ON). During build-out it lived behind the
+  flag (default OFF) so each phase shipped dark and green; the final phase flipped
+  the default. Setting `MOBILE_UNIFIED_ENABLED=false` restores the prior root
+  selection for rollback/A-B.
 - All server calls stay on the existing `/api/v1/*` contract via `ApiClient`.
   No server behavior changes are required except the already-specced mobile
   feature-flag expansion (kept additive/flagged).

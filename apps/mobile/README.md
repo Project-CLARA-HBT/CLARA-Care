@@ -1,9 +1,12 @@
 # CLARA Mobile (Flutter)
 
-This folder contains the Flutter client for CLARA mobile integration. New
-End_User-facing surfaces ship behind feature flags that default to OFF, so a
-plain build behaves exactly like the original six-screen app (login, research,
-CareGuard, council, dashboard, PHR) until a flag is explicitly enabled.
+This folder contains the Flutter client for CLARA mobile integration. A plain
+build now ships the **unified experience** (`MOBILE_UNIFIED_ENABLED`, default
+ON) — one product-aligned app whose information architecture matches the web
+product. It supersedes the legacy Dashboard, Experience_V2, and Experience_V3
+layers, which remain reachable only as an explicit rollback
+(`--dart-define=MOBILE_UNIFIED_ENABLED=false`). Individual feature surfaces are
+still gated by their own flags (default OFF) as documented below.
 
 ## Unified experience (`MOBILE_UNIFIED_ENABLED`)
 
@@ -11,8 +14,10 @@ The **unified** client (spec: `.kiro/specs/clara-mobile-unified`) collapses the
 three historical layers (legacy Dashboard, Experience_V2, and the Experience_V3
 redesign) into ONE product-aligned experience whose information architecture
 matches the current web product. It is gated by `MOBILE_UNIFIED_ENABLED`
-(default OFF, staged rollout) and is checked **before** the redesign and V2
-gates in `app.dart`, so it is a strict superset. It is a **client-only** change:
+(**default ON** — the shipped experience) and is checked **before** the redesign
+and V2 gates in `app.dart`, so it is a strict superset. Set
+`--dart-define=MOBILE_UNIFIED_ENABLED=false` to fall back to the prior roots for
+A/B or rollback. It is a **client-only** change:
 no CLARA_API contract is altered and every safety guardrail (consent gating,
 per-session Scribe consent, no-PII analytics, RBAC/capability gates, DDI
 two-medicine guard + severity floor, emergency fast-path, clinician-review
@@ -39,12 +44,21 @@ Root + onboarding gate: `lib/experience/unified/unified_root.dart`,
 today/episodes/tasks, PHR onboarding, medication courses, visits, family) are
 wrapped in `lib/core/api_client.dart`; mutations carry an `Idempotency-Key`.
 
-Run the unified experience:
+Run the unified experience (it is the default; the flag is shown only for
+clarity — omit it and you still get the unified root):
+
+```
+flutter run \
+  --dart-define=CLARA_API_BASE_URL=http://localhost:8100
+```
+
+To roll back to the prior root selection (legacy / V3 redesign) for A/B or
+debugging:
 
 ```
 flutter run \
   --dart-define=CLARA_API_BASE_URL=http://localhost:8100 \
-  --dart-define=MOBILE_UNIFIED_ENABLED=true
+  --dart-define=MOBILE_UNIFIED_ENABLED=false
 ```
 
 ## Experience_V3 redesign (`MOBILE_REDESIGN_ENABLED`)
@@ -175,7 +189,7 @@ Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |
 | ------------------------------------- | ------- |
-| `MOBILE_UNIFIED_ENABLED`              | Unified experience root (Today / LifeMap / Medicines / Ask CLARA / Profile) — supersedes the three layers below; see the section above |
+| `MOBILE_UNIFIED_ENABLED` (default ON) | Unified experience root (Today / LifeMap / Medicines / Ask CLARA / Profile) — supersedes the three layers below; set `=false` to roll back; see the section above |
 | `MOBILE_REDESIGN_ENABLED`             | Experience_V3 redesign root (light-first, centered-Chat shell) — see the section above |
 | `MOBILE_EXPERIENCE_V2_ENABLED`        | Legacy Experience_V2 shell (superseded by the redesign when both are on) |
 | `MOBILE_UX_POLISH_ENABLED`            | Web-matching palette for the V2/polished chat |
