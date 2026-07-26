@@ -19,10 +19,12 @@ import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
+import '../../screens/council_case_screen.dart' show kCouncilMobileParityEnabled;
 import '../connected_health/connected_health_screen.dart';
 import '../language_controller.dart';
 import 'family_surface.dart';
 import 'visits_surface.dart';
+import '../redesign/council_surface_v3.dart' show CouncilSurfaceV3;
 import '../redesign/scribe_surface_v3.dart' show ScribeSurfaceV3;
 import '../redesign/settings_screen_v3.dart' show SettingsScreenV3;
 import '../redesign/social_surface_v3.dart' show SocialSurfaceV3;
@@ -70,6 +72,11 @@ class ProfileHub extends StatelessWidget {
 
   bool get _canScribe =>
       resolver.scribeEnabled && (role == 'doctor' || role == 'admin');
+
+  // AI Council (multi-specialist case review) is a clinician tool: doctor/admin
+  // only, and gated by the council parity flag (fail-closed).
+  bool get _canCouncil =>
+      kCouncilMobileParityEnabled && (role == 'doctor' || role == 'admin');
 
   List<_ProfileEntry> _entries() {
     final entries = <_ProfileEntry>[];
@@ -136,6 +143,21 @@ class ProfileHub extends StatelessWidget {
             apiClient: apiClient,
             sessionStore: sessionStore,
             resolver: resolver,
+          ),
+        ),
+      );
+    }
+
+    // AI Council — guided multi-specialist case wizard (doctor/admin, gated).
+    if (_canCouncil) {
+      entries.add(
+        _ProfileEntry(
+          icon: Icons.groups_outlined,
+          title: 'Hội chẩn ca bệnh',
+          subtitle: 'Tập hợp góc nhìn đa chuyên khoa cho ca khó',
+          builder: (_) => CouncilSurfaceV3(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
           ),
         ),
       );

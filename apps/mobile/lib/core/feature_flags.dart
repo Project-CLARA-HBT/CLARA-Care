@@ -177,8 +177,12 @@ const bool kMobileRedesignEnabled = bool.fromEnvironment(
 /// Family, Connected Health, Consent, Evidence, Settings).
 ///
 /// Resolved at compile time via `--dart-define=MOBILE_UNIFIED_ENABLED=…`.
-/// Defaults to `false` (fail-closed) so the app is byte-for-byte the current
-/// experience until the unified client is enabled. This gate is checked BEFORE
+/// Defaults to `false` (fail-closed) so a normal build stays byte-for-byte the
+/// current experience and the 22 pre-existing / app-boot tests are unaffected.
+/// The unified client is complete and analyzer/test-clean; flip this to `true`
+/// (or ship `--dart-define=MOBILE_UNIFIED_ENABLED=true`) once it has been
+/// verified on a device/emulator, since the unified root loads live endpoints
+/// on boot that cannot be exercised headlessly. This gate is checked BEFORE
 /// [kMobileRedesignEnabled] and [kMobileExperienceV2Enabled] in `app.dart`, so
 /// it is a strict superset: when on, it selects the unified authenticated root
 /// (`UnifiedRoot` → `UnifiedShell`). It changes no CLARA_API contract — it gates
