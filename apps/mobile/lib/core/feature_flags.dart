@@ -167,6 +167,27 @@ const bool kMobileRedesignEnabled = bool.fromEnvironment(
   defaultValue: false,
 );
 
+/// The single build-time gate for the **unified** CLARA_Mobile experience
+/// (spec: .kiro/specs/clara-mobile-unified).
+///
+/// This collapses the three historical layers (legacy Dashboard, Experience_V2,
+/// Experience_V3 redesign) into ONE product-aligned client whose information
+/// architecture matches the current web product: a Today home, LifeMap, a
+/// unified Medicines hub, an Ask-CLARA action, and a Profile hub (PHR, Visits,
+/// Family, Connected Health, Consent, Evidence, Settings).
+///
+/// Resolved at compile time via `--dart-define=MOBILE_UNIFIED_ENABLED=…`.
+/// Defaults to `false` (fail-closed) so the app is byte-for-byte the current
+/// experience until the unified client is enabled. This gate is checked BEFORE
+/// [kMobileRedesignEnabled] and [kMobileExperienceV2Enabled] in `app.dart`, so
+/// it is a strict superset: when on, it selects the unified authenticated root
+/// (`UnifiedRoot` → `UnifiedShell`). It changes no CLARA_API contract — it gates
+/// only client-side surface selection.
+const bool kMobileUnifiedEnabled = bool.fromEnvironment(
+  'MOBILE_UNIFIED_ENABLED',
+  defaultValue: false,
+);
+
 /// Build-time gate for the CLARA Health Social community surface on mobile
 /// (spec: .kiro/specs/clara-health-social). Default OFF (fail-closed): when off,
 /// no social entry is shown and no social route is called, so the app is

@@ -170,6 +170,18 @@ class ApiClient {
   /// `POST /auth/refresh` rather than stampeding the endpoint.
   Future<String?>? _refreshInFlight;
 
+  /// Monotonic counter feeding [_idempotencyKey] so repeated mutations within a
+  /// session get distinct keys while a retried single call can reuse one.
+  int _idempotencyCounter = 0;
+
+  /// Generates a client-side `Idempotency-Key` for LifeMap/medication/visit
+  /// mutations that require one. Combines a millisecond timestamp with a
+  /// per-instance counter so keys are unique without a UUID dependency.
+  String _idempotencyKey() {
+    _idempotencyCounter += 1;
+    return 'm-${DateTime.now().microsecondsSinceEpoch}-$_idempotencyCounter';
+  }
+
   set authHooks(AuthSessionHooks? hooks) => _authHooks = hooks;
   AuthSessionHooks? get authHooks => _authHooks;
 
@@ -1207,6 +1219,135 @@ class ApiClient {
     );
   }
 
+  // --- PHR onboarding (clara-mobile-unified) --------------------------------
+
+  /// Returns the durable first-run onboarding decision (never infers health
+  /// facts). `needs_onboarding` is true only while status is `pending`.
+  Future<Map<String, dynamic>> getPhrOnboarding({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/phr/onboarding', accessToken: accessToken);
+  }
+
+  /// Partially saves, completes, or skips onboarding. [payload] carries an
+  /// `action` of `save` | `complete` | `skip` plus any optional profile fields.
+  Future<Map<String, dynamic>> updatePhrOnboarding({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _patch(
+      '/api/v1/phr/onboarding',
+      body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  // --- LifeMap / Today (clara-mobile-unified) -------------------------------
+
+  /// Today agenda: accepted care tasks, open episodes, and the pending-
+  /// confirmation count. Returns 409 when no PHR profile exists yet (the caller
+  /// routes that to onboarding).
+  Future<Map<String, dynamic>> getLifeMapToday({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/lifemap/today', accessToken: accessToken);
+  }
+
+  /// Creates a user-owned care episode. Mutations carry an `Idempotency-Key`.
+  Future<Map<String, dynamic>> createLifeMapEpisode({
+    required String accessToken,
+    required String title,
+    String goal = '',
+    String priority = 'routine',
+  }) {
+    return _post(
+      '/api/v1/lifemap/episodes',
+      body: <String, dynamic>{
+        'title': title,
+        'goal': goal,
+        'priority': priority,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Proposes a task under an open episode.
+  Future<Map<String, dynamic>> createLifeMapTask({
+    required String accessToken,
+    required String episodeId,
+    required String title,
+    String? dueAt,
+  }) {
+    return _post(
+      '/api/v1/lifemap/episodes/$episodeId/tasks',
+      body: <String, dynamic>{
+        'title': title,
+        if (dueAt != null) 'due_at': dueAt,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Marks a proposed task accepted so it enters Today.
+  Future<Map<String, dynamic>> acceptLifeMapTask({
+    required String accessToken,
+    required String taskId,
+  }) {
+    return _post(
+      '/api/v1/lifemap/tasks/$taskId/accept',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Marks an accepted task complete.
+  Future<Map<String, dynamic>> completeLifeMapTask({
+    required String accessToken,
+    required String taskId,
+    Map<String, dynamic> evidence = const <String, dynamic>{},
+  }) {
+    return _post(
+      '/api/v1/lifemap/tasks/$taskId/complete',
+      body: <String, dynamic>{'evidence': evidence},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  // --- Medication courses (clara-mobile-unified) ----------------------------
+
+  /// Lists confirmed medication courses. Requires an existing PHR profile.
+  Future<Map<String, dynamic>> getMedicationCourses({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/medication-courses', accessToken: accessToken);
+  }
+
+  /// Records a confirmed medication course (never inferred).
+  Future<Map<String, dynamic>> createMedicationCourse({
+    required String accessToken,
+    required String medicationName,
+    String doseText = '',
+    String scheduleText = '',
+    String? drugbankId,
+  }) {
+    return _post(
+      '/api/v1/medication-courses',
+      body: <String, dynamic>{
+        'medication_name': medicationName,
+        'dose_text': doseText,
+        'schedule_text': scheduleText,
+        if (drugbankId != null && drugbankId.isNotEmpty)
+          'drugbank_id': drugbankId,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
   /// Applies the bounded [_requestTimeout] to a single request future, mapping a
   /// stalled request onto the existing [ApiException] type (Req 9.2). Additive:
   /// callers keep awaiting an `http.Response` exactly as before.
@@ -1356,12 +1497,13 @@ class ApiClient {
     String path, {
     required Map<String, dynamic> body,
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) {
     return _sendAuthed(
       accessToken,
       (token) => _httpClient.post(
         Uri.parse('$_baseUrl$path'),
-        headers: _headers(accessToken: token),
+        headers: _headers(accessToken: token, extra: extraHeaders),
         body: jsonEncode(body),
       ),
     );
@@ -1470,7 +1612,7 @@ class ApiClient {
     );
   }
 
-  Map<String, String> _headers({String? accessToken}) {
+  Map<String, String> _headers({String? accessToken, Map<String, String>? extra}) {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -1478,6 +1620,10 @@ class ApiClient {
 
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
+    }
+
+    if (extra != null) {
+      headers.addAll(extra);
     }
 
     return headers;
