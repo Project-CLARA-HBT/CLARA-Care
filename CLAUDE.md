@@ -13,7 +13,10 @@ The four runtimes are:
 - **`services/ml`** — FastAPI ML orchestration (Python 3.11+): routing, guardrails, RAG, and domain agents (CareGuard / Council / Scribe), plus FIDES verification.
 - **`apps/mobile`** — Flutter starter client (Dart); core screens wired to the API, session currently being hardened toward persistence.
 
-A supporting **`services/paddleocr`** microservice (FastAPI + PaddleOCR, Vietnamese) provides medication-label OCR for CareGuard scanning; the API reaches it through the OCR bridge (`TGC_OCR_*`).
+Two supporting sidecar microservices back the media pipelines:
+
+- **`services/ocr`** — thin FastAPI adapter over **Google Cloud Vision** (`DOCUMENT_TEXT_DETECTION`) for medication-label OCR; the API reaches it through the OCR bridge (`TGC_OCR_*`). It holds no model and needs no GPU.
+- **`services/asr`** — FastAPI + `faster-whisper` (local Whisper) exposing an OpenAI-compatible `POST /v1/audio/transcriptions`, used by Scribe transcription (`DEEPSEEK_AUDIO_BASE_URL` points at it because the YEScale `deepseek` group has no audio model).
 
 ## Repository Structure
 
@@ -23,9 +26,10 @@ A supporting **`services/paddleocr`** microservice (FastAPI + PaddleOCR, Vietnam
 │   ├── web/      # Next.js frontend production app
 │   └── mobile/   # Flutter client (login, dashboard, research, careguard, council)
 ├── services/
-│   ├── api/        # FastAPI gateway + SQLAlchemy models + Alembic migrations
-│   ├── ml/         # FastAPI ML layer: routing + RAG pipeline + agents + FIDES
-│   └── paddleocr/  # FastAPI + PaddleOCR microservice for medication-label OCR
+│   ├── api/   # FastAPI gateway + SQLAlchemy models + Alembic migrations
+│   ├── ml/    # FastAPI ML layer: routing + RAG pipeline + agents + FIDES
+│   ├── ocr/   # FastAPI adapter over Google Cloud Vision (medication-label OCR)
+│   └── asr/   # FastAPI + faster-whisper (Scribe audio transcription)
 ├── deploy/
 │   ├── docker/   # docker-compose.yml (infra), .app.yml (app), .deploy.yml (server)
 │   └── nginx/    # reverse proxy conf
@@ -62,7 +66,7 @@ CLARA_Mobile (Flutter)  ── core screens reuse the same /api/v1 surface via A
 
 ### Data plane (via Docker Compose)
 
-The local infra stack (`deploy/docker/docker-compose.yml`) provides: **PostgreSQL** (relational state), **Redis** (cache / distributed limiters), **Milvus** (vector store, backed by **etcd** + **MinIO**), **Elasticsearch** (lexical / hybrid search), and **Neo4j** (graph). The app stack (`deploy/docker/docker-compose.app.yml`) adds **SearXNG** for external web retrieval alongside the `api`, `ml`, and `web` containers.
+The local infra stack (`deploy/docker/docker-compose.yml`) provides: **PostgreSQL** (relational state), **Redis** (cache / distributed limiters), **Milvus** (vector store, backed by **etcd** + **MinIO**), **Elasticsearch** (lexical / hybrid search), and **Neo4j** (graph). The app stack (`deploy/docker/docker-compose.app.yml`) adds **SearXNG** for external web retrieval alongside the `api`, `ml`, `web`, `ocr`, and `asr` containers.
 
 ### Common local ports (app compose)
 
@@ -120,9 +124,9 @@ Database migrations run via Alembic from `services/api` (`alembic upgrade head`)
 ### CLARA_API (`services/api/src/clara_api`)
 
 - **Bootstrap & security** (`main.py`): CORS (no wildcard origins in production), auth-context middleware, rate limiter, API-metrics middleware, security headers (HSTS on HTTPS), and CSRF middleware that applies only to **cookie-authenticated mutating requests** (bearer-token requests and a small set of auth paths are exempt). A startup invariant enforces the ML timeout floor (`ML_SERVICE_TIMEOUT_SECONDS >= DEEPSEEK_TIMEOUT_SECONDS`, sync-research path `>= ML_RESEARCH_TIMEOUT_SECONDS`) so a misconfiguration fails fast. Production startup guards block default JWT secrets, require `AUTH_COOKIE_SECURE=true`, require `ML_INTERNAL_API_KEY`, forbid auto-provisioning, reject weak admin bootstrap passwords, and require `REDIS_URL` when distributed limiters are enabled. The router is also mounted a second time under `/api/v1` for backward compatibility with stale double-prefixed frontend calls.
-- **Router** (`api/router.py`, prefix `/api/v1`): `health`, `auth` (register/verify/login + 2-step OTP for sensitive roles/consent), `mobile`, `chat` (routed proxy), `phr` (personal health record get/upsert), `search` (multi-source federated source-hub search across PubMed/RxNorm/openFDA/DailyMed/EuropePMC/Semantic Scholar/ClinicalTrials/DAVID), `research` (conversations, knowledge sources/documents, tier2 sync `/tier2` and async jobs `/tier2/jobs` with poll + SSE, source hub), `careguard` (medicine cabinet, scan, auto DDI, VN drug dictionary, `/analyze`), `council`, `scribe`, `system` (metrics, dependencies, control-tower config, flow events + SSE), and `workspace` (folders/channels/share/export/notes).
+- **Router** (`api/router.py`, prefix `/api/v1`): `health`, `auth` (register/verify/login + 2-step OTP for sensitive roles/consent), `mobile`, `chat` (routed proxy), `phr` (personal health record get/upsert), `search` (multi-source federated source-hub search across PubMed/RxNorm/openFDA/DailyMed/EuropePMC/Semantic Scholar/ClinicalTrials/DAVID), `research` (conversations, knowledge sources/documents, tier2 sync `/tier2` and async jobs `/tier2/jobs` with poll + SSE, source hub), `careguard` (medicine cabinet, scan, auto DDI, VN drug dictionary, `/analyze`), `council`, `scribe`, `system` (metrics, dependencies, control-tower config, flow events + SSE), `workspace` (folders/channels/share/export/notes), `social` (flag-gated community, see below), `admin/rag`, `admin/audit`, `admin/observability`, and `compliance` (DSAR / data-rights).
 - **Research Tier2** (`api/v1/endpoints/research.py`): normalized request contract, document upload + OCR bridge (`TGC_OCR_*`), per-user knowledge sources, and an in-API async job engine (DB-backed `ResearchJob`, background worker pool via `RESEARCH_JOB_MAX_WORKERS`) exposing polling and SSE streams.
-- **Data** (`db/models.py`): identity/session (`User`, `SessionModel`, `Query`, `AuthToken`, `UserConsent`), `PhrProfile`, `ResearchJob`, CareGuard (`MedicineCabinet`/`MedicineItem`, VN drug dictionary tables), scribe/council case tables, federated source records, `SystemSetting`, knowledge (`KnowledgeSource`/`KnowledgeDocument`), and workspace models. Migrations are in `services/api/alembic/versions/` (`20260324_0001` … `20260409_0008`).
+- **Data** (`db/models.py`): identity/session (`User`, `SessionModel`, `Query`, `AuthToken`, `UserConsent`), `PhrProfile`, `ResearchJob`, CareGuard (`MedicineCabinet`/`MedicineItem`, VN drug dictionary tables), scribe/council case tables, federated source records, `SystemSetting`, knowledge (`KnowledgeSource`/`KnowledgeDocument`), and workspace models. Migrations are in `services/api/alembic/versions/` (`20260324_0001` … `20260422_0018`).
 
 ### CLARA_ML (`services/ml/src/clara_ml`)
 
@@ -149,7 +153,7 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 
 ## Models & Runtime (as-built)
 
-The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint (`DEEPSEEK_BASE_URL`, model `deepseek-v3.2`) with a configurable timeout and retry policy. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
+The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint (`DEEPSEEK_BASE_URL`, model `deepseek-v4-pro` by default per `.env.example`) with a configurable timeout and retry policy. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
 > Note: when `LLM_DEEPSEEK_ONLY` is enabled and a supplied runtime matches the configured DeepSeek env, the pipeline must reuse the default DeepSeek client (preserving its longer timeout) rather than constructing a short-timeout runtime client — and the API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 

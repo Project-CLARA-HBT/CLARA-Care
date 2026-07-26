@@ -67,6 +67,8 @@ from clara_api.schemas import (
     PhrEntryPatchRequest,
     PhrObservationCreateRequest,
     PhrOcrConfirmRequest,
+    PhrOnboardingResponse,
+    PhrOnboardingUpdateRequest,
     PhrRecordResponse,
     PhrRecordUpdateRequest,
     PhrReminderCreateRequest,
@@ -78,6 +80,20 @@ router = APIRouter()
 
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 SETTINGS_DEP = Depends(get_settings)
+PHR_ONBOARDING_VERSION = "2026-07-v1"
+PHR_ONBOARDING_OPTIONAL_FIELDS = [
+    "full_name",
+    "date_of_birth",
+    "gender",
+    "blood_type",
+    "height_cm",
+    "weight_kg",
+    "emergency_contact_name",
+    "emergency_contact_phone",
+    "allergies",
+    "conditions",
+    "medications",
+]
 
 
 def _get_user_by_token(db: Session, token: TokenPayload) -> User:
@@ -123,6 +139,182 @@ def _serialize_profile(profile: PhrProfile | None) -> PhrRecordResponse:
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
+
+
+def _serialize_onboarding(
+    db: Session, *, user: User, profile: PhrProfile
+) -> PhrOnboardingResponse:
+    onboarding_status = profile.onboarding_status or "pending"
+    if onboarding_status not in {"pending", "completed", "skipped"}:
+        onboarding_status = "pending"
+    return PhrOnboardingResponse(
+        status=onboarding_status,
+        needs_onboarding=onboarding_status == "pending",
+        version=profile.onboarding_version or PHR_ONBOARDING_VERSION,
+        completed_at=profile.onboarding_completed_at,
+        personalization_consent=PhrConsentService.is_granted(
+            db, user_id=user.id, purpose="personalization"
+        ),
+        optional_fields=PHR_ONBOARDING_OPTIONAL_FIELDS,
+        record=_serialize_profile(profile),
+    )
+
+
+def _no_store(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Vary"] = "Authorization"
+
+
+@router.get("/onboarding", response_model=PhrOnboardingResponse)
+def get_phr_onboarding(
+    response: Response,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> PhrOnboardingResponse:
+    """Return the durable first-run decision without inferring health facts."""
+
+    user = _get_user_by_token(db, token)
+    profile = _get_or_create_profile(db, user.id)
+    if profile.id is None:
+        db.commit()
+        db.refresh(profile)
+    _no_store(response)
+    return _serialize_onboarding(db, user=user, profile=profile)
+
+
+@router.patch("/onboarding", response_model=PhrOnboardingResponse)
+def update_phr_onboarding(
+    payload: PhrOnboardingUpdateRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> PhrOnboardingResponse:
+    """Partially save, complete, or explicitly skip health-profile setup.
+
+    No clinical answer is required. Omitted fields are preserved and consent is
+    changed only when the caller sends ``personalization_consent``.
+    """
+
+    if payload.action == "complete" and not payload.confirm_self_declared:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Xác nhận dữ liệu sức khỏe là do bạn tự khai trước khi hoàn tất.",
+        )
+
+    user = _get_user_by_token(db, token)
+    profile = _get_or_create_profile(db, user.id)
+    db.flush()
+    before = _record_dict(profile, db)
+
+    supplied = payload.model_fields_set
+    scalar_fields = (
+        "full_name",
+        "date_of_birth",
+        "gender",
+        "blood_type",
+        "height_cm",
+        "weight_kg",
+        "emergency_contact_name",
+        "emergency_contact_phone",
+    )
+    for field_name in scalar_fields:
+        if field_name not in supplied:
+            continue
+        value = getattr(payload, field_name)
+        if value is None and field_name in {
+            "full_name",
+            "gender",
+            "blood_type",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+        }:
+            value = ""
+        if isinstance(value, str):
+            value = value.strip()
+            if field_name == "blood_type":
+                value = value.upper()
+        setattr(profile, field_name, value)
+
+    if "date_of_birth" in supplied:
+        try:
+            validate_date_of_birth(profile.date_of_birth)
+        except PhrValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+            ) from exc
+
+    list_fields = {
+        "allergies": "allergies_json",
+        "conditions": "conditions_json",
+        "medications": "medications_json",
+    }
+    for request_field, model_field in list_fields.items():
+        if request_field not in supplied:
+            continue
+        value = getattr(payload, request_field)
+        setattr(
+            profile,
+            model_field,
+            [item.model_dump(mode="json") for item in value] if value is not None else None,
+        )
+
+    # The enhanced validators remain authoritative when enabled, including the
+    # future-date and medication normalization checks.
+    if phr_features(settings).enhanced and supplied.intersection(
+        {"date_of_birth", *list_fields.keys()}
+    ):
+        merged = _serialize_profile(profile).model_dump()
+        merged.pop("created_at", None)
+        merged.pop("updated_at", None)
+        try:
+            validated = PhrRecordUpdateRequest.model_validate(merged)
+            allergies, conditions, medications = _enhanced_write_entries(validated, db)
+        except PhrValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+            ) from exc
+        profile.allergies_json = allergies
+        profile.conditions_json = conditions
+        profile.medications_json = medications
+
+    now = datetime.now(UTC)
+    if payload.action == "complete":
+        profile.onboarding_status = "completed"
+        profile.onboarding_version = PHR_ONBOARDING_VERSION
+        profile.onboarding_completed_at = now
+    elif payload.action == "skip" and profile.onboarding_status != "completed":
+        profile.onboarding_status = "skipped"
+        profile.onboarding_version = PHR_ONBOARDING_VERSION
+        profile.onboarding_completed_at = now
+
+    if "personalization_consent" in supplied and payload.personalization_consent is not None:
+        if payload.personalization_consent:
+            PhrConsentService.grant(db, user_id=user.id, purpose="personalization")
+        else:
+            PhrConsentService.revoke(db, user_id=user.id, purpose="personalization")
+
+    audit_svc.record_change(
+        db,
+        profile=profile,
+        action=audit_svc.ACTION_UPDATE,
+        entity="onboarding",
+        actor_user_id=user.id,
+        before=before,
+        after={
+            "status": profile.onboarding_status,
+            "version": profile.onboarding_version,
+            "fields_supplied": sorted(
+                supplied.intersection(set(PHR_ONBOARDING_OPTIONAL_FIELDS))
+            ),
+            "personalization_consent_changed": "personalization_consent" in supplied,
+        },
+        snapshot=_record_dict(profile, db),
+    )
+    db.commit()
+    db.refresh(profile)
+    _no_store(response)
+    return _serialize_onboarding(db, user=user, profile=profile)
 
 
 @router.get("/record", response_model=PhrRecordResponse)

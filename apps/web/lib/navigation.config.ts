@@ -10,6 +10,8 @@ export type PageMeta = {
 export type NavigationItem = {
   href: string;
   label: string;
+  /** Short label for tight surfaces (mobile bottom bar). Falls back to `label`. */
+  shortLabel?: string;
   icon: string;
   desc: string;
   group: NavGroupKey;
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/chat",
     label: "Hỏi CLARA",
+    shortLabel: "Hỏi",
     icon: "chat_paste_go",
     desc: "Hỏi đáp y tế hợp nhất",
     group: "care",
@@ -69,6 +72,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/dashboard",
     label: "Tổng quan",
+    shortLabel: "Tổng quan",
     icon: "dashboard",
     desc: "Bức tranh nhanh hôm nay",
     group: "care",
@@ -83,6 +87,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/today",
     label: "Hôm nay",
+    shortLabel: "Hôm nay",
     icon: "today",
     desc: "Việc chăm sóc bạn đã chấp nhận",
     group: "care",
@@ -132,11 +137,11 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/research",
     label: "Nghiên cứu",
+    shortLabel: "Nghiên cứu",
     icon: "science",
     desc: "Tổng hợp và kiểm chứng bằng chứng",
     group: "explore",
     roles: ["normal", "researcher", "doctor", "admin"],
-    mobilePrimary: true,
     page: {
       title: "CLARA Research",
       subtitle: "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
@@ -157,6 +162,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/phr",
     label: "Hồ sơ sức khỏe cá nhân",
+    shortLabel: "Hồ sơ",
     icon: "description",
     desc: "Hồ sơ sức khỏe cá nhân",
     group: "care",
@@ -184,6 +190,7 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/medicines",
     label: "Thuốc & an toàn",
+    shortLabel: "Thuốc",
     icon: "medication",
     desc: "Thuốc, tủ thuốc và kiểm tra tương tác",
     group: "medicines",

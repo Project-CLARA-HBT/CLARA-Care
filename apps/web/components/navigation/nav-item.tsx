@@ -41,7 +41,9 @@ export function NavItem({
         <span className="material-symbols-outlined text-[19px]" style={filled} aria-hidden="true">
           {item.icon}
         </span>
-        <span className="text-[11px] font-semibold leading-tight">{item.label}</span>
+        <span className="max-w-full truncate text-[11px] font-semibold leading-tight">
+          {item.shortLabel ?? item.label}
+        </span>
       </Link>
     );
   }

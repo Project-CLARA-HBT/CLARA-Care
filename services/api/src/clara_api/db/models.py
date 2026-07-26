@@ -806,6 +806,18 @@ class PhrProfile(Base):
     medications_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
     # New (additive, nullable) — owner-controlled emergency-card field inclusion.
     emergency_card_prefs_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # First-run setup is an explicit user decision.  A newly provisioned
+    # profile starts pending; existing accounts are classified by migration so
+    # they are not unexpectedly trapped in onboarding.
+    onboarding_status: Mapped[str] = mapped_column(
+        String(32), default="pending", server_default="pending", index=True
+    )
+    onboarding_version: Mapped[str] = mapped_column(
+        String(32), default="", server_default=""
+    )
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # New — monotonic per-profile version counter, bumped on each committed change.
     current_version_no: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

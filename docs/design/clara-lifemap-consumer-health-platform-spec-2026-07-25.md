@@ -7,25 +7,30 @@ Supersedes: Chat-first product orientation
 Reuses: Medical Answer Harness, DrugBank CareGuard, Scribe, Research, authentication,
 consent, evidence verification, and emergency routing
 
+Market and positioning basis:
+[CLARA — Market Research, Positioning and Product Requirements](./clara-market-research-positioning-and-requirements-2026-07-25.md)
+
 ## 1. Executive decision
 
 CLARA will no longer be designed primarily as a medical chatbot.
 
-The primary product is **CLARA LifeMap**, a continuously updated, user-controlled
-map of a person's health. The primary unit of work is a **Health Episode** with a
-beginning, changing state, planned next steps, follow-up checkpoints, and an explicit
-resolution or safe handoff. Chat remains available as a natural input and explanation
-surface, but it is not the information architecture, system of record, or principal
-value proposition.
+CLARA is a **personal health operations system**. Its consumer product is
+**CLARA Care Loop**; **LifeMap** is the continuously updated, user-controlled state
+and provenance layer underneath it. The primary unit of work is a **Health Episode**
+with a beginning, changing state, executable next steps, completion evidence,
+follow-up checkpoints, and an explicit outcome or safe handoff. Chat remains
+available as a natural input and explanation surface, but it is not the information
+architecture, system of record, principal value proposition or success metric.
 
 The product promise is:
 
-> CLARA remembers your health, notices meaningful changes, and helps you complete
-> the next safe step.
+> CLARA turns a health concern into a safe, trackable plan—and keeps it moving
+> until it is resolved or handed off.
 
 Vietnamese product promise:
 
-> CLARA ghi nhớ, giải thích và theo dõi sức khỏe của bạn xuyên suốt.
+> CLARA biến một vấn đề sức khỏe thành các bước rõ ràng, rồi theo dõi đến khi được
+> giải quyết hoặc chuyển giao an toàn.
 
 CLARA must be useful without requiring the user to know what prompt to write, what
 medical terminology to use, or which product feature to open.
@@ -33,22 +38,32 @@ medical terminology to use, or which product feature to open.
 ## 2. Why this direction is defensible
 
 A well-prompted general LLM can summarize medical information, produce citations,
-simulate several specialist roles, and ask follow-up questions. Those capabilities
-are necessary but not a durable consumer product advantage.
+simulate several specialist roles, ask follow-up questions and use connected health
+records. Current products also aggregate records, track symptoms and medicines,
+show correlations, prepare visit summaries, support family profiles and navigate
+care. Those capabilities are necessary but not a durable consumer product advantage.
 
-CLARA's durable advantage must come from capabilities a single answer cannot
-provide:
+CLARA's durable advantage must come from **closed-loop health operations** that a
+single answer, passive record or one-time assessment cannot provide:
 
 1. A consented, structured and longitudinal personal health state.
 2. Separation of confirmed facts, reported observations, imported records, and
    model inferences.
 3. Detection of changes relative to the user's own baseline.
 4. Durable Health Episodes that remain open across days, visits, and new evidence.
-5. Executable medication, safety, measurement, and follow-up workflows.
-6. Closed-loop observation of whether the planned next step occurred and what
-   happened afterward.
+5. Executable medication, safety, measurement, service and follow-up workflows.
+6. A typed distinction between proposed, accepted, attempted, user-reported and
+   externally verified completion.
 7. Reproducible explanations of why CLARA surfaced an item at a particular time.
 8. Family and caregiver coordination with explicit, granular permissions.
+9. Provider-neutral handoff across home, pharmacy, laboratory and clinic.
+10. Episode outcome and closure state that survives model, chat and provider
+    changes.
+
+LifeMap, medical memory, record-grounded answers, trend charts, symptom assessment,
+visit preparation and family profiles are table stakes. CLARA succeeds only if it
+safely advances and closes real Care Loops better than the user's current
+workaround.
 
 Longitudinal clinical reasoning is not solved by simply adding more history to a
 prompt. TIMER reports that time-aware instruction modeling improves completeness
@@ -1360,20 +1375,24 @@ The product-direction migration is complete only when:
 14. Consumer E2E, safety, accessibility and privacy gates pass.
 15. No public clinical-outcome or benchmark-superiority claim exceeds validated
     evidence.
+16. An eligible Episode can travel from accepted action to attributed completion
+    evidence and a typed outcome or acknowledged safe handoff.
+17. Attempted, user-reported and externally verified completion are never rendered
+    as equivalent.
 
 ## 25. Product copy summary
 
 Brand:
 
-> CLARA remembers your health.
+> CLARA keeps your health plan moving.
 
 Consumer explanation:
 
 > Thay vì bắt đầu lại mỗi lần bạn có một câu hỏi, CLARA giúp bạn ghi lại điều đã xảy
-> ra, nhận ra những thay đổi đáng chú ý và theo dõi bước tiếp theo cho đến khi vấn đề
-> được giải quyết hoặc chuyển giao an toàn.
+> ra, biến vấn đề thành các bước rõ ràng và theo dõi bằng chứng hoàn thành cho đến
+> khi vấn đề được giải quyết hoặc chuyển giao an toàn.
 
 Internal product rule:
 
-> A message is temporary. A confirmed health event, episode, task and decision
-> ledger are durable.
+> A message is temporary. A Care Loop persists until it has an outcome or a safe,
+> acknowledged handoff.

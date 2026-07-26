@@ -1248,6 +1248,39 @@ class PhrRecordResponse(BaseModel):
     updated_at: datetime | None = None
 
 
+class PhrOnboardingUpdateRequest(BaseModel):
+    """Partial, owner-declared first-run profile setup.
+
+    Every health field is optional. Omitted fields are preserved, while an
+    explicitly supplied empty value clears that field. No answer is inferred.
+    """
+
+    action: Literal["save", "complete", "skip"] = "save"
+    confirm_self_declared: bool = False
+    personalization_consent: bool | None = None
+    full_name: str | None = Field(default=None, max_length=255)
+    date_of_birth: date | None = None
+    gender: str | None = Field(default=None, max_length=32)
+    blood_type: str | None = Field(default=None, max_length=16)
+    height_cm: float | None = Field(default=None, ge=0, le=300)
+    weight_kg: float | None = Field(default=None, ge=0, le=800)
+    emergency_contact_name: str | None = Field(default=None, max_length=255)
+    emergency_contact_phone: str | None = Field(default=None, max_length=64)
+    allergies: list[PhrAllergyItemLegacy] | None = Field(default=None, max_length=80)
+    conditions: list[PhrConditionItemLegacy] | None = Field(default=None, max_length=80)
+    medications: list[PhrMedicationItemLegacy] | None = Field(default=None, max_length=120)
+
+
+class PhrOnboardingResponse(BaseModel):
+    status: Literal["pending", "completed", "skipped"]
+    needs_onboarding: bool
+    version: str
+    completed_at: datetime | None = None
+    personalization_consent: bool
+    optional_fields: list[str] = Field(default_factory=list)
+    record: PhrRecordResponse
+
+
 class PhrEnhancedRecordResponse(BaseModel):
     """Enhanced /record/enhanced response — surfaces coded/provenance fields."""
 

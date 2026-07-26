@@ -4,6 +4,8 @@ Status: implementation-ready delivery specification
 Date: 2026-07-25
 Parent specification:
 [CLARA LifeMap — Consumer Health Platform Specification](./clara-lifemap-consumer-health-platform-spec-2026-07-25.md)
+Market and requirements basis:
+[CLARA — Market Research, Positioning and Product Requirements](./clara-market-research-positioning-and-requirements-2026-07-25.md)
 Audience: Product, Design, Web, API, ML, Data, Clinical Safety, Security, QA, SRE
 Applies to: Phase 0 through Phase 5 of the CLARA LifeMap migration
 
@@ -36,7 +38,7 @@ tests and explicitly labeled demo environments.
 Phase 0: trustworthy platform contracts
     |
     v
-Phase 1: Today + Capture + durable Episodes
+Phase 1: Care Loop MVP + Today + Capture
     |
     v
 Phase 2: Medicine Guardian + personal change detection + Replay
@@ -227,6 +229,10 @@ available under load.
 - audit taxonomy and non-PII operational telemetry;
 - feature-flag and migration framework;
 - compatibility adapters for PHR, Medicine Cabinet, Chat, Scribe and Research.
+- intended-use, AI-risk classification and conformity-readiness dossier;
+- CareAction, ActionAttempt, CompletionEvidence and EpisodeOutcome contracts;
+- Authority Router and Action Adapter contracts;
+- personal-data inventory and impact-assessment workflow.
 
 ### 4.3 Out of scope
 
@@ -266,6 +272,11 @@ source_references
 health_episodes
 episode_event_links
 care_tasks
+care_actions
+action_attempts
+completion_evidence
+episode_outcomes
+authority_decisions
 decision_ledgers
 domain_outbox
 idempotency_records
@@ -384,6 +395,23 @@ GET    /api/v1/lifemap/schema-version
 These endpoints may be internal until Phase 1, but contract tests must run against
 the deployed staging service.
 
+### 4.10.1 Regulatory and intended-use dossier
+
+Before Phase 1 can reach public users, the responsible Regulatory owner documents:
+
+- intended purpose, users, target population and excluded uses;
+- every AI component and its decision impact;
+- preliminary classification under Viet Nam's AI Law No. 134/2025/QH15;
+- whether a function may be high-risk or regulated medical software;
+- applicable notification, conformity and human-oversight obligations;
+- data-processing inventory and applicable impact/cross-border assessments under
+  Law No. 91/2025/QH15;
+- significant-change criteria covering model, harness, authority, dataset,
+  intended use and workflow changes;
+- technical dossier, logging, post-market monitoring and incident owners.
+
+Engineering completion does not override this release gate.
+
 ### 4.11 Phase 0 test matrix
 
 | Layer | Required tests |
@@ -407,6 +435,8 @@ All must be true:
 - P0/P1 availability and latency remain within agreed service objectives during
   Research/Scribe saturation.
 - Rollback rehearsal completes without health-data loss.
+- Regulatory classification, data-impact and conformity-readiness gates are signed
+  by accountable owners.
 
 Exit evidence:
 
@@ -416,13 +446,14 @@ Exit evidence:
 - load/chaos report;
 - signed safety-foundation checklist.
 
-## 5. Phase 1 — Today, Universal Capture and Episode MVP
+## 5. Phase 1 — Care Loop MVP, Today and Universal Capture
 
 ### 5.1 Outcome
 
-After login, an ordinary user sees what matters today, can record a concern without
-writing a sophisticated prompt, confirms what CLARA understood, and follows the
-concern across sessions as a durable Health Episode.
+After login, an ordinary user can turn a concern into a durable Care Loop, accept a
+trackable next step, record or receive completion evidence, and see the Episode
+resolve or move to a safe handoff. Today and Universal Capture support the loop;
+they are not the outcome.
 
 ### 5.2 Primary vertical slice
 
@@ -437,7 +468,10 @@ Login
  -> user opens a new Episode
  -> CLARA asks one high-value follow-up question
  -> user accepts a follow-up task
- -> Today displays the task on next login
+ -> user attempts the action
+ -> CLARA records attributed completion evidence
+ -> Episode reaches an outcome, remains open, or is safely handed off
+ -> Today shows only remaining work on next login
 ```
 
 ### 5.3 In scope
@@ -453,6 +487,10 @@ Login
 - deterministic Today projection;
 - initial notifications for accepted tasks;
 - old Chat-to-Episode conversion.
+- CareAction, ActionAttempt and CompletionEvidence;
+- explicit Episode goal, outcome and closure contract;
+- minimal provider-neutral handoff;
+- deterministic “What am I waiting for?” status.
 
 ### 5.4 Out of scope
 
@@ -668,6 +706,31 @@ Projection output:
 }
 ```
 
+### 5.10.1 P1-WP7 — Care Loop closure runtime
+
+Every proposed next step compiles into a typed CareAction with:
+
+- purpose and mandatory authority;
+- responsible actor;
+- due or observation window;
+- expected completion evidence;
+- safety constraints;
+- failure and recovery path;
+- Decision Ledger ID.
+
+Action states distinguish:
+
+```text
+proposed -> accepted -> attempted -> user_reported_complete -> verified_complete
+                    \-> blocked
+                    \-> skipped
+                    \-> expired
+```
+
+An Episode cannot close because the model produced reassuring prose or the user
+stopped chatting. Closure requires a reason, typed outcome, unresolved-item list and
+reopen policy. The runtime—not the LLM—validates state-machine transitions.
+
 ### 5.11 Phase 1 API
 
 ```text
@@ -687,6 +750,12 @@ POST   /api/v1/episodes/{episode_id}/transitions
 POST   /api/v1/episodes/{episode_id}/check-ins
 POST   /api/v1/episodes/{episode_id}/chat
 POST   /api/v1/care-tasks/{task_id}/transitions
+POST   /api/v1/care-actions/{action_id}/transitions
+POST   /api/v1/care-actions/{action_id}/attempts
+POST   /api/v1/care-actions/{action_id}/completion-evidence
+POST   /api/v1/episodes/{episode_id}/outcomes
+POST   /api/v1/episodes/{episode_id}/handoffs
+GET    /api/v1/episodes/{episode_id}/open-loop-status
 POST   /api/v1/chat/{thread_id}/convert-to-episode
 ```
 
@@ -705,6 +774,12 @@ EpisodeCheckInRecorded.v1
 CareTaskProposed.v1
 CareTaskAccepted.v1
 CareTaskCompleted.v1
+CareActionAccepted.v1
+CareActionAttempted.v1
+CompletionEvidenceRecorded.v1
+CareActionVerified.v1
+EpisodeOutcomeRecorded.v1
+EpisodeClosed.v1
 TodayProjectionInvalidated.v1
 ```
 
@@ -717,6 +792,8 @@ Product:
 - correction rate by field, language and input type;
 - Episode created from capture;
 - accepted task completion;
+- accepted action → verified completion or acknowledged handoff;
+- incorrectly closed and lost/overdue loop rate;
 - repeated-question avoidance.
 
 Safety:
@@ -753,6 +830,10 @@ Required E2E:
 10. Research load: Today, capture and Episode update remain functional.
 11. Dark/light mode, mobile viewport and keyboard-only operation.
 12. Cross-profile event URL is denied.
+13. Attempted action is not displayed as completed.
+14. User-reported completion remains distinct from external verification.
+15. Expired/blocked action returns to Today with a recovery path.
+16. Episode closure records outcome, unresolved items and reopen policy.
 
 Human evaluation:
 
@@ -784,6 +865,8 @@ Rollback:
 - Emergency bypass meets Clinical Safety thresholds in Vietnamese and English.
 - Consumer comprehension and task-completion thresholds pass.
 - Today and Episode SLOs pass at expected peak load.
+- Eligible Care Loops reach verified completion or acknowledged safe handoff at the
+  agreed threshold without increased unsafe closure or escalation.
 - Production canary shows no unexplained rise in support or safety escalation.
 
 Exit evidence:
@@ -812,6 +895,8 @@ User photographs/enters a medicine
  -> DrugBank DDI check runs against active courses
  -> warning shows DrugBank provenance or unavailable state
  -> a later symptom is linked temporally, not causally asserted
+ -> unresolved safety/change state can be handed off to the pilot partner
+ -> receipt or user report updates the loop without inventing completion
  -> Health Replay shows the timeline and decision rationale
 ```
 
@@ -827,6 +912,8 @@ User photographs/enters a medicine
 - next-best-question engine;
 - Health Replay and Decision Ledger viewer;
 - temporal relationship language with strict causal boundaries.
+- medicine-change monitoring loop with typed completion evidence;
+- one verified pharmacist, clinic or telehealth handoff adapter for the pilot.
 
 ### 6.4 Out of scope
 
@@ -1051,6 +1138,7 @@ POST   /api/v1/decisions/{decision_id}/dispute
 6. Run baselines in shadow for clinician review.
 7. Enable low-risk descriptive changes.
 8. Enable Health Replay.
+9. Canary the verified pilot handoff and completion receipt.
 
 Rollback:
 
@@ -1066,6 +1154,8 @@ Rollback:
 - Baseline implementation matches the independent reference suite.
 - Clinical reviewers approve temporal language and no-causality boundary.
 - Replay reconstructs every released card from durable records and versioned logic.
+- The pilot handoff preserves requested, acknowledged, user-reported and verified
+  completion states separately.
 
 Exit evidence:
 
@@ -1876,3 +1966,6 @@ The LifeMap program is complete only when all phase gates pass and:
 9. deletion, export and revocation work across all new data;
 10. no released multi-agent path underperforms the approved strong baseline on the
     predeclared safety/quality gate.
+11. attempted, user-reported and externally verified completion remain distinct;
+12. at least one production-shaped loop reaches an authority-bound action, real
+    completion evidence and an outcome or acknowledged handoff.

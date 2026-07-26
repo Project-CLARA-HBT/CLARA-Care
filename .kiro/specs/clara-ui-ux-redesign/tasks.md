@@ -12,30 +12,30 @@ Each task keeps the app building and green. Safety-locked tests
 - [x] 1.4 Unify content width across all standard pages (remove `isWideWorkspace`
   fork). _Req 1.1, 1.4_
 - [x] 1.5 Apply first-run onboarding gate to all roles. _Req 6.1, 6.4_
-- [ ] 1.6 Add `Tabs`, `Modal`, `Toggle` primitives (token-driven, a11y, reduced
+- [x] 1.6 Add `Tabs`, `Modal`, `Toggle` primitives (token-driven, a11y, reduced
   motion). _Req 4.1, 4.4, 5.x_
 - [ ] 1.7 Reconcile remaining legacy CSS: neutralize/remove dead glass/glow/gradient
   rules and the unused `medical` palette + `sky/teal/cyan→blue` Tailwind aliases,
   without regressing contrast/focus/chat-theme tests. _Req 3.2, 8.1, 8.4_
 
 ## Phase 2 — Navigation & IA
-- [ ] 2.1 Regroup `navigation.config.ts` into goal-oriented groups (Care, Medicines,
+- [x] 2.1 Regroup `navigation.config.ts` into goal-oriented groups (Care, Medicines,
   Explore, Clinical, Admin, Support) with consumer-friendly labels; preserve RBAC
   role arrays, `PUBLIC_ROUTES`, `isActiveRoute`, `resolvePostLoginPath`,
   `isAuthenticatedUtilityRoute`. _Req 2.1, 2.4, 8.1, 8.2_
-- [ ] 2.2 Extract a shared `<NavItem>` + one active-state style; refactor sidebar,
+- [x] 2.2 Extract a shared `<NavItem>` + one active-state style; refactor sidebar,
   mobile drawer, bottom-nav, and topbar to consume `getGroupedNavItems(role)`.
   _Req 2.5, 4.2, 4.3_
-- [ ] 2.3 Update/extend `navigation.config.test.ts` for the new grouping; assert role
+- [x] 2.3 Update/extend `navigation.config.test.ts` for the new grouping; assert role
   gating is byte-for-byte unchanged. _Req 8.2_
 
 ## Phase 3 — Medicines consolidation
-- [ ] 3.1 Build `/medicines` hub with `Tabs`: Danh sách (list + DDI), Tủ thuốc
+- [x] 3.1 Build `/medicines` hub with `Tabs`: Danh sách (list + DDI), Tủ thuốc
   (cabinet + OCR), An toàn (interaction analysis); reuse existing lib modules and
   preserve consent gate + disclaimers + low-confidence confirm. _Req 2.2, 7.x_
-- [ ] 3.2 Convert `/selfmed`, `/selfmed/add`, `/selfmed/ddi`, `/careguard` to redirect
+- [x] 3.2 Convert `/selfmed`, `/selfmed/add`, `/selfmed/ddi`, `/careguard` to redirect
   stubs into the correct hub tab; add redirect tests. _Req 2.2, 2.3_
-- [ ] 3.3 Remove the now-duplicate medication nav items; keep one **Medicines** entry.
+- [x] 3.3 Remove the now-duplicate medication nav items; keep one **Medicines** entry.
   _Req 2.1, 2.2_
 
 ## Phase 4 — Page adoption sweep
