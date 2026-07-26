@@ -71,7 +71,7 @@ export function Tabs({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`inline-flex flex-wrap items-center gap-1 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 ${className}`}
+      className={`hide-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 sm:inline-flex ${className}`}
     >
       {items.map((item, index) => {
         const selected = item.key === active;
@@ -89,7 +89,7 @@ export function Tabs({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.key)}
             onKeyDown={(event) => onKeyDown(event, index)}
-            className={`focus-ring inline-flex items-center gap-2 rounded-[var(--radius-md)] px-3.5 py-2 text-sm font-semibold transition ${
+            className={`focus-ring inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--radius-md)] px-3.5 py-2 text-sm font-semibold transition ${
               selected
                 ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-[var(--shadow-sm)]"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"

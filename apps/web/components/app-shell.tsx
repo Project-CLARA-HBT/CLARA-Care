@@ -457,12 +457,12 @@ export default function AppShell({ children }: Props) {
             id="main-content"
             tabIndex={-1}
             className={[
-              "app-content-canvas flex-1 px-2.5 sm:px-3",
+              "app-content-canvas flex-1",
               isImmersiveLayout
                 ? isChatLayout
                   ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0 sm:pb-20 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
                   : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
-                : "pb-[calc(env(safe-area-inset-bottom,0px)+7.5rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-12 lg:pt-8 xl:px-10",
+                : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-12 lg:pt-8 xl:px-10",
             ].join(" ")}
           >
             <div
@@ -492,7 +492,7 @@ export default function AppShell({ children }: Props) {
             type="button"
             onClick={() => setIsMobileNavOpen(false)}
             aria-label="Close mobile navigation"
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1.5px]"
+            className="absolute inset-0 bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
           />
           <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl">
             <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">

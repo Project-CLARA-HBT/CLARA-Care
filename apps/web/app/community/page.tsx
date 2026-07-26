@@ -5,6 +5,7 @@ import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
 import { Textarea, Select, Field } from "@/components/ui/field";
 import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
+import { Modal } from "@/components/ui/modal";
 import PostDetailDialog from "@/components/community/post-detail-dialog";
 import {
   SocialCommunity,
@@ -248,61 +249,59 @@ export default function CommunityPage() {
         )}
       </div>
 
-      {composeOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-float)]">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Chia sẻ với cộng đồng</h3>
-            <div className="mt-4 space-y-3">
-              <Select
-                label="Cộng đồng"
-                value={composeCommunity ?? ""}
-                onChange={(e) => setComposeCommunity(Number(e.target.value))}
-              >
-                {communities.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
-              <Field
-                label="Tiêu đề"
-                value={composeTitle}
-                onChange={(e) => setComposeTitle(e.target.value)}
-                maxLength={200}
-              />
-              <Textarea
-                label="Nội dung"
-                value={composeBody}
-                onChange={(e) => setComposeBody(e.target.value)}
-                rows={5}
-                maxLength={5000}
-              />
-              {composeError ? (
-                <p className="text-sm text-[var(--status-danger-text)]">{composeError}</p>
-              ) : null}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setComposeOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={submitPost}
-                disabled={submitting || !composeTitle.trim() || !composeBody.trim()}
-                loading={submitting}
-                loadingLabel="Đang đăng…"
-              >
-                Đăng bài
-              </Button>
-            </div>
-          </div>
+      <Modal
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        title="Chia sẻ với cộng đồng"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setComposeOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={submitPost}
+              disabled={submitting || !composeTitle.trim() || !composeBody.trim()}
+              loading={submitting}
+              loadingLabel="Đang đăng…"
+            >
+              Đăng bài
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Select
+            label="Cộng đồng"
+            value={composeCommunity ?? ""}
+            onChange={(e) => setComposeCommunity(Number(e.target.value))}
+          >
+            {communities.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          <Field
+            label="Tiêu đề"
+            value={composeTitle}
+            onChange={(e) => setComposeTitle(e.target.value)}
+            maxLength={200}
+          />
+          <Textarea
+            label="Nội dung"
+            value={composeBody}
+            onChange={(e) => setComposeBody(e.target.value)}
+            rows={5}
+            maxLength={5000}
+          />
+          {composeError ? (
+            <p className="text-sm text-[var(--status-danger-text)]">{composeError}</p>
+          ) : null}
         </div>
-      ) : null}
+      </Modal>
 
       {activePost ? (
         <PostDetailDialog

@@ -123,7 +123,7 @@ export default function AppTopbar({
             family_restroom
           </span>
           {familyNotificationCount > 0 ? (
-            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-rose-600 px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">
+            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[var(--danger-500)] px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">
               {familyNotificationCount > 9 ? "9+" : familyNotificationCount}
             </span>
           ) : null}

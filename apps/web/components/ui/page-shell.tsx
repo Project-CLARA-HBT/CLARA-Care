@@ -13,12 +13,12 @@ export default function PageShell({
   const heading = (
     <header className="page-intro max-w-4xl">
       {title ? (
-        <h1 className="text-[1.8rem] font-semibold leading-[1.15] tracking-[-0.035em] text-[var(--text-primary)] sm:text-[2.15rem]">
+        <h1 className="text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--text-primary)] sm:text-[1.9rem] lg:text-[2.15rem]">
           {title}
         </h1>
       ) : null}
       {description ? (
-        <p className="mt-2 max-w-[68ch] text-[15px] leading-6 text-[var(--text-secondary)]">
+        <p className="mt-2 max-w-[68ch] text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
           {description}
         </p>
       ) : null}
