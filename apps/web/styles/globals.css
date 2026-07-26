@@ -11,11 +11,11 @@
   --shell-nav-width: 17rem;
 
   /* Foundation */
-  --color-bg: #f7f8fb;
-  --bg-canvas: #f7f8fb;
+  --color-bg: #eef1f7;
+  --bg-canvas: #eef1f7;
   --bg-elev-1: #ffffff;
-  --bg-elev-2: #ffffff;
-  --bg-elev-3: #ffffff;
+  --bg-elev-2: #fbfcfe;
+  --bg-elev-3: #f6f8fc;
 
   /* Text */
   --text-primary: #18212f;
@@ -64,15 +64,25 @@
   --blur-lg: 24px;
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
 
-  /* Shadows */
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.12);
-  --shadow-float: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
-  --shadow-hero: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  /* Type scale */
+  --text-display: clamp(2rem, 1.5rem + 1.6vw, 2.6rem);
+  --text-title: clamp(1.45rem, 1.2rem + 0.9vw, 1.85rem);
+  --text-heading: 1.15rem;
+  --text-body: 0.9375rem;
+  --text-caption: 0.8125rem;
+
+  /* Shadows — modern, layered, low-contrast Fluent depth */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
+  --shadow-soft: 0 2px 6px -1px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-float: 0 10px 24px -8px rgba(15, 23, 42, 0.14), 0 2px 6px -2px rgba(15, 23, 42, 0.08);
+  --shadow-hero: 0 24px 48px -18px rgba(15, 23, 42, 0.22), 0 6px 14px -8px rgba(15, 23, 42, 0.12);
   --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.28);
   --shadow-chrome: 0 20px 54px -34px rgba(37, 99, 235, 0.4);
 
@@ -82,11 +92,11 @@
   --focus-ring-offset: 2px;
 
   --font-sans:
-    "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
-    Helvetica, Arial, sans-serif;
+    "Inter", "Inter var", "Segoe UI Variable", "Segoe UI", ui-sans-serif,
+    system-ui, -apple-system, Helvetica, Arial, sans-serif;
   --font-display:
-    "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui,
-    -apple-system, sans-serif;
+    "Inter", "Inter var", "Segoe UI Variable Display", "Segoe UI",
+    ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-chat:
     "Segoe UI", ui-sans-serif, system-ui, -apple-system, Helvetica, Arial,
     sans-serif;
@@ -394,15 +404,29 @@ html[data-theme="dark"] .app-nav-item-active {
 
 .fluent-card {
   border: 1px solid var(--shell-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface-panel);
   box-shadow: var(--shadow-soft);
+  transition: box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
 .fluent-card-subtle {
   border: 1px solid var(--shell-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface-muted);
+}
+
+/* Interactive card lift — apply .fluent-card-interactive to clickable cards */
+.fluent-card-interactive {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .fluent-card-interactive:hover {
+    box-shadow: var(--shadow-float);
+    border-color: var(--shell-border-strong);
+    transform: translateY(-2px);
+  }
 }
 
 .fluent-button-primary,
