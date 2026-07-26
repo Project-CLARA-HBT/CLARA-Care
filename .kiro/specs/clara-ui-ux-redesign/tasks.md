@@ -39,24 +39,26 @@ Each task keeps the app building and green. Safety-locked tests
   _Req 2.1, 2.2_
 
 ## Phase 4 — Page adoption sweep
-- [ ] 4.1 Migrate any remaining bespoke-styled pages to primitives + tokens (audit for
+- [x] 4.1 Migrate any remaining bespoke-styled pages to primitives + tokens (audit for
   hardcoded hex, raw palette, inline control strings). _Req 3.3, 4.1, 8.4_
-- [ ] 4.2 Standardize every data page on `AsyncSection` + `EmptyState` with a primary
-  CTA and plain-language copy. _Req 6.2, 6.3, 4.4_
-- [ ] 4.3 Replace bespoke modals (e.g. community compose) with the `Modal` primitive.
+- [~] 4.2 Standardize data pages on `AsyncSection`/state primitives + `EmptyState`.
+  Consumer/feature pages use the shared state primitives; a full AsyncSection
+  sweep of admin analytics pages remains optional follow-up. _Req 6.2, 6.3, 4.4_
+- [x] 4.3 Replace bespoke modals (e.g. community compose) with the `Modal` primitive.
   _Req 4.1, 5.2_
 
 ## Phase 5 — First-run & polish
-- [ ] 5.1 Polish `/welcome` copy/visuals; ensure skip + resume + completed→home paths.
+- [x] 5.1 Polish `/welcome` copy/visuals; ensure skip + resume + completed→home paths.
   _Req 6.1, 6.4, 6.5_
-- [ ] 5.2 Accessibility pass: focus order, labels, `aria-*`, reduced-motion, forced
+- [x] 5.2 Accessibility pass: focus order, labels, `aria-*`, reduced-motion, forced
   colors across redesigned surfaces. _Req 5.1–5.5_
-- [ ] 5.3 Responsive pass: mobile/tablet/desktop for shell + hub + key pages. _Req
+- [x] 5.3 Responsive pass: mobile/tablet/desktop for shell + hub + key pages
+  (content padding, scrollable tabs, bottom-nav shortLabels, responsive titles). _Req
   1.2, 1.3_
 
 ## Phase 6 — Validation & deploy
-- [ ] 6.1 Full gate: `npm run lint`, `npm run test`, `npm run build` green; add
-  width-consistency + redirect + hub-tab tests. _Req 8.3_
-- [ ] 6.2 Deploy web to VPS; verify health, first-run for a fresh account, medicines
+- [x] 6.1 Full gate: `npm run lint`, `npm run test`, `npm run build` green; added
+  width-consistency + medicines redirect/hub-tab tests. _Req 8.3_
+- [x] 6.2 Deploy web to VPS; verified health, first-run gate for all roles, medicines
   hub tabs, and consolidated redirects live. _Req 8.5_
-- [ ] 6.3 Update `docs/design/clara-ui-modernization-*` with the final system + IA map.
+- [x] 6.3 Update `docs/design/clara-ui-modernization-*` with the final system + IA map.

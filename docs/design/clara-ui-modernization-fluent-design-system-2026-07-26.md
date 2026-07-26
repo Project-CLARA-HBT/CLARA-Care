@@ -1,9 +1,10 @@
 # CLARA Web — Fluent Design-System Modernization
 
 Date: 2026-07-26
-Status: Implemented (foundation + shared primitives + consumer core pages)
-Scope: `apps/web` visual language, shared UI primitives, and the LifeMap
-consumer core surfaces (Today, LifeMap, Medicines).
+Status: Implemented (foundation + shared primitives + full page adoption +
+IA regroup + medicines consolidation + first-run onboarding + mobile pass)
+Scope: `apps/web` visual language, shared UI primitives, navigation IA, and the
+authenticated app surfaces. See also `.kiro/specs/clara-ui-ux-redesign/`.
 
 ## 1. Why
 
@@ -97,13 +98,53 @@ respect `prefers-reduced-motion`, and meet the 44px touch-target minimum.
 - `npm run build` — production build succeeds; `/today`, `/lifemap`,
   `/medicines` compile.
 
-## 7. Follow-ups (not in this pass)
+## 7. Follow-up pass (2026-07-26) — completed
 
-- Migrate remaining professional surfaces (Dashboard, Visits, Family, Scribe,
-  Council, Research) to the shared primitives.
-- Reconcile the two nav active-state color systems (mobile `sky-*` vs desktop
-  `--brand-*`) onto a single token.
-- Retire the neutralized dead glass/glow/gradient CSS once no surface depends
-  on those class names for layout.
-- Replace the FontAwesome 4.7 CDN dependency (theme-toggle icons) with Material
-  Symbols to consolidate on one icon system.
+The deeper UX/IA redesign (spec: `.kiro/specs/clara-ui-ux-redesign/`) landed on
+top of the foundation above:
+
+- **All pages migrated** to the shared primitives + tokens; no hardcoded hex or
+  raw Tailwind palette colors remain on page/component surfaces.
+- **Single nav active-state system.** A shared `<NavItem>` (`components/
+  navigation/nav-item.tsx`) now feeds the desktop sidebar, mobile drawer, and
+  bottom bar from `getGroupedNavItems(role)`, replacing four hand-maintained
+  renderers and the dual `sky-*` vs `--brand-*` active styles.
+- **FontAwesome 4.7 removed** — the app is now on a single icon system
+  (Material Symbols).
+- **Dead Tailwind palette removed** — the `sky/teal/cyan → blue` aliases and the
+  unused `medical` teal palette are gone from `tailwind.config.ts`.
+- **New primitives**: `Tabs`/`TabPanel`, `Modal` (focus-trap, Escape, scroll
+  lock, restore focus), `Toggle` (`role="switch"`). Community compose now uses
+  `Modal`; `/welcome` uses `Toggle`.
+- **Unified content width** — every non-immersive page shares one centered
+  `max-w-[1200px]` column (guarded by `components/content-width.test.ts`); the
+  old `isWideWorkspace` fork that made page widths jump is gone.
+- **First-run onboarding** — `/welcome` flow gated for all roles.
+- **Mobile pass** — scrollable tablist, bottom-nav `shortLabel`s, roomier
+  content padding, responsive page titles, tokenized scrims.
+
+### Information architecture (final)
+
+Goal-oriented nav groups (`navigation.config.ts`), role-gated:
+
+| Group | Consumer label | Key routes |
+| --- | --- | --- |
+| care | Chăm sóc của bạn | `/chat`, `/today`, `/lifemap`, `/visits`, `/family`, `/phr`, `/dashboard`* |
+| medicines | Thuốc & an toàn | `/medicines` (hub: Thuốc / Tủ thuốc / An toàn) |
+| explore | Khám phá & bằng chứng | `/research`, `/evidence`, `/research/source-hub` |
+| clinical | Lâm sàng | `/council`, `/scribe` |
+| admin | Vận hành | `/admin/*` |
+| support | Trợ giúp & tài khoản | `/huong-dan`, account/consent/data (flag-gated) |
+
+*`/dashboard` hidden for `normal`.
+
+**Medicines consolidation**: `/selfmed`, `/selfmed/ddi`, `/careguard` are now
+redirect stubs into the correct `/medicines?tab=` panel, collapsing three
+overlapping medication surfaces (and three nav entries) into one hub.
+
+### Remaining optional follow-ups
+
+- Retire the neutralized dead glass/glow/gradient CSS class names once no
+  research/dashboard/council surface depends on them for layout.
+- Standardize every data page on `AsyncSection` (some still use the
+  `LoadingCards`/`InlineError`/`EmptyState` trio directly).
