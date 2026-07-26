@@ -62,7 +62,6 @@ const NAV_ITEMS: NavigationItem[] = [
     desc: "Hỏi đáp y tế hợp nhất",
     group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
-    mobilePrimary: true,
     page: {
       title: "CLARA Chat",
       subtitle:
@@ -101,10 +100,12 @@ const NAV_ITEMS: NavigationItem[] = [
   {
     href: "/lifemap",
     label: "LifeMap",
+    shortLabel: "LifeMap",
     icon: "route",
     desc: "Hành trình chăm sóc của bạn",
     group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
     page: {
       title: "LifeMap",
       subtitle: "Tổ chức điều bạn muốn theo dõi thành hành trình nhỏ.",
@@ -171,20 +172,6 @@ const NAV_ITEMS: NavigationItem[] = [
     page: {
       title: "Hồ sơ sức khỏe cá nhân",
       subtitle: "Lưu trữ và tổng hợp hồ sơ sức khỏe cá nhân.",
-    },
-  },
-  {
-    href: "/community",
-    label: "Cộng đồng",
-    icon: "forum",
-    desc: "Cộng đồng sức khỏe CLARA",
-    group: "care",
-    roles: ["normal", "researcher", "doctor", "admin"],
-    hiddenForRoles: ["normal", "researcher", "doctor", "admin"],
-    page: {
-      title: "Cộng đồng sức khỏe",
-      subtitle:
-        "Chia sẻ kinh nghiệm và hỗ trợ nhau. Không phải tư vấn y tế — nội dung được kiểm duyệt.",
     },
   },
   {
@@ -448,6 +435,25 @@ if (isComplianceFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED)) {
   NAV_ITEMS.push(ADMIN_DSAR_NAV_ITEM);
 }
 
+// CLARA_Social community surface. The backend fails closed (routes 404 when
+// `SOCIAL_PLATFORM_ENABLED` is off), so the nav entry is shown only when the
+// matching public flag is explicitly enabled — no permanently-hidden dead item.
+if (isComplianceFlagOn(process.env.NEXT_PUBLIC_SOCIAL_PLATFORM_ENABLED)) {
+  NAV_ITEMS.push({
+    href: "/community",
+    label: "Cộng đồng",
+    icon: "forum",
+    desc: "Cộng đồng sức khỏe CLARA",
+    group: "care",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    page: {
+      title: "Cộng đồng sức khỏe",
+      subtitle:
+        "Chia sẻ kinh nghiệm và hỗ trợ nhau. Không phải tư vấn y tế — nội dung được kiểm duyệt.",
+    },
+  });
+}
+
 const GROUP_ORDER: NavGroupKey[] = [
   "care",
   "medicines",
@@ -457,14 +463,7 @@ const GROUP_ORDER: NavGroupKey[] = [
   "support",
 ];
 
-export const GROUP_LABELS: Record<NavGroupKey, string> = {
-  care: "Chăm sóc của bạn",
-  medicines: "Thuốc & an toàn",
-  explore: "Tìm hiểu",
-  clinical: "Lâm sàng",
-  admin: "Quản trị hệ thống",
-  support: "Hỗ trợ",
-};
+
 
 const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
   care: {
@@ -574,26 +573,7 @@ export function getGroupMeta(group: NavGroupKey): NavGroupMeta {
   return GROUP_META[group];
 }
 
-export function getTopNavLinks(
-  role: UserRole,
-): Array<{ href: string; label: string; icon: string }> {
-  const grouped = getGroupedNavItems(role);
-  const desiredOrder: NavGroupKey[] = ["clinical", "medicines", "admin"];
-  return desiredOrder
-    .map((groupKey) => {
-      const group = grouped.find((entry) => entry.key === groupKey);
-      if (!group || group.items.length === 0) return null;
-      const meta = GROUP_META[groupKey];
-      return {
-        href: group.items[0].href,
-        label: meta.shortLabel,
-        icon: meta.icon,
-      };
-    })
-    .filter((item): item is { href: string; label: string; icon: string } =>
-      Boolean(item),
-    );
-}
+
 
 export function getPageMeta(pathname: string): PageMeta {
   const exact = NAV_ITEMS.find((item) => item.href === pathname);

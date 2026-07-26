@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getMobilePrimaryNav,
   getNavItemsByRole,
   getRoleHomePath,
   isAuthenticatedUtilityRoute,
@@ -29,6 +30,17 @@ describe("authenticated navigation defaults", () => {
 
   it("preserves an explicit safe next destination after login", () => {
     expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe("/phr");
+  });
+
+  it("leads the consumer mobile nav with Today/LifeMap, not Chat (chat is not the IA)", () => {
+    const primary = getMobilePrimaryNav("normal").map((item) => item.href);
+    // Per the LifeMap product spec §6.1, chat is an input/explanation surface,
+    // not a primary consumer destination. Today must lead; chat is reached via
+    // the persistent "Hỏi CLARA" action instead of a bottom tab.
+    expect(primary[0]).toBe("/today");
+    expect(primary).toContain("/lifemap");
+    expect(primary).toContain("/medicines");
+    expect(primary).not.toContain("/chat");
   });
 
   it("allows onboarding without turning it into permanent navigation", () => {

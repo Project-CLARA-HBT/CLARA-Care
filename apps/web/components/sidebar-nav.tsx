@@ -7,6 +7,7 @@ import { beginLogout } from "@/lib/logout";
 import NavItem from "@/components/navigation/nav-item";
 import {
   getGroupedNavItems,
+  getRoleHomePath,
   isActiveRoute,
   type UserRole,
 } from "@/lib/navigation.config";
@@ -58,6 +59,7 @@ export default function SidebarNav({
 }: SidebarNavProps) {
   const pathname = usePathname();
   const groups = getGroupedNavItems(role);
+  const homeHref = getRoleHomePath(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isEnglish = uiLanguage === "en";
 
@@ -81,7 +83,7 @@ export default function SidebarNav({
           collapsed ? "justify-center" : "gap-3 px-2",
         ].join(" ")}
       >
-        <Link href="/chat" className="app-brand-mark" aria-label="CLARA">
+        <Link href={homeHref} className="app-brand-mark" aria-label="CLARA">
           <span
             className="material-symbols-outlined text-[21px]"
             style={{ fontVariationSettings: "'FILL' 1" }}
@@ -91,7 +93,7 @@ export default function SidebarNav({
           </span>
         </Link>
         {!collapsed ? (
-          <Link href="/chat" className="min-w-0">
+          <Link href={homeHref} className="min-w-0">
             <span className="block text-[17px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
               CLARA
             </span>
@@ -106,19 +108,15 @@ export default function SidebarNav({
         <Link
           href="/chat"
           className={collapsed ? "app-new-chat !px-0" : "app-new-chat"}
-          title={isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}
+          title={isEnglish ? "Ask CLARA" : "Hỏi CLARA"}
         >
           <span
             className="material-symbols-outlined text-[19px]"
             aria-hidden="true"
           >
-            add_comment
+            auto_awesome
           </span>
-          {!collapsed ? (
-            <span>
-              {isEnglish ? "New conversation" : "Cuộc trò chuyện mới"}
-            </span>
-          ) : null}
+          {!collapsed ? <span>{isEnglish ? "Ask CLARA" : "Hỏi CLARA"}</span> : null}
         </Link>
       </div>
 
