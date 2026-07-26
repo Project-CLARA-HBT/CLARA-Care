@@ -11,6 +11,7 @@ import 'experience/onboarding/onboarding_gate.dart';
 import 'experience/redesign/login_screen_v3.dart';
 import 'experience/redesign/redesign_root.dart';
 import 'experience/settings/language_toggle.dart';
+import 'experience/unified/unified_root.dart';
 import 'experience/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
@@ -71,7 +72,8 @@ class _ClaraAppState extends State<ClaraApp> {
     // persisted theme preference (light-mode-first) and applies the polished
     // web-matching palette. Locale wiring is applied when a controller exists.
     final themeController = widget.themeController;
-    if (kMobileRedesignEnabled && themeController != null) {
+    if ((kMobileUnifiedEnabled || kMobileRedesignEnabled) &&
+        themeController != null) {
       final languageController = widget.languageController;
       final listenables = <Listenable>[
         themeController,
@@ -184,8 +186,9 @@ class _ClaraAppState extends State<ClaraApp> {
                 child: _authenticatedRoot(),
               );
             }
-            // Experience_V3 redesign: the polished, light-first sign-in.
-            if (kMobileRedesignEnabled) {
+            // Experience_V3 redesign / Unified: the polished, light-first
+            // sign-in (shared by both).
+            if (kMobileUnifiedEnabled || kMobileRedesignEnabled) {
               return LoginScreenV3(
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
@@ -207,6 +210,17 @@ class _ClaraAppState extends State<ClaraApp> {
   /// (Experience_V2): the first-run [OnboardingGate] wrapping the adaptive
   /// [AppShell] of primary destinations (Req 1.1–1.3, 3.5, 5.6).
   Widget _authenticatedRoot() {
+    // Unified experience: the consumer-IA center-Chat shell (Today, LifeMap,
+    // Medicines, Profile) behind a server-backed onboarding gate. Checked FIRST
+    // so it supersedes the redesign and V2 roots when enabled.
+    if (kMobileUnifiedEnabled) {
+      return UnifiedRoot(
+        apiClient: widget.apiClient,
+        sessionStore: widget.sessionStore,
+        themeController: widget.themeController,
+        languageController: widget.languageController,
+      );
+    }
     // Experience_V3 redesign: the center-Chat adaptive shell root. Checked
     // first so it wins when both the redesign and V2 flags are on.
     if (kMobileRedesignEnabled) {

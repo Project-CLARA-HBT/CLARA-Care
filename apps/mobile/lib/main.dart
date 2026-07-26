@@ -37,8 +37,9 @@ void main() async {
   // frame so the persisted theme applies on launch. Both are constructed when
   // EITHER the redesign or the legacy V2 flag is on; the redesign path
   // additionally wires the theme controller.
-  final bool needsLocaleWiring =
-      kMobileRedesignEnabled || kMobileExperienceV2Enabled;
+  final bool needsLocaleWiring = kMobileUnifiedEnabled ||
+      kMobileRedesignEnabled ||
+      kMobileExperienceV2Enabled;
   LanguageController? languageController;
   if (needsLocaleWiring) {
     languageController = LanguageController();
@@ -46,7 +47,7 @@ void main() async {
   }
 
   ThemeController? themeController;
-  if (kMobileRedesignEnabled) {
+  if (kMobileUnifiedEnabled || kMobileRedesignEnabled) {
     themeController = ThemeController();
     await themeController.load();
   }
