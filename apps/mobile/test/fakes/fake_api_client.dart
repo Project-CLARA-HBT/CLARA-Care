@@ -398,6 +398,74 @@ class FakeApiClient extends ApiClient {
         accessToken: accessToken);
   }
 
+  // --- Unified: PHR onboarding + LifeMap/Today -------------------------------
+
+  @override
+  Future<Map<String, dynamic>> getPhrOnboarding({required String accessToken}) {
+    return _dispatch('getPhrOnboarding', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updatePhrOnboarding({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _dispatch('updatePhrOnboarding', {'payload': payload},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapToday({required String accessToken}) {
+    return _dispatch('getLifeMapToday', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createLifeMapEpisode({
+    required String accessToken,
+    required String title,
+    String goal = '',
+    String priority = 'routine',
+  }) {
+    return _dispatch(
+      'createLifeMapEpisode',
+      {'title': title, 'goal': goal, 'priority': priority},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> createLifeMapTask({
+    required String accessToken,
+    required String episodeId,
+    required String title,
+    String? dueAt,
+  }) {
+    return _dispatch(
+      'createLifeMapTask',
+      {'episodeId': episodeId, 'title': title, 'dueAt': dueAt},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptLifeMapTask({
+    required String accessToken,
+    required String taskId,
+  }) {
+    return _dispatch('acceptLifeMapTask', {'taskId': taskId},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> completeLifeMapTask({
+    required String accessToken,
+    required String taskId,
+    Map<String, dynamic> evidence = const <String, dynamic>{},
+  }) {
+    return _dispatch('completeLifeMapTask', {'taskId': taskId, 'evidence': evidence},
+        accessToken: accessToken);
+  }
+
   // --- Scribe ----------------------------------------------------------------
 
   @override
