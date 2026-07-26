@@ -62,3 +62,15 @@ Each task keeps the app building and green. Safety-locked tests
 - [x] 6.2 Deploy web to VPS; verified health, first-run gate for all roles, medicines
   hub tabs, and consolidated redirects live. _Req 8.5_
 - [x] 6.3 Update `docs/design/clara-ui-modernization-*` with the final system + IA map.
+
+## Phase 7 — IA alignment with product definition (LifeMap spec §6.1)
+- [x] 7.1 Demote Chat from primary IA: brand mark + consumer bottom nav lead with
+  Today/LifeMap; Chat stays reachable via the topbar/sidebar "Hỏi CLARA" action
+  (spec: chat is an input/explanation surface, not the IA). _Req 2.1, 2.4_
+- [x] 7.2 Flag-gate `/community` (only shown when `NEXT_PUBLIC_SOCIAL_PLATFORM_ENABLED`
+  is on), matching the fail-closed social design; removed the permanently-hidden
+  dead nav entry. _Req 2.1, 8.1_
+- [x] 7.3 Consumer mobile primary nav = Today · LifeMap · Hồ sơ · Thuốc (Chat is the
+  persistent quick-ask action, not a tab); locked with a nav test. _Req 1.2, 2.1_
+- [x] 7.4 Remove dead nav helpers (`getTopNavLinks`, `GROUP_LABELS`) no component
+  consumed. _Req 8.4_
