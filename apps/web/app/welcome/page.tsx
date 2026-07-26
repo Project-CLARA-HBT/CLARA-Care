@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field, Select } from "@/components/ui/field";
+import { Toggle } from "@/components/ui/toggle";
 import { InlineError, SurfaceCard } from "@/components/ui/surface";
 import { getRole } from "@/lib/auth-store";
 import { getRoleHomePath } from "@/lib/navigation.config";
@@ -326,33 +327,12 @@ export default function WelcomePage() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                role="switch"
-                aria-checked={consent}
-                onClick={() => setConsent((value) => !value)}
-                className="focus-ring flex w-full items-center gap-4 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left transition hover:border-[color:var(--shell-border-strong)]"
-              >
-                <span
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-                    consent ? "bg-[var(--brand-600)]" : "bg-[var(--surface-muted)]"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                      consent ? "left-[1.375rem]" : "left-0.5"
-                    }`}
-                  />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-[var(--text-primary)]">
-                    Cho phép cá nhân hoá
-                  </span>
-                  <span className="mt-0.5 block text-xs leading-5 text-[var(--text-secondary)]">
-                    Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc.
-                  </span>
-                </span>
-              </button>
+              <Toggle
+                checked={consent}
+                onChange={setConsent}
+                label="Cho phép cá nhân hoá"
+                description="Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc."
+              />
 
               <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] px-4 py-3 text-xs leading-5 text-[var(--text-secondary)]">
                 Thông tin bạn nhập là tự khai báo, không phải chẩn đoán y tế. CLARA hỗ trợ
