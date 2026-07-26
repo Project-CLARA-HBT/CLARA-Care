@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import AppTopbar from "@/components/navigation/app-topbar";
+import NavItem from "@/components/navigation/nav-item";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import {
   clearTokens,
@@ -535,57 +536,16 @@ export default function AppShell({ children }: Props) {
                     </span>
                     {group.label}
                   </p>
-                  <nav className="space-y-2">
-                    {group.items.map((item) => {
-                      const active = isActiveRoute(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          aria-current={active ? "page" : undefined}
-                          onClick={() => setIsMobileNavOpen(false)}
-                          className={[
-                            "block rounded-xl border px-3.5 py-3 transition",
-                            active
-                              ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]"
-                              : "border-transparent bg-transparent hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-panel)]",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-2">
-                              <span
-                                className={
-                                  active
-                                    ? "material-symbols-outlined text-[18px] text-sky-700 dark:text-sky-200"
-                                    : "material-symbols-outlined text-[18px] text-[var(--text-muted)]"
-                                }
-                              >
-                                {item.icon}
-                              </span>
-                              <span
-                                className={
-                                  active
-                                    ? "text-sm font-semibold text-sky-800 dark:text-sky-100"
-                                    : "text-sm font-semibold text-[var(--text-primary)]"
-                                }
-                              >
-                                {item.label}
-                              </span>
-                            </span>
-                            <span
-                              className={`h-2 w-2 rounded-full ${
-                                active
-                                  ? "bg-sky-500 dark:bg-sky-300"
-                                  : "bg-[var(--text-muted)]/55"
-                              }`}
-                            />
-                          </div>
-                          <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">
-                            {item.desc}
-                          </p>
-                        </Link>
-                      );
-                    })}
+                  <nav className="space-y-1">
+                    {group.items.map((item) => (
+                      <NavItem
+                        key={item.href}
+                        item={item}
+                        active={isActiveRoute(pathname, item.href)}
+                        variant="drawer"
+                        onNavigate={() => setIsMobileNavOpen(false)}
+                      />
+                    ))}
                   </nav>
                 </section>
               ))}

@@ -154,8 +154,7 @@ export default function AppTopbar({
           {uiLanguage.toUpperCase()}
         </button>
 
-        <Link
-          href="/role-select"
+        <div
           className="app-profile-chip"
           aria-label={`Vai trò hiện tại: ${ROLE_LABELS[role]}`}
         >
@@ -170,13 +169,7 @@ export default function AppTopbar({
               {ROLE_LABELS[role]}
             </span>
           </span>
-          <span
-            className="material-symbols-outlined hidden text-[17px] text-[var(--text-muted)] xl:block"
-            aria-hidden="true"
-          >
-            expand_more
-          </span>
-        </Link>
+        </div>
       </div>
     </header>
   );

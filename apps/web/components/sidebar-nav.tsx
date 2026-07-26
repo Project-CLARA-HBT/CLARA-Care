@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { beginLogout } from "@/lib/logout";
+import NavItem from "@/components/navigation/nav-item";
 import {
   getGroupedNavItems,
   isActiveRoute,
@@ -25,10 +26,10 @@ type SidebarNavProps = {
 };
 
 const GROUP_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
-  core: { vi: "Chăm sóc của bạn", en: "Your care" },
-  research: { vi: "Nghiên cứu", en: "Research" },
+  care: { vi: "Chăm sóc của bạn", en: "Your care" },
+  medicines: { vi: "Thuốc & an toàn", en: "Medication & safety" },
+  explore: { vi: "Tìm hiểu", en: "Explore" },
   clinical: { vi: "Lâm sàng", en: "Clinical" },
-  medication: { vi: "Thuốc & an toàn", en: "Medication & safety" },
   admin: { vi: "Vận hành", en: "Operations" },
   support: { vi: "Hỗ trợ", en: "Support" },
 };
@@ -135,43 +136,15 @@ export default function SidebarNav({
                 GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label
               }
             >
-              {group.items.map((item) => {
-                const active = isActiveRoute(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={[
-                      "app-nav-item",
-                      collapsed ? "justify-center px-0" : "gap-3 px-3",
-                      active ? "app-nav-item-active" : "",
-                    ].join(" ")}
-                    title={item.label}
-                  >
-                    <span
-                      className="material-symbols-outlined shrink-0 text-[20px]"
-                      style={
-                        active
-                          ? { fontVariationSettings: "'FILL' 1" }
-                          : undefined
-                      }
-                      aria-hidden="true"
-                    >
-                      {item.icon}
-                    </span>
-                    {!collapsed ? (
-                      <span className="truncate">{item.label}</span>
-                    ) : null}
-                    {!collapsed && active ? (
-                      <span
-                        className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--brand-600)]"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </Link>
-                );
-              })}
+              {group.items.map((item) => (
+                <NavItem
+                  key={item.href}
+                  item={item}
+                  active={isActiveRoute(pathname, item.href)}
+                  variant="sidebar"
+                  collapsed={collapsed}
+                />
+              ))}
             </nav>
           </section>
         ))}

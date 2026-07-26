@@ -1,6 +1,6 @@
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 export type NavGroupKey =
-  "core" | "research" | "clinical" | "medication" | "admin" | "support";
+  "care" | "medicines" | "explore" | "clinical" | "admin" | "support";
 
 export type PageMeta = {
   title: string;
@@ -14,6 +14,7 @@ export type NavigationItem = {
   desc: string;
   group: NavGroupKey;
   roles: UserRole[];
+  hiddenForRoles?: UserRole[];
   mobilePrimary?: boolean;
   page: PageMeta;
 };
@@ -31,10 +32,8 @@ export const PUBLIC_ROUTES = new Set([
   "/legal/terms",
   "/legal/consent",
   "/legal/cookies",
-  "/huong-dan",
   "/login",
   "/register",
-  "/role-select",
   "/forgot-password",
   "/reset-password",
   "/verify-email",
@@ -43,6 +42,7 @@ export const PUBLIC_ROUTES = new Set([
 export const DEFAULT_POST_LOGIN_PATH = "/today";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
+const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
   normal: "/today",
@@ -57,7 +57,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hỏi CLARA",
     icon: "chat_paste_go",
     desc: "Hỏi đáp y tế hợp nhất",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
@@ -71,8 +71,9 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Tổng quan",
     icon: "dashboard",
     desc: "Bức tranh nhanh hôm nay",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
+    hiddenForRoles: ["normal"],
     mobilePrimary: true,
     page: {
       title: "Tổng quan công việc",
@@ -84,7 +85,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hôm nay",
     icon: "today",
     desc: "Việc chăm sóc bạn đã chấp nhận",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
@@ -97,7 +98,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "LifeMap",
     icon: "route",
     desc: "Hành trình chăm sóc của bạn",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "LifeMap",
@@ -109,7 +110,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Chuẩn bị đi khám",
     icon: "event_available",
     desc: "Câu hỏi và Visit Pack của bạn",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Chuẩn bị buổi khám",
@@ -121,7 +122,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Family Circle",
     icon: "family_restroom",
     desc: "Chia sẻ tối thiểu với người hỗ trợ",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Family Circle",
@@ -133,7 +134,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Nghiên cứu",
     icon: "science",
     desc: "Tổng hợp và kiểm chứng bằng chứng",
-    group: "research",
+    group: "explore",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
@@ -146,7 +147,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Bằng chứng cập nhật",
     icon: "fact_check",
     desc: "Câu hỏi LifeMap với nguồn kiểm chứng",
-    group: "research",
+    group: "explore",
     roles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Bằng chứng đang cập nhật",
@@ -158,7 +159,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Hồ sơ sức khỏe cá nhân",
     icon: "description",
     desc: "Hồ sơ sức khỏe cá nhân",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
     mobilePrimary: true,
     page: {
@@ -171,8 +172,9 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Cộng đồng",
     icon: "forum",
     desc: "Cộng đồng sức khỏe CLARA",
-    group: "core",
+    group: "care",
     roles: ["normal", "researcher", "doctor", "admin"],
+    hiddenForRoles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Cộng đồng sức khỏe",
       subtitle:
@@ -180,28 +182,47 @@ const NAV_ITEMS: NavigationItem[] = [
     },
   },
   {
+    href: "/medicines",
+    label: "Thuốc & an toàn",
+    icon: "medication",
+    desc: "Thuốc, tủ thuốc và kiểm tra tương tác",
+    group: "medicines",
+    roles: ["normal", "researcher", "doctor", "admin"],
+    mobilePrimary: true,
+    page: {
+      title: "Thuốc & an toàn",
+      subtitle:
+        "Thuốc đã xác nhận, tủ thuốc và kiểm tra tương tác — tất cả ở một nơi.",
+    },
+  },
+  {
+    // Consolidated into the /medicines hub. Kept as route-allowed (hidden for
+    // every role) so the AppShell guard permits the redirect stubs to load and
+    // forward into the correct hub tab instead of bouncing to the role home.
     href: "/selfmed",
     label: "Tủ thuốc",
     icon: "pill",
-    desc: "Quản lý thuốc cá nhân",
-    group: "medication",
+    desc: "Đã hợp nhất vào Thuốc & an toàn",
+    group: "medicines",
     roles: ["normal", "researcher", "doctor", "admin"],
-    mobilePrimary: true,
+    hiddenForRoles: ["normal", "researcher", "doctor", "admin"],
     page: {
       title: "Tủ thuốc của tôi",
       subtitle: "Quản lý thuốc đang dùng và quét toa thuốc từ ảnh.",
     },
   },
   {
-    href: "/medicines",
-    label: "Thuốc của tôi",
-    icon: "medication",
-    desc: "Thuốc đã xác nhận và DrugBank DDI",
-    group: "medication",
+    href: "/careguard",
+    label: "Kiểm tra tương tác",
+    icon: "security",
+    desc: "Đã hợp nhất vào Thuốc & an toàn",
+    group: "medicines",
     roles: ["normal", "researcher", "doctor", "admin"],
+    hiddenForRoles: ["normal", "researcher", "doctor", "admin"],
     page: {
-      title: "Thuốc của tôi",
-      subtitle: "Theo dõi thuốc đã xác nhận và kiểm tra DrugBank.",
+      title: "Kiểm tra tương tác thuốc",
+      subtitle:
+        "Đối chiếu thuốc, dị ứng và triệu chứng để phát hiện rủi ro sớm.",
     },
   },
   {
@@ -209,7 +230,7 @@ const NAV_ITEMS: NavigationItem[] = [
     label: "Nguồn nghiên cứu",
     icon: "database_search",
     desc: "PubMed, thuốc và nguồn y khoa",
-    group: "research",
+    group: "explore",
     roles: ["researcher", "doctor", "admin"],
     page: {
       title: "Nguồn nghiên cứu",
@@ -217,20 +238,7 @@ const NAV_ITEMS: NavigationItem[] = [
         "Đồng bộ và tra cứu các nguồn y khoa phục vụ phân tích bằng chứng.",
     },
   },
-  {
-    href: "/careguard",
-    label: "Kiểm tra tương tác",
-    icon: "security",
-    desc: "DDI và cảnh báo an toàn",
-    group: "medication",
-    roles: ["normal", "researcher", "doctor", "admin"],
-    mobilePrimary: true,
-    page: {
-      title: "Kiểm tra tương tác thuốc",
-      subtitle:
-        "Đối chiếu thuốc, dị ứng và triệu chứng để phát hiện rủi ro sớm.",
-    },
-  },
+
   {
     href: "/council",
     label: "Ca lâm sàng",
@@ -434,36 +442,36 @@ if (isComplianceFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED)) {
 }
 
 const GROUP_ORDER: NavGroupKey[] = [
-  "core",
-  "research",
+  "care",
+  "medicines",
+  "explore",
   "clinical",
-  "medication",
   "admin",
   "support",
 ];
 
 export const GROUP_LABELS: Record<NavGroupKey, string> = {
-  core: "Không gian làm việc",
-  research: "Nghiên cứu",
+  care: "Chăm sóc của bạn",
+  medicines: "Thuốc & an toàn",
+  explore: "Tìm hiểu",
   clinical: "Lâm sàng",
-  medication: "Thuốc và an toàn",
   admin: "Quản trị hệ thống",
   support: "Hỗ trợ",
 };
 
 const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
-  core: {
-    label: "Không gian làm việc",
-    shortLabel: "Không gian",
-    icon: "workspaces",
+  care: {
+    label: "Chăm sóc của bạn",
+    shortLabel: "Chăm sóc",
+    icon: "favorite",
   },
-  research: { label: "Nghiên cứu", shortLabel: "Nghiên cứu", icon: "science" },
+  medicines: {
+    label: "Thuốc & an toàn",
+    shortLabel: "Thuốc",
+    icon: "medication",
+  },
+  explore: { label: "Tìm hiểu", shortLabel: "Tìm hiểu", icon: "science" },
   clinical: { label: "Lâm sàng", shortLabel: "Lâm sàng", icon: "stethoscope" },
-  medication: {
-    label: "Thuốc và an toàn",
-    shortLabel: "An toàn",
-    icon: "shield",
-  },
   admin: {
     label: "Quản trị hệ thống",
     shortLabel: "Quản trị",
@@ -480,6 +488,15 @@ const DEFAULT_PAGE_META: PageMeta = {
 
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.has(pathname);
+}
+
+/**
+ * Signed-in flows that should be route-guarded but not shown as permanent
+ * navigation destinations. Onboarding is intentionally transient: once the
+ * user has completed or skipped it, the everyday sidebar stays uncluttered.
+ */
+export function isAuthenticatedUtilityRoute(pathname: string): boolean {
+  return AUTHENTICATED_UTILITY_ROUTES.has(pathname);
 }
 
 export function getRoleHomePath(role: UserRole = "normal"): string {
@@ -511,7 +528,19 @@ export function resolvePostLoginPath(options: {
 }
 
 export function getNavItemsByRole(role: UserRole): NavigationItem[] {
-  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+  return NAV_ITEMS.filter(
+    (item) =>
+      item.roles.includes(role) && !item.hiddenForRoles?.includes(role),
+  );
+}
+
+export function isRouteAllowedForRole(
+  pathname: string,
+  role: UserRole,
+): boolean {
+  return NAV_ITEMS.some(
+    (item) => item.roles.includes(role) && isActiveRoute(pathname, item.href),
+  );
 }
 
 export function getGroupedNavItems(
@@ -542,7 +571,7 @@ export function getTopNavLinks(
   role: UserRole,
 ): Array<{ href: string; label: string; icon: string }> {
   const grouped = getGroupedNavItems(role);
-  const desiredOrder: NavGroupKey[] = ["clinical", "medication", "admin"];
+  const desiredOrder: NavGroupKey[] = ["clinical", "medicines", "admin"];
   return desiredOrder
     .map((groupKey) => {
       const group = grouped.find((entry) => entry.key === groupKey);

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   getNavItemsByRole,
   getRoleHomePath,
+  isAuthenticatedUtilityRoute,
+  isRouteAllowedForRole,
   resolvePostLoginPath,
 } from "@/lib/navigation.config";
 
@@ -27,5 +29,32 @@ describe("authenticated navigation defaults", () => {
 
   it("preserves an explicit safe next destination after login", () => {
     expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe("/phr");
+  });
+
+  it("allows onboarding without turning it into permanent navigation", () => {
+    expect(isAuthenticatedUtilityRoute("/welcome")).toBe(true);
+    expect(
+      getNavItemsByRole("normal").some((item) => item.href === "/welcome"),
+    ).toBe(false);
+  });
+
+  it("consolidates medication surfaces into one Medicines hub entry", () => {
+    for (const role of ["normal", "researcher", "doctor", "admin"] as const) {
+      const visible = getNavItemsByRole(role).map((item) => item.href);
+      // Only the unified hub is shown; the legacy surfaces are hidden.
+      expect(visible).toContain("/medicines");
+      expect(visible).not.toContain("/selfmed");
+      expect(visible).not.toContain("/careguard");
+    }
+  });
+
+  it("keeps legacy consumer routes reachable without cluttering navigation", () => {
+    const visible = getNavItemsByRole("normal").map((item) => item.href);
+    expect(visible).not.toContain("/dashboard");
+    expect(visible).not.toContain("/community");
+    // Redirect stubs must stay route-allowed so the shell guard lets them load
+    // and forward into the correct hub tab.
+    expect(isRouteAllowedForRole("/selfmed", "normal")).toBe(true);
+    expect(isRouteAllowedForRole("/careguard", "normal")).toBe(true);
   });
 });
