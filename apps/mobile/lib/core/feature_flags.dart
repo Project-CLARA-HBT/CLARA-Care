@@ -177,19 +177,18 @@ const bool kMobileRedesignEnabled = bool.fromEnvironment(
 /// Family, Connected Health, Consent, Evidence, Settings).
 ///
 /// Resolved at compile time via `--dart-define=MOBILE_UNIFIED_ENABLED=…`.
-/// Defaults to `false` (fail-closed) so a normal build stays byte-for-byte the
-/// current experience and the 22 pre-existing / app-boot tests are unaffected.
-/// The unified client is complete and analyzer/test-clean; flip this to `true`
-/// (or ship `--dart-define=MOBILE_UNIFIED_ENABLED=true`) once it has been
-/// verified on a device/emulator, since the unified root loads live endpoints
-/// on boot that cannot be exercised headlessly. This gate is checked BEFORE
+/// Defaults to `true`: the unified client is now the shipped default (Phase 7.3
+/// of the spec), superseding the legacy Dashboard, Experience_V2, and the V3
+/// redesign roots. Ship `--dart-define=MOBILE_UNIFIED_ENABLED=false` to fall
+/// back to the prior root selection for A/B or rollback. This gate is checked
+/// BEFORE
 /// [kMobileRedesignEnabled] and [kMobileExperienceV2Enabled] in `app.dart`, so
 /// it is a strict superset: when on, it selects the unified authenticated root
 /// (`UnifiedRoot` → `UnifiedShell`). It changes no CLARA_API contract — it gates
 /// only client-side surface selection.
 const bool kMobileUnifiedEnabled = bool.fromEnvironment(
   'MOBILE_UNIFIED_ENABLED',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 /// Build-time gate for the CLARA Health Social community surface on mobile

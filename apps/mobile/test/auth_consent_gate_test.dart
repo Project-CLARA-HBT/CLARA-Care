@@ -17,6 +17,7 @@ import 'package:clara_mobile/app.dart';
 import 'package:clara_mobile/core/analytics.dart';
 import 'package:clara_mobile/core/api_client.dart';
 import 'package:clara_mobile/core/session_store.dart';
+import 'package:clara_mobile/experience/unified/unified_root.dart';
 import 'package:clara_mobile/widgets/consent_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,9 +90,13 @@ void main() {
       'required_version': '2026-04-v1',
       'accepted': false,
     });
-    // Dashboard data, fetched only once the gate reveals the dashboard.
+    // Unified-root data, fetched only once the gate reveals the app.
     api.stub('getMobileSummary', response: const {
       'feature_flags': {'research': true},
+    });
+    api.stub('getPhrOnboarding', response: const {
+      'needs_onboarding': false,
+      'status': 'completed',
     });
     api.stub('acceptConsent', response: const {'accepted': true});
 
@@ -100,16 +105,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Gated content is blocked: the dashboard ("Công cụ") is NOT shown and the
-    // consent acceptance step is presented instead (Req 6.6).
-    expect(find.text('Công cụ'), findsNothing);
+    // Gated content is blocked: the app root is NOT shown and the consent
+    // acceptance step is presented instead (Req 6.6).
+    expect(find.byType(UnifiedRoot), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Tôi đồng ý'), findsOneWidget);
-    // The gate must not have rendered the dashboard, so its summary load has
+    // The gate must not have rendered the app root, so its summary load has
     // not run yet.
     expect(api.wasCalled('getMobileSummary'), isFalse);
 
     // Accept consent: the gate records acceptance for the required version and
-    // then reveals the gated dashboard.
+    // then reveals the gated app root.
     await tester.tap(find.widgetWithText(FilledButton, 'Tôi đồng ý'));
     await tester.pumpAndSettle();
 
@@ -118,7 +123,7 @@ void main() {
 
     // Now the gated content is reachable.
     expect(find.widgetWithText(FilledButton, 'Tôi đồng ý'), findsNothing);
-    expect(find.text('Công cụ'), findsOneWidget);
+    expect(find.byType(UnifiedRoot), findsOneWidget);
     expect(api.wasCalled('getMobileSummary'), isTrue);
   });
 

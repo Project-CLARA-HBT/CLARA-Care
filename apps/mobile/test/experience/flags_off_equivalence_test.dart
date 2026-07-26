@@ -1,23 +1,17 @@
-// Wave 10 quality-gate: flags-off equivalence (CLARA mobile experience spec,
-// task 10.1 — Property P1).
+// Unified-default root selection (spec: clara-mobile-unified, Phase 7.3).
 //
-// Property P1 (design §"Correctness Properties"): with
-// `MOBILE_EXPERIENCE_V2_ENABLED` false, the authenticated root is the legacy
-// `DashboardScreen`, NO Experience_V2 widget (`AppShell`, `HomeScreen`,
-// `OnboardingGate`) is constructed, and the reachable navigation equals the
-// pre-feature baseline.
-//   Validates: Requirements 1.1, 1.2, 1.3, 10.1.
-//
-// `kMobileExperienceV2Enabled` is a compile-time `bool.fromEnvironment`
-// constant that defaults to `false`; a normal `flutter test` run (no
-// `--dart-define`) therefore exercises the flag-OFF branch of `app.dart`
-// directly. This test drives the real `ClaraApp` end-to-end (hydrate → consent
-// gate → authenticated root) with the reusable fakes, so it runs with no
-// platform channels or live network (Requirement 10.5).
+// The unified client is now the shipped default (`MOBILE_UNIFIED_ENABLED`
+// defaults to true), superseding the legacy Dashboard and Experience_V2. This
+// test drives the real `ClaraApp` end-to-end (hydrate → consent gate →
+// authenticated root) with the reusable fakes, asserting that:
+//   * the authenticated root is the `UnifiedRoot`, and
+//   * the legacy Experience_V2 build gate still ships OFF and none of its
+//     surfaces (`AppShell`, `HomeScreen`, `OnboardingGate`) are constructed.
+// It runs with no platform channels or live network.
 //
 // A valid (future-exp) JWT is persisted so launch hydration RESTORES the
-// session rather than clearing it as expired (the legacy `DashboardScreen`
-// only renders for an authenticated session).
+// session rather than clearing it as expired (the authenticated root only
+// renders for an authenticated session).
 
 import 'dart:convert';
 
@@ -28,8 +22,7 @@ import 'package:clara_mobile/core/session_store.dart';
 import 'package:clara_mobile/experience/app_shell.dart';
 import 'package:clara_mobile/experience/home_screen.dart';
 import 'package:clara_mobile/experience/onboarding/onboarding_gate.dart';
-import 'package:clara_mobile/screens/dashboard_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:clara_mobile/experience/unified/unified_root.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fakes.dart';
@@ -72,46 +65,44 @@ void main() {
 
   group('Property P1 — flags-off equivalence (Req 1.1, 1.2, 1.3, 10.1)', () {
     testWidgets(
-        'compile-time gate ships OFF so the baseline experience is the default',
+        'the Experience_V2 build gate still ships OFF (superseded by unified)',
         (tester) async {
-      // The single Experience_V2 build gate must default to false: a normal
-      // build (no --dart-define) is byte-for-byte the legacy experience.
+      // The legacy Experience_V2 build gate must default to false: it is
+      // superseded by the unified root and must never auto-construct.
       expect(kMobileExperienceV2Enabled, isFalse);
     });
 
     testWidgets(
-        'authenticated root is the legacy DashboardScreen and no Experience_V2 '
-        'widget is constructed', (tester) async {
+        'authenticated root is the unified root and no Experience_V2 widget is '
+        'constructed', (tester) async {
       final api = FakeApiClient();
       // Consent already accepted so the gate passes straight to the root.
       api.stub('getConsentStatus', response: const {
         'accepted': true,
         'required_version': 'v1',
       });
-      // Legacy dashboard loads the same role-scoped summary on init.
+      // The unified root loads the role-scoped summary + onboarding on init.
       api.stub('getMobileSummary', response: const {'feature_flags': {}});
+      api.stub('getPhrOnboarding', response: const {
+        'needs_onboarding': false,
+        'status': 'completed',
+      });
 
       final session = await _authenticatedWithValidJwt();
 
       await tester.pumpWidget(
         ClaraApp(apiClient: api, sessionStore: session),
       );
-      // Settle hydration + consent evaluation + summary load.
+      // Settle hydration + consent evaluation + summary/onboarding load.
       await tester.pumpAndSettle();
 
-      // The legacy authenticated root is present.
-      expect(find.byType(DashboardScreen), findsOneWidget);
+      // The unified authenticated root is present (default-on, Phase 7.3).
+      expect(find.byType(UnifiedRoot), findsOneWidget);
 
-      // NONE of the Experience_V2 surfaces are constructed when the flag is off.
+      // NONE of the legacy Experience_V2 surfaces are constructed.
       expect(find.byType(AppShell), findsNothing);
       expect(find.byType(HomeScreen), findsNothing);
       expect(find.byType(OnboardingGate), findsNothing);
-
-      // The locale-aware MaterialApp branch is only taken when the flag is on
-      // AND a controller is injected; with the flag off there is no locale
-      // wiring (supportedLocales stays at Flutter's default single entry).
-      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
-      expect(app.locale, isNull);
     });
 
     testWidgets(
@@ -130,8 +121,8 @@ void main() {
       expect(find.byType(AppShell), findsNothing);
       expect(find.byType(HomeScreen), findsNothing);
       expect(find.byType(OnboardingGate), findsNothing);
-      // The authenticated legacy root is not shown either (we are logged out).
-      expect(find.byType(DashboardScreen), findsNothing);
+      // The authenticated unified root is not shown either (we are logged out).
+      expect(find.byType(UnifiedRoot), findsNothing);
     });
   });
 }

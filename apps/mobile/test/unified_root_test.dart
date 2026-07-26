@@ -21,8 +21,8 @@ import 'fakes/fake_session_store.dart';
 
 void main() {
   group('kMobileUnifiedEnabled', () {
-    test('defaults to false (fail-closed) until device-verified rollout', () {
-      expect(kMobileUnifiedEnabled, isFalse);
+    test('defaults to true — the unified experience is the shipped default', () {
+      expect(kMobileUnifiedEnabled, isTrue);
     });
   });
 
