@@ -68,24 +68,29 @@ fail (15 new/updated unified tests, no regression).
   The 2 app-boot tests that asserted the legacy Dashboard root were updated to
   assert the unified root boots (headless boot verification), keeping the suite at
   382 pass / 22 pre-existing fail — no net regression. _Req 1.1, 10.4_
-- [~] 7.4 A11y + responsive: the unified surfaces reuse the shared a11y-audited
+- [x] 7.4 A11y + responsive: the unified surfaces reuse the shared a11y-audited
   primitives (`RedesignShell`, `ClaraButton/Card/Input`, `ClaraEmptyState`,
-  `MinTapTarget`, `A11y.resolveMotionDuration`) whose behavior is covered by the
-  existing theme/a11y suites. On-device sweep (real phone/tablet, live text-scale/
-  reduced-motion) still requires an emulator/device not available here. _Req 7.x_
+  `MinTapTarget`, `A11y.resolveMotionDuration`). Added a headless a11y/responsive
+  sweep (`test/unified_a11y_responsive_test.dart`, 7 tests): OnboardingFlow +
+  ProfileHub across phone/tablet widths, 1.6x text scale, and reduced motion,
+  asserting no overflow exception and the ≥48dp tap-target minimum on real
+  controls. On-device sweep against a live backend still requires an emulator/
+  device not available here. _Req 7.x_
 
 ## Phase 8 — Validation
-- [x] 8.1 `flutter analyze` clean on all unified code; `flutter test` — 382 pass /
-  22 pre-existing fail (no regression below the 369 baseline; +13 unified tests).
+- [x] 8.1 `flutter analyze` clean on all unified code; `flutter test` — 389 pass /
+  22 pre-existing fail (no regression below the 369 baseline; +20 unified tests).
   _Req 9.x_
 - [x] 8.2 Update `apps/mobile/README.md` + this plan with the unified IA map and
   the retired-layers/staged-rollout note. _Req 10.4_
 
 ## Environment limitation (transparency)
-All phases are implemented and the unified experience is the default. Verified by
-`flutter analyze` (clean on all unified code) and `flutter test` (382 pass / 22
-pre-existing fail, no regression; boot tests confirm `UnifiedRoot` is the
-authenticated root). The one thing NOT possible in this environment is real
-device/emulator runtime QA — actual boot against a live backend and hands-on
-a11y/responsive testing on physical form factors (7.4). Recommend a device smoke
-pass before store release; rollback is a single `--dart-define=MOBILE_UNIFIED_ENABLED=false`.
+All 8 phases are implemented and the unified experience is the shipped default.
+Verified by `flutter analyze` (clean on all unified code) and `flutter test`
+(389 pass / 22 pre-existing fail, no regression from the 369 baseline; +20
+unified tests including boot tests that confirm `UnifiedRoot` is the authenticated
+root, and a headless a11y/responsive sweep). The one thing NOT possible in this
+environment is real device/emulator runtime QA — actual boot against a live
+backend and hands-on a11y/responsive testing on physical form factors. Recommend
+a device smoke pass before store release; rollback is a single
+`--dart-define=MOBILE_UNIFIED_ENABLED=false`.
