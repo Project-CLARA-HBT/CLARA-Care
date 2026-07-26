@@ -11,11 +11,11 @@
   --shell-nav-width: 17rem;
 
   /* Foundation */
-  --color-bg: #eef1f7;
-  --bg-canvas: #eef1f7;
+  --color-bg: #eceef6;
+  --bg-canvas: #eceef6;
   --bg-elev-1: #ffffff;
   --bg-elev-2: #fbfcfe;
-  --bg-elev-3: #f6f8fc;
+  --bg-elev-3: #f5f7fc;
 
   /* Text */
   --text-primary: #18212f;
@@ -24,19 +24,22 @@
   --text-brand: #1d4ed8;
 
   /* Shell surfaces */
-  --surface-sidebar: #f9fafc;
-  --surface-header: rgba(255, 255, 255, 0.9);
+  --surface-sidebar: #f7f9fd;
+  --surface-header: rgba(255, 255, 255, 0.82);
   --surface-panel: #ffffff;
-  --surface-muted: #f1f4f8;
-  --surface-brand-soft: #edf3ff;
-  --shell-border: #e2e7ef;
-  --shell-border-strong: #9aabc0;
+  --surface-muted: #eff2f9;
+  --surface-brand-soft: #e8effe;
+  --shell-border: #e0e5f0;
+  --shell-border-strong: #94a3bd;
 
-  /* Brand + status */
-  --brand-500: #3b82f6;
+  /* Brand + status — indigo-leaning blue for a warmer, more modern feel */
+  --brand-400: #6098f5;
+  --brand-500: #3b7bf0;
   --brand-600: #2563eb;
   --brand-700: #1d4ed8;
-  --accent-500: #5b5fc7;
+  --brand-800: #1e40af;
+  --accent-500: #6366f1;
+  --accent-600: #4f46e5;
   --success-500: #16a34a;
   --warn-500: #f59e0b;
   --danger-500: #dc2626;
@@ -190,14 +193,14 @@
   pointer-events: none;
   background:
     radial-gradient(
-      40rem 22rem at 96% 0%,
-      rgb(8 120 189 / 6%),
-      transparent 68%
+      46rem 26rem at 100% -2%,
+      rgb(37 99 235 / 9%),
+      transparent 66%
     ),
     radial-gradient(
-      34rem 20rem at 12% 100%,
-      rgb(91 95 199 / 5%),
-      transparent 72%
+      40rem 24rem at 0% 100%,
+      rgb(99 102 241 / 7%),
+      transparent 70%
     );
 }
 

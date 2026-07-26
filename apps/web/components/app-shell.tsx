@@ -16,12 +16,13 @@ import {
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
-  getNavItemsByRole,
   getGroupMeta,
   getGroupedNavItems,
   getRoleHomePath,
   isActiveRoute,
+  isAuthenticatedUtilityRoute,
   isPublicRoute,
+  isRouteAllowedForRole,
   type UserRole,
 } from "@/lib/navigation.config";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/lib/profile-context";
 import { activateOwnedProfile, getProfileContext } from "@/lib/profile-context-api";
 import { listFamilyNotifications } from "@/lib/visit-family";
+import { getPhrOnboarding } from "@/lib/phr-onboarding";
 
 type Props = {
   children: ReactNode;
@@ -93,7 +95,8 @@ export default function AppShell({ children }: Props) {
   const [isProfileChanging, setIsProfileChanging] = useState(false);
   const [familyNotificationCount, setFamilyNotificationCount] = useState(0);
 
-  const hideSidebar = isPublicRoute(pathname);
+  const hideSidebar =
+    isPublicRoute(pathname) || isAuthenticatedUtilityRoute(pathname);
   const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -272,17 +275,42 @@ export default function AppShell({ children }: Props) {
   }, [themePreference]);
 
   const mobileNavGroups = useMemo(() => getGroupedNavItems(role), [role]);
-  const roleNavItems = useMemo(() => getNavItemsByRole(role), [role]);
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
     if (!isRoleHydrated || !isSessionChecked) return;
-    const allowed = roleNavItems.some((item) =>
-      isActiveRoute(pathname, item.href),
-    );
+    const allowed =
+      isAuthenticatedUtilityRoute(pathname) ||
+      isRouteAllowedForRole(pathname, role);
     if (allowed) return;
     router.replace(getRoleHomePath(role));
-  }, [isRoleHydrated, isSessionChecked, pathname, role, roleNavItems, router]);
+  }, [isRoleHydrated, isSessionChecked, pathname, role, router]);
+
+  useEffect(() => {
+    if (isPublicRoute(pathname)) return;
+    if (!isRoleHydrated || !isSessionChecked || role !== "normal") return;
+    let active = true;
+    const enforceFirstRunSetup = async () => {
+      try {
+        const onboarding = await getPhrOnboarding();
+        if (!active) return;
+        if (onboarding.needs_onboarding && pathname !== "/welcome") {
+          router.replace("/welcome");
+          return;
+        }
+        if (!onboarding.needs_onboarding && pathname === "/welcome") {
+          router.replace(getRoleHomePath(role));
+        }
+      } catch {
+        // Fail open when the additive onboarding endpoint is temporarily
+        // unavailable; established product surfaces remain usable.
+      }
+    };
+    void enforceFirstRunSetup();
+    return () => {
+      active = false;
+    };
+  }, [isRoleHydrated, isSessionChecked, pathname, role, router]);
 
   const handleThemeChange = (nextTheme: ThemePreference) => {
     setThemePreference(nextTheme);
@@ -642,13 +670,6 @@ export default function AppShell({ children }: Props) {
                 </div>
               </div>
 
-              <Link
-                href="/role-select"
-                onClick={() => setIsMobileNavOpen(false)}
-                className="flex min-h-[46px] items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
-              >
-                Switch role
-              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
