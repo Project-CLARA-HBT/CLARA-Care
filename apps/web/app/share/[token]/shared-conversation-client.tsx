@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import MarkdownAnswer from "@/components/research/markdown-answer";
+import { Badge } from "@/components/ui/badge";
+import { InlineError, SurfaceCard } from "@/components/ui/surface";
 import {
   WorkspacePublicConversation,
   getWorkspacePublicConversation,
@@ -45,58 +47,56 @@ export default function SharedConversationClient({ token }: SharedConversationCl
 
   return (
     <main className="mx-auto min-h-dvh max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/50 sm:p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+      <SurfaceCard className="p-4 sm:p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
           Public Share
         </p>
-        <h1 className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
+        <h1 className="mt-1 text-xl font-semibold text-[var(--text-primary)]">
           {payload?.title || "Shared Conversation"}
         </h1>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
           Owner: {payload?.owner_label ?? "-"}
         </p>
         {payload?.expires_at ? (
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            Link expires: {new Date(payload.expires_at).toLocaleString("vi-VN")}
-          </p>
+          <div className="mt-2">
+            <Badge tone="warn" icon="schedule">
+              Link expires: {new Date(payload.expires_at).toLocaleString("vi-VN")}
+            </Badge>
+          </div>
         ) : null}
-      </section>
+      </SurfaceCard>
 
       {isLoading ? (
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300">
+        <SurfaceCard className="mt-4 p-4 text-sm text-[var(--text-secondary)]">
           Đang tải dữ liệu hội thoại...
-        </section>
+        </SurfaceCard>
       ) : null}
 
       {error ? (
-        <section className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
-          {error}
-        </section>
+        <div className="mt-4">
+          <InlineError message={error} />
+        </div>
       ) : null}
 
       {!isLoading && !error && payload?.messages?.length ? (
         <div className="mt-4 space-y-4">
           {payload.messages.map((message) => (
-            <article
-              key={message.query_id}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
-            >
+            <SurfaceCard key={message.query_id} className="p-4">
               <header className="mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-700 dark:text-cyan-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-brand)]">
                   Câu hỏi
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-slate-800 dark:text-slate-100">
+                <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-[var(--text-primary)]">
                   {message.query}
                 </p>
               </header>
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/40">
+              <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                 <MarkdownAnswer answer={message.answer} citations={[]} />
               </div>
-            </article>
+            </SurfaceCard>
           ))}
         </div>
       ) : null}
     </main>
   );
 }
-

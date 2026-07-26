@@ -725,6 +725,47 @@ class Settings(BaseSettings):
         ge=0,
     )
 
+    # --- LifeMap transactional-outbox relay (Phase 0, P0-WP5) -----------------
+    # LifeMap command handlers durably write integration events into
+    # ``lifemap_outbox_events`` alongside each mutation, but nothing drained the
+    # ``pending`` rows. This flag starts an in-process background relay that
+    # publishes and marks those rows ``published``. Additive + default OFF ⇒
+    # byte-for-byte prior behavior (rows accumulate as ``pending``); flipping it
+    # off at runtime cleanly stops draining with no data loss.
+    lifemap_outbox_relay_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_OUTBOX_RELAY_ENABLED",
+    )
+    lifemap_outbox_relay_interval_seconds: float = Field(
+        default=5.0,
+        validation_alias="LIFEMAP_OUTBOX_RELAY_INTERVAL_SECONDS",
+        gt=0,
+    )
+    lifemap_outbox_relay_batch_size: int = Field(
+        default=100,
+        validation_alias="LIFEMAP_OUTBOX_RELAY_BATCH_SIZE",
+        gt=0,
+        le=1000,
+    )
+
+    # --- LifeMap next-best-question engine (Phase 2, P2-WP5) --------------------
+    # Additive + default OFF ⇒ the endpoint returns the feature-disabled (404)
+    # shape and no question is ever generated, preserving prior behavior. When
+    # on, the engine deterministically proposes at most one highest-value
+    # question (or none) from an episode's typed missing critical fields, subject
+    # to a per-episode burden budget. Flipping it off at runtime cleanly stops
+    # question generation with no data change.
+    lifemap_next_question_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_NEXT_QUESTION_ENABLED",
+    )
+    lifemap_next_question_burden_budget: int = Field(
+        default=3,
+        validation_alias="LIFEMAP_NEXT_QUESTION_BURDEN_BUDGET",
+        gt=0,
+        le=20,
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

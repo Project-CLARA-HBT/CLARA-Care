@@ -4,9 +4,10 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
-import AuthFormShell from "@/components/auth-form-shell";
-import AuthField from "@/components/auth/auth-field";
-import AuthFeedback from "@/components/auth/auth-feedback";
+import Button from "@/components/ui/button";
+import { Field, Select } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard } from "@/components/ui/surface";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
@@ -111,110 +112,160 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthFormShell title="Tạo tài khoản" subtitle="Khởi tạo tài khoản CLARA và chọn vai trò phù hợp nhu cầu của bạn.">
-      <form className="space-y-4" onSubmit={onSubmit}>
-        <AuthField
-          id="register-full-name"
-          label="Họ và tên"
-          value={fullName}
-          onChange={setFullName}
-          placeholder="Nguyễn Văn A"
-          required
-        />
-        <AuthField
-          id="register-email"
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="name@example.com"
-          required
-        />
-        <AuthField
-          id="register-password"
-          label="Mật khẩu"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          helperText="Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối."
-          placeholder="Tối thiểu 8 ký tự"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
-        <AuthField
-          id="register-confirm-password"
-          label="Xác nhận mật khẩu"
-          type="password"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          helperText="Nhập lại mật khẩu để tránh gõ nhầm."
-          error={confirmPasswordError}
-          placeholder="Nhập lại mật khẩu"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
+    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
+      <SurfaceCard className="w-full p-7 sm:p-9">
+        <Badge tone="brand">The Clara Care</Badge>
+        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
+          Tạo tài khoản
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          Khởi tạo tài khoản CLARA và chọn vai trò phù hợp nhu cầu của bạn.
+        </p>
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-slate-800" htmlFor="register-role">
-            Vai trò sử dụng
-          </label>
-          <select
+        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+          <Field
+            id="register-full-name"
+            label="Họ và tên"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            placeholder="Nguyễn Văn A"
+            required
+          />
+          <Field
+            id="register-email"
+            label="Email"
+            type="email"
+            inputMode="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="name@example.com"
+            required
+          />
+          <div className="space-y-1.5">
+            <Field
+              id="register-password"
+              label="Mật khẩu"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Tối thiểu 8 ký tự"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Field
+              id="register-confirm-password"
+              label="Xác nhận mật khẩu"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Nhập lại mật khẩu"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              aria-invalid={confirmPasswordError ? true : undefined}
+            />
+            {confirmPasswordError ? (
+              <p role="alert" className="text-sm font-medium text-[var(--status-danger-text)]">
+                {confirmPasswordError}
+              </p>
+            ) : (
+              <p className="text-sm text-[var(--text-secondary)]">
+                Nhập lại mật khẩu để tránh gõ nhầm.
+              </p>
+            )}
+          </div>
+
+          <Select
             id="register-role"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+            label="Vai trò sử dụng"
             value={role}
             onChange={(event) => setRole(event.target.value as UserRole)}
           >
             <option value="normal">Người dùng cá nhân</option>
             <option value="researcher">Nhà nghiên cứu</option>
             <option value="doctor">Bác sĩ</option>
-          </select>
-        </div>
+          </Select>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 bg-slate-50 p-3">
-          <input
-            type="checkbox"
-            checked={acceptedLegal}
-            onChange={(event) => setAcceptedLegal(event.target.checked)}
-            className="mt-1 h-5 w-5 rounded border-slate-300"
-          />
-          <span className="text-sm leading-6 text-slate-700">
-            Tôi đồng ý với{" "}
-            <Link href="/legal/terms" className="font-semibold text-blue-700 hover:underline">
-              Điều khoản sử dụng
+          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+            <input
+              type="checkbox"
+              checked={acceptedLegal}
+              onChange={(event) => setAcceptedLegal(event.target.checked)}
+              className="focus-ring mt-1 h-5 w-5 rounded border-[color:var(--shell-border-strong)]"
+            />
+            <span className="text-sm leading-6 text-[var(--text-secondary)]">
+              Tôi đồng ý với{" "}
+              <Link
+                href="/legal/terms"
+                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+              >
+                Điều khoản sử dụng
+              </Link>
+              ,{" "}
+              <Link
+                href="/legal/privacy"
+                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+              >
+                Chính sách quyền riêng tư
+              </Link>{" "}
+              và{" "}
+              <Link
+                href="/legal/consent"
+                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+              >
+                Đồng thuận sử dụng y tế
+              </Link>
+              .
+            </span>
+          </label>
+
+          {notice ? (
+            <p
+              role="status"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+            >
+              {notice}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          {notice.includes("xác thực") ? (
+            <Link
+              href={`/verify-email?email=${encodeURIComponent(email)}`}
+              className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Đi đến trang xác thực email
             </Link>
-            ,{" "}
-            <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline">
-              Chính sách quyền riêng tư
-            </Link>{" "}
-            và{" "}
-            <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline">
-              Đồng thuận sử dụng y tế
+          ) : null}
+
+          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang xử lý...">
+            Tạo tài khoản
+          </Button>
+
+          <p className="text-sm text-[var(--text-secondary)]">
+            Đã có tài khoản?{" "}
+            <Link
+              href="/login"
+              className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Đăng nhập
             </Link>
-            .
-          </span>
-        </label>
-
-        <AuthFeedback notice={notice} error={error} />
-
-        {notice.includes("xác thực") ? (
-          <Link href={`/verify-email?email=${encodeURIComponent(email)}`} className="text-sm font-medium text-blue-700 hover:underline">
-            Đi đến trang xác thực email
-          </Link>
-        ) : null}
-
-        <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Đang xử lý..." : "Tạo tài khoản"}
-        </button>
-
-        <p className="text-sm text-slate-600">
-          Đã có tài khoản?{" "}
-          <Link href="/login" className="font-medium text-blue-700 hover:underline">
-            Đăng nhập
-          </Link>
-        </p>
-      </form>
-    </AuthFormShell>
+          </p>
+        </form>
+      </SurfaceCard>
+    </main>
   );
 }

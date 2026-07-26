@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import api from "@/lib/http-client";
-import AuthFormShell from "@/components/auth-form-shell";
-import AuthField from "@/components/auth/auth-field";
-import AuthFeedback from "@/components/auth/auth-feedback";
+import Button from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard } from "@/components/ui/surface";
 
 export default function VerifyEmailPage() {
   const [token, setToken] = useState("");
@@ -64,52 +65,82 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <AuthFormShell title="Xác thực email" subtitle="Nhập mã xác thực hoặc yêu cầu gửi lại mã để kích hoạt tài khoản.">
-      <form className="space-y-4" onSubmit={onSubmit}>
-        <AuthField
-          id="verify-token"
-          label="Mã xác thực"
-          as="textarea"
-          rows={3}
-          value={token}
-          onChange={setToken}
-          placeholder="Dán mã xác thực tại đây"
-          required
-        />
+    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
+      <SurfaceCard className="w-full p-7 sm:p-9">
+        <Badge tone="brand">The Clara Care</Badge>
+        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
+          Xác thực email
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          Nhập mã xác thực hoặc yêu cầu gửi lại mã để kích hoạt tài khoản.
+        </p>
 
-        <AuthFeedback notice={notice} error={error} />
+        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+          <Textarea
+            id="verify-token"
+            label="Mã xác thực"
+            rows={3}
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="Dán mã xác thực tại đây"
+            required
+          />
 
-        {notice ? (
-          <Link href="/login" className="inline-block text-sm font-medium text-blue-700 hover:underline">
-            Đi đến đăng nhập
-          </Link>
-        ) : null}
+          {notice ? (
+            <p
+              role="status"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+            >
+              {notice}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+            >
+              {error}
+            </p>
+          ) : null}
 
-        <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Đang xác thực..." : "Xác thực email"}
-        </button>
-      </form>
+          {notice ? (
+            <Link
+              href="/login"
+              className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Đi đến đăng nhập
+            </Link>
+          ) : null}
 
-      <div className="my-5 border-t border-slate-200" />
+          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang xác thực...">
+            Xác thực email
+          </Button>
+        </form>
 
-      <form className="space-y-4" onSubmit={onResend}>
-        <AuthField
-          id="verify-email"
-          label="Email tài khoản"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="name@example.com"
-          required
-        />
-        <button
-          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-70"
-          type="submit"
-          disabled={isResending}
-        >
-          {isResending ? "Đang gửi lại..." : "Gửi lại mã xác thực"}
-        </button>
-      </form>
-    </AuthFormShell>
+        <div className="my-6 border-t border-[color:var(--shell-border)]" />
+
+        <form className="space-y-4" onSubmit={onResend}>
+          <Field
+            id="verify-email"
+            label="Email tài khoản"
+            type="email"
+            inputMode="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="name@example.com"
+            required
+          />
+          <Button
+            type="submit"
+            variant="secondary"
+            block
+            loading={isResending}
+            loadingLabel="Đang gửi lại..."
+          >
+            Gửi lại mã xác thực
+          </Button>
+        </form>
+      </SurfaceCard>
+    </main>
   );
 }

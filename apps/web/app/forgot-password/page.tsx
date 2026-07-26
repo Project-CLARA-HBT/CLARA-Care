@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import api from "@/lib/http-client";
-import AuthFormShell from "@/components/auth-form-shell";
-import AuthField from "@/components/auth/auth-field";
-import AuthFeedback from "@/components/auth/auth-feedback";
+import Button from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard } from "@/components/ui/surface";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,37 +41,69 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <AuthFormShell title="Quên mật khẩu" subtitle="Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.">
-      <form className="space-y-4" onSubmit={onSubmit}>
-        <AuthField
-          id="forgot-email"
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="name@example.com"
-          required
-        />
+    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
+      <SurfaceCard className="w-full p-7 sm:p-9">
+        <Badge tone="brand">The Clara Care</Badge>
+        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
+          Quên mật khẩu
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.
+        </p>
 
-        <AuthFeedback notice={notice} error={error} />
+        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+          <Field
+            id="forgot-email"
+            label="Email"
+            type="email"
+            inputMode="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="name@example.com"
+            required
+          />
 
-        {tokenPreview ? (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            Mã reset (dev): <code className="font-mono text-xs">{tokenPreview}</code>{" "}
-            <Link href={`/reset-password?token=${encodeURIComponent(tokenPreview)}`} className="font-medium text-blue-700 hover:underline">
-              Mở trang đặt lại
-            </Link>
-          </p>
-        ) : null}
+          {notice ? (
+            <p
+              role="status"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+            >
+              {notice}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+            >
+              {error}
+            </p>
+          ) : null}
 
-        <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
-        </button>
+          {tokenPreview ? (
+            <p className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+              Mã reset (dev): <code className="font-mono text-xs">{tokenPreview}</code>{" "}
+              <Link
+                href={`/reset-password?token=${encodeURIComponent(tokenPreview)}`}
+                className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
+              >
+                Mở trang đặt lại
+              </Link>
+            </p>
+          ) : null}
 
-        <Link href="/login" className="inline-block text-sm text-slate-600 hover:underline">
-          Quay lại đăng nhập
-        </Link>
-      </form>
-    </AuthFormShell>
+          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang gửi...">
+            Gửi yêu cầu
+          </Button>
+
+          <Link
+            href="/login"
+            className="focus-ring inline-block rounded text-sm text-[var(--text-secondary)] hover:underline"
+          >
+            Quay lại đăng nhập
+          </Link>
+        </form>
+      </SurfaceCard>
+    </main>
   );
 }

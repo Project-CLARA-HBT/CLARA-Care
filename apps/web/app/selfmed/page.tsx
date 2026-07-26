@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 import { trackCareguardViewed } from "@/lib/analytics/events";
@@ -28,12 +30,12 @@ function sourceLabel(source: string): string {
   return source;
 }
 
-function sourceClass(source: string): string {
-  if (source === "ocr") return "border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-300/60 dark:bg-cyan-500/15 dark:text-cyan-100";
-  if (source === "manual") return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/40 dark:bg-slate-500/20 dark:text-slate-100";
-  if (source === "barcode") return "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-300/55 dark:bg-indigo-500/20 dark:text-indigo-100";
-  if (source === "imported") return "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-300/55 dark:bg-sky-500/20 dark:text-sky-100";
-  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
+function sourceTone(source: string): BadgeTone {
+  if (source === "ocr") return "brand";
+  if (source === "manual") return "neutral";
+  if (source === "barcode") return "brand";
+  if (source === "imported") return "brand";
+  return "neutral";
 }
 
 function normalizationLabel(source: string | null | undefined): string {
@@ -44,12 +46,12 @@ function normalizationLabel(source: string | null | undefined): string {
   return "Chưa rõ";
 }
 
-function normalizationClass(source: string | null | undefined): string {
-  if (source === "db" || source === "matched") return "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-300/60 dark:bg-emerald-500/15 dark:text-emerald-100";
-  if (source === "candidate") return "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-100";
-  if (source === "needs_review") return "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-300/70 dark:bg-rose-500/20 dark:text-rose-100";
-  if (source === "fallback") return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-300/60 dark:bg-rose-500/15 dark:text-rose-100";
-  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-400/35 dark:bg-slate-500/20 dark:text-slate-100";
+function normalizationTone(source: string | null | undefined): BadgeTone {
+  if (source === "db" || source === "matched") return "ok";
+  if (source === "candidate") return "warn";
+  if (source === "needs_review") return "danger";
+  if (source === "fallback") return "danger";
+  return "neutral";
 }
 
 function formatDate(value: string | null): string {
@@ -271,7 +273,7 @@ export default function SelfMedPage() {
     >
       <SelfMedConsentGate>
         <div className="space-y-6">
-          <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+          <SurfaceCard className="p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
@@ -281,36 +283,25 @@ export default function SelfMedPage() {
               </div>
               <div className="flex flex-col items-start gap-2">
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href="/selfmed/add"
-                    className="inline-flex min-h-11 items-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/20"
-                  >
-                    + Thêm thuốc
-                  </Link>
+                  <Button as="link" href="/selfmed/add" icon="add">
+                    Thêm thuốc
+                  </Button>
                   {canCheckInteractions ? (
-                    <Link
-                      href="/selfmed/ddi"
-                      className="inline-flex min-h-11 items-center rounded-lg border border-blue-700 bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
-                    >
+                    <Button as="link" href="/selfmed/ddi" variant="secondary">
                       Kiểm tra tương tác thuốc
-                    </Link>
+                    </Button>
                   ) : (
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled
                       title="Cần thêm ít nhất 2 thuốc để kiểm tra tương tác."
-                      className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg border border-slate-300 bg-slate-200 px-4 text-sm font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                     >
                       Kiểm tra tương tác thuốc
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => void refreshCabinet()}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-blue-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
-                  >
+                  <Button variant="ghost" icon="refresh" onClick={() => void refreshCabinet()}>
                     Làm mới
-                  </button>
+                  </Button>
                 </div>
                 {!canCheckInteractions ? (
                   <p className="text-xs text-[var(--text-muted)]">Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.</p>
@@ -323,24 +314,23 @@ export default function SelfMedPage() {
               <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Dữ liệu lưu trên tài khoản</span>
               <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Có thể cập nhật bất cứ lúc nào</span>
             </div>
-          </section>
+          </SurfaceCard>
 
           <section className="grid grid-cols-12 gap-6">
             <div className="col-span-12 lg:col-span-8 space-y-6">
-              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[0_18px_42px_-32px_rgba(37,99,235,0.45)]">
+              <SurfaceCard className="p-6">
                 <div className="mb-6 flex items-center justify-between">
                   <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
-                  <span
-                    className={[
-                      "rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
+                  <Badge
+                    tone={
                       stats.total === 0
-                        ? "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]"
+                        ? "neutral"
                         : stats.riskTone === "high"
-                          ? "border-red-300/40 bg-red-500/15 text-red-700 dark:text-red-200"
+                          ? "danger"
                           : stats.riskTone === "moderate"
-                            ? "border-amber-300/40 bg-amber-500/15 text-amber-700 dark:text-amber-200"
-                            : "border-emerald-300/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
-                    ].join(" ")}
+                            ? "warn"
+                            : "ok"
+                    }
                   >
                     {stats.total === 0
                       ? "CHƯA CÓ THUỐC"
@@ -349,7 +339,7 @@ export default function SelfMedPage() {
                         : stats.riskTone === "moderate"
                           ? "TRUNG BÌNH"
                           : "ỔN ĐỊNH"}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="flex flex-col gap-8 md:flex-row md:items-center">
@@ -385,7 +375,7 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
+                      <div className="mt-2 h-1 w-full rounded-full bg-[var(--shell-border)]">
                         <div className="h-full rounded-full bg-[var(--brand-500)]" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
                       </div>
                     </div>
@@ -394,7 +384,7 @@ export default function SelfMedPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
                       </p>
-                      <div className="mt-2 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-900/40">
+                      <div className="mt-2 h-1 w-full rounded-full bg-[var(--shell-border)]">
                         <div
                           className="h-full rounded-full bg-[var(--brand-500)]"
                           style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
@@ -403,7 +393,7 @@ export default function SelfMedPage() {
                     </div>
                   </div>
                 </div>
-              </article>
+              </SurfaceCard>
 
               <article className="space-y-4">
                 <div className="flex items-center justify-between px-1">
@@ -412,36 +402,32 @@ export default function SelfMedPage() {
                 </div>
 
                 {isLoading ? <p className="text-sm text-[var(--text-secondary)]">Đang tải tủ thuốc...</p> : null}
-                {error ? <p className="text-sm text-red-300">{error}</p> : null}
-                {notice ? <p className="text-sm text-emerald-300">{notice}</p> : null}
+                {error ? <InlineError message={error} onRetry={() => void refreshCabinet()} /> : null}
+                {notice ? <p className="text-sm font-medium text-[var(--status-ok-text)]">{notice}</p> : null}
 
                 {!isLoading && topItems.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
-                    <p className="text-base font-medium text-[var(--text-primary)]">Tủ thuốc đang trống.</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">Bắt đầu bằng &quot;Thêm Thuốc Mới&quot; để nhập tay hoặc quét OCR.</p>
-                  </div>
+                  <EmptyState
+                    icon="medication"
+                    title="Tủ thuốc đang trống."
+                    description='Bắt đầu bằng "Thêm Thuốc Mới" để nhập tay hoặc quét OCR.'
+                  />
                 ) : null}
 
                 {topItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="group overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition hover:border-cyan-400/30"
-                  >
+                  <SurfaceCard key={item.id} className="group overflow-hidden" interactive>
                     <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-6">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                        <span className="material-symbols-outlined text-cyan-300 text-3xl">medication_liquid</span>
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)]">
+                        <span className="material-symbols-outlined text-[var(--text-brand)] text-3xl">medication_liquid</span>
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
                           <h4 className="truncate text-lg font-bold text-[var(--text-primary)]">{item.drug_name}</h4>
-                          <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${sourceClass(item.source)}`}>
-                            {sourceLabel(item.source)}
-                          </span>
+                          <Badge tone={sourceTone(item.source)}>{sourceLabel(item.source)}</Badge>
                           {(item.normalization_status ?? item.normalization_source) ? (
-                            <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold ${normalizationClass(item.normalization_status ?? item.normalization_source)}`}>
+                            <Badge tone={normalizationTone(item.normalization_status ?? item.normalization_source)}>
                               {normalizationLabel(item.normalization_status ?? item.normalization_source)}
-                            </span>
+                            </Badge>
                           ) : null}
                         </div>
 
@@ -457,7 +443,7 @@ export default function SelfMedPage() {
                             <i className="fa fa-calendar" aria-hidden="true" /> HSD: {formatDate(item.expires_on)}
                           </span>
                           {item.ocr_confidence !== null ? (
-                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-200">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[var(--status-ok-text)]">
                               <i className="fa fa-check-circle" aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
                             </span>
                           ) : null}
@@ -467,13 +453,14 @@ export default function SelfMedPage() {
                       <div className="text-right">
                         <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Số lượng</p>
                         <p className="text-xl font-extrabold text-[var(--text-primary)]">{item.quantity}</p>
-                        <button
-                          type="button"
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="mt-3"
                           onClick={() => void onDelete(item.id)}
-                          className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-300/50 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/25"
                         >
                           Xóa
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -483,13 +470,13 @@ export default function SelfMedPage() {
                         <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> Cập nhật: {formatDate(item.updated_at)}</span>
                       </div>
                     </div>
-                  </div>
+                  </SurfaceCard>
                 ))}
               </article>
             </div>
 
             <div className="col-span-12 lg:col-span-4 space-y-6">
-              <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+              <SurfaceCard className="p-6">
                 <h3 className="mb-6 text-sm uppercase tracking-widest text-[var(--text-secondary)]">Lịch Trình Dùng Thuốc</h3>
                 {timelineItems.length > 0 ? (
                   <div className="relative space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-[color:var(--shell-border)]">
@@ -498,10 +485,10 @@ export default function SelfMedPage() {
                         <div
                           className={[
                             "absolute top-1 z-10 rounded-full border-2 border-[var(--bg-canvas)]",
-                            idx === 0 ? "left-0 w-6 h-6 bg-cyan-400" : "left-[5px] w-[14px] h-[14px] bg-[var(--surface-muted)]",
+                            idx === 0 ? "left-0 w-6 h-6 bg-[var(--brand-500)]" : "left-[5px] w-[14px] h-[14px] bg-[var(--surface-muted)]",
                           ].join(" ")}
                         />
-                        <p className={`mb-1 text-[10px] font-bold uppercase ${idx === 0 ? "text-cyan-300" : "text-[var(--text-muted)]"}`}>{entry.time}</p>
+                        <p className={`mb-1 text-[10px] font-bold uppercase ${idx === 0 ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"}`}>{entry.time}</p>
                         <p className="text-sm font-bold text-[var(--text-primary)]">{entry.title}</p>
                         <p className="text-xs text-[var(--text-secondary)]">{entry.note}</p>
                       </div>
@@ -512,18 +499,18 @@ export default function SelfMedPage() {
                     Chưa có dữ liệu lịch trình từ tủ thuốc. Hãy thêm thuốc hoặc cập nhật liều dùng để hệ thống tạo timeline.
                   </p>
                 )}
-              </article>
+              </SurfaceCard>
 
-              <article className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-300/30 dark:bg-red-500/10">
+              <section className="rounded-[var(--radius-xl)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-6">
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-red-500 dark:text-red-300">emergency</span>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-red-700 dark:text-red-200">Phản Ứng Cần Lưu Ý</h3>
+                  <span className="material-symbols-outlined text-[var(--status-danger-text)]">emergency</span>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--status-danger-text)]">Phản Ứng Cần Lưu Ý</h3>
                 </div>
                 {medicationAlerts.length > 0 ? (
                   <ul className="space-y-3">
                     {medicationAlerts.map((alert) => (
                       <li className="flex items-start gap-2" key={alert.id}>
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 dark:bg-red-300" />
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--danger-500)]" />
                         <div>
                           <p className="text-xs font-bold text-[var(--text-primary)]">{alert.title}</p>
                           <p className="text-[10px] text-[var(--text-secondary)]">{alert.detail}</p>
@@ -534,13 +521,10 @@ export default function SelfMedPage() {
                 ) : (
                   <p className="text-xs text-[var(--text-secondary)]">Chưa phát hiện cảnh báo tự động từ dữ liệu tủ thuốc hiện tại.</p>
                 )}
-                <Link
-                  href="/careguard"
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-600 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-red-700 dark:border-red-300/40 dark:bg-transparent dark:text-red-100 dark:hover:bg-red-500/10"
-                >
+                <Button as="link" href="/careguard" variant="danger" block className="mt-4 text-[10px] uppercase tracking-widest">
                   Mở kiểm tra tương tác
-                </Link>
-              </article>
+                </Button>
+              </section>
 
             </div>
           </section>

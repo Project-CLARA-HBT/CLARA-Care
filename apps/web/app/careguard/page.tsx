@@ -3,6 +3,10 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Field, Textarea } from "@/components/ui/field";
+import { InlineError } from "@/components/ui/surface";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
@@ -31,21 +35,21 @@ import {
   ScanDetection
 } from "@/lib/selfmed";
 
-function getRiskBadgeClass(riskTier: string | null): string {
+function getRiskBadgeTone(riskTier: string | null): BadgeTone {
   const value = riskTier?.toLowerCase() ?? "";
   if (value.includes("high") || value.includes("red") || value.includes("critical")) {
-    return "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300";
+    return "danger";
   }
   if (value.includes("orange") || value.includes("elevated")) {
-    return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300";
+    return "warn";
   }
   if (value.includes("medium") || value.includes("moderate") || value.includes("amber")) {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
+    return "warn";
   }
   if (value.includes("low") || value.includes("green")) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "ok";
   }
-  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
+  return "neutral";
 }
 
 function getDetectionKey(item: ScanDetection, index: number): string {
@@ -60,20 +64,20 @@ function getNormalizationLabel(source: string | null | undefined): string {
   return "Chưa xác định";
 }
 
-function getNormalizationClass(source: string | null | undefined): string {
+function getNormalizationTone(source: string | null | undefined): BadgeTone {
   if (source === "db" || source === "matched") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "ok";
   }
   if (source === "candidate") {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
+    return "warn";
   }
   if (source === "needs_review") {
-    return "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-200";
+    return "danger";
   }
   if (source === "fallback") {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300";
+    return "danger";
   }
-  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
+  return "neutral";
 }
 
 function getSeverityTone(severity: string | undefined, fallbackIndex: number): "major" | "moderate" {
@@ -119,10 +123,10 @@ function getRiskScoreMeaning(result: CareguardAnalyzeResult | null, score: numbe
 }
 
 function getRiskResultClass(score: number): string {
-  if (score >= 70) return "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/35 dark:text-red-200";
-  if (score >= 55) return "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/35 dark:text-orange-200";
-  if (score >= 35) return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-200";
-  return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/35 dark:text-emerald-200";
+  if (score >= 70) return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
+  if (score >= 55) return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  if (score >= 35) return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
 }
 
 function getRiskResultIcon(score: number): string {
@@ -518,8 +522,8 @@ export default function CareguardPage() {
   if (!consentAccepted) {
     return (
       <PageShell title="CLARA CareGuard" variant="plain">
-        <section className="rounded-3xl border border-amber-300 bg-amber-50 p-6 shadow-sm dark:border-amber-800 dark:bg-amber-950/25">
-          <p className="text-xs font-semibold uppercase tracking-widest text-amber-800 dark:text-amber-200">Yêu cầu xác nhận điều khoản y tế</p>
+        <section className="rounded-3xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--status-warn-text)]">Yêu cầu xác nhận điều khoản y tế</p>
           <h2 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">Tuyên bố miễn trừ trách nhiệm y tế</h2>
           <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
             CLARA hỗ trợ cảnh báo tương tác thuốc và phân tích an toàn, không thay thế bác sĩ kê đơn/chẩn đoán.
@@ -527,17 +531,17 @@ export default function CareguardPage() {
           </p>
           <p className="mt-3 text-sm text-[var(--text-secondary)]">
             Xem đầy đủ tại{" "}
-            <Link className="font-semibold text-blue-700 underline dark:text-blue-300" href="/legal/consent">
+            <Link className="font-semibold text-[var(--text-brand)] underline" href="/legal/consent">
               Đồng thuận sử dụng y tế
             </Link>
             {" "}và{" "}
-            <Link className="font-semibold text-blue-700 underline dark:text-blue-300" href="/legal/privacy">
+            <Link className="font-semibold text-[var(--text-brand)] underline" href="/legal/privacy">
               Chính sách quyền riêng tư
             </Link>
             . Phiên bản: <span className="font-semibold">{consentRequiredVersion || "-"}</span>
           </p>
 
-          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-white p-4 dark:border-amber-800 dark:bg-slate-900">
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] p-4">
             <input
               type="checkbox"
               className="mt-1 h-5 w-5"
@@ -549,16 +553,18 @@ export default function CareguardPage() {
             </span>
           </label>
 
-          <button
-            type="button"
-            onClick={onAcceptConsent}
-            disabled={!consentChecked || acceptingConsent}
-            className="mt-5 min-h-11 rounded-xl bg-[color:var(--brand-700)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-          >
-            {acceptingConsent ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
-          </button>
+          <div className="mt-5">
+            <Button
+              onClick={onAcceptConsent}
+              disabled={!consentChecked || acceptingConsent}
+              loading={acceptingConsent}
+              loadingLabel="Đang lưu xác nhận..."
+            >
+              Đồng ý và tiếp tục
+            </Button>
+          </div>
 
-          {consentError ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{consentError}</p> : null}
+          {consentError ? <div className="mt-3"><InlineError message={consentError} onRetry={() => void refreshConsentStatus()} /></div> : null}
         </section>
       </PageShell>
     );
@@ -575,7 +581,7 @@ export default function CareguardPage() {
                 Nhập ít nhất 2 thuốc để CLARA kiểm tra tương tác và gợi ý lưu ý an toàn.
               </p>
             </div>
-            <div className="inline-flex max-w-md items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800 dark:border-teal-800 dark:bg-teal-950/35 dark:text-teal-200">
+            <div className="inline-flex max-w-md items-center gap-2 rounded-xl border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm font-semibold text-[var(--status-ok-text)]">
               <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
               Dữ liệu nhập ở trang này không tự lưu vào tủ thuốc cá nhân.
             </div>
@@ -625,32 +631,29 @@ export default function CareguardPage() {
 
           {activeInputTab === "manual" ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <div>
-                <label className="text-sm font-semibold text-[var(--text-primary)]" htmlFor="careguard-medication-text">
-                  Nhập danh sách thuốc
-                </label>
-                <textarea
-                  id="careguard-medication-text"
-                  value={receiptTextInput}
-                  onChange={(event) => setReceiptTextInput(event.target.value)}
-                  className="mt-2 min-h-[180px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)] focus:ring-2 focus:ring-blue-500/15"
-                  placeholder="Ví dụ: Metformin 500mg sáng/tối, Ibuprofen 400mg khi đau, Amlodipine 5mg mỗi ngày"
-                />
-              </div>
+              <Textarea
+                id="careguard-medication-text"
+                label="Nhập danh sách thuốc"
+                value={receiptTextInput}
+                onChange={(event) => setReceiptTextInput(event.target.value)}
+                className="min-h-[180px]"
+                placeholder="Ví dụ: Metformin 500mg sáng/tối, Ibuprofen 400mg khi đau, Amlodipine 5mg mỗi ngày"
+              />
               <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Gợi ý nhập nhanh</p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                   Mỗi dòng một thuốc, hoặc ngăn cách bằng dấu phẩy. Có thể thêm liều, thời điểm dùng, dị ứng hoặc thuốc không kê đơn.
                 </p>
-                <button
-                  type="button"
+                <Button
+                  className="mt-4"
+                  icon="bolt"
                   onClick={onRecognizeReceiptText}
                   disabled={isScanning}
-                  className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--brand-600)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  loading={isScanning}
+                  loadingLabel="Đang phân tích..."
                 >
-                  <span className="material-symbols-outlined text-[18px]">bolt</span>
-                  {isScanning ? "Đang phân tích..." : "Phân tích văn bản"}
-                </button>
+                  Phân tích văn bản
+                </Button>
               </div>
             </div>
           ) : (
@@ -673,7 +676,7 @@ export default function CareguardPage() {
 
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="max-w-xl">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-[var(--text-brand)] dark:bg-blue-950/45">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
                     <span className="material-symbols-outlined">upload_file</span>
                   </div>
                   <h3 className="mt-4 text-lg font-bold text-[var(--text-primary)]">Tải ảnh hoặc PDF đơn thuốc</h3>
@@ -685,28 +688,21 @@ export default function CareguardPage() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => hiddenFileInputRef.current?.click()}
-                    className="inline-flex min-h-10 items-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-semibold text-white"
-                  >
+                  <Button onClick={() => hiddenFileInputRef.current?.click()}>
                     Chọn ảnh/PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="inline-flex min-h-10 items-center rounded-lg border border-[color:var(--shell-border-strong)] px-4 text-sm font-semibold text-[var(--text-brand)]"
-                  >
+                  </Button>
+                  <Button variant="secondary" onClick={() => cameraInputRef.current?.click()}>
                     Mở camera
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={onScanReceiptFile}
                     disabled={isScanning || !receiptFile}
-                    className="inline-flex min-h-10 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-sm font-semibold text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                    loading={isScanning}
+                    loadingLabel="Đang phân tích..."
                   >
-                    {isScanning ? "Đang phân tích..." : "Phân tích ảnh"}
-                  </button>
+                    Phân tích ảnh
+                  </Button>
                 </div>
               </div>
             </div>
@@ -727,27 +723,27 @@ export default function CareguardPage() {
                 <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">Kiểm tra lại trước khi thêm vào danh sách</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => onConfirmAllLowConfidence(true)}
                   disabled={lowConfidenceDetectionCount === 0}
-                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                  className="border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)] hover:bg-[var(--status-warn-bg)]"
                 >
                   Xác nhận mục cần kiểm tra
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  size="sm"
                   onClick={onImportDetections}
                   disabled={pendingLowConfidenceDetections.length > 0}
-                  className="rounded-lg bg-[var(--brand-600)] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Thêm vào danh sách kiểm tra
-                </button>
+                </Button>
               </div>
             </div>
 
             {pendingLowConfidenceDetections.length > 0 ? (
-              <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="mb-3 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-warn-text)]">
                 Còn {pendingLowConfidenceDetections.length}/{lowConfidenceDetectionCount} thuốc cần xác nhận trước khi thêm.
               </p>
             ) : null}
@@ -764,9 +760,11 @@ export default function CareguardPage() {
                       {item.dosage ? `Liều: ${item.dosage}` : "Liều: Chưa có"}
                     </p>
                     <p className="mt-1 text-xs text-[var(--text-secondary)]">Mức chắc chắn nhận diện: {Math.round(item.confidence * 100)}%</p>
-                    <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.mapping_source)}`}>
-                      {getNormalizationLabel(item.mapping_source)}
-                    </span>
+                    <div className="mt-2">
+                      <Badge tone={getNormalizationTone(item.mapping_source)}>
+                        {getNormalizationLabel(item.mapping_source)}
+                      </Badge>
+                    </div>
                     {isLowConfidence ? (
                       <label className="mt-2 flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
                         <input
@@ -796,31 +794,24 @@ export default function CareguardPage() {
             </span>
           </div>
 
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <input
+          <div className="mb-4 flex flex-wrap items-end gap-2">
+            <Field
+              wrapperClassName="min-w-[260px] flex-1"
+              aria-label="Thêm nhanh thuốc"
               value={manualMedicationInput}
               onChange={(event) => setManualMedicationInput(event.target.value)}
               placeholder="Thêm nhanh, ví dụ: Metformin, Ibuprofen"
-              className="min-w-[260px] flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
-            <button
-              type="button"
-              onClick={onAddManualMedication}
-              className="rounded-lg border border-[color:var(--shell-border-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-muted)]"
-            >
+            <Button variant="secondary" onClick={onAddManualMedication}>
               Thêm thuốc
-            </button>
-            <button
-              type="button"
-              onClick={refreshCabinet}
-              className="rounded-lg border border-[color:var(--shell-border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
-            >
+            </Button>
+            <Button variant="ghost" icon="refresh" onClick={refreshCabinet}>
               Làm mới
-            </button>
+            </Button>
           </div>
 
           {cabinetLoading ? <p className="text-sm text-[var(--text-secondary)]">Đang tải danh sách thuốc...</p> : null}
-          {cabinetError ? <p className="text-sm text-red-700 dark:text-red-300">{cabinetError}</p> : null}
+          {cabinetError ? <div className="mb-2"><InlineError message={cabinetError} onRetry={() => void refreshCabinet()} /></div> : null}
           {cabinetNotice ? <p className="text-sm text-[var(--text-secondary)]">{cabinetNotice}</p> : null}
 
           {cabinet.length > 0 ? (
@@ -831,17 +822,15 @@ export default function CareguardPage() {
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
                       <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.dosage || "Liều: Chưa có"}</p>
-                      <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getNormalizationClass(item.normalization_status ?? item.normalization_source)}`}>
-                        {getNormalizationLabel(item.normalization_status ?? item.normalization_source)}
+                      <span className="mt-2 inline-block">
+                        <Badge tone={getNormalizationTone(item.normalization_status ?? item.normalization_source)}>
+                          {getNormalizationLabel(item.normalization_status ?? item.normalization_source)}
+                        </Badge>
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveCabinetItem(item.id)}
-                      className="rounded border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
-                    >
+                    <Button variant="danger" size="sm" onClick={() => onRemoveCabinetItem(item.id)}>
                       Xóa
-                    </button>
+                    </Button>
                   </div>
                 </li>
               ))}
@@ -855,19 +844,20 @@ export default function CareguardPage() {
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
+            <Button
+              size="lg"
               onClick={onRunAutoDdi}
               disabled={autoChecking || !canCheckInteractions}
-              className="inline-flex min-h-11 items-center rounded-lg bg-[var(--brand-600)] px-5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              loading={autoChecking}
+              loadingLabel="Đang kiểm tra..."
             >
-              {autoChecking ? "Đang kiểm tra..." : "Kiểm tra tương tác thuốc"}
-            </button>
+              Kiểm tra tương tác thuốc
+            </Button>
             <span className="text-sm text-[var(--text-muted)]">
               {canCheckInteractions ? "Đã đủ số thuốc để kiểm tra." : "Cần ít nhất 2 thuốc để bật kiểm tra."}
             </span>
           </div>
-          {autoError ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{autoError}</p> : null}
+          {autoError ? <div className="mt-3"><InlineError message={autoError} onRetry={() => void onRunAutoDdi()} /></div> : null}
         </section>
 
         <details className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
@@ -894,20 +884,21 @@ export default function CareguardPage() {
               </label>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <input value={ageInput} onChange={(event) => setAgeInput(event.target.value)} placeholder="Tuổi (không bắt buộc)" className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm" />
-              <input value={allergiesInput} onChange={(event) => setAllergiesInput(event.target.value)} placeholder="Dị ứng / OTC / thảo dược" className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm" />
-              <input value={symptomsInput} onChange={(event) => setSymptomsInput(event.target.value)} placeholder="Triệu chứng, ngăn cách bằng dấu phẩy" className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm" />
-              <input value={labsInput} onChange={(event) => setLabsInput(event.target.value)} placeholder="Xét nghiệm: egfr=28, creatinine=2.1" className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm" />
+              <Field value={ageInput} onChange={(event) => setAgeInput(event.target.value)} placeholder="Tuổi (không bắt buộc)" aria-label="Tuổi" />
+              <Field value={allergiesInput} onChange={(event) => setAllergiesInput(event.target.value)} placeholder="Dị ứng / OTC / thảo dược" aria-label="Dị ứng, OTC hoặc thảo dược" />
+              <Field value={symptomsInput} onChange={(event) => setSymptomsInput(event.target.value)} placeholder="Triệu chứng, ngăn cách bằng dấu phẩy" aria-label="Triệu chứng" />
+              <Field value={labsInput} onChange={(event) => setLabsInput(event.target.value)} placeholder="Xét nghiệm: egfr=28, creatinine=2.1" aria-label="Kết quả xét nghiệm" />
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={onRunAdvancedAnalyze}
               disabled={manualChecking || !canCheckInteractions}
-              className="rounded-lg border border-[color:var(--shell-border-strong)] px-5 py-2 text-sm font-bold text-[var(--text-brand)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+              loading={manualChecking}
+              loadingLabel="Đang phân tích kỹ hơn..."
             >
-              {manualChecking ? "Đang phân tích kỹ hơn..." : "Phân tích kỹ hơn với thông tin bổ sung"}
-            </button>
-            {manualError ? <p className="text-sm text-red-700 dark:text-red-300">{manualError}</p> : null}
+              Phân tích kỹ hơn với thông tin bổ sung
+            </Button>
+            {manualError ? <div><InlineError message={manualError} onRetry={onRunAdvancedAnalyze} /></div> : null}
           </div>
         </details>
 
@@ -918,13 +909,12 @@ export default function CareguardPage() {
                 <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Khu vực 5</p>
                 <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Kết quả kiểm tra</h2>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => setCabinetNotice("Đã lưu danh sách kiểm tra vào tủ thuốc cá nhân.")}
-                className="rounded-lg border border-[color:var(--shell-border-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-muted)]"
               >
                 Lưu vào tủ thuốc cá nhân
-              </button>
+              </Button>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
@@ -940,10 +930,10 @@ export default function CareguardPage() {
                   </div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-[11px] font-semibold">
-                  <span className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-800">Xanh: chưa thấy đáng kể</span>
-                  <span className="rounded-md bg-amber-100 px-2 py-1 text-amber-800">Vàng: cần lưu ý</span>
-                  <span className="rounded-md bg-orange-100 px-2 py-1 text-orange-800">Cam: nên hỏi chuyên môn</span>
-                  <span className="rounded-md bg-red-100 px-2 py-1 text-red-800">Đỏ: cần liên hệ bác sĩ</span>
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--status-ok-bg)] px-2 py-1 text-[var(--status-ok-text)]">Xanh: chưa thấy đáng kể</span>
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--status-warn-bg)] px-2 py-1 text-[var(--status-warn-text)]">Vàng: cần lưu ý</span>
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--status-warn-bg)] px-2 py-1 text-[var(--status-warn-text)]">Cam: nên hỏi chuyên môn</span>
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--status-danger-bg)] px-2 py-1 text-[var(--status-danger-text)]">Đỏ: cần liên hệ bác sĩ</span>
                 </div>
               </article>
 
@@ -955,12 +945,12 @@ export default function CareguardPage() {
                       {visibleAlerts.map((alert, index) => {
                         const major = alert.tone === "major";
                         return (
-                          <li key={`${alert.title}-${index}`} className={`rounded-xl border-l-4 bg-[var(--surface-panel)] p-4 ${major ? "border-red-500" : "border-amber-500"}`}>
+                          <li key={`${alert.title}-${index}`} className={`rounded-xl border-l-4 bg-[var(--surface-panel)] p-4 ${major ? "border-[color:var(--danger-500)]" : "border-[color:var(--warn-500)]"}`}>
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <p className="font-semibold text-[var(--text-primary)]">{alert.title}</p>
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${major ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                              <Badge tone={major ? "danger" : "warn"}>
                                 {major ? "Cần xử lý sớm" : "Cần lưu ý"}
-                              </span>
+                              </Badge>
                             </div>
                             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{alert.details}</p>
                           </li>
@@ -1033,9 +1023,9 @@ export default function CareguardPage() {
                   <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
                     <h3 className="text-base font-bold text-[var(--text-primary)]">Mức rủi ro tổng quan</h3>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult.riskTier)}`}>
+                      <Badge tone={getRiskBadgeTone(displayedResult.riskTier)}>
                         {formatCareguardRiskLabel(displayedUserView?.riskLevel ?? displayedResult.riskTier)}
-                      </span>
+                      </Badge>
                     </div>
                   </article>
                 }
@@ -1043,15 +1033,15 @@ export default function CareguardPage() {
                 <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
                   <h3 className="text-base font-bold text-[var(--text-primary)]">Độ tin cậy của kết quả</h3>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskBadgeClass(displayedResult.riskTier)}`}>
+                    <Badge tone={getRiskBadgeTone(displayedResult.riskTier)}>
                       {formatCareguardRiskLabel(displayedResult.riskTier)}
-                    </span>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                    </Badge>
+                    <Badge tone="neutral">
                       {displayedResult.attribution?.sourceCount ?? 0} nguồn
-                    </span>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                    </Badge>
+                    <Badge tone="neutral">
                       {displayedResult.attribution?.citationCount ?? 0} trích dẫn
-                    </span>
+                    </Badge>
                   </div>
                 </article>
               </TelemetryPanel>

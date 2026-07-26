@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import api from "@/lib/http-client";
-import AuthFormShell from "@/components/auth-form-shell";
-import AuthField from "@/components/auth/auth-field";
-import AuthFeedback from "@/components/auth/auth-feedback";
+import Button from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard } from "@/components/ui/surface";
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState("");
@@ -37,42 +38,69 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AuthFormShell title="Đặt lại mật khẩu" subtitle="Nhập mã đặt lại và mật khẩu mới để tiếp tục sử dụng tài khoản.">
-      <form className="space-y-4" onSubmit={onSubmit}>
-        <AuthField
-          id="reset-token"
-          label="Mã đặt lại mật khẩu"
-          as="textarea"
-          rows={3}
-          value={token}
-          onChange={setToken}
-          placeholder="Dán mã đặt lại tại đây"
-          required
-        />
+    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
+      <SurfaceCard className="w-full p-7 sm:p-9">
+        <Badge tone="brand">The Clara Care</Badge>
+        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
+          Đặt lại mật khẩu
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          Nhập mã đặt lại và mật khẩu mới để tiếp tục sử dụng tài khoản.
+        </p>
 
-        <AuthField
-          id="reset-new-password"
-          label="Mật khẩu mới"
-          type="password"
-          value={newPassword}
-          onChange={setNewPassword}
-          placeholder="Tối thiểu 8 ký tự"
-          minLength={8}
-          required
-        />
+        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+          <Textarea
+            id="reset-token"
+            label="Mã đặt lại mật khẩu"
+            rows={3}
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="Dán mã đặt lại tại đây"
+            required
+          />
 
-        <AuthFeedback notice={notice} error={error} />
+          <Field
+            id="reset-new-password"
+            label="Mật khẩu mới"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder="Tối thiểu 8 ký tự"
+            minLength={8}
+            required
+          />
 
-        {notice ? (
-          <Link href="/login" className="inline-block text-sm font-medium text-blue-700 hover:underline">
-            Đi đến đăng nhập
-          </Link>
-        ) : null}
+          {notice ? (
+            <p
+              role="status"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+            >
+              {notice}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+            >
+              {error}
+            </p>
+          ) : null}
 
-        <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Đang xử lý..." : "Đặt lại mật khẩu"}
-        </button>
-      </form>
-    </AuthFormShell>
+          {notice ? (
+            <Link
+              href="/login"
+              className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Đi đến đăng nhập
+            </Link>
+          ) : null}
+
+          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang xử lý...">
+            Đặt lại mật khẩu
+          </Button>
+        </form>
+      </SurfaceCard>
+    </main>
   );
 }

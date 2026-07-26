@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { InlineError } from "@/components/ui/surface";
 import {
   WorkspaceConversationShareListItem,
   listWorkspaceShares,
@@ -59,24 +61,25 @@ export default function ChatShareManagementPage() {
     >
       <div className="chrome-panel rounded-2xl p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <Link
-            href="/chat"
-            className="inline-flex min-h-[36px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-          >
-            ← Back to Chat
-          </Link>
-          <button
+          <Button as="link" href="/chat" variant="secondary" size="sm" icon="arrow_back">
+            Back to Chat
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            icon="refresh"
             onClick={() => void load()}
-            className="inline-flex min-h-[36px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
           >
             Reload
-          </button>
+          </Button>
         </div>
 
         {loading ? <p className="text-sm text-[var(--text-muted)]">Đang tải...</p> : null}
-        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-        {!error && notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+        {error ? <InlineError message={error} /> : null}
+        {!error && notice ? (
+          <p className="text-sm text-[var(--status-ok-text)]">{notice}</p>
+        ) : null}
 
         {!loading ? (
           items.length ? (
@@ -102,9 +105,9 @@ export default function ChatShareManagementPage() {
                       <td className="px-2 py-2 text-[var(--text-secondary)]">{item.message_count}</td>
                       <td className="px-2 py-2">
                         {item.is_active ? (
-                          <span className="rounded-full border border-emerald-300/70 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700">Active</span>
+                          <Badge tone="ok">Active</Badge>
                         ) : (
-                          <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-xs text-[var(--text-secondary)]">Revoked</span>
+                          <Badge tone="neutral">Revoked</Badge>
                         )}
                       </td>
                       <td className="px-2 py-2 text-xs text-[var(--text-secondary)]">
@@ -115,29 +118,36 @@ export default function ChatShareManagementPage() {
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-1.5">
-                          <button
+                          <Button
                             type="button"
+                            variant="secondary"
+                            size="sm"
+                            icon="content_copy"
                             onClick={() => void onCopy(item.public_url)}
-                            className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-xs text-[var(--text-secondary)]"
                           >
                             Copy
-                          </button>
+                          </Button>
                           <a
                             href={item.public_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-700"
+                            className="inline-flex min-h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--text-secondary)] shadow-[var(--shadow-sm)] transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)] focus-ring"
                           >
+                            <span className="material-symbols-outlined text-[1.15em]" aria-hidden="true">
+                              open_in_new
+                            </span>
                             Open
                           </a>
                           {item.is_active ? (
-                            <button
+                            <Button
                               type="button"
+                              variant="danger"
+                              size="sm"
+                              icon="link_off"
                               onClick={() => void onRevoke(item.conversation_id)}
-                              className="rounded border border-rose-300/70 bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-700"
                             >
                               Revoke
-                            </button>
+                            </Button>
                           ) : null}
                         </div>
                       </td>

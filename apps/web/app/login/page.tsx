@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
 import { setAccessToken, setRefreshToken, setRole as setStoredRole } from "@/lib/auth-store";
-import AuthFormShell from "@/components/auth-form-shell";
-import AuthField from "@/components/auth/auth-field";
-import AuthFeedback from "@/components/auth/auth-feedback";
+import Button from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard } from "@/components/ui/surface";
 import { resolvePostLoginPath } from "@/lib/navigation.config";
 
 export default function LoginPage() {
@@ -123,116 +124,151 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthFormShell
-      title={isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
-      subtitle={
-        isOtpStep
-          ? "Nhập mã OTP vừa gửi để hoàn tất đăng nhập."
-          : "Đăng nhập để truy cập CLARA Chat, Self-Med và các công cụ chuyên môn."
-      }
-    >
-      <form className="space-y-4" onSubmit={onSubmit}>
-        {!isOtpStep ? (
-          <>
-            <AuthField
-              id="login-email"
-              label="Email"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="name@example.com"
-              required
-            />
-            <AuthField
-              id="login-password"
-              label="Mật khẩu"
-              type="password"
-              value={password}
-              onChange={setPassword}
-              placeholder="Nhập mật khẩu"
-              required
-            />
-          </>
-        ) : (
-          <>
-            <AuthField
-              id="login-otp"
-              label="Mã OTP"
-              type="text"
-              value={otpCode}
-              onChange={setOtpCode}
-              placeholder="Nhập mã OTP 6 số"
-              required
-              minLength={6}
-              maxLength={6}
-              autoComplete="one-time-code"
-            />
-            <p className="text-xs text-slate-500">
-              OTP đã gửi tới: <span className="font-semibold text-slate-700">{otpEmail}</span>
-            </p>
-            {otpDeliveryStatus ? (
-              <p className="text-xs text-slate-500">Trạng thái gửi OTP: {otpDeliveryStatus}</p>
-            ) : null}
-            {otpExpiresInSeconds ? (
-              <p className="text-xs text-slate-500">
-                Mã có hiệu lực khoảng {Math.max(1, Math.round(otpExpiresInSeconds / 60))} phút.
-              </p>
-            ) : null}
-            {otpPreviewCode ? (
-              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                OTP preview (dev): <span className="font-bold">{otpPreviewCode}</span>
-              </p>
-            ) : null}
-          </>
-        )}
-
-        <AuthFeedback error={error} />
-
-        {!isOtpStep && shouldShowVerifyLink ? (
-          <Link href={`/verify-email?email=${encodeURIComponent(email)}`} className="text-sm font-medium text-blue-700 hover:underline">
-            Tài khoản chưa xác thực? Đi đến trang xác thực email
-          </Link>
-        ) : null}
-
-        <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" disabled={isSubmitting} type="submit">
-          {isSubmitting ? (isOtpStep ? "Đang xác thực..." : "Đang đăng nhập...") : isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
-        </button>
-
-        {!isOtpStep ? (
-          <div className="flex justify-between text-sm">
-            <Link href="/register" className="text-blue-700 hover:underline">
-              Tạo tài khoản
-            </Link>
-            <Link href="/forgot-password" className="text-slate-600 hover:underline">
-              Quên mật khẩu?
-            </Link>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={resetOtpStep}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Quay lại đăng nhập bằng mật khẩu
-          </button>
-        )}
-
-        <p className="text-xs leading-6 text-slate-500">
-          Bằng việc tiếp tục, bạn xác nhận đã đọc{" "}
-          <Link href="/legal/terms" className="font-medium text-blue-700 hover:underline">
-            Điều khoản
-          </Link>
-          ,{" "}
-          <Link href="/legal/privacy" className="font-medium text-blue-700 hover:underline">
-            Quyền riêng tư
-          </Link>{" "}
-          và{" "}
-          <Link href="/legal/consent" className="font-medium text-blue-700 hover:underline">
-            Đồng thuận y tế
-          </Link>
-          .
+    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
+      <SurfaceCard className="w-full p-7 sm:p-9">
+        <Badge tone="brand">The Clara Care</Badge>
+        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
+          {isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          {isOtpStep
+            ? "Nhập mã OTP vừa gửi để hoàn tất đăng nhập."
+            : "Đăng nhập để truy cập CLARA Chat, Self-Med và các công cụ chuyên môn."}
         </p>
-      </form>
-    </AuthFormShell>
+
+        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+          {!isOtpStep ? (
+            <>
+              <Field
+                id="login-email"
+                label="Email"
+                type="email"
+                inputMode="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                required
+              />
+              <Field
+                id="login-password"
+                label="Mật khẩu"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Nhập mật khẩu"
+                required
+              />
+            </>
+          ) : (
+            <>
+              <Field
+                id="login-otp"
+                label="Mã OTP"
+                type="text"
+                value={otpCode}
+                onChange={(event) => setOtpCode(event.target.value)}
+                placeholder="Nhập mã OTP 6 số"
+                required
+                minLength={6}
+                maxLength={6}
+                autoComplete="one-time-code"
+              />
+              <p className="text-xs text-[var(--text-muted)]">
+                OTP đã gửi tới:{" "}
+                <span className="font-semibold text-[var(--text-primary)]">{otpEmail}</span>
+              </p>
+              {otpDeliveryStatus ? (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Trạng thái gửi OTP: {otpDeliveryStatus}
+                </p>
+              ) : null}
+              {otpExpiresInSeconds ? (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Mã có hiệu lực khoảng {Math.max(1, Math.round(otpExpiresInSeconds / 60))} phút.
+                </p>
+              ) : null}
+              {otpPreviewCode ? (
+                <p className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs text-[var(--status-warn-text)]">
+                  OTP preview (dev): <span className="font-bold">{otpPreviewCode}</span>
+                </p>
+              ) : null}
+            </>
+          )}
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          {!isOtpStep && shouldShowVerifyLink ? (
+            <Link
+              href={`/verify-email?email=${encodeURIComponent(email)}`}
+              className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Tài khoản chưa xác thực? Đi đến trang xác thực email
+            </Link>
+          ) : null}
+
+          <Button
+            type="submit"
+            block
+            loading={isSubmitting}
+            loadingLabel={isOtpStep ? "Đang xác thực..." : "Đang đăng nhập..."}
+          >
+            {isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
+          </Button>
+
+          {!isOtpStep ? (
+            <div className="flex justify-between text-sm">
+              <Link
+                href="/register"
+                className="focus-ring rounded text-[var(--text-brand)] hover:underline"
+              >
+                Tạo tài khoản
+              </Link>
+              <Link
+                href="/forgot-password"
+                className="focus-ring rounded text-[var(--text-secondary)] hover:underline"
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
+          ) : (
+            <Button type="button" variant="secondary" block onClick={resetOtpStep}>
+              Quay lại đăng nhập bằng mật khẩu
+            </Button>
+          )}
+
+          <p className="text-xs leading-6 text-[var(--text-muted)]">
+            Bằng việc tiếp tục, bạn xác nhận đã đọc{" "}
+            <Link
+              href="/legal/terms"
+              className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Điều khoản
+            </Link>
+            ,{" "}
+            <Link
+              href="/legal/privacy"
+              className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Quyền riêng tư
+            </Link>{" "}
+            và{" "}
+            <Link
+              href="/legal/consent"
+              className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
+            >
+              Đồng thuận y tế
+            </Link>
+            .
+          </p>
+        </form>
+      </SurfaceCard>
+    </main>
   );
 }

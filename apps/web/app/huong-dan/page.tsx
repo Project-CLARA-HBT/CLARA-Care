@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { PRIMARY_ACTIONS, type PrimarySurface } from "@/lib/primary-actions";
+import Button from "@/components/ui/button";
+import { SurfaceCard } from "@/components/ui/surface";
 
 type GuideTask = {
   title: string;
@@ -65,19 +66,19 @@ const LABELS = [
 export default function GuidePage() {
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-5 py-8 sm:px-6 lg:px-8">
-      <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
+      <SurfaceCard className="p-5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Bắt đầu tại đây</p>
         <h1 className="mt-2 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">Hướng dẫn sử dụng CLARA</h1>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
           Chọn việc bạn muốn làm, làm theo 3 bước ngắn, rồi mở thẳng đúng màn hình. CLARA chỉ hỗ trợ tham khảo; khi có dấu hiệu nguy hiểm, hãy liên hệ cơ sở y tế.
         </p>
-      </section>
+      </SurfaceCard>
 
       <section className="grid gap-3 md:grid-cols-2">
         {TASKS.map((task) => {
           const action = PRIMARY_ACTIONS[task.surface];
           return (
-            <article key={task.title} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-sm">
+            <SurfaceCard key={task.title} className="p-4">
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined mt-0.5 text-[22px] text-[var(--brand-600)]">{task.icon}</span>
                 <div className="min-w-0 flex-1">
@@ -90,25 +91,27 @@ export default function GuidePage() {
                   <li key={step}>{step}</li>
                 ))}
               </ol>
-              <Link href={action.href} className="focus-ring mt-4 inline-flex min-h-10 items-center rounded-md bg-[var(--text-primary)] px-3 text-sm font-semibold text-[var(--bg-canvas)] transition hover:opacity-90">
-                {action.label}
-              </Link>
-            </article>
+              <div className="mt-4">
+                <Button as="link" href={action.href} variant="secondary" size="sm">
+                  {action.label}
+                </Button>
+              </div>
+            </SurfaceCard>
           );
         })}
       </section>
 
-      <section className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+      <SurfaceCard className="p-5">
         <h2 className="text-base font-semibold text-[var(--text-primary)]">Các nhãn trong ô chat nghĩa là gì?</h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {LABELS.map((item) => (
-            <div key={item.term} className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+            <div key={item.term} className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{item.term}</p>
               <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{item.meaning}</p>
             </div>
           ))}
         </div>
-      </section>
+      </SurfaceCard>
     </main>
   );
 }

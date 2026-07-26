@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
 import AsyncSection, {
   selectAsyncState,
   type AsyncState,
@@ -266,13 +268,7 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
   };
 }
 
-function InputLabel({ children }: { children: string }) {
-  return (
-    <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-      {children}
-    </span>
-  );
-}
+
 
 /**
  * Per-entry provenance + verification chips (personal-health-record Requirement
@@ -297,14 +293,14 @@ function ProvenanceBadges({
   return (
     <div className="flex flex-wrap gap-1.5">
       {source ? (
-        <span className="inline-flex items-center gap-1 rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold text-[#1D4ED8] dark:border-sky-500/60 dark:bg-sky-500/15 dark:text-sky-100">
+        <Badge tone="brand">
           {sourceLabel}: {SOURCE_LABELS[source][uiLanguage]}
-        </span>
+        </Badge>
       ) : null}
       {verification ? (
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200">
+        <Badge tone="neutral">
           {verificationLabel}: {VERIFICATION_LABELS[verification][uiLanguage]}
-        </span>
+        </Badge>
       ) : null}
     </div>
   );
@@ -353,7 +349,7 @@ function CompletenessMeter({
                     aria-label={text.completenessTitle}
                   >
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-sky-600 to-cyan-500 transition-[width]"
+                      className="h-full rounded-full bg-[var(--brand-500)] transition-[width]"
                       style={{ width: `${percent}%` }}
                     />
                   </div>
@@ -367,12 +363,9 @@ function CompletenessMeter({
                       {text.completenessPresent}:
                     </span>
                     {data.present.map((cls) => (
-                      <span
-                        key={cls}
-                        className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/60 dark:bg-emerald-500/15 dark:text-emerald-100"
-                      >
+                      <Badge key={cls} tone="ok">
                         {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 ) : null}
@@ -382,16 +375,13 @@ function CompletenessMeter({
                       {text.completenessMissing}:
                     </span>
                     {data.missing.map((cls) => (
-                      <span
-                        key={cls}
-                        className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200"
-                      >
+                      <Badge key={cls} tone="warn">
                         {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[13px] text-emerald-600 dark:text-emerald-300">
+                  <p className="text-[13px] text-[var(--status-ok-text)]">
                     {text.completenessComplete}
                   </p>
                 )}
@@ -405,15 +395,11 @@ function CompletenessMeter({
 }
 
 const phrPanelClass =
-  "rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90 sm:p-6";
+  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-sm)] sm:p-6";
 const phrColumnClass =
-  "rounded-2xl border border-[#B6D4FE] bg-white p-4 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-sm)]";
 const phrItemClass =
-  "rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-3 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
-const addButtonClass =
-  "inline-flex min-h-9 items-center rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-3 text-sm font-bold text-[#1D4ED8] transition hover:bg-[#DBEAFE] hover:text-[#1E40AF] focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100 dark:hover:bg-sky-500/28";
-const removeButtonClass =
-  "justify-self-start rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100";
+  "rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-sm)]";
 
 export default function PhrPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
@@ -624,14 +610,14 @@ export default function PhrPage() {
             (personal-health-record Requirement 18.4; Req 13.5). */}
         <p
           role="note"
-          className="rounded-2xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-[13px] leading-6 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-[13px] leading-6 text-[var(--status-warn-text)]"
         >
           {text.disclaimer}
         </p>
 
         {/* PHR consents are managed through the unified Consent Center, not a
             PHR-only toggle (personal-health-record Requirement 19.5). */}
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[var(--text-primary)]">
               {text.consentTitle}
@@ -640,12 +626,9 @@ export default function PhrPage() {
               {text.consentBody}
             </p>
           </div>
-          <Link
-            href="/account/consent"
-            className="inline-flex min-h-[38px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-brand)] transition hover:border-[color:var(--shell-border-strong)]"
-          >
+          <Button as="link" href="/account/consent" variant="secondary" size="sm">
             {text.consentLink}
-          </Link>
+          </Button>
         </section>
 
         {/* USCDI completeness meter — only when the capability is effective
@@ -699,14 +682,16 @@ export default function PhrPage() {
                 ? new Date(record.updated_at).toLocaleString()
                 : text.unknown}
             </div>
-            <button
+            <Button
               type="button"
               onClick={onSave}
               disabled={loading || saving}
-              className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              loading={saving}
+              loadingLabel={text.saving}
+              icon="save"
             >
-              {saving ? text.saving : text.save}
-            </button>
+              {text.save}
+            </Button>
           </div>
           {loading ? (
             <p className="mt-3 text-sm text-[var(--text-secondary)]">
@@ -714,9 +699,11 @@ export default function PhrPage() {
             </p>
           ) : null}
           {message ? (
-            <p className="mt-3 text-sm text-emerald-300">{message}</p>
+            <p className="mt-3 text-sm text-[var(--status-ok-text)]">{message}</p>
           ) : null}
-          {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
+          {error ? (
+            <p className="mt-3 text-sm text-[var(--status-danger-text)]">{error}</p>
+          ) : null}
         </section>
 
         <section className={phrPanelClass}>
@@ -724,154 +711,120 @@ export default function PhrPage() {
             {text.profile}
           </p>
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.fullName}</InputLabel>
-              <input
-                className="input"
-                value={record.full_name}
-                onChange={(e) => setField("full_name", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.dob}</InputLabel>
-              <input
-                type="date"
-                className="input"
-                value={toInputDate(record.date_of_birth)}
-                onChange={(e) =>
-                  setField("date_of_birth", e.target.value || null)
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.gender}</InputLabel>
-              <input
-                className="input"
-                value={record.gender}
-                onChange={(e) => setField("gender", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.bloodType}</InputLabel>
-              <input
-                className="input"
-                value={record.blood_type}
-                onChange={(e) => setField("blood_type", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.height}</InputLabel>
-              <input
-                inputMode="decimal"
-                className="input"
-                value={record.height_cm ?? ""}
-                onChange={(e) =>
-                  setField("height_cm", parseInputNumber(e.target.value))
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.weight}</InputLabel>
-              <input
-                inputMode="decimal"
-                className="input"
-                value={record.weight_kg ?? ""}
-                onChange={(e) =>
-                  setField("weight_kg", parseInputNumber(e.target.value))
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.phone}</InputLabel>
-              <input
-                className="input"
-                value={record.phone}
-                onChange={(e) => setField("phone", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.insurance}</InputLabel>
-              <input
-                className="input"
-                value={record.insurance_id}
-                onChange={(e) => setField("insurance_id", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.emergencyName}</InputLabel>
-              <input
-                className="input"
-                value={record.emergency_contact_name}
-                onChange={(e) =>
-                  setField("emergency_contact_name", e.target.value)
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <InputLabel>{text.emergencyPhone}</InputLabel>
-              <input
-                className="input"
-                value={record.emergency_contact_phone}
-                onChange={(e) =>
-                  setField("emergency_contact_phone", e.target.value)
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 md:col-span-2">
-              <InputLabel>{text.address}</InputLabel>
-              <input
-                className="input"
-                value={record.address}
-                onChange={(e) => setField("address", e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 md:col-span-2">
-              <InputLabel>{text.notes}</InputLabel>
-              <textarea
-                className="input min-h-[84px] resize-y py-2.5"
-                value={record.notes}
-                onChange={(e) => setField("notes", e.target.value)}
-              />
-            </label>
+            <Field
+              label={text.fullName}
+              value={record.full_name}
+              onChange={(e) => setField("full_name", e.target.value)}
+            />
+            <Field
+              label={text.dob}
+              type="date"
+              value={toInputDate(record.date_of_birth)}
+              onChange={(e) =>
+                setField("date_of_birth", e.target.value || null)
+              }
+            />
+            <Field
+              label={text.gender}
+              value={record.gender}
+              onChange={(e) => setField("gender", e.target.value)}
+            />
+            <Field
+              label={text.bloodType}
+              value={record.blood_type}
+              onChange={(e) => setField("blood_type", e.target.value)}
+            />
+            <Field
+              label={text.height}
+              inputMode="decimal"
+              value={record.height_cm ?? ""}
+              onChange={(e) =>
+                setField("height_cm", parseInputNumber(e.target.value))
+              }
+            />
+            <Field
+              label={text.weight}
+              inputMode="decimal"
+              value={record.weight_kg ?? ""}
+              onChange={(e) =>
+                setField("weight_kg", parseInputNumber(e.target.value))
+              }
+            />
+            <Field
+              label={text.phone}
+              value={record.phone}
+              onChange={(e) => setField("phone", e.target.value)}
+            />
+            <Field
+              label={text.insurance}
+              value={record.insurance_id}
+              onChange={(e) => setField("insurance_id", e.target.value)}
+            />
+            <Field
+              label={text.emergencyName}
+              value={record.emergency_contact_name}
+              onChange={(e) =>
+                setField("emergency_contact_name", e.target.value)
+              }
+            />
+            <Field
+              label={text.emergencyPhone}
+              value={record.emergency_contact_phone}
+              onChange={(e) =>
+                setField("emergency_contact_phone", e.target.value)
+              }
+            />
+            <Field
+              label={text.address}
+              wrapperClassName="md:col-span-2"
+              value={record.address}
+              onChange={(e) => setField("address", e.target.value)}
+            />
+            <Textarea
+              label={text.notes}
+              wrapperClassName="md:col-span-2"
+              className="min-h-[84px]"
+              value={record.notes}
+              onChange={(e) => setField("notes", e.target.value)}
+            />
           </div>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+              <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.allergies}
               </p>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
+                icon="add"
                 onClick={addAllergy}
-                className={addButtonClass}
               >
-                + {text.add}
-              </button>
+                {text.add}
+              </Button>
             </div>
             <div className="space-y-3">
               {record.allergies.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.allergyName}
                       value={item.name}
                       onChange={(e) =>
                         updateAllergy(item.id, { name: e.target.value })
                       }
                     />
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.reaction}
                       value={item.reaction}
                       onChange={(e) =>
                         updateAllergy(item.id, { reaction: e.target.value })
                       }
                     />
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.severity}
                       value={item.severity}
                       onChange={(e) =>
@@ -881,8 +834,8 @@ export default function PhrPage() {
                         })
                       }
                     />
-                    <textarea
-                      className="input min-h-[56px] resize-y py-2.5"
+                    <Textarea
+                      className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
                       onChange={(e) =>
@@ -896,8 +849,12 @@ export default function PhrPage() {
                       sourceLabel={text.source}
                       verificationLabel={text.verification}
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="danger"
+                      size="sm"
+                      icon="delete"
+                      className="justify-self-start"
                       onClick={() =>
                         setRecord((prev) => ({
                           ...prev,
@@ -906,10 +863,9 @@ export default function PhrPage() {
                           ),
                         }))
                       }
-                      className={removeButtonClass}
                     >
                       {text.remove}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -918,31 +874,31 @@ export default function PhrPage() {
 
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+              <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.conditions}
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={addCondition}
-                className={addButtonClass}
+                variant="secondary"
+                size="sm"
+                icon="add"
               >
-                + {text.add}
-              </button>
+                {text.add}
+              </Button>
             </div>
             <div className="space-y-3">
               {record.conditions.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.conditionName}
                       value={item.name}
                       onChange={(e) =>
                         updateCondition(item.id, { name: e.target.value })
                       }
                     />
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.status}
                       value={item.status}
                       onChange={(e) =>
@@ -952,9 +908,8 @@ export default function PhrPage() {
                         })
                       }
                     />
-                    <input
+                    <Field
                       type="date"
-                      className="input"
                       placeholder={text.diagnosedOn}
                       value={toInputDate(item.diagnosed_on)}
                       onChange={(e) =>
@@ -963,8 +918,8 @@ export default function PhrPage() {
                         })
                       }
                     />
-                    <textarea
-                      className="input min-h-[56px] resize-y py-2.5"
+                    <Textarea
+                      className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
                       onChange={(e) =>
@@ -978,7 +933,7 @@ export default function PhrPage() {
                       sourceLabel={text.source}
                       verificationLabel={text.verification}
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() =>
                         setRecord((prev) => ({
@@ -988,10 +943,13 @@ export default function PhrPage() {
                           ),
                         }))
                       }
-                      className={removeButtonClass}
+                      variant="danger"
+                      size="sm"
+                      icon="delete"
+                      className="justify-self-start"
                     >
                       {text.remove}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -1000,48 +958,46 @@ export default function PhrPage() {
 
           <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-base font-bold text-[#1F2937] dark:text-slate-100">
+              <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.medications}
               </p>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
+                icon="add"
                 onClick={addMedication}
-                className={addButtonClass}
               >
-                + {text.add}
-              </button>
+                {text.add}
+              </Button>
             </div>
             <div className="space-y-3">
               {record.medications.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.medicationName}
                       value={item.name}
                       onChange={(e) =>
                         updateMedication(item.id, { name: e.target.value })
                       }
                     />
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.dose}
                       value={item.dose}
                       onChange={(e) =>
                         updateMedication(item.id, { dose: e.target.value })
                       }
                     />
-                    <input
-                      className="input"
+                    <Field
                       placeholder={text.frequency}
                       value={item.frequency}
                       onChange={(e) =>
                         updateMedication(item.id, { frequency: e.target.value })
                       }
                     />
-                    <input
+                    <Field
                       type="date"
-                      className="input"
                       placeholder={text.startedOn}
                       value={toInputDate(item.started_on)}
                       onChange={(e) =>
@@ -1050,7 +1006,7 @@ export default function PhrPage() {
                         })
                       }
                     />
-                    <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-[#374151] dark:text-slate-200">
+                    <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                       <input
                         type="checkbox"
                         checked={item.is_current}
@@ -1062,8 +1018,8 @@ export default function PhrPage() {
                       />
                       {text.current}
                     </label>
-                    <textarea
-                      className="input min-h-[56px] resize-y py-2.5"
+                    <Textarea
+                      className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
                       onChange={(e) =>
@@ -1077,8 +1033,11 @@ export default function PhrPage() {
                       sourceLabel={text.source}
                       verificationLabel={text.verification}
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="danger"
+                      size="sm"
+                      icon="delete"
                       onClick={() =>
                         setRecord((prev) => ({
                           ...prev,
@@ -1087,10 +1046,9 @@ export default function PhrPage() {
                           ),
                         }))
                       }
-                      className={removeButtonClass}
                     >
                       {text.remove}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}

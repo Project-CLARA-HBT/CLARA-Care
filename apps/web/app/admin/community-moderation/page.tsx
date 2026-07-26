@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { SurfaceCard, InlineError } from "@/components/ui/surface";
 import {
   SocialReport,
   actOnReport,
@@ -86,11 +88,7 @@ export default function CommunityModerationPage() {
       description="Xem xét các báo cáo nội dung. Gỡ nội dung vi phạm hoặc bỏ qua báo cáo."
     >
       <div className="space-y-4">
-        {error ? (
-          <div className="rounded-xl border border-red-300/50 bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
-            {error}
-          </div>
-        ) : null}
+        {error ? <InlineError message={error} /> : null}
 
         {loading ? (
           <p className="text-sm text-[var(--text-secondary)]">Đang tải…</p>
@@ -101,9 +99,9 @@ export default function CommunityModerationPage() {
         ) : (
           <ul className="space-y-3">
             {reports.map((r) => (
-              <li
+              <SurfaceCard
                 key={r.id}
-                className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -114,24 +112,24 @@ export default function CommunityModerationPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     disabled={busyId === r.id}
                     onClick={() => act(r.id, "dismiss")}
-                    className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                   >
                     Bỏ qua
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
                     disabled={busyId === r.id}
                     onClick={() => act(r.id, "remove")}
-                    className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
                   >
                     Gỡ nội dung
-                  </button>
+                  </Button>
                 </div>
-              </li>
+              </SurfaceCard>
             ))}
           </ul>
         )}

@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/field";
+import { InlineError } from "@/components/ui/surface";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import {
   DdiUserView,
@@ -47,19 +50,19 @@ function riskLevel(value: string | null | undefined): "high" | "medium" | "low" 
   return "unknown";
 }
 
-function riskPillClass(value: string | null | undefined): string {
+function riskTone(value: string | null | undefined): BadgeTone {
   const level = riskLevel(value);
-  if (level === "high") return "border-red-300 bg-red-100 text-red-800 dark:border-red-500/60 dark:bg-red-500/20 dark:text-red-100";
-  if (level === "medium") return "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-100";
-  if (level === "low") return "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-400/60 dark:bg-emerald-500/20 dark:text-emerald-100";
-  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-500/60 dark:bg-slate-500/20 dark:text-slate-100";
+  if (level === "high") return "danger";
+  if (level === "medium") return "warn";
+  if (level === "low") return "ok";
+  return "neutral";
 }
 
 function riskPanelClass(value: string | null | undefined): string {
   const level = riskLevel(value);
-  if (level === "high") return "border-red-300 bg-red-50/85 dark:border-red-500/55 dark:bg-red-500/10";
-  if (level === "medium") return "border-amber-300 bg-amber-50/90 dark:border-amber-400/55 dark:bg-amber-500/10";
-  if (level === "low") return "border-emerald-300 bg-emerald-50/90 dark:border-emerald-400/55 dark:bg-emerald-500/10";
+  if (level === "high") return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)]";
+  if (level === "medium") return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]";
+  if (level === "low") return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]";
   return "border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
 }
 
@@ -164,18 +167,12 @@ export default function SelfMedDdiPage() {
                 <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Kiểm tra tương tác trong tủ thuốc</h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/selfmed"
-                  className="inline-flex min-h-12 items-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
-                >
+                <Button as="link" href="/selfmed" variant="secondary">
                   Về tủ thuốc
-                </Link>
-                <Link
-                  href="/selfmed/add"
-                  className="inline-flex min-h-12 items-center rounded-xl border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
-                >
+                </Button>
+                <Button as="link" href="/selfmed/add">
                   Thêm thuốc
-                </Link>
+                </Button>
               </div>
             </div>
           </section>
@@ -190,7 +187,7 @@ export default function SelfMedDdiPage() {
               </div>
 
               {isLoadingCabinet ? <p className="mt-3 text-sm text-[var(--text-secondary)]">Đang tải danh mục thuốc...</p> : null}
-              {cabinetError ? <p className="mt-3 text-sm text-red-300">{cabinetError}</p> : null}
+              {cabinetError ? <div className="mt-3"><InlineError message={cabinetError} onRetry={() => void refreshCabinet()} /></div> : null}
 
               {!isLoadingCabinet && !items.length ? (
                 <div className="mt-3 rounded-2xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
@@ -217,38 +214,37 @@ export default function SelfMedDdiPage() {
               <h3 className="text-xl font-semibold text-[var(--text-primary)]">Thiết lập kiểm tra</h3>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">Có thể thêm dị ứng để tăng độ chính xác cảnh báo.</p>
 
-              <label className="mt-3 block space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Dị ứng (không bắt buộc)</span>
-                <textarea
-                  value={allergiesInput}
-                  onChange={(event) => setAllergiesInput(event.target.value)}
-                  placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
-                  className="min-h-[140px] w-full rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-sm text-[var(--text-primary)]"
-                />
-              </label>
+              <Textarea
+                label="Dị ứng"
+                optional
+                wrapperClassName="mt-3"
+                value={allergiesInput}
+                onChange={(event) => setAllergiesInput(event.target.value)}
+                placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
+                className="min-h-[140px]"
+              />
 
-              <button
-                type="button"
+              <Button
+                className="mt-3"
                 onClick={() => void onRunDdi()}
                 disabled={isChecking || needsMoreMedicines}
-                className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
+                loading={isChecking}
+                loadingLabel="Đang kiểm tra tương tác..."
               >
-                {isChecking ? "Đang kiểm tra tương tác..." : "Kiểm tra tương tác thuốc"}
-              </button>
+                Kiểm tra tương tác thuốc
+              </Button>
 
-              {needsMoreMedicines ? <p className="mt-2 text-xs text-amber-200">Cần ít nhất {MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác.</p> : null}
-              {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
+              {needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">Cần ít nhất {MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác.</p> : null}
+              {error ? <div className="mt-2"><InlineError message={error} onRetry={() => void onRunDdi()} /></div> : null}
             </section>
           </div>
 
           {result ? (
             <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskLevel)}`}>
               {offlineCachedAt ? (
-                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/90 px-3 py-2 dark:border-amber-400/55 dark:bg-amber-500/10">
-                  <span className="rounded-full border border-amber-400 bg-amber-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-900 dark:border-amber-300/60 dark:bg-amber-500/20 dark:text-amber-100">
-                    {CAREGUARD_OFFLINE_LABEL}
-                  </span>
-                  <span className="text-xs text-amber-900 dark:text-amber-100">
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
+                  <Badge tone="warn">{CAREGUARD_OFFLINE_LABEL}</Badge>
+                  <span className="text-xs text-[var(--status-warn-text)]">
                     {(() => {
                       const at = formatOfflineCachedAt(offlineCachedAt);
                       return at
@@ -260,9 +256,9 @@ export default function SelfMedDdiPage() {
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Kết quả tổng quan</p>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskPillClass(result.riskLevel)}`}>
+                <Badge tone={riskTone(result.riskLevel)}>
                   Mức rủi ro: {formatCareguardRiskLabel(result.riskLevel)}
-                </span>
+                </Badge>
               </div>
 
               {result.alerts.length ? (
@@ -271,9 +267,9 @@ export default function SelfMedDdiPage() {
                     <li key={`${alert.message}-${index}`} className={`rounded-2xl border p-3 ${riskPanelClass(alert.severity)}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.message}</p>
-                        <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${riskPillClass(alert.severity)}`}>
+                        <Badge tone={riskTone(alert.severity)}>
                           {formatCareguardRiskLabel(alert.severity)}
-                        </span>
+                        </Badge>
                       </div>
                       {alert.details ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{alert.details}</p> : null}
                     </li>

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import PageShell from "@/components/ui/page-shell";
+import Button from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard, InlineError } from "@/components/ui/surface";
 import {
   isDsarEnabled,
   listDsarRequests,
@@ -248,7 +251,7 @@ export default function DataRightsPage() {
         {showDisabled ? (
           <p
             role="status"
-            className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm text-[var(--text-secondary)]"
           >
             {text.disabled}
           </p>
@@ -257,28 +260,21 @@ export default function DataRightsPage() {
             {notice ? (
               <p
                 role="status"
-                className="rounded-xl border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-2.5 text-sm font-medium text-[var(--status-ok-text)]"
+                className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-2.5 text-sm font-medium text-[var(--status-ok-text)]"
               >
                 {notice}
               </p>
             ) : null}
-            {error ? (
-              <p
-                role="alert"
-                className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-2.5 text-sm font-medium text-[var(--status-danger-text)]"
-              >
-                {error}
-              </p>
-            ) : null}
+            {error ? <InlineError message={error} /> : null}
 
             <ul className="grid gap-3 md:grid-cols-2">
               {ACTIONS.map((action) => {
                 const isPending = pendingKind === action.kind;
                 const isExport = action.kind === "export";
                 return (
-                  <li
+                  <SurfaceCard
                     key={action.kind}
-                    className="flex flex-col rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4"
+                    className="flex flex-col p-4"
                   >
                     <p className="text-sm font-bold text-[var(--text-primary)]">
                       {action.label[uiLanguage]}
@@ -299,63 +295,64 @@ export default function DataRightsPage() {
                             {text.confirmDelete}
                           </p>
                           <div className="flex gap-2">
-                            <button
-                              type="button"
+                            <Button
+                              variant="danger"
+                              size="sm"
                               disabled={isPending}
                               onClick={() => void onDelete()}
-                              className="inline-flex min-h-[38px] items-center rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 text-sm font-semibold text-[var(--status-danger-text)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {isPending ? text.submitting : text.confirmYes}
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
                               onClick={() => setConfirmingDelete(false)}
-                              className="inline-flex min-h-[38px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm font-semibold text-[var(--text-secondary)]"
                             >
                               {text.cancel}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingDelete(true)}
-                          className="mt-3 inline-flex min-h-[38px] w-fit items-center rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 text-sm font-semibold text-[var(--status-danger-text)]"
-                        >
-                          {action.label[uiLanguage]}
-                        </button>
+                        <div className="mt-3">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setConfirmingDelete(true)}
+                          >
+                            {action.label[uiLanguage]}
+                          </Button>
+                        </div>
                       )
                     ) : (
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() =>
-                          isExport
-                            ? void onExport()
-                            : void onSubmit(
-                                action.kind as Exclude<DsarKind, "export" | "delete">,
-                              )
-                        }
-                        className="mt-3 inline-flex min-h-[38px] w-fit items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--shell-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isPending
-                          ? isExport
-                            ? text.exporting
-                            : text.submitting
-                          : isExport
-                            ? text.download
-                            : text.submit}
-                      </button>
+                      <div className="mt-3">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() =>
+                            isExport
+                              ? void onExport()
+                              : void onSubmit(
+                                  action.kind as Exclude<DsarKind, "export" | "delete">,
+                                )
+                          }
+                        >
+                          {isPending
+                            ? isExport
+                              ? text.exporting
+                              : text.submitting
+                            : isExport
+                              ? text.download
+                              : text.submit}
+                        </Button>
+                      </div>
                     )}
-                  </li>
+                  </SurfaceCard>
                 );
               })}
             </ul>
 
-            <section
-              aria-label={text.historyTitle}
-              className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4"
-            >
+            <SurfaceCard className="p-4">
               <p className="text-sm font-bold text-[var(--text-primary)]">
                 {text.historyTitle}
               </p>
@@ -368,7 +365,7 @@ export default function DataRightsPage() {
                   {requests.map((request) => (
                     <li
                       key={request.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-[var(--text-primary)]">
@@ -385,10 +382,10 @@ export default function DataRightsPage() {
                             : ""}
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-[color:var(--shell-border)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                      <Badge tone="neutral">
                         {STATUS_LABELS[request.status]?.[uiLanguage] ??
                           request.status}
-                      </span>
+                      </Badge>
                     </li>
                   ))}
                 </ul>
@@ -397,7 +394,7 @@ export default function DataRightsPage() {
                   {isEn ? COPY.en.noHistory : COPY.vi.noHistory}
                 </p>
               )}
-            </section>
+            </SurfaceCard>
           </>
         )}
       </div>

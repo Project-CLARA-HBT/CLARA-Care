@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import PageShell from "@/components/ui/page-shell";
+import { Badge } from "@/components/ui/badge";
+import { SurfaceCard, InlineError } from "@/components/ui/surface";
 import {
   grantConsent,
   isGranularConsentEnabled,
@@ -217,7 +219,7 @@ export default function ConsentCenterPage() {
         {showDisabled ? (
           <p
             role="status"
-            className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm text-[var(--text-secondary)]"
           >
             {text.disabled}
           </p>
@@ -225,14 +227,7 @@ export default function ConsentCenterPage() {
           <p className="text-sm text-[var(--text-secondary)]">{text.loading}</p>
         ) : (
           <>
-            {error ? (
-              <p
-                role="alert"
-                className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-2.5 text-sm font-medium text-[var(--status-danger-text)]"
-              >
-                {error}
-              </p>
-            ) : null}
+            {error ? <InlineError message={error} /> : null}
 
             <ul className="space-y-3">
               {PURPOSE_ORDER.map((purpose) => {
@@ -241,10 +236,7 @@ export default function ConsentCenterPage() {
                 const granted = copy.locked ? true : Boolean(record?.granted);
                 const isPending = pending === purpose;
                 return (
-                  <li
-                    key={purpose}
-                    className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4"
-                  >
+                  <SurfaceCard key={purpose} className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-[var(--text-primary)]">
@@ -261,20 +253,13 @@ export default function ConsentCenterPage() {
                         ) : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <span
-                          className={[
-                            "rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
-                            granted
-                              ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
-                              : "border-[color:var(--status-neutral-border)] bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)]",
-                          ].join(" ")}
-                        >
+                        <Badge tone={granted ? "ok" : "neutral"}>
                           {copy.locked
                             ? text.locked
                             : granted
                               ? text.granted
                               : text.notGranted}
-                        </span>
+                        </Badge>
                         {copy.locked ? null : (
                           <button
                             type="button"
@@ -306,7 +291,7 @@ export default function ConsentCenterPage() {
                         ) : null}
                       </div>
                     </div>
-                  </li>
+                  </SurfaceCard>
                 );
               })}
             </ul>

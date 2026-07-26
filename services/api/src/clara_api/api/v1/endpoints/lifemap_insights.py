@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
+from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -20,6 +21,7 @@ from clara_api.db.models import (
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
+from clara_api.lifemap.next_best_question import compute_next_best_question
 
 router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -97,6 +99,35 @@ def baseline(
 ) -> dict:
     profile = _profile(db, token)
     return _baseline(db, profile.id, signal_key)
+
+
+@router.get("/episodes/{episode_id}/next-question")
+def episode_next_question(
+    episode_id: int,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Next-best-question for an episode (Phase 2, P2-WP5).
+
+    Default-off: when ``LIFEMAP_NEXT_QUESTION_ENABLED`` is unset the feature is
+    disabled and returns a 404, preserving prior behavior. When enabled the
+    engine returns at most one highest-value question, or an explicit
+    'ask nothing' result with a reason code.
+    """
+
+    if not get_settings().lifemap_next_question_enabled:
+        raise HTTPException(status_code=404, detail="Feature not enabled")
+    profile = _profile(db, token)
+    episode = db.execute(
+        select(LifeMapEpisode).where(
+            LifeMapEpisode.id == episode_id,
+            LifeMapEpisode.profile_id == profile.id,
+        )
+    ).scalar_one_or_none()
+    if episode is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    result = compute_next_best_question(db, profile_id=profile.id, episode=episode)
+    return {"episode_id": str(episode.id), **result.as_dict()}
 
 
 @router.get("/episodes/{episode_id}/replay")
