@@ -64,16 +64,7 @@ const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
   { value: "en", label: "EN" },
 ];
 
-const WIDE_WORKSPACE_PREFIXES = [
-  "/admin",
-  "/research",
-  "/selfmed",
-  "/careguard",
-  "/dashboard",
-  "/council",
-  "/scribe",
-  "/chat",
-];
+
 
 const IMMERSIVE_LAYOUT_PREFIXES = ["/chat", "/research", "/council", "/scribe"];
 const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
@@ -97,9 +88,6 @@ export default function AppShell({ children }: Props) {
 
   const hideSidebar =
     isPublicRoute(pathname) || isAuthenticatedUtilityRoute(pathname);
-  const isWideWorkspace = WIDE_WORKSPACE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
   const isImmersiveLayout = IMMERSIVE_LAYOUT_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -288,7 +276,7 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
-    if (!isRoleHydrated || !isSessionChecked || role !== "normal") return;
+    if (!isRoleHydrated || !isSessionChecked) return;
     let active = true;
     const enforceFirstRunSetup = async () => {
       try {
@@ -394,8 +382,7 @@ export default function AppShell({ children }: Props) {
       <TransparencyNoticeGate />
       <div
         className={[
-          "relative z-[1] mx-auto flex min-h-screen w-full",
-          isWideWorkspace ? "max-w-[2520px]" : "max-w-[1840px]",
+          "relative z-[1] mx-auto flex min-h-screen w-full max-w-[1920px]",
         ].join(" ")}
       >
         <SidebarNav
@@ -480,7 +467,11 @@ export default function AppShell({ children }: Props) {
             <div
               className={[
                 "w-full",
-                isWideWorkspace ? "max-w-none" : "mx-auto max-w-[1440px]",
+                // Immersive surfaces (chat/research/council/scribe) manage their
+                // own full-bleed layout. Every other page shares ONE consistent
+                // centered content column so page width never jumps between
+                // routes.
+                isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1200px]",
               ].join(" ")}
             >
               {children}
