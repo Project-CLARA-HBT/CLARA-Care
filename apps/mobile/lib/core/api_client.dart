@@ -181,8 +181,6 @@ class ApiClient {
     return 'm-${DateTime.now().microsecondsSinceEpoch}-$_idempotencyCounter';
   }
 
-
-
   /// Maximum time to await a single request/response round-trip before it is
   /// surfaced as a recoverable [ApiException] instead of hanging (Req 9.2).
   final Duration _requestTimeout;
@@ -1315,6 +1313,40 @@ class ApiClient {
     );
   }
 
+  /// Creates a Universal Capture text draft. The server may return an
+  /// emergency escalation with `persisted=false` before writing any content.
+  Future<Map<String, dynamic>> startLifeMapTextCapture({
+    required String accessToken,
+    required String text,
+    String locale = 'vi',
+  }) {
+    return _post(
+      '/api/v1/lifemap/capture/sessions',
+      body: <String, dynamic>{'text': text, 'locale': locale},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Applies an explicit online review action to one capture candidate.
+  Future<Map<String, dynamic>> reviewLifeMapCaptureCandidate({
+    required String accessToken,
+    required String candidateId,
+    required String action,
+    Map<String, dynamic>? value,
+    String reason = '',
+  }) {
+    return _post(
+      '/api/v1/lifemap/capture/candidates/$candidateId/review',
+      body: <String, dynamic>{
+        'action': action,
+        if (value != null) 'value': value,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
   // --- Medication courses (clara-mobile-unified) ----------------------------
 
   /// Lists confirmed medication courses. Requires an existing PHR profile.
@@ -1767,7 +1799,8 @@ class ApiClient {
     );
   }
 
-  Map<String, String> _headers({String? accessToken, Map<String, String>? extra}) {
+  Map<String, String> _headers(
+      {String? accessToken, Map<String, String>? extra}) {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',

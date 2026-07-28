@@ -132,18 +132,18 @@ safe; API processes host no production long-running LifeMap loops.
 
 ## Phase 4 — Universal Capture
 
-- [ ] 4.1 Add capture session/artifact/candidate/review tables and encrypted
+- [x] 4.1 Add capture session/artifact/candidate/review tables and encrypted
   object-storage abstraction. _R4, R15, R16_
-- [ ] 4.2 Implement upload limits, media sniffing, malware scanning, checksums,
+- [x] 4.2 Implement upload limits, media sniffing, malware scanning, checksums,
   short-lived URLs, and draft expiry/deletion. _R4, R16_
-- [ ] 4.3 Add capture V2 APIs and job workflow; run emergency fast-path before
+- [x] 4.3 Add capture V2 APIs and job workflow; run emergency fast-path before
   persistence-dependent extraction. _R4, R18_
-- [ ] 4.4 Define versioned typed extraction schemas for text, medication label,
+- [x] 4.4 Define versioned typed extraction schemas for text, medication label,
   visit document, guided answer, and supported imported observation. _R4_
 - [ ] 4.5 Implement ML/OCR extraction as candidates with per-field confidence,
   exact source spans, missing critical fields, and prompt-injection defenses.
   _R4, R16, R18_
-- [ ] 4.6 Implement duplicate suggestions without ambiguous auto-merge. _R4_
+- [x] 4.6 Implement duplicate suggestions without ambiguous auto-merge. _R4_
 - [ ] 4.7 Build web capture review: edit/reject/confirm, source preview, low-
   confidence warnings, abandon/resume, accessible states. _R4, R19_
 - [ ] 4.8 Build equivalent Flutter review, using online-only mutations and stale/

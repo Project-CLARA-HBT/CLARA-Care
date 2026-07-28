@@ -109,6 +109,8 @@ class ObjectStoreClient(Protocol):
 
     def get_object(self, key: str) -> bytes: ...
 
+    def delete_object(self, key: str) -> None: ...
+
 
 class _FilesystemObjectStore:
     """Filesystem-backed object store for ``file://`` URLs.
@@ -153,6 +155,15 @@ class _FilesystemObjectStore:
         except OSError as exc:  # pragma: no cover - filesystem failure path
             raise ResearchUploadStoreUnavailable(
                 f"Filesystem object store read failed: {exc.__class__.__name__}"
+            ) from exc
+
+    def delete_object(self, key: str) -> None:
+        path = self._path_for(key)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as exc:  # pragma: no cover - filesystem failure path
+            raise ResearchUploadStoreUnavailable(
+                f"Filesystem object store delete failed: {exc.__class__.__name__}"
             ) from exc
 
 
@@ -218,8 +229,16 @@ class _S3ObjectStore:
                 f"Object store read failed: {exc.__class__.__name__}"
             ) from exc
 
+    def delete_object(self, key: str) -> None:
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=self._full_key(key))
+        except Exception as exc:  # pragma: no cover - depends on optional dep
+            raise ResearchUploadStoreUnavailable(
+                f"Object store delete failed: {exc.__class__.__name__}"
+            ) from exc
 
-def _build_object_store_client(url: str) -> ObjectStoreClient:
+
+def build_object_store_client(url: str) -> ObjectStoreClient:
     cleaned = (url or "").strip()
     if not cleaned:
         raise ResearchUploadStoreUnavailable("Object store backend selected but no URL configured")
@@ -255,7 +274,7 @@ class ResearchUploadStore:
 
     def _client(self) -> ObjectStoreClient:
         if self._object_client is None:
-            self._object_client = _build_object_store_client(self._object_store_url)
+            self._object_client = build_object_store_client(self._object_store_url)
         return self._object_client
 
     @staticmethod

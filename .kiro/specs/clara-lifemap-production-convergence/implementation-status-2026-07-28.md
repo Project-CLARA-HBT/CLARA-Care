@@ -200,5 +200,24 @@ append-only revisions, immutable source checksums, one canonical revision
 pointer, idempotency conflicts, and rollback of canonical data when outbox
 creation fails.
 
+Universal Capture now has its first complete backend tranche behind
+`LIFEMAP_CAPTURE_ENABLED` (still default OFF). Migration `20260728_0033` adds
+resumable sessions, encrypted artifact metadata, durable extraction jobs,
+review-only candidates, and append-only review actions. Artifact bytes require
+AES-GCM object storage, exact media sniffing, bounded size, a clean fail-closed
+ClamAV verdict, checksum, authenticated short-lived access, and expiry/abandon
+deletion. Text capture runs a deterministic Vietnamese/English emergency
+fast-path before profile, consent, or persistence. Typed extraction schemas
+cover text, medication labels, visit documents, guided answers, and imported
+observations; job output remains draft with confidence, exact source span,
+missing-critical-field, extractor-version, and prompt-injection findings.
+Exact-checksum duplicates are suggestions only and never auto-merge.
+
+The initial web and Flutter review surfaces are server-capability-gated and
+preserve the explicit-confirmation boundary. Their focused lint/analyze and
+client tests pass. Phase 4.5 and the complete 4.7–4.9 gates remain open because
+production OCR/ML worker wiring, full artifact review UX, and field-level
+clinical evaluation evidence are not yet complete.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

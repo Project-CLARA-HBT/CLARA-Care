@@ -47,9 +47,8 @@ class _Episode {
   factory _Episode.fromJson(Map<String, dynamic> json) => _Episode(
         id: _str(json['id']),
         title: _str(json['title']),
-        priority: _str(json['priority']).isEmpty
-            ? 'routine'
-            : _str(json['priority']),
+        priority:
+            _str(json['priority']).isEmpty ? 'routine' : _str(json['priority']),
       );
 
   final String id;
@@ -93,6 +92,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
 
   List<_Episode> _episodes = const [];
   List<_AcceptedTask> _tasks = const [];
+  bool _captureEnabled = false;
+  bool _capturing = false;
+  Map<String, dynamic>? _captureSession;
+  final TextEditingController _captureController = TextEditingController();
 
   // --- "Tạo hành trình" (create episode) form state ------------------------
   bool _episodeFormOpen = false;
@@ -118,6 +121,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     _episodeTitleController.dispose();
     _episodeGoalController.dispose();
     _taskTitleController.dispose();
+    _captureController.dispose();
     super.dispose();
   }
 
@@ -142,6 +146,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _needsOnboarding = false;
     });
     try {
+      final summary =
+          await widget.apiClient.getMobileSummary(accessToken: token);
+      final flags = summary['feature_flags'];
+      final captureEnabled = flags is Map && flags['lifemap_capture'] == true;
       final data = await widget.apiClient.getLifeMapToday(accessToken: token);
       final episodes = <_Episode>[];
       final rawEpisodes = data['episodes'];
@@ -165,13 +173,13 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       setState(() {
         _episodes = episodes;
         _tasks = tasks;
+        _captureEnabled = captureEnabled;
         // Keep the task-form selection valid against the freshly loaded set.
         if (_selectedEpisodeId != null &&
             !episodes.any((e) => e.id == _selectedEpisodeId)) {
           _selectedEpisodeId = null;
         }
-        _selectedEpisodeId ??=
-            episodes.isNotEmpty ? episodes.first.id : null;
+        _selectedEpisodeId ??= episodes.isNotEmpty ? episodes.first.id : null;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -267,6 +275,69 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     }
   }
 
+  Future<void> _startCapture() async {
+    final token = _token;
+    final text = _captureController.text.trim();
+    if (token == null || text.isEmpty || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      final session = await widget.apiClient.startLifeMapTextCapture(
+        accessToken: token,
+        text: text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _captureSession = session;
+        if (session['persisted'] == true) _captureController.clear();
+      });
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tạo bản nháp. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _confirmCapture(String candidateId) async {
+    final token = _token;
+    if (token == null || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      await widget.apiClient.reviewLifeMapCaptureCandidate(
+        accessToken: token,
+        candidateId: candidateId,
+        action: 'confirm',
+        reason: 'Người dùng đã kiểm tra bản ghi',
+      );
+      if (!mounted) return;
+      setState(() {
+        final session = Map<String, dynamic>.from(_captureSession ?? const {});
+        final candidates = session['candidates'];
+        if (candidates is List) {
+          session['candidates'] = candidates.map((candidate) {
+            if (candidate is Map && _str(candidate['id']) == candidateId) {
+              return <String, dynamic>{
+                ...candidate.cast<String, dynamic>(),
+                'status': 'confirmed',
+              };
+            }
+            return candidate;
+          }).toList();
+        }
+        session['status'] = 'completed';
+        _captureSession = session;
+      });
+      await _load();
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể xác nhận bản ghi. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -358,6 +429,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           ),
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
+
+        if (_captureEnabled) ...[
+          const SectionHeader(title: 'Ghi nhận nhanh'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: _buildCaptureCard(context),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
 
         // --- Journeys (episodes) -------------------------------------------
         Row(
@@ -452,6 +537,98 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildCaptureCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final session = _captureSession;
+    if (session?['emergency'] == true) {
+      return ClaraCard.static_(
+        child: Semantics(
+          liveRegion: true,
+          child: Text(
+            _str(session?['message']),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+    final rawCandidates = session?['candidates'];
+    if (rawCandidates is List && rawCandidates.isNotEmpty) {
+      final candidate = rawCandidates.first;
+      if (candidate is Map) {
+        final value = candidate['value'];
+        final text = value is Map ? _str(value['text']) : '';
+        final status = _str(candidate['status']);
+        return ClaraCard.static_(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(text, style: theme.textTheme.bodyLarge),
+              const SizedBox(height: ClaraTokens.spaceSm),
+              Text(
+                'Bản nháp do bạn kiểm tra; CLARA không tự xác nhận.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (status == 'draft') ...[
+                const SizedBox(height: ClaraTokens.spaceMd),
+                ClaraButton.primary(
+                  label: 'Tôi đã xem và xác nhận',
+                  icon: Icons.verified_outlined,
+                  loading: _capturing,
+                  onPressed: () => _confirmCapture(_str(candidate['id'])),
+                ),
+              ] else ...[
+                const SizedBox(height: ClaraTokens.spaceSm),
+                Text(
+                  'Đã xác nhận',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }
+    }
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tạo bản nháp để xem lại trước khi đưa vào LifeMap.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          TextField(
+            controller: _captureController,
+            minLines: 2,
+            maxLines: 5,
+            enabled: !_capturing,
+            decoration: const InputDecoration(
+              labelText: 'Điều bạn muốn ghi lại',
+              hintText: 'Ví dụ: Tối qua tôi ngủ khoảng 7 giờ',
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.primary(
+              label: 'Tạo bản nháp',
+              icon: Icons.note_add_outlined,
+              loading: _capturing,
+              onPressed: _startCapture,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -571,9 +748,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         children: [
           Expanded(
             child: Text(
-              episode.title.isEmpty
-                  ? 'Hành trình chưa đặt tên'
-                  : episode.title,
+              episode.title.isEmpty ? 'Hành trình chưa đặt tên' : episode.title,
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),

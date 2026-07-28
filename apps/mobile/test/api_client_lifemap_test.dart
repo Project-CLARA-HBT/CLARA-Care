@@ -39,7 +39,8 @@ void main() {
         baseUrl: base,
         httpClient: MockClient((request) async {
           captured = request;
-          return ok({'tasks': [], 'episodes': [], 'pending_confirmation_count': 0});
+          return ok(
+              {'tasks': [], 'episodes': [], 'pending_confirmation_count': 0});
         }),
       );
 
@@ -51,7 +52,8 @@ void main() {
       expect(result['pending_confirmation_count'], 0);
     });
 
-    test('createLifeMapEpisode POSTs title/goal/priority with an Idempotency-Key',
+    test(
+        'createLifeMapEpisode POSTs title/goal/priority with an Idempotency-Key',
         () async {
       late http.Request captured;
       final client = ApiClient(
@@ -134,6 +136,40 @@ void main() {
 
       expect(keys.length, 2);
       expect(keys.toSet().length, 2, reason: 'keys must be unique per call');
+    });
+
+    test('Universal Capture wrappers use draft and idempotent review routes',
+        () async {
+      final requests = <http.Request>[];
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return ok({'id': 'capture-1', 'status': 'draft'});
+        }),
+      );
+
+      await client.startLifeMapTextCapture(
+        accessToken: token,
+        text: 'Tôi ngủ 7 giờ',
+      );
+      await client.reviewLifeMapCaptureCandidate(
+        accessToken: token,
+        candidateId: 'candidate-1',
+        action: 'confirm',
+        reason: 'reviewed',
+      );
+
+      expect(requests[0].url.path, '/api/v1/lifemap/capture/sessions');
+      expect(
+        jsonDecode(requests[0].body),
+        {'text': 'Tôi ngủ 7 giờ', 'locale': 'vi'},
+      );
+      expect(
+        requests[1].url.path,
+        '/api/v1/lifemap/capture/candidates/candidate-1/review',
+      );
+      expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
     });
   });
 

@@ -772,6 +772,27 @@ class Settings(BaseSettings):
     lifemap_capture_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_CAPTURE_ENABLED"
     )
+    lifemap_capture_object_store_url: str = Field(
+        default="", validation_alias="LIFEMAP_CAPTURE_OBJECT_STORE_URL"
+    )
+    lifemap_capture_encryption_key: str = Field(
+        default="", validation_alias="LIFEMAP_CAPTURE_ENCRYPTION_KEY"
+    )
+    lifemap_capture_clamav_host: str = Field(
+        default="", validation_alias="LIFEMAP_CAPTURE_CLAMAV_HOST"
+    )
+    lifemap_capture_clamav_port: int = Field(
+        default=3310,
+        validation_alias="LIFEMAP_CAPTURE_CLAMAV_PORT",
+        ge=1,
+        le=65535,
+    )
+    lifemap_capture_max_artifact_bytes: int = Field(
+        default=10_000_000,
+        validation_alias="LIFEMAP_CAPTURE_MAX_ARTIFACT_BYTES",
+        ge=1_024,
+        le=25_000_000,
+    )
     lifemap_baselines_v2_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_BASELINES_V2_ENABLED"
     )

@@ -1057,6 +1057,181 @@ class LifeMapDecisionInput(Base):
     )
 
 
+class LifeMapCaptureSession(Base):
+    """A resumable, expiring Universal Capture review boundary."""
+
+    __tablename__ = "lifemap_capture_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    input_kind: Mapped[str] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    schema_version: Mapped[str] = mapped_column(String(64))
+    locale: Mapped[str] = mapped_column(String(16), default="vi")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    abandoned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class LifeMapCaptureArtifact(Base):
+    """Encrypted capture artifact metadata; raw bytes live outside the database."""
+
+    __tablename__ = "lifemap_capture_artifacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    storage_key: Mapped[str] = mapped_column(String(512), unique=True)
+    media_type: Mapped[str] = mapped_column(String(128))
+    byte_size: Mapped[int] = mapped_column(Integer)
+    checksum: Mapped[str] = mapped_column(String(128), index=True)
+    encryption_version: Mapped[str] = mapped_column(String(32), default="aesgcm-v1")
+    malware_status: Mapped[str] = mapped_column(
+        String(24), default="pending", server_default="pending", index=True
+    )
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapCaptureJob(Base):
+    """Durable OCR/ML extraction job; output is always review-only candidates."""
+
+    __tablename__ = "lifemap_capture_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
+    )
+    artifact_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_capture_artifacts.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    job_type: Mapped[str] = mapped_column(String(48), index=True)
+    status: Mapped[str] = mapped_column(
+        String(24), default="queued", server_default="queued", index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    lease_owner: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, index=True
+    )
+    lease_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    error_code: Mapped[str] = mapped_column(String(64), default="")
+    extractor_version: Mapped[str] = mapped_column(String(96), default="")
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapCaptureCandidate(Base):
+    """Untrusted extracted value awaiting an explicit review action."""
+
+    __tablename__ = "lifemap_capture_candidates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
+    )
+    artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_capture_artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    candidate_type: Mapped[str] = mapped_column(String(64), index=True)
+    field_path: Mapped[str] = mapped_column(String(160))
+    value_json: Mapped[dict] = mapped_column(JSON)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_span_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    missing_critical_fields_json: Mapped[list[str]] = mapped_column(
+        JSON, default=list, server_default="[]"
+    )
+    extraction_schema_version: Mapped[str] = mapped_column(String(64))
+    extractor_version: Mapped[str] = mapped_column(String(96), default="")
+    security_findings_json: Mapped[list[str]] = mapped_column(
+        JSON, default=list, server_default="[]"
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapCaptureReviewAction(Base):
+    """Append-only edit/reject/confirm history for one capture candidate."""
+
+    __tablename__ = "lifemap_capture_review_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    candidate_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_capture_candidates.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(24), index=True)
+    patch_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reason_code: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class LifeMapOutboxEvent(Base):
     """Transactional integration event emitted alongside LifeMap mutations."""
 

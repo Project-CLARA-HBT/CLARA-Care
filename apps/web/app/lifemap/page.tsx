@@ -11,9 +11,14 @@ import {
   acceptLifeMapTask,
   createLifeMapEpisode,
   createLifeMapTask,
+  getLifeMapCaptureCapability,
   getLifeMapToday,
+  reviewLifeMapCaptureCandidate,
+  startLifeMapTextCapture,
+  type CaptureSession,
   type LifeMapToday,
 } from "@/lib/lifemap";
+import { getProfileContext } from "@/lib/profile-context-api";
 
 const priorities = [
   ["routine", "Khi thuận tiện"],
@@ -43,6 +48,9 @@ export default function LifeMapPage() {
   const [priority, setPriority] = useState<PriorityKey>("routine");
   const [taskTitle, setTaskTitle] = useState("");
   const [episodeId, setEpisodeId] = useState("");
+  const [captureEnabled, setCaptureEnabled] = useState(false);
+  const [captureText, setCaptureText] = useState("");
+  const [captureSession, setCaptureSession] = useState<CaptureSession | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +68,59 @@ export default function LifeMapPage() {
 
   useEffect(() => {
     void load();
+    void getProfileContext()
+      .then((context) =>
+        context.active_profile_id
+          ? getLifeMapCaptureCapability(context.active_profile_id)
+          : false,
+      )
+      .then(setCaptureEnabled)
+      .catch(() => setCaptureEnabled(false));
   }, [load]);
+
+  const startCapture = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!captureText.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      const session = await startLifeMapTextCapture(captureText.trim());
+      setCaptureSession(session);
+      if (session.persisted) setCaptureText("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi nhận.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmCapture = async (candidateId: string) => {
+    setSaving(true);
+    setError("");
+    try {
+      await reviewLifeMapCaptureCandidate(candidateId, "confirm", {
+        reason: "Người dùng đã kiểm tra bản ghi",
+      });
+      setCaptureSession((current) =>
+        current
+          ? {
+              ...current,
+              status: "completed",
+              candidates: current.candidates?.map((candidate) =>
+                candidate.id === candidateId
+                  ? { ...candidate, status: "confirmed" }
+                  : candidate,
+              ),
+            }
+          : current,
+      );
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể xác nhận bản ghi.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const makeEpisode = async (event: FormEvent) => {
     event.preventDefault();
@@ -200,6 +260,85 @@ export default function LifeMapPage() {
         </div>
 
         <aside className="space-y-5">
+          {captureEnabled ? (
+            <SurfaceCard className="p-5">
+              <div className="flex items-start gap-3">
+                <span
+                  className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]"
+                  aria-hidden="true"
+                >
+                  add_notes
+                </span>
+                <div>
+                  <h2 className="font-semibold text-[var(--text-primary)]">
+                    Ghi nhận nhanh
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+                    CLARA tạo bản nháp để bạn xem lại. Không có thông tin nào được
+                    xác nhận tự động.
+                  </p>
+                </div>
+              </div>
+              {captureSession?.emergency ? (
+                <div
+                  className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm text-[var(--status-danger-text)]"
+                  role="alert"
+                >
+                  {captureSession.message}
+                </div>
+              ) : captureSession?.candidates?.length ? (
+                <div className="mt-4 space-y-3">
+                  {captureSession.candidates.map((candidate) => (
+                    <div
+                      key={candidate.id}
+                      className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"
+                    >
+                      <p className="text-sm text-[var(--text-primary)]">
+                        {String(candidate.value.text ?? "")}
+                      </p>
+                      {candidate.missing_critical_fields.length ? (
+                        <p className="mt-2 text-xs text-[var(--status-warn-text)]">
+                          Cần bổ sung: {candidate.missing_critical_fields.join(", ")}
+                        </p>
+                      ) : null}
+                      {candidate.status === "draft" ? (
+                        <Button
+                          className="mt-3"
+                          size="sm"
+                          icon="verified"
+                          loading={saving}
+                          onClick={() => void confirmCapture(candidate.id)}
+                        >
+                          Tôi đã xem và xác nhận
+                        </Button>
+                      ) : (
+                        <Badge tone="ok">Đã xác nhận</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <form className="mt-4 space-y-3" onSubmit={(event) => void startCapture(event)}>
+                  <Textarea
+                    label="Điều bạn muốn ghi lại"
+                    value={captureText}
+                    onChange={(event) => setCaptureText(event.target.value)}
+                    placeholder="Ví dụ: Tối qua tôi ngủ khoảng 7 giờ"
+                  />
+                  <Button
+                    type="submit"
+                    block
+                    loading={saving}
+                    loadingLabel="Đang tạo bản nháp…"
+                    icon="add_notes"
+                  >
+                    Tạo bản nháp
+                  </Button>
+                </form>
+              )}
+            </SurfaceCard>
+          ) : null}
+
           <SurfaceCard className="p-5">
             <h2 className="font-semibold text-[var(--text-primary)]">Tạo hành trình</h2>
             <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">

@@ -467,6 +467,39 @@ class FakeApiClient extends ApiClient {
         accessToken: accessToken);
   }
 
+  @override
+  Future<Map<String, dynamic>> startLifeMapTextCapture({
+    required String accessToken,
+    required String text,
+    String locale = 'vi',
+  }) {
+    return _dispatch(
+      'startLifeMapTextCapture',
+      {'text': text, 'locale': locale},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> reviewLifeMapCaptureCandidate({
+    required String accessToken,
+    required String candidateId,
+    required String action,
+    Map<String, dynamic>? value,
+    String reason = '',
+  }) {
+    return _dispatch(
+      'reviewLifeMapCaptureCandidate',
+      {
+        'candidateId': candidateId,
+        'action': action,
+        'value': value,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+    );
+  }
+
   // --- Scribe ----------------------------------------------------------------
 
   @override
