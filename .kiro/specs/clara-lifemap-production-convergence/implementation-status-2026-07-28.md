@@ -149,5 +149,16 @@ without overlap or loss, then a recovery worker reclaimed exactly one expired
 lease. The test created and dropped a randomly named schema and did not read or
 mutate production application tables.
 
+The next worker tranche completed the versioned `lifemap.outbox.v1`
+minimum-data envelope and typed event-kind classification for fact, episode,
+task, consent, correction, and invalidation changes. Extra fields are forbidden,
+which regression-locks that clinical payloads cannot be added to delivery
+envelopes accidentally. Worker-local health now exposes bounded no-PII outcome
+and cycle-duration metrics, while the admin database health projection exposes
+pending/retry/processing/published/dead-letter/resolved counts, expired leases,
+aggregate retry attempts, oldest unpublished age, and stale projection
+dependencies. Alert thresholds, scaling, incident response, and rollback are
+documented in `docs/runbooks/lifemap-outbox-worker.md`.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

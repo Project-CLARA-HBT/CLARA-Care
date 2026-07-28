@@ -80,15 +80,18 @@ def test_drain_publishes_pending_events_and_marks_them_published() -> None:
         # Publisher received a PII-free projection (no clinical payload).
         assert seen and all(
             set(item) == {
+                "schema_version",
                 "event_id",
                 "profile_id",
                 "aggregate_type",
                 "aggregate_id",
                 "event_type",
-                "created_at",
+                "event_kind",
+                "occurred_at",
             }
             for item in seen
         )
+        assert all(item["schema_version"] == "lifemap.outbox.v1" for item in seen)
 
     with SessionLocal() as db:
         remaining = db.execute(

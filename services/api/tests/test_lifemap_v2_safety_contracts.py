@@ -297,6 +297,9 @@ def test_outbox_operational_health_is_admin_only_and_contains_no_payload() -> No
         "published",
         "dead_letter",
         "resolved",
+        "expired_leases",
+        "retry_attempts",
+        "stale_projection_dependencies",
         "oldest_unpublished_age_seconds",
         "generated_at",
     }

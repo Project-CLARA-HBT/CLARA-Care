@@ -15,6 +15,8 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.db.models import LifeMapOutboxEvent, PhrProfile
+from clara_api.lifemap.outbox_events import LifeMapIntegrationEvent, event_kind
+from clara_api.lifemap.outbox_metrics import get_lifemap_outbox_metrics
 
 logger = logging.getLogger("clara_api.lifemap.outbox")
 Publisher = Callable[[dict], None]
@@ -23,14 +25,16 @@ Publisher = Callable[[dict], None]
 def _projection(event: LifeMapOutboxEvent, profile_public_id: str) -> dict:
     """Return the deliberately minimal, no-clinical-text event envelope."""
 
-    return {
-        "event_id": event.event_id,
-        "profile_id": profile_public_id,
-        "aggregate_type": event.aggregate_type,
-        "aggregate_id": event.aggregate_id,
-        "event_type": event.event_type,
-        "created_at": event.created_at.isoformat() if event.created_at else None,
-    }
+    envelope = LifeMapIntegrationEvent(
+        event_id=event.event_id,
+        profile_id=profile_public_id,
+        aggregate_type=event.aggregate_type,
+        aggregate_id=event.aggregate_id,
+        event_type=event.event_type,
+        event_kind=event_kind(event.event_type),
+        occurred_at=event.created_at or datetime.now(UTC),
+    )
+    return envelope.model_dump(mode="json")
 
 
 def _log_publisher(projection: dict) -> None:
@@ -80,6 +84,7 @@ def claim_lifemap_outbox(
         row.lease_owner = worker_id
         row.lease_until = lease_until
     db.commit()
+    get_lifemap_outbox_metrics().record_outcome("claimed", len(rows))
     return [row.id for row in rows]
 
 
@@ -102,6 +107,7 @@ def _mark_published(
     row.lease_until = None
     row.last_error_code = ""
     db.commit()
+    get_lifemap_outbox_metrics().record_outcome("published")
     return True
 
 
@@ -157,11 +163,14 @@ def _mark_failed(
     if row.attempt_count >= row.max_attempts:
         row.status = "dead_letter"
         row.dead_lettered_at = now
+        outcome = "dead_letter"
     else:
         delay = max(base_backoff_seconds, 0.0) * (2 ** (row.attempt_count - 1))
         row.status = "retry"
         row.available_at = now + timedelta(seconds=min(delay, 3600.0))
+        outcome = "retry"
     db.commit()
+    get_lifemap_outbox_metrics().record_outcome(outcome)
 
 
 def drain_lifemap_outbox(

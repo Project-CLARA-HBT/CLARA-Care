@@ -958,6 +958,22 @@ def outbox_health(
     ).scalar_one_or_none()
     if oldest is not None and oldest.tzinfo is None:
         oldest = oldest.replace(tzinfo=UTC)
+    now = datetime.now(UTC)
+    expired_leases = db.execute(
+        select(func.count(LifeMapOutboxEvent.id)).where(
+            LifeMapOutboxEvent.status == "processing",
+            LifeMapOutboxEvent.lease_until.is_not(None),
+            LifeMapOutboxEvent.lease_until <= now,
+        )
+    ).scalar_one()
+    retry_attempts = db.execute(
+        select(func.coalesce(func.sum(LifeMapOutboxEvent.attempt_count), 0))
+    ).scalar_one()
+    stale_dependencies = db.execute(
+        select(func.count(LifeMapProjectionDependency.id)).where(
+            LifeMapProjectionDependency.invalidated_at.is_not(None)
+        )
+    ).scalar_one()
     return {
         "status": "degraded" if rows.get("dead_letter", 0) else "ok",
         "pending": rows.get("pending", 0),
@@ -966,12 +982,15 @@ def outbox_health(
         "published": rows.get("published", 0),
         "dead_letter": rows.get("dead_letter", 0),
         "resolved": rows.get("resolved", 0),
+        "expired_leases": int(expired_leases),
+        "retry_attempts": int(retry_attempts),
+        "stale_projection_dependencies": int(stale_dependencies),
         "oldest_unpublished_age_seconds": (
-            max(0, int((datetime.now(UTC) - oldest).total_seconds()))
+            max(0, int((now - oldest).total_seconds()))
             if oldest is not None
             else 0
         ),
-        "generated_at": datetime.now(UTC),
+        "generated_at": now,
     }
 
 

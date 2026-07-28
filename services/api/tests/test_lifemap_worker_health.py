@@ -1,5 +1,6 @@
 """Standalone LifeMap worker liveness and readiness contracts."""
 
+import json
 from threading import Event
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -24,6 +25,12 @@ def test_worker_health_server_distinguishes_liveness_and_readiness() -> None:
         ready.set()
         with urlopen(f"http://127.0.0.1:{port}/health/ready", timeout=2) as response:
             assert response.status == 200
+            payload = json.load(response)
+            assert set(payload["metrics"]) == {
+                "outcomes",
+                "cycles",
+                "cycle_p95_ms",
+            }
 
         with pytest.raises(HTTPError) as missing:
             urlopen(f"http://127.0.0.1:{port}/unknown", timeout=2)

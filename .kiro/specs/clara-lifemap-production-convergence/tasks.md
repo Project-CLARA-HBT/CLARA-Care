@@ -116,11 +116,11 @@ transition; correction history and idempotency are regression-locked.
   letter repository with concurrent-worker tests. _R17_
 - [x] 3.3 Create a separately deployable LifeMap worker entry point and health
   endpoints; disable production use of API lifespan relay. _R17_
-- [ ] 3.4 Define typed events and minimum-data payload schemas for fact, episode,
+- [x] 3.4 Define typed events and minimum-data payload schemas for fact, episode,
   task, consent, correction, and invalidation changes. _R17_
 - [ ] 3.5 Make every consumer idempotent; test duplicate, reorder, worker crash,
   expired lease, partial dependency outage, and replay. _R17_
-- [ ] 3.6 Add no-PII metrics/dashboards/alerts for lag, lease, retry, oldest event,
+- [x] 3.6 Add no-PII metrics/dashboards/alerts for lag, lease, retry, oldest event,
   dead letters, job duration, and stale projection age. _R17, R20_
 - [x] 3.7 Add audited admin dead-letter inspect/replay/resolve operations with no
   raw PHI in primary lists. _R16, R17_

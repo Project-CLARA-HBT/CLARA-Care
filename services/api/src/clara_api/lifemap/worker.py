@@ -9,11 +9,13 @@ import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Event, Thread
+from time import perf_counter
 from urllib.request import urlopen
 from uuid import uuid4
 
 from clara_api.core.config import get_settings
 from clara_api.db.session import SessionLocal
+from clara_api.lifemap.outbox_metrics import get_lifemap_outbox_metrics
 from clara_api.lifemap.outbox_relay import drain_lifemap_outbox
 
 logger = logging.getLogger("clara_api.lifemap.worker")
@@ -29,7 +31,10 @@ def _start_health_server(ready: Event, port: int) -> ThreadingHTTPServer:
             else:
                 code = HTTPStatus.NOT_FOUND
             payload = json.dumps(
-                {"status": "ok" if code == HTTPStatus.OK else "unavailable"},
+                {
+                    "status": "ok" if code == HTTPStatus.OK else "unavailable",
+                    "metrics": get_lifemap_outbox_metrics().snapshot(),
+                },
                 separators=(",", ":"),
             ).encode()
             self.send_response(code)
@@ -65,6 +70,7 @@ def run_worker(stop: Event | None = None, *, health_port: int | None = None) -> 
     logger.info("lifemap.worker.started", extra={"worker_id": worker_id})
     try:
         while not stop_event.is_set():
+            started = perf_counter()
             with SessionLocal() as db:
                 drain_lifemap_outbox(
                     db,
@@ -73,6 +79,9 @@ def run_worker(stop: Event | None = None, *, health_port: int | None = None) -> 
                     lease_seconds=settings.lifemap_outbox_lease_seconds,
                     base_backoff_seconds=settings.lifemap_outbox_backoff_seconds,
                 )
+            get_lifemap_outbox_metrics().record_cycle(
+                (perf_counter() - started) * 1000
+            )
             ready.set()
             stop_event.wait(settings.lifemap_outbox_relay_interval_seconds)
     finally:
