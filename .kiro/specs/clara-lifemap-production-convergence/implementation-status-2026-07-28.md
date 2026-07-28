@@ -238,5 +238,30 @@ tests pass. Phase 5 is not yet closed: consent/source-revocation and late-data
 invalidation traversal, the authorized dispute-resolution queue, complete
 cross-client dispute handling, and the property-test gate remain open.
 
+Phase 6 now has an approval-aware dark implementation. Migration
+`20260728_0035` adds versioned baseline definitions, immutable snapshots, exact
+aggregate inputs, explainable changes, typed question definitions, and
+append-only interaction history. No production definition or question is
+silently approved: V2 endpoints return no governed result unless a registry row
+has explicit approval metadata, the server flag is on, and current medical
+consent exists.
+
+The baseline engine normalizes canonical units, rejects configured invalid
+ranges, requires both sample count and calendar span, computes median and median
+absolute deviation, hashes the exact input watermark, reuses identical
+snapshots, and marks the predecessor stale after late/corrected data. It
+describes only change against the same person's history, never clinical
+normality. Property tests cover order independence and robust statistics.
+
+The governed question engine selects at most one deterministic approved
+question, preserves emergency short-circuiting, applies answered/dismissed/
+do-not-ask filters, a 24-hour burden ceiling, and consent. A response creates a
+`guided_answer` Capture candidate and cannot become truth until explicit review.
+Web and Flutter surfaces are server-capability gated and explain both the
+question rationale and the draft-review boundary. Focused API lint/type/tests,
+web lint/client tests, and Flutter analyze/client tests pass. Clinical signal
+and catalogue approval, historical shadow evaluation, and comprehension pilots
+remain open, so both V2 flags stay default OFF.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

@@ -46,6 +46,34 @@ export type LifeMapReplay = {
   }>;
 };
 
+export type LifeMapBaseline = {
+  id: string;
+  signal_key: string;
+  status: string;
+  personal_median: number | null;
+  median_absolute_deviation: number | null;
+  unit: string;
+  sample_days: number;
+  span_days: number;
+  minimum_days: number;
+  window_days: number;
+  rule_version: string;
+  computed_at: string;
+  stale: boolean;
+  explanation: string;
+};
+
+export type LifeMapQuestion = {
+  episode_id: string;
+  ask: boolean;
+  question_id?: string | null;
+  field_key?: string | null;
+  question?: string | null;
+  why?: string | null;
+  reason_code: string;
+  policy_version: string;
+};
+
 export type CaptureCandidate = {
   id: string;
   type: string;
@@ -157,6 +185,65 @@ export async function disputeLifeMapDecision(
     `/decisions/${encodeURIComponent(decisionId)}/dispute`,
     { reason },
   );
+}
+
+export async function getLifeMapBaselines(): Promise<LifeMapBaseline[]> {
+  return (await api.get<LifeMapBaseline[]>("/lifemap/v2/baselines")).data;
+}
+
+export async function getLifeMapNextQuestion(
+  episodeId: string,
+  locale = "vi",
+): Promise<LifeMapQuestion> {
+  return (
+    await api.get<LifeMapQuestion>(
+      `/episodes/${encodeURIComponent(episodeId)}/next-question`,
+      { params: { locale } },
+    )
+  ).data;
+}
+
+export async function recordLifeMapQuestionInteraction(
+  episodeId: string,
+  questionId: string,
+  action: "presented" | "dismissed" | "do_not_ask",
+  reason = "",
+): Promise<void> {
+  await api.post(
+    `/episodes/${encodeURIComponent(episodeId)}/questions/${encodeURIComponent(questionId)}/interaction`,
+    { action, reason },
+    { headers: { "Idempotency-Key": idempotencyKey() } },
+  );
+}
+
+export async function startLifeMapGuidedAnswer(
+  episodeId: string,
+  questionId: string,
+  answer: Record<string, unknown>,
+  locale = "vi",
+): Promise<CaptureSession> {
+  return (
+    await api.post<CaptureSession>("/lifemap/capture/guided-answers", {
+      episode_id: episodeId,
+      question_id: questionId,
+      answer,
+      locale,
+    })
+  ).data;
+}
+
+export async function getLifeMapV2Capabilities(
+  profileId: string,
+): Promise<Record<string, boolean>> {
+  const response = await api.get<{
+    capabilities?: Record<string, { enabled?: boolean } | boolean>;
+  }>(`/profiles/${encodeURIComponent(profileId)}/capabilities`);
+  const result: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(response.data.capabilities ?? {})) {
+    result[key] =
+      typeof value === "boolean" ? value : Boolean(value?.enabled);
+  }
+  return result;
 }
 
 export async function startLifeMapTextCapture(

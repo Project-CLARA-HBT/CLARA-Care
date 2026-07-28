@@ -12,12 +12,18 @@ import {
   correctLifeMapEvent,
   createLifeMapEpisode,
   createLifeMapTask,
-  getLifeMapCaptureCapability,
+  getLifeMapBaselines,
+  getLifeMapNextQuestion,
   getLifeMapReplay,
   getLifeMapToday,
+  getLifeMapV2Capabilities,
+  recordLifeMapQuestionInteraction,
   reviewLifeMapCaptureCandidate,
   startLifeMapTextCapture,
+  startLifeMapGuidedAnswer,
   type CaptureSession,
+  type LifeMapBaseline,
+  type LifeMapQuestion,
   type LifeMapToday,
   type LifeMapReplay,
 } from "@/lib/lifemap";
@@ -52,6 +58,10 @@ export default function LifeMapPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [episodeId, setEpisodeId] = useState("");
   const [captureEnabled, setCaptureEnabled] = useState(false);
+  const [questionEnabled, setQuestionEnabled] = useState(false);
+  const [baselines, setBaselines] = useState<LifeMapBaseline[]>([]);
+  const [nextQuestion, setNextQuestion] = useState<LifeMapQuestion | null>(null);
+  const [questionAnswer, setQuestionAnswer] = useState("");
   const [captureText, setCaptureText] = useState("");
   const [captureSession, setCaptureSession] = useState<CaptureSession | null>(null);
   const [replay, setReplay] = useState<LifeMapReplay | null>(null);
@@ -76,13 +86,21 @@ export default function LifeMapPage() {
   useEffect(() => {
     void load();
     void getProfileContext()
-      .then((context) =>
-        context.active_profile_id
-          ? getLifeMapCaptureCapability(context.active_profile_id)
-          : false,
-      )
-      .then(setCaptureEnabled)
-      .catch(() => setCaptureEnabled(false));
+      .then(async (context) => {
+        if (!context.active_profile_id) return;
+        const capabilities = await getLifeMapV2Capabilities(
+          context.active_profile_id,
+        );
+        setCaptureEnabled(Boolean(capabilities.lifemap_capture));
+        setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
+        if (capabilities.lifemap_baselines_v2) {
+          setBaselines(await getLifeMapBaselines());
+        }
+      })
+      .catch(() => {
+        setCaptureEnabled(false);
+        setQuestionEnabled(false);
+      });
   }, [load]);
 
   const startCapture = async (event: FormEvent) => {
@@ -180,6 +198,69 @@ export default function LifeMapPage() {
     }
   };
 
+  const loadQuestion = async (selectedEpisodeId: string) => {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await getLifeMapNextQuestion(selectedEpisodeId);
+      setNextQuestion(result);
+      setQuestionAnswer("");
+      if (result.ask && result.question_id) {
+        await recordLifeMapQuestionInteraction(
+          selectedEpisodeId,
+          result.question_id,
+          "presented",
+        );
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tải câu hỏi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const answerQuestion = async () => {
+    if (
+      !nextQuestion?.ask ||
+      !nextQuestion.question_id ||
+      !questionAnswer.trim()
+    ) return;
+    setSaving(true);
+    setError("");
+    try {
+      const session = await startLifeMapGuidedAnswer(
+        nextQuestion.episode_id,
+        nextQuestion.question_id,
+        { value: questionAnswer.trim() },
+      );
+      setCaptureSession(session);
+      setNextQuestion(null);
+      setQuestionAnswer("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể lưu câu trả lời.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const dismissQuestion = async (permanent = false) => {
+    if (!nextQuestion?.question_id) return;
+    setSaving(true);
+    try {
+      await recordLifeMapQuestionInteraction(
+        nextQuestion.episode_id,
+        nextQuestion.question_id,
+        permanent ? "do_not_ask" : "dismissed",
+        permanent ? "Người dùng không muốn được hỏi lại" : "Để sau",
+      );
+      setNextQuestion(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể cập nhật lựa chọn.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const correctEvent = async (
     item: LifeMapReplay["events"][number],
   ) => {
@@ -251,6 +332,17 @@ export default function LifeMapPage() {
                         >
                           Xem lại
                         </Button>
+                        {questionEnabled ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon="help"
+                            loading={saving}
+                            onClick={() => void loadQuestion(episode.id)}
+                          >
+                            Một câu hỏi
+                          </Button>
+                        ) : null}
                         <Badge tone={priorityTone(episode.priority)}>
                           {priorityLabel(episode.priority)}
                         </Badge>
@@ -267,6 +359,80 @@ export default function LifeMapPage() {
                   </div>
                 )}
               </SurfaceCard>
+
+              {nextQuestion?.ask ? (
+                <SurfaceCard className="p-5">
+                  <Badge tone="brand">Một câu hỏi hữu ích</Badge>
+                  <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+                    {nextQuestion.question}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Vì sao CLARA hỏi: {nextQuestion.why}
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <Textarea
+                      label="Câu trả lời của bạn"
+                      value={questionAnswer}
+                      onChange={(event) => setQuestionAnswer(event.target.value)}
+                      hint="Câu trả lời sẽ thành bản nháp để bạn kiểm tra trước khi xác nhận."
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        loading={saving}
+                        onClick={() => void answerQuestion()}
+                      >
+                        Tạo bản nháp
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void dismissQuestion(false)}
+                      >
+                        Để sau
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void dismissQuestion(true)}
+                      >
+                        Không hỏi lại
+                      </Button>
+                    </div>
+                  </div>
+                </SurfaceCard>
+              ) : null}
+
+              {baselines.length ? (
+                <SurfaceCard className="p-5">
+                  <h2 className="font-semibold text-[var(--text-primary)]">
+                    Thay đổi so với chính bạn
+                  </h2>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    Đây không phải mức bình thường lâm sàng hay chẩn đoán.
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {baselines.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4"
+                      >
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
+                          {item.signal_key}
+                        </p>
+                        <p className="mt-1 text-xl font-semibold text-[var(--text-primary)]">
+                          {item.status === "ready"
+                            ? `${item.personal_median ?? "—"} ${item.unit}`
+                            : "Chưa đủ dữ liệu"}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                          {item.sample_days} ngày dữ liệu · {item.rule_version}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </SurfaceCard>
+              ) : null}
 
               {replay ? (
                 <SurfaceCard className="overflow-hidden" aria-live="polite">

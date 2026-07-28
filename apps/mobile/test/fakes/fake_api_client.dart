@@ -497,6 +497,66 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> getLifeMapBaselines({
+    required String accessToken,
+  }) {
+    return _dispatch('getLifeMapBaselines', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapNextQuestion({
+    required String accessToken,
+    required String episodeId,
+    String locale = 'vi',
+  }) {
+    return _dispatch(
+      'getLifeMapNextQuestion',
+      {'episodeId': episodeId, 'locale': locale},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> recordLifeMapQuestionInteraction({
+    required String accessToken,
+    required String episodeId,
+    required String questionId,
+    required String action,
+    String reason = '',
+  }) {
+    return _dispatch(
+      'recordLifeMapQuestionInteraction',
+      {
+        'episodeId': episodeId,
+        'questionId': questionId,
+        'action': action,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> startLifeMapGuidedAnswer({
+    required String accessToken,
+    required String episodeId,
+    required String questionId,
+    required Map<String, dynamic> answer,
+    String locale = 'vi',
+  }) {
+    return _dispatch(
+      'startLifeMapGuidedAnswer',
+      {
+        'episodeId': episodeId,
+        'questionId': questionId,
+        'answer': answer,
+        'locale': locale,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> startLifeMapTextCapture({
     required String accessToken,
     required String text,

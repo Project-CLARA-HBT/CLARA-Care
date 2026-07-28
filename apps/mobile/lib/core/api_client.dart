@@ -1345,6 +1345,57 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> getLifeMapBaselines({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/lifemap/v2/baselines', accessToken: accessToken);
+  }
+
+  Future<Map<String, dynamic>> getLifeMapNextQuestion({
+    required String accessToken,
+    required String episodeId,
+    String locale = 'vi',
+  }) {
+    return _get(
+      '/api/v1/episodes/$episodeId/next-question?locale=$locale',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> recordLifeMapQuestionInteraction({
+    required String accessToken,
+    required String episodeId,
+    required String questionId,
+    required String action,
+    String reason = '',
+  }) {
+    return _post(
+      '/api/v1/episodes/$episodeId/questions/$questionId/interaction',
+      body: <String, dynamic>{'action': action, 'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> startLifeMapGuidedAnswer({
+    required String accessToken,
+    required String episodeId,
+    required String questionId,
+    required Map<String, dynamic> answer,
+    String locale = 'vi',
+  }) {
+    return _post(
+      '/api/v1/lifemap/capture/guided-answers',
+      body: <String, dynamic>{
+        'episode_id': episodeId,
+        'question_id': questionId,
+        'answer': answer,
+        'locale': locale,
+      },
+      accessToken: accessToken,
+    );
+  }
+
   /// Creates a Universal Capture text draft. The server may return an
   /// emergency escalation with `persisted=false` before writing any content.
   Future<Map<String, dynamic>> startLifeMapTextCapture({

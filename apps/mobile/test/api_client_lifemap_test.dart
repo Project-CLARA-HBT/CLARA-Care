@@ -170,6 +170,39 @@ void main() {
       expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
     });
 
+    test('baseline and governed-question routes stay server authoritative',
+        () async {
+      final requests = <http.Request>[];
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return ok({'ask': false});
+        }),
+      );
+      await client.getLifeMapBaselines(accessToken: token);
+      await client.getLifeMapNextQuestion(
+        accessToken: token,
+        episodeId: 'episode-1',
+      );
+      await client.startLifeMapGuidedAnswer(
+        accessToken: token,
+        episodeId: 'episode-1',
+        questionId: 'question-1',
+        answer: {'value': 'Ổn hơn'},
+      );
+      expect(requests[0].url.path, '/api/v1/lifemap/v2/baselines');
+      expect(
+        requests[1].url.path,
+        '/api/v1/episodes/episode-1/next-question',
+      );
+      expect(requests[1].url.queryParameters['locale'], 'vi');
+      expect(
+        requests[2].url.path,
+        '/api/v1/lifemap/capture/guided-answers',
+      );
+    });
+
     test('Universal Capture wrappers use draft and idempotent review routes',
         () async {
       final requests = <http.Request>[];

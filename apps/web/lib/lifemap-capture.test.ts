@@ -13,7 +13,9 @@ import {
   correctLifeMapEvent,
   getLifeMapCaptureCapability,
   getLifeMapReplay,
+  getLifeMapNextQuestion,
   reviewLifeMapCaptureCandidate,
+  startLifeMapGuidedAnswer,
   startLifeMapTextCapture,
 } from "@/lib/lifemap";
 
@@ -82,5 +84,35 @@ describe("LifeMap Universal Capture client", () => {
         },
       },
     );
+  });
+
+  it("loads one governed question and routes its answer through Capture", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        episode_id: "episode-1",
+        ask: true,
+        question_id: "question-1",
+        reason_code: "highest_value_question",
+      },
+    });
+    post.mockResolvedValueOnce({
+      data: { id: "session-1", emergency: false, persisted: true },
+    });
+    await getLifeMapNextQuestion("episode-1");
+    await startLifeMapGuidedAnswer(
+      "episode-1",
+      "question-1",
+      { value: "Tốt hơn" },
+    );
+    expect(get).toHaveBeenCalledWith(
+      "/episodes/episode-1/next-question",
+      { params: { locale: "vi" } },
+    );
+    expect(post).toHaveBeenCalledWith("/lifemap/capture/guided-answers", {
+      episode_id: "episode-1",
+      question_id: "question-1",
+      answer: { value: "Tốt hơn" },
+      locale: "vi",
+    });
   });
 });

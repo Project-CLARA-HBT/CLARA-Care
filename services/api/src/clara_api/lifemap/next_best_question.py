@@ -36,9 +36,9 @@ persists anything, so it is inert until called and has no schema footprint.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.db.models import (
@@ -46,6 +46,8 @@ from clara_api.db.models import (
     LifeMapDecisionLedger,
     LifeMapEpisode,
     LifeMapEvent,
+    LifeMapQuestionDefinition,
+    LifeMapQuestionInteraction,
 )
 
 POLICY_VERSION = "next-best-question-v1"
@@ -101,6 +103,7 @@ _MEDICATION_HINTS = ("thuốc", "liều", "uống", "medication", "dose", "medic
 
 @dataclass
 class QuestionCandidate:
+    question_id: str | None
     field_key: str
     text: str
     why: str
@@ -115,6 +118,7 @@ class NextBestQuestion:
     policy_version: str = POLICY_VERSION
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     field_key: str | None = None
+    question_id: str | None = None
     question: str | None = None
     why: str | None = None
     reason_code: str = ""
@@ -126,6 +130,7 @@ class NextBestQuestion:
             "policy_version": self.policy_version,
             "generated_at": self.generated_at,
             "field_key": self.field_key,
+            "question_id": self.question_id,
             "question": self.question,
             "why": self.why,
             "reason_code": self.reason_code,
@@ -144,6 +149,48 @@ def _classify(episode: LifeMapEpisode) -> list[CriticalField]:
     if not fields:
         fields.append(_SYMPTOM_FIELDS[1])  # severity
     return fields
+
+
+def _episode_class(episode: LifeMapEpisode) -> str:
+    text = f"{episode.title} {episode.goal or ''}".lower()
+    if any(hint in text for hint in _MEDICATION_HINTS):
+        return "medication"
+    if any(hint in text for hint in _SYMPTOM_HINTS):
+        return "symptom"
+    return "general"
+
+
+def _approved_catalogue(
+    db: Session, episode: LifeMapEpisode, *, locale: str
+) -> list[QuestionCandidate]:
+    episode_class = _episode_class(episode)
+    rows = list(
+        db.execute(
+            select(LifeMapQuestionDefinition)
+            .where(
+                LifeMapQuestionDefinition.status == "approved",
+                LifeMapQuestionDefinition.approved_at.is_not(None),
+                LifeMapQuestionDefinition.locale == locale,
+                LifeMapQuestionDefinition.episode_class.in_(
+                    (episode_class, "general")
+                ),
+            )
+            .order_by(
+                LifeMapQuestionDefinition.impact_weight.desc(),
+                LifeMapQuestionDefinition.field_key,
+            )
+        ).scalars()
+    )
+    return [
+        QuestionCandidate(
+            question_id=row.public_id,
+            field_key=row.field_key,
+            text=row.question_text,
+            why=row.rationale_text,
+            impact=row.impact_weight,
+        )
+        for row in rows
+    ]
 
 
 def _answered_field_keys(db: Session, profile_id: int, episode_id: int) -> set[str]:
@@ -183,7 +230,45 @@ def _dismissed_field_keys(db: Session, profile_id: int, episode_id: int) -> set[
     for inputs in rows:
         if isinstance(inputs, dict) and (key := inputs.get("field_key")):
             dismissed.add(str(key))
+    now = datetime.now(UTC)
+    governed = db.execute(
+        select(LifeMapQuestionDefinition.field_key)
+        .join(
+            LifeMapQuestionInteraction,
+            LifeMapQuestionInteraction.question_definition_id
+            == LifeMapQuestionDefinition.id,
+        )
+        .where(
+            LifeMapQuestionInteraction.profile_id == profile_id,
+            LifeMapQuestionInteraction.episode_id == episode_id,
+            or_(
+                LifeMapQuestionInteraction.action == "do_not_ask",
+                (
+                    (LifeMapQuestionInteraction.action == "dismissed")
+                    & (LifeMapQuestionInteraction.cooldown_until.is_not(None))
+                    & (LifeMapQuestionInteraction.cooldown_until > now)
+                ),
+            ),
+        )
+    ).scalars()
+    dismissed.update(str(key) for key in governed)
     return dismissed
+
+
+def _burden_budget_exhausted(
+    db: Session, profile_id: int, episode_id: int, now: datetime
+) -> bool:
+    recent = db.execute(
+        select(LifeMapQuestionInteraction.id).where(
+            LifeMapQuestionInteraction.profile_id == profile_id,
+            LifeMapQuestionInteraction.episode_id == episode_id,
+            LifeMapQuestionInteraction.action.in_(
+                ("presented", "answered_draft", "confirmed", "dismissed")
+            ),
+            LifeMapQuestionInteraction.created_at >= now - timedelta(hours=24),
+        )
+    ).first()
+    return recent is not None
 
 
 def _emergency_active(db: Session, profile_id: int, episode_id: int) -> bool:
@@ -220,6 +305,8 @@ def compute_next_best_question(
     *,
     profile_id: int,
     episode: LifeMapEpisode,
+    locale: str = "vi",
+    governed_only: bool = False,
 ) -> NextBestQuestion:
     """Deterministic core: return the single highest-value question, or none."""
 
@@ -227,14 +314,34 @@ def compute_next_best_question(
     if _emergency_active(db, profile_id, episode.id):
         return NextBestQuestion(ask=False, reason_code="emergency_active")
 
-    fields = _classify(episode)
+    now = datetime.now(UTC)
+    if _burden_budget_exhausted(db, profile_id, episode.id, now):
+        return NextBestQuestion(ask=False, reason_code="burden_budget_exhausted")
+
+    governed = (
+        _approved_catalogue(db, episode, locale=locale)
+        if governed_only
+        else []
+    )
+    if governed_only and not governed:
+        return NextBestQuestion(ask=False, reason_code="catalogue_not_approved")
     answered = _answered_field_keys(db, profile_id, episode.id)
     dismissed = _dismissed_field_keys(db, profile_id, episode.id)
 
+    candidates = governed or [
+        QuestionCandidate(
+            question_id=None,
+            field_key=key,
+            text=text,
+            why=why,
+            impact=impact,
+        )
+        for (key, text, why, impact) in _classify(episode)
+    ]
     candidates = [
-        QuestionCandidate(field_key=key, text=text, why=why, impact=impact)
-        for (key, text, why, impact) in fields
-        if key not in answered and key not in dismissed
+        item
+        for item in candidates
+        if item.field_key not in answered and item.field_key not in dismissed
     ]
     considered = len(candidates)
 
@@ -260,6 +367,7 @@ def compute_next_best_question(
 
     return NextBestQuestion(
         ask=True,
+        question_id=best.question_id,
         field_key=best.field_key,
         question=best.text,
         why=best.why,

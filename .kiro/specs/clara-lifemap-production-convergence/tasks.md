@@ -182,18 +182,18 @@ outputs cannot masquerade as current.
 - [ ] 6.1 Clinical/data review selects initial signals, canonical units, valid
   ranges, source eligibility, exclusions, sample/span minimums, and change rules.
   _R7, R22_
-- [ ] 6.2 Implement the versioned baseline registry and snapshot/input/change
+- [x] 6.2 Implement the versioned baseline registry and snapshot/input/change
   tables. _R7_
-- [ ] 6.3 Implement deterministic normalization, robust statistics, sufficiency,
+- [x] 6.3 Implement deterministic normalization, robust statistics, sufficiency,
   persistence, late-data handling, and correction recomputation. _R7_
 - [ ] 6.4 Shadow-run baseline V2 against historical/synthetic data; measure false
   alert, data insufficiency, stability, and subgroup performance. _R7, R22_
 - [ ] 6.5 Clinical review creates the initial typed question catalogue, rationale,
   sensitivity, answer schemas, and impact mappings. _R8_
-- [ ] 6.6 Implement deterministic eligibility/ranking, burden budget, cooldown,
+- [x] 6.6 Implement deterministic eligibility/ranking, burden budget, cooldown,
   dismissal, do-not-ask, and consent checks. _R8_
-- [ ] 6.7 Route answers through Capture/truth; never direct-confirm. _R3, R8_
-- [ ] 6.8 Build web/mobile baseline explanations and one-question UI with clear
+- [x] 6.7 Route answers through Capture/truth; never direct-confirm. _R3, R8_
+- [x] 6.8 Build web/mobile baseline explanations and one-question UI with clear
   “personal change, not diagnosis” copy. _R7, R8, R19_
 - [ ] 6.9 Run comprehension and usefulness pilot; set alert/question stop
   thresholds before enabling beyond allowlist. _R22_

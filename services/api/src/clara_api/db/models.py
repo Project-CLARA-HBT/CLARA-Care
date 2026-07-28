@@ -1135,6 +1135,204 @@ class LifeMapDecisionInput(Base):
     )
 
 
+class LifeMapBaselineDefinition(Base):
+    """Versioned, governed registry entry for one personal baseline signal."""
+
+    __tablename__ = "lifemap_baseline_definitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "signal_key",
+            "version",
+            name="uq_lifemap_baseline_definition_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    signal_key: Mapped[str] = mapped_column(String(64), index=True)
+    version: Mapped[str] = mapped_column(String(64), index=True)
+    canonical_unit: Mapped[str] = mapped_column(String(32))
+    valid_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    valid_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    minimum_samples: Mapped[int] = mapped_column(Integer, default=7)
+    minimum_span_days: Mapped[int] = mapped_column(Integer, default=7)
+    window_days: Mapped[int] = mapped_column(Integer, default=28)
+    source_eligibility_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    exclusions_json: Mapped[list] = mapped_column(JSON, default=list)
+    change_rules_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    approved_by: Mapped[str] = mapped_column(String(120), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapBaselineSnapshot(Base):
+    """Immutable reproducible result for a definition and input watermark."""
+
+    __tablename__ = "lifemap_baseline_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "definition_id",
+            "input_watermark",
+            name="uq_lifemap_baseline_snapshot_watermark",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_baseline_definitions.id", ondelete="RESTRICT"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    median_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mad_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sample_count: Mapped[int] = mapped_column(Integer)
+    span_days: Mapped[int] = mapped_column(Integer)
+    window_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    window_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    input_watermark: Mapped[str] = mapped_column(String(64), index=True)
+    rule_version: Mapped[str] = mapped_column(String(64))
+    stale_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    stale_reason: Mapped[str] = mapped_column(String(96), default="")
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapBaselineInput(Base):
+    """Exact daily aggregates consumed by a baseline snapshot."""
+
+    __tablename__ = "lifemap_baseline_inputs"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "aggregate_id",
+            name="uq_lifemap_baseline_snapshot_input",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_baseline_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    aggregate_id: Mapped[int] = mapped_column(
+        ForeignKey("wearable_daily_aggregates.id", ondelete="RESTRICT"), index=True
+    )
+    aggregate_policy_version: Mapped[str] = mapped_column(String(64))
+
+
+class LifeMapBaselineChange(Base):
+    """Explainable comparison between consecutive baseline snapshots."""
+
+    __tablename__ = "lifemap_baseline_changes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    previous_snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_baseline_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    current_snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_baseline_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    change_kind: Mapped[str] = mapped_column(String(32), index=True)
+    absolute_change: Mapped[float | None] = mapped_column(Float, nullable=True)
+    relative_change: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rule_version: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapQuestionDefinition(Base):
+    """Versioned question catalogue; only approved rows are eligible."""
+
+    __tablename__ = "lifemap_question_definitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "field_key",
+            "version",
+            "locale",
+            name="uq_lifemap_question_definition_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    field_key: Mapped[str] = mapped_column(String(64), index=True)
+    version: Mapped[str] = mapped_column(String(64), index=True)
+    locale: Mapped[str] = mapped_column(String(16), index=True)
+    episode_class: Mapped[str] = mapped_column(String(32), index=True)
+    question_text: Mapped[str] = mapped_column(Text)
+    rationale_text: Mapped[str] = mapped_column(Text)
+    sensitivity: Mapped[str] = mapped_column(String(24), default="standard")
+    answer_schema_json: Mapped[dict] = mapped_column(JSON)
+    impact_weight: Mapped[int] = mapped_column(Integer)
+    impact_mapping_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    approved_by: Mapped[str] = mapped_column(String(120), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class LifeMapQuestionInteraction(Base):
+    """Append-only burden, dismissal, and answer history."""
+
+    __tablename__ = "lifemap_question_interactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), index=True
+    )
+    question_definition_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_question_definitions.id", ondelete="RESTRICT"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(24), index=True)
+    reason_code: Mapped[str] = mapped_column(String(64), default="")
+    answer_event_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    cooldown_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 class LifeMapCaptureSession(Base):
     """A resumable, expiring Universal Capture review boundary."""
 

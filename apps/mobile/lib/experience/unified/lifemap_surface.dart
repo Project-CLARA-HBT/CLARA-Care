@@ -93,6 +93,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   List<_Episode> _episodes = const [];
   List<_AcceptedTask> _tasks = const [];
   bool _captureEnabled = false;
+  bool _questionEnabled = false;
+  List<Map<String, dynamic>> _baselines = const [];
   bool _capturing = false;
   Map<String, dynamic>? _captureSession;
   final TextEditingController _captureController = TextEditingController();
@@ -150,6 +152,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           await widget.apiClient.getMobileSummary(accessToken: token);
       final flags = summary['feature_flags'];
       final captureEnabled = flags is Map && flags['lifemap_capture'] == true;
+      final questionEnabled =
+          flags is Map && flags['lifemap_next_question_v2'] == true;
+      final baselineEnabled =
+          flags is Map && flags['lifemap_baselines_v2'] == true;
+      final baselinePayload = baselineEnabled
+          ? await widget.apiClient.getLifeMapBaselines(accessToken: token)
+          : const <String, dynamic>{};
+      final baselines = <Map<String, dynamic>>[];
+      final rawBaselines = baselinePayload['data'];
+      if (rawBaselines is List) {
+        for (final item in rawBaselines) {
+          if (item is Map) baselines.add(item.cast<String, dynamic>());
+        }
+      }
       final data = await widget.apiClient.getLifeMapToday(accessToken: token);
       final episodes = <_Episode>[];
       final rawEpisodes = data['episodes'];
@@ -174,6 +190,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _episodes = episodes;
         _tasks = tasks;
         _captureEnabled = captureEnabled;
+        _questionEnabled = questionEnabled;
+        _baselines = baselines;
         // Keep the task-form selection valid against the freshly loaded set.
         if (_selectedEpisodeId != null &&
             !episodes.any((e) => e.id == _selectedEpisodeId)) {
@@ -435,6 +453,91 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     }
   }
 
+  Future<void> _askOneQuestion(_Episode episode) async {
+    final token = _token;
+    if (token == null) return;
+    try {
+      final question = await widget.apiClient.getLifeMapNextQuestion(
+        accessToken: token,
+        episodeId: episode.id,
+      );
+      if (question['ask'] != true || _str(question['question_id']).isEmpty) {
+        _showSnack(
+            'Hiện chưa có câu hỏi cần thiết. CLARA ưu tiên hỏi ít nhất có thể.');
+        return;
+      }
+      final questionId = _str(question['question_id']);
+      await widget.apiClient.recordLifeMapQuestionInteraction(
+        accessToken: token,
+        episodeId: episode.id,
+        questionId: questionId,
+        action: 'presented',
+      );
+      if (!mounted) return;
+      final controller = TextEditingController();
+      final answer = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(_str(question['question'])),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Vì sao CLARA hỏi: ${_str(question['why'])}'),
+              const SizedBox(height: ClaraTokens.spaceMd),
+              TextField(
+                controller: controller,
+                minLines: 2,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Câu trả lời của bạn',
+                  helperText: 'Sẽ tạo bản nháp để bạn kiểm tra trước.',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await widget.apiClient.recordLifeMapQuestionInteraction(
+                  accessToken: token,
+                  episodeId: episode.id,
+                  questionId: questionId,
+                  action: 'dismissed',
+                  reason: 'Để sau',
+                );
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Để sau'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
+              },
+              child: const Text('Tạo bản nháp'),
+            ),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (answer == null || answer.isEmpty) return;
+      final session = await widget.apiClient.startLifeMapGuidedAnswer(
+        accessToken: token,
+        episodeId: episode.id,
+        questionId: questionId,
+        answer: <String, dynamic>{'value': answer},
+      );
+      if (!mounted) return;
+      setState(() => _captureSession = session);
+      _showSnack('Đã tạo bản nháp. Hãy kiểm tra rồi xác nhận.');
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tải câu hỏi. Vui lòng thử lại khi có mạng.');
+    }
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -539,6 +642,48 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             child: _buildCaptureCard(context),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
+        ],
+
+        if (_baselines.isNotEmpty) ...[
+          const SectionHeader(title: 'Thay đổi so với chính bạn'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: ClaraCard.static_(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Không phải mức bình thường lâm sàng hay chẩn đoán.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: ClaraTokens.spaceMd),
+                  ..._baselines.map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(_str(item['signal_key'])),
+                      subtitle: Text(
+                        '${_str(item['sample_days'])} ngày dữ liệu · '
+                        '${_str(item['rule_version'])}',
+                      ),
+                      trailing: Text(
+                        item['status'] == 'ready'
+                            ? '${_str(item['personal_median'])} ${_str(item['unit'])}'
+                            : 'Chưa đủ dữ liệu',
+                        style: theme.textTheme.labelLarge,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
 
         // --- Journeys (episodes) -------------------------------------------
@@ -862,10 +1007,21 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           const SizedBox(height: ClaraTokens.spaceSm),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => _openReplay(episode),
-              icon: const Icon(Icons.history, size: 18),
-              label: const Text('Xem lịch sử'),
+            child: Wrap(
+              spacing: ClaraTokens.spaceSm,
+              children: [
+                if (_questionEnabled)
+                  TextButton.icon(
+                    onPressed: () => _askOneQuestion(episode),
+                    icon: const Icon(Icons.help_outline, size: 18),
+                    label: const Text('Một câu hỏi'),
+                  ),
+                TextButton.icon(
+                  onPressed: () => _openReplay(episode),
+                  icon: const Icon(Icons.history, size: 18),
+                  label: const Text('Xem lịch sử'),
+                ),
+              ],
             ),
           ),
         ],

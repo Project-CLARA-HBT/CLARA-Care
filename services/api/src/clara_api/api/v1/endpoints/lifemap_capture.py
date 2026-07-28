@@ -29,8 +29,12 @@ from clara_api.db.models import (
     LifeMapCaptureJob,
     LifeMapCaptureReviewAction,
     LifeMapCaptureSession,
+    LifeMapEpisode,
+    LifeMapEpisodeEventLink,
     LifeMapEvent,
     LifeMapEventRevision,
+    LifeMapQuestionDefinition,
+    LifeMapQuestionInteraction,
 )
 from clara_api.db.session import get_db
 from clara_api.lifemap.capture_artifacts import (
@@ -63,6 +67,13 @@ class ReviewRequest(BaseModel):
     action: str
     value: dict | None = None
     reason: str = Field(default="", max_length=255)
+
+
+class GuidedAnswerCaptureRequest(BaseModel):
+    episode_id: str
+    question_id: str
+    answer: dict
+    locale: str = Field(default="vi", min_length=2, max_length=16)
 
 
 def _require_enabled() -> None:
@@ -111,6 +122,36 @@ def _candidate(
     if row is None:
         raise HTTPException(status_code=404, detail={"code": "capture_candidate_not_found"})
     return row
+
+
+def _guided_scope_objects(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    episode_id: str,
+    question_id: str,
+) -> tuple[LifeMapEpisode, LifeMapQuestionDefinition]:
+    episode = db.execute(
+        select(LifeMapEpisode).where(
+            LifeMapEpisode.public_id == episode_id,
+            LifeMapEpisode.profile_id == scope.profile.id,
+            LifeMapEpisode.status == "open",
+        )
+    ).scalar_one_or_none()
+    question = db.execute(
+        select(LifeMapQuestionDefinition).where(
+            LifeMapQuestionDefinition.public_id == question_id,
+            LifeMapQuestionDefinition.status == "approved",
+            LifeMapQuestionDefinition.approved_at.is_not(None),
+        )
+    ).scalar_one_or_none()
+    if episode is None:
+        raise HTTPException(status_code=404, detail={"code": "episode_not_found"})
+    if question is None:
+        raise HTTPException(
+            status_code=409, detail={"code": "question_not_approved"}
+        )
+    return episode, question
 
 
 def _serialize_candidate(row: LifeMapCaptureCandidate) -> dict:
@@ -235,6 +276,93 @@ def start_text_capture(
         entity_id=session.public_id,
         actor_user_id=scope.actor.id,
         scope="owner:self_care",
+    )
+    db.commit()
+    return {
+        "id": session.public_id,
+        "status": session.status,
+        "expires_at": session.expires_at,
+        "candidates": [_serialize_candidate(candidate)],
+        "emergency": False,
+        "persisted": True,
+    }
+
+
+@router.post("/guided-answers", status_code=201)
+def start_guided_answer_capture(
+    payload: GuidedAnswerCaptureRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Create a reviewable answer candidate; never direct-confirm an answer."""
+
+    _require_enabled()
+    answer_text = json.dumps(payload.answer, ensure_ascii=False, sort_keys=True)
+    if emergency_fast_path(answer_text):
+        return {
+            "emergency": True,
+            "persisted": False,
+            "message": (
+                "Nếu bạn đang gặp nguy hiểm ngay lập tức, hãy gọi cấp cứu địa phương "
+                "hoặc đến cơ sở cấp cứu gần nhất."
+            ),
+        }
+    scope = _scope(db, token, x_profile, action="create")
+    ensure_medical_disclaimer_consent(db, user_id=scope.actor.id)
+    episode, question = _guided_scope_objects(
+        db,
+        scope,
+        episode_id=payload.episode_id,
+        question_id=payload.question_id,
+    )
+    now = datetime.now(UTC)
+    session = LifeMapCaptureSession(
+        profile_id=scope.profile.id,
+        created_by_user_id=scope.actor.id,
+        input_kind="guided_answer",
+        schema_version=CAPTURE_SCHEMA_VERSION,
+        locale=payload.locale,
+        expires_at=now + SESSION_LIFETIME,
+    )
+    db.add(session)
+    db.flush()
+    value = {
+        "question_id": question.public_id,
+        "field_key": question.field_key,
+        "episode_id": episode.public_id,
+        "answer": payload.answer,
+    }
+    candidate = LifeMapCaptureCandidate(
+        session_id=session.id,
+        profile_id=scope.profile.id,
+        candidate_type="guided_answer",
+        field_path=question.field_key,
+        value_json=value,
+        confidence=1.0,
+        source_span_json=None,
+        missing_critical_fields_json=[],
+        extraction_schema_version=CAPTURE_SCHEMA_VERSION,
+        extractor_version="direct-guided-answer-v1",
+    )
+    db.add(candidate)
+    db.add(
+        LifeMapQuestionInteraction(
+            profile_id=scope.profile.id,
+            episode_id=episode.id,
+            question_definition_id=question.id,
+            action="answered_draft",
+        )
+    )
+    db.flush()
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="create",
+        entity="capture_session",
+        entity_id=session.public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
     )
     db.commit()
     return {
@@ -617,9 +745,19 @@ def review_candidate(
         )
         db.add(source)
         db.flush()
+        episode: LifeMapEpisode | None = None
+        question: LifeMapQuestionDefinition | None = None
+        if candidate.candidate_type == "guided_answer":
+            episode, question = _guided_scope_objects(
+                db,
+                scope,
+                episode_id=str(value.get("episode_id", "")),
+                question_id=str(value.get("question_id", "")),
+            )
         event = LifeMapEvent(
             profile_id=scope.profile.id,
-            event_type="captured_text",
+            episode_id=episode.id if episode else None,
+            event_type=question.field_key if question else "captured_text",
             truth_state="confirmed",
             occurred_at=datetime.now(UTC),
             payload_json=value,
@@ -633,20 +771,39 @@ def review_candidate(
         )
         db.add(event)
         db.flush()
-        db.add(
-            LifeMapEventRevision(
-                event_id=event.id,
-                profile_id=scope.profile.id,
-                revision_no=1,
-                truth_state="confirmed",
-                payload_json=value,
-                provenance_json=event.provenance_json,
-                source_reference_id=source.id,
-                asserted_by_user_id=scope.actor.id,
-                reason_code="capture_review_confirmed",
-                policy_version="lifemap-truth-v2",
-            )
+        revision = LifeMapEventRevision(
+            event_id=event.id,
+            profile_id=scope.profile.id,
+            revision_no=1,
+            truth_state="confirmed",
+            payload_json=value,
+            provenance_json=event.provenance_json,
+            source_reference_id=source.id,
+            asserted_by_user_id=scope.actor.id,
+            reason_code="capture_review_confirmed",
+            policy_version="lifemap-truth-v2",
         )
+        db.add(revision)
+        db.flush()
+        if episode is not None and question is not None:
+            db.add(
+                LifeMapEpisodeEventLink(
+                    profile_id=scope.profile.id,
+                    episode_id=episode.id,
+                    event_id=event.id,
+                    event_revision_id=revision.id,
+                    linked_by_user_id=scope.actor.id,
+                )
+            )
+            db.add(
+                LifeMapQuestionInteraction(
+                    profile_id=scope.profile.id,
+                    episode_id=episode.id,
+                    question_definition_id=question.id,
+                    action="confirmed",
+                    answer_event_revision_id=revision.id,
+                )
+            )
         response["event_id"] = event.public_id
         session.status = "completed"
         session.completed_at = datetime.now(UTC)

@@ -1,6 +1,7 @@
 """Profile-scoped baseline, revision-aware replay, and decision-ledger reads."""
 
-from datetime import UTC, datetime
+import hashlib
+from datetime import UTC, datetime, timedelta
 from statistics import median
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -9,9 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.core.config import get_settings
+from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    LifeMapBaselineDefinition,
+    LifeMapBaselineSnapshot,
     LifeMapCareTask,
     LifeMapDecisionInput,
     LifeMapDecisionLedger,
@@ -20,11 +24,21 @@ from clara_api.db.models import (
     LifeMapEvent,
     LifeMapEventRevision,
     LifeMapProjectionDependency,
+    LifeMapQuestionDefinition,
+    LifeMapQuestionInteraction,
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
+from clara_api.lifemap.baselines import recompute_baseline, serialize_snapshot
+from clara_api.lifemap.commands import (
+    add_outbox,
+    replay_command,
+    request_digest,
+    store_command,
+)
 from clara_api.lifemap.next_best_question import compute_next_best_question
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.phr.audit import write_audit
 
 router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -32,6 +46,11 @@ USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 
 class DecisionDisputeRequest(BaseModel):
     reason: str = Field(min_length=2, max_length=1000)
+
+
+class QuestionInteractionRequest(BaseModel):
+    action: str
+    reason: str = Field(default="", max_length=255)
 
 
 def _scope(
@@ -74,6 +93,126 @@ def _aggregate_value(row: WearableDailyAggregate) -> float | None:
     if isinstance(scalar, int | float) and not isinstance(scalar, bool):
         return float(scalar)
     return None
+
+
+def _approved_baseline_definition(
+    db: Session, signal_key: str
+) -> LifeMapBaselineDefinition:
+    definition = db.execute(
+        select(LifeMapBaselineDefinition)
+        .where(
+            LifeMapBaselineDefinition.signal_key == signal_key,
+            LifeMapBaselineDefinition.status == "approved",
+            LifeMapBaselineDefinition.approved_at.is_not(None),
+        )
+        .order_by(LifeMapBaselineDefinition.created_at.desc())
+    ).scalars().first()
+    if definition is None:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "baseline_definition_not_approved"},
+        )
+    return definition
+
+
+def _require_baseline_v2() -> None:
+    if not get_settings().lifemap_baselines_v2_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_not_enabled"})
+
+
+@router.get("/lifemap/v2/baselines")
+def baseline_snapshots_v2(
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> list[dict]:
+    _require_baseline_v2()
+    scope = _scope(db, token, x_profile)
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    rows = db.execute(
+        select(LifeMapBaselineSnapshot, LifeMapBaselineDefinition)
+        .join(
+            LifeMapBaselineDefinition,
+            LifeMapBaselineDefinition.id == LifeMapBaselineSnapshot.definition_id,
+        )
+        .where(
+            LifeMapBaselineSnapshot.profile_id == scope.profile.id,
+            LifeMapBaselineSnapshot.stale_at.is_(None),
+        )
+        .order_by(LifeMapBaselineDefinition.signal_key)
+    ).all()
+    return [serialize_snapshot(snapshot, definition) for snapshot, definition in rows]
+
+
+@router.post("/lifemap/v2/baselines/{signal_key}/recompute")
+def recompute_baseline_v2(
+    signal_key: str,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    _require_baseline_v2()
+    scope = _scope(db, token, x_profile, action="update")
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    definition = _approved_baseline_definition(db, signal_key)
+    operation = f"baseline.recompute:{definition.public_id}"
+    digest = request_digest({"signal_key": signal_key, "version": definition.version})
+    prior = replay_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+    )
+    if prior is not None:
+        return {**prior.response, "idempotent_replay": True}
+    snapshot = recompute_baseline(
+        db,
+        profile_id=scope.profile.id,
+        definition=definition,
+    )
+    response = {
+        **serialize_snapshot(snapshot, definition),
+        "idempotent_replay": False,
+    }
+    command = store_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        status_code=200,
+        response=response,
+    )
+    add_outbox(
+        db,
+        event_id=hashlib.sha256(
+            (
+                f"{scope.profile.id}:{scope.actor.id}:{operation}:"
+                f"{idempotency_key}"
+            ).encode()
+        ).hexdigest(),
+        profile_id=scope.profile.id,
+        aggregate_type="baseline_snapshot",
+        aggregate_public_id=snapshot.public_id,
+        event_type="lifemap.baseline.recomputed",
+    )
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="change",
+        entity="baseline_snapshot",
+        entity_id=snapshot.public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
+    response["command_id"] = command.public_id
+    command.response_json = {**response}
+    db.commit()
+    return response
 
 
 @router.get("/baselines")
@@ -136,6 +275,7 @@ def baseline(
 @router.get("/episodes/{episode_id}/next-question")
 def episode_next_question(
     episode_id: str,
+    locale: str = "vi",
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
@@ -148,14 +288,133 @@ def episode_next_question(
     'ask nothing' result with a reason code.
     """
 
-    if not get_settings().lifemap_next_question_enabled:
+    settings = get_settings()
+    if not (
+        settings.lifemap_next_question_enabled
+        or settings.lifemap_next_question_v2_enabled
+    ):
         raise HTTPException(status_code=404, detail="Feature not enabled")
     scope = _scope(db, token, x_profile)
+    if settings.lifemap_next_question_v2_enabled:
+        ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+        if not settings.lifemap_capture_enabled:
+            return {
+                "episode_id": episode_id,
+                "ask": False,
+                "policy_version": "next-best-question-v2",
+                "reason_code": "capture_unavailable",
+            }
     episode = _episode_for_profile(db, scope.profile.id, episode_id)
     result = compute_next_best_question(
-        db, profile_id=scope.profile.id, episode=episode
+        db,
+        profile_id=scope.profile.id,
+        episode=episode,
+        locale=locale,
+        governed_only=settings.lifemap_next_question_v2_enabled,
     )
     return {"episode_id": episode.public_id, **result.as_dict()}
+
+
+@router.post("/episodes/{episode_id}/questions/{question_id}/interaction")
+def record_question_interaction(
+    episode_id: str,
+    question_id: str,
+    payload: QuestionInteractionRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    settings = get_settings()
+    if not settings.lifemap_next_question_v2_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_not_enabled"})
+    if payload.action not in {"presented", "dismissed", "do_not_ask"}:
+        raise HTTPException(status_code=422, detail={"code": "invalid_action"})
+    scope = _scope(db, token, x_profile, action="update")
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    episode = _episode_for_profile(db, scope.profile.id, episode_id)
+    question = db.execute(
+        select(LifeMapQuestionDefinition).where(
+            LifeMapQuestionDefinition.public_id == question_id,
+            LifeMapQuestionDefinition.status == "approved",
+            LifeMapQuestionDefinition.approved_at.is_not(None),
+        )
+    ).scalar_one_or_none()
+    if question is None:
+        raise HTTPException(status_code=404, detail={"code": "question_not_found"})
+    operation = f"question.{payload.action}:{episode.public_id}:{question.public_id}"
+    digest = request_digest(payload.model_dump(mode="json"))
+    prior = replay_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+    )
+    if prior is not None:
+        return {**prior.response, "idempotent_replay": True}
+    cooldown = (
+        datetime.now(UTC) + timedelta(days=30)
+        if payload.action == "dismissed"
+        else None
+    )
+    interaction = LifeMapQuestionInteraction(
+        profile_id=scope.profile.id,
+        episode_id=episode.id,
+        question_definition_id=question.id,
+        action=payload.action,
+        reason_code=payload.reason.strip(),
+        cooldown_until=cooldown,
+    )
+    db.add(interaction)
+    db.flush()
+    response = {
+        "id": interaction.public_id,
+        "action": interaction.action,
+        "cooldown_until": (
+            interaction.cooldown_until.isoformat()
+            if interaction.cooldown_until is not None
+            else None
+        ),
+        "idempotent_replay": False,
+    }
+    command = store_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        status_code=200,
+        response=response,
+    )
+    response["command_id"] = command.public_id
+    command.response_json = {**response}
+    add_outbox(
+        db,
+        event_id=hashlib.sha256(
+            (
+                f"{scope.profile.id}:{scope.actor.id}:{operation}:"
+                f"{idempotency_key}"
+            ).encode()
+        ).hexdigest(),
+        profile_id=scope.profile.id,
+        aggregate_type="question_interaction",
+        aggregate_public_id=interaction.public_id,
+        event_type=f"lifemap.question.{payload.action}",
+    )
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="change",
+        entity="question_interaction",
+        entity_id=interaction.public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
+    db.commit()
+    return response
 
 
 @router.get("/episodes/{episode_id}/replay")
