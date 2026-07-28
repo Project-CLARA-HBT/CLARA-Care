@@ -35,14 +35,26 @@ import '../states/empty_state.dart';
 @immutable
 class _MedicationCourse {
   const _MedicationCourse({
+    required this.id,
     required this.medicationName,
     required this.doseText,
     required this.scheduleText,
+    required this.routeText,
+    required this.formText,
+    required this.status,
+    required this.reconciliationStatus,
+    required this.version,
   });
 
+  final String id;
   final String medicationName;
   final String doseText;
   final String scheduleText;
+  final String routeText;
+  final String formText;
+  final String status;
+  final String reconciliationStatus;
+  final int version;
 
   static _MedicationCourse fromJson(Map<String, dynamic> json) {
     String read(String key) {
@@ -51,9 +63,15 @@ class _MedicationCourse {
     }
 
     return _MedicationCourse(
+      id: read('id'),
       medicationName: read('medication_name'),
       doseText: read('dose_text'),
       scheduleText: read('schedule_text'),
+      routeText: read('route_text'),
+      formText: read('form_text'),
+      status: read('status'),
+      reconciliationStatus: read('reconciliation_status'),
+      version: json['version'] is int ? json['version'] as int : 1,
     );
   }
 }
@@ -235,6 +253,64 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
     }
   }
 
+  Future<void> _openEditSheet(_MedicationCourse course) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: _AddCourseForm(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          existing: course,
+        ),
+      ),
+    );
+    if (changed == true) await _load();
+  }
+
+  Future<void> _endCourse(_MedicationCourse course) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ghi nhận đã kết thúc?'),
+        content: const Text(
+          'Thao tác này chỉ cập nhật hồ sơ của bạn, không phải khuyến nghị dừng thuốc. '
+          'Không tự ý ngừng thuốc nếu chưa trao đổi với chuyên gia y tế.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Ghi nhận'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      await widget.apiClient.endMedicationCourse(
+        accessToken: token,
+        courseId: course.id,
+        version: course.version,
+        reason: 'Người dùng xác nhận kết thúc trên ứng dụng di động',
+      );
+      await _load();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -300,17 +376,26 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
         itemCount: _courses.length,
         separatorBuilder: (_, __) =>
             const SizedBox(height: ClaraTokens.spaceSm),
-        itemBuilder: (context, index) =>
-            _CourseCard(course: _courses[index]),
+        itemBuilder: (context, index) => _CourseCard(
+          course: _courses[index],
+          onEdit: () => _openEditSheet(_courses[index]),
+          onEnd: () => _endCourse(_courses[index]),
+        ),
       ),
     );
   }
 }
 
 class _CourseCard extends StatelessWidget {
-  const _CourseCard({required this.course});
+  const _CourseCard({
+    required this.course,
+    required this.onEdit,
+    required this.onEnd,
+  });
 
   final _MedicationCourse course;
+  final VoidCallback onEdit;
+  final VoidCallback onEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +405,8 @@ class _CourseCard extends StatelessWidget {
     final details = <String>[
       if (course.doseText.isNotEmpty) course.doseText,
       if (course.scheduleText.isNotEmpty) course.scheduleText,
+      if (course.routeText.isNotEmpty) course.routeText,
+      if (course.formText.isNotEmpty) course.formText,
     ];
 
     return Card(
@@ -352,8 +439,47 @@ class _CourseCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  const SizedBox(height: ClaraTokens.spaceSm),
+                  Wrap(
+                    spacing: ClaraTokens.spaceXs,
+                    runSpacing: ClaraTokens.spaceXs,
+                    children: [
+                      Chip(
+                        label: Text(
+                          course.status == 'ended'
+                              ? 'Đã kết thúc'
+                              : 'Đang dùng',
+                        ),
+                      ),
+                      Chip(
+                        label: Text(
+                          course.reconciliationStatus == 'matched'
+                              ? 'Đã khớp nguồn'
+                              : 'Chưa xác minh',
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Thao tác với thuốc',
+              onSelected: (value) {
+                if (value == 'edit') onEdit();
+                if (value == 'end') onEnd();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Text('Sửa bằng phiên bản mới'),
+                ),
+                if (course.status != 'ended')
+                  const PopupMenuItem(
+                    value: 'end',
+                    child: Text('Ghi nhận đã kết thúc'),
+                  ),
+              ],
             ),
           ],
         ),
@@ -366,10 +492,12 @@ class _AddCourseForm extends StatefulWidget {
   const _AddCourseForm({
     required this.apiClient,
     required this.sessionStore,
+    this.existing,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final _MedicationCourse? existing;
 
   @override
   State<_AddCourseForm> createState() => _AddCourseFormState();
@@ -379,15 +507,34 @@ class _AddCourseFormState extends State<_AddCourseForm> {
   final _nameController = TextEditingController();
   final _doseController = TextEditingController();
   final _scheduleController = TextEditingController();
+  final _routeController = TextEditingController();
+  final _formController = TextEditingController();
+  final _reasonController = TextEditingController();
 
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final course = widget.existing;
+    if (course != null) {
+      _nameController.text = course.medicationName;
+      _doseController.text = course.doseText;
+      _scheduleController.text = course.scheduleText;
+      _routeController.text = course.routeText;
+      _formController.text = course.formText;
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _doseController.dispose();
     _scheduleController.dispose();
+    _routeController.dispose();
+    _formController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
@@ -410,12 +557,36 @@ class _AddCourseFormState extends State<_AddCourseForm> {
     });
 
     try {
-      await widget.apiClient.createMedicationCourse(
-        accessToken: token,
-        medicationName: name,
-        doseText: _doseController.text.trim(),
-        scheduleText: _scheduleController.text.trim(),
-      );
+      if (widget.existing == null) {
+        await widget.apiClient.createMedicationCourse(
+          accessToken: token,
+          medicationName: name,
+          doseText: _doseController.text.trim(),
+          scheduleText: _scheduleController.text.trim(),
+          routeText: _routeController.text.trim(),
+          formText: _formController.text.trim(),
+        );
+      } else {
+        final reason = _reasonController.text.trim();
+        if (reason.length < 2) {
+          setState(() {
+            _saving = false;
+            _error = 'Vui lòng nhập lý do chỉnh sửa.';
+          });
+          return;
+        }
+        await widget.apiClient.correctMedicationCourse(
+          accessToken: token,
+          courseId: widget.existing!.id,
+          version: widget.existing!.version,
+          medicationName: name,
+          doseText: _doseController.text.trim(),
+          scheduleText: _scheduleController.text.trim(),
+          routeText: _routeController.text.trim(),
+          formText: _formController.text.trim(),
+          reason: reason,
+        );
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
@@ -448,7 +619,7 @@ class _AddCourseFormState extends State<_AddCourseForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Thêm thuốc',
+              widget.existing == null ? 'Thêm thuốc' : 'Sửa thông tin thuốc',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -479,14 +650,62 @@ class _AddCourseFormState extends State<_AddCourseForm> {
             TextField(
               controller: _scheduleController,
               enabled: !_saving,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _saving ? null : _submit(),
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Lịch dùng',
                 hintText: 'Ví dụ: 2 lần/ngày sau ăn',
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _routeController,
+                    enabled: !_saving,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Đường dùng',
+                      hintText: 'Ví dụ: Uống',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: ClaraTokens.spaceSm),
+                Expanded(
+                  child: TextField(
+                    controller: _formController,
+                    enabled: !_saving,
+                    textInputAction: widget.existing == null
+                        ? TextInputAction.done
+                        : TextInputAction.next,
+                    onSubmitted: widget.existing == null && !_saving
+                        ? (_) => _submit()
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Dạng thuốc',
+                      hintText: 'Ví dụ: Viên nén',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (widget.existing != null) ...[
+              const SizedBox(height: ClaraTokens.spaceMd),
+              TextField(
+                controller: _reasonController,
+                enabled: !_saving,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _saving ? null : _submit(),
+                decoration: const InputDecoration(
+                  labelText: 'Lý do chỉnh sửa *',
+                  hintText: 'Ví dụ: Sửa thông tin đã nhập nhầm',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: ClaraTokens.spaceMd),
               Text(
@@ -508,7 +727,11 @@ class _AddCourseFormState extends State<_AddCourseForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Lưu thuốc'),
+                  : Text(
+                      widget.existing == null
+                          ? 'Lưu thuốc'
+                          : 'Lưu phiên bản mới',
+                    ),
             ),
           ],
         ),
@@ -569,8 +792,7 @@ class _SafetyTab extends StatelessWidget {
                 const SizedBox(height: ClaraTokens.spaceMd),
                 Builder(
                   builder: (context) {
-                    final controller =
-                        DefaultTabController.maybeOf(context);
+                    final controller = DefaultTabController.maybeOf(context);
                     if (controller == null) {
                       return const SizedBox.shrink();
                     }
@@ -579,8 +801,7 @@ class _SafetyTab extends StatelessWidget {
                       icon: const Icon(Icons.inventory_2_outlined),
                       label: const Text('Mở Tủ thuốc'),
                       style: OutlinedButton.styleFrom(
-                        minimumSize:
-                            const Size.fromHeight(kMinTouchTarget),
+                        minimumSize: const Size.fromHeight(kMinTouchTarget),
                       ),
                     );
                   },

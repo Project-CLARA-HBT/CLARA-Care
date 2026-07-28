@@ -203,18 +203,18 @@ gates pass; outputs never imply clinical abnormality or diagnosis.
 
 ## Phase 7 — Medication Guardian convergence
 
-- [ ] 7.1 Add medication normalization, route/form, reconciliation status,
+- [x] 7.1 Add medication normalization, route/form, reconciliation status,
   source, and append-only course-change schema. _R9_
-- [ ] 7.2 Migrate current medication courses, preserving original text and
+- [x] 7.2 Migrate current medication courses, preserving original text and
   marking unresolved normalization as unknown. _R9, R21_
 - [ ] 7.3 Make OCR/import results Capture drafts and require critical-field
   confirmation. _R4, R9_
-- [ ] 7.4 Ensure DDI analysis uses current confirmed courses by default; label
+- [x] 7.4 Ensure DDI analysis uses current confirmed courses by default; label
   hypothetical inputs separately. _R9_
-- [ ] 7.5 Regression-lock FIDES blocking, consent, emergency, and
+- [x] 7.5 Regression-lock FIDES blocking, consent, emergency, and
   no-start/stop/substitute/dose language across API, ML, web, and mobile. _R9,
   R18_
-- [ ] 7.6 Converge list/cabinet/safety into one Medicines hub on both clients;
+- [x] 7.6 Converge list/cabinet/safety into one Medicines hub on both clients;
   rehome shared OCR/DDI components. _R9, R19_
 - [ ] 7.7 Retire duplicate primary medication routes only after telemetry and
   redirect/rollback window. _R21_

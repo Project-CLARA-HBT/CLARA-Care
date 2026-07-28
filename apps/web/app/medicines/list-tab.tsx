@@ -8,7 +8,9 @@ import { Field } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import {
   checkDrugBankDdi,
+  correctMedicationCourse,
   createMedicationCourse,
+  endMedicationCourse,
   getMedicationCourses,
   type DrugBankDdiResult,
   type MedicationCourse,
@@ -25,6 +27,9 @@ export default function MedicinesListTab() {
   const [dose, setDose] = useState("");
   const [schedule, setSchedule] = useState("");
   const [drugbankId, setDrugbankId] = useState("");
+  const [route, setRoute] = useState("");
+  const [form, setForm] = useState("");
+  const [editing, setEditing] = useState<MedicationCourse | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,16 +53,32 @@ export default function MedicinesListTab() {
     setSaving(true);
     setError("");
     try {
-      await createMedicationCourse({
-        medication_name: name.trim(),
-        dose_text: dose.trim(),
-        schedule_text: schedule.trim(),
-        drugbank_id: drugbankId.trim() || undefined,
-      });
+      if (editing) {
+        await correctMedicationCourse(editing.id, editing.version, {
+          medication_name: name.trim(),
+          dose_text: dose.trim(),
+          schedule_text: schedule.trim(),
+          route_text: route.trim(),
+          form_text: form.trim(),
+          reason: "Người dùng chỉnh sửa theo nguồn đang có",
+        });
+      } else {
+        await createMedicationCourse({
+          medication_name: name.trim(),
+          dose_text: dose.trim(),
+          schedule_text: schedule.trim(),
+          route_text: route.trim(),
+          form_text: form.trim(),
+          drugbank_id: drugbankId.trim() || undefined,
+        });
+      }
       setName("");
       setDose("");
       setSchedule("");
       setDrugbankId("");
+      setRoute("");
+      setForm("");
+      setEditing(null);
       setResult(null);
       await load();
     } catch (cause) {
@@ -72,13 +93,55 @@ export default function MedicinesListTab() {
     setError("");
     setResult(null);
     try {
-      setResult(await checkDrugBankDdi(courses.map((course) => course.id)));
+      setResult(
+        await checkDrugBankDdi(
+          courses
+            .filter((course) => course.status === "active")
+            .map((course) => course.id),
+        ),
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể hoàn tất kiểm tra tương tác.");
     } finally {
       setChecking(false);
     }
   };
+
+  const edit = (course: MedicationCourse) => {
+    setEditing(course);
+    setName(course.medication_name);
+    setDose(course.dose_text);
+    setSchedule(course.schedule_text);
+    setRoute(course.route_text);
+    setForm(course.form_text);
+    setDrugbankId(course.drugbank_id ?? "");
+  };
+
+  const end = async (course: MedicationCourse) => {
+    if (
+      !window.confirm(
+        "Xác nhận ghi nhận thuốc này đã kết thúc? Đây chỉ là cập nhật hồ sơ, không phải lời khuyên ngừng thuốc.",
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await endMedicationCourse(
+        course.id,
+        course.version,
+        "Người dùng cập nhật trạng thái hồ sơ",
+      );
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể cập nhật thuốc.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activeCourses = courses.filter((course) => course.status === "active");
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -99,7 +162,7 @@ export default function MedicinesListTab() {
                 </div>
                 <Button
                   size="sm"
-                  disabled={courses.length < 2}
+                  disabled={activeCourses.length < 2}
                   loading={checking}
                   loadingLabel="Đang đối chiếu DrugBank…"
                   onClick={() => void check()}
@@ -123,7 +186,12 @@ export default function MedicinesListTab() {
                           {course.medication_name}
                         </p>
                         <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
-                          {[course.dose_text, course.schedule_text].filter(Boolean).join(" · ") ||
+                          {[
+                            course.dose_text,
+                            course.schedule_text,
+                            course.route_text,
+                            course.form_text,
+                          ].filter(Boolean).join(" · ") ||
                             "Chưa có liều/lịch dùng"}
                         </p>
                         {course.drugbank_id ? (
@@ -132,9 +200,43 @@ export default function MedicinesListTab() {
                           </p>
                         ) : null}
                       </div>
-                      <Badge tone="ok" icon="check_circle">
-                        Đã xác nhận
-                      </Badge>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <Badge
+                          tone={course.status === "active" ? "ok" : "neutral"}
+                          icon={course.status === "active" ? "check_circle" : "history"}
+                        >
+                          {course.status === "active" ? "Đang theo dõi" : "Đã kết thúc"}
+                        </Badge>
+                        <Badge
+                          tone={
+                            course.reconciliation_status === "matched" ? "brand" : "warn"
+                          }
+                        >
+                          {course.reconciliation_status === "matched"
+                            ? "Đã đối chiếu"
+                            : "Chưa đối chiếu chuẩn"}
+                        </Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon="edit"
+                            onClick={() => edit(course)}
+                          >
+                            Sửa
+                          </Button>
+                          {course.status === "active" ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon="stop_circle"
+                              onClick={() => void end(course)}
+                            >
+                              Kết thúc
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -201,7 +303,9 @@ export default function MedicinesListTab() {
 
       <aside className="space-y-5">
         <SurfaceCard className="p-5">
-          <h2 className="font-semibold text-[var(--text-primary)]">Thêm thuốc đã xác nhận</h2>
+          <h2 className="font-semibold text-[var(--text-primary)]">
+            {editing ? "Sửa bản ghi thuốc" : "Thêm thuốc đã xác nhận"}
+          </h2>
           <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
             Nhập theo nhãn hoặc đơn của bạn; CLARA không suy đoán thuốc.
           </p>
@@ -227,6 +331,20 @@ export default function MedicinesListTab() {
               placeholder="Ví dụ: buổi tối"
             />
             <Field
+              label="Đường dùng"
+              optional
+              value={route}
+              onChange={(event) => setRoute(event.target.value)}
+              placeholder="Ví dụ: uống"
+            />
+            <Field
+              label="Dạng bào chế"
+              optional
+              value={form}
+              onChange={(event) => setForm(event.target.value)}
+              placeholder="Ví dụ: viên nén"
+            />
+            <Field
               label="DrugBank ID"
               optional
               value={drugbankId}
@@ -241,8 +359,26 @@ export default function MedicinesListTab() {
               loadingLabel="Đang lưu…"
               icon="save"
             >
-              Lưu thuốc đã xác nhận
+              {editing ? "Lưu phiên bản mới" : "Lưu thuốc đã xác nhận"}
             </Button>
+            {editing ? (
+              <Button
+                type="button"
+                variant="ghost"
+                block
+                onClick={() => {
+                  setEditing(null);
+                  setName("");
+                  setDose("");
+                  setSchedule("");
+                  setRoute("");
+                  setForm("");
+                  setDrugbankId("");
+                }}
+              >
+                Hủy chỉnh sửa
+              </Button>
+            ) : null}
           </form>
         </SurfaceCard>
 

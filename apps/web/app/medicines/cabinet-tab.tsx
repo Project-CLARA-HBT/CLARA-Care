@@ -15,12 +15,6 @@ type TimelineEntry = {
   note: string;
 };
 
-type MedicationAlert = {
-  id: string;
-  title: string;
-  detail: string;
-};
-
 function sourceLabel(source: string): string {
   if (source === "ocr") return "OCR";
   if (source === "manual") return "Thủ công";
@@ -60,18 +54,8 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("vi-VN");
 }
 
-function riskTone(score: number): "low" | "moderate" | "high" {
-  if (score >= 70) return "high";
-  if (score >= 35) return "moderate";
-  return "low";
-}
-
 function normalizeText(value: string | null | undefined): string {
   return String(value ?? "").trim().toLowerCase();
-}
-
-function buildMedicineText(item: CabinetItem): string {
-  return [item.drug_name, item.normalized_name, item.brand_name, item.note].map((value) => normalizeText(value)).join(" ");
 }
 
 function includesAny(text: string, tokens: string[]): boolean {
@@ -122,8 +106,6 @@ export default function MedicinesCabinetTab() {
       }
     });
 
-    const computedRisk = Math.min(96, items.length * 12 + expired * 22 + expiringSoon * 10 + missingDosage * 8);
-
     return {
       total: items.length,
       fromOcr,
@@ -131,8 +113,6 @@ export default function MedicinesCabinetTab() {
       expiringSoon,
       expired,
       missingDosage,
-      riskScore: computedRisk,
-      riskTone: riskTone(computedRisk),
     };
   }, [items]);
 
@@ -156,79 +136,6 @@ export default function MedicinesCabinetTab() {
       })),
     [topItems]
   );
-
-  const medicationAlerts = useMemo((): MedicationAlert[] => {
-    const alerts: MedicationAlert[] = [];
-    if (items.length === 0) return alerts;
-
-    const medicineTexts = items.map((item) => buildMedicineText(item));
-    const hasMedicine = (tokens: string[]) => medicineTexts.some((text) => includesAny(text, tokens));
-
-    const hasWarfarin = hasMedicine(["warfarin"]);
-    const hasStatin = hasMedicine([
-      "atorvastatin",
-      "simvastatin",
-      "rosuvastatin",
-      "pravastatin",
-      "lovastatin",
-      "fluvastatin",
-      "pitavastatin",
-      "statin",
-    ]);
-    const hasNsaid = hasMedicine([
-      "ibuprofen",
-      "diclofenac",
-      "naproxen",
-      "ketoprofen",
-      "meloxicam",
-      "piroxicam",
-      "celecoxib",
-      "etoricoxib",
-      "nsaid",
-    ]);
-
-    if (hasWarfarin) {
-      alerts.push({
-        id: "warfarin-bleeding",
-        title: "Chảy máu bất thường",
-        detail: "Phát hiện Warfarin trong tủ thuốc. Nếu có chảy máu bất thường, liên hệ bác sĩ ngay.",
-      });
-    }
-
-    if (hasStatin) {
-      alerts.push({
-        id: "statin-myalgia",
-        title: "Đau cơ dữ dội",
-        detail: "Phát hiện thuốc nhóm statin. Theo dõi đau cơ, yếu cơ hoặc nước tiểu sậm màu.",
-      });
-    }
-
-    if (hasWarfarin && hasNsaid) {
-      alerts.push({
-        id: "warfarin-nsaid",
-        title: "Tăng nguy cơ xuất huyết",
-        detail: "Warfarin dùng cùng NSAID có thể làm tăng nguy cơ chảy máu. Cần đánh giá DDI sớm.",
-      });
-    }
-
-    if (stats.expired > 0) {
-      alerts.push({
-        id: "expired-medication",
-        title: `Có ${stats.expired} thuốc đã hết hạn`,
-        detail: "Rà soát và loại bỏ thuốc hết hạn trước khi tiếp tục sử dụng.",
-      });
-    }
-
-    if (stats.missingDosage > 0) {
-      alerts.push({
-        id: "missing-dosage",
-        title: `Thiếu liều dùng ở ${stats.missingDosage} thuốc`,
-        detail: "Bổ sung liều dùng để hệ thống đánh giá tương tác và lịch dùng chính xác hơn.",
-      });
-    }
-
-    return alerts.slice(0, 4);
-  }, [items, stats.expired, stats.missingDosage]);
 
   const refreshCabinet = async () => {
     setError("");
@@ -304,7 +211,7 @@ export default function MedicinesCabinetTab() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Có cảnh báo an toàn y tế</span>
+            <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Kiểm tra an toàn qua nguồn được xác minh</span>
             <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Dữ liệu lưu trên tài khoản</span>
             <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Có thể cập nhật bất cứ lúc nào</span>
           </div>
@@ -314,78 +221,41 @@ export default function MedicinesCabinetTab() {
           <div className="col-span-12 lg:col-span-8 space-y-6">
             <SurfaceCard className="p-6">
               <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức cần kiểm tra thuốc</h3>
-                <Badge
-                  tone={
-                    stats.total === 0
-                      ? "neutral"
-                      : stats.riskTone === "high"
-                        ? "danger"
-                        : stats.riskTone === "moderate"
-                          ? "warn"
-                          : "ok"
-                  }
-                >
-                  {stats.total === 0
-                    ? "CHƯA CÓ THUỐC"
-                    : stats.riskTone === "high"
-                      ? "CẢNH BÁO CAO"
-                      : stats.riskTone === "moderate"
-                        ? "TRUNG BÌNH"
-                        : "ỔN ĐỊNH"}
+                <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức sẵn sàng của dữ liệu</h3>
+                <Badge tone={stats.total === 0 || stats.missingDosage > 0 ? "warn" : "ok"}>
+                  {stats.total === 0 ? "CHƯA CÓ THUỐC" : stats.missingDosage > 0 ? "CẦN BỔ SUNG" : "ĐỦ DỮ LIỆU CƠ BẢN"}
                 </Badge>
               </div>
 
-              <div className="flex flex-col gap-8 md:flex-row md:items-center">
-                <div className="relative h-28 w-56">
-                  <svg viewBox="0 0 220 120" className="h-full w-full" aria-hidden="true">
-                    <path
-                      d="M20 100 A90 90 0 0 1 200 100"
-                      fill="none"
-                      stroke="var(--shell-border)"
-                      strokeWidth="12"
-                      strokeLinecap="round"
-                      pathLength={100}
-                    />
-                    <path
-                      d="M20 100 A90 90 0 0 1 200 100"
-                      fill="none"
-                      stroke="var(--brand-500)"
-                      strokeWidth="12"
-                      strokeLinecap="round"
-                      pathLength={100}
-                      strokeDasharray={`${Math.max(0, Math.min(100, stats.riskScore))} 100`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                    <span className="text-3xl font-extrabold text-[var(--text-brand)]">{stats.riskScore}%</span>
-                    <span className="text-[10px] uppercase text-[var(--text-muted)]">Điểm cần rà soát</span>
-                  </div>
-                </div>
-
-                <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
+              <p className="mb-5 text-xs leading-5 text-[var(--text-secondary)]">
+                Đây là kiểm tra độ đầy đủ và hạn dùng của dữ liệu, không phải điểm rủi ro y khoa.
+                Cảnh báo tương tác chỉ xuất hiện sau khi bạn chủ động kiểm tra qua nguồn DrugBank được xác minh.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                     <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Dữ liệu để kiểm tra tương tác</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
                       {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
                     </p>
-                    <div className="mt-2 h-1 w-full rounded-full bg-[var(--shell-border)]">
-                      <div className="h-full rounded-full bg-[var(--brand-500)]" style={{ width: `${Math.min(100, stats.riskScore)}%` }} />
-                    </div>
                   </div>
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                     <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Độ đầy đủ dữ liệu</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
                       {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
                     </p>
-                    <div className="mt-2 h-1 w-full rounded-full bg-[var(--shell-border)]">
-                      <div
-                        className="h-full rounded-full bg-[var(--brand-500)]"
-                        style={{ width: `${Math.max(8, Math.min(100, 100 - stats.missingDosage * 12))}%` }}
-                      />
-                    </div>
                   </div>
-                </div>
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Hạn dùng</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {stats.expired > 0 ? `${stats.expired} mục đã hết hạn` : stats.expiringSoon > 0 ? `${stats.expiringSoon} mục sắp hết hạn` : "Chưa có mục quá hạn"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Nguồn nhập</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {stats.fromOcr} OCR · {stats.manual} thủ công
+                    </p>
+                  </div>
               </div>
             </SurfaceCard>
 
@@ -495,27 +365,23 @@ export default function MedicinesCabinetTab() {
               )}
             </SurfaceCard>
 
-            <section className="rounded-[var(--radius-xl)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-6">
+            <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
               <div className="mb-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-[var(--status-danger-text)]">emergency</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--status-danger-text)]">Phản Ứng Cần Lưu Ý</h3>
+                <span className="material-symbols-outlined text-[var(--text-brand)]">verified_user</span>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)]">Kiểm Tra An Toàn Được Xác Minh</h3>
               </div>
-              {medicationAlerts.length > 0 ? (
-                <ul className="space-y-3">
-                  {medicationAlerts.map((alert) => (
-                    <li className="flex items-start gap-2" key={alert.id}>
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--danger-500)]" />
-                      <div>
-                        <p className="text-xs font-bold text-[var(--text-primary)]">{alert.title}</p>
-                        <p className="text-[10px] text-[var(--text-secondary)]">{alert.detail}</p>
-                      </div>
-                    </li>
-                  ))}
+              <p className="text-xs leading-5 text-[var(--text-secondary)]">
+                CLARA không suy luận cảnh báo từ tên thuốc trong tủ. Hãy mở kiểm tra tương tác để gửi các thuốc đã chọn
+                tới luồng DrugBank/FIDES; nếu nguồn xác minh không sẵn sàng, kết quả sẽ bị chặn an toàn.
+              </p>
+              {stats.expired > 0 || stats.expiringSoon > 0 || stats.missingDosage > 0 ? (
+                <ul className="mt-4 space-y-2 text-xs text-[var(--text-secondary)]">
+                  {stats.expired > 0 ? <li>• {stats.expired} mục đã hết hạn trong dữ liệu tủ.</li> : null}
+                  {stats.expiringSoon > 0 ? <li>• {stats.expiringSoon} mục sẽ hết hạn trong 30 ngày.</li> : null}
+                  {stats.missingDosage > 0 ? <li>• {stats.missingDosage} mục chưa có thông tin liều.</li> : null}
                 </ul>
-              ) : (
-                <p className="text-xs text-[var(--text-secondary)]">Chưa phát hiện cảnh báo tự động từ dữ liệu tủ thuốc hiện tại.</p>
-              )}
-              <Button as="link" href="/medicines?tab=safety" variant="danger" block className="mt-4 text-[10px] uppercase tracking-widest">
+              ) : null}
+              <Button as="link" href="/medicines?tab=safety" variant="secondary" block className="mt-4 text-[10px] uppercase tracking-widest">
                 Mở kiểm tra tương tác
               </Button>
             </section>

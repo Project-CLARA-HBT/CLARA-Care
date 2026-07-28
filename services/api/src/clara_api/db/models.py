@@ -1717,25 +1717,77 @@ class MedicationCourse(Base):
     __tablename__ = "medication_courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
     medication_name: Mapped[str] = mapped_column(String(255), index=True)
+    original_text: Mapped[str] = mapped_column(Text, default="")
+    normalized_name: Mapped[str] = mapped_column(String(255), default="", index=True)
+    normalization_system: Mapped[str] = mapped_column(String(64), default="")
+    normalization_code: Mapped[str] = mapped_column(String(128), default="", index=True)
+    reconciliation_status: Mapped[str] = mapped_column(
+        String(24), default="unknown", server_default="unknown", index=True
+    )
     drugbank_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(24), default="active", index=True)
     dose_text: Mapped[str] = mapped_column(String(255), default="")
     schedule_text: Mapped[str] = mapped_column(String(255), default="")
+    route_text: Mapped[str] = mapped_column(String(128), default="")
+    form_text: Mapped[str] = mapped_column(String(128), default="")
     indication_text: Mapped[str] = mapped_column(Text, default="")
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     truth_state: Mapped[str] = mapped_column(String(24), default="confirmed", index=True)
     provenance_json: Mapped[dict] = mapped_column(JSON)
+    source_reference_id: Mapped[int | None] = mapped_column(
+        ForeignKey("health_source_references.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    version_no: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MedicationCourseChange(Base):
+    """Append-only medication reconciliation and lifecycle history."""
+
+    __tablename__ = "medication_course_changes"
+    __table_args__ = (
+        UniqueConstraint(
+            "course_id",
+            "version_no",
+            name="uq_medication_course_change_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("medication_courses.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    snapshot_json: Mapped[dict] = mapped_column(JSON)
+    reason_code: Mapped[str] = mapped_column(String(96), default="")
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 
 

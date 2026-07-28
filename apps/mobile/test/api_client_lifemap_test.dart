@@ -311,6 +311,8 @@ void main() {
         accessToken: token,
         medicationName: 'Metformin',
         doseText: '500 mg',
+        routeText: 'Uống',
+        formText: 'Viên nén',
         drugbankId: 'DB00331',
       );
 
@@ -319,6 +321,65 @@ void main() {
       final body = jsonDecode(captured.body) as Map<String, dynamic>;
       expect(body['medication_name'], 'Metformin');
       expect(body['drugbank_id'], 'DB00331');
+      expect(body['route_text'], 'Uống');
+      expect(body['form_text'], 'Viên nén');
+    });
+
+    test('correctMedicationCourse uses optimistic concurrency', () async {
+      late http.Request captured;
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return ok({'id': 'mc_opaque', 'version': 3});
+        }),
+      );
+
+      await client.correctMedicationCourse(
+        accessToken: token,
+        courseId: 'mc_opaque',
+        version: 2,
+        medicationName: 'Metformin',
+        reason: 'Sửa liều đã nhập nhầm',
+        doseText: '850 mg',
+      );
+
+      expect(captured.method, 'POST');
+      expect(
+        captured.url.path,
+        '/api/v1/medication-courses/mc_opaque/correct',
+      );
+      expect(captured.headers['If-Match'], '2');
+      expect(captured.headers['Idempotency-Key'], isNotEmpty);
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['dose_text'], '850 mg');
+      expect(body['reason'], 'Sửa liều đã nhập nhầm');
+    });
+
+    test('endMedicationCourse records history without deletion', () async {
+      late http.Request captured;
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return ok({'id': 'mc_opaque', 'status': 'ended', 'version': 2});
+        }),
+      );
+
+      await client.endMedicationCourse(
+        accessToken: token,
+        courseId: 'mc_opaque',
+        version: 1,
+        reason: 'Người dùng xác nhận kết thúc',
+      );
+
+      expect(captured.method, 'POST');
+      expect(captured.url.path, '/api/v1/medication-courses/mc_opaque/end');
+      expect(captured.headers['If-Match'], '1');
+      expect(captured.headers['Idempotency-Key'], isNotEmpty);
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['reason'], 'Người dùng xác nhận kết thúc');
+      expect(body.containsKey('ended_at'), isFalse);
     });
   });
 }

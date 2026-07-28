@@ -263,5 +263,31 @@ web lint/client tests, and Flutter analyze/client tests pass. Clinical signal
 and catalogue approval, historical shadow evaluation, and comprehension pilots
 remain open, so both V2 flags stay default OFF.
 
+The Phase 7 Medication Guardian convergence foundation is implemented through
+migration `20260728_0036`. Medication courses now retain original product text,
+normalization system/code, reconciliation status, route/form, source reference,
+opaque public ID, and optimistic version. Create, correction, and end commands
+are profile-scoped and idempotent; corrections and lifecycle changes append
+immutable snapshots, and an owner-scoped history query exposes those versions
+without database identifiers. Legacy rows are preserved, while unresolved
+normalization is marked `unknown` rather than fabricated.
+
+Medication DDI checks select current, confirmed, active courses by default.
+Hypothetical names use an explicitly separate request and response mode, and
+mixed real/hypothetical inputs are rejected. DrugBank readiness and exclusive
+DrugBank provenance remain fail-closed. Web and Flutter now support route/form,
+new-version correction, record-only course ending, and coherent
+list/cabinet/safety tabs. The web cabinet's prior locally inferred risk score
+and name-matched drug warnings were removed; it now reports only factual data
+completeness/expiry and directs clinical checks through DrugBank/FIDES.
+
+Focused evidence includes 10 API medication/migration/scope tests, 33 ML
+CareGuard/FIDES/medical-answer safety tests, five web medication client/copy
+tests, and sixteen Flutter wrapper/copy tests, plus clean focused lint, mypy,
+and Flutter analysis. Phase 7.3 remains open until all OCR/import writers create
+Universal Capture drafts with critical-field review. Phase 7.7 also remains open
+until legacy-route traffic and the approved redirect/rollback window permit
+retirement.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

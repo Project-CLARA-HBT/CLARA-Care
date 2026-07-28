@@ -22,6 +22,15 @@ def _profile_and_courses(headers: dict[str, str]) -> list[dict]:
         ).status_code
         == 200
     )
+    consent = client.get("/api/v1/auth/consent-status", headers=headers).json()
+    assert client.post(
+        "/api/v1/auth/consent",
+        headers=headers,
+        json={
+            "accepted": True,
+            "consent_version": consent["required_version"],
+        },
+    ).status_code == 200
     created = []
     for name, drugbank_id in (("Warfarin", "DB00682"), ("Ibuprofen", "DB01050")):
         response = client.post(
@@ -72,7 +81,7 @@ def test_medication_course_ddi_is_drugbank_only(monkeypatch) -> None:
     response = client.post(
         "/api/v1/medication-courses/safety/ddi",
         headers=headers,
-        json={"course_ids": [int(course["id"]) for course in courses]},
+        json={"course_ids": [course["id"] for course in courses]},
     )
 
     assert response.status_code == 200

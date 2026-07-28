@@ -139,6 +139,15 @@ def test_confirmed_medication_course_is_profile_scoped() -> None:
         ).status_code
         == 200
     )
+    consent = client.get("/api/v1/auth/consent-status", headers=headers).json()
+    assert client.post(
+        "/api/v1/auth/consent",
+        headers=headers,
+        json={
+            "accepted": True,
+            "consent_version": consent["required_version"],
+        },
+    ).status_code == 200
     created = client.post(
         "/api/v1/medication-courses",
         headers={**headers, "Idempotency-Key": "med-1"},

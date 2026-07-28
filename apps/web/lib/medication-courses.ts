@@ -3,11 +3,18 @@ import api from "@/lib/http-client";
 export type MedicationCourse = {
   id: string;
   medication_name: string;
+  original_text: string;
+  normalized_name: string;
+  reconciliation_status: string;
   drugbank_id: string | null;
   status: string;
   dose_text: string;
   schedule_text: string;
+  route_text: string;
+  form_text: string;
   truth_state: string;
+  version: number;
+  ended_at: string | null;
 };
 
 export type DrugBankDdiResult = {
@@ -28,6 +35,8 @@ export async function createMedicationCourse(input: {
   drugbank_id?: string;
   dose_text?: string;
   schedule_text?: string;
+  route_text?: string;
+  form_text?: string;
   indication_text?: string;
 }): Promise<MedicationCourse> {
   return (
@@ -37,10 +46,55 @@ export async function createMedicationCourse(input: {
   ).data;
 }
 
+export async function correctMedicationCourse(
+  courseId: string,
+  version: number,
+  input: {
+    medication_name: string;
+    dose_text?: string;
+    schedule_text?: string;
+    route_text?: string;
+    form_text?: string;
+    reason: string;
+  },
+): Promise<MedicationCourse> {
+  return (
+    await api.post<MedicationCourse>(
+      `/medication-courses/${encodeURIComponent(courseId)}/correct`,
+      input,
+      {
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+          "If-Match": String(version),
+        },
+      },
+    )
+  ).data;
+}
+
+export async function endMedicationCourse(
+  courseId: string,
+  version: number,
+  reason: string,
+): Promise<MedicationCourse> {
+  return (
+    await api.post<MedicationCourse>(
+      `/medication-courses/${encodeURIComponent(courseId)}/end`,
+      { reason },
+      {
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+          "If-Match": String(version),
+        },
+      },
+    )
+  ).data;
+}
+
 export async function checkDrugBankDdi(courseIds: string[]): Promise<DrugBankDdiResult> {
   return (
     await api.post<DrugBankDdiResult>("/medication-courses/safety/ddi", {
-      course_ids: courseIds.map((id) => Number(id)),
+      course_ids: courseIds,
     })
   ).data;
 }

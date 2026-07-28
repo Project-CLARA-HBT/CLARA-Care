@@ -1445,6 +1445,8 @@ class ApiClient {
     required String medicationName,
     String doseText = '',
     String scheduleText = '',
+    String routeText = '',
+    String formText = '',
     String? drugbankId,
   }) {
     return _post(
@@ -1453,11 +1455,67 @@ class ApiClient {
         'medication_name': medicationName,
         'dose_text': doseText,
         'schedule_text': scheduleText,
+        'route_text': routeText,
+        'form_text': formText,
         if (drugbankId != null && drugbankId.isNotEmpty)
           'drugbank_id': drugbankId,
       },
       accessToken: accessToken,
       extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Replaces a confirmed medication course with an explicitly corrected
+  /// version. The API preserves the prior values in its append-only history.
+  Future<Map<String, dynamic>> correctMedicationCourse({
+    required String accessToken,
+    required String courseId,
+    required int version,
+    required String medicationName,
+    required String reason,
+    String doseText = '',
+    String scheduleText = '',
+    String routeText = '',
+    String formText = '',
+  }) {
+    return _post(
+      '/api/v1/medication-courses/$courseId/correct',
+      body: <String, dynamic>{
+        'medication_name': medicationName,
+        'dose_text': doseText,
+        'schedule_text': scheduleText,
+        'route_text': routeText,
+        'form_text': formText,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'Idempotency-Key': _idempotencyKey(),
+        'If-Match': '$version',
+      },
+    );
+  }
+
+  /// Records that a course ended. This is historical record-keeping and never
+  /// advice to stop a medicine.
+  Future<Map<String, dynamic>> endMedicationCourse({
+    required String accessToken,
+    required String courseId,
+    required int version,
+    required String reason,
+    DateTime? endedAt,
+  }) {
+    return _post(
+      '/api/v1/medication-courses/$courseId/end',
+      body: <String, dynamic>{
+        'reason': reason,
+        if (endedAt != null) 'ended_at': endedAt.toUtc().toIso8601String(),
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'Idempotency-Key': _idempotencyKey(),
+        'If-Match': '$version',
+      },
     );
   }
 
