@@ -289,5 +289,38 @@ Universal Capture drafts with critical-field review. Phase 7.7 also remains open
 until legacy-route traffic and the approved redirect/rollback window permit
 retirement.
 
+The Phase 8 Grounded Visit engineering path is now implemented behind
+`LIFEMAP_VISIT_EXTRACTION_ENABLED`, which remains default OFF. Migration
+`20260729_0037` gives visits, documents, concerns, links, intake answers,
+drafts, packs, consents, and shares opaque identifiers; documents are
+revisioned; and typed instruction candidates retain classification, confidence,
+extractor/schema versions, review state, source digest, and exact
+page/region/text spans.
+
+The ML extractor is DeepSeek-backed and fail-closed. It rejects prompt-injection
+content before model use, validates a bounded candidate-kind schema, and
+returns no candidates if any output is malformed, ungrounded, or unavailable.
+The API independently revalidates every exact source substring and digest.
+Only a user-selected `clinician_instruction` may propose a task;
+`model_interpretation` is visibly non-actionable. No source span means no
+confirmation and no task.
+
+Visit Packs now require explicit opaque selections and preserve an immutable,
+purpose-bound V2 snapshot with visit, episode, event, medication, document,
+and confirmed-instruction source versions. A source correction, medication
+version change, or selected document withdrawal/deletion marks dependent packs
+stale; stale packs cannot be approved, shared, or resolved through an existing
+capability. Web and Flutter both implement document control, candidate review,
+pack selection/approval, seven-day sharing, immediate revocation, and
+visit-specific Scribe consent.
+
+Focused Phase 8 evidence includes 14 API domain/migration/opaque-ID/grounding/
+staleness tests, four ML extractor security/grounding tests, seven web client
+contract tests, and four Flutter wire-contract tests, with clean focused Ruff,
+mypy, web lint, and Flutter analysis. Tasks 8.3 and 8.7 remain open: the flag
+must not be enabled until the governed source-span/safety evaluation establishes
+instruction accuracy, unsupported-instruction rate, span validity, task
+leakage, and user comprehension thresholds.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

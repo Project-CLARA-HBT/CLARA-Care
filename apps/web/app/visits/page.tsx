@@ -9,10 +9,12 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import {
   addVisitConcern, answerVisitIntake, approveVisitPack, confirmVisitPlan, createVisit,
   createVisitDocument, createVisitPack, deleteVisitDocument, extractVisitPlan,
+  getVisitPackOptions,
   grantVisitScribeConsent, listVisitDocuments, listVisits, revokeVisitScribeConsent,
-  shareVisitPack, withdrawVisitDocument, withdrawVisitPlan,
+  revokeVisitShare, shareVisitPack, withdrawVisitDocument, withdrawVisitPlan,
   type Visit, type VisitDocument, type VisitIntakeQuestion, type VisitPack,
   type VisitPlanDraft, type VisitShare,
+  type VisitPackOptions,
 } from "@/lib/visit-family";
 
 const initialQuestion = (visit: Visit): VisitIntakeQuestion => visit.goal.trim()
@@ -26,6 +28,23 @@ function candidateText(candidate: Record<string, unknown>, index: number) {
   return "Mục trích xuất " + String(index + 1);
 }
 
+function candidateSource(candidate: Record<string, unknown>): string {
+  const spans = candidate.source_spans;
+  if (Array.isArray(spans)) {
+    return spans
+      .map((span) =>
+        span && typeof span === "object" && typeof (span as { text?: unknown }).text === "string"
+          ? String((span as { text: string }).text).trim()
+          : "",
+      )
+      .filter(Boolean)
+      .join(" … ");
+  }
+  if (typeof candidate.source_span === "string") return candidate.source_span;
+  if (typeof candidate.source_text === "string") return candidate.source_text;
+  return "";
+}
+
 export default function VisitsPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -37,6 +56,14 @@ export default function VisitsPage() {
   const [draft, setDraft] = useState<VisitPlanDraft | null>(null);
   const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [pack, setPack] = useState<VisitPack | null>(null);
+  const [packOptions, setPackOptions] = useState<VisitPackOptions>({
+    concerns: [],
+    episodes: [],
+    events: [],
+    medications: [],
+    instructions: [],
+  });
+  const [packSelection, setPackSelection] = useState<Record<string, boolean>>({});
   const [share, setShare] = useState<VisitShare | null>(null);
   const [consented, setConsented] = useState(false);
   const [title, setTitle] = useState("");
@@ -66,14 +93,21 @@ export default function VisitsPage() {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (!selectedId) { setDocuments([]); return; }
-    void listVisitDocuments(selectedId).then(setDocuments).catch((cause: unknown) =>
-      setError(cause instanceof Error ? cause.message : "Không thể tải tài liệu."),
+    void Promise.all([
+      listVisitDocuments(selectedId),
+      getVisitPackOptions(selectedId),
+    ]).then(([nextDocuments, nextOptions]) => {
+      setDocuments(nextDocuments);
+      setPackOptions(nextOptions);
+      setPackSelection({});
+    }).catch((cause: unknown) =>
+      setError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu buổi khám."),
     );
   }, [selectedId]);
 
   const choose = (id: string) => {
     setSelectedId(id); setQuestion(null); setComplete(false); setProgress({ answered: 0, total: 0 });
-    setDraft(null); setCandidateIds([]); setPack(null); setShare(null); setConsented(false);
+    setDraft(null); setCandidateIds([]); setPack(null); setShare(null); setConsented(false); setPackSelection({});
   };
   const action = async (work: () => Promise<void>, fallback: string) => {
     setSaving(true); setError("");
@@ -127,7 +161,7 @@ export default function VisitsPage() {
   const confirm = () => {
     if (!selectedId || !draft || !candidateIds.length) return;
     void action(async () => {
-      await confirmVisitPlan(selectedId, { draft_id: Number(draft.id), candidate_ids: candidateIds });
+      await confirmVisitPlan(selectedId, { draft_id: draft.id, candidate_ids: candidateIds });
       setDraft({ ...draft, status: "confirmed" });
     }, "Không thể xác nhận các mục đã chọn.");
   };
@@ -143,13 +177,37 @@ export default function VisitsPage() {
   const makePack = () => {
     if (!selectedId) return;
     void action(async () => {
-      const created = await createVisitPack(selectedId, { visit_summary: true, confirmed_medications: true, concerns: true, recent_episode_events: true });
+      const selected = (items: Array<{ id: string }>) =>
+        items.filter((item) => packSelection[item.id]).map((item) => item.id);
+      const created = await createVisitPack(selectedId, {
+        concern_ids: selected(packOptions.concerns),
+        episode_ids: selected(packOptions.episodes),
+        event_ids: selected(packOptions.events),
+        medication_course_ids: selected(packOptions.medications),
+        instruction_candidate_ids: selected(packOptions.instructions),
+        questions: [],
+      });
       setPack(await approveVisitPack(created.id)); setShare(null);
     }, "Không thể chuẩn bị Visit Pack.");
   };
+  const selectedPackCount = Object.values(packSelection).filter(Boolean).length;
+  const packGroups = [
+    { key: "concerns", label: "Điều cần hỏi", items: packOptions.concerns },
+    { key: "medications", label: "Thuốc đã xác nhận", items: packOptions.medications },
+    { key: "episodes", label: "Hành trình liên quan", items: packOptions.episodes },
+    { key: "events", label: "Diễn biến đã xác nhận", items: packOptions.events },
+    { key: "instructions", label: "Chỉ dẫn bác sĩ bạn đã xác nhận", items: packOptions.instructions },
+  ];
   const makeShare = () => {
     if (!pack) return;
     void action(async () => setShare(await shareVisitPack(pack.id, new Date(Date.now() + 604800000).toISOString())), "Không thể tạo liên kết chia sẻ.");
+  };
+  const removeShare = () => {
+    if (!pack || !share) return;
+    void action(async () => {
+      await revokeVisitShare(pack.id, share.id);
+      setShare(null);
+    }, "Không thể thu hồi liên kết.");
   };
   const toggleConsent = () => {
     if (!selectedId) return;
@@ -177,12 +235,12 @@ export default function VisitsPage() {
           <div className="mt-5 space-y-2">{documents.length ? documents.map((document) => <div key={document.id} className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-[var(--text-primary)]">{document.title}</p><p className="mt-0.5 text-xs text-[var(--text-secondary)]">{document.deleted_at ? "Đã xoá nội dung" : document.withdrawn_at ? "Đã rút khỏi xử lý" : document.status === "external_unverified" ? "Bạn đã thêm · chưa xác minh" : document.status}</p></div>{!document.deleted_at && !document.withdrawn_at ? <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => extract(document)}>Kiểm tra kế hoạch</Button><Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => changeDocument(document, "withdraw")}>Rút khỏi xử lý</Button><Button type="button" size="sm" variant="danger" disabled={saving} onClick={() => changeDocument(document, "delete")}>Xoá nội dung</Button></div> : null}</div></div>) : <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-secondary)]">Chưa có tài liệu nào được thêm.</p>}</div>
         </SurfaceCard>
         {draft ? <SurfaceCard className="p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 3 · Rà soát có căn cứ</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Xác nhận trước khi tạo việc cần làm</h2>
-          {draft.safe_unavailable || !draft.candidates.length ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm text-[var(--status-warn-text)]"><p className="font-semibold">CLARA chưa tạo kế hoạch từ tài liệu này.</p><p className="mt-1">{draft.reason || "Không có mục nào đủ căn cứ để đề xuất. Hãy xem lại với bác sĩ."}</p></div> : <div className="mt-4 space-y-2"><p className="text-sm text-[var(--text-secondary)]">Chỉ chọn mục có nguồn hiển thị rõ ràng. Không có mục nào được tạo nếu bạn không xác nhận.</p>{draft.candidates.map((candidate, index) => { const source = typeof candidate.source_span === "string" ? candidate.source_span : typeof candidate.source_text === "string" ? candidate.source_text : ""; const checked = candidateIds.includes(candidate.id); return <label key={candidate.id} className="block rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><span className="flex gap-3"><input type="checkbox" disabled={!source} checked={checked} onChange={() => setCandidateIds((current) => checked ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} className="mt-1 h-4 w-4 accent-[var(--brand-600)]" /><span><span className="block font-medium text-[var(--text-primary)]">{candidateText(candidate, index)}</span><span className="mt-1 block text-sm text-[var(--text-secondary)]">{source ? "Nguồn: “" + source + "”" : "Không có đoạn nguồn — không thể xác nhận mục này."}</span></span></span></label>; })}</div>}
+          {draft.safe_unavailable || !draft.candidates.length ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm text-[var(--status-warn-text)]"><p className="font-semibold">CLARA chưa tạo kế hoạch từ tài liệu này.</p><p className="mt-1">{draft.reason || "Không có mục nào đủ căn cứ để đề xuất. Hãy xem lại với bác sĩ."}</p></div> : <div className="mt-4 space-y-2"><p className="text-sm text-[var(--text-secondary)]">Chỉ chọn chỉ dẫn của bác sĩ có đoạn nguồn hiển thị rõ ràng. Diễn giải AI chỉ để tham khảo và không thể tạo việc cần làm.</p>{draft.candidates.map((candidate, index) => { const source = candidateSource(candidate); const checked = candidateIds.includes(candidate.id); const confirmable = Boolean(source) && candidate.classification === "clinician_instruction"; return <label key={candidate.id} className="block rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><span className="flex gap-3"><input type="checkbox" disabled={!confirmable} checked={checked} onChange={() => setCandidateIds((current) => checked ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} className="mt-1 h-4 w-4 accent-[var(--brand-600)]" /><span><span className="block font-medium text-[var(--text-primary)]">{candidateText(candidate, index)}</span><span className="mt-1 block text-xs font-medium text-[var(--text-muted)]">{candidate.classification === "clinician_instruction" ? "Chỉ dẫn được trích xuất · cần bạn xác nhận" : "Diễn giải AI · không tạo việc cần làm"}</span><span className="mt-1 block text-sm text-[var(--text-secondary)]">{source ? "Nguồn: “" + source + "”" : "Không có đoạn nguồn — không thể xác nhận mục này."}</span></span></span></label>; })}</div>}
           <div className="mt-4 flex flex-wrap gap-2">{draft.candidates.length && !draft.safe_unavailable ? <Button type="button" disabled={saving || !candidateIds.length || draft.status === "confirmed"} onClick={confirm}>{draft.status === "confirmed" ? "Đã xác nhận" : "Xác nhận mục đã chọn"}</Button> : null}{draft.status !== "withdrawn" && draft.status !== "confirmed" ? <Button type="button" variant="secondary" disabled={saving} onClick={withdrawDraft}>Rút bản nháp</Button> : null}</div>
         </SurfaceCard> : null}
-        <SurfaceCard className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 4 · Visit Pack</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Tự duyệt trước khi chia sẻ</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">Gói chỉ là ảnh chụp bốn nhóm bạn thấy; không có chia sẻ ngầm.</p></div><Button type="button" disabled={saving} onClick={makePack}>{pack ? "Tạo bản mới" : "Tạo và duyệt gói"}</Button></div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">{["Tóm tắt buổi khám", "Thuốc đã xác nhận", "Điều cần hỏi", "Diễn biến gần đây"].map((item) => <div key={item} className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-primary)]">{item}</div>)}</div>
-          {pack ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4"><p className="font-semibold text-[var(--status-ok-text)]">Bản {pack.version_no} đã được bạn duyệt</p><Button type="button" size="sm" className="mt-3" disabled={saving || Boolean(share)} onClick={makeShare}>Tạo liên kết 7 ngày</Button>{share ? <code className="mt-3 block break-all rounded-[var(--radius-md)] bg-[var(--surface-panel)] p-3 text-xs text-[var(--status-ok-text)]">{window.location.origin + "/api/v1/visit-packs/shared/" + share.token}</code> : null}</div> : null}
+        <SurfaceCard className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 4 · Visit Pack</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Tự chọn và duyệt trước khi chia sẻ</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">Chỉ các mục bạn đánh dấu được chụp vào phiên bản gói; không có chia sẻ ngầm.</p></div><Button type="button" disabled={saving || selectedPackCount === 0} onClick={makePack}>{pack ? "Tạo bản mới" : `Tạo và duyệt ${selectedPackCount || ""} mục`}</Button></div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">{packGroups.map((group) => <fieldset key={group.key} className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><legend className="px-1 text-sm font-semibold text-[var(--text-primary)]">{group.label}</legend>{group.items.length ? <div className="mt-1 space-y-2">{group.items.map((item) => <label key={item.id} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]"><input type="checkbox" checked={Boolean(packSelection[item.id])} onChange={(event) => setPackSelection((current) => ({ ...current, [item.id]: event.target.checked }))} className="mt-1 h-4 w-4 accent-[var(--brand-600)]" /><span>{item.label}</span></label>)}</div> : <p className="mt-1 text-xs text-[var(--text-muted)]">Chưa có mục phù hợp.</p>}</fieldset>)}</div>
+          {pack ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4"><p className="font-semibold text-[var(--status-ok-text)]">Bản {pack.version_no} đã được bạn duyệt</p><Button type="button" size="sm" className="mt-3" disabled={saving || Boolean(share)} onClick={makeShare}>Tạo liên kết 7 ngày</Button>{share ? <><code className="mt-3 block break-all rounded-[var(--radius-md)] bg-[var(--surface-panel)] p-3 text-xs text-[var(--status-ok-text)]">{window.location.origin + "/api/v1/visit-packs/shared/" + share.token}</code><Button type="button" size="sm" variant="secondary" className="mt-2" disabled={saving} onClick={removeShare}>Thu hồi liên kết</Button></> : null}</div> : null}
         </SurfaceCard></> : null}
       </main>
       <aside className="space-y-5"><SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">Tạo buổi khám</h2><form className="mt-4 space-y-3" onSubmit={create}><Field label="Tên buổi khám" required minLength={2} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ví dụ: Tái khám tim mạch" /><Textarea label="Mục tiêu (tuỳ chọn)" value={goal} onChange={(event) => setGoal(event.target.value)} className="min-h-20" /><Field label="Thời gian dự kiến" type="datetime-local" value={when} onChange={(event) => setWhen(event.target.value)} /><Button type="submit" variant="secondary" block disabled={saving}>Lưu buổi khám</Button></form></SurfaceCard>

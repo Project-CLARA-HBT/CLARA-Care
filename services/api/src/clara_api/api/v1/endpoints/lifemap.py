@@ -46,6 +46,7 @@ from clara_api.lifemap.domain import (
     require_truth_transition,
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.lifemap.visit_family_service import invalidate_visit_packs_for_source
 from clara_api.observability.admin_audit import record_admin_action
 from clara_api.phr.audit import write_audit
 
@@ -531,6 +532,13 @@ def _truth_command(
     if destination in {"invalidated", "entered_in_error"}:
         event.lifecycle_status = destination
     _invalidate_dependencies(db, scope, current, destination)
+    invalidate_visit_packs_for_source(
+        db,
+        profile_id=scope.profile.id,
+        source_kind="event",
+        source_public_id=event.public_id,
+        reason=f"event_{destination}",
+    )
     return _finish(
         db,
         scope,
@@ -717,6 +725,13 @@ def correct_event(
     if payload.occurred_at is not None:
         event.occurred_at = payload.occurred_at
     _invalidate_dependencies(db, scope, current, "source_corrected")
+    invalidate_visit_packs_for_source(
+        db,
+        profile_id=scope.profile.id,
+        source_kind="event",
+        source_public_id=event.public_id,
+        reason="event_corrected",
+    )
     return _finish(
         db,
         scope,
@@ -824,6 +839,13 @@ def revise_episode_goal(
             actor_user_id=scope.actor.id,
             reason=payload.reason.strip() or "goal_updated",
         )
+    )
+    invalidate_visit_packs_for_source(
+        db,
+        profile_id=scope.profile.id,
+        source_kind="episode",
+        source_public_id=episode.public_id,
+        reason="episode_goal_updated",
     )
     return _finish(
         db,

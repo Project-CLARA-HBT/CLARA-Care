@@ -92,7 +92,9 @@ def test_visit_pack_is_selective_immutable_and_share_revocation_is_live() -> Non
                 "questions": ["Should I track caffeine?"],
             },
         )
-        assert [item["source_id"] for item in pack.contents_json["events"]] == [str(event.id)]
+        assert [item["source_id"] for item in pack.contents_json["events"]] == [
+            event.public_id
+        ]
         assert "must never be in pack" not in str(pack.contents_json)
         assert "Profile owner" not in str(pack.contents_json)
         approve_visit_pack(db, owner=owner, pack_id=pack.id)

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import re
 import secrets
+import unicodedata
+from datetime import datetime, timezone
+from pathlib import Path
 from time import perf_counter
 from typing import Any
-import unicodedata
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
@@ -27,6 +27,7 @@ from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
+from clara_ml.lifemap.visit_extraction import extract_visit_instructions
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
@@ -1401,6 +1402,30 @@ def social_moderate(payload: dict) -> dict:
 @app.post("/v1/careguard/analyze")
 def careguard_analyze(payload: dict) -> dict:
     return run_careguard_analyze(payload)
+
+
+@app.post("/v1/lifemap/visit/extract")
+def lifemap_visit_extract(payload: dict) -> dict:
+    """Produce source-grounded review candidates; never confirmed instructions."""
+
+    document_text = str(payload.get("document_text", ""))
+    document_digest = str(payload.get("document_digest", "")).strip()
+    if not document_digest:
+        raise HTTPException(status_code=422, detail="document_digest_required")
+    generator = _build_deepseek_client() if settings.deepseek_api_key.strip() else None
+    result = extract_visit_instructions(
+        document_text,
+        document_digest=document_digest,
+        generator=generator,
+    )
+    return {
+        "status": result.status,
+        "candidates": list(result.candidates),
+        "schema_version": result.schema_version,
+        "extractor_version": result.extractor_version,
+        "security_findings": list(result.security_findings),
+        "reason_code": result.reason_code,
+    }
 
 
 @app.post("/v1/scribe/soap")

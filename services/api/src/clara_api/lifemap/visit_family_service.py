@@ -37,6 +37,7 @@ from clara_api.db.models import (
     VisitConsent,
     VisitDocument,
     VisitEpisodeLink,
+    VisitInstructionCandidate,
     VisitIntakeAnswer,
     VisitPackVersion,
     VisitPlanDraft,
@@ -505,6 +506,13 @@ def withdraw_visit_document(
             draft.status = "withdrawn"
             draft.withdrawn_at = document.withdrawn_at
             draft.withdraw_reason = document.withdraw_reason
+        invalidate_visit_packs_for_source(
+            db,
+            profile_id=document.profile_id,
+            source_kind="document",
+            source_public_id=document.public_id,
+            reason="source_document_withdrawn",
+        )
     db.flush()
     return document
 
@@ -537,6 +545,13 @@ def delete_visit_document(
             draft.status = "deleted"
             draft.deleted_at = now
             draft.candidates_json = []
+        invalidate_visit_packs_for_source(
+            db,
+            profile_id=document.profile_id,
+            source_kind="document",
+            source_public_id=document.public_id,
+            reason="source_document_deleted",
+        )
     db.flush()
     return document
 
@@ -576,6 +591,140 @@ def create_safe_unavailable_plan_draft(
         },
     )
     db.add(draft)
+    db.flush()
+    return draft
+
+
+def create_grounded_plan_draft(
+    db: Session,
+    *,
+    owner: User,
+    visit_id: int,
+    document_id: int,
+    extraction: dict[str, Any],
+) -> VisitPlanDraft:
+    """Persist only candidates whose exact source span survives API revalidation."""
+
+    document = _owned_visit_document(
+        db, owner=owner, visit_id=visit_id, document_id=document_id
+    )
+    if document.deleted_at is not None or document.withdrawn_at is not None:
+        raise DomainValidationError("A withdrawn or deleted document cannot be processed")
+    if document.text_content is None:
+        raise DomainValidationError("Visit extraction requires bounded source text")
+    if document.document_kind == "scribe_note" and not has_active_visit_consent(
+        db, visit_id=visit_id, purpose="scribe_recording"
+    ):
+        raise DomainValidationError("Active visit-specific Scribe consent is required")
+    if extraction.get("status") != "ready_for_review":
+        raise DomainValidationError("Grounded extraction is not available")
+    raw_candidates = extraction.get("candidates")
+    if not isinstance(raw_candidates, list):
+        raise DomainValidationError("Grounded extraction returned an invalid candidate set")
+    schema_version = str(extraction.get("schema_version", "")).strip()
+    extractor_version = str(extraction.get("extractor_version", "")).strip()
+    if not schema_version or not extractor_version:
+        raise DomainValidationError("Grounded extraction versions are required")
+
+    validated: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw in raw_candidates:
+        if not isinstance(raw, dict):
+            raise DomainValidationError("Grounded extraction candidate is invalid")
+        candidate_id = raw.get("id")
+        title = raw.get("title")
+        spans = raw.get("source_spans")
+        confidence = raw.get("confidence")
+        if (
+            not isinstance(candidate_id, str)
+            or not candidate_id
+            or candidate_id in seen
+            or raw.get("kind")
+            not in {
+                "medication_change",
+                "test",
+                "referral",
+                "follow_up",
+                "home_monitoring",
+                "return_precaution",
+                "unresolved_question",
+            }
+            or raw.get("classification")
+            not in {"clinician_instruction", "model_interpretation"}
+            or not isinstance(title, str)
+            or not title.strip()
+            or not isinstance(confidence, (int, float))
+            or isinstance(confidence, bool)
+            or not 0 <= float(confidence) <= 1
+            or raw.get("source_document_digest") != document.content_digest
+            or not isinstance(spans, list)
+            or not spans
+        ):
+            raise DomainValidationError("Grounded extraction candidate is invalid")
+        for span in spans:
+            if (
+                not isinstance(span, dict)
+                or not isinstance(span.get("start"), int)
+                or isinstance(span.get("start"), bool)
+                or not isinstance(span.get("end"), int)
+                or isinstance(span.get("end"), bool)
+                or span["start"] < 0
+                or span["end"] <= span["start"]
+                or span["end"] > len(document.text_content)
+                or span.get("text")
+                != document.text_content[span["start"] : span["end"]]
+            ):
+                raise DomainValidationError(
+                    "Grounded extraction candidate has an invalid source span"
+                )
+        seen.add(candidate_id)
+        validated.append(
+            {
+                "id": candidate_id,
+                "kind": raw["kind"],
+                "classification": raw["classification"],
+                "title": title.strip(),
+                "confidence": float(confidence),
+                "source_spans": spans,
+                "source_document_digest": document.content_digest,
+            }
+        )
+
+    draft = VisitPlanDraft(
+        visit_id=visit_id,
+        profile_id=document.profile_id,
+        document_id=document.id,
+        status="ready_for_review",
+        extraction_provider=extractor_version,
+        candidates_json=validated,
+        provenance_json={
+            "source_document_id": document.public_id,
+            "source_document_revision": document.revision_no,
+            "source_digest": document.content_digest,
+            "schema_version": schema_version,
+            "extractor_version": extractor_version,
+            "result": "draft_candidates_only",
+        },
+    )
+    db.add(draft)
+    db.flush()
+    for candidate in validated:
+        db.add(
+            VisitInstructionCandidate(
+                draft_id=draft.id,
+                document_id=document.id,
+                profile_id=document.profile_id,
+                candidate_key=candidate["id"],
+                instruction_kind=candidate["kind"],
+                classification=candidate["classification"],
+                instruction_text=candidate["title"],
+                confidence=candidate["confidence"],
+                source_span_json={"spans": candidate["source_spans"]},
+                source_document_digest=document.content_digest,
+                extraction_schema_version=schema_version,
+                extractor_version=extractor_version,
+            )
+        )
     db.flush()
     return draft
 
@@ -657,6 +806,8 @@ def _candidate_index(
                 and span["end"] > span["start"]
                 and document.text_content is not None
                 and span["end"] <= len(document.text_content)
+                and span.get("text")
+                == document.text_content[span["start"] : span["end"]]
                 for span in spans
             )
         ):
@@ -766,6 +917,13 @@ def confirm_visit_plan(
     candidates = _candidate_index(draft, document=document)
     if not set(candidate_ids).issubset(candidates):
         raise DomainValidationError("Selected plan candidate was not found")
+    if any(
+        candidates[candidate_id]["classification"] != "clinician_instruction"
+        for candidate_id in candidate_ids
+    ):
+        raise DomainValidationError(
+            "Only source-classified clinician instructions can create tasks"
+        )
 
     episode: LifeMapEpisode | None = None
     if episode_id is not None:
@@ -871,6 +1029,28 @@ def confirm_visit_plan(
         "episode_event_ids": [event.id for event in events],
         "task_status": task_status,
     }
+    reviewed_candidates = list(
+        db.execute(
+            select(VisitInstructionCandidate).where(
+                VisitInstructionCandidate.draft_id == draft.id,
+                VisitInstructionCandidate.profile_id == visit.profile_id,
+            )
+        ).scalars()
+    )
+    selected_keys = set(candidate_ids)
+    for reviewed_candidate in reviewed_candidates:
+        reviewed_candidate.status = (
+            "confirmed"
+            if reviewed_candidate.candidate_key in selected_keys
+            else "rejected"
+        )
+        reviewed_candidate.reviewed_by_user_id = owner.id
+        reviewed_candidate.reviewed_at = now
+        reviewed_candidate.review_reason = (
+            "explicit_user_confirmation"
+            if reviewed_candidate.candidate_key in selected_keys
+            else "not_selected_on_confirmation"
+        )
     db.add(
         LifeMapDecisionLedger(
             profile_id=visit.profile_id,
@@ -909,7 +1089,14 @@ def _questions(value: Any) -> list[str]:
 
 
 def _selection(selection: dict[str, Any]) -> dict[str, list[int] | list[str]]:
-    allowed = {"concern_ids", "episode_ids", "event_ids", "medication_course_ids", "questions"}
+    allowed = {
+        "concern_ids",
+        "episode_ids",
+        "event_ids",
+        "medication_course_ids",
+        "instruction_candidate_ids",
+        "questions",
+    }
     unknown = set(selection) - allowed
     if unknown:
         raise DomainValidationError("Visit Pack selection contains unsupported fields")
@@ -919,6 +1106,10 @@ def _selection(selection: dict[str, Any]) -> dict[str, list[int] | list[str]]:
         "event_ids": _ids(selection.get("event_ids", []), key="event_ids"),
         "medication_course_ids": _ids(
             selection.get("medication_course_ids", []), key="medication_course_ids"
+        ),
+        "instruction_candidate_ids": _ids(
+            selection.get("instruction_candidate_ids", []),
+            key="instruction_candidate_ids",
         ),
         "questions": _questions(selection.get("questions", [])),
     }
@@ -947,6 +1138,7 @@ def create_visit_pack(
     episode_ids = cast(list[int], chosen["episode_ids"])
     event_ids = cast(list[int], chosen["event_ids"])
     medication_ids = cast(list[int], chosen["medication_course_ids"])
+    instruction_ids = cast(list[int], chosen["instruction_candidate_ids"])
 
     concerns = _rows_by_id(
         list(
@@ -1002,6 +1194,44 @@ def create_visit_pack(
         medication_ids,
         "medication",
     )
+    instructions = _rows_by_id(
+        list(
+            db.execute(
+                select(VisitInstructionCandidate)
+                .join(
+                    VisitPlanDraft,
+                    VisitPlanDraft.id == VisitInstructionCandidate.draft_id,
+                )
+                .where(
+                    VisitInstructionCandidate.profile_id == visit.profile_id,
+                    VisitInstructionCandidate.id.in_(instruction_ids or [-1]),
+                    VisitInstructionCandidate.status == "confirmed",
+                    VisitInstructionCandidate.classification
+                    == "clinician_instruction",
+                    VisitPlanDraft.visit_id == visit.id,
+                )
+            ).scalars()
+        ),
+        instruction_ids,
+        "confirmed instruction",
+    )
+    instruction_document_ids = {row.document_id for row in instructions}
+    instruction_documents = {
+        row.id: row
+        for row in db.execute(
+            select(VisitDocument).where(
+                VisitDocument.id.in_(instruction_document_ids or {-1}),
+                VisitDocument.visit_id == visit.id,
+                VisitDocument.profile_id == visit.profile_id,
+                VisitDocument.deleted_at.is_(None),
+                VisitDocument.withdrawn_at.is_(None),
+            )
+        ).scalars()
+    }
+    if set(instruction_document_ids) != set(instruction_documents):
+        raise DomainValidationError(
+            "A selected instruction no longer has an active source document"
+        )
     version_no = (
         db.execute(
             select(func.coalesce(func.max(VisitPackVersion.version_no), 0)).where(
@@ -1011,21 +1241,26 @@ def create_visit_pack(
         + 1
     )
     contents = {
-        "schema_version": "2026-07-25.1",
+        "schema_version": "lifemap.visit-pack.v2",
+        "purpose": "visit_preparation",
         "visit": {
-            "id": str(visit.id),
+            "id": visit.public_id,
             "title": visit.title,
             "goal": visit.goal,
             "visit_type": visit.visit_type,
             "scheduled_at": visit.scheduled_at.isoformat() if visit.scheduled_at else None,
         },
         "concerns": [
-            {"source_id": str(row.id), "text": row.text, "priority": row.priority}
+            {
+                "source_id": row.public_id,
+                "text": row.text,
+                "priority": row.priority,
+            }
             for row in concerns
         ],
         "episodes": [
             {
-                "source_id": str(row.id),
+                "source_id": row.public_id,
                 "title": row.title,
                 "goal": row.goal,
                 "status": row.status,
@@ -1035,7 +1270,7 @@ def create_visit_pack(
         ],
         "events": [
             {
-                "source_id": str(row.id),
+                "source_id": row.public_id,
                 "event_type": row.event_type,
                 "truth_state": row.truth_state,
                 "occurred_at": row.occurred_at.isoformat(),
@@ -1046,7 +1281,7 @@ def create_visit_pack(
         ],
         "medications": [
             {
-                "source_id": str(row.id),
+                "source_id": row.public_id,
                 "name": row.medication_name,
                 "dose": row.dose_text,
                 "schedule": row.schedule_text,
@@ -1056,6 +1291,22 @@ def create_visit_pack(
             }
             for row in medicines
         ],
+        "confirmed_instructions": [
+            {
+                "source_id": row.public_id,
+                "kind": row.instruction_kind,
+                "text": row.instruction_text,
+                "classification": row.classification,
+                "source_spans": row.source_span_json.get("spans", []),
+                "source_document": {
+                    "id": instruction_documents[row.document_id].public_id,
+                    "title": instruction_documents[row.document_id].title,
+                    "revision": instruction_documents[row.document_id].revision_no,
+                    "digest": instruction_documents[row.document_id].content_digest,
+                },
+            }
+            for row in instructions
+        ],
         "questions": chosen["questions"],
     }
     pack = VisitPackVersion(
@@ -1064,10 +1315,91 @@ def create_visit_pack(
         version_no=version_no,
         selection_json=chosen,
         contents_json=contents,
+        source_versions_json={
+            "visit": {
+                "id": visit.public_id,
+                "updated_at": visit.updated_at.isoformat() if visit.updated_at else None,
+            },
+            "episodes": [
+                {"id": row.public_id, "version": row.version_no} for row in episodes
+            ],
+            "events": [
+                {"id": row.public_id, "revision": row.current_revision_no}
+                for row in events
+            ],
+            "medications": [
+                {"id": row.public_id, "version": row.version_no}
+                for row in medicines
+            ],
+            "documents": [
+                {
+                    "id": row.public_id,
+                    "revision": row.revision_no,
+                    "digest": row.content_digest,
+                }
+                for row in instruction_documents.values()
+            ],
+            "instructions": [
+                {
+                    "id": row.public_id,
+                    "document_id": instruction_documents[row.document_id].public_id,
+                    "reviewed_at": row.reviewed_at.isoformat()
+                    if row.reviewed_at
+                    else None,
+                }
+                for row in instructions
+            ],
+        },
+        policy_version="visit-pack-v2",
+        purpose="visit_preparation",
     )
     db.add(pack)
     db.flush()
     return pack
+
+
+def invalidate_visit_packs_for_source(
+    db: Session,
+    *,
+    profile_id: int,
+    source_kind: str,
+    source_public_id: str,
+    reason: str,
+) -> int:
+    """Mark every dependent immutable pack stale without rewriting its snapshot."""
+
+    key = {
+        "event": "events",
+        "episode": "episodes",
+        "medication": "medications",
+        "document": "documents",
+        "instruction": "instructions",
+    }.get(source_kind)
+    if key is None:
+        raise DomainValidationError("Unsupported Visit Pack source kind")
+    now = _now()
+    changed = 0
+    packs = db.execute(
+        select(VisitPackVersion).where(
+            VisitPackVersion.profile_id == profile_id,
+            VisitPackVersion.stale_at.is_(None),
+        )
+    ).scalars()
+    for pack in packs:
+        versions = (
+            pack.source_versions_json
+            if isinstance(pack.source_versions_json, dict)
+            else {}
+        )
+        references = versions.get(key, [])
+        if isinstance(references, list) and any(
+            isinstance(item, dict) and item.get("id") == source_public_id
+            for item in references
+        ):
+            pack.stale_at = now
+            pack.stale_reason = reason[:96]
+            changed += 1
+    return changed
 
 
 def approve_visit_pack(db: Session, *, owner: User, pack_id: int) -> VisitPackVersion:
@@ -1080,6 +1412,8 @@ def approve_visit_pack(db: Session, *, owner: User, pack_id: int) -> VisitPackVe
         raise DomainNotFoundError("Visit Pack not found")
     if pack.status != "draft":
         raise DomainValidationError("Only a draft Visit Pack can be approved")
+    if pack.stale_at is not None:
+        raise DomainValidationError("A stale Visit Pack cannot be approved")
     pack.status = "approved"
     pack.approved_at = _now()
     pack.approved_by_user_id = owner.id
@@ -1102,6 +1436,8 @@ def create_visit_share(
         raise DomainNotFoundError("Visit Pack not found")
     if pack.status != "approved":
         raise DomainValidationError("Only an approved Visit Pack can be shared")
+    if pack.stale_at is not None:
+        raise DomainValidationError("A stale Visit Pack cannot be shared")
     expires_at = _as_utc(expires_at)
     if expires_at <= _now() or expires_at > _now() + MAX_SHARE_LIFETIME:
         raise DomainValidationError("Visit Pack share must expire within 30 days")
@@ -1127,7 +1463,7 @@ def resolve_visit_share(db: Session, *, raw_token: str) -> VisitPackVersion:
     if share is None or share.revoked_at is not None or _as_utc(share.expires_at) <= _now():
         raise DomainNotFoundError("Visit Pack share unavailable")
     pack = db.get(VisitPackVersion, share.pack_version_id)
-    if pack is None or pack.status != "approved":
+    if pack is None or pack.status != "approved" or pack.stale_at is not None:
         raise DomainNotFoundError("Visit Pack share unavailable")
     return pack
 

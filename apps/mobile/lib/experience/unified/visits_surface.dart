@@ -24,6 +24,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import 'visit_detail_surface.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
 
@@ -164,8 +165,8 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-          () => _error = 'Không thể tải danh sách buổi khám. Vui lòng thử lại.');
+      setState(() =>
+          _error = 'Không thể tải danh sách buổi khám. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -188,7 +189,8 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
         accessToken: token,
         payload: <String, dynamic>{
           'title': title,
-          if (reason.isNotEmpty) 'reason': reason,
+          'goal': reason,
+          'visit_type': 'other',
         },
       );
       _titleController.clear();
@@ -486,6 +488,26 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
             _formatScheduled(visit.scheduledAt),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.secondary(
+              label: 'Mở chuẩn bị',
+              icon: Icons.arrow_forward,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => VisitDetailSurface(
+                    apiClient: widget.apiClient,
+                    sessionStore: widget.sessionStore,
+                    visitId: visit.id,
+                    title: visit.title.isEmpty
+                        ? 'Chuẩn bị buổi khám'
+                        : visit.title,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

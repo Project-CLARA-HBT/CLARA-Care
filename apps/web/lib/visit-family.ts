@@ -15,6 +15,22 @@ export type VisitPack = {
   status: string;
 };
 
+export type VisitPackOption = {
+  id: string;
+  label: string;
+  status?: string;
+  priority?: string;
+  occurred_at?: string;
+};
+
+export type VisitPackOptions = {
+  concerns: VisitPackOption[];
+  episodes: VisitPackOption[];
+  events: VisitPackOption[];
+  medications: VisitPackOption[];
+  instructions: VisitPackOption[];
+};
+
 export type VisitShare = {
   id: string;
   token: string;
@@ -54,6 +70,15 @@ export type VisitPlanCandidate = {
   id: string;
   text?: string;
   source_span?: string;
+  source_spans?: Array<{
+    page?: number | null;
+    region?: number[] | null;
+    start: number;
+    end: number;
+    text: string;
+  }>;
+  confidence?: number;
+  classification?: "clinician_instruction" | "model_interpretation";
   kind?: string;
   [key: string]: unknown;
 };
@@ -203,7 +228,7 @@ export async function extractVisitPlan(
 ): Promise<VisitPlanDraft> {
   return (
     await api.post<VisitPlanDraft>(`/visits/${encodeURIComponent(visitId)}/plan/extract`, {
-      document_id: Number(documentId),
+      document_id: documentId,
     })
   ).data;
 }
@@ -224,10 +249,10 @@ export async function withdrawVisitPlan(
 export async function confirmVisitPlan(
   visitId: string,
   input: {
-    draft_id: number;
+    draft_id: string;
     candidate_ids: string[];
     task_status?: string;
-    episode_id?: number;
+    episode_id?: string;
   },
 ): Promise<VisitPlanConfirmation> {
   return (
@@ -240,12 +265,27 @@ export async function confirmVisitPlan(
 
 export async function createVisitPack(
   visitId: string,
-  selection: Record<string, boolean>,
+  selection: {
+    concern_ids: string[];
+    episode_ids: string[];
+    event_ids: string[];
+    medication_course_ids: string[];
+    instruction_candidate_ids: string[];
+    questions: string[];
+  },
 ): Promise<VisitPack> {
   return (
     await api.post<VisitPack>(`/visits/${encodeURIComponent(visitId)}/pack`, {
       selection,
     })
+  ).data;
+}
+
+export async function getVisitPackOptions(visitId: string): Promise<VisitPackOptions> {
+  return (
+    await api.get<VisitPackOptions>(
+      `/visits/${encodeURIComponent(visitId)}/pack-options`,
+    )
   ).data;
 }
 
@@ -259,6 +299,12 @@ export async function shareVisitPack(packId: string, expiresAt: string): Promise
       expires_at: expiresAt,
     })
   ).data;
+}
+
+export async function revokeVisitShare(packId: string, shareId: string): Promise<void> {
+  await api.delete(
+    `/visit-packs/${encodeURIComponent(packId)}/shares/${encodeURIComponent(shareId)}`,
+  );
 }
 
 export async function grantVisitScribeConsent(visitId: string): Promise<void> {

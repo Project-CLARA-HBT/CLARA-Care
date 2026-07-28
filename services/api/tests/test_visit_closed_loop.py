@@ -160,7 +160,13 @@ def test_confirmed_grounded_candidate_creates_tasks_and_linked_episode_event() -
                     "title": "Check blood pressure each morning for seven days",
                     "classification": "clinician_instruction",
                     "source_document_digest": document.content_digest,
-                    "source_spans": [{"start": 0, "end": 62}],
+                    "source_spans": [
+                        {
+                            "start": 0,
+                            "end": len(document.text_content),
+                            "text": document.text_content,
+                        }
+                    ],
                 }
             ],
             provenance_json={"source_document_id": str(document.id)},

@@ -224,17 +224,17 @@ blocked; one coherent client entry exists.
 
 ## Phase 8 — Grounded Visit closed loop
 
-- [ ] 8.1 Extend document/extraction candidate schema with exact page/region/text
+- [x] 8.1 Extend document/extraction candidate schema with exact page/region/text
   spans and review state. _R11_
-- [ ] 8.2 Implement typed visit-document extraction with instruction
+- [x] 8.2 Implement typed visit-document extraction with instruction
   classification, confidence, and fail-closed unknowns. _R11, R18_
 - [ ] 8.3 Replace the permanent `extraction_unavailable` placeholder only when
   grounded extraction passes the source-span and safety evaluation. _R11_
-- [ ] 8.4 Build review/confirm flow; only confirmed clinician instructions can
+- [x] 8.4 Build review/confirm flow; only confirmed clinician instructions can
   propose follow-up tasks. _R3, R5, R11_
-- [ ] 8.5 Make Visit Pack sections revision-aware, invalidatable, user-approved,
+- [x] 8.5 Make Visit Pack sections revision-aware, invalidatable, user-approved,
   purpose-bound, and revocable. _R10, R11, R12_
-- [ ] 8.6 Complete web/mobile visit lifecycle: documents, candidate review, pack
+- [x] 8.6 Complete web/mobile visit lifecycle: documents, candidate review, pack
   approval, share, expiry/revocation. _R11, R19_
 - [ ] 8.7 Evaluate instruction accuracy, unsupported-instruction rate, span
   validity, task leakage, and user comprehension. _R22_

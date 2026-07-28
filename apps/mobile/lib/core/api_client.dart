@@ -1583,12 +1583,182 @@ class ApiClient {
   Future<Map<String, dynamic>> createVisitPack({
     required String accessToken,
     required String visitId,
+    required Map<String, dynamic> selection,
   }) {
     return _post(
       '/api/v1/visits/$visitId/pack',
+      body: <String, dynamic>{'selection': selection},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> getVisitPackOptions({
+    required String accessToken,
+    required String visitId,
+  }) {
+    return _get(
+      '/api/v1/visits/$visitId/pack-options',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getVisitDocuments({
+    required String accessToken,
+    required String visitId,
+  }) {
+    return _get(
+      '/api/v1/visits/$visitId/documents',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> createVisitDocument({
+    required String accessToken,
+    required String visitId,
+    required Map<String, dynamic> payload,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/documents',
+      body: payload,
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> withdrawVisitDocument({
+    required String accessToken,
+    required String visitId,
+    required String documentId,
+    String reason = 'owner_withdrew',
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/documents/$documentId/withdraw',
+      body: <String, dynamic>{'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteVisitDocument({
+    required String accessToken,
+    required String visitId,
+    required String documentId,
+    String reason = 'owner_requested_deletion',
+  }) {
+    return _delete(
+      '/api/v1/visits/$visitId/documents/$documentId',
+      body: <String, dynamic>{'reason': reason},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> extractVisitPlan({
+    required String accessToken,
+    required String visitId,
+    required String documentId,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/plan/extract',
+      body: <String, dynamic>{'document_id': documentId},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmVisitPlan({
+    required String accessToken,
+    required String visitId,
+    required String draftId,
+    required List<String> candidateIds,
+    String? episodeId,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/plan/confirm',
+      body: <String, dynamic>{
+        'draft_id': draftId,
+        'candidate_ids': candidateIds,
+        if (episodeId != null && episodeId.isNotEmpty) 'episode_id': episodeId,
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> withdrawVisitPlan({
+    required String accessToken,
+    required String visitId,
+    required String draftId,
+    String reason = 'owner_withdrew',
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/plan/$draftId/withdraw',
+      body: <String, dynamic>{'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> approveVisitPack({
+    required String accessToken,
+    required String packId,
+  }) {
+    return _post(
+      '/api/v1/visit-packs/$packId/approve',
       body: const <String, dynamic>{},
       accessToken: accessToken,
       extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> shareVisitPack({
+    required String accessToken,
+    required String packId,
+    required DateTime expiresAt,
+  }) {
+    return _post(
+      '/api/v1/visit-packs/$packId/shares',
+      body: <String, dynamic>{
+        'expires_at': expiresAt.toUtc().toIso8601String(),
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> revokeVisitShare({
+    required String accessToken,
+    required String packId,
+    required String shareId,
+  }) {
+    return _delete(
+      '/api/v1/visit-packs/$packId/shares/$shareId',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> grantVisitScribeConsent({
+    required String accessToken,
+    required String visitId,
+  }) {
+    return _post(
+      '/api/v1/visits/$visitId/scribe-consents',
+      body: const <String, dynamic>{
+        'purpose': 'scribe_recording',
+        'policy_version': 'visit-scribe-v1',
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> revokeVisitScribeConsent({
+    required String accessToken,
+    required String visitId,
+  }) {
+    return _delete(
+      '/api/v1/visits/$visitId/scribe-consents/scribe_recording',
+      accessToken: accessToken,
     );
   }
 
@@ -1917,12 +2087,14 @@ class ApiClient {
   Future<Map<String, dynamic>> _delete(
     String path, {
     String? accessToken,
+    Map<String, dynamic>? body,
   }) {
     return _sendAuthed(
       accessToken,
       (token) => _httpClient.delete(
         Uri.parse('$_baseUrl$path'),
         headers: _headers(accessToken: token),
+        body: body == null ? null : jsonEncode(body),
       ),
     );
   }

@@ -1797,6 +1797,9 @@ class LifeMapVisit(Base):
     __tablename__ = "lifemap_visits"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1820,6 +1823,9 @@ class VisitConcern(Base):
     __tablename__ = "visit_concerns"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1840,6 +1846,9 @@ class VisitEpisodeLink(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1861,6 +1870,9 @@ class VisitPackVersion(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1871,6 +1883,17 @@ class VisitPackVersion(Base):
     status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
     selection_json: Mapped[dict] = mapped_column(JSON)
     contents_json: Mapped[dict] = mapped_column(JSON)
+    source_versions_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    policy_version: Mapped[str] = mapped_column(
+        String(64), default="visit-pack-v2", server_default="visit-pack-v2"
+    )
+    purpose: Mapped[str] = mapped_column(
+        String(64), default="visit_preparation", server_default="visit_preparation"
+    )
+    stale_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    stale_reason: Mapped[str] = mapped_column(String(96), default="")
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -1884,6 +1907,9 @@ class VisitConsent(Base):
     __tablename__ = "visit_consents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1906,6 +1932,9 @@ class VisitShare(Base):
     __tablename__ = "visit_shares"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     pack_version_id: Mapped[int] = mapped_column(
         ForeignKey("visit_pack_versions.id", ondelete="CASCADE"), index=True
     )
@@ -1936,6 +1965,9 @@ class VisitIntakeAnswer(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1967,6 +1999,9 @@ class VisitDocument(Base):
     __tablename__ = "visit_documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -1982,6 +2017,7 @@ class VisitDocument(Base):
     metadata_json: Mapped[dict] = mapped_column(JSON)
     provenance_json: Mapped[dict] = mapped_column(JSON)
     content_digest: Mapped[str] = mapped_column(String(128), index=True)
+    revision_no: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(32), default="external_unverified", index=True)
     scribe_session_id: Mapped[int | None] = mapped_column(
         ForeignKey("scribe_sessions.id", ondelete="SET NULL"), nullable=True, index=True
@@ -2012,6 +2048,9 @@ class VisitPlanDraft(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2038,6 +2077,55 @@ class VisitPlanDraft(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class VisitInstructionCandidate(Base):
+    """Typed, source-grounded instruction awaiting an explicit review action."""
+
+    __tablename__ = "visit_instruction_candidates"
+    __table_args__ = (
+        UniqueConstraint(
+            "draft_id",
+            "candidate_key",
+            name="uq_visit_instruction_candidate_key",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    draft_id: Mapped[int] = mapped_column(
+        ForeignKey("visit_plan_drafts.id", ondelete="CASCADE"), index=True
+    )
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("visit_documents.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    candidate_key: Mapped[str] = mapped_column(String(96))
+    instruction_kind: Mapped[str] = mapped_column(String(48), index=True)
+    classification: Mapped[str] = mapped_column(String(48), index=True)
+    instruction_text: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[float] = mapped_column(Float)
+    source_span_json: Mapped[dict] = mapped_column(JSON)
+    source_document_digest: Mapped[str] = mapped_column(String(128), index=True)
+    extraction_schema_version: Mapped[str] = mapped_column(String(64))
+    extractor_version: Mapped[str] = mapped_column(String(96))
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 
 

@@ -23,6 +23,7 @@ from clara_api.lifemap.commands import (
     store_command,
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.lifemap.visit_family_service import invalidate_visit_packs_for_source
 from clara_api.phr.audit import write_audit
 
 router = APIRouter()
@@ -376,6 +377,13 @@ def correct_course(
     row.normalization_code = ""
     row.reconciliation_status = "unknown"
     row.version_no += 1
+    invalidate_visit_packs_for_source(
+        db,
+        profile_id=scope.profile.id,
+        source_kind="medication",
+        source_public_id=row.public_id,
+        reason="medication_corrected",
+    )
     db.add(
         MedicationCourseChange(
             course_id=row.id,
@@ -427,6 +435,13 @@ def end_course(
     row.status = "ended"
     row.ended_at = payload.ended_at or datetime.now(UTC)
     row.version_no += 1
+    invalidate_visit_packs_for_source(
+        db,
+        profile_id=scope.profile.id,
+        source_kind="medication",
+        source_public_id=row.public_id,
+        reason="medication_ended",
+    )
     db.add(
         MedicationCourseChange(
             course_id=row.id,

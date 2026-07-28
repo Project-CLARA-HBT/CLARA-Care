@@ -12,9 +12,13 @@ vi.mock("@/lib/http-client", () => ({ default: api }));
 
 import {
   answerVisitIntake,
+  confirmVisitPlan,
   createVisitDocument,
+  createVisitPack,
   deleteVisitDocument,
   extractVisitPlan,
+  getVisitPackOptions,
+  revokeVisitShare,
 } from "@/lib/visit-family";
 
 describe("visit-family phase 3 API contracts", () => {
@@ -68,11 +72,84 @@ describe("visit-family phase 3 API contracts", () => {
     });
   });
 
-  it("uses a persisted document id for safe plan extraction", async () => {
+  it("preserves an opaque persisted document id for safe plan extraction", async () => {
     api.post.mockResolvedValueOnce({
-      data: { id: "8", status: "extraction_unavailable", candidates: [], safe_unavailable: true },
+      data: {
+        id: "draft_K3",
+        status: "extraction_unavailable",
+        candidates: [],
+        safe_unavailable: true,
+      },
     });
-    await extractVisitPlan("12", "4");
-    expect(api.post).toHaveBeenCalledWith("/visits/12/plan/extract", { document_id: 4 });
+    await extractVisitPlan("visit_A7", "document_B9");
+    expect(api.post).toHaveBeenCalledWith("/visits/visit_A7/plan/extract", {
+      document_id: "document_B9",
+    });
+  });
+
+  it("loads only owner-scoped choices for an explicit Visit Pack selection", async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        concerns: [{ id: "concern_A", label: "Đau khi đi bộ" }],
+        episodes: [],
+        events: [],
+        medications: [{ id: "medication_B", label: "Metformin" }],
+        instructions: [{ id: "instruction_I", label: "Theo dõi 7 ngày" }],
+      },
+    });
+
+    await getVisitPackOptions("visit_A7");
+
+    expect(api.get).toHaveBeenCalledWith("/visits/visit_A7/pack-options");
+  });
+
+  it("creates a Visit Pack from exact opaque selections instead of booleans", async () => {
+    api.post.mockResolvedValueOnce({
+      data: { id: "pack_P1", version_no: 1, status: "draft" },
+    });
+
+    const selection = {
+      concern_ids: ["concern_A"],
+      episode_ids: ["episode_C"],
+      event_ids: [],
+      medication_course_ids: ["medication_B"],
+      instruction_candidate_ids: ["instruction_I"],
+      questions: ["Tôi cần theo dõi gì?"],
+    };
+    await createVisitPack("visit_A7", selection);
+
+    expect(api.post).toHaveBeenCalledWith("/visits/visit_A7/pack", { selection });
+  });
+
+  it("confirms only the explicitly selected grounded candidate ids", async () => {
+    api.post.mockResolvedValueOnce({
+      data: {
+        id: "draft_K3",
+        status: "confirmed",
+        task_ids: ["task_T4"],
+        task_status: "proposed",
+        episode_event_ids: [],
+      },
+    });
+
+    await confirmVisitPlan("visit_A7", {
+      draft_id: "draft_K3",
+      candidate_ids: ["candidate_C5"],
+      episode_id: "episode_E6",
+    });
+
+    expect(api.post).toHaveBeenCalledWith("/visits/visit_A7/plan/confirm", {
+      draft_id: "draft_K3",
+      candidate_ids: ["candidate_C5"],
+      episode_id: "episode_E6",
+    });
+  });
+
+  it("revokes the exact opaque Visit Pack share", async () => {
+    api.delete.mockResolvedValueOnce({ data: { status: "revoked" } });
+
+    await revokeVisitShare("pack_P1", "share_S2");
+
+    expect(api.delete).toHaveBeenCalledWith("/visit-packs/pack_P1/shares/share_S2");
   });
 });
