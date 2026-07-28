@@ -15,6 +15,12 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy import (
+    event as sa_event,
+)
+from sqlalchemy import (
+    inspect as sa_inspect,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from clara_api.db.base import Base
@@ -1023,6 +1029,34 @@ class LifeMapDecisionLedger(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class LifeMapDecisionInput(Base):
+    """Relational link from a decision to the exact fact revision it consumed."""
+
+    __tablename__ = "lifemap_decision_inputs"
+    __table_args__ = (
+        UniqueConstraint(
+            "decision_id",
+            "event_revision_id",
+            name="uq_lifemap_decision_input_revision",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    decision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_decision_ledger.id", ondelete="CASCADE"), index=True
+    )
+    event_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    input_role: Mapped[str] = mapped_column(String(64), default="", index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class LifeMapOutboxEvent(Base):
     """Transactional integration event emitted alongside LifeMap mutations."""
 
@@ -1123,6 +1157,21 @@ class LifeMapEventRevision(Base):
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+@sa_event.listens_for(LifeMapEventRevision, "before_update")
+def _prevent_lifemap_revision_update(_mapper, _connection, _target) -> None:
+    """Canonical revisions are append-only; corrections insert a successor."""
+
+    raise ValueError("LifeMap event revisions are immutable")
+
+
+@sa_event.listens_for(HealthSourceReference, "before_update")
+def _prevent_source_checksum_change(_mapper, _connection, target) -> None:
+    """A source checksum is an immutable provenance identity."""
+
+    if sa_inspect(target).attrs.checksum.history.has_changes():
+        raise ValueError("Health source checksums are immutable")
 
 
 class LifeMapTaskAction(Base):
@@ -1536,6 +1585,9 @@ class FamilyAccessGrant(Base):
     )
     object_type: Mapped[str] = mapped_column(String(32), index=True)
     object_id: Mapped[str] = mapped_column(String(64), index=True)
+    data_classes_json: Mapped[list[str]] = mapped_column(
+        JSON, default=list, server_default="[]"
+    )
     allowed_actions_json: Mapped[list[str]] = mapped_column(JSON)
     purpose: Mapped[str] = mapped_column(String(64), index=True)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

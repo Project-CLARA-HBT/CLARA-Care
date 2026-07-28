@@ -45,6 +45,7 @@ from clara_api.lifemap.domain import (
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
 from clara_api.observability.admin_audit import record_admin_action
+from clara_api.phr.audit import write_audit
 
 router = APIRouter()
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -210,8 +211,38 @@ def _finish(
         aggregate_public_id=aggregate_public_id,
         event_type=event_type,
     )
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="change",
+        entity=aggregate_type,
+        entity_id=aggregate_public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
     db.commit()
     return stored
+
+
+def _audit_read(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    entity: str,
+    entity_id: str = "",
+) -> None:
+    """Persist a minimum-data object read without storing health payloads."""
+
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="share_read" if not scope.is_owner else "read",
+        entity=entity,
+        entity_id=entity_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
+    db.commit()
 
 
 def _event(
@@ -364,6 +395,7 @@ def create_event(
 def _truth_command(
     event_id: str,
     target: str,
+    action: str,
     payload: EventTruthRequest,
     idempotency_key: str,
     if_match: str | None,
@@ -371,7 +403,7 @@ def _truth_command(
     db: Session,
     token: TokenPayload,
 ) -> dict:
-    scope = _scope(db, token, x_profile, action=target)
+    scope = _scope(db, token, x_profile, action=action)
     event = _event(db, scope, event_id)
     current = _current_revision(db, scope, event)
     _require_version(current.revision_no, if_match)
@@ -382,7 +414,7 @@ def _truth_command(
             status_code=409, detail={"code": "invalid_transition", "transition": str(exc)}
         ) from exc
 
-    operation = f"event.{destination}:{event.public_id}"
+    operation = f"event.{action}:{event.public_id}"
     digest, replay = _begin(
         db,
         scope,
@@ -443,7 +475,15 @@ def confirm_event(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
     return _truth_command(
-        event_id, "confirmed", payload, idempotency_key, if_match, x_profile, db, token
+        event_id,
+        "confirmed",
+        "confirm",
+        payload,
+        idempotency_key,
+        if_match,
+        x_profile,
+        db,
+        token,
     )
 
 
@@ -458,7 +498,15 @@ def dispute_event(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
     return _truth_command(
-        event_id, "disputed", payload, idempotency_key, if_match, x_profile, db, token
+        event_id,
+        "disputed",
+        "dispute",
+        payload,
+        idempotency_key,
+        if_match,
+        x_profile,
+        db,
+        token,
     )
 
 
@@ -473,7 +521,48 @@ def invalidate_event(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
     return _truth_command(
-        event_id, "invalidated", payload, idempotency_key, if_match, x_profile, db, token
+        event_id,
+        "invalidated",
+        "invalidate",
+        payload,
+        idempotency_key,
+        if_match,
+        x_profile,
+        db,
+        token,
+    )
+
+
+@router.post("/events/{event_id}/resolve")
+def resolve_event(
+    event_id: str,
+    payload: EventTruthRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    """Resolve a disputed fact through an explicit, audited typed command."""
+
+    scope = _scope(db, token, x_profile, action="resolve")
+    event = _event(db, scope, event_id)
+    current = _current_revision(db, scope, event)
+    if canonical_truth_state(current.truth_state) != "disputed":
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "invalid_transition", "transition": "resolve_requires_disputed"},
+        )
+    return _truth_command(
+        event_id,
+        "confirmed",
+        "resolve",
+        payload,
+        idempotency_key,
+        if_match,
+        x_profile,
+        db,
+        token,
     )
 
 
@@ -814,7 +903,7 @@ def event_history(
         )
         .order_by(LifeMapEventRevision.revision_no)
     ).scalars()
-    return [
+    result = [
         {
             "id": item.public_id,
             "revision": item.revision_no,
@@ -825,6 +914,8 @@ def event_history(
         }
         for item in revisions
     ]
+    _audit_read(db, scope, entity="event_history", entity_id=event.public_id)
+    return result
 
 
 @router.get("/today", response_model=TodayResponse)
@@ -865,7 +956,7 @@ def today(
             LifeMapEvent.lifecycle_status == "active",
         )
     ).all()
-    return TodayResponse(
+    result = TodayResponse(
         generated_at=datetime.now(UTC),
         tasks=[
             {
@@ -883,6 +974,8 @@ def today(
         ],
         pending_confirmation_count=len(drafts),
     )
+    _audit_read(db, scope, entity="today")
+    return result
 
 
 @router.get("/health", response_model=LifeMapHealthResponse)
@@ -928,13 +1021,15 @@ def command_status(
     if record is None:
         raise HTTPException(status_code=404, detail={"code": "command_not_found"})
     response.headers["Cache-Control"] = "no-store, private"
-    return {
+    result = {
         "id": record.public_id,
         "operation": record.operation,
         "status_code": record.status_code,
         "result": record.response_json,
         "created_at": record.created_at,
     }
+    _audit_read(db, scope, entity="command", entity_id=record.public_id)
+    return result
 
 
 @router.get("/admin/outbox/health")

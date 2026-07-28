@@ -59,11 +59,18 @@ class DomainValidationError(ValueError):
 VISIT_STATUSES = {"planning", "ready", "in_progress", "awaiting_review", "completed", "cancelled"}
 VISIT_CONSENT_PURPOSES = {"scribe_recording"}
 FAMILY_OBJECT_ACTIONS = {
+    "lifemap": {"view"},
     "episode": {"view", "add_observation"},
     "care_task": {"view", "complete_task"},
     "visit": {"view"},
 }
-FAMILY_PURPOSES = {"care_coordination", "visit_support"}
+FAMILY_PURPOSES = {"self_care", "care_coordination", "visit_support"}
+FAMILY_OBJECT_DATA_CLASSES = {
+    "lifemap": {"lifemap"},
+    "episode": {"lifemap"},
+    "care_task": {"lifemap"},
+    "visit": {"visits"},
+}
 MAX_SHARE_LIFETIME = timedelta(days=30)
 MAX_DOCUMENT_TEXT_CHARS = 100_000
 MAX_DOCUMENT_METADATA_BYTES = 16_000
@@ -1256,9 +1263,12 @@ def assert_scribe_session_visit_consent(
 
 
 def _validate_grant_scope(db: Session, *, profile_id: int, scope: dict[str, Any]) -> dict[str, Any]:
-    if set(scope) != {"object_type", "object_id", "allowed_actions"}:
+    required = {"object_type", "object_id", "allowed_actions"}
+    if not required.issubset(scope) or not set(scope).issubset(
+        required | {"data_classes"}
+    ):
         raise DomainValidationError(
-            "Grant scope must contain object type, id, and allowed actions only"
+            "Grant scope must contain object type, id, actions, and optional data classes only"
         )
     object_type = scope["object_type"]
     object_id = scope["object_id"]
@@ -1273,6 +1283,7 @@ def _validate_grant_scope(db: Session, *, profile_id: int, scope: dict[str, Any]
     ):
         raise DomainValidationError("Grant action is not permitted for this object")
     model: Any = {
+        "lifemap": PhrProfile,
         "episode": LifeMapEpisode,
         "care_task": LifeMapCareTask,
         "visit": LifeMapVisit,
@@ -1287,13 +1298,34 @@ def _validate_grant_scope(db: Session, *, profile_id: int, scope: dict[str, Any]
         clauses.append(model.id == int(selector))
     if not clauses:
         raise DomainValidationError("Unsupported grant object")
+    ownership_clause = (
+        model.id == profile_id if object_type == "lifemap" else model.profile_id == profile_id
+    )
     row = db.execute(
-        select(model).where(or_(*clauses), model.profile_id == profile_id)
+        select(model).where(or_(*clauses), ownership_clause)
     ).scalar_one_or_none()
     if row is None:
         raise DomainNotFoundError("Grant object not found")
     canonical_id = getattr(row, "public_id", None) or str(row.id)
-    return {"object_type": object_type, "object_id": canonical_id, "allowed_actions": actions}
+    requested_classes = scope.get("data_classes")
+    if requested_classes is None:
+        data_classes = sorted(FAMILY_OBJECT_DATA_CLASSES[object_type])
+    elif (
+        not isinstance(requested_classes, list)
+        or not requested_classes
+        or len(requested_classes) != len(set(requested_classes))
+        or not all(isinstance(item, str) for item in requested_classes)
+        or not set(requested_classes).issubset(FAMILY_OBJECT_DATA_CLASSES[object_type])
+    ):
+        raise DomainValidationError("Grant data classes are not permitted for this object")
+    else:
+        data_classes = requested_classes
+    return {
+        "object_type": object_type,
+        "object_id": canonical_id,
+        "data_classes": data_classes,
+        "allowed_actions": actions,
+    }
 
 
 def _validate_invitation_expiry(expires_at: datetime) -> datetime:
@@ -1403,6 +1435,7 @@ def accept_family_invitation(db: Session, *, recipient: User, raw_token: str) ->
         profile_id=invitation.profile_id,
         object_type=scope["object_type"],
         object_id=str(scope["object_id"]),
+        data_classes_json=scope["data_classes"],
         allowed_actions_json=scope["allowed_actions"],
         purpose=invitation.purpose,
         starts_at=accepted_at,

@@ -2,16 +2,27 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from clara_api.api.v1.endpoints import lifemap as lifemap_endpoint
 from clara_api.core.config import get_settings
-from clara_api.core.security import create_access_token
-from clara_api.db.models import LifeMapOutboxEvent
+from clara_api.core.security import create_access_token, decode_access_token
+from clara_api.db.models import (
+    FamilyAccessGrant,
+    FamilyAccessLog,
+    HealthSourceReference,
+    LifeMapEpisode,
+    LifeMapEvent,
+    LifeMapEventRevision,
+    LifeMapOutboxEvent,
+    PhrAudit,
+    PhrProfile,
+)
 from clara_api.db.session import SessionLocal
 from clara_api.lifemap.domain import (
     TASK_TRANSITIONS,
@@ -20,6 +31,7 @@ from clara_api.lifemap.domain import (
     require_task_transition,
     require_truth_transition,
 )
+from clara_api.lifemap.profile_scope import resolve_profile_scope
 from clara_api.main import app
 
 client = TestClient(app)
@@ -48,6 +60,20 @@ def _idempotent(headers: dict[str, str], key: str) -> dict[str, str]:
     return {**headers, "Idempotency-Key": key}
 
 
+def _role_account(role: str) -> tuple[dict[str, str], str, str]:
+    email = f"lifemap-{role}-{uuid4().hex}@{role}.clara"
+    login = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": "secret123"}
+    )
+    assert login.status_code == 200
+    token = create_access_token(subject=email, role=role)
+    return (
+        {"Authorization": f"Bearer {token}"},
+        token,
+        email,
+    )
+
+
 def test_generic_capture_cannot_claim_confirmation_and_ids_are_opaque() -> None:
     headers, _profile_id = _account("truth")
     created = client.post(
@@ -74,6 +100,30 @@ def test_generic_capture_cannot_claim_confirmation_and_ids_are_opaque() -> None:
     )
     assert confirmed.status_code == 200
     assert confirmed.json()["truth_state"] == "confirmed"
+    disputed = client.post(
+        f"/api/v1/lifemap/events/{body['id']}/dispute",
+        headers=_idempotent(headers, f"dispute-{uuid4().hex}"),
+        json={"reason": "Nguồn thông tin chưa rõ"},
+    )
+    assert disputed.status_code == 200
+    assert disputed.json()["truth_state"] == "disputed"
+    resolved = client.post(
+        f"/api/v1/lifemap/events/{body['id']}/resolve",
+        headers=_idempotent(headers, f"resolve-{uuid4().hex}"),
+        json={"reason": "Đã kiểm tra lại nguồn"},
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["truth_state"] == "confirmed"
+    invalid_resolve = client.post(
+        f"/api/v1/lifemap/events/{body['id']}/resolve",
+        headers=_idempotent(headers, f"resolve-invalid-{uuid4().hex}"),
+        json={"reason": "Không còn tranh chấp"},
+    )
+    assert invalid_resolve.status_code == 409
+    assert invalid_resolve.json()["detail"] == {
+        "code": "invalid_transition",
+        "transition": "resolve_requires_disputed",
+    }
 
 
 def test_command_replay_is_stable_and_digest_conflicts_fail_closed() -> None:
@@ -111,6 +161,36 @@ def test_command_replay_is_stable_and_digest_conflicts_fail_closed() -> None:
     assert command.headers["cache-control"] == "no-store, private"
 
 
+def test_canonical_write_and_outbox_are_atomic(monkeypatch) -> None:
+    headers, profile_id = _account("atomic")
+    title = f"Atomic {uuid4().hex}"
+
+    def fail_outbox(*_args, **_kwargs):
+        raise RuntimeError("simulated outbox failure")
+
+    monkeypatch.setattr(lifemap_endpoint, "add_outbox", fail_outbox)
+    isolated_client = TestClient(app, raise_server_exceptions=False)
+    response = isolated_client.post(
+        "/api/v1/lifemap/episodes",
+        headers=_idempotent(headers, f"atomic-{uuid4().hex}"),
+        json={"title": title},
+    )
+    assert response.status_code == 500
+    with SessionLocal() as db:
+        internal_profile_id = db.execute(
+            select(PhrProfile.id).where(PhrProfile.public_id == profile_id)
+        ).scalar_one()
+        assert (
+            db.execute(
+                select(LifeMapEpisode).where(
+                    LifeMapEpisode.profile_id == internal_profile_id,
+                    LifeMapEpisode.title == title,
+                )
+            ).scalar_one_or_none()
+            is None
+        )
+
+
 def test_profile_context_cannot_be_used_as_an_idor_or_enumeration_oracle() -> None:
     owner, owner_profile = _account("owner")
     stranger, stranger_profile = _account("stranger")
@@ -139,6 +219,249 @@ def test_profile_context_cannot_be_used_as_an_idor_or_enumeration_oracle() -> No
     assert unknown.json() == denied.json()
 
 
+def test_every_lifemap_object_route_enforces_profile_non_interference() -> None:
+    owner, owner_profile = _account("route-owner")
+    stranger, _stranger_profile = _account("route-stranger")
+    event = client.post(
+        "/api/v1/lifemap/events",
+        headers=_idempotent(owner, f"route-event-{uuid4().hex}"),
+        json={
+            "event_type": "observation",
+            "occurred_at": "2026-07-28T08:00:00Z",
+            "payload": {"value": 1},
+        },
+    ).json()
+    episode = client.post(
+        "/api/v1/lifemap/episodes",
+        headers=_idempotent(owner, f"route-episode-{uuid4().hex}"),
+        json={"title": "Owner only"},
+    ).json()
+    task = client.post(
+        f"/api/v1/lifemap/episodes/{episode['id']}/tasks",
+        headers=_idempotent(owner, f"route-task-{uuid4().hex}"),
+        json={"title": "Owner task"},
+    ).json()
+
+    cross_profile = {**stranger, "X-CLARA-Profile-Context": owner_profile}
+    attempts = (
+        client.get(
+            f"/api/v1/lifemap/events/{event['id']}/history",
+            headers=cross_profile,
+        ),
+        client.post(
+            f"/api/v1/lifemap/events/{event['id']}/correct",
+            headers=_idempotent(stranger, f"route-correct-{uuid4().hex}"),
+            json={"payload": {"value": 9}, "reason": "not authorized"},
+        ),
+        client.post(
+            f"/api/v1/lifemap/episodes/{episode['id']}/tasks",
+            headers=_idempotent(stranger, f"route-create-task-{uuid4().hex}"),
+            json={"title": "not authorized"},
+        ),
+        client.post(
+            f"/api/v1/lifemap/tasks/{task['id']}/accept",
+            headers=_idempotent(stranger, f"route-accept-{uuid4().hex}"),
+        ),
+        client.get(
+            f"/api/v1/lifemap/v2/commands/{episode['command_id']}",
+            headers=stranger,
+        ),
+    )
+    assert [response.status_code for response in attempts] == [404, 404, 404, 404, 404]
+
+
+def test_doctor_requires_a_live_grant_and_admin_role_is_not_profile_access() -> None:
+    owner, owner_profile = _account("scope-roles")
+    doctor, doctor_token, doctor_email = _role_account("doctor")
+    admin, _admin_token, admin_email = _role_account("admin")
+
+    assert (
+        client.get(
+            "/api/v1/lifemap/today",
+            headers={**doctor, "X-CLARA-Profile-Context": owner_profile},
+        ).status_code
+        == 404
+    )
+
+    accepted_by_recipient: dict[str, dict] = {}
+    for recipient, recipient_email, headers in (
+        ("lifemap-doctor", doctor_email, doctor),
+        ("lifemap-admin", admin_email, admin),
+    ):
+        invitation = client.post(
+            "/api/v1/family/invitations",
+            headers=owner,
+            json={
+                "recipient_email": recipient_email,
+                "scope": {
+                    "object_type": "lifemap",
+                    "object_id": owner_profile,
+                    "allowed_actions": ["view"],
+                },
+                "purpose": "self_care",
+                "expires_at": "2026-07-29T08:00:00Z",
+            },
+        )
+        assert invitation.status_code == 201, recipient
+        accepted = client.post(
+            "/api/v1/family/invitations/accept",
+            headers=headers,
+            json={"token": invitation.json()["token"]},
+        )
+        assert accepted.status_code == 201
+        assert accepted.json()["data_classes"] == ["lifemap"]
+        accepted_by_recipient[recipient] = accepted.json()
+
+    allowed = client.get(
+        "/api/v1/lifemap/today",
+        headers={**doctor, "X-CLARA-Profile-Context": owner_profile},
+    )
+    assert allowed.status_code == 200
+    with SessionLocal() as db:
+        scope = resolve_profile_scope(
+            db,
+            decode_access_token(doctor_token),
+            requested_profile=owner_profile,
+            action="view",
+        )
+        assert scope.actor_role == "clinician"
+        assert scope.purpose == "self_care"
+
+    denied = client.get(
+        "/api/v1/lifemap/today",
+        headers={**admin, "X-CLARA-Profile-Context": owner_profile},
+    )
+    assert denied.status_code == 404
+    assert denied.json()["detail"]["code"] == "scope_forbidden"
+    with SessionLocal() as db:
+        support_denial = db.execute(
+            select(FamilyAccessLog).where(
+                FamilyAccessLog.actor_user_id.is_not(None),
+                FamilyAccessLog.purpose == "support_access",
+                FamilyAccessLog.outcome == "denied",
+            )
+        ).scalar_one()
+        assert support_denial.metadata_json == {
+            "reason_code": "break_glass_required"
+        }
+
+    revoked = client.delete(
+        f"/api/v1/family/access-grants/"
+        f"{accepted_by_recipient['lifemap-doctor']['id']}",
+        headers=owner,
+    )
+    assert revoked.status_code == 200
+    assert revoked.json()["status"] == "revoked"
+    assert revoked.json()["grant_version"] == 2
+    denied_after_revoke = client.get(
+        "/api/v1/lifemap/today",
+        headers={**doctor, "X-CLARA-Profile-Context": owner_profile},
+    )
+    assert denied_after_revoke.status_code == 404
+
+
+def test_lifemap_reads_and_changes_append_minimum_data_audit_records() -> None:
+    headers, profile_id = _account("object-audit")
+    episode = client.post(
+        "/api/v1/lifemap/episodes",
+        headers=_idempotent(headers, f"audit-episode-{uuid4().hex}"),
+        json={"title": "Audit boundary"},
+    )
+    assert episode.status_code == 201
+    today_response = client.get("/api/v1/lifemap/today", headers=headers)
+    assert today_response.status_code == 200
+
+    with SessionLocal() as db:
+        internal_profile_id = db.execute(
+            select(PhrProfile.id).where(PhrProfile.public_id == profile_id)
+        ).scalar_one()
+        rows = list(
+            db.execute(
+                select(PhrAudit)
+                .where(PhrAudit.profile_id == internal_profile_id)
+                .order_by(PhrAudit.id)
+            ).scalars()
+        )
+        change = next(
+            row
+            for row in rows
+            if row.action == "change" and row.entity == "episode"
+        )
+        assert change.entity_id == episode.json()["id"]
+        assert change.before_json is None
+        assert change.after_json is None
+        read = next(
+            row for row in rows if row.action == "read" and row.entity == "today"
+        )
+        assert read.scope == "owner:self_care"
+
+
+def test_family_grant_rejects_data_class_escalation() -> None:
+    owner, owner_profile = _account("scope-data-class")
+    _doctor, _token, doctor_email = _role_account("doctor")
+    invitation = client.post(
+        "/api/v1/family/invitations",
+        headers=owner,
+        json={
+            "recipient_email": doctor_email,
+            "scope": {
+                "object_type": "lifemap",
+                "object_id": owner_profile,
+                "data_classes": ["visits"],
+                "allowed_actions": ["view"],
+            },
+            "purpose": "self_care",
+            "expires_at": "2026-07-29T08:00:00Z",
+        },
+    )
+    assert invitation.status_code == 422
+    assert "data classes" in invitation.json()["detail"].lower()
+
+
+def test_expired_grant_and_confused_deputy_profile_swap_fail_closed() -> None:
+    owner_a, profile_a = _account("grant-owner-a")
+    _owner_b, profile_b = _account("grant-owner-b")
+    doctor, _token, doctor_email = _role_account("doctor")
+    invitation = client.post(
+        "/api/v1/family/invitations",
+        headers=owner_a,
+        json={
+            "recipient_email": doctor_email,
+            "scope": {
+                "object_type": "lifemap",
+                "object_id": profile_a,
+                "data_classes": ["lifemap"],
+                "allowed_actions": ["view"],
+            },
+            "purpose": "self_care",
+            "expires_at": "2026-07-29T08:00:00Z",
+        },
+    ).json()
+    accepted = client.post(
+        "/api/v1/family/invitations/accept",
+        headers=doctor,
+        json={"token": invitation["token"]},
+    )
+    assert accepted.status_code == 201
+    assert client.get(
+        "/api/v1/lifemap/today",
+        headers={**doctor, "X-CLARA-Profile-Context": profile_b},
+    ).status_code == 404
+
+    with SessionLocal() as db:
+        grant = db.execute(
+            select(FamilyAccessGrant).where(
+                FamilyAccessGrant.id == int(accepted.json()["id"])
+            )
+        ).scalar_one()
+        grant.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+    assert client.get(
+        "/api/v1/lifemap/today",
+        headers={**doctor, "X-CLARA-Profile-Context": profile_a},
+    ).status_code == 404
+
+
 def test_correction_is_append_only_and_invalid_task_transitions_are_blocked() -> None:
     headers, _profile_id = _account("history")
     event = client.post(
@@ -163,6 +486,17 @@ def test_correction_is_append_only_and_invalid_task_transitions_are_blocked() ->
     assert [row["revision"] for row in history.json()] == [1, 2]
     assert history.json()[0]["payload"] == {"value": 1}
     assert history.json()[1]["payload"] == {"value": 2}
+    with SessionLocal() as db:
+        canonical = db.execute(
+            select(LifeMapEvent).where(LifeMapEvent.public_id == event["id"])
+        ).scalar_one()
+        active_revision = db.execute(
+            select(LifeMapEventRevision).where(
+                LifeMapEventRevision.event_id == canonical.id,
+                LifeMapEventRevision.revision_no == canonical.current_revision_no,
+            )
+        ).scalar_one()
+        assert active_revision.public_id == history.json()[-1]["id"]
 
     episode = client.post(
         "/api/v1/lifemap/episodes",
@@ -237,6 +571,52 @@ def test_domain_transition_tables_are_exhaustive() -> None:
             else:
                 with pytest.raises(InvalidTransition):
                     require_task_transition(source, action)
+
+
+def test_revisions_and_source_checksums_are_immutable() -> None:
+    headers, profile_id = _account("immutable")
+    event = client.post(
+        "/api/v1/lifemap/events",
+        headers=_idempotent(headers, f"immutable-event-{uuid4().hex}"),
+        json={
+            "event_type": "observation",
+            "occurred_at": "2026-07-28T08:00:00Z",
+            "payload": {"value": 1},
+        },
+    )
+    assert event.status_code == 201
+    history = client.get(
+        f"/api/v1/lifemap/events/{event.json()['id']}/history",
+        headers=headers,
+    )
+    assert history.status_code == 200
+    revision_ids = [row["id"] for row in history.json()]
+    with SessionLocal() as db:
+        internal_profile_id = db.execute(
+            select(PhrProfile.id).where(PhrProfile.public_id == profile_id)
+        ).scalar_one()
+        revision = db.execute(
+            select(LifeMapEventRevision).where(
+                LifeMapEventRevision.public_id.in_(revision_ids)
+            )
+        ).scalars().first()
+        assert revision is not None
+        revision.reason_code = "mutated"
+        with pytest.raises(ValueError, match="revisions are immutable"):
+            db.flush()
+        db.rollback()
+
+        source = HealthSourceReference(
+            profile_id=internal_profile_id,
+            source_kind="document",
+            checksum="original",
+        )
+        db.add(source)
+        db.commit()
+        source.checksum = "replacement"
+        with pytest.raises(ValueError, match="checksums are immutable"):
+            db.flush()
+        db.rollback()
 
 
 def test_v2_and_ai_capabilities_default_off_and_are_server_authoritative() -> None:

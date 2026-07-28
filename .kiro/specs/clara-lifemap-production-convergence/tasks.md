@@ -64,21 +64,21 @@ flags are dark; no implementation status is overstated.
 
 ## Phase 1 — ProfileScope, opaque IDs, and authorization
 
-- [ ] 1.1 Add migration for profile public IDs and status/version fields; backfill
+- [x] 1.1 Add migration for profile public IDs and status/version fields; backfill
   in bounded, resumable batches with uniqueness/reconciliation queries.
   _R2, R21_
-- [ ] 1.2 Implement `ProfileScope` and `ProfileAccessPolicy` under
+- [x] 1.2 Implement `ProfileScope` and `ProfileAccessPolicy` under
   `services/api/src/clara_api/lifemap/`; cover self, caregiver grant, clinician
   share, admin/support-denied-by-default. _R2, R12, R16_
-- [ ] 1.3 Refactor LifeMap repositories/endpoints to require resolved scope for
+- [x] 1.3 Refactor LifeMap repositories/endpoints to require resolved scope for
   every object query; add two-profile non-interference tests per route. _R2_
-- [ ] 1.4 Introduce public-ID serializers/resolvers and stop returning numeric
+- [x] 1.4 Introduce public-ID serializers/resolvers and stop returning numeric
   identifiers in V2 contracts. _R2, R21_
-- [ ] 1.5 Extend family/share authorization with explicit purpose, data classes,
+- [x] 1.5 Extend family/share authorization with explicit purpose, data classes,
   actions, expiry, and immediate revocation fan-out. _R12, R15_
-- [ ] 1.6 Add object-level AuditEvent-compatible records for reads, exports,
+- [x] 1.6 Add object-level AuditEvent-compatible records for reads, exports,
   changes, shares, revocations, and support access. _R12, R16_
-- [ ] 1.7 Threat-model and test IDOR, enumeration, confused deputy, token replay,
+- [x] 1.7 Threat-model and test IDOR, enumeration, confused deputy, token replay,
   expired grant, and cross-profile background jobs. _R16_
 
 Exit gate: automated tests show no cross-profile access; V2 exposes opaque IDs;
@@ -86,22 +86,22 @@ revocation and auditing meet the defined policy.
 
 ## Phase 2 — Truth, provenance, commands, and idempotency
 
-- [ ] 2.1 Add `HealthSourceReference`, event revisions, action histories,
+- [x] 2.1 Add `HealthSourceReference`, event revisions, action histories,
   decision-input links, and projection dependencies via additive migrations.
   _R3, R5, R10_
-- [ ] 2.2 Implement the truth-state and task-state transition matrices as pure
+- [x] 2.2 Implement the truth-state and task-state transition matrices as pure
   domain functions with exhaustive/property tests. _R3, R5_
-- [ ] 2.3 Implement the command pipeline: scope, CSRF, digest, idempotency,
+- [x] 2.3 Implement the command pipeline: scope, CSRF, digest, idempotency,
   optimistic concurrency, transaction, audit, and outbox. _R3, R17_
-- [ ] 2.4 Remove client authority to set `confirmed` on generic event creation;
+- [x] 2.4 Remove client authority to set `confirmed` on generic event creation;
   current endpoint becomes a compatibility adapter that creates a safe state.
   _R3, R21_
-- [ ] 2.5 Implement typed confirm, correct, dispute, invalidate, and resolve
+- [x] 2.5 Implement typed confirm, correct, dispute, invalidate, and resolve
   commands plus stable error codes. _R3, R10_
-- [ ] 2.6 Backfill current facts with explicit legacy provenance and actor
+- [x] 2.6 Backfill current facts with explicit legacy provenance and actor
   certainty; produce counts for confirmed, user-reported, ambiguous, and invalid.
   _R21_
-- [ ] 2.7 Add invariants: terminal revisions immutable, one active revision,
+- [x] 2.7 Add invariants: terminal revisions immutable, one active revision,
   source checksum stable, idempotency key/digest conflict, and canonical+outbox
   atomicity. _R3, R17_
 

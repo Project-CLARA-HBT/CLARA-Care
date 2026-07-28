@@ -171,5 +171,34 @@ claims, complete reconciliation, exactly-once expired-lease recovery, and
 random schemas dropped after every cycle. This is worker engineering evidence,
 not a substitute for the later GA load/SLO certification gate.
 
+Phase 1 scope hardening now includes an explicit `ProfileAccessPolicy`.
+Ownership, caregiver grants, and clinician grants are distinct server-derived
+actor classes. Doctor role alone grants nothing; a doctor needs a live,
+purpose-bound, action-scoped LifeMap grant. Administrative role is explicitly
+denied for non-owned health profiles even if a Family grant exists, preserving
+the separate audited break-glass boundary. V2 serializers and resolvers return
+opaque public identifiers, with numeric resolution retained only inside bounded
+legacy compatibility adapters.
+
+Phase 1 is now closed at the repository gate. Public-ID reconciliation has a
+bounded, resumable operator command; all LifeMap object routes resolve
+server-authorized profile scope; Family grants persist explicit data classes,
+actions, purpose, expiry, and grant version; revocation takes effect on the
+next request; and object reads/changes plus denied support access append
+minimum-data audit records. The IDOR, enumeration, confused-deputy, invitation
+replay, expiry, revocation, and cross-profile worker boundaries are documented
+in `docs/security/lifemap-v2-threat-model.md` and regression-tested.
+
+Phase 2 is also closed at the repository gate. Exact decision-to-revision links
+complete the additive provenance schema. Legacy facts receive explicit
+unverified certainty rather than fabricated confirmation and have a no-PHI
+aggregate reconciliation report. Generic capture cannot assert confirmation;
+confirm, correct, dispute, invalidate, and resolve are typed commands with
+stable failure codes. The command transaction binds scope, actor, digest,
+idempotency, optimistic version, audit, canonical write, and outbox. Tests lock
+append-only revisions, immutable source checksums, one canonical revision
+pointer, idempotency conflicts, and rollback of canonical data when outbox
+creation fails.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

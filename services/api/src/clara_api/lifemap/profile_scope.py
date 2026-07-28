@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import FamilyAccessGrant, PhrProfile, User
+from clara_api.db.models import FamilyAccessGrant, FamilyAccessLog, PhrProfile, User
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,26 @@ class ProfileScope:
         return self.profile.user_id == self.actor.id
 
 
+@dataclass(frozen=True)
+class ProfileAccessPolicy:
+    """Role classification only; a role never grants profile access by itself."""
+
+    token_role: str
+    account_role: str
+
+    @property
+    def administrative(self) -> bool:
+        return "admin" in {self.token_role, self.account_role}
+
+    @property
+    def delegated_actor_role(self) -> str:
+        return (
+            "clinician"
+            if "doctor" in {self.token_role, self.account_role}
+            else "caregiver"
+        )
+
+
 def _profile_selector(value: str):
     value = value.strip()
     clauses = [PhrProfile.public_id == value]
@@ -44,13 +64,11 @@ def _profile_selector(value: str):
 
 
 def _data_classes(grant: FamilyAccessGrant) -> frozenset[str]:
-    # Existing grants encoded their object boundary rather than a separate data
-    # class list. Preserve that safe minimum during migration.
-    if grant.object_type == "profile":
-        return frozenset({"lifemap"})
-    if grant.object_type in {"lifemap", "episode", "care_task"}:
-        return frozenset({"lifemap"})
-    return frozenset({grant.object_type})
+    return frozenset(
+        str(item)
+        for item in (grant.data_classes_json or [])
+        if isinstance(item, str)
+    )
 
 
 def _grant_covers_profile(grant: FamilyAccessGrant, profile: PhrProfile) -> bool:
@@ -74,6 +92,7 @@ def resolve_profile_scope(
     """Resolve one profile and prove the requested action before data access."""
 
     actor = current_user(db, token)
+    policy = ProfileAccessPolicy(token_role=token.role, account_role=actor.role)
     owned = db.execute(
         select(PhrProfile)
         .where(PhrProfile.user_id == actor.id, PhrProfile.status == "active")
@@ -114,6 +133,8 @@ def resolve_profile_scope(
                     "confirm",
                     "correct",
                     "dispute",
+                    "invalidate",
+                    "resolve",
                     "accept",
                     "complete",
                     "share",
@@ -121,6 +142,28 @@ def resolve_profile_scope(
                 }
             ),
             allowed_data_classes=frozenset({"lifemap", "medications", "visits", "evidence"}),
+        )
+
+    # Administrative role is not a health-data capability. Support/admin access
+    # requires a separate audited break-glass workflow and can never be inferred
+    # from role or a Family grant.
+    if policy.administrative:
+        db.add(
+            FamilyAccessLog(
+                profile_id=profile.id,
+                actor_user_id=actor.id,
+                object_type="lifemap",
+                object_id=profile.public_id,
+                action=action,
+                outcome="denied",
+                purpose="support_access",
+                metadata_json={"reason_code": "break_glass_required"},
+            )
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "scope_forbidden", "message": "Profile not found"},
         )
 
     now = datetime.now(UTC)
@@ -146,7 +189,7 @@ def resolve_profile_scope(
             return ProfileScope(
                 actor=actor,
                 profile=profile,
-                actor_role="caregiver",
+                actor_role=policy.delegated_actor_role,
                 purpose=purpose,
                 allowed_actions=actions,
                 allowed_data_classes=classes,
