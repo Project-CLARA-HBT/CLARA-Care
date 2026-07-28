@@ -976,6 +976,39 @@ class LifeMapEpisode(Base):
     )
 
 
+class LifeMapEpisodeGoalRevision(Base):
+    """Append-only episode goal history."""
+
+    __tablename__ = "lifemap_episode_goal_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "episode_id",
+            "revision_no",
+            name="uq_lifemap_episode_goal_revision",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    episode_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    revision_no: Mapped[int] = mapped_column(Integer)
+    goal: Mapped[str] = mapped_column(Text, default="")
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class LifeMapCareTask(Base):
     """An explicit, trackable next action in a care loop."""
 
@@ -1013,6 +1046,9 @@ class LifeMapDecisionLedger(Base):
     __tablename__ = "lifemap_decision_ledger"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1027,6 +1063,48 @@ class LifeMapDecisionLedger(Base):
     policy_version: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LifeMapEpisodeEventLink(Base):
+    """Revision-aware membership of one fact in an episode replay."""
+
+    __tablename__ = "lifemap_episode_event_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "episode_id",
+            "event_revision_id",
+            name="uq_lifemap_episode_event_revision_link",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    episode_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), index=True
+    )
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_events.id", ondelete="CASCADE"), index=True
+    )
+    event_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    linked_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="active", server_default="active", index=True
+    )
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    unlinked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class LifeMapDecisionInput(Base):

@@ -138,6 +138,38 @@ void main() {
       expect(keys.toSet().length, 2, reason: 'keys must be unique per call');
     });
 
+    test('Replay read and correction preserve exact revision', () async {
+      final requests = <http.Request>[];
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return ok({'events': <dynamic>[]});
+        }),
+      );
+
+      await client.getLifeMapReplay(
+        accessToken: token,
+        episodeId: 'episode-1',
+      );
+      await client.correctLifeMapEvent(
+        accessToken: token,
+        eventId: 'event-1',
+        revision: 2,
+        payload: {'text': 'Thông tin đúng'},
+        reason: 'Người dùng sửa',
+      );
+
+      expect(requests[0].method, 'GET');
+      expect(requests[0].url.path, '/api/v1/episodes/episode-1/replay');
+      expect(
+        requests[1].url.path,
+        '/api/v1/lifemap/events/event-1/correct',
+      );
+      expect(requests[1].headers['If-Match'], '2');
+      expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
+    });
+
     test('Universal Capture wrappers use draft and idempotent review routes',
         () async {
       final requests = <http.Request>[];

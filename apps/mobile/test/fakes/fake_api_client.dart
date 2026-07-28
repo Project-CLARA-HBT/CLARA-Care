@@ -468,6 +468,35 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> getLifeMapReplay({
+    required String accessToken,
+    required String episodeId,
+  }) {
+    return _dispatch('getLifeMapReplay', {'episodeId': episodeId},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> correctLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required Map<String, dynamic> payload,
+    required String reason,
+  }) {
+    return _dispatch(
+      'correctLifeMapEvent',
+      {
+        'eventId': eventId,
+        'revision': revision,
+        'payload': payload,
+        'reason': reason,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> startLifeMapTextCapture({
     required String accessToken,
     required String text,

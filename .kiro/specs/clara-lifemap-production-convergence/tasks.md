@@ -157,13 +157,13 @@ have review and source provenance; emergency response is not delayed.
 
 ## Phase 5 — Episodes, Today, Replay, and correction propagation
 
-- [ ] 5.1 Add revision-aware episode-event links, goal revisions, task actions,
+- [x] 5.1 Add revision-aware episode-event links, goal revisions, task actions,
   and decision inputs. _R5_
-- [ ] 5.2 Implement V2 episode/goal/task commands and deterministic Today
+- [x] 5.2 Implement V2 episode/goal/task commands and deterministic Today
   projection. _R5, R6_
 - [ ] 5.3 Implement projection dependencies and invalidation traversal for
   correction, deletion, consent/source revocation, and late data. _R10_
-- [ ] 5.4 Implement revision-aware Replay query with consumer-safe `why`,
+- [x] 5.4 Implement revision-aware Replay query with consumer-safe `why`,
   provenance, rule/model version, and stale state. _R10_
 - [ ] 5.5 Implement user dispute and resolution workflow with authorized
   operator/clinical review queue where needed. _R10_

@@ -1313,6 +1313,38 @@ class ApiClient {
     );
   }
 
+  /// Reads exact event revisions, provenance, decision versions, and stale
+  /// markers for one episode.
+  Future<Map<String, dynamic>> getLifeMapReplay({
+    required String accessToken,
+    required String episodeId,
+  }) {
+    return _get(
+      '/api/v1/episodes/$episodeId/replay',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Creates a replacement fact revision. Health mutations are online-only and
+  /// guarded by both idempotency and optimistic concurrency.
+  Future<Map<String, dynamic>> correctLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required Map<String, dynamic> payload,
+    required String reason,
+  }) {
+    return _post(
+      '/api/v1/lifemap/events/$eventId/correct',
+      body: <String, dynamic>{'payload': payload, 'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'Idempotency-Key': _idempotencyKey(),
+        'If-Match': '$revision',
+      },
+    );
+  }
+
   /// Creates a Universal Capture text draft. The server may return an
   /// emergency escalation with `persisted=false` before writing any content.
   Future<Map<String, dynamic>> startLifeMapTextCapture({

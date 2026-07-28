@@ -9,14 +9,17 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import {
   acceptLifeMapTask,
+  correctLifeMapEvent,
   createLifeMapEpisode,
   createLifeMapTask,
   getLifeMapCaptureCapability,
+  getLifeMapReplay,
   getLifeMapToday,
   reviewLifeMapCaptureCandidate,
   startLifeMapTextCapture,
   type CaptureSession,
   type LifeMapToday,
+  type LifeMapReplay,
 } from "@/lib/lifemap";
 import { getProfileContext } from "@/lib/profile-context-api";
 
@@ -51,6 +54,10 @@ export default function LifeMapPage() {
   const [captureEnabled, setCaptureEnabled] = useState(false);
   const [captureText, setCaptureText] = useState("");
   const [captureSession, setCaptureSession] = useState<CaptureSession | null>(null);
+  const [replay, setReplay] = useState<LifeMapReplay | null>(null);
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [editingEvent, setEditingEvent] = useState("");
+  const [correctionText, setCorrectionText] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,6 +168,41 @@ export default function LifeMapPage() {
     }
   };
 
+  const openReplay = async (selectedEpisodeId: string) => {
+    setReplayLoading(true);
+    setError("");
+    try {
+      setReplay(await getLifeMapReplay(selectedEpisodeId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tải lịch sử.");
+    } finally {
+      setReplayLoading(false);
+    }
+  };
+
+  const correctEvent = async (
+    item: LifeMapReplay["events"][number],
+  ) => {
+    if (!correctionText.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      await correctLifeMapEvent(
+        item.id,
+        item.revision,
+        { text: correctionText.trim() },
+        "Người dùng sửa thông tin trong Replay",
+      );
+      setEditingEvent("");
+      setCorrectionText("");
+      await openReplay(replay?.episode.id ?? episodeId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể lưu chỉnh sửa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell
       variant="plain"
@@ -200,6 +242,15 @@ export default function LifeMapPage() {
                             Một hành trình do bạn tạo
                           </p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon="history"
+                          loading={replayLoading}
+                          onClick={() => void openReplay(episode.id)}
+                        >
+                          Xem lại
+                        </Button>
                         <Badge tone={priorityTone(episode.priority)}>
                           {priorityLabel(episode.priority)}
                         </Badge>
@@ -216,6 +267,96 @@ export default function LifeMapPage() {
                   </div>
                 )}
               </SurfaceCard>
+
+              {replay ? (
+                <SurfaceCard className="overflow-hidden" aria-live="polite">
+                  <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      Health Replay
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                      {replay.episode.title}
+                    </h2>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Mỗi mục hiển thị đúng phiên bản, nguồn và quy tắc đã dùng.
+                    </p>
+                  </div>
+                  <div className="space-y-3 p-5">
+                    {replay.events.length ? replay.events.map((item) => (
+                      <div
+                        key={item.revision_id}
+                        className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-4"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone={item.truth_state === "confirmed" ? "ok" : "neutral"}>
+                            {item.truth_state === "confirmed" ? "Đã xác nhận" : "Bạn đã ghi nhận"}
+                          </Badge>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Phiên bản {item.revision} · {item.policy_version || "quy tắc cũ"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-[var(--text-primary)]">
+                          {String(item.provenance.assertion ?? item.type)}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                          Vì sao có mục này: {item.why.text}
+                        </p>
+                        {editingEvent === item.id ? (
+                          <div className="mt-3 space-y-3">
+                            <Textarea
+                              label="Thông tin đúng"
+                              value={correctionText}
+                              onChange={(event) => setCorrectionText(event.target.value)}
+                              hint="Chỉnh sửa tạo một phiên bản mới; lịch sử cũ vẫn được giữ để bạn kiểm tra."
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                loading={saving}
+                                onClick={() => void correctEvent(item)}
+                              >
+                                Lưu phiên bản mới
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingEvent("")}
+                              >
+                                Hủy
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            className="mt-3"
+                            size="sm"
+                            variant="ghost"
+                            icon="edit"
+                            onClick={() => {
+                              setEditingEvent(item.id);
+                              setCorrectionText("");
+                            }}
+                          >
+                            Sửa thông tin
+                          </Button>
+                        )}
+                      </div>
+                    )) : (
+                      <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
+                        Hành trình này chưa có bản ghi nào.
+                      </p>
+                    )}
+                    {replay.decisions.some((item) => item.stale) ? (
+                      <div
+                        role="status"
+                        className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"
+                      >
+                        Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.
+                      </div>
+                    ) : null}
+                  </div>
+                </SurfaceCard>
+              ) : null}
 
               <SurfaceCard className="p-5">
                 <div className="flex items-start justify-between gap-4">

@@ -19,6 +19,33 @@ export type LifeMapToday = {
   pending_confirmation_count: number;
 };
 
+export type LifeMapReplayEvent = {
+  id: string;
+  revision_id: string;
+  revision: number;
+  type: string;
+  truth_state: string;
+  occurred_at: string;
+  provenance: Record<string, unknown>;
+  source_reference: string | null;
+  policy_version: string;
+  why: { code: string; text: string };
+};
+
+export type LifeMapReplay = {
+  episode: { id: string; title: string; status: string };
+  events: LifeMapReplayEvent[];
+  tasks: Array<{ id: string; title: string; status: string }>;
+  decisions: Array<{
+    id: string;
+    type: string;
+    disposition: string;
+    policy_version: string;
+    stale: boolean;
+    why: { code: string; text: string };
+  }>;
+};
+
 export type CaptureCandidate = {
   id: string;
   type: string;
@@ -91,6 +118,44 @@ export async function acceptLifeMapTask(taskId: string): Promise<void> {
     `/lifemap/tasks/${encodeURIComponent(taskId)}/accept`,
     {},
     { headers: { "Idempotency-Key": idempotencyKey() } },
+  );
+}
+
+export async function getLifeMapReplay(
+  episodeId: string,
+): Promise<LifeMapReplay> {
+  return (
+    await api.get<LifeMapReplay>(
+      `/episodes/${encodeURIComponent(episodeId)}/replay`,
+    )
+  ).data;
+}
+
+export async function correctLifeMapEvent(
+  eventId: string,
+  revision: number,
+  payload: Record<string, unknown>,
+  reason: string,
+): Promise<void> {
+  await api.post(
+    `/lifemap/events/${encodeURIComponent(eventId)}/correct`,
+    { payload, reason },
+    {
+      headers: {
+        "Idempotency-Key": idempotencyKey(),
+        "If-Match": String(revision),
+      },
+    },
+  );
+}
+
+export async function disputeLifeMapDecision(
+  decisionId: string,
+  reason: string,
+): Promise<void> {
+  await api.post(
+    `/decisions/${encodeURIComponent(decisionId)}/dispute`,
+    { reason },
   );
 }
 

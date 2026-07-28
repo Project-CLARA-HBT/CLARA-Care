@@ -24,6 +24,8 @@ from clara_api.db.models import (
     LifeMapCareTask,
     LifeMapCommandRecord,
     LifeMapEpisode,
+    LifeMapEpisodeEventLink,
+    LifeMapEpisodeGoalRevision,
     LifeMapEvent,
     LifeMapEventRevision,
     LifeMapOutboxEvent,
@@ -67,6 +69,7 @@ class EventCreateRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
     provenance: dict = Field(default_factory=dict)
     truth_state: str = "user_reported"
+    episode_id: str | None = None
 
 
 class EventTruthRequest(BaseModel):
@@ -83,6 +86,11 @@ class EpisodeCreateRequest(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     goal: str = Field(default="", max_length=4000)
     priority: str = "routine"
+
+
+class EpisodeGoalRequest(BaseModel):
+    goal: str = Field(min_length=2, max_length=4000)
+    reason: str = Field(default="", max_length=255)
 
 
 class TaskCreateRequest(BaseModel):
@@ -318,6 +326,67 @@ def _invalidate_dependencies(
         dependency.invalidation_reason = reason
 
 
+def _link_event_revision(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    event: LifeMapEvent,
+    revision: LifeMapEventRevision,
+    episode: LifeMapEpisode | None = None,
+) -> None:
+    """Make replay membership explicit and tied to the exact fact revision."""
+
+    target = episode
+    if target is None and event.episode_id is not None:
+        target = db.get(LifeMapEpisode, event.episode_id)
+    if target is None:
+        return
+    db.add(
+        LifeMapEpisodeEventLink(
+            profile_id=scope.profile.id,
+            episode_id=target.id,
+            event_id=event.id,
+            event_revision_id=revision.id,
+            linked_by_user_id=scope.actor.id,
+        )
+    )
+
+
+def _supersede_event_links(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    event: LifeMapEvent,
+    previous: LifeMapEventRevision,
+    replacement: LifeMapEventRevision,
+) -> None:
+    """Move active episode membership to a replacement revision atomically."""
+
+    now = datetime.now(UTC)
+    links = list(
+        db.execute(
+            select(LifeMapEpisodeEventLink).where(
+                LifeMapEpisodeEventLink.profile_id == scope.profile.id,
+                LifeMapEpisodeEventLink.event_id == event.id,
+                LifeMapEpisodeEventLink.event_revision_id == previous.id,
+                LifeMapEpisodeEventLink.status == "active",
+            )
+        ).scalars()
+    )
+    for link in links:
+        link.status = "superseded"
+        link.unlinked_at = now
+        db.add(
+            LifeMapEpisodeEventLink(
+                profile_id=scope.profile.id,
+                episode_id=link.episode_id,
+                event_id=event.id,
+                event_revision_id=replacement.id,
+                linked_by_user_id=scope.actor.id,
+            )
+        )
+
+
 @router.post("/events", status_code=201)
 def create_event(
     payload: EventCreateRequest,
@@ -348,6 +417,12 @@ def create_event(
     if replay is not None:
         return replay
 
+    episode = (
+        _episode(db, scope, payload.episode_id, open_only=True)
+        if payload.episode_id
+        else None
+    )
+
     provenance = {
         **payload.provenance,
         "assertion": "user_reported" if requested_state == "user_reported" else "machine_draft",
@@ -361,23 +436,25 @@ def create_event(
         payload_json=payload.payload,
         provenance_json=provenance,
         source_kind="reported" if requested_state == "user_reported" else "extracted",
+        episode_id=episode.id if episode else None,
         created_by_user_id=scope.actor.id,
     )
     db.add(event)
     db.flush()
-    db.add(
-        LifeMapEventRevision(
-            event_id=event.id,
-            profile_id=scope.profile.id,
-            revision_no=1,
-            truth_state=requested_state,
-            payload_json=payload.payload,
-            provenance_json=provenance,
-            asserted_by_user_id=scope.actor.id,
-            reason_code="created",
-            policy_version=TRUTH_POLICY_VERSION,
-        )
+    revision = LifeMapEventRevision(
+        event_id=event.id,
+        profile_id=scope.profile.id,
+        revision_no=1,
+        truth_state=requested_state,
+        payload_json=payload.payload,
+        provenance_json=provenance,
+        asserted_by_user_id=scope.actor.id,
+        reason_code="created",
+        policy_version=TRUTH_POLICY_VERSION,
     )
+    db.add(revision)
+    db.flush()
+    _link_event_revision(db, scope, event=event, revision=revision, episode=episode)
     return _finish(
         db,
         scope,
@@ -440,6 +517,14 @@ def _truth_command(
         policy_version=TRUTH_POLICY_VERSION,
     )
     db.add(next_revision)
+    db.flush()
+    _supersede_event_links(
+        db,
+        scope,
+        event=event,
+        previous=current,
+        replacement=next_revision,
+    )
     event.current_revision_no = next_revision.revision_no
     event.version_no = next_revision.revision_no
     event.truth_state = destination
@@ -617,6 +702,14 @@ def correct_event(
         policy_version=TRUTH_POLICY_VERSION,
     )
     db.add(next_revision)
+    db.flush()
+    _supersede_event_links(
+        db,
+        scope,
+        event=event,
+        previous=current,
+        replacement=next_revision,
+    )
     event.payload_json = payload.payload
     event.truth_state = "user_reported"
     event.current_revision_no = next_no
@@ -672,6 +765,16 @@ def create_episode(
     )
     db.add(episode)
     db.flush()
+    db.add(
+        LifeMapEpisodeGoalRevision(
+            episode_id=episode.id,
+            profile_id=scope.profile.id,
+            revision_no=1,
+            goal=episode.goal,
+            actor_user_id=scope.actor.id,
+            reason="created",
+        )
+    )
     return _finish(
         db,
         scope,
@@ -683,6 +786,60 @@ def create_episode(
         aggregate_type="episode",
         aggregate_public_id=episode.public_id,
         event_type="lifemap.episode.created",
+    )
+
+
+@router.post("/episodes/{episode_id}/goal")
+def revise_episode_goal(
+    episode_id: str,
+    payload: EpisodeGoalRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    scope = _scope(db, token, x_profile, action="update")
+    episode = _episode(db, scope, episode_id, open_only=True)
+    _require_version(episode.version_no, if_match)
+    operation = f"episode.goal:{episode.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
+    revision_no = episode.version_no + 1
+    episode.goal = payload.goal.strip()
+    episode.version_no = revision_no
+    db.add(
+        LifeMapEpisodeGoalRevision(
+            episode_id=episode.id,
+            profile_id=scope.profile.id,
+            revision_no=revision_no,
+            goal=episode.goal,
+            actor_user_id=scope.actor.id,
+            reason=payload.reason.strip() or "goal_updated",
+        )
+    )
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={
+            "id": episode.public_id,
+            "goal": episode.goal,
+            "version": revision_no,
+        },
+        status_code=200,
+        aggregate_type="episode",
+        aggregate_public_id=episode.public_id,
+        event_type="lifemap.episode.goal_updated",
     )
 
 

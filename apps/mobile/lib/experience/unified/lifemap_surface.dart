@@ -338,6 +338,103 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     }
   }
 
+  Future<void> _openReplay(_Episode episode) async {
+    final token = _token;
+    if (token == null) return;
+    try {
+      final replay = await widget.apiClient.getLifeMapReplay(
+        accessToken: token,
+        episodeId: episode.id,
+      );
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: .85,
+            child: _ReplaySheet(
+              replay: replay,
+              onCorrect: (event) async {
+                Navigator.of(sheetContext).pop();
+                final changed = await _correctReplayEvent(event);
+                if (changed && mounted) await _openReplay(episode);
+              },
+            ),
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tải lịch sử. Vui lòng thử lại khi có mạng.');
+    }
+  }
+
+  Future<bool> _correctReplayEvent(Map<String, dynamic> event) async {
+    final token = _token;
+    if (token == null) return false;
+    final controller = TextEditingController();
+    final submitted = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sửa thông tin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Thao tác này cần kết nối mạng và tạo một phiên bản mới. '
+              'Phiên bản cũ vẫn được giữ trong lịch sử.',
+            ),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            TextField(
+              controller: controller,
+              minLines: 2,
+              maxLines: 5,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Thông tin đúng'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
+            },
+            child: const Text('Lưu phiên bản mới'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (submitted == null || submitted.isEmpty) return false;
+    try {
+      await widget.apiClient.correctLifeMapEvent(
+        accessToken: token,
+        eventId: _str(event['id']),
+        revision: event['revision'] is int ? event['revision'] as int : 1,
+        payload: <String, dynamic>{'text': submitted},
+        reason: 'Người dùng sửa thông tin trong Replay',
+      );
+      _showSnack('Đã lưu phiên bản mới.');
+      return true;
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+      return false;
+    } catch (_) {
+      _showSnack(
+          'Không thể lưu. Thay đổi sức khỏe không được xếp hàng offline.');
+      return false;
+    }
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -743,18 +840,34 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   Widget _buildEpisodeCard(BuildContext context, _Episode episode) {
     final theme = Theme.of(context);
     return ClaraCard.static_(
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              episode.title.isEmpty ? 'Hành trình chưa đặt tên' : episode.title,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  episode.title.isEmpty
+                      ? 'Hành trình chưa đặt tên'
+                      : episode.title,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              _PriorityChip(priority: episode.priority),
+            ],
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _openReplay(episode),
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('Xem lịch sử'),
             ),
           ),
-          const SizedBox(width: ClaraTokens.spaceSm),
-          _PriorityChip(priority: episode.priority),
         ],
       ),
     );
@@ -779,6 +892,128 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ReplaySheet extends StatelessWidget {
+  const _ReplaySheet({required this.replay, required this.onCorrect});
+
+  final Map<String, dynamic> replay;
+  final Future<void> Function(Map<String, dynamic>) onCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final episode = replay['episode'];
+    final events = replay['events'] is List
+        ? replay['events'] as List<dynamic>
+        : const <dynamic>[];
+    final decisions = replay['decisions'] is List
+        ? replay['decisions'] as List<dynamic>
+        : const <dynamic>[];
+    final hasStale = decisions.any(
+      (item) => item is Map && item['stale'] == true,
+    );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        ClaraTokens.spaceMd,
+        0,
+        ClaraTokens.spaceMd,
+        ClaraTokens.spaceXl,
+      ),
+      children: [
+        Text(
+          'Health Replay',
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceXs),
+        Text(
+          episode is Map ? _str(episode['title']) : 'Lịch sử LifeMap',
+          style: theme.textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: ClaraTokens.spaceSm),
+        Text(
+          'Mỗi mục hiển thị đúng phiên bản và quy tắc đã dùng. '
+          'Chỉnh sửa cần mạng và không được xếp hàng offline.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (hasStale) ...[
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Semantics(
+            liveRegion: true,
+            child: ClaraCard.static_(
+              child: Text(
+                'Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: ClaraTokens.spaceLg),
+        if (events.isEmpty)
+          const ClaraEmptyState(
+            icon: Icons.history,
+            title: 'Chưa có bản ghi',
+            message: 'Hành trình này chưa có thông tin để xem lại.',
+          )
+        else
+          ...events.whereType<Map>().map((raw) {
+            final event = raw.cast<String, dynamic>();
+            final why = event['why'];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceMd),
+              child: ClaraCard.static_(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: ClaraTokens.spaceSm,
+                      runSpacing: ClaraTokens.spaceXs,
+                      children: [
+                        Chip(label: Text(_str(event['truth_state']))),
+                        Chip(
+                          label: Text('Phiên bản ${_str(event['revision'])}'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    Text(
+                      _str(event['type']),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    if (why is Map) ...[
+                      const SizedBox(height: ClaraTokens.spaceXs),
+                      Text(
+                        'Vì sao có mục này: ${_str(why['text'])}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => onCorrect(event),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('Sửa thông tin'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
     );
   }
 }

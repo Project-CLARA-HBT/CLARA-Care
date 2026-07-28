@@ -10,7 +10,9 @@ vi.mock("@/lib/http-client", () => ({
 }));
 
 import {
+  correctLifeMapEvent,
   getLifeMapCaptureCapability,
+  getLifeMapReplay,
   reviewLifeMapCaptureCandidate,
   startLifeMapTextCapture,
 } from "@/lib/lifemap";
@@ -56,6 +58,29 @@ describe("LifeMap Universal Capture client", () => {
     await expect(getLifeMapCaptureCapability("profile/id")).resolves.toBe(true);
     expect(get).toHaveBeenCalledWith(
       "/profiles/profile%2Fid/capabilities",
+    );
+  });
+
+  it("loads revision-aware replay with an opaque episode id", async () => {
+    get.mockResolvedValueOnce({
+      data: { episode: { id: "episode/id" }, events: [], tasks: [], decisions: [] },
+    });
+    await getLifeMapReplay("episode/id");
+    expect(get).toHaveBeenCalledWith("/episodes/episode%2Fid/replay");
+  });
+
+  it("corrects the exact revision with optimistic concurrency", async () => {
+    post.mockResolvedValueOnce({ data: { revision: 3 } });
+    await correctLifeMapEvent("event/id", 2, { text: "đúng" }, "sửa");
+    expect(post).toHaveBeenCalledWith(
+      "/lifemap/events/event%2Fid/correct",
+      { payload: { text: "đúng" }, reason: "sửa" },
+      {
+        headers: {
+          "Idempotency-Key": expect.any(String),
+          "If-Match": "2",
+        },
+      },
     );
   });
 });

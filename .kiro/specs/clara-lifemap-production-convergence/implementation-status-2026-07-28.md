@@ -219,5 +219,24 @@ client tests pass. Phase 4.5 and the complete 4.7–4.9 gates remain open becaus
 production OCR/ML worker wiring, full artifact review UX, and field-level
 clinical evaluation evidence are not yet complete.
 
+The Phase 5 canonical Replay foundation is implemented behind the existing
+dark rollout controls. Migration `20260728_0034` adds append-only episode goal
+revisions, exact episode-to-event-revision membership, and opaque public IDs for
+decision-ledger reads. Episode creation and goal changes are idempotent,
+optimistically concurrent commands; event creation can attach to an authorized
+open episode; and every truth transition or correction atomically supersedes
+the old replay link and points to the replacement revision. The Replay query
+uses those exact revisions and returns consumer-safe why text, provenance,
+policy version, and derived-decision stale state without exposing model
+chain-of-thought.
+
+Web and Flutter now provide a revision-aware Health Replay reader and explicit
+correction flow. Both explain that correction creates a new version; Flutter
+also labels the mutation online-only and never queues a health write offline.
+Focused API migration/behavior, web client/lint, and Flutter analyze/client
+tests pass. Phase 5 is not yet closed: consent/source-revocation and late-data
+invalidation traversal, the authorized dispute-resolution queue, complete
+cross-client dispute handling, and the property-test gate remain open.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.
