@@ -42,7 +42,7 @@ Verified milestone status:
 - [ ] 0.1 Approve intended-use, prohibited-use, actor, and jurisdiction statement;
   record whether any planned function needs regulated-software review.
   _R1, R18, R22_
-- [ ] 0.2 Convert the current-state table into a checked inventory of API routes,
+- [x] 0.2 Convert the current-state table into a checked inventory of API routes,
   tables, flags, worker loops, web/mobile surfaces, and tests; identify owner and
   production usage for each. _R21_
 - [ ] 0.3 Create the LifeMap hazard log covering emergency delay, incorrect fact,
@@ -51,7 +51,7 @@ Verified milestone status:
 - [ ] 0.4 Define the privacy inventory, purposes, data classes, retention draft,
   controller/processor roles, transfer map, and DSAR impact for Law
   91/2025/QH15; open EU assessment if in launch scope. _R15_
-- [ ] 0.5 Create the requirement-to-test traceability template and GA scorecard.
+- [x] 0.5 Create the requirement-to-test traceability template and GA scorecard.
   _R22_
 - [x] 0.6 Add all V2 flags to API config and mobile/web capability responses,
   default OFF, with configuration tests. _R22_
