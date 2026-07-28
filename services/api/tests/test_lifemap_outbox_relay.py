@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from clara_api.db.models import LifeMapOutboxEvent
 from clara_api.db.session import SessionLocal
+from clara_api.lifemap.outbox_metrics import get_lifemap_outbox_metrics
 from clara_api.lifemap.outbox_relay import (
     claim_lifemap_outbox,
     drain_lifemap_outbox,
@@ -226,3 +227,94 @@ def test_heartbeat_extends_only_the_current_workers_lease() -> None:
         if lease_until.tzinfo is None:
             lease_until = lease_until.replace(tzinfo=UTC)
         assert lease_until == claimed_at + timedelta(seconds=35)
+
+
+def test_fifo_order_is_stable_and_one_failed_event_does_not_block_the_batch() -> None:
+    _seed_care_loop("outbox-fifo@example.com", "fifo")
+    with SessionLocal() as db:
+        expected = [
+            row.aggregate_id
+            for row in db.execute(
+                select(LifeMapOutboxEvent)
+                .where(LifeMapOutboxEvent.status == "pending")
+                .order_by(LifeMapOutboxEvent.id)
+            ).scalars()
+        ]
+        assert len(expected) >= 2
+        failed_id = expected[0]
+        delivered: list[str] = []
+
+        def publish(projection: dict) -> None:
+            aggregate_id = str(projection["aggregate_id"])
+            if aggregate_id == failed_id:
+                raise ConnectionError("isolated dependency failure")
+            delivered.append(aggregate_id)
+
+        published = drain_lifemap_outbox(
+            db,
+            publisher=publish,
+            base_backoff_seconds=0,
+        )
+        assert published == len(expected) - 1
+        assert delivered == expected[1:]
+
+    with SessionLocal() as db:
+        recovered: list[str] = []
+        assert (
+            drain_lifemap_outbox(
+                db, publisher=lambda item: recovered.append(str(item["aggregate_id"]))
+            )
+            == 1
+        )
+        assert recovered == [failed_id]
+
+
+def test_retry_exhaustion_dead_letters_without_republishing_completed_rows() -> None:
+    _seed_care_loop("outbox-dead-letter@example.com", "dead-letter")
+    with SessionLocal() as db:
+        rows = list(
+            db.execute(
+                select(LifeMapOutboxEvent)
+                .where(LifeMapOutboxEvent.status == "pending")
+                .order_by(LifeMapOutboxEvent.id)
+            ).scalars()
+        )
+        assert rows
+        target = rows[0]
+        target.max_attempts = 1
+        target_event_id = target.event_id
+        db.commit()
+
+        def fail_target(item: dict) -> None:
+            if item["event_id"] == target_event_id:
+                raise TimeoutError("sink timeout")
+
+        drain_lifemap_outbox(
+            db, publisher=fail_target, base_backoff_seconds=0
+        )
+        dead = db.execute(
+            select(LifeMapOutboxEvent).where(
+                LifeMapOutboxEvent.event_id == target_event_id
+            )
+        ).scalar_one()
+        assert dead.status == "dead_letter"
+        assert dead.attempt_count == 1
+        assert dead.dead_lettered_at is not None
+
+        # A later healthy cycle cannot re-publish terminal/completed rows.
+        assert drain_lifemap_outbox(db, publisher=lambda _item: None) == 0
+
+
+def test_worker_metrics_are_bounded_aggregates_without_identifiers() -> None:
+    metrics = get_lifemap_outbox_metrics()
+    metrics.reset()
+    _seed_care_loop("outbox-metrics@example.com", "metrics")
+    with SessionLocal() as db:
+        assert drain_lifemap_outbox(db, publisher=lambda _item: None) >= 1
+    snapshot = metrics.snapshot()
+    assert set(snapshot) == {"outcomes", "cycles", "cycle_p95_ms"}
+    assert snapshot["outcomes"]["claimed"] >= 1
+    assert snapshot["outcomes"]["published"] >= 1
+    serialized = str(snapshot).lower()
+    assert "event_id" not in serialized
+    assert "profile_id" not in serialized

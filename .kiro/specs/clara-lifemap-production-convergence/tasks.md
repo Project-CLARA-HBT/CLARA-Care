@@ -118,13 +118,13 @@ transition; correction history and idempotency are regression-locked.
   endpoints; disable production use of API lifespan relay. _R17_
 - [x] 3.4 Define typed events and minimum-data payload schemas for fact, episode,
   task, consent, correction, and invalidation changes. _R17_
-- [ ] 3.5 Make every consumer idempotent; test duplicate, reorder, worker crash,
+- [x] 3.5 Make every consumer idempotent; test duplicate, reorder, worker crash,
   expired lease, partial dependency outage, and replay. _R17_
 - [x] 3.6 Add no-PII metrics/dashboards/alerts for lag, lease, retry, oldest event,
   dead letters, job duration, and stale projection age. _R17, R20_
 - [x] 3.7 Add audited admin dead-letter inspect/replay/resolve operations with no
   raw PHI in primary lists. _R16, R17_
-- [ ] 3.8 Run soak and recovery tests; document worker scaling and incident
+- [x] 3.8 Run soak and recovery tests; document worker scaling and incident
   runbooks. _R17, R20_
 
 Exit gate: worker failure cannot lose a committed event; duplicate delivery is

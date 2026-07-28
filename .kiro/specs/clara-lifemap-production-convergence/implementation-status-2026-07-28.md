@@ -160,5 +160,16 @@ aggregate retry attempts, oldest unpublished age, and stale projection
 dependencies. Alert thresholds, scaling, incident response, and rollback are
 documented in `docs/runbooks/lifemap-outbox-worker.md`.
 
+Phase 3 failure and recovery coverage was then completed. The only deployed
+consumer is the stateless no-PII structured-log publisher; completed rows are
+never selected again. Tests cover FIFO ordering, duplicate drains, isolated
+dependency failure without head-of-line blocking, immediate recovery, expired
+lease reclaim, retry exhaustion, terminal dead-letter state, audited replay,
+and bounded aggregate metrics. An isolated PostgreSQL soak ran 20 complete
+four-worker claim/recovery cycles (1,280 rows) in 5.595 seconds with disjoint
+claims, complete reconciliation, exactly-once expired-lease recovery, and
+random schemas dropped after every cycle. This is worker engineering evidence,
+not a substitute for the later GA load/SLO certification gate.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.
