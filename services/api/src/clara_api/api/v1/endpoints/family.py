@@ -16,7 +16,14 @@ from sqlalchemy.orm import Session
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import FamilyAccessGrant, LifeMapCareTask, PhrProfile, User
+from clara_api.db.models import (
+    FamilyAccessGrant,
+    LifeMapCareTask,
+    LifeMapEpisode,
+    LifeMapVisit,
+    PhrProfile,
+    User,
+)
 from clara_api.db.session import get_db
 from clara_api.lifemap.visit_family_service import (
     DomainAuthorizationError,
@@ -25,6 +32,7 @@ from clara_api.lifemap.visit_family_service import (
     accept_family_invitation,
     acknowledge_care_task_notification,
     complete_delegated_task,
+    create_family_grant_renewal,
     create_family_invitation,
     list_family_access_log,
     record_caregiver_observation,
@@ -75,6 +83,10 @@ class InvitationAcceptRequest(BaseModel):
 
 class NotificationAcknowledgementRequest(BaseModel):
     purpose: str = Field(min_length=2, max_length=64)
+
+
+class GrantRenewalRequest(BaseModel):
+    expires_at: datetime
 
 
 MAX_EVIDENCE_BYTES = 16_000
@@ -145,6 +157,63 @@ def _profile(db: Session, token: TokenPayload) -> tuple[User, PhrProfile]:
     return user, profile
 
 
+def _public_selector(model: Any, value: str):
+    selector = model.public_id == value
+    if value.isdecimal():
+        selector = selector | (model.id == int(value))
+    return selector
+
+
+def _resolve_owned_grant_id(
+    db: Session,
+    *,
+    reference: str,
+    owner_id: int | None = None,
+    grantee_id: int | None = None,
+) -> int:
+    conditions = [_public_selector(FamilyAccessGrant, reference)]
+    if owner_id is not None:
+        conditions.append(FamilyAccessGrant.grantor_user_id == owner_id)
+    if grantee_id is not None:
+        conditions.append(FamilyAccessGrant.grantee_user_id == grantee_id)
+    resolved = db.execute(
+        select(FamilyAccessGrant.id).where(*conditions)
+    ).scalar_one_or_none()
+    if resolved is None:
+        raise DomainNotFoundError("Access grant not found")
+    return resolved
+
+
+def _profile_public_id(db: Session, profile_id: int) -> str:
+    value = db.execute(
+        select(PhrProfile.public_id).where(PhrProfile.id == profile_id)
+    ).scalar_one_or_none()
+    if value is None:
+        raise DomainNotFoundError("Profile not found")
+    return value
+
+
+def _resolve_profile_id(db: Session, reference: str) -> int:
+    selector = PhrProfile.public_id == reference
+    if reference.isdecimal():
+        selector = selector | (PhrProfile.id == int(reference))
+    value = db.execute(select(PhrProfile.id).where(selector)).scalar_one_or_none()
+    if value is None:
+        raise DomainNotFoundError("Profile not found")
+    return value
+
+
+def _supporter_label(user: User | None) -> str:
+    if user is None:
+        return "Người hỗ trợ"
+    if user.full_name.strip():
+        return user.full_name.strip()
+    local, _, domain = user.email.partition("@")
+    if not domain:
+        return "Người hỗ trợ"
+    return f"{local[:2]}***@{domain}"
+
+
 @router.post("/invitations", status_code=status.HTTP_201_CREATED)
 def create_invitation(
     payload: InvitationRequest,
@@ -164,7 +233,11 @@ def create_invitation(
         )
         db.commit()
         # Delivery is explicitly out-of-band; CLARA does not pretend to have sent it.
-        return {"id": str(invitation.id), "token": raw_token, "expires_at": invitation.expires_at}
+        return {
+            "id": invitation.public_id,
+            "token": raw_token,
+            "expires_at": invitation.expires_at,
+        }
     except (DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
         _raise(error)
@@ -193,8 +266,8 @@ def accept_invitation(
         grant = accept_family_invitation(db, recipient=recipient, raw_token=raw_token)
         db.commit()
         return {
-            "id": str(grant.id),
-            "profile_id": str(grant.profile_id),
+            "id": grant.public_id,
+            "profile_id": _profile_public_id(db, grant.profile_id),
             "object_type": grant.object_type,
             "object_id": grant.object_id,
             "data_classes": grant.data_classes_json,
@@ -246,18 +319,28 @@ def relationships(
         )
         .order_by(FamilyAccessGrant.id.desc())
     ).scalars()
+    rows = list(grants)
+    users = {
+        user.id: user
+        for user in db.execute(
+            select(User).where(
+                User.id.in_({row.grantor_user_id for row in rows} or {-1})
+            )
+        ).scalars()
+    }
     return [
         {
-            "id": str(grant.id),
-            "profile_id": str(grant.profile_id),
+            "id": grant.public_id,
+            "profile_id": _profile_public_id(db, grant.profile_id),
             "object_type": grant.object_type,
             "object_id": grant.object_id,
             "data_classes": grant.data_classes_json,
             "allowed_actions": grant.allowed_actions_json,
             "purpose": grant.purpose,
             "expires_at": grant.expires_at,
+            "supporter_label": _supporter_label(users.get(grant.grantor_user_id)),
         }
-        for grant in grants
+        for grant in rows
     ]
 
 
@@ -311,9 +394,13 @@ def family_notifications(
             continue
         cards.append(
             {
-                "id": f"family-task:{grant.id}:{task.id}:v{grant.grant_version}",
+                "id": (
+                    f"family-task:{grant.public_id}:{task.public_id}:"
+                    f"v{grant.grant_version}"
+                ),
                 "kind": "delegated_care_task",
-                "profile_id": str(grant.profile_id),
+                "profile_id": _profile_public_id(db, grant.profile_id),
+                "grant_id": grant.public_id,
                 "task_id": task.public_id,
                 "purpose": grant.purpose,
                 "expires_at": grant.expires_at,
@@ -326,7 +413,7 @@ def family_notifications(
 
 @router.post("/notifications/{grant_id}/{task_id}/acknowledge")
 def acknowledge_notification(
-    grant_id: int,
+    grant_id: str,
     task_id: str,
     payload: NotificationAcknowledgementRequest,
     db: Session = Depends(get_db),
@@ -347,9 +434,20 @@ def acknowledge_notification(
     ).scalar_one_or_none()
     if task is None:
         raise HTTPException(status_code=403, detail="Family notification is no longer authorized")
+    try:
+        resolved_grant_id = _resolve_owned_grant_id(
+            db,
+            reference=grant_id,
+            grantee_id=caregiver.id,
+        )
+    except DomainNotFoundError:
+        raise HTTPException(
+            status_code=403,
+            detail="Family notification is no longer authorized",
+        ) from None
     grant = db.execute(
         select(FamilyAccessGrant).where(
-            FamilyAccessGrant.id == grant_id,
+            FamilyAccessGrant.id == resolved_grant_id,
             FamilyAccessGrant.grantee_user_id == caregiver.id,
             FamilyAccessGrant.status == "active",
             FamilyAccessGrant.revoked_at.is_(None),
@@ -381,10 +479,30 @@ def list_owner_grants(
     db: Session = Depends(get_db), token: TokenPayload = USER
 ) -> list[dict[str, Any]]:
     owner, profile = _profile(db, token)
+    rows = list(
+        db.execute(
+            select(FamilyAccessGrant)
+            .where(
+                FamilyAccessGrant.grantor_user_id == owner.id,
+                FamilyAccessGrant.profile_id == profile.id,
+            )
+            .order_by(FamilyAccessGrant.id.desc())
+        ).scalars()
+    )
+    recipients = {
+        user.id: user
+        for user in db.execute(
+            select(User).where(
+                User.id.in_({row.grantee_user_id for row in rows} or {-1})
+            )
+        ).scalars()
+    }
     return [
         {
-            "id": str(grant.id),
-            "grantee_user_id": str(grant.grantee_user_id),
+            "id": grant.public_id,
+            "supporter_label": _supporter_label(
+                recipients.get(grant.grantee_user_id)
+            ),
             "object_type": grant.object_type,
             "object_id": grant.object_id,
             "data_classes": grant.data_classes_json,
@@ -393,27 +511,115 @@ def list_owner_grants(
             "status": grant.status,
             "expires_at": grant.expires_at,
             "grant_version": grant.grant_version,
+            "starts_at": grant.starts_at,
+            "revoked_at": grant.revoked_at,
         }
-        for grant in db.execute(
-            select(FamilyAccessGrant)
-            .where(
-                FamilyAccessGrant.grantor_user_id == owner.id,
-                FamilyAccessGrant.profile_id == profile.id,
-            )
-            .order_by(FamilyAccessGrant.id.desc())
-        ).scalars()
+        for grant in rows
     ]
+
+
+@router.get("/share-options")
+def family_share_options(
+    db: Session = Depends(get_db), token: TokenPayload = USER
+) -> dict[str, list[dict[str, Any]]]:
+    """Return only owner-controlled objects eligible for a new minimal grant."""
+
+    owner, profile = _profile(db, token)
+    del owner
+    episodes = list(
+        db.execute(
+            select(LifeMapEpisode)
+            .where(
+                LifeMapEpisode.profile_id == profile.id,
+                LifeMapEpisode.status.in_({"open", "active", "paused"}),
+            )
+            .order_by(LifeMapEpisode.updated_at.desc(), LifeMapEpisode.id.desc())
+        ).scalars()
+    )
+    visits = list(
+        db.execute(
+            select(LifeMapVisit)
+            .where(
+                LifeMapVisit.profile_id == profile.id,
+                LifeMapVisit.status.notin_({"cancelled"}),
+            )
+            .order_by(LifeMapVisit.updated_at.desc(), LifeMapVisit.id.desc())
+        ).scalars()
+    )
+    tasks = list(
+        db.execute(
+            select(LifeMapCareTask)
+            .where(
+                LifeMapCareTask.profile_id == profile.id,
+                LifeMapCareTask.status == "accepted",
+            )
+            .order_by(LifeMapCareTask.id.desc())
+        ).scalars()
+    )
+    return {
+        "episodes": [
+            {"id": row.public_id, "label": row.title} for row in episodes
+        ],
+        "visits": [{"id": row.public_id, "label": row.title} for row in visits],
+        "care_tasks": [
+            {"id": row.public_id, "label": row.title} for row in tasks
+        ],
+    }
+
+
+@router.post(
+    "/access-grants/{grant_id}/renewals",
+    status_code=status.HTTP_201_CREATED,
+)
+def renew_grant(
+    grant_id: str,
+    payload: GrantRenewalRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    """Issue a fresh one-time capability; never silently extend authorization."""
+
+    owner = current_user(db, token)
+    try:
+        resolved_grant_id = _resolve_owned_grant_id(
+            db, reference=grant_id, owner_id=owner.id
+        )
+        invitation, raw_token = create_family_grant_renewal(
+            db,
+            owner=owner,
+            grant_id=resolved_grant_id,
+            expires_at=payload.expires_at,
+        )
+        db.commit()
+        return {
+            "id": invitation.public_id,
+            "token": raw_token,
+            "expires_at": invitation.expires_at,
+            "requires_recipient_acceptance": True,
+        }
+    except (DomainNotFoundError, DomainValidationError) as error:
+        db.rollback()
+        _raise(error)
 
 
 @router.delete("/access-grants/{grant_id}")
 def revoke_grant(
-    grant_id: int, db: Session = Depends(get_db), token: TokenPayload = USER
+    grant_id: str, db: Session = Depends(get_db), token: TokenPayload = USER
 ) -> dict[str, Any]:
     owner = current_user(db, token)
     try:
-        grant = revoke_family_access_grant(db, owner=owner, grant_id=grant_id)
+        resolved_grant_id = _resolve_owned_grant_id(
+            db, reference=grant_id, owner_id=owner.id
+        )
+        grant = revoke_family_access_grant(
+            db, owner=owner, grant_id=resolved_grant_id
+        )
         db.commit()
-        return {"id": str(grant.id), "status": grant.status, "grant_version": grant.grant_version}
+        return {
+            "id": grant.public_id,
+            "status": grant.status,
+            "grant_version": grant.grant_version,
+        }
     except DomainNotFoundError as error:
         db.rollback()
         _raise(error)
@@ -423,11 +629,31 @@ def revoke_grant(
 def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> list[dict[str, Any]]:
     owner, profile = _profile(db, token)
     try:
+        rows = list_family_access_log(db, owner=owner, profile_id=profile.id)
+        grant_ids = {row.grant_id for row in rows if row.grant_id is not None}
+        grant_public_ids = {
+            grant.id: grant.public_id
+            for grant in db.execute(
+                select(FamilyAccessGrant).where(
+                    FamilyAccessGrant.id.in_(grant_ids or {-1})
+                )
+            ).scalars()
+        }
         return [
             {
-                "id": str(row.id),
-                "actor_user_id": str(row.actor_user_id) if row.actor_user_id else None,
-                "grant_id": str(row.grant_id) if row.grant_id else None,
+                "id": row.public_id,
+                "actor_label": (
+                    "Bạn"
+                    if row.actor_user_id == owner.id
+                    else "Người hỗ trợ"
+                    if row.actor_user_id is not None
+                    else "Hệ thống"
+                ),
+                "grant_id": (
+                    grant_public_ids.get(row.grant_id)
+                    if row.grant_id is not None
+                    else None
+                ),
                 "object_type": row.object_type,
                 "object_id": row.object_id,
                 "action": row.action,
@@ -435,7 +661,7 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
                 "purpose": row.purpose,
                 "created_at": row.created_at,
             }
-            for row in list_family_access_log(db, owner=owner, profile_id=profile.id)
+            for row in rows
         ]
     except DomainNotFoundError as error:
         _raise(error)
@@ -443,17 +669,18 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
 
 @router.post("/profiles/{profile_id}/caregiver-observations", status_code=status.HTTP_201_CREATED)
 def caregiver_observation(
-    profile_id: int,
+    profile_id: str,
     payload: ObservationRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
     caregiver = current_user(db, token)
     try:
+        resolved_profile_id = _resolve_profile_id(db, profile_id)
         event = record_caregiver_observation(
             db,
             caregiver=caregiver,
-            profile_id=profile_id,
+            profile_id=resolved_profile_id,
             episode_id=payload.episode_id,
             purpose=payload.purpose,
             text=payload.text,
@@ -471,7 +698,7 @@ def caregiver_observation(
 
 @router.post("/profiles/{profile_id}/care-tasks/{task_id}/complete")
 def complete_task_as_caregiver(
-    profile_id: int,
+    profile_id: str,
     task_id: str,
     payload: CompleteTaskRequest,
     db: Session = Depends(get_db),
@@ -479,10 +706,11 @@ def complete_task_as_caregiver(
 ) -> dict[str, Any]:
     caregiver = current_user(db, token)
     try:
+        resolved_profile_id = _resolve_profile_id(db, profile_id)
         task = complete_delegated_task(
             db,
             caregiver=caregiver,
-            profile_id=profile_id,
+            profile_id=resolved_profile_id,
             task_id=task_id,
             purpose=payload.purpose,
             evidence=payload.evidence,
@@ -517,7 +745,11 @@ def delegate_task(
             expires_at=payload.expires_at,
         )
         db.commit()
-        return {"id": str(invitation.id), "token": raw_token, "expires_at": invitation.expires_at}
+        return {
+            "id": invitation.public_id,
+            "token": raw_token,
+            "expires_at": invitation.expires_at,
+        }
     except (DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
         _raise(error)

@@ -1783,10 +1783,11 @@ class ApiClient {
     required String accessToken,
     required String grantId,
     required String taskId,
+    required String purpose,
   }) {
     return _post(
       '/api/v1/family/notifications/$grantId/$taskId/acknowledge',
-      body: const <String, dynamic>{},
+      body: <String, dynamic>{'purpose': purpose},
       accessToken: accessToken,
       extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
     );
@@ -1817,6 +1818,12 @@ class ApiClient {
     return _get('/api/v1/family/access-log', accessToken: accessToken);
   }
 
+  Future<Map<String, dynamic>> getFamilyShareOptions({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/family/share-options', accessToken: accessToken);
+  }
+
   /// Invites a supporter to a minimal, consent-based sharing relationship.
   Future<Map<String, dynamic>> createFamilyInvitation({
     required String accessToken,
@@ -1843,6 +1850,21 @@ class ApiClient {
       extraHeaders: <String, String>{
         'X-Family-Invitation-Token': invitationToken,
       },
+    );
+  }
+
+  Future<Map<String, dynamic>> renewFamilyAccessGrant({
+    required String accessToken,
+    required String grantId,
+    required DateTime expiresAt,
+  }) {
+    return _post(
+      '/api/v1/family/access-grants/$grantId/renewals',
+      body: <String, dynamic>{
+        'expires_at': expiresAt.toUtc().toIso8601String(),
+      },
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
     );
   }
 

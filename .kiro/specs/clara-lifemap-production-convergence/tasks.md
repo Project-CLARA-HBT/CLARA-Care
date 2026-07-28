@@ -244,17 +244,17 @@ approved and invalidate on source correction/revocation.
 
 ## Phase 9 — Family Circle hardening
 
-- [ ] 9.1 Migrate grants to explicit data classes, actions, purpose, start,
+- [x] 9.1 Migrate grants to explicit data classes, actions, purpose, start,
   expiry, and revocation; do not infer access from relationship. _R12_
-- [ ] 9.2 Implement immediate API denial and sub-60-second cache/token/session/job
+- [x] 9.2 Implement immediate API denial and sub-60-second cache/token/session/job
   revocation. _R12, R20_
-- [ ] 9.3 Hash invitation/share secrets, add replay prevention, and test token
+- [x] 9.3 Hash invitation/share secrets, add replay prevention, and test token
   leakage/redaction. _R12, R16_
-- [ ] 9.4 Complete owner-facing access log, sensitive-access notifications, and
+- [x] 9.4 Complete owner-facing access log, sensitive-access notifications, and
   grant review/renewal UI on web/mobile. _R12, R19_
 - [ ] 9.5 Define and implement minor/legal-representative policy only after
   privacy/legal approval; otherwise keep unsupported. _R12_
-- [ ] 9.6 Run authorization matrix and adversarial tests for every data class and
+- [x] 9.6 Run authorization matrix and adversarial tests for every data class and
   action. _R2, R12, R16_
 
 Exit gate: relationship never equals access; revocation SLO and access-log

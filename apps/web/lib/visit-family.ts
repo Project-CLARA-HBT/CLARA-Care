@@ -102,22 +102,24 @@ export type VisitPlanConfirmation = {
 
 export type FamilyGrant = {
   id: string;
-  grantee_user_id?: string;
+  supporter_label?: string;
   profile_id?: string;
   object_type: "episode" | "care_task" | "visit" | string;
-  object_id: number;
+  object_id: string;
   allowed_actions: string[];
   purpose: string;
   status?: string;
   expires_at: string;
   grant_version?: number;
+  starts_at?: string;
+  revoked_at?: string | null;
 };
 
 export type FamilyAccessLog = {
   id: string;
-  actor_user_id: string | null;
+  actor_label: string;
   object_type: string;
-  object_id: number;
+  object_id: string;
   action: string;
   outcome: string;
   purpose: string;
@@ -351,7 +353,7 @@ export async function createFamilyInvitation(input: {
   recipient_email: string;
   scope: {
     object_type: "episode" | "care_task" | "visit";
-    object_id: number;
+    object_id: string;
     allowed_actions: string[];
   };
   purpose: "care_coordination" | "visit_support";
@@ -372,4 +374,26 @@ export async function acceptFamilyInvitation(token: string): Promise<FamilyGrant
 
 export async function revokeFamilyGrant(grantId: string): Promise<void> {
   await api.delete(`/family/access-grants/${encodeURIComponent(grantId)}`);
+}
+
+export type FamilyShareOptions = {
+  episodes: Array<{ id: string; label: string }>;
+  visits: Array<{ id: string; label: string }>;
+  care_tasks: Array<{ id: string; label: string }>;
+};
+
+export async function getFamilyShareOptions(): Promise<FamilyShareOptions> {
+  return (await api.get<FamilyShareOptions>("/family/share-options")).data;
+}
+
+export async function renewFamilyGrant(
+  grantId: string,
+  expiresAt: string,
+): Promise<{ id: string; token: string; expires_at: string }> {
+  return (
+    await api.post(
+      `/family/access-grants/${encodeURIComponent(grantId)}/renewals`,
+      { expires_at: expiresAt },
+    )
+  ).data;
 }

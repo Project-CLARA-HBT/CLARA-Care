@@ -40,7 +40,8 @@ String _firstNonEmpty(List<Object?> values) {
 /// Extracts a list of maps from a response that may nest the list under a
 /// `data`/`items`/`results` key or expose it as a top-level array under one of
 /// [keys]. Mirrors how the other unified surfaces parse defensively.
-List<Map<String, dynamic>> _asMapList(Map<String, dynamic> data, List<String> keys) {
+List<Map<String, dynamic>> _asMapList(
+    Map<String, dynamic> data, List<String> keys) {
   Object? raw;
   for (final key in keys) {
     if (data[key] != null) {
@@ -66,6 +67,7 @@ class _Relationship {
 
   factory _Relationship.fromJson(Map<String, dynamic> json) {
     final title = _firstNonEmpty(<Object?>[
+      json['supporter_label'],
       json['display_name'],
       json['name'],
       json['relationship'],
@@ -73,6 +75,7 @@ class _Relationship {
       json['email'],
     ]);
     final subtitle = _firstNonEmpty(<Object?>[
+      json['object_type'],
       json['relationship'],
       json['role'],
       json['status'],
@@ -93,6 +96,7 @@ class _FamilyNotification {
     required this.grantId,
     required this.taskId,
     required this.title,
+    required this.purpose,
   });
 
   factory _FamilyNotification.fromJson(Map<String, dynamic> json) {
@@ -116,12 +120,14 @@ class _FamilyNotification {
       grantId: grantId,
       taskId: taskId,
       title: title.isEmpty ? 'Thông báo mới' : title,
+      purpose: _str(json['purpose']),
     );
   }
 
   final String grantId;
   final String taskId;
   final String title;
+  final String purpose;
 }
 
 /// An active access grant shared with a supporter.
@@ -130,6 +136,7 @@ class _AccessGrant {
     required this.id,
     required this.title,
     required this.subtitle,
+    required this.expiresAt,
   });
 
   factory _AccessGrant.fromJson(Map<String, dynamic> json) {
@@ -154,12 +161,39 @@ class _AccessGrant {
       id: id,
       title: title.isEmpty ? 'Quyền truy cập' : title,
       subtitle: subtitle,
+      expiresAt: _str(json['expires_at']),
     );
   }
 
   final String id;
   final String title;
   final String subtitle;
+  final String expiresAt;
+}
+
+class _AccessLogEntry {
+  const _AccessLogEntry({
+    required this.id,
+    required this.actor,
+    required this.action,
+    required this.outcome,
+    required this.createdAt,
+  });
+
+  factory _AccessLogEntry.fromJson(Map<String, dynamic> json) =>
+      _AccessLogEntry(
+        id: _str(json['id']),
+        actor: _firstNonEmpty(<Object?>[json['actor_label'], 'Người hỗ trợ']),
+        action: _str(json['action']),
+        outcome: _str(json['outcome']),
+        createdAt: _str(json['created_at']),
+      );
+
+  final String id;
+  final String actor;
+  final String action;
+  final String outcome;
+  final String createdAt;
 }
 
 /// The Family surface: minimal, consent-based sharing with supporters.
@@ -186,16 +220,26 @@ class _FamilySurfaceState extends State<FamilySurface> {
   List<_Relationship> _relationships = const [];
   List<_FamilyNotification> _notifications = const [];
   List<_AccessGrant> _grants = const [];
+  List<_AccessLogEntry> _accessLog = const [];
+  Map<String, List<Map<String, dynamic>>> _shareOptions =
+      const <String, List<Map<String, dynamic>>>{
+    'episode': <Map<String, dynamic>>[],
+    'visit': <Map<String, dynamic>>[],
+  };
 
   // --- "Mời người thân" (invite) form state --------------------------------
   bool _formOpen = false;
   bool _inviting = false;
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _relationshipController = TextEditingController();
+  String _objectType = 'episode';
+  String _objectId = '';
+  String _purpose = 'care_coordination';
+  String _createdToken = '';
 
   /// Ids of in-flight acknowledge/revoke actions, keyed for busy state.
   final Set<String> _acking = <String>{};
   final Set<String> _revoking = <String>{};
+  final Set<String> _renewing = <String>{};
 
   @override
   void initState() {
@@ -206,7 +250,6 @@ class _FamilySurfaceState extends State<FamilySurface> {
   @override
   void dispose() {
     _emailController.dispose();
-    _relationshipController.dispose();
     super.dispose();
   }
 
@@ -277,11 +320,40 @@ class _FamilySurfaceState extends State<FamilySurface> {
       // Ignore — the access-grants region is optional.
     }
 
+    var accessLog = const <_AccessLogEntry>[];
+    try {
+      final data =
+          await widget.apiClient.getFamilyAccessLog(accessToken: token);
+      accessLog = _asMapList(data, <String>['access_log', 'logs'])
+          .map(_AccessLogEntry.fromJson)
+          .toList();
+    } catch (_) {
+      // Optional owner audit region.
+    }
+
+    var shareOptions = _shareOptions;
+    try {
+      final data =
+          await widget.apiClient.getFamilyShareOptions(accessToken: token);
+      shareOptions = <String, List<Map<String, dynamic>>>{
+        'episode': _asMapList(data, <String>['episodes']),
+        'visit': _asMapList(data, <String>['visits']),
+      };
+    } catch (_) {
+      // Invitation remains disabled when no authorized options can be loaded.
+    }
+
     if (!mounted) return;
     setState(() {
       _relationships = relationships;
       _notifications = notifications;
       _grants = grants;
+      _accessLog = accessLog;
+      _shareOptions = shareOptions;
+      final available = shareOptions[_objectType] ?? const [];
+      if (!available.any((item) => _str(item['id']) == _objectId)) {
+        _objectId = available.isEmpty ? '' : _str(available.first['id']);
+      }
       _loading = false;
     });
   }
@@ -296,21 +368,33 @@ class _FamilySurfaceState extends State<FamilySurface> {
     }
     setState(() => _inviting = true);
     try {
-      final relationship = _relationshipController.text.trim();
-      await widget.apiClient.createFamilyInvitation(
+      if (_objectId.isEmpty) {
+        _showSnack('Hãy chọn đúng hành trình hoặc buổi khám để chia sẻ.');
+        return;
+      }
+      final result = await widget.apiClient.createFamilyInvitation(
         accessToken: token,
         payload: <String, dynamic>{
-          'email': email,
-          if (relationship.isNotEmpty) 'relationship': relationship,
+          'recipient_email': email,
+          'scope': <String, dynamic>{
+            'object_type': _objectType,
+            'object_id': _objectId,
+            'allowed_actions': _objectType == 'episode'
+                ? <String>['view', 'add_observation']
+                : <String>['view'],
+          },
+          'purpose': _purpose,
+          'expires_at': DateTime.now()
+              .toUtc()
+              .add(const Duration(days: 7))
+              .toIso8601String(),
         },
       );
       _emailController.clear();
-      _relationshipController.clear();
       if (mounted) {
-        setState(() => _formOpen = false);
+        setState(() => _createdToken = _str(result['token']));
       }
-      _showSnack('Đã gửi lời mời chia sẻ.');
-      await _load();
+      _showSnack('Đã tạo mã mời. CLARA chưa tự gửi email.');
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
@@ -336,6 +420,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
         accessToken: token,
         grantId: notification.grantId,
         taskId: notification.taskId,
+        purpose: notification.purpose,
       );
       await _load();
     } on ApiException catch (error) {
@@ -372,6 +457,32 @@ class _FamilySurfaceState extends State<FamilySurface> {
       if (mounted) {
         setState(() => _revoking.remove(grant.id));
       }
+    }
+  }
+
+  Future<void> _renew(_AccessGrant grant) async {
+    final token = _token;
+    if (token == null || _renewing.contains(grant.id)) return;
+    setState(() => _renewing.add(grant.id));
+    try {
+      final result = await widget.apiClient.renewFamilyAccessGrant(
+        accessToken: token,
+        grantId: grant.id,
+        expiresAt: DateTime.now().toUtc().add(const Duration(days: 30)),
+      );
+      if (mounted) {
+        setState(() {
+          _createdToken = _str(result['token']);
+          _formOpen = true;
+        });
+      }
+      _showSnack('Đã tạo mã gia hạn; người nhận cần chấp nhận lại.');
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tạo lời mời gia hạn.');
+    } finally {
+      if (mounted) setState(() => _renewing.remove(grant.id));
     }
   }
 
@@ -545,6 +656,30 @@ class _FamilySurfaceState extends State<FamilySurface> {
         );
     }
 
+    if (_accessLog.isNotEmpty) {
+      children
+        ..add(const SizedBox(height: ClaraTokens.spaceSm))
+        ..add(const SectionHeader(title: 'Nhật ký truy cập gần đây'))
+        ..addAll(
+          _accessLog.take(20).map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    ClaraTokens.spaceMd,
+                    0,
+                    ClaraTokens.spaceMd,
+                    ClaraTokens.spaceMd,
+                  ),
+                  child: ClaraCard.static_(
+                    child: Text(
+                      '${entry.actor} · ${entry.action} · ${entry.outcome}'
+                      '${entry.createdAt.isEmpty ? '' : '\n${entry.createdAt}'}',
+                    ),
+                  ),
+                ),
+              ),
+        );
+    }
+
     return ListView(
       padding: const EdgeInsets.only(
         top: ClaraTokens.spaceMd,
@@ -599,13 +734,57 @@ class _FamilySurfaceState extends State<FamilySurface> {
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
-          TextField(
-            controller: _relationshipController,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              labelText: 'Mối quan hệ (không bắt buộc)',
-              hintText: 'Ví dụ: Con gái, người chăm sóc',
-            ),
+          DropdownButtonFormField<String>(
+            initialValue: _objectType,
+            decoration: const InputDecoration(labelText: 'Chỉ chia sẻ'),
+            items: const <DropdownMenuItem<String>>[
+              DropdownMenuItem(
+                value: 'episode',
+                child: Text('Một hành trình'),
+              ),
+              DropdownMenuItem(
+                value: 'visit',
+                child: Text('Một buổi khám'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              final choices = _shareOptions[value] ?? const [];
+              setState(() {
+                _objectType = value;
+                _objectId = choices.isEmpty ? '' : _str(choices.first['id']);
+              });
+            },
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          DropdownButtonFormField<String>(
+            initialValue: _objectId.isEmpty ? null : _objectId,
+            decoration: const InputDecoration(labelText: 'Mục được chia sẻ'),
+            items: (_shareOptions[_objectType] ?? const [])
+                .map(
+                  (item) => DropdownMenuItem<String>(
+                    value: _str(item['id']),
+                    child: Text(_str(item['label'])),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) => setState(() => _objectId = value ?? ''),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          DropdownButtonFormField<String>(
+            initialValue: _purpose,
+            decoration: const InputDecoration(labelText: 'Mục đích'),
+            items: const <DropdownMenuItem<String>>[
+              DropdownMenuItem(
+                value: 'care_coordination',
+                child: Text('Phối hợp chăm sóc'),
+              ),
+              DropdownMenuItem(
+                value: 'visit_support',
+                child: Text('Hỗ trợ đi khám'),
+              ),
+            ],
+            onChanged: (value) => setState(() => _purpose = value ?? _purpose),
           ),
           const SizedBox(height: ClaraTokens.spaceLg),
           Align(
@@ -617,6 +796,14 @@ class _FamilySurfaceState extends State<FamilySurface> {
               onPressed: _invite,
             ),
           ),
+          if (_createdToken.isNotEmpty) ...<Widget>[
+            const SizedBox(height: ClaraTokens.spaceMd),
+            const Text(
+              'Mã chỉ hiển thị lần này. Gửi mã qua kênh bạn tin cậy:',
+            ),
+            const SizedBox(height: ClaraTokens.spaceXs),
+            SelectableText(_createdToken),
+          ],
         ],
       ),
     );
@@ -691,6 +878,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
   Widget _buildGrantCard(BuildContext context, _AccessGrant grant) {
     final theme = Theme.of(context);
     final busy = _revoking.contains(grant.id);
+    final renewing = _renewing.contains(grant.id);
     return ClaraCard.static_(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,15 +901,31 @@ class _FamilySurfaceState extends State<FamilySurface> {
                     ),
                   ),
                 ],
+                if (grant.expiresAt.isNotEmpty)
+                  Text(
+                    'Hết hạn: ${grant.expiresAt}',
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
             ),
           ),
           const SizedBox(width: ClaraTokens.spaceSm),
-          ClaraButton.secondary(
-            label: 'Thu hồi',
-            icon: Icons.link_off,
-            loading: busy,
-            onPressed: () => _revoke(grant),
+          Column(
+            children: <Widget>[
+              ClaraButton.secondary(
+                label: 'Gia hạn',
+                icon: Icons.update,
+                loading: renewing,
+                onPressed: () => _renew(grant),
+              ),
+              const SizedBox(height: ClaraTokens.spaceXs),
+              ClaraButton.secondary(
+                label: 'Thu hồi',
+                icon: Icons.link_off,
+                loading: busy,
+                onPressed: () => _revoke(grant),
+              ),
+            ],
           ),
         ],
       ),

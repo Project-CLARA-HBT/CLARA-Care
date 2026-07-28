@@ -149,7 +149,7 @@ def test_family_scope_cannot_widen_and_revoke_blocks_next_write() -> None:
         )
         assert observation.truth_state == "user_reported"
         assert observation.provenance_json["actor_user_id"] == caregiver.id
-        assert observation.provenance_json["family_grant_id"] == grant.id
+        assert observation.provenance_json["family_grant_id"] == grant.public_id
         revoke_family_access_grant(db, owner=owner, grant_id=grant.id)
         with pytest.raises(DomainAuthorizationError):
             record_caregiver_observation(

@@ -322,5 +322,34 @@ must not be enabled until the governed source-span/safety evaluation establishes
 instruction accuracy, unsupported-instruction rate, span validity, task
 leakage, and user comprehension thresholds.
 
+Phase 9 Family Circle engineering hardening is implemented through migration
+`20260729_0038`. Invitations, grants, and access-log records now expose opaque
+identifiers; internal user/profile/grant identifiers are removed from consumer
+responses and provenance. Existing grants already enforce explicit data
+classes, actions, purpose, start, expiry, version, and revocation. Authorization
+is re-evaluated from canonical state on every request, so revoke/expiry removes
+derived notification cards and denies the next API action without a cache,
+session, or background-job delay.
+
+Invitation and share capabilities remain hash-only at rest. Invitation
+acceptance is recipient-bound and transactionally one-time: an idempotent replay
+can return the same grant but cannot mint another; URL-carried capabilities are
+never processed or echoed. Grant renewal never silently extends authorization:
+it creates a fresh one-time invitation for the same minimum scope and requires
+recipient acceptance again.
+
+Owner-scoped share options prevent clients from inventing object identifiers.
+Web and Flutter now create the same episode/visit scopes, display minimum-data
+access activity, review active grants, revoke immediately, and create explicit
+renewal capabilities. Focused evidence includes the existing data-class/action/
+purpose authorization matrix plus ten Family API/migration/live-revocation
+tests, three Flutter wire-contract tests, and nine web client-contract tests;
+focused Ruff, mypy, web lint, and Flutter analysis pass.
+
+Task 9.5 remains approval-gated. CLARA does not infer or implement a minor or
+legal-representative relationship from ordinary Family Circle data; that use
+case remains unsupported until privacy/legal policy approval and a separate
+identity/authority proofing design exist.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.

@@ -451,7 +451,7 @@ def test_expired_grant_and_confused_deputy_profile_swap_fail_closed() -> None:
     with SessionLocal() as db:
         grant = db.execute(
             select(FamilyAccessGrant).where(
-                FamilyAccessGrant.id == int(accepted.json()["id"])
+                FamilyAccessGrant.public_id == accepted.json()["id"]
             )
         ).scalar_one()
         grant.expires_at = datetime.now(UTC) - timedelta(seconds=1)

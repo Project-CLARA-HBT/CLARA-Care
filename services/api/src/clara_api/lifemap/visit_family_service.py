@@ -1937,6 +1937,57 @@ def revoke_family_access_grant(
     return grant
 
 
+def create_family_grant_renewal(
+    db: Session,
+    *,
+    owner: User,
+    grant_id: int,
+    expires_at: datetime,
+) -> tuple[FamilyInvitation, str]:
+    """Create a new one-time invitation for the exact existing grant scope.
+
+    Renewal never silently extends a live authorization. The named recipient
+    must accept a fresh capability, preserving recipient awareness and an
+    append-only grant history.
+    """
+
+    grant = db.execute(
+        select(FamilyAccessGrant).where(
+            FamilyAccessGrant.id == grant_id,
+            FamilyAccessGrant.grantor_user_id == owner.id,
+        )
+    ).scalar_one_or_none()
+    if grant is None:
+        raise DomainNotFoundError("Access grant not found")
+    recipient = db.get(User, grant.grantee_user_id)
+    if recipient is None or recipient.status != "active":
+        raise DomainValidationError("The named recipient is unavailable")
+    invitation, raw_token = create_family_invitation(
+        db,
+        owner=owner,
+        profile_id=grant.profile_id,
+        recipient_email=recipient.email,
+        scope={
+            "object_type": grant.object_type,
+            "object_id": grant.object_id,
+            "data_classes": list(grant.data_classes_json or []),
+            "allowed_actions": list(grant.allowed_actions_json or []),
+        },
+        purpose=grant.purpose,
+        expires_at=expires_at,
+    )
+    _access_log(
+        db,
+        profile_id=grant.profile_id,
+        actor_user_id=owner.id,
+        grant=grant,
+        action="grant.renewal_invited",
+        outcome="success",
+    )
+    db.flush()
+    return invitation, raw_token
+
+
 def record_caregiver_observation(
     db: Session,
     *,
@@ -1978,7 +2029,7 @@ def record_caregiver_observation(
         provenance_json={
             "source": "caregiver_reported",
             "actor_user_id": caregiver.id,
-            "family_grant_id": grant.id,
+            "family_grant_id": grant.public_id,
             "grant_version": grant.grant_version,
         },
         source_kind="caregiver_reported",
@@ -2040,7 +2091,7 @@ def complete_delegated_task(
     task.completion_evidence_json = {
         "source": "caregiver_completed",
         "actor_user_id": caregiver.id,
-        "family_grant_id": grant.id,
+        "family_grant_id": grant.public_id,
         "evidence": evidence or {},
     }
     db.add(

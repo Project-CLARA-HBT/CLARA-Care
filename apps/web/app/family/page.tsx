@@ -14,15 +14,15 @@ import { Field, Select } from "@/components/ui/field";
 import {
   acceptFamilyInvitation,
   createFamilyInvitation,
+  getFamilyShareOptions,
   listFamilyAccessLog,
   listFamilyGrants,
   listFamilyRelationships,
   revokeFamilyGrant,
+  renewFamilyGrant,
   type FamilyAccessLog,
   type FamilyGrant,
-  listVisits,
 } from "@/lib/visit-family";
-import { getLifeMapToday } from "@/lib/lifemap";
 
 export default function FamilyPage() {
   const [grants, setGrants] = useState<FamilyGrant[]>([]);
@@ -48,19 +48,18 @@ export default function FamilyPage() {
     setLoading(true);
     setError("");
     try {
-      const [owned, received, history, today, visits] = await Promise.all([
+      const [owned, received, history, options] = await Promise.all([
         listFamilyGrants(),
         listFamilyRelationships(),
         listFamilyAccessLog(),
-        getLifeMapToday(),
-        listVisits(),
+        getFamilyShareOptions(),
       ]);
       setGrants(owned);
       setRelationships(received);
       setLogs(history);
       const nextShareable = {
-        episode: today.episodes.map((episode) => ({ id: episode.id, label: episode.title })),
-        visit: visits.map((visit) => ({ id: visit.id, label: visit.title })),
+        episode: options.episodes,
+        visit: options.visits,
       };
       setShareable(nextShareable);
       setObjectId((current) => current || nextShareable.episode[0]?.id || "");
@@ -81,7 +80,7 @@ export default function FamilyPage() {
       const actions = objectType === "episode" ? ["view", "add_observation"] : ["view"];
       const result = await createFamilyInvitation({
         recipient_email: email.trim(),
-        scope: { object_type: objectType, object_id: Number(objectId), allowed_actions: actions },
+        scope: { object_type: objectType, object_id: objectId, allowed_actions: actions },
         purpose,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       });
@@ -123,6 +122,23 @@ export default function FamilyPage() {
     }
   };
 
+  const renew = async (grantId: string) => {
+    setSaving(true);
+    setError("");
+    setCreatedToken("");
+    try {
+      const result = await renewFamilyGrant(
+        grantId,
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      );
+      setCreatedToken(result.token);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tạo lời mời gia hạn.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell
       variant="plain"
@@ -149,7 +165,7 @@ export default function FamilyPage() {
                       <li key={grant.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-[var(--text-primary)]">
-                            {grant.object_type} #{grant.object_id}
+                            {grant.supporter_label || "Người hỗ trợ"} · {grant.object_type}
                           </p>
                           <p className="mt-1 text-sm text-[var(--text-secondary)]">
                             {grant.allowed_actions.join(", ")} · {grant.purpose}
@@ -158,15 +174,12 @@ export default function FamilyPage() {
                             Hết hạn {new Date(grant.expires_at).toLocaleString("vi-VN")}
                           </p>
                         </div>
-                        <Button
-                          type="button"
-                          variant="danger"
-                          size="sm"
-                          disabled={saving || grant.status === "revoked"}
-                          onClick={() => void revoke(grant.id)}
-                        >
-                          {grant.status === "revoked" ? "Đã thu hồi" : "Thu hồi"}
-                        </Button>
+                        <div className="flex gap-2">
+                          {grant.status !== "revoked" ? <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => void renew(grant.id)}>Gia hạn</Button> : null}
+                          <Button type="button" variant="danger" size="sm" disabled={saving || grant.status === "revoked"} onClick={() => void revoke(grant.id)}>
+                            {grant.status === "revoked" ? "Đã thu hồi" : "Thu hồi"}
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -188,7 +201,7 @@ export default function FamilyPage() {
                     {relationships.map((relationship) => (
                       <div key={relationship.id} className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
                         <p className="font-medium text-[var(--text-primary)]">
-                          {relationship.object_type} #{relationship.object_id}
+                          {relationship.supporter_label || "Phạm vi được chia sẻ"} · {relationship.object_type}
                         </p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
                           {relationship.allowed_actions.join(", ")}
@@ -221,10 +234,10 @@ export default function FamilyPage() {
                       </span>
                       <div>
                         <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {log.action} · {log.outcome}
+                          {log.actor_label} · {log.action} · {log.outcome}
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
-                          {log.object_type} #{log.object_id} ·{" "}
+                          {log.object_type} ·{" "}
                           {new Date(log.created_at).toLocaleString("vi-VN")}
                         </p>
                       </div>

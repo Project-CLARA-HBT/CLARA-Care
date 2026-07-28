@@ -126,7 +126,15 @@ def test_family_notification_is_minimal_live_and_owner_auditable() -> None:
     assert len(cards.json()) == 1
     card = cards.json()[0]
     assert set(card) == {
-        "id", "kind", "profile_id", "task_id", "purpose", "expires_at", "action", "message"
+        "id",
+        "kind",
+        "profile_id",
+        "grant_id",
+        "task_id",
+        "purpose",
+        "expires_at",
+        "action",
+        "message",
     }
     assert "Sensitive task title" not in str(card)
     assert "Private Owner Name" not in str(card)

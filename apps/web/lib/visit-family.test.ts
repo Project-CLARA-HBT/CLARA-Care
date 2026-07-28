@@ -13,11 +13,14 @@ vi.mock("@/lib/http-client", () => ({ default: api }));
 import {
   answerVisitIntake,
   confirmVisitPlan,
+  createFamilyInvitation,
   createVisitDocument,
   createVisitPack,
   deleteVisitDocument,
   extractVisitPlan,
   getVisitPackOptions,
+  getFamilyShareOptions,
+  renewFamilyGrant,
   revokeVisitShare,
 } from "@/lib/visit-family";
 
@@ -151,5 +154,43 @@ describe("visit-family phase 3 API contracts", () => {
     await revokeVisitShare("pack_P1", "share_S2");
 
     expect(api.delete).toHaveBeenCalledWith("/visit-packs/pack_P1/shares/share_S2");
+  });
+
+  it("creates a minimum-scope Family invitation with an opaque object id", async () => {
+    api.post.mockResolvedValueOnce({
+      data: { id: "invite_I1", token: "secret", expires_at: "2026-08-01T00:00:00Z" },
+    });
+    const input = {
+      recipient_email: "supporter@example.com",
+      scope: {
+        object_type: "episode" as const,
+        object_id: "episode_E1",
+        allowed_actions: ["view", "add_observation"],
+      },
+      purpose: "care_coordination" as const,
+      expires_at: "2026-08-01T00:00:00Z",
+    };
+
+    await createFamilyInvitation(input);
+
+    expect(api.post).toHaveBeenCalledWith("/family/invitations", input);
+  });
+
+  it("loads owner-scoped share options and creates a fresh renewal invitation", async () => {
+    api.get.mockResolvedValueOnce({
+      data: { episodes: [], visits: [], care_tasks: [] },
+    });
+    api.post.mockResolvedValueOnce({
+      data: { id: "invite_I2", token: "new-secret", expires_at: "2026-08-20T00:00:00Z" },
+    });
+
+    await getFamilyShareOptions();
+    await renewFamilyGrant("grant_G1", "2026-08-20T00:00:00Z");
+
+    expect(api.get).toHaveBeenCalledWith("/family/share-options");
+    expect(api.post).toHaveBeenCalledWith(
+      "/family/access-grants/grant_G1/renewals",
+      { expires_at: "2026-08-20T00:00:00Z" },
+    );
   });
 });
