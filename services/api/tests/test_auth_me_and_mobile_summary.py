@@ -257,7 +257,14 @@ def test_mobile_summary_success_by_role(
         "council": "/api/v1/council/run",
         "system_monitor": "/api/v1/system/metrics",
     }
-    assert payload["feature_flags"] == feature_flags
+    assert {
+        key: payload["feature_flags"][key] for key in feature_flags
+    } == feature_flags
+    assert all(
+        value is False
+        for key, value in payload["feature_flags"].items()
+        if key.startswith("lifemap_")
+    )
     assert datetime.fromisoformat(payload["last_updated"]).tzinfo is not None
 
 
@@ -295,9 +302,16 @@ def test_mobile_summary_admin_enables_all_features() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["role"] == "admin"
-    assert payload["feature_flags"] == _ADMIN_MOBILE_FEATURE_FLAGS
-    # Every emitted flag must be True for admin.
-    assert all(payload["feature_flags"].values())
+    assert {
+        key: payload["feature_flags"][key] for key in _ADMIN_MOBILE_FEATURE_FLAGS
+    } == _ADMIN_MOBILE_FEATURE_FLAGS
+    # LifeMap rollout gates remain server-authoritative and default off even
+    # for admins; administrative RBAC must not silently enable experiments.
+    assert all(
+        value is False
+        for key, value in payload["feature_flags"].items()
+        if key.startswith("lifemap_")
+    )
 
 
 def test_mobile_summary_non_admin_roles_omit_new_flags() -> None:

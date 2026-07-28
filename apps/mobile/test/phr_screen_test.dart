@@ -70,7 +70,8 @@ void main() {
     'renders provenance/verification badges and the persistent self-declared '
     'disclaimer, reading via the legacy GET contract (Req 5.1, 5.2, 5.3)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api);
 
@@ -87,14 +88,25 @@ void main() {
       expect(find.byKey(const Key('phr-disclaimer')), findsOneWidget);
 
       // Entries render.
+      await tester.dragUntilVisible(
+        find.text('Penicillin'),
+        find.byType(ListView).first,
+        const Offset(0, -240),
+      );
       expect(find.text('Penicillin'), findsOneWidget);
+      expect(find.text('Nhập khẩu'), findsOneWidget); // imported source
+      expect(find.text('Đã xác minh'), findsOneWidget); // confirmed
+
+      await tester.dragUntilVisible(
+        find.text('Tăng huyết áp'),
+        find.byType(ListView).first,
+        const Offset(0, -240),
+      );
       expect(find.text('Tăng huyết áp'), findsOneWidget);
 
       // Provenance + verification badges convey status by TEXT (Req 5.2, not
       // color alone). The imported/confirmed allergy and the default
       // self-declared/unconfirmed condition are both labelled.
-      expect(find.text('Nhập khẩu'), findsOneWidget); // imported source
-      expect(find.text('Đã xác minh'), findsOneWidget); // confirmed
       expect(find.text('Tự khai'), findsOneWidget); // default self-declared
       expect(find.text('Chưa xác minh'), findsOneWidget); // default unconfirmed
     },
@@ -131,8 +143,8 @@ void main() {
     (tester) async {
       final api = FakeApiClient()
         ..stub('getPhrRecord',
-            error: ApiException(
-                message: 'Không thể tải hồ sơ.', statusCode: 500));
+            error:
+                ApiException(message: 'Không thể tải hồ sơ.', statusCode: 500));
 
       await pumpScreen(tester, api: api);
       await tester.pumpAndSettle();

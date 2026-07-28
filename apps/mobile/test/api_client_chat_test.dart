@@ -52,7 +52,7 @@ void main() {
     test('POSTs message to /api/v1/chat and returns the envelope', () async {
       late http.Request captured;
       final mock = MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response(
           jsonEncode({
             'message': 'xin chao',
@@ -100,8 +100,8 @@ void main() {
         throwsA(
           isA<ApiException>()
               .having((e) => e.statusCode, 'statusCode', 503)
-              .having((e) => e.message, 'message',
-                  'deepseek_required_unavailable'),
+              .having(
+                  (e) => e.message, 'message', 'deepseek_required_unavailable'),
         ),
       );
     });
@@ -123,9 +123,8 @@ void main() {
       });
       final api = ApiClient(baseUrl: base, httpClient: mock);
 
-      final events = await api
-          .streamChat(accessToken: token, payload: {'message': 'xin chao'})
-          .toList();
+      final events = await api.streamChat(
+          accessToken: token, payload: {'message': 'xin chao'}).toList();
 
       // Request shape.
       expect(captured.method, 'POST');
@@ -161,8 +160,7 @@ void main() {
       final api = ApiClient(baseUrl: base, httpClient: mock);
 
       final events = await api
-          .streamChat(accessToken: token, payload: {'message': 'hi'})
-          .toList();
+          .streamChat(accessToken: token, payload: {'message': 'hi'}).toList();
 
       expect(events.map((e) => e.event).toList(), ['token', 'error']);
       // Already-streamed content is preserved up to the error (Req 1.3).
@@ -183,8 +181,7 @@ void main() {
       final api = ApiClient(baseUrl: base, httpClient: mock);
 
       final events = await api
-          .streamChat(accessToken: token, payload: {'message': 'hi'})
-          .toList();
+          .streamChat(accessToken: token, payload: {'message': 'hi'}).toList();
 
       expect(events.map((e) => e.event).toList(), ['token', 'done']);
       expect(events.first.json?['text'], 'hello');
@@ -201,9 +198,8 @@ void main() {
       final api = ApiClient(baseUrl: base, httpClient: mock);
 
       expect(
-        () => api
-            .streamChat(accessToken: token, payload: {'message': 'hi'})
-            .toList(),
+        () => api.streamChat(
+            accessToken: token, payload: {'message': 'hi'}).toList(),
         throwsA(
           isA<ApiException>()
               .having((e) => e.statusCode, 'statusCode', 401)

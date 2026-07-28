@@ -20,7 +20,7 @@ void main() {
         () async {
       late http.Request captured;
       final mock = MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response(
           jsonEncode({'id': 7, 'title': 'Case A', 'status': 'draft'}),
           200,
@@ -41,7 +41,8 @@ void main() {
       expect(result['id'], 7);
     });
 
-    test('listCouncilCases GETs /council/cases with pagination query', () async {
+    test('listCouncilCases GETs /council/cases with pagination query',
+        () async {
       late Uri capturedUri;
       final mock = MockClient((request) async {
         capturedUri = request.url;
@@ -63,9 +64,12 @@ void main() {
     test('getCouncilCase GETs the owned case by id', () async {
       late http.Request captured;
       final mock = MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response(
-          jsonEncode({'id': 42, 'result': {'consensus': {}}}),
+          jsonEncode({
+            'id': 42,
+            'result': {'consensus': {}}
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -83,7 +87,7 @@ void main() {
         () async {
       late http.Request captured;
       final mock = MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response(
           jsonEncode({'id': 9}),
           200,
@@ -112,9 +116,12 @@ void main() {
     test('runCouncilCase POSTs run overrides to /cases/{id}/run', () async {
       late http.Request captured;
       final mock = MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response(
-          jsonEncode({'id': 3, 'result': {'final_recommendation': 'x'}}),
+          jsonEncode({
+            'id': 3,
+            'result': {'final_recommendation': 'x'}
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -145,7 +152,10 @@ void main() {
       final mock = MockClient((request) async {
         captured = request;
         return http.Response(
-          jsonEncode({'id': 11, 'intake': {'symptoms': []}}),
+          jsonEncode({
+            'id': 11,
+            'intake': {'symptoms': []}
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );

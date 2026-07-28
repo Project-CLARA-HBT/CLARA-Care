@@ -70,7 +70,7 @@ Future<PersistentSessionStore> _authedStore({
 void main() {
   const base = 'https://api.test';
 
-  http.Response _ok(Map<String, dynamic> body) => http.Response(
+  http.Response ok(Map<String, dynamic> body) => http.Response(
         jsonEncode(body),
         200,
         headers: {'content-type': 'application/json'},
@@ -89,7 +89,7 @@ void main() {
           refreshCalls++;
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['refresh_token'], 'refresh-token');
-          return _ok({
+          return ok({
             'access_token': _refreshedAccess,
             'refresh_token': 'refresh-token-2',
             'role': 'doctor',
@@ -98,7 +98,7 @@ void main() {
         }
         summaryCalls++;
         bearerOnSummary = request.headers['Authorization'];
-        return _ok({'ok': true});
+        return ok({'ok': true});
       });
 
       final api = ApiClient(baseUrl: base, httpClient: mock)
@@ -129,7 +129,7 @@ void main() {
         } else {
           summaryCalls++;
         }
-        return _ok({'ok': true});
+        return ok({'ok': true});
       });
 
       final api = ApiClient(baseUrl: base, httpClient: mock)
@@ -137,8 +137,8 @@ void main() {
 
       await expectLater(
         api.getMobileSummary(accessToken: _expiredAccess),
-        throwsA(isA<ApiException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
+        throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401)),
       );
       expect(refreshCalls, 0, reason: 'no refresh token to exchange');
       expect(summaryCalls, 0, reason: 'request never sent');
@@ -156,7 +156,7 @@ void main() {
       final mock = MockClient((request) async {
         if (request.url.path.endsWith('/auth/refresh')) {
           refreshCalls++;
-          return _ok({
+          return ok({
             'access_token': _refreshedAccess,
             'refresh_token': 'refresh-token-2',
             'role': 'normal',
@@ -168,7 +168,7 @@ void main() {
           return http.Response('{"detail":"expired"}', 401,
               headers: {'content-type': 'application/json'});
         }
-        return _ok({'ok': true});
+        return ok({'ok': true});
       });
 
       final api = ApiClient(baseUrl: base, httpClient: mock)
@@ -202,8 +202,8 @@ void main() {
 
       await expectLater(
         api.getMobileSummary(accessToken: _validAccess),
-        throwsA(isA<ApiException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
+        throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401)),
       );
       expect(refreshCalls, 1, reason: 'exactly one refresh attempt');
       expect(summaryCalls, 1, reason: 'no resend after a failed refresh');
@@ -219,7 +219,7 @@ void main() {
       final mock = MockClient((request) async {
         if (request.url.path.endsWith('/auth/refresh')) {
           refreshCalls++;
-          return _ok({
+          return ok({
             'access_token': _refreshedAccess,
             'refresh_token': 'r2',
             'role': 'normal',
@@ -277,7 +277,7 @@ void main() {
       final mock = MockClient((request) async {
         if (request.url.path.endsWith('/auth/refresh')) {
           refreshCalls++;
-          return _ok({'access_token': _refreshedAccess});
+          return ok({'access_token': _refreshedAccess});
         }
         summaryCalls++;
         return http.Response('{"detail":"expired"}', 401,
@@ -289,8 +289,8 @@ void main() {
 
       await expectLater(
         api.getMobileSummary(accessToken: _expiredAccess),
-        throwsA(isA<ApiException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
+        throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401)),
       );
       expect(refreshCalls, 0, reason: 'no refresh wiring -> legacy behavior');
       expect(summaryCalls, 1, reason: 'request sent once, no retry');
@@ -307,13 +307,13 @@ void main() {
           refreshCalls++;
           // Small delay so the second caller joins the in-flight refresh.
           await Future<void>.delayed(const Duration(milliseconds: 10));
-          return _ok({
+          return ok({
             'access_token': _refreshedAccess,
             'refresh_token': 'r2',
             'role': 'normal',
           });
         }
-        return _ok({'ok': true});
+        return ok({'ok': true});
       });
 
       final api = ApiClient(baseUrl: base, httpClient: mock)

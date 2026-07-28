@@ -60,7 +60,7 @@ void main() {
     return store;
   }
 
-  http.Response _json(Object body, [int status = 200]) => http.Response(
+  http.Response json(Object body, [int status = 200]) => http.Response(
         jsonEncode(body),
         status,
         headers: {'content-type': 'application/json'},
@@ -71,7 +71,7 @@ void main() {
     var calls = 0;
     final mock = MockClient((request) async {
       calls++;
-      return _json({'detail': 'unexpected'}, 404);
+      return json({'detail': 'unexpected'}, 404);
     });
     final apiClient = ApiClient(baseUrl: 'https://api.test', httpClient: mock);
     final session = await buildSession();
@@ -90,8 +90,7 @@ void main() {
     expect(calls, 0);
   });
 
-  testWidgets(
-      'consent gate unlocks list, then add and delete hit CLARA_API',
+  testWidgets('consent gate unlocks list, then add and delete hit CLARA_API',
       (tester) async {
     var consentAccepted = false;
     var postedConsent = false;
@@ -115,7 +114,7 @@ void main() {
       final path = request.url.path;
       final method = request.method;
       if (path.endsWith('/auth/consent-status') && method == 'GET') {
-        return _json({
+        return json({
           'required_version': '2026-04-v1',
           'accepted': consentAccepted,
         });
@@ -123,10 +122,10 @@ void main() {
       if (path.endsWith('/auth/consent') && method == 'POST') {
         postedConsent = true;
         consentAccepted = true;
-        return _json({'accepted_at': '2026-04-01T00:00:00Z'});
+        return json({'accepted_at': '2026-04-01T00:00:00Z'});
       }
       if (path.endsWith('/careguard/cabinet') && method == 'GET') {
-        return _json({'cabinet_id': 1, 'items': items});
+        return json({'cabinet_id': 1, 'items': items});
       }
       if (path.endsWith('/careguard/cabinet/items') && method == 'POST') {
         postedItem = true;
@@ -137,14 +136,14 @@ void main() {
           'source': 'manual',
           'quantity': 10,
         });
-        return _json({'id': 2});
+        return json({'id': 2});
       }
       if (path.contains('/careguard/cabinet/items/') && method == 'DELETE') {
         deletedItem = true;
         items.removeWhere((it) => path.endsWith('/${it['id']}'));
-        return _json({'deleted': true});
+        return json({'deleted': true});
       }
-      return _json({'detail': 'unexpected'}, 404);
+      return json({'detail': 'unexpected'}, 404);
     });
 
     final apiClient = ApiClient(baseUrl: 'https://api.test', httpClient: mock);

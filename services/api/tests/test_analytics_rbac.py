@@ -73,10 +73,10 @@ def _analytics_get_paths() -> list[str]:
     """
 
     paths: set[str] = set()
-    for route in app.routes:
-        path = getattr(route, "path", "")
-        methods = getattr(route, "methods", set()) or set()
-        if "GET" not in methods:
+    # FastAPI 0.135+ represents included routers lazily; OpenAPI remains the
+    # flattened route contract consumed by clients.
+    for path, operations in app.openapi()["paths"].items():
+        if "get" not in operations:
             continue
         if "/system/analytics/" not in path:
             continue

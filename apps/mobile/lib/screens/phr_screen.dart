@@ -38,8 +38,8 @@ class PhrStrings {
 
   String get title => _t('Hồ sơ sức khỏe', 'Health Record');
   String get languageToggle => _t('EN', 'VI');
-  String get loadError =>
-      _t('Không thể tải hồ sơ. Vui lòng thử lại.', 'Could not load the record. Please try again.');
+  String get loadError => _t('Không thể tải hồ sơ. Vui lòng thử lại.',
+      'Could not load the record. Please try again.');
   String get retry => _t('Thử lại', 'Retry');
   String get save => _t('Lưu', 'Save');
   String get saved => _t('Đã lưu hồ sơ.', 'Record saved.');
@@ -63,8 +63,10 @@ class PhrStrings {
   String get weightKg => _t('Cân nặng (kg)', 'Weight (kg)');
   String get phone => _t('Điện thoại', 'Phone');
   String get address => _t('Địa chỉ', 'Address');
-  String get emergencyContactName => _t('Người liên hệ khẩn cấp', 'Emergency contact');
-  String get emergencyContactPhone => _t('SĐT liên hệ khẩn cấp', 'Emergency phone');
+  String get emergencyContactName =>
+      _t('Người liên hệ khẩn cấp', 'Emergency contact');
+  String get emergencyContactPhone =>
+      _t('SĐT liên hệ khẩn cấp', 'Emergency phone');
   String get insuranceId => _t('Mã bảo hiểm', 'Insurance ID');
   String get notes => _t('Ghi chú', 'Notes');
 
@@ -166,8 +168,18 @@ class PhrStrings {
 // endpoint omits them (Requirement 17.3, 6.2).
 // =============================================================================
 
-const List<String> kAllergySeverities = ['mild', 'moderate', 'severe', 'unknown'];
-const List<String> kConditionStatuses = ['active', 'resolved', 'monitoring', 'unknown'];
+const List<String> kAllergySeverities = [
+  'mild',
+  'moderate',
+  'severe',
+  'unknown'
+];
+const List<String> kConditionStatuses = [
+  'active',
+  'resolved',
+  'monitoring',
+  'unknown'
+];
 
 String _str(Object? value) => value == null ? '' : value.toString();
 
@@ -182,8 +194,12 @@ String _verification(Map<String, dynamic> json) {
 }
 
 double? _toDouble(Object? value) {
-  if (value is num) return value.toDouble();
-  if (value is String && value.trim().isNotEmpty) return double.tryParse(value.trim());
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String && value.trim().isNotEmpty) {
+    return double.tryParse(value.trim());
+  }
   return null;
 }
 
@@ -270,7 +286,9 @@ class PhrCondition {
         'id': id,
         'name': name,
         'status': status,
-        'diagnosed_on': (diagnosedOn != null && diagnosedOn!.isNotEmpty) ? diagnosedOn : null,
+        'diagnosed_on': (diagnosedOn != null && diagnosedOn!.isNotEmpty)
+            ? diagnosedOn
+            : null,
         'note': note,
       };
 }
@@ -319,7 +337,8 @@ class PhrMedication {
         'name': name,
         'dose': dose,
         'frequency': frequency,
-        'started_on': (startedOn != null && startedOn!.isNotEmpty) ? startedOn : null,
+        'started_on':
+            (startedOn != null && startedOn!.isNotEmpty) ? startedOn : null,
         'is_current': isCurrent,
         'note': note,
       };
@@ -365,7 +384,10 @@ class PhrRecordModel {
 
   static List<Map<String, dynamic>> _objectList(Object? value) {
     if (value is! List) return const [];
-    return value.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+    return value
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
   }
 
   factory PhrRecordModel.fromJson(Map<String, dynamic> json) {
@@ -383,16 +405,21 @@ class PhrRecordModel {
       emergencyContactPhone: _str(json['emergency_contact_phone']),
       insuranceId: _str(json['insurance_id']),
       notes: _str(json['notes']),
-      allergies: _objectList(json['allergies']).map(PhrAllergy.fromJson).toList(),
-      conditions: _objectList(json['conditions']).map(PhrCondition.fromJson).toList(),
-      medications: _objectList(json['medications']).map(PhrMedication.fromJson).toList(),
+      allergies:
+          _objectList(json['allergies']).map(PhrAllergy.fromJson).toList(),
+      conditions:
+          _objectList(json['conditions']).map(PhrCondition.fromJson).toList(),
+      medications:
+          _objectList(json['medications']).map(PhrMedication.fromJson).toList(),
     );
   }
 
   /// Serializes to the server-validated `PUT /record` payload (Requirement 17.2).
   Map<String, dynamic> toJson() => {
         'full_name': fullName,
-        'date_of_birth': (dateOfBirth != null && dateOfBirth!.isNotEmpty) ? dateOfBirth : null,
+        'date_of_birth': (dateOfBirth != null && dateOfBirth!.isNotEmpty)
+            ? dateOfBirth
+            : null,
         'gender': gender,
         'blood_type': bloodType,
         'height_cm': heightCm,
@@ -671,8 +698,9 @@ class _PhrScreenState extends State<PhrScreen> {
       getAnalyticsClient().capture(AnalyticsEvent(
         MobileAnalyticsEvents.phrSaved,
         {
-          'entry_count':
-              record.allergies.length + record.conditions.length + record.medications.length,
+          'entry_count': record.allergies.length +
+              record.conditions.length +
+              record.medications.length,
         },
       ));
       final updated = PhrRecordModel.fromJson(data);
@@ -735,7 +763,8 @@ class _PhrScreenState extends State<PhrScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, PhrStrings s, PhrRecordModel? record) {
+  Widget _buildBody(
+      BuildContext context, PhrStrings s, PhrRecordModel? record) {
     if (_loading && record == null) {
       // Keep the self-declared disclaimer present even while loading so it is
       // persistent on every PHR surface (Requirement 5.3 / 17.4).
@@ -862,7 +891,8 @@ class _PhrScreenState extends State<PhrScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(s.sectionProfile, style: Theme.of(context).textTheme.titleMedium),
+            Text(s.sectionProfile,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _field(_fullName, s.fullName),
             _field(_dob, s.dateOfBirth, hint: 'YYYY-MM-DD'),
@@ -873,7 +903,8 @@ class _PhrScreenState extends State<PhrScreen> {
             _field(_phone, s.phone, keyboardType: TextInputType.phone),
             _field(_address, s.address),
             _field(_emName, s.emergencyContactName),
-            _field(_emPhone, s.emergencyContactPhone, keyboardType: TextInputType.phone),
+            _field(_emPhone, s.emergencyContactPhone,
+                keyboardType: TextInputType.phone),
             _field(_insurance, s.insuranceId),
             _field(_notes, s.notes, maxLines: 3),
           ],
@@ -931,7 +962,8 @@ class _PhrScreenState extends State<PhrScreen> {
     );
   }
 
-  Future<void> _editAllergy(PhrStrings s, PhrRecordModel record, int? index) async {
+  Future<void> _editAllergy(
+      PhrStrings s, PhrRecordModel record, int? index) async {
     final existing = index == null ? null : record.allergies[index];
     final result = await showModalBottomSheet<PhrAllergy>(
       context: context,
@@ -960,7 +992,8 @@ class _PhrScreenState extends State<PhrScreen> {
         final c = record.conditions[i];
         final details = <String>[
           s.statusLabel(c.status),
-          if (c.diagnosedOn != null && c.diagnosedOn!.isNotEmpty) c.diagnosedOn!,
+          if (c.diagnosedOn != null && c.diagnosedOn!.isNotEmpty)
+            c.diagnosedOn!,
         ];
         return _EntryTile(
           title: c.name,
@@ -974,7 +1007,8 @@ class _PhrScreenState extends State<PhrScreen> {
     );
   }
 
-  Future<void> _editCondition(PhrStrings s, PhrRecordModel record, int? index) async {
+  Future<void> _editCondition(
+      PhrStrings s, PhrRecordModel record, int? index) async {
     final existing = index == null ? null : record.conditions[index];
     final result = await showModalBottomSheet<PhrCondition>(
       context: context,
@@ -1017,7 +1051,8 @@ class _PhrScreenState extends State<PhrScreen> {
     );
   }
 
-  Future<void> _editMedication(PhrStrings s, PhrRecordModel record, int? index) async {
+  Future<void> _editMedication(
+      PhrStrings s, PhrRecordModel record, int? index) async {
     final existing = index == null ? null : record.medications[index];
     final result = await showModalBottomSheet<PhrMedication>(
       context: context,
@@ -1059,7 +1094,8 @@ class PhrDisclaimerBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 18, color: scheme.onSecondaryContainer),
+          Icon(Icons.info_outline,
+              size: 18, color: scheme.onSecondaryContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -1105,7 +1141,8 @@ class _EntrySection extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(title,
+                      style: Theme.of(context).textTheme.titleMedium),
                 ),
                 TextButton.icon(
                   onPressed: onAdd,
@@ -1267,8 +1304,10 @@ class _AllergyEditorState extends State<_AllergyEditor> {
         reaction: _reaction.text.trim(),
         severity: _severity,
         note: _note.text.trim(),
-        informationSource: widget.existing?.informationSource ?? 'self-declared',
-        verificationStatus: widget.existing?.verificationStatus ?? 'unconfirmed',
+        informationSource:
+            widget.existing?.informationSource ?? 'self-declared',
+        verificationStatus:
+            widget.existing?.verificationStatus ?? 'unconfirmed',
       ),
     );
   }
@@ -1340,8 +1379,10 @@ class _ConditionEditorState extends State<_ConditionEditor> {
         status: _status,
         diagnosedOn: diagnosed.isEmpty ? null : diagnosed,
         note: _note.text.trim(),
-        informationSource: widget.existing?.informationSource ?? 'self-declared',
-        verificationStatus: widget.existing?.verificationStatus ?? 'unconfirmed',
+        informationSource:
+            widget.existing?.informationSource ?? 'self-declared',
+        verificationStatus:
+            widget.existing?.verificationStatus ?? 'unconfirmed',
       ),
     );
   }
@@ -1364,7 +1405,8 @@ class _ConditionEditorState extends State<_ConditionEditor> {
           labelFor: s.statusLabel,
           onChanged: (v) => setState(() => _status = v),
         ),
-        _EditorField(controller: _diagnosedOn, label: s.diagnosedOn, hint: 'YYYY-MM-DD'),
+        _EditorField(
+            controller: _diagnosedOn, label: s.diagnosedOn, hint: 'YYYY-MM-DD'),
         _EditorField(controller: _note, label: s.note, maxLines: 2),
       ],
     );
@@ -1421,8 +1463,10 @@ class _MedicationEditorState extends State<_MedicationEditor> {
         startedOn: started.isEmpty ? null : started,
         isCurrent: _isCurrent,
         note: _note.text.trim(),
-        informationSource: widget.existing?.informationSource ?? 'self-declared',
-        verificationStatus: widget.existing?.verificationStatus ?? 'unconfirmed',
+        informationSource:
+            widget.existing?.informationSource ?? 'self-declared',
+        verificationStatus:
+            widget.existing?.verificationStatus ?? 'unconfirmed',
       ),
     );
   }
@@ -1440,7 +1484,8 @@ class _MedicationEditorState extends State<_MedicationEditor> {
         _EditorField(controller: _name, label: s.name),
         _EditorField(controller: _dose, label: s.dose),
         _EditorField(controller: _frequency, label: s.frequency),
-        _EditorField(controller: _startedOn, label: s.startedOn, hint: 'YYYY-MM-DD'),
+        _EditorField(
+            controller: _startedOn, label: s.startedOn, hint: 'YYYY-MM-DD'),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(s.isCurrent),
@@ -1503,7 +1548,8 @@ class _EditorScaffold extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(onPressed: onDone, child: Text(doneLabel)),
+                  child:
+                      FilledButton(onPressed: onDone, child: Text(doneLabel)),
                 ),
               ],
             ),
@@ -1565,14 +1611,15 @@ class _Dropdown extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
           isDense: true,
         ),
         items: options
-            .map((o) => DropdownMenuItem<String>(value: o, child: Text(labelFor(o))))
+            .map((o) =>
+                DropdownMenuItem<String>(value: o, child: Text(labelFor(o))))
             .toList(),
         onChanged: (v) {
           if (v != null) onChanged(v);

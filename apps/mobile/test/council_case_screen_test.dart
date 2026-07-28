@@ -92,7 +92,8 @@ void main() {
 
       if (path == '/api/v1/council/cases' && method == 'POST') {
         return http.Response(
-          jsonEncode({'id': caseId, 'title': 'Ca hội chẩn mới', 'status': 'draft'}),
+          jsonEncode(
+              {'id': caseId, 'title': 'Ca hội chẩn mới', 'status': 'draft'}),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -117,7 +118,8 @@ void main() {
           headers: {'content-type': 'application/json'},
         );
       }
-      return http.Response('{"detail":"unexpected ${request.method} $path"}', 404,
+      return http.Response(
+          '{"detail":"unexpected ${request.method} $path"}', 404,
           headers: {'content-type': 'application/json'});
     });
   }
@@ -161,27 +163,31 @@ void main() {
       await driveFlowToResult(tester, apiClient: apiClient, session: session);
 
       // Result phase: the "tạo ca mới" reset control marks we reached phase 3.
+      await tester.dragUntilVisible(
+        find.text('Tạo ca hội chẩn mới'),
+        find.byType(Scrollable),
+        const Offset(0, -300),
+      );
       expect(find.text('Tạo ca hội chẩn mới'), findsOneWidget);
 
       // Consensus summary (Req 8.3).
       expect(find.text('Tóm tắt đồng thuận'), findsOneWidget);
       expect(
-        find.text(
-            'Cả ba chuyên khoa đồng ý cần loại trừ hội chứng vành cấp.'),
+        find.text('Cả ba chuyên khoa đồng ý cần loại trừ hội chứng vành cấp.'),
         findsOneWidget,
       );
 
       // Final recommendation (Req 8.3).
       expect(find.text('Khuyến nghị cuối cùng'), findsOneWidget);
       expect(
-        find.text(
-            'Khuyến nghị nhập viện theo dõi và đo troponin chuỗi.'),
+        find.text('Khuyến nghị nhập viện theo dõi và đo troponin chuỗi.'),
         findsOneWidget,
       );
 
       // Divergence: header + the divergence note and the conflict note are both
       // surfaced, and the divergence banner title is shown (Req 8.3).
-      expect(find.text('Có điểm khác biệt giữa các chuyên khoa'), findsOneWidget);
+      expect(
+          find.text('Có điểm khác biệt giữa các chuyên khoa'), findsOneWidget);
       expect(find.text('Điểm cần lưu ý / bất đồng'), findsOneWidget);
       expect(
         find.textContaining('Tim mạch ưu tiên chụp mạch vành sớm'),

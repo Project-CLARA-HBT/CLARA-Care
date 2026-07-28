@@ -147,13 +147,13 @@ def _classify(episode: LifeMapEpisode) -> list[CriticalField]:
 
 
 def _answered_field_keys(db: Session, profile_id: int, episode_id: int) -> set[str]:
-    """Field keys already satisfied by a confirmed/reported event on the episode."""
+    """Field keys already supplied by a confirmed or explicitly reported fact."""
 
     rows = db.execute(
         select(LifeMapEvent.event_type, LifeMapEvent.payload_json).where(
             LifeMapEvent.profile_id == profile_id,
             LifeMapEvent.episode_id == episode_id,
-            LifeMapEvent.truth_state.in_(("confirmed", "reported")),
+            LifeMapEvent.truth_state.in_(("confirmed", "user_reported", "reported")),
         )
     ).all()
     answered: set[str] = set()

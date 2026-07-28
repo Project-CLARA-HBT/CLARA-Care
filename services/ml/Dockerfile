@@ -1,16 +1,21 @@
 FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
 COPY services/ml/pyproject.toml /app/pyproject.toml
+COPY services/ml/uv.lock /app/uv.lock
 COPY services/ml/README.md /app/README.md
 COPY services/ml/src /app/src
 
-RUN python -m pip install --upgrade pip \
-    && pip install --no-cache-dir .
+# Use the exact graph exercised by tests. Resolving broad lower bounds during
+# a production build can silently introduce incompatible FastAPI/LangChain
+# releases even when application source has not changed.
+RUN python -m pip install --no-cache-dir "uv==0.8.22" \
+    && uv sync --frozen --no-dev --no-editable
 
 EXPOSE 8010
 

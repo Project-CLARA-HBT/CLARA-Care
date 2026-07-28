@@ -728,10 +728,9 @@ class Settings(BaseSettings):
     # --- LifeMap transactional-outbox relay (Phase 0, P0-WP5) -----------------
     # LifeMap command handlers durably write integration events into
     # ``lifemap_outbox_events`` alongside each mutation, but nothing drained the
-    # ``pending`` rows. This flag starts an in-process background relay that
-    # publishes and marks those rows ``published``. Additive + default OFF ⇒
-    # byte-for-byte prior behavior (rows accumulate as ``pending``); flipping it
-    # off at runtime cleanly stops draining with no data loss.
+    # ``pending`` rows. The relay now runs only as the dedicated
+    # ``python -m clara_api.lifemap.worker`` process; the legacy flag remains as
+    # a compatibility setting but never starts a thread inside an API replica.
     lifemap_outbox_relay_enabled: bool = Field(
         default=False,
         validation_alias="LIFEMAP_OUTBOX_RELAY_ENABLED",
@@ -746,6 +745,74 @@ class Settings(BaseSettings):
         validation_alias="LIFEMAP_OUTBOX_RELAY_BATCH_SIZE",
         gt=0,
         le=1000,
+    )
+    lifemap_outbox_lease_seconds: float = Field(
+        default=60.0,
+        validation_alias="LIFEMAP_OUTBOX_LEASE_SECONDS",
+        ge=5.0,
+        le=3600.0,
+    )
+    lifemap_outbox_backoff_seconds: float = Field(
+        default=1.0,
+        validation_alias="LIFEMAP_OUTBOX_BACKOFF_SECONDS",
+        ge=0.0,
+        le=300.0,
+    )
+    lifemap_worker_health_port: int = Field(
+        default=8020,
+        validation_alias="LIFEMAP_WORKER_HEALTH_PORT",
+        ge=1,
+        le=65535,
+    )
+
+    # --- LifeMap V2 staged rollout -----------------------------------------
+    # Server-authoritative and fail-closed. Clients may hide unavailable
+    # surfaces from capability responses but cannot enable any behavior.
+    lifemap_v2_enabled: bool = Field(default=False, validation_alias="LIFEMAP_V2_ENABLED")
+    lifemap_capture_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_CAPTURE_ENABLED"
+    )
+    lifemap_baselines_v2_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_BASELINES_V2_ENABLED"
+    )
+    lifemap_next_question_v2_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_NEXT_QUESTION_V2_ENABLED"
+    )
+    lifemap_replay_v2_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_REPLAY_V2_ENABLED"
+    )
+    lifemap_visit_extraction_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_VISIT_EXTRACTION_ENABLED"
+    )
+    lifemap_evidence_monitor_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_EVIDENCE_MONITOR_ENABLED"
+    )
+    lifemap_fhir_export_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_FHIR_EXPORT_ENABLED"
+    )
+    lifemap_ask_ai_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_ASK_AI_ENABLED"
+    )
+    lifemap_ai_summaries_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_SUMMARIES_ENABLED"
+    )
+    lifemap_ai_entity_resolution_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_ENTITY_RESOLUTION_ENABLED"
+    )
+    lifemap_ai_review_findings_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_REVIEW_FINDINGS_ENABLED"
+    )
+    lifemap_ai_pattern_shadow_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_PATTERN_SHADOW_ENABLED"
+    )
+    lifemap_ai_forecast_shadow_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_FORECAST_SHADOW_ENABLED"
+    )
+    lifemap_ai_question_ranker_shadow_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_QUESTION_RANKER_SHADOW_ENABLED"
+    )
+    lifemap_ai_evidence_matching_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_AI_EVIDENCE_MATCHING_ENABLED"
     )
 
     # --- LifeMap next-best-question engine (Phase 2, P2-WP5) --------------------

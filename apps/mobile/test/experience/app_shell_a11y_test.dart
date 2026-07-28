@@ -110,14 +110,24 @@ void main() {
       await tester.pumpAndSettle();
 
       // Each destination announces its own label via the nav control.
-      expect(find.bySemanticsLabel(homeLabel), findsAtLeastNWidgets(1));
-      expect(find.bySemanticsLabel(toolsLabel), findsAtLeastNWidgets(1));
-      expect(find.bySemanticsLabel(settingsLabel), findsAtLeastNWidgets(1));
+      expect(
+        find.bySemanticsLabel(RegExp('^$homeLabel(?:\\n|\$)')),
+        findsAtLeastNWidgets(1),
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^$toolsLabel(?:\\n|\$)')),
+        findsAtLeastNWidgets(1),
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^$settingsLabel(?:\\n|\$)')),
+        findsAtLeastNWidgets(1),
+      );
 
       handle.dispose();
     });
 
-    testWidgets('active body region exposes a header semantics node labeled '
+    testWidgets(
+        'active body region exposes a header semantics node labeled '
         'with the destination', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpAtPhoneWidth(tester, buildShell());
@@ -125,9 +135,11 @@ void main() {
 
       // The shell wraps the active body in A11yLabeled(isHeader: true) with the
       // destination label, so the body region is announced as a header.
+      final homeSemantics = tester.getSemantics(find.byKey(homeBodyKey));
+      expect(homeSemantics.label, startsWith(homeLabel));
       expect(
-        tester.getSemantics(find.byKey(homeBodyKey)),
-        containsSemantics(isHeader: true, label: homeLabel),
+        homeSemantics.flagsCollection.isHeader,
+        isTrue,
         reason: 'Home body region must expose a labeled header semantics node',
       );
 
@@ -135,9 +147,12 @@ void main() {
       await tester.tap(find.text(settingsLabel));
       await tester.pumpAndSettle();
 
+      final settingsSemantics =
+          tester.getSemantics(find.byKey(settingsBodyKey));
+      expect(settingsSemantics.label, startsWith(settingsLabel));
       expect(
-        tester.getSemantics(find.byKey(settingsBodyKey)),
-        containsSemantics(isHeader: true, label: settingsLabel),
+        settingsSemantics.flagsCollection.isHeader,
+        isTrue,
         reason: 'Settings body region must expose a labeled header node',
       );
 

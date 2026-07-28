@@ -9,7 +9,6 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from clara_api.api.router import api_router
 from clara_api.api.v1.endpoints.research import start_research_job_recovery
-from clara_api.lifemap.outbox_relay import start_outbox_relay
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
@@ -231,16 +230,6 @@ def init_db_schema() -> None:
     with SessionLocal() as db:
         ensure_bootstrap_admin(db, settings)
     start_research_job_recovery()
-    # LifeMap transactional-outbox relay (Phase 0, P0-WP5). Default-off: with
-    # LIFEMAP_OUTBOX_RELAY_ENABLED unset the box behaves exactly as before
-    # (pending rows accumulate), so enabling it is a reversible, no-schema-change
-    # operation. When on, a daemon drains pending events to the structured-log
-    # sink so the outbox no longer silently backs up.
-    if settings.lifemap_outbox_relay_enabled:
-        start_outbox_relay(
-            interval_seconds=settings.lifemap_outbox_relay_interval_seconds,
-            batch_size=settings.lifemap_outbox_relay_batch_size,
-        )
 
 
 @app.exception_handler(ClaraAPIError)

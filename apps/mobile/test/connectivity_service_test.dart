@@ -5,8 +5,6 @@
 //    the existing [ApiException] type. A `MockClient` backs a real [ApiClient]
 //    so no live network is required.
 
-import 'dart:async';
-
 import 'package:clara_mobile/core/api_client.dart';
 import 'package:clara_mobile/core/connectivity_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +30,8 @@ void main() {
       expect(service.currentValue, isTrue);
     });
 
-    test('de-duplicates repeated values (only real transitions emit)', () async {
+    test('de-duplicates repeated values (only real transitions emit)',
+        () async {
       final service = DefaultConnectivityService(initialValue: true);
       addTearDown(service.dispose);
 

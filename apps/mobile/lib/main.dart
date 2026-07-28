@@ -6,6 +6,7 @@ import 'core/feature_flags.dart';
 import 'core/session_store.dart';
 import 'experience/language_controller.dart';
 import 'experience/theme_controller.dart';
+import 'widgets/screen_error_boundary.dart';
 
 // Default to the documented local dev API port (8100). The web app and API
 // docs (README) run the gateway on 8100; the previous 8000 default was config
@@ -18,6 +19,7 @@ const _defaultApiBaseUrl = String.fromEnvironment(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ScreenErrorBoundary.install();
 
   final sessionStore = SessionStore();
   final apiClient = ApiClient(baseUrl: _defaultApiBaseUrl);

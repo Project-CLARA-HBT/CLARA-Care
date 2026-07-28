@@ -1,0 +1,153 @@
+# CLARA LifeMap Production Convergence — Implementation Status
+
+Date: 2026-07-28
+Status: foundation milestone implemented and repository-tested; general
+availability is not approved
+
+This record separates implemented engineering from work that requires clinical,
+privacy, security, operational, or prospective-study evidence. It must not be
+used as a production-release approval.
+
+## Implemented in this milestone
+
+- Added the 16 server-authoritative LifeMap V2/AI capability flags. Every flag
+  defaults off and is projected consistently through profile and mobile
+  capability responses.
+- Added opaque public identifiers, lifecycle/version fields, source references,
+  append-only event revisions and task actions, command records, projection
+  dependencies, and durable outbox state through additive migration
+  `20260728_0030_lifemap_v2_foundation`.
+- Added profile-scoped LifeMap resolution with non-enumerating denial behavior.
+  LifeMap, evidence-question, and Family task/episode paths accept canonical
+  opaque identifiers while retaining bounded legacy compatibility.
+- Added deterministic truth/task state machines and typed confirm, correct,
+  dispute, invalidate, resolve, accept, complete, episode, and task commands.
+  Generic capture can no longer self-assert confirmed truth.
+- Added request-digest idempotency, optimistic concurrency, stable error codes,
+  command status lookup, atomic command/outbox persistence, and append-only
+  history queries.
+- Replaced the API-hosted LifeMap relay with a separately deployable worker,
+  leased claims and owner-scoped heartbeats, retry/backoff, dead-letter state,
+  HTTP liveness/readiness endpoints, and audited admin
+  health/inspect/replay/resolve operations.
+- Converged opaque LifeMap identifiers through evidence, insights,
+  next-best-question, visit-plan confirmation, and Family delegation flows.
+- Reclassified the Council “neural” shadow scorer truthfully as a fixed-weight,
+  untrained heuristic while preserving its legacy alias and shadow containment.
+- Updated browser E2E fixtures to use authenticated production-style API mocks
+  and canonical Today, LifeMap, and Medicines routes.
+- Fixed Flutter lifecycle, accessibility, reduced-motion, Material-version, and
+  test-harness defects encountered by the unified mobile path.
+- Corrected stale operational documentation links and the docs checker’s URL
+  false positive.
+- Made the ML production image consume the committed frozen dependency lock,
+  preventing untested framework upgrades during deployment.
+
+## Verification evidence
+
+| Gate | Result |
+| --- | --- |
+| API full regression | 1,113 passed; 38 deprecation/OpenAPI warnings |
+| API changed-path regression after final edits | 17 passed |
+| API Ruff | Passed for `src` and `tests` |
+| LifeMap/Family focused mypy | Passed for seven changed foundation modules |
+| ML full regression | Passed |
+| Council heuristic tests | Included in the passing ML regression suite |
+| Web unit | 566 passed across 59 files |
+| Web lint | Passed with five existing warnings |
+| Web production build | Passed |
+| Browser E2E | 6 passed; 2 expected device-specific skips |
+| Flutter analyze | Passed |
+| Flutter tests | 411 passed |
+| Android release build | Passed against `https://theclaracare.com` |
+| Migration rehearsal | SQLite upgrade, downgrade, and re-upgrade passed |
+| Documentation links | Passed |
+| Diff whitespace | Passed |
+| Production PostgreSQL migration | Upgraded to `20260728_0030`; all public-ID reconciliation counts were zero |
+| Production smoke | Web/API/ML/worker healthy; authenticated Today/capabilities/outbox passed |
+
+Release APK:
+
+- Path:
+  `apps/mobile/build/app/outputs/flutter-apk/app-release.apk`
+- SHA-256:
+  `9ebef23c5f945ca9de87a93702d3ba9ce967b5dfd9dc7794d452cdb88647afa2`
+- API base:
+  `https://theclaracare.com`
+
+## Known repository-wide quality debt
+
+The service-scoped gates above are green. The root lint configuration currently
+reports 602 historical findings across ML and utility scripts, and the full API
+mypy run reports 188 historical errors across 24 files. The changed LifeMap
+foundation modules are clean under their focused checks. These baselines were
+not mass-rewritten because doing so would mix unrelated behavior changes into
+this safety-sensitive milestone.
+
+The API suite also reports existing FastAPI/Starlette deprecations and duplicate
+OpenAPI operation-ID warnings. They are non-failing, but should be resolved in a
+separate compatibility cleanup.
+
+## Approval-gated and not complete
+
+The unchecked tasks in `tasks.md` remain real work. In particular, the
+following cannot be declared complete from repository implementation alone:
+
+- intended-use, regulated-software, hazard, privacy, retention, and
+  jurisdiction approvals;
+- Universal Capture artifact security and field-level clinical evaluation;
+- clinically selected baseline/question rules and Vietnamese/English usability
+  pilots;
+- grounded visit extraction evaluation;
+- FHIR R4/IPS terminology licensing and conformance certification;
+- penetration, load/soak, backup/restore, revocation-SLO, and production-like
+  no-PII trace evidence;
+- production shadow comparison, allowlisted rollout, kill-switch ownership, and
+  rollback-window evidence;
+- governed model/dataset/artifact registry, signed artifacts, prospective AI
+  evaluation, and any predictive/adaptive research.
+
+All new LifeMap V2 and AI flags therefore remain off. No unchecked task should
+be converted to complete until its task-level definition of done and phase exit
+gate are evidenced.
+
+## Production deployment evidence
+
+The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
+
+- Public `/` and `/login` returned 200; authenticated destinations returned the
+  expected 307 login redirect; a versioned Next.js asset returned 200.
+- Authenticated profile capabilities and Today returned 200.
+- All 16 new LifeMap V2/AI flags were present and false.
+- Outbox operational health returned `ok`, with zero pending and zero
+  dead-letter rows.
+- API, ML, web, and the standalone LifeMap worker were healthy, with no
+  traceback/fatal/panic log matches in the post-deployment window.
+- The worker health timeout was raised from 5 to 15 seconds after production
+  showed that cold Python imports could narrowly exceed five seconds on the
+  one-core host. The database probe itself remained successful.
+- Rollback artifacts are stored on the VPS under
+  `/opt/clara-care/backups/pre-lifemap-v2-20260728-180210-*`: a validated
+  PostgreSQL custom-format dump, source snapshot, and SHA-256 manifest.
+
+A follow-up API/worker rollout on the same date added the owner-scoped lease
+heartbeat, real `/health/live` and `/health/ready` worker probes, retry-budget
+reset on audited replay, and audited terminal dead-letter resolution.
+Post-deployment evidence showed:
+
+- worker liveness and readiness both returned 200;
+- authenticated outbox health returned `ok`, with zero pending and zero
+  dead-letter rows and the new resolved counter present;
+- PostgreSQL remained at migration head `20260728_0030`;
+- public `/` and `/login` returned 200; and
+- API and worker logs contained no traceback, unhandled, fatal, or panic
+  matches.
+
+Task 3.2 was subsequently completed with a real concurrent PostgreSQL
+`SKIP LOCKED` contract. Four simultaneous workers claimed 64 isolated test rows
+without overlap or loss, then a recovery worker reclaimed exactly one expired
+lease. The test created and dropped a randomly named schema and did not read or
+mutate production application tables.
+
+This deployment does not enable approval-gated V2/AI capabilities and is not a
+general-availability approval.

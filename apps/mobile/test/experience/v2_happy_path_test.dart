@@ -97,7 +97,7 @@ void main() {
 
   /// A summary that lights up a couple of role-scoped quick actions on Home so
   /// the success path (not just the empty one) is exercised end to end.
-  FakeApiClient _apiWithSummary() {
+  FakeApiClient apiWithSummary() {
     final api = FakeApiClient();
     api.stub('getMobileSummary', response: const {
       'feature_flags': {
@@ -113,7 +113,7 @@ void main() {
     testWidgets(
         'first run: onboarding → shell → Home renders without exceptions at '
         'phone width', (tester) async {
-      final api = _apiWithSummary();
+      final api = apiWithSummary();
       final session = await FakeSessionStore.authenticated(role: 'normal');
       final onboardingStore =
           OnboardingStore(storage: _InMemoryOnboardingStorage());
@@ -150,7 +150,7 @@ void main() {
     testWidgets(
         'returning user (onboarding seen): shell + Home render without '
         'exceptions at tablet width', (tester) async {
-      final api = _apiWithSummary();
+      final api = apiWithSummary();
       final session = await FakeSessionStore.authenticated(role: 'doctor');
       // Pre-seed "seen" so the gate goes straight to the shell.
       final onboardingStore = OnboardingStore(
@@ -183,7 +183,7 @@ void main() {
     testWidgets(
         'navigating shell destinations after onboarding raises no exceptions',
         (tester) async {
-      final api = _apiWithSummary();
+      final api = apiWithSummary();
       final session = await FakeSessionStore.authenticated(role: 'normal');
       final onboardingStore = OnboardingStore(
         storage: _InMemoryOnboardingStorage(

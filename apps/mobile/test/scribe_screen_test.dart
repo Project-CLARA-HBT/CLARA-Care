@@ -85,8 +85,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Tính năng ghi chú lâm sàng chưa được bật.'),
-        findsOneWidget);
+    expect(
+        find.text('Tính năng ghi chú lâm sàng chưa được bật.'), findsOneWidget);
     expect(calls, 0);
   });
 
@@ -163,8 +163,8 @@ void main() {
         sessionStore: session,
         featureFlags: _resolver(enabled: true),
         // Provide audio bytes so the upload affordance is rendered.
-        audioProvider: () async =>
-            ScribeAudioClip(bytes: utf8.encode('fake-audio'), filename: 'a.webm'),
+        audioProvider: () async => ScribeAudioClip(
+            bytes: utf8.encode('fake-audio'), filename: 'a.webm'),
       ),
     ));
     await tester.pumpAndSettle();
@@ -199,7 +199,8 @@ void main() {
         reason: 'audio processing is allowed once consent is captured');
   });
 
-  testWidgets('clinical transcript + SOAP are sanitized and absent from analytics',
+  testWidgets(
+      'clinical transcript + SOAP are sanitized and absent from analytics',
       (tester) async {
     final transport = RecordingAnalyticsTransport();
     final analytics = consentedAnalytics(transport);
@@ -263,6 +264,11 @@ void main() {
     expect(find.textContaining('RAG mode'), findsNothing);
     expect(find.textContaining('retrieval'), findsNothing);
     // The genuine assessment content (minus the label) is still rendered.
+    await tester.dragUntilVisible(
+      find.textContaining('viêm họng cấp'),
+      find.byType(ListView).first,
+      const Offset(0, -300),
+    );
     expect(find.textContaining('viêm họng cấp'), findsOneWidget);
 
     // No clinical free text reached analytics: every captured event carries

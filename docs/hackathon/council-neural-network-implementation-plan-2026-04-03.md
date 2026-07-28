@@ -1,4 +1,10 @@
-# Council Neural Network Plan + Execution (2026-04-03)
+# Council Fixed-Weight Heuristic Shadow — Historical Plan (2026-04-03)
+
+> Correction (2026-07-28): despite the original name, this implementation has
+> hand-authored fixed weights and no training dataset/checkpoint. It is a
+> deterministic heuristic shadow, not a trained neural network. The truthful
+> runtime identifier is `council-fixed-weight-heuristic-shadow-v2`; the old
+> `council-neural-shadow-v1` string is retained only as a legacy alias.
 
 ## Mục tiêu
 - Bổ sung tầng neural network cho luồng hội chẩn CLARA theo hướng **decision support**.
@@ -19,7 +25,10 @@
 {
   "enabled": true,
   "shadow_mode": true,
-  "model_version": "council-neural-shadow-v1",
+  "model_version": "council-fixed-weight-heuristic-shadow-v2",
+  "legacy_model_alias": "council-neural-shadow-v1",
+  "model_class": "fixed_weight_heuristic",
+  "trained": false,
   "risk_probability": 0.67,
   "risk_band": "medium",
   "recommended_triage": "same_day_review",

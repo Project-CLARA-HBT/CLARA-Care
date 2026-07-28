@@ -33,7 +33,8 @@ class _Bomb extends StatelessWidget {
 }
 
 void main() {
-  tearDown(ScreenErrorBoundary.debugReset);
+  setUpAll(ScreenErrorBoundary.install);
+  tearDownAll(ScreenErrorBoundary.debugReset);
 
   testWidgets(
       'throwing child renders the fallback without crashing or leaking a stack '
@@ -117,7 +118,7 @@ void main() {
 
   testWidgets('install() is idempotent and reports installed state',
       (tester) async {
-    expect(ScreenErrorBoundary.isInstalled, isFalse);
+    expect(ScreenErrorBoundary.isInstalled, isTrue);
     ScreenErrorBoundary.install();
     ScreenErrorBoundary.install();
     expect(ScreenErrorBoundary.isInstalled, isTrue);

@@ -65,6 +65,11 @@ void main() {
 
     // Analytics defaults to OFF (privacy-first); the switch reflects that.
     expect(store.isGranted(ConsentPurpose.analytics), isFalse);
+    await tester.dragUntilVisible(
+      find.text(ConsentPurpose.analytics.titleVi),
+      find.byType(Scrollable),
+      const Offset(0, -240),
+    );
 
     final analyticsSwitch = find.ancestor(
       of: find.text(ConsentPurpose.analytics.titleVi),
@@ -110,6 +115,11 @@ void main() {
 
     // load() synced the facade to the persisted analytics grant (false) →
     // transmission is suppressed even though credentials are present.
+    await tester.dragUntilVisible(
+      find.text(ConsentPurpose.analytics.titleVi),
+      find.byType(Scrollable),
+      const Offset(0, -240),
+    );
     final analyticsSwitch = find.ancestor(
       of: find.text(ConsentPurpose.analytics.titleVi),
       matching: find.byType(SwitchListTile),

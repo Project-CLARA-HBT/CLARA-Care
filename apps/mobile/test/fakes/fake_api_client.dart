@@ -64,8 +64,8 @@ class _UnusableHttpClient extends http.BaseClient {
 /// Method-level fake of [ApiClient]. Extends the real client so it is a drop-in
 /// substitute wherever an `ApiClient` is required.
 class FakeApiClient extends ApiClient {
-  FakeApiClient({String baseUrl = 'https://fake.clara.test'})
-      : super(baseUrl: baseUrl, httpClient: _UnusableHttpClient());
+  FakeApiClient({super.baseUrl = 'https://fake.clara.test'})
+      : super(httpClient: _UnusableHttpClient());
 
   /// Every call made to this fake, in order.
   final List<FakeApiInvocation> invocations = <FakeApiInvocation>[];
@@ -462,7 +462,8 @@ class FakeApiClient extends ApiClient {
     required String taskId,
     Map<String, dynamic> evidence = const <String, dynamic>{},
   }) {
-    return _dispatch('completeLifeMapTask', {'taskId': taskId, 'evidence': evidence},
+    return _dispatch(
+        'completeLifeMapTask', {'taskId': taskId, 'evidence': evidence},
         accessToken: accessToken);
   }
 

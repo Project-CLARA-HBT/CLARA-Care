@@ -101,7 +101,10 @@ while IFS= read -r hit; do
   errors=$((errors + 1))
 done < <(
   if command -v rg >/dev/null 2>&1; then
-    rg -n '/Users/|/home/|/private/' docs --glob '!docs/archive/**' || true
+    # Ignore URL path segments such as https://example.org/home/... while still
+    # rejecting machine-specific absolute filesystem paths.
+    rg -n -P '(?<![A-Za-z0-9.:])/(Users|home|private)/' \
+      docs --glob '!docs/archive/**' || true
   else
     grep -R -nE '/Users/|/home/|/private/' docs --include='*.md' --exclude-dir='archive' || true
   fi

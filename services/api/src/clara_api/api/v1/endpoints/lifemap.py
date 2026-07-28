@@ -1,28 +1,56 @@
-"""Small, truthful LifeMap service contracts exposed from Phase 0."""
+"""Profile-scoped LifeMap commands and projections.
+
+The compatibility routes now enforce the V2 safety floor: generic capture can
+create only drafts or user-reported facts, truth changes use typed commands,
+public identifiers are opaque, and every mutation records an idempotent result,
+append-only action/revision, and transactional outbox event.
+"""
+
+from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from clara_api.api.v1.endpoints.profiles import current_user
+from clara_api.compliance.redaction import hash_user_ref
+from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     LifeMapCareTask,
+    LifeMapCommandRecord,
     LifeMapEpisode,
     LifeMapEvent,
+    LifeMapEventRevision,
     LifeMapOutboxEvent,
-    PhrProfile,
+    LifeMapProjectionDependency,
+    LifeMapTaskAction,
 )
 from clara_api.db.session import get_db
+from clara_api.lifemap.commands import (
+    add_outbox,
+    replay_command,
+    request_digest,
+    store_command,
+)
+from clara_api.lifemap.domain import (
+    InvalidTransition,
+    canonical_truth_state,
+    require_task_transition,
+    require_truth_transition,
+)
+from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.observability.admin_audit import record_admin_action
 
 router = APIRouter()
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
-SCHEMA_VERSION = "2026-07-25.1"
+ADMIN_ROLE_DEP = Depends(require_roles("admin"))
+SCHEMA_VERSION = "lifemap.v2"
+TRUTH_POLICY_VERSION = "lifemap-truth-v2"
 
 
 class LifeMapHealthResponse(BaseModel):
@@ -37,7 +65,17 @@ class EventCreateRequest(BaseModel):
     occurred_at: datetime
     payload: dict = Field(default_factory=dict)
     provenance: dict = Field(default_factory=dict)
-    truth_state: str = "confirmed"
+    truth_state: str = "user_reported"
+
+
+class EventTruthRequest(BaseModel):
+    reason: str = Field(default="", max_length=255)
+
+
+class EventCorrectionRequest(BaseModel):
+    payload: dict
+    occurred_at: datetime | None = None
+    reason: str = Field(min_length=2, max_length=255)
 
 
 class EpisodeCreateRequest(BaseModel):
@@ -55,6 +93,14 @@ class TaskCompletionRequest(BaseModel):
     evidence: dict = Field(default_factory=dict)
 
 
+class TaskActionRequest(BaseModel):
+    reason: str = Field(default="", max_length=255)
+
+
+class DeadLetterReplayRequest(BaseModel):
+    reason_code: str = Field(min_length=2, max_length=64)
+
+
 class TodayResponse(BaseModel):
     generated_at: datetime
     tasks: list[dict]
@@ -62,230 +108,777 @@ class TodayResponse(BaseModel):
     pending_confirmation_count: int
 
 
-def _profile(db: Session, token: TokenPayload) -> tuple[object, PhrProfile]:
-    user = current_user(db, token)
-    profile = db.execute(
-        select(PhrProfile).where(PhrProfile.user_id == user.id)
-    ).scalar_one_or_none()
-    if profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Create your health profile first"
-        )
-    return user, profile
-
-
-def _command_id(profile_id: int, operation: str, key: str) -> str:
-    if not key or len(key) > 128:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid Idempotency-Key"
-        )
-    return hashlib.sha256(f"{profile_id}:{operation}:{key}".encode()).hexdigest()
-
-
-def _replay(db: Session, command_id: str) -> dict | None:
-    event = db.execute(
-        select(LifeMapOutboxEvent).where(LifeMapOutboxEvent.event_id == command_id)
-    ).scalar_one_or_none()
-    return (
-        event.payload_json if event is not None and isinstance(event.payload_json, dict) else None
-    )
-
-
-def _outbox(
+def _scope(
     db: Session,
-    profile_id: int,
-    command_id: str,
-    aggregate_type: str,
-    aggregate_id: int,
-    event_type: str,
-) -> None:
-    db.add(
-        LifeMapOutboxEvent(
-            event_id=command_id,
-            profile_id=profile_id,
-            aggregate_type=aggregate_type,
-            aggregate_id=str(aggregate_id),
-            event_type=event_type,
-            payload_json={"aggregate_id": str(aggregate_id), "event_type": event_type},
-        )
+    token: TokenPayload,
+    requested_profile: str | None,
+    *,
+    action: str,
+) -> ProfileScope:
+    return resolve_profile_scope(
+        db,
+        token,
+        requested_profile=requested_profile,
+        action=action,
+        data_class="lifemap",
+        purpose="self_care",
     )
+
+
+def _selector(model, public_or_legacy_id: str):
+    clauses = [model.public_id == public_or_legacy_id]
+    if public_or_legacy_id.isdecimal():
+        clauses.append(model.id == int(public_or_legacy_id))
+    return or_(*clauses)
+
+
+def _event_id(scope: ProfileScope, operation: str, idempotency_key: str) -> str:
+    raw = f"{scope.profile.id}:{scope.actor.id}:{operation}:{idempotency_key}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _require_version(current: int, if_match: str | None) -> None:
+    """Enforce optimistic concurrency when a client supplies ``If-Match``."""
+
+    if if_match is None:
+        return
+    candidate = if_match.strip().removeprefix("W/").strip('"')
+    if not candidate.isdecimal():
+        raise HTTPException(status_code=422, detail={"code": "invalid_if_match"})
+    if int(candidate) != current:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "stale_version", "current_version": current},
+        )
+
+
+def _begin(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    operation: str,
+    idempotency_key: str,
+    payload: object,
+) -> tuple[str, dict | None]:
+    digest = request_digest(payload)
+    replay = replay_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+    )
+    if replay is None:
+        return digest, None
+    return digest, {**replay.response, "idempotent_replay": True}
+
+
+def _finish(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    operation: str,
+    idempotency_key: str,
+    digest: str,
+    response: dict,
+    status_code: int,
+    aggregate_type: str,
+    aggregate_public_id: str,
+    event_type: str,
+) -> dict:
+    stored = {**response, "idempotent_replay": False}
+    record = store_command(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        status_code=status_code,
+        response=stored,
+    )
+    stored["command_id"] = record.public_id
+    # JSON columns do not track in-place dict mutation; assign a fresh object so
+    # the command-status/replay representation includes its own opaque ID.
+    record.response_json = {**stored}
+    add_outbox(
+        db,
+        event_id=_event_id(scope, operation, idempotency_key),
+        profile_id=scope.profile.id,
+        aggregate_type=aggregate_type,
+        aggregate_public_id=aggregate_public_id,
+        event_type=event_type,
+    )
+    db.commit()
+    return stored
+
+
+def _event(
+    db: Session, scope: ProfileScope, event_id: str
+) -> LifeMapEvent:
+    event = db.execute(
+        select(LifeMapEvent).where(
+            _selector(LifeMapEvent, event_id),
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.lifecycle_status == "active",
+        )
+    ).scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail={"code": "event_not_found"})
+    return event
+
+
+def _episode(
+    db: Session, scope: ProfileScope, episode_id: str, *, open_only: bool = False
+) -> LifeMapEpisode:
+    filters = [
+        _selector(LifeMapEpisode, episode_id),
+        LifeMapEpisode.profile_id == scope.profile.id,
+    ]
+    if open_only:
+        filters.append(LifeMapEpisode.status == "open")
+    episode = db.execute(select(LifeMapEpisode).where(*filters)).scalar_one_or_none()
+    if episode is None:
+        raise HTTPException(status_code=404, detail={"code": "episode_not_found"})
+    return episode
+
+
+def _task(db: Session, scope: ProfileScope, task_id: str) -> LifeMapCareTask:
+    task = db.execute(
+        select(LifeMapCareTask).where(
+            _selector(LifeMapCareTask, task_id),
+            LifeMapCareTask.profile_id == scope.profile.id,
+        )
+    ).scalar_one_or_none()
+    if task is None:
+        raise HTTPException(status_code=404, detail={"code": "task_not_found"})
+    return task
+
+
+def _current_revision(
+    db: Session, scope: ProfileScope, event: LifeMapEvent
+) -> LifeMapEventRevision:
+    revision = db.execute(
+        select(LifeMapEventRevision).where(
+            LifeMapEventRevision.event_id == event.id,
+            LifeMapEventRevision.profile_id == scope.profile.id,
+            LifeMapEventRevision.revision_no == event.current_revision_no,
+        )
+    ).scalar_one_or_none()
+    if revision is None:
+        raise HTTPException(status_code=409, detail={"code": "revision_missing"})
+    return revision
+
+
+def _invalidate_dependencies(
+    db: Session, scope: ProfileScope, revision: LifeMapEventRevision, reason: str
+) -> None:
+    now = datetime.now(UTC)
+    dependencies = db.execute(
+        select(LifeMapProjectionDependency).where(
+            LifeMapProjectionDependency.profile_id == scope.profile.id,
+            LifeMapProjectionDependency.input_revision_id == revision.id,
+            LifeMapProjectionDependency.invalidated_at.is_(None),
+        )
+    ).scalars()
+    for dependency in dependencies:
+        dependency.invalidated_at = now
+        dependency.invalidation_reason = reason
 
 
 @router.post("/events", status_code=201)
 def create_event(
     payload: EventCreateRequest,
     idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    if payload.truth_state not in {"reported", "confirmed", "extracted_draft"}:
-        raise HTTPException(status_code=422, detail="Unsupported truth state")
-    user, profile = _profile(db, token)
-    command_id = _command_id(profile.id, "event.create", idempotency_key)
-    if replay := _replay(db, command_id):
-        return {**replay, "idempotent_replay": True}
+    requested_state = canonical_truth_state(payload.truth_state)
+    # Compatibility: old clients that sent "confirmed" created user-authored
+    # assertions. Preserve the write but never claim a confirmation ceremony
+    # occurred.
+    if requested_state == "confirmed":
+        requested_state = "user_reported"
+    if requested_state not in {"draft", "user_reported"}:
+        raise HTTPException(status_code=422, detail={"code": "invalid_initial_truth_state"})
+
+    scope = _scope(db, token, x_profile, action="create")
+    operation = "event.create"
+    command_payload = {**payload.model_dump(mode="json"), "truth_state": requested_state}
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=command_payload,
+    )
+    if replay is not None:
+        return replay
+
+    provenance = {
+        **payload.provenance,
+        "assertion": "user_reported" if requested_state == "user_reported" else "machine_draft",
+        "policy_version": TRUTH_POLICY_VERSION,
+    }
     event = LifeMapEvent(
-        profile_id=profile.id,
+        profile_id=scope.profile.id,
         event_type=payload.event_type,
-        truth_state=payload.truth_state,
+        truth_state=requested_state,
         occurred_at=payload.occurred_at,
         payload_json=payload.payload,
-        provenance_json=payload.provenance,
-        source_kind="reported",
-        created_by_user_id=user.id,
+        provenance_json=provenance,
+        source_kind="reported" if requested_state == "user_reported" else "extracted",
+        created_by_user_id=scope.actor.id,
     )
     db.add(event)
     db.flush()
-    _outbox(db, profile.id, command_id, "event", event.id, "lifemap.event.created")
-    db.commit()
-    return {"id": str(event.id), "truth_state": event.truth_state, "idempotent_replay": False}
+    db.add(
+        LifeMapEventRevision(
+            event_id=event.id,
+            profile_id=scope.profile.id,
+            revision_no=1,
+            truth_state=requested_state,
+            payload_json=payload.payload,
+            provenance_json=provenance,
+            asserted_by_user_id=scope.actor.id,
+            reason_code="created",
+            policy_version=TRUTH_POLICY_VERSION,
+        )
+    )
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={"id": event.public_id, "truth_state": requested_state},
+        status_code=201,
+        aggregate_type="event",
+        aggregate_public_id=event.public_id,
+        event_type="lifemap.event.created",
+    )
+
+
+def _truth_command(
+    event_id: str,
+    target: str,
+    payload: EventTruthRequest,
+    idempotency_key: str,
+    if_match: str | None,
+    x_profile: str | None,
+    db: Session,
+    token: TokenPayload,
+) -> dict:
+    scope = _scope(db, token, x_profile, action=target)
+    event = _event(db, scope, event_id)
+    current = _current_revision(db, scope, event)
+    _require_version(current.revision_no, if_match)
+    try:
+        _, destination = require_truth_transition(current.truth_state, target)
+    except InvalidTransition as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "invalid_transition", "transition": str(exc)}
+        ) from exc
+
+    operation = f"event.{destination}:{event.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
+
+    next_revision = LifeMapEventRevision(
+        event_id=event.id,
+        profile_id=scope.profile.id,
+        revision_no=current.revision_no + 1,
+        truth_state=destination,
+        payload_json=current.payload_json,
+        provenance_json=current.provenance_json,
+        source_reference_id=current.source_reference_id,
+        asserted_by_user_id=scope.actor.id,
+        confidence=current.confidence,
+        reason_code=payload.reason or destination,
+        supersedes_revision_id=current.id,
+        policy_version=TRUTH_POLICY_VERSION,
+    )
+    db.add(next_revision)
+    event.current_revision_no = next_revision.revision_no
+    event.version_no = next_revision.revision_no
+    event.truth_state = destination
+    if destination in {"invalidated", "entered_in_error"}:
+        event.lifecycle_status = destination
+    _invalidate_dependencies(db, scope, current, destination)
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={
+            "id": event.public_id,
+            "truth_state": destination,
+            "revision": next_revision.revision_no,
+        },
+        status_code=200,
+        aggregate_type="event",
+        aggregate_public_id=event.public_id,
+        event_type=f"lifemap.event.{destination}",
+    )
+
+
+@router.post("/events/{event_id}/confirm")
+def confirm_event(
+    event_id: str,
+    payload: EventTruthRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _truth_command(
+        event_id, "confirmed", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.post("/events/{event_id}/dispute")
+def dispute_event(
+    event_id: str,
+    payload: EventTruthRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _truth_command(
+        event_id, "disputed", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.post("/events/{event_id}/invalidate")
+def invalidate_event(
+    event_id: str,
+    payload: EventTruthRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _truth_command(
+        event_id, "invalidated", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.post("/events/{event_id}/correct")
+def correct_event(
+    event_id: str,
+    payload: EventCorrectionRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    scope = _scope(db, token, x_profile, action="correct")
+    event = _event(db, scope, event_id)
+    current = _current_revision(db, scope, event)
+    _require_version(current.revision_no, if_match)
+    if canonical_truth_state(current.truth_state) in {
+        "superseded",
+        "invalidated",
+        "entered_in_error",
+    }:
+        raise HTTPException(status_code=409, detail={"code": "invalid_transition"})
+
+    operation = f"event.correct:{event.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
+
+    next_no = current.revision_no + 1
+    next_revision = LifeMapEventRevision(
+        event_id=event.id,
+        profile_id=scope.profile.id,
+        revision_no=next_no,
+        truth_state="user_reported",
+        payload_json=payload.payload,
+        provenance_json={
+            **current.provenance_json,
+            "corrected_by": "profile_owner",
+            "policy_version": TRUTH_POLICY_VERSION,
+        },
+        source_reference_id=current.source_reference_id,
+        asserted_by_user_id=scope.actor.id,
+        reason_code=payload.reason,
+        supersedes_revision_id=current.id,
+        policy_version=TRUTH_POLICY_VERSION,
+    )
+    db.add(next_revision)
+    event.payload_json = payload.payload
+    event.truth_state = "user_reported"
+    event.current_revision_no = next_no
+    event.version_no = next_no
+    if payload.occurred_at is not None:
+        event.occurred_at = payload.occurred_at
+    _invalidate_dependencies(db, scope, current, "source_corrected")
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={
+            "id": event.public_id,
+            "truth_state": event.truth_state,
+            "revision": next_no,
+        },
+        status_code=200,
+        aggregate_type="event",
+        aggregate_public_id=event.public_id,
+        event_type="lifemap.event.corrected",
+    )
 
 
 @router.post("/episodes", status_code=201)
 def create_episode(
     payload: EpisodeCreateRequest,
     idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
     if payload.priority not in {"routine", "soon", "urgent"}:
-        raise HTTPException(status_code=422, detail="Unsupported priority")
-    user, profile = _profile(db, token)
-    command_id = _command_id(profile.id, "episode.create", idempotency_key)
-    if replay := _replay(db, command_id):
-        return {**replay, "idempotent_replay": True}
+        raise HTTPException(status_code=422, detail={"code": "invalid_priority"})
+    scope = _scope(db, token, x_profile, action="create")
+    operation = "episode.create"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
     episode = LifeMapEpisode(
-        profile_id=profile.id,
+        profile_id=scope.profile.id,
         title=payload.title.strip(),
         goal=payload.goal.strip(),
         priority=payload.priority,
-        created_by_user_id=user.id,
+        created_by_user_id=scope.actor.id,
     )
     db.add(episode)
     db.flush()
-    _outbox(db, profile.id, command_id, "episode", episode.id, "lifemap.episode.created")
-    db.commit()
-    return {"id": str(episode.id), "status": episode.status, "idempotent_replay": False}
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={"id": episode.public_id, "status": episode.status},
+        status_code=201,
+        aggregate_type="episode",
+        aggregate_public_id=episode.public_id,
+        event_type="lifemap.episode.created",
+    )
 
 
 @router.post("/episodes/{episode_id}/tasks", status_code=201)
 def create_task(
-    episode_id: int,
+    episode_id: str,
     payload: TaskCreateRequest,
     idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    _, profile = _profile(db, token)
-    episode = db.execute(
-        select(LifeMapEpisode).where(
-            LifeMapEpisode.id == episode_id,
-            LifeMapEpisode.profile_id == profile.id,
-            LifeMapEpisode.status == "open",
-        )
-    ).scalar_one_or_none()
-    if episode is None:
-        raise HTTPException(status_code=404, detail="Open episode not found")
-    command_id = _command_id(profile.id, f"task.create:{episode_id}", idempotency_key)
-    if replay := _replay(db, command_id):
-        return {**replay, "idempotent_replay": True}
+    scope = _scope(db, token, x_profile, action="create")
+    episode = _episode(db, scope, episode_id, open_only=True)
+    operation = f"task.create:{episode.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
     task = LifeMapCareTask(
-        profile_id=profile.id,
+        profile_id=scope.profile.id,
         episode_id=episode.id,
         title=payload.title.strip(),
         due_at=payload.due_at,
-        provenance_json={"source": "user_accepted"},
+        provenance_json={"source": "user_proposed"},
     )
     db.add(task)
     db.flush()
-    _outbox(db, profile.id, command_id, "care_task", task.id, "lifemap.task.proposed")
-    db.commit()
-    return {"id": str(task.id), "status": task.status, "idempotent_replay": False}
+    db.add(
+        LifeMapTaskAction(
+            task_id=task.id,
+            profile_id=scope.profile.id,
+            action="propose",
+            from_state="",
+            to_state="proposed",
+            actor_user_id=scope.actor.id,
+        )
+    )
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={"id": task.public_id, "status": task.status},
+        status_code=201,
+        aggregate_type="care_task",
+        aggregate_public_id=task.public_id,
+        event_type="lifemap.task.proposed",
+    )
+
+
+def _task_action(
+    task_id: str,
+    action: str,
+    payload: TaskActionRequest | TaskCompletionRequest,
+    idempotency_key: str,
+    if_match: str | None,
+    x_profile: str | None,
+    db: Session,
+    token: TokenPayload,
+) -> dict:
+    scope = _scope(db, token, x_profile, action=action)
+    task = _task(db, scope, task_id)
+    _require_version(task.version_no, if_match)
+    operation = f"task.{action}:{task.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
+    try:
+        transition = require_task_transition(task.status, action)
+    except InvalidTransition as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "invalid_transition", "transition": str(exc)}
+        ) from exc
+
+    task.status = transition.to_state
+    task.version_no += 1
+    now = datetime.now(UTC)
+    if action == "accept":
+        task.accepted_at = now
+    if action == "complete":
+        task.completed_at = now
+        assert isinstance(payload, TaskCompletionRequest)
+        task.completion_evidence_json = payload.evidence
+    reason = payload.reason if isinstance(payload, TaskActionRequest) else ""
+    db.add(
+        LifeMapTaskAction(
+            task_id=task.id,
+            profile_id=scope.profile.id,
+            action=action,
+            from_state=transition.from_state,
+            to_state=transition.to_state,
+            actor_user_id=scope.actor.id,
+            reason=reason,
+        )
+    )
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={"id": task.public_id, "status": task.status, "version": task.version_no},
+        status_code=200,
+        aggregate_type="care_task",
+        aggregate_public_id=task.public_id,
+        event_type=f"lifemap.task.{task.status}",
+    )
 
 
 @router.post("/tasks/{task_id}/accept")
 def accept_task(
-    task_id: int,
+    task_id: str,
     idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    _, profile = _profile(db, token)
-    command_id = _command_id(profile.id, f"task.accept:{task_id}", idempotency_key)
-    if replay := _replay(db, command_id):
-        return {**replay, "idempotent_replay": True}
-    task = db.execute(
-        select(LifeMapCareTask).where(
-            LifeMapCareTask.id == task_id, LifeMapCareTask.profile_id == profile.id
-        )
-    ).scalar_one_or_none()
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.status != "proposed":
-        raise HTTPException(status_code=409, detail="Task cannot be accepted")
-    task.status = "accepted"
-    task.accepted_at = datetime.now(UTC)
-    _outbox(db, profile.id, command_id, "care_task", task.id, "lifemap.task.accepted")
-    db.commit()
-    return {"id": str(task.id), "status": task.status, "idempotent_replay": False}
+    return _task_action(
+        task_id,
+        "accept",
+        TaskActionRequest(),
+        idempotency_key,
+        if_match,
+        x_profile,
+        db,
+        token,
+    )
+
+
+@router.post("/tasks/{task_id}/start")
+def start_task(
+    task_id: str,
+    payload: TaskActionRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _task_action(
+        task_id, "start", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.post("/tasks/{task_id}/reject")
+def reject_task(
+    task_id: str,
+    payload: TaskActionRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _task_action(
+        task_id, "reject", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.post("/tasks/{task_id}/cancel")
+def cancel_task(
+    task_id: str,
+    payload: TaskActionRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    return _task_action(
+        task_id, "cancel", payload, idempotency_key, if_match, x_profile, db, token
+    )
 
 
 @router.post("/tasks/{task_id}/complete")
 def complete_task(
-    task_id: int,
+    task_id: str,
     payload: TaskCompletionRequest,
     idempotency_key: str = Header(alias="Idempotency-Key"),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    _, profile = _profile(db, token)
-    command_id = _command_id(profile.id, f"task.complete:{task_id}", idempotency_key)
-    if replay := _replay(db, command_id):
-        return {**replay, "idempotent_replay": True}
-    task = db.execute(
-        select(LifeMapCareTask).where(
-            LifeMapCareTask.id == task_id, LifeMapCareTask.profile_id == profile.id
+    return _task_action(
+        task_id, "complete", payload, idempotency_key, if_match, x_profile, db, token
+    )
+
+
+@router.get("/events/{event_id}/history")
+def event_history(
+    event_id: str,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> list[dict]:
+    scope = _scope(db, token, x_profile, action="view")
+    event = _event(db, scope, event_id)
+    revisions = db.execute(
+        select(LifeMapEventRevision)
+        .where(
+            LifeMapEventRevision.event_id == event.id,
+            LifeMapEventRevision.profile_id == scope.profile.id,
         )
-    ).scalar_one_or_none()
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.status != "accepted":
-        raise HTTPException(status_code=409, detail="Task must be accepted before completion")
-    task.status = "completed"
-    task.completed_at = datetime.now(UTC)
-    task.completion_evidence_json = payload.evidence
-    _outbox(db, profile.id, command_id, "care_task", task.id, "lifemap.task.completed")
-    db.commit()
-    return {"id": str(task.id), "status": task.status, "idempotent_replay": False}
+        .order_by(LifeMapEventRevision.revision_no)
+    ).scalars()
+    return [
+        {
+            "id": item.public_id,
+            "revision": item.revision_no,
+            "truth_state": item.truth_state,
+            "payload": item.payload_json,
+            "reason": item.reason_code,
+            "recorded_at": item.recorded_at,
+        }
+        for item in revisions
+    ]
 
 
 @router.get("/today", response_model=TodayResponse)
-def today(db: Session = Depends(get_db), token: TokenPayload = USER_ROLE_DEP) -> TodayResponse:
-    _, profile = _profile(db, token)
+def today(
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> TodayResponse:
+    scope = _scope(db, token, x_profile, action="view")
     tasks = list(
         db.execute(
             select(LifeMapCareTask)
-            .where(LifeMapCareTask.profile_id == profile.id, LifeMapCareTask.status == "accepted")
-            .order_by(LifeMapCareTask.due_at.is_(None), LifeMapCareTask.due_at, LifeMapCareTask.id)
+            .where(
+                LifeMapCareTask.profile_id == scope.profile.id,
+                LifeMapCareTask.status.in_(("accepted", "in_progress")),
+            )
+            .order_by(
+                LifeMapCareTask.due_at.is_(None),
+                LifeMapCareTask.due_at,
+                LifeMapCareTask.id,
+            )
         ).scalars()
     )
     episodes = list(
         db.execute(
             select(LifeMapEpisode)
-            .where(LifeMapEpisode.profile_id == profile.id, LifeMapEpisode.status == "open")
+            .where(
+                LifeMapEpisode.profile_id == scope.profile.id,
+                LifeMapEpisode.status == "open",
+            )
             .order_by(LifeMapEpisode.priority.desc(), LifeMapEpisode.updated_at.desc())
         ).scalars()
     )
     drafts = db.execute(
         select(LifeMapEvent.id).where(
-            LifeMapEvent.profile_id == profile.id, LifeMapEvent.truth_state == "extracted_draft"
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.truth_state.in_(("draft", "extracted_draft")),
+            LifeMapEvent.lifecycle_status == "active",
         )
     ).all()
     return TodayResponse(
         generated_at=datetime.now(UTC),
-        tasks=[{"id": str(item.id), "title": item.title, "due_at": item.due_at} for item in tasks],
+        tasks=[
+            {
+                "id": item.public_id,
+                "title": item.title,
+                "due_at": item.due_at,
+                "status": item.status,
+                "version": item.version_no,
+            }
+            for item in tasks
+        ],
         episodes=[
-            {"id": str(item.id), "title": item.title, "priority": item.priority}
+            {"id": item.public_id, "title": item.title, "priority": item.priority}
             for item in episodes
         ],
         pending_confirmation_count=len(drafts),
@@ -296,10 +889,13 @@ def today(db: Session = Depends(get_db), token: TokenPayload = USER_ROLE_DEP) ->
 def lifemap_health(
     db: Session = Depends(get_db), token: TokenPayload = USER_ROLE_DEP
 ) -> LifeMapHealthResponse:
-    user = current_user(db, token)
-    ready = (
-        db.execute(select(PhrProfile.id).where(PhrProfile.user_id == user.id)).first() is not None
-    )
+    try:
+        resolve_profile_scope(db, token, action="view")
+        ready = True
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_409_CONFLICT:
+            raise
+        ready = False
     return LifeMapHealthResponse(
         status="ok",
         schema_version=SCHEMA_VERSION,
@@ -311,3 +907,204 @@ def lifemap_health(
 @router.get("/schema-version")
 def schema_version(_token: TokenPayload = USER_ROLE_DEP) -> dict[str, str]:
     return {"schema_version": SCHEMA_VERSION}
+
+
+@router.get("/v2/commands/{command_id}")
+def command_status(
+    command_id: str,
+    response: Response,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    scope = _scope(db, token, x_profile, action="view")
+    record = db.execute(
+        select(LifeMapCommandRecord).where(
+            LifeMapCommandRecord.public_id == command_id,
+            LifeMapCommandRecord.profile_id == scope.profile.id,
+            LifeMapCommandRecord.actor_user_id == scope.actor.id,
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=404, detail={"code": "command_not_found"})
+    response.headers["Cache-Control"] = "no-store, private"
+    return {
+        "id": record.public_id,
+        "operation": record.operation,
+        "status_code": record.status_code,
+        "result": record.response_json,
+        "created_at": record.created_at,
+    }
+
+
+@router.get("/admin/outbox/health")
+def outbox_health(
+    _token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return bounded no-PII delivery metrics for operations and alerting."""
+
+    rows: dict[str, int] = {
+        outbox_status: count
+        for outbox_status, count in db.execute(
+            select(LifeMapOutboxEvent.status, func.count(LifeMapOutboxEvent.id))
+            .group_by(LifeMapOutboxEvent.status)
+        ).all()
+    }
+    oldest = db.execute(
+        select(func.min(LifeMapOutboxEvent.created_at)).where(
+            LifeMapOutboxEvent.status.in_(("pending", "retry", "processing"))
+        )
+    ).scalar_one_or_none()
+    if oldest is not None and oldest.tzinfo is None:
+        oldest = oldest.replace(tzinfo=UTC)
+    return {
+        "status": "degraded" if rows.get("dead_letter", 0) else "ok",
+        "pending": rows.get("pending", 0),
+        "retry": rows.get("retry", 0),
+        "processing": rows.get("processing", 0),
+        "published": rows.get("published", 0),
+        "dead_letter": rows.get("dead_letter", 0),
+        "resolved": rows.get("resolved", 0),
+        "oldest_unpublished_age_seconds": (
+            max(0, int((datetime.now(UTC) - oldest).total_seconds()))
+            if oldest is not None
+            else 0
+        ),
+        "generated_at": datetime.now(UTC),
+    }
+
+
+@router.get("/admin/outbox/dead-letters")
+def dead_letters(
+    _token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    rows = db.execute(
+        select(LifeMapOutboxEvent)
+        .where(LifeMapOutboxEvent.status == "dead_letter")
+        .order_by(LifeMapOutboxEvent.dead_lettered_at.desc())
+        .limit(200)
+    ).scalars()
+    return [
+        {
+            "event_id": row.event_id,
+            "aggregate_type": row.aggregate_type,
+            "aggregate_id": row.aggregate_id,
+            "event_type": row.event_type,
+            "attempt_count": row.attempt_count,
+            "last_error_code": row.last_error_code,
+            "dead_lettered_at": row.dead_lettered_at,
+        }
+        for row in rows
+    ]
+
+
+@router.post("/admin/outbox/dead-letters/{event_id}/replay")
+def replay_dead_letter(
+    event_id: str,
+    payload: DeadLetterReplayRequest,
+    token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Audited requeue; raw payload/clinical text is never returned or logged."""
+
+    if not get_settings().admin_audit_log_enabled:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "admin_audit_required"},
+        )
+    row = db.execute(
+        select(LifeMapOutboxEvent).where(
+            LifeMapOutboxEvent.event_id == event_id,
+            LifeMapOutboxEvent.status == "dead_letter",
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        record_admin_action(
+            db,
+            actor_ref=hash_user_ref(token.sub),
+            action="lifemap.outbox.replay",
+            target=event_id,
+            outcome="failure",
+        )
+        db.commit()
+        raise HTTPException(status_code=404, detail={"code": "dead_letter_not_found"})
+    row.status = "retry"
+    previous_attempt_count = row.attempt_count
+    row.attempt_count = 0
+    row.available_at = datetime.now(UTC)
+    row.lease_owner = None
+    row.lease_until = None
+    row.dead_lettered_at = None
+    row.last_error_code = payload.reason_code
+    record_admin_action(
+        db,
+        actor_ref=hash_user_ref(token.sub),
+        action="lifemap.outbox.replay",
+        target=event_id,
+        outcome="success",
+        meta={
+            "previous_attempt_count": previous_attempt_count,
+            "reason_code": payload.reason_code,
+        },
+    )
+    db.commit()
+    return {"event_id": event_id, "status": "retry"}
+
+
+@router.post("/admin/outbox/dead-letters/{event_id}/resolve")
+def resolve_dead_letter(
+    event_id: str,
+    payload: DeadLetterReplayRequest,
+    token: TokenPayload = ADMIN_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Audited terminal resolution when an operator intentionally drops delivery."""
+
+    if not get_settings().admin_audit_log_enabled:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "admin_audit_required"},
+        )
+    row = db.execute(
+        select(LifeMapOutboxEvent).where(
+            LifeMapOutboxEvent.event_id == event_id,
+            LifeMapOutboxEvent.status == "dead_letter",
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        record_admin_action(
+            db,
+            actor_ref=hash_user_ref(token.sub),
+            action="lifemap.outbox.resolve",
+            target=event_id,
+            outcome="failure",
+        )
+        db.commit()
+        raise HTTPException(status_code=404, detail={"code": "dead_letter_not_found"})
+    row.status = "resolved"
+    row.lease_owner = None
+    row.lease_until = None
+    row.last_error_code = payload.reason_code
+    record_admin_action(
+        db,
+        actor_ref=hash_user_ref(token.sub),
+        action="lifemap.outbox.resolve",
+        target=event_id,
+        outcome="success",
+        meta={"attempt_count": row.attempt_count, "reason_code": payload.reason_code},
+    )
+    db.commit()
+    return {"event_id": event_id, "status": "resolved"}
+
+
+def _legacy_pending_outbox_replay(
+    db: Session, event_id: str
+) -> dict | None:
+    """Kept only for old rows created before command records existed."""
+
+    event = db.execute(
+        select(LifeMapOutboxEvent).where(LifeMapOutboxEvent.event_id == event_id)
+    ).scalar_one_or_none()
+    return event.payload_json if event and isinstance(event.payload_json, dict) else None

@@ -88,17 +88,24 @@ class LanguageToggle extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                   vertical: ClaraTokens.spaceXs,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final option in _options)
-                      _LanguageRadioTile(
-                        option: option,
-                        groupValue: selected,
-                        textScaler: textScaler,
-                        onSelected: () => controller.setLanguage(option.code),
-                      ),
-                  ],
+                child: RadioGroup<String>(
+                  groupValue: selected,
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.setLanguage(value);
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final option in _options)
+                        _LanguageRadioTile(
+                          option: option,
+                          groupValue: selected,
+                          textScaler: textScaler,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -116,13 +123,11 @@ class _LanguageRadioTile extends StatelessWidget {
     required this.option,
     required this.groupValue,
     required this.textScaler,
-    required this.onSelected,
   });
 
   final _LanguageOption option;
   final String groupValue;
   final TextScaler textScaler;
-  final VoidCallback onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -143,12 +148,6 @@ class _LanguageRadioTile extends StatelessWidget {
           child: RadioListTile<String>(
             key: Key('language-option-${option.code}'),
             value: option.code,
-            groupValue: groupValue,
-            onChanged: (value) {
-              if (value != null) {
-                onSelected();
-              }
-            },
             controlAffinity: ListTileControlAffinity.trailing,
             title: Text(
               option.label,

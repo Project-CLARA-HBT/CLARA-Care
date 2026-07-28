@@ -52,10 +52,10 @@ void main() {
   testWidgets('submitting an export request shows an acknowledgement (Req 8.3)',
       (tester) async {
     final kinds = <DsarRequestKind>[];
-    DsarSubmitter submitter = (kind) async {
+    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
       kinds.add(kind);
       return _ack(kind);
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
@@ -79,10 +79,10 @@ void main() {
   testWidgets('deleting requires confirmation then acknowledges (Req 8.3)',
       (tester) async {
     final kinds = <DsarRequestKind>[];
-    DsarSubmitter submitter = (kind) async {
+    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
       kinds.add(kind);
       return _ack(kind);
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
@@ -108,10 +108,10 @@ void main() {
   testWidgets('gate off: surface is inert with no controls (Req 8.6)',
       (tester) async {
     var called = 0;
-    DsarSubmitter submitter = (kind) async {
+    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
       called += 1;
       return _ack(kind);
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
@@ -127,15 +127,16 @@ void main() {
     expect(called, 0);
   });
 
-  testWidgets('collects NO PII: no text fields, only the kind is transmitted '
+  testWidgets(
+      'collects NO PII: no text fields, only the kind is transmitted '
       '(Req 8.5)', (tester) async {
     final transport = RecordingAnalyticsTransport();
     final analytics = _analytics(transport);
     final kinds = <DsarRequestKind>[];
-    DsarSubmitter submitter = (kind) async {
+    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
       kinds.add(kind);
       return _ack(kind);
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(

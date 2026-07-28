@@ -88,32 +88,28 @@ class OnboardingCarousel extends StatefulWidget {
     OnboardingPage(
       icon: Icons.health_and_safety_outlined,
       title: 'Chào mừng đến với CLARA',
-      body:
-          'CLARA là phần mềm hỗ trợ ra quyết định dựa trên thông tin bạn tự '
+      body: 'CLARA là phần mềm hỗ trợ ra quyết định dựa trên thông tin bạn tự '
           'cung cấp. CLARA không phải thiết bị y tế và không thay thế chẩn '
           'đoán hay tư vấn của bác sĩ.',
     ),
     OnboardingPage(
       icon: Icons.privacy_tip_outlined,
       title: 'Quyền riêng tư là trên hết',
-      body:
-          'Chúng tôi không thu thập thông tin định danh cá nhân của bạn cho '
+      body: 'Chúng tôi không thu thập thông tin định danh cá nhân của bạn cho '
           'mục đích phân tích. Trước khi cần bất kỳ quyền truy cập nào, CLARA '
           'sẽ giải thích lý do và chỉ hỏi khi bạn đồng ý.',
     ),
     OnboardingPage(
       icon: Icons.medical_information_outlined,
       title: 'Hồ sơ sức khỏe của bạn',
-      body:
-          'Lưu trữ hồ sơ sức khỏe cá nhân và tra cứu thông tin một cách an '
+      body: 'Lưu trữ hồ sơ sức khỏe cá nhân và tra cứu thông tin một cách an '
           'toàn. Bạn toàn quyền kiểm soát dữ liệu của mình và có thể xem lại '
           'bất cứ lúc nào.',
     ),
     OnboardingPage(
       icon: Icons.rocket_launch_outlined,
       title: 'Sẵn sàng bắt đầu',
-      body:
-          'Khám phá các công cụ hỗ trợ sức khỏe được thiết kế dễ dùng và dễ '
+      body: 'Khám phá các công cụ hỗ trợ sức khỏe được thiết kế dễ dùng và dễ '
           'tiếp cận. Bạn có thể thay đổi ngôn ngữ và tùy chọn bất cứ lúc nào '
           'trong phần Cài đặt.',
     ),
@@ -152,6 +148,10 @@ class _OnboardingCarouselState extends State<OnboardingCarousel> {
     }
     final duration =
         A11y.resolveMotionDuration(context, ClaraTokens.motionMedium);
+    if (duration == Duration.zero) {
+      _controller.jumpToPage(_currentPage + 1);
+      return;
+    }
     _controller.animateToPage(
       _currentPage + 1,
       duration: duration,

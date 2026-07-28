@@ -92,7 +92,8 @@ void main() {
     'flag OFF: no export / emergency-card affordances are rendered '
     '(legacy behavior preserved) (Req 5.6)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api, flags: resolver(enhanced: false));
 
@@ -101,6 +102,11 @@ void main() {
       expect(find.byKey(const Key('phr-emergency-card-action')), findsNothing);
 
       // The legacy surface still loaded normally.
+      await tester.dragUntilVisible(
+        find.text('Penicillin'),
+        find.byType(ListView).first,
+        const Offset(0, -240),
+      );
       expect(find.text('Penicillin'), findsOneWidget);
     },
   );
@@ -108,7 +114,8 @@ void main() {
   testWidgets(
     'no featureFlags injected resolves the gate closed (default-off) (Req 5.6)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api); // no flags
 
@@ -120,13 +127,15 @@ void main() {
   testWidgets(
     'flag ON: export + emergency-card affordances appear (Req 5.6)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api, flags: resolver(enhanced: true));
 
       expect(find.byKey(const Key('phr-enhanced-actions')), findsOneWidget);
       expect(find.byKey(const Key('phr-export-action')), findsOneWidget);
-      expect(find.byKey(const Key('phr-emergency-card-action')), findsOneWidget);
+      expect(
+          find.byKey(const Key('phr-emergency-card-action')), findsOneWidget);
     },
   );
 
@@ -134,7 +143,8 @@ void main() {
     'flag ON: export view renders a read-only JSON projection of the record '
     '(no extra API call) (Req 5.6)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api, flags: resolver(enhanced: true));
 
@@ -143,8 +153,8 @@ void main() {
 
       expect(find.byKey(const Key('phr-export-view')), findsOneWidget);
       // The serialized record is shown read-only and selectable.
-      final json =
-          tester.widget<SelectableText>(find.byKey(const Key('phr-export-json')));
+      final json = tester
+          .widget<SelectableText>(find.byKey(const Key('phr-export-json')));
       expect(json.data, contains('Nguyen Van A'));
       expect(json.data, contains('Amlodipine'));
 
@@ -158,7 +168,8 @@ void main() {
     'flag ON: emergency-card view shows allergies, current meds only, '
     'conditions, blood type, and contact (Req 5.6)',
     (tester) async {
-      final api = FakeApiClient()..stub('getPhrRecord', response: recordPayload());
+      final api = FakeApiClient()
+        ..stub('getPhrRecord', response: recordPayload());
 
       await pumpScreen(tester, api: api, flags: resolver(enhanced: true));
 

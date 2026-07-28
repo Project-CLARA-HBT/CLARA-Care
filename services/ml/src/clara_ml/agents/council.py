@@ -1161,7 +1161,10 @@ def _build_neural_risk_payload(
         return {
             "enabled": False,
             "shadow_mode": shadow_mode,
-            "model_version": "council-neural-shadow-v1",
+            "model_version": "council-fixed-weight-heuristic-shadow-v2",
+            "legacy_model_alias": "council-neural-shadow-v1",
+            "model_class": "fixed_weight_heuristic",
+            "trained": False,
         }
 
     feature_map = _build_neural_feature_map(
@@ -1190,6 +1193,9 @@ def _build_neural_risk_payload(
         "enabled": True,
         "shadow_mode": shadow_mode,
         "model_version": score.model_version,
+        "legacy_model_alias": "council-neural-shadow-v1",
+        "model_class": "fixed_weight_heuristic",
+        "trained": False,
         "risk_probability": score.probability,
         "risk_band": score.band,
         "recommended_triage": recommended_triage,

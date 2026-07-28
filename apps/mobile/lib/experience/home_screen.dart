@@ -109,15 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
   /// The authenticated role, defaulting to the least-privileged `normal`.
   String get _role => widget.sessionStore.role ?? 'normal';
 
-  /// Defense-in-depth role check for admin-only surfaces (mirrors dashboard).
-  bool get _isAdmin => _role == 'admin';
-
-  /// Whether the admin-only system-monitor surface may be shown. Requires a
-  /// loaded summary, the admin role, AND the role-scoped `system_monitor` flag,
-  /// so the surface is NEVER exposed to a non-admin role (Requirement 4.4).
-  bool get _canSystemMonitor =>
-      _summaryLoaded && _isAdmin && _featureEnabled('system_monitor');
-
   /// Reads a boolean `feature_flags` entry from the loaded summary, mirroring
   /// `dashboard_screen.dart`'s `_featureEnabled`: an unloadable summary, a
   /// non-map `feature_flags`, a missing key, or a non-`true` value all resolve
@@ -427,8 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClaraEmptyState(
                   icon: Icons.history,
                   title: 'Chưa có hoạt động gần đây',
-                  message:
-                      'Các hoạt động gần đây của bạn sẽ xuất hiện ở đây.',
+                  message: 'Các hoạt động gần đây của bạn sẽ xuất hiện ở đây.',
                 ),
               ),
               const SizedBox(height: ClaraTokens.spaceXl),
@@ -487,8 +477,7 @@ class _QuickActionGrid extends StatelessWidget {
         const spacing = ClaraTokens.spaceMd;
         final maxWidth = constraints.maxWidth;
         final columns = maxWidth >= 600 ? 3 : 2;
-        final itemWidth =
-            (maxWidth - spacing * (columns - 1)) / columns;
+        final itemWidth = (maxWidth - spacing * (columns - 1)) / columns;
 
         return Wrap(
           spacing: spacing,

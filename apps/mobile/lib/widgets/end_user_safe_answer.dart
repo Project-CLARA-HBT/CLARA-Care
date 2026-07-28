@@ -205,8 +205,9 @@ List<AnswerCitation> extractCitations(Map<String, dynamic> envelope) {
         }
       }
     }
-    if (out.isNotEmpty)
+    if (out.isNotEmpty) {
       break; // first non-empty list wins (citations > sources)
+    }
   }
   return out;
 }

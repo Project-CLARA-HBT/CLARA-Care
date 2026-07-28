@@ -100,7 +100,7 @@ def test_family_notification_is_minimal_live_and_owner_auditable() -> None:
             "recipient_email": "profile-notification-caregiver@example.com",
             "scope": {
                 "object_type": "care_task",
-                "object_id": int(task_id),
+                "object_id": task_id,
                 "allowed_actions": ["view", "complete_task"],
             },
             "purpose": "care_coordination",
@@ -187,7 +187,7 @@ def test_family_accept_uses_body_or_header_and_is_idempotent() -> None:
             "recipient_email": "accept-hardening-caregiver@example.com",
             "scope": {
                 "object_type": "episode",
-                "object_id": int(episode.json()["id"]),
+                "object_id": episode.json()["id"],
                 "allowed_actions": ["view", "add_observation"],
             },
             "purpose": "care_coordination",

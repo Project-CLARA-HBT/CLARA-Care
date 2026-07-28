@@ -15,7 +15,6 @@ from pydantic import ValidationError
 from clara_api.api.v1.endpoints.research import _enforce_never_fast_and_personal
 from clara_api.schemas import ResearchTier2JobCreateRequest
 
-
 # --- Schema-level enforcement (covers POST /research/tier2/jobs) -------------
 
 

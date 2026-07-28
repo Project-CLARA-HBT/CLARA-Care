@@ -35,6 +35,15 @@ Future<void> _pumpDashboard(
   await tester.pumpAndSettle();
 }
 
+Future<void> _reveal(WidgetTester tester, Finder finder) async {
+  await tester.dragUntilVisible(
+    finder,
+    find.byType(Scrollable).first,
+    const Offset(0, -240),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(resetAnalyticsClientForTest);
   tearDown(resetAnalyticsClientForTest);
@@ -112,6 +121,7 @@ void main() {
 
     expect(find.text('Chỉ số hệ thống'), findsOneWidget);
     expect(api.wasCalled('getSystemMetrics'), isTrue);
+    await _reveal(tester, find.text('Tổng số request: 42'));
     expect(find.text('Tổng số request: 42'), findsOneWidget);
   });
 
@@ -151,6 +161,7 @@ void main() {
 
     expect(find.text('Trò chuyện'), findsOneWidget);
     expect(find.text('Tủ thuốc tự kê'), findsOneWidget);
+    await _reveal(tester, find.text('Trung tâm đồng ý'));
     expect(find.text('Trung tâm đồng ý'), findsOneWidget);
     expect(find.text('Nội dung chia sẻ'), findsOneWidget);
   });

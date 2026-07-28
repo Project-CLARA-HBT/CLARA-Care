@@ -6,17 +6,17 @@ import hmac
 import json
 import math
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, NoReturn
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import FamilyAccessGrant, LifeMapCareTask, PhrProfile
+from clara_api.db.models import FamilyAccessGrant, LifeMapCareTask, PhrProfile, User
 from clara_api.db.session import get_db
 from clara_api.lifemap.visit_family_service import (
     DomainAuthorizationError,
@@ -44,7 +44,7 @@ class InvitationRequest(BaseModel):
 
 
 class ObservationRequest(BaseModel):
-    episode_id: int = Field(gt=0)
+    episode_id: str = Field(min_length=1, max_length=64)
     purpose: str
     text: str = Field(min_length=2, max_length=4000)
 
@@ -125,7 +125,7 @@ def _bounded_evidence_bytes(value: dict[str, Any]) -> None:
         raise ValueError("Evidence is too large")
 
 
-def _raise(error: Exception) -> None:
+def _raise(error: Exception) -> NoReturn:
     if isinstance(error, DomainNotFoundError):
         raise HTTPException(status_code=404, detail=str(error)) from error
     if isinstance(error, DomainAuthorizationError):
@@ -135,7 +135,7 @@ def _raise(error: Exception) -> None:
     raise error
 
 
-def _profile(db: Session, token: TokenPayload) -> tuple[object, PhrProfile]:
+def _profile(db: Session, token: TokenPayload) -> tuple[User, PhrProfile]:
     user = current_user(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
@@ -295,13 +295,12 @@ def family_notifications(
         # completing it have to be in the grant's exact action list.
         if "view" not in actions or "complete_task" not in actions:
             continue
-        try:
-            task_id = int(grant.object_id)
-        except (TypeError, ValueError):
-            continue
+        task_clauses = [LifeMapCareTask.public_id == grant.object_id]
+        if grant.object_id.isdecimal():
+            task_clauses.append(LifeMapCareTask.id == int(grant.object_id))
         task = db.execute(
             select(LifeMapCareTask).where(
-                LifeMapCareTask.id == task_id,
+                or_(*task_clauses),
                 LifeMapCareTask.profile_id == grant.profile_id,
                 LifeMapCareTask.status == "accepted",
             )
@@ -313,7 +312,7 @@ def family_notifications(
                 "id": f"family-task:{grant.id}:{task.id}:v{grant.grant_version}",
                 "kind": "delegated_care_task",
                 "profile_id": str(grant.profile_id),
-                "task_id": str(task.id),
+                "task_id": task.public_id,
                 "purpose": grant.purpose,
                 "expires_at": grant.expires_at,
                 "action": "complete_task",
@@ -326,7 +325,7 @@ def family_notifications(
 @router.post("/notifications/{grant_id}/{task_id}/acknowledge")
 def acknowledge_notification(
     grant_id: int,
-    task_id: int,
+    task_id: str,
     payload: NotificationAcknowledgementRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
@@ -338,6 +337,14 @@ def acknowledge_notification(
     """
 
     caregiver = current_user(db, token)
+    task_clauses = [LifeMapCareTask.public_id == task_id]
+    if task_id.isdecimal():
+        task_clauses.append(LifeMapCareTask.id == int(task_id))
+    task = db.execute(
+        select(LifeMapCareTask).where(or_(*task_clauses))
+    ).scalar_one_or_none()
+    if task is None:
+        raise HTTPException(status_code=403, detail="Family notification is no longer authorized")
     grant = db.execute(
         select(FamilyAccessGrant).where(
             FamilyAccessGrant.id == grant_id,
@@ -346,7 +353,7 @@ def acknowledge_notification(
             FamilyAccessGrant.revoked_at.is_(None),
             FamilyAccessGrant.expires_at > datetime.now(UTC),
             FamilyAccessGrant.object_type == "care_task",
-            FamilyAccessGrant.object_id == str(task_id),
+            FamilyAccessGrant.object_id.in_({task.public_id, str(task.id)}),
             FamilyAccessGrant.purpose == payload.purpose,
         )
     ).scalar_one_or_none()
@@ -357,7 +364,7 @@ def acknowledge_notification(
             db,
             caregiver=caregiver,
             profile_id=grant.profile_id,
-            task_id=task_id,
+            task_id=task.public_id,
             purpose=payload.purpose,
         )
         db.commit()
@@ -449,7 +456,11 @@ def caregiver_observation(
             text=payload.text,
         )
         db.commit()
-        return {"id": str(event.id), "truth_state": event.truth_state, "source": event.source_kind}
+        return {
+            "id": event.public_id,
+            "truth_state": event.truth_state,
+            "source": event.source_kind,
+        }
     except (DomainAuthorizationError, DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
         _raise(error)
@@ -458,7 +469,7 @@ def caregiver_observation(
 @router.post("/profiles/{profile_id}/care-tasks/{task_id}/complete")
 def complete_task_as_caregiver(
     profile_id: int,
-    task_id: int,
+    task_id: str,
     payload: CompleteTaskRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
@@ -474,7 +485,7 @@ def complete_task_as_caregiver(
             evidence=payload.evidence,
         )
         db.commit()
-        return {"id": str(task.id), "status": task.status, "completed_at": task.completed_at}
+        return {"id": task.public_id, "status": task.status, "completed_at": task.completed_at}
     except (DomainAuthorizationError, DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
         _raise(error)
@@ -482,7 +493,7 @@ def complete_task_as_caregiver(
 
 @task_router.post("/{task_id}/delegations", status_code=status.HTTP_201_CREATED)
 def delegate_task(
-    task_id: int,
+    task_id: str,
     payload: DelegationRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,

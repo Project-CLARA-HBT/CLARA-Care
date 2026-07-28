@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from math import exp
-from typing import Mapping
 
 _FEATURE_ORDER = (
     "red_flag_rate",
@@ -29,7 +29,7 @@ _B2 = -1.10
 
 
 @dataclass(frozen=True)
-class NeuralCouncilScore:
+class CouncilHeuristicScore:
     probability: float
     band: str
     top_contributors: list[dict[str, float | str]]
@@ -85,7 +85,7 @@ def score_council_risk(
     *,
     medium_threshold: float = 0.45,
     high_threshold: float = 0.72,
-) -> NeuralCouncilScore:
+) -> CouncilHeuristicScore:
     vector = _feature_vector(features)
 
     hidden: list[float] = []
@@ -96,7 +96,7 @@ def score_council_risk(
     logit = sum(weight * value for weight, value in zip(_W2, hidden)) + _B2
     probability = _sigmoid(logit)
 
-    return NeuralCouncilScore(
+    return CouncilHeuristicScore(
         probability=round(probability, 4),
         band=_band_from_probability(
             probability,
@@ -104,5 +104,5 @@ def score_council_risk(
             high_threshold=high_threshold,
         ),
         top_contributors=_top_contributors(vector),
-        model_version="council-neural-shadow-v1",
+        model_version="council-fixed-weight-heuristic-shadow-v2",
     )

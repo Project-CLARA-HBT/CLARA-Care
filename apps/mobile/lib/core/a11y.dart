@@ -258,11 +258,11 @@ class StatusByText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _colorFor(context);
-    final spoken =
-        semanticsPrefix == null ? label : '$semanticsPrefix: $label';
+    final spoken = semanticsPrefix == null ? label : '$semanticsPrefix: $label';
     return Semantics(
       label: spoken,
       container: true,
+      excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

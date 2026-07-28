@@ -30,7 +30,7 @@ def _headers(email: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def _episode(headers: dict[str, str], suffix: str) -> int:
+def _episode(headers: dict[str, str], suffix: str) -> str:
     assert (
         client.put(
             "/api/v1/phr/record",
@@ -45,7 +45,7 @@ def _episode(headers: dict[str, str], suffix: str) -> int:
         json={"title": "Theo dõi huyết áp"},
     )
     assert response.status_code == 201, response.text
-    return int(response.json()["id"])
+    return str(response.json()["id"])
 
 
 def _verified_result() -> dict:

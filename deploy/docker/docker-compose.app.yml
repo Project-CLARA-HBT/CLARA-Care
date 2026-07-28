@@ -70,6 +70,46 @@ services:
       - default
       - clara-local
 
+  lifemap-worker:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+    command: ["python", "-m", "clara_api.lifemap.worker"]
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-true}
+      DATABASE_FALLBACK_URL: ${DATABASE_FALLBACK_URL:-sqlite+pysqlite:////data/clara.db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      LIFEMAP_OUTBOX_RELAY_INTERVAL_SECONDS: ${LIFEMAP_OUTBOX_RELAY_INTERVAL_SECONDS:-5}
+      LIFEMAP_OUTBOX_RELAY_BATCH_SIZE: ${LIFEMAP_OUTBOX_RELAY_BATCH_SIZE:-100}
+      LIFEMAP_OUTBOX_LEASE_SECONDS: ${LIFEMAP_OUTBOX_LEASE_SECONDS:-60}
+      LIFEMAP_OUTBOX_BACKOFF_SECONDS: ${LIFEMAP_OUTBOX_BACKOFF_SECONDS:-1}
+      LIFEMAP_WORKER_HEALTH_PORT: ${LIFEMAP_WORKER_HEALTH_PORT:-8020}
+    depends_on:
+      - api
+    volumes:
+      - clara_api_data:/data
+    networks:
+      - default
+      - clara-local
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:'+os.environ.get('LIFEMAP_WORKER_HEALTH_PORT','8020')+'/health/ready', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 10s
+
   ml:
     build:
       context: ../..

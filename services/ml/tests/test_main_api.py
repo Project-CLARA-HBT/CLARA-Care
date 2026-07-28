@@ -1027,7 +1027,12 @@ def test_council_run_returns_expected_schema():
     assert "safety_gate" in steps
     assert isinstance(body["neural_risk"], dict)
     assert body["neural_risk"]["enabled"] is False
-    assert body["neural_risk"]["model_version"] == "council-neural-shadow-v1"
+    assert (
+        body["neural_risk"]["model_version"]
+        == "council-fixed-weight-heuristic-shadow-v2"
+    )
+    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
+    assert body["neural_risk"]["trained"] is False
     assert isinstance(body["research"], dict)
     assert isinstance(body["deepdive"], dict)
     assert body["analyze"]["consensus_triage"] in {
@@ -1092,7 +1097,13 @@ def test_council_run_supports_neural_shadow_scoring():
     assert isinstance(body["neural_risk"], dict)
     assert body["neural_risk"]["enabled"] is True
     assert body["neural_risk"]["shadow_mode"] is True
-    assert body["neural_risk"]["model_version"] == "council-neural-shadow-v1"
+    assert (
+        body["neural_risk"]["model_version"]
+        == "council-fixed-weight-heuristic-shadow-v2"
+    )
+    assert body["neural_risk"]["legacy_model_alias"] == "council-neural-shadow-v1"
+    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
+    assert body["neural_risk"]["trained"] is False
     assert body["neural_risk"]["risk_band"] in {"low", "medium", "high"}
     assert 0.0 <= body["neural_risk"]["risk_probability"] <= 1.0
     assert body["neural_risk"]["recommended_triage"] in {

@@ -41,9 +41,9 @@ skipped and behavior matches today exactly.
 | Content-Security-Policy response header | `HARDENING_CSP_ENABLED` | API | `false` |
 
 > **Operational / CI hardening is out of band.** Secret sourcing
-> (`docs/ops/secret-rotation.md`), prod-fallback opt-in
+> (`docs/runbooks/credential-rotation.md`), prod-fallback opt-in
 > (`DATABASE_FALLBACK_ENABLED`), the supply-chain gate thresholds in
-> `.github/workflows/ci.yml`, backup/restore (`docs/ops/backup-restore.md`), and
+> `.github/workflows/ci.yml`, backup/restore (`docs/runbooks/backup-restore.md`), and
 > worker/pool sizing are governed by deploy/CI configuration rather than runtime
 > flags. They are applied through the deploy stack and are independently
 > reversible, but they are **not** part of the per-flag flip procedure below.
@@ -290,5 +290,5 @@ mitigation and requires no clinical-code redeploy.
   errors to clients indicates a wiring bug; roll back and investigate.
 - Operational/CI hardening (secret rotation, prod-fallback opt-in, supply-chain
   gate thresholds, backups, worker/pool sizing) ships with its deploy/CI change,
-  not this per-flag flip. See `docs/ops/secret-rotation.md`,
-  `docs/ops/backup-restore.md`, and `docs/security/accepted-findings.md`.
+  not this per-flag flip. See `docs/runbooks/credential-rotation.md`,
+  `docs/runbooks/backup-restore.md`, and `docs/security/accepted-findings.md`.

@@ -198,17 +198,24 @@ class _ThemeSection extends StatelessWidget {
           title: _sectionTitle,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceXs),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final option in _options)
-                  _ThemeRadioTile(
-                    option: option,
-                    groupValue: selected,
-                    textScaler: textScaler,
-                    onSelected: () => controller.setThemeMode(option.mode),
-                  ),
-              ],
+            child: RadioGroup<ThemeMode>(
+              groupValue: selected,
+              onChanged: (value) {
+                if (value != null) {
+                  controller.setThemeMode(value);
+                }
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final option in _options)
+                    _ThemeRadioTile(
+                      option: option,
+                      groupValue: selected,
+                      textScaler: textScaler,
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -224,13 +231,11 @@ class _ThemeRadioTile extends StatelessWidget {
     required this.option,
     required this.groupValue,
     required this.textScaler,
-    required this.onSelected,
   });
 
   final _ThemeOption option;
   final ThemeMode groupValue;
   final TextScaler textScaler;
-  final VoidCallback onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -251,12 +256,6 @@ class _ThemeRadioTile extends StatelessWidget {
           child: RadioListTile<ThemeMode>(
             key: Key('theme-option-${option.mode.name}'),
             value: option.mode,
-            groupValue: groupValue,
-            onChanged: (value) {
-              if (value != null) {
-                onSelected();
-              }
-            },
             controlAffinity: ListTileControlAffinity.trailing,
             secondary: Icon(option.icon),
             title: Text(option.label, textScaler: textScaler),

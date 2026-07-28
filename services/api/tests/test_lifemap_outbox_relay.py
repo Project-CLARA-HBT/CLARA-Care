@@ -6,14 +6,18 @@ command handlers, marks them ``published`` with a timestamp, is idempotent
 (at-least-once durability).
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from clara_api.db.models import LifeMapOutboxEvent
 from clara_api.db.session import SessionLocal
-from clara_api.lifemap.outbox_relay import drain_lifemap_outbox
+from clara_api.lifemap.outbox_relay import (
+    claim_lifemap_outbox,
+    drain_lifemap_outbox,
+    heartbeat_lifemap_outbox,
+)
 from clara_api.main import app
 
 client = TestClient(app)
@@ -120,10 +124,12 @@ def test_publish_failure_keeps_row_pending_for_next_pass() -> None:
         ).scalars().all()
         assert pending_before, "expected pending rows to test failure path"
 
-        published = drain_lifemap_outbox(db, publisher=_always_fail)
+        published = drain_lifemap_outbox(
+            db, publisher=_always_fail, base_backoff_seconds=0
+        )
         assert published == 0
 
-    # The failed rows are still pending, so a healthy publisher drains them later.
+    # Failed rows are retryable immediately when a zero backoff is configured.
     with SessionLocal() as db:
         recovered = drain_lifemap_outbox(db, publisher=lambda _projection: None)
         assert recovered >= 1
@@ -154,3 +160,66 @@ def test_marks_published_at_in_utc() -> None:
         published_at = row.published_at
         if published_at.tzinfo is not None:
             assert published_at >= before
+
+
+def test_claim_lease_prevents_a_second_worker_from_claiming_the_same_rows() -> None:
+    _seed_care_loop("outbox-lease@example.com", "lease")
+    with SessionLocal() as db:
+        first = claim_lifemap_outbox(
+            db, worker_id="worker-a", batch_size=100, lease_seconds=60
+        )
+        assert first
+        second = claim_lifemap_outbox(
+            db, worker_id="worker-b", batch_size=100, lease_seconds=60
+        )
+        assert second == []
+
+        rows = db.execute(
+            select(LifeMapOutboxEvent).where(LifeMapOutboxEvent.id.in_(first))
+        ).scalars()
+        for row in rows:
+            row.lease_until = datetime.now(UTC)
+        db.commit()
+
+        reclaimed = claim_lifemap_outbox(
+            db, worker_id="worker-b", batch_size=100, lease_seconds=60
+        )
+        assert set(reclaimed) == set(first)
+
+
+def test_heartbeat_extends_only_the_current_workers_lease() -> None:
+    _seed_care_loop("outbox-heartbeat@example.com", "heartbeat")
+    claimed_at = datetime.now(UTC)
+    with SessionLocal() as db:
+        claimed = claim_lifemap_outbox(
+            db,
+            worker_id="worker-a",
+            batch_size=100,
+            lease_seconds=10,
+            now=claimed_at,
+        )
+        assert claimed
+        row_id = claimed[0]
+
+        assert heartbeat_lifemap_outbox(
+            db,
+            row_id=row_id,
+            worker_id="worker-a",
+            lease_seconds=30,
+            now=claimed_at + timedelta(seconds=5),
+        )
+        assert not heartbeat_lifemap_outbox(
+            db,
+            row_id=row_id,
+            worker_id="worker-b",
+            lease_seconds=60,
+            now=claimed_at + timedelta(seconds=6),
+        )
+
+        row = db.get(LifeMapOutboxEvent, row_id)
+        assert row is not None and row.lease_owner == "worker-a"
+        lease_until = row.lease_until
+        assert lease_until is not None
+        if lease_until.tzinfo is None:
+            lease_until = lease_until.replace(tzinfo=UTC)
+        assert lease_until == claimed_at + timedelta(seconds=35)

@@ -6,11 +6,12 @@ profile scoping. The engine is deterministic so these assertions are stable.
 """
 
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from sqlalchemy import select
 
 from clara_api.core.config import get_settings
-from clara_api.db.models import LifeMapDecisionLedger, LifeMapEpisode, PhrProfile
+from clara_api.db.models import LifeMapDecisionLedger, LifeMapEpisode, PhrProfile, User
 from clara_api.db.session import SessionLocal
 from clara_api.lifemap.next_best_question import compute_next_best_question
 
@@ -25,7 +26,15 @@ def _episode(db, profile_id: int, title: str, goal: str = "") -> LifeMapEpisode:
 def _any_profile_id(db) -> int:
     profile = db.execute(select(PhrProfile)).scalars().first()
     if profile is None:
-        profile = PhrProfile(user_id=None, display_name="NBQ Test")
+        suffix = uuid4().hex
+        user = User(
+            email=f"nbq-{suffix}@test.clara",
+            hashed_password="not-used",
+            role="normal",
+        )
+        db.add(user)
+        db.flush()
+        profile = PhrProfile(user_id=user.id, full_name="NBQ Test")
         db.add(profile)
         db.flush()
     return profile.id

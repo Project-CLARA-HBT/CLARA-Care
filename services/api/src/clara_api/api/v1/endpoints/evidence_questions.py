@@ -36,6 +36,7 @@ from clara_api.db.models import (
     GuidelineArtifact,
     LifeMapEpisode,
     PhrProfile,
+    User,
 )
 from clara_api.db.session import SessionLocal, get_db
 
@@ -121,7 +122,7 @@ class EvidenceSubscriptionCreate(BaseModel):
     delivery_channel: Literal["in_app"] = "in_app"
 
 
-def _user_profile(db: Session, token: TokenPayload) -> tuple[object, PhrProfile]:
+def _user_profile(db: Session, token: TokenPayload) -> tuple[User, PhrProfile]:
     user = current_user(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
@@ -131,10 +132,14 @@ def _user_profile(db: Session, token: TokenPayload) -> tuple[object, PhrProfile]
     return user, profile
 
 
-def _episode(db: Session, profile_id: int, episode_id: int) -> LifeMapEpisode:
+def _episode(db: Session, profile_id: int, episode_id: str | int) -> LifeMapEpisode:
+    episode_ref = str(episode_id)
+    selector = LifeMapEpisode.public_id == episode_ref
+    if episode_ref.isdigit():
+        selector = selector | (LifeMapEpisode.id == int(episode_ref))
     episode = db.execute(
         select(LifeMapEpisode).where(
-            LifeMapEpisode.id == episode_id, LifeMapEpisode.profile_id == profile_id
+            selector, LifeMapEpisode.profile_id == profile_id
         )
     ).scalar_one_or_none()
     if episode is None:
@@ -563,15 +568,15 @@ def _execute_evidence_run(run_id: int, token_data: dict[str, Any]) -> None:
 
 @router.post("/episodes/{episode_id}/evidence-questions", status_code=status.HTTP_201_CREATED)
 def create_evidence_question(
-    episode_id: int,
+    episode_id: str,
     payload: EvidenceQuestionCreate,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
     user, profile = _user_profile(db, token)
-    _episode(db, profile.id, episode_id)
+    episode = _episode(db, profile.id, episode_id)
     compiled = _compile_question(payload)
-    compiled["episode_id"] = episode_id
+    compiled["episode_id"] = episode.public_id
     item = ClinicalCase(
         owner_user_id=user.id,
         title=payload.question.strip()[:255],
@@ -592,7 +597,7 @@ def get_evidence_question(
 ) -> dict[str, Any]:
     user, profile = _user_profile(db, token)
     item = _question_case(db, user.id, question_id)
-    _episode(db, profile.id, int(_question_data(item).get("episode_id") or 0))
+    _episode(db, profile.id, str(_question_data(item).get("episode_id") or ""))
     return _serialize_question(item)
 
 
@@ -606,7 +611,7 @@ def update_evidence_question(
     user, profile = _user_profile(db, token)
     item = _question_case(db, user.id, question_id)
     existing = _question_data(item)
-    _episode(db, profile.id, int(existing.get("episode_id") or 0))
+    _episode(db, profile.id, str(existing.get("episode_id") or ""))
     updated = _compile_question(payload, existing)
     updated["episode_id"] = existing["episode_id"]
     item.metadata_json = {"evidence_question": updated}
@@ -630,7 +635,7 @@ def run_evidence_question(
     user, profile = _user_profile(db, token)
     question_case = _question_case(db, user.id, question_id)
     question = _question_data(question_case)
-    _episode(db, profile.id, int(question.get("episode_id") or 0))
+    _episode(db, profile.id, str(question.get("episode_id") or ""))
     if not question.get("confirmed"):
         raise HTTPException(
             status_code=409,
@@ -831,7 +836,7 @@ def subscribe_to_evidence_run(
     user, profile = _user_profile(db, token)
     run = _owned_run(db, user.id, run_id)
     question = _question_data(_question_case(db, user.id, run.case_id))
-    _episode(db, profile.id, int(question.get("episode_id") or 0))
+    _episode(db, profile.id, str(question.get("episode_id") or ""))
     existing = db.execute(
         select(EvidenceRunSubscription).where(
             EvidenceRunSubscription.user_id == user.id,

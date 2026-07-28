@@ -263,14 +263,6 @@ class ScreenErrorBoundary extends StatefulWidget {
 class _ScreenErrorBoundaryState extends State<ScreenErrorBoundary> {
   int _attempt = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    // Wrapping a screen is enough to get clean containment even if the app
-    // never called install() explicitly.
-    _ensureCleanErrorWidgetBuilder();
-  }
-
   void _retry() {
     widget.onRetry?.call();
     // Reconstruct the guarded subtree so a transient failure can recover.

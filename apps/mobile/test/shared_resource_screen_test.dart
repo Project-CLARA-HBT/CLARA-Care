@@ -35,7 +35,7 @@ void main() {
     tester,
   ) async {
     var called = 0;
-    SharedResourceFetcher fetcher = (token) async {
+    Future<Map<String, dynamic>> fetcher(String token) async {
       called += 1;
       expect(token, 'good-token');
       return <String, dynamic>{
@@ -63,7 +63,7 @@ void main() {
         },
         'hedge': 'hedge text',
       };
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
@@ -94,12 +94,12 @@ void main() {
   testWidgets('invalid/expired token shows a clear non-PII error', (
     tester,
   ) async {
-    SharedResourceFetcher fetcher = (token) async {
+    Future<Map<String, dynamic>> fetcher(String token) async {
       throw ApiException(
         statusCode: 410,
         message: kSharedResourceUnavailableMessage,
       );
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
@@ -120,7 +120,8 @@ void main() {
   testWidgets('emergency-card scope renders only whitelisted fields', (
     tester,
   ) async {
-    SharedResourceFetcher fetcher = (token) async => <String, dynamic>{
+    Future<Map<String, dynamic>> fetcher(String token) async =>
+        <String, dynamic>{
           'scope': 'emergency_card',
           'emergency_card': {
             'disclaimer': {'vi': 'Thẻ tự khai.', 'en': 'Self declared.'},
@@ -155,10 +156,10 @@ void main() {
     tester,
   ) async {
     var called = 0;
-    SharedResourceFetcher fetcher = (token) async {
+    Future<Map<String, dynamic>> fetcher(String token) async {
       called += 1;
       return <String, dynamic>{'scope': 'full', 'record': {}};
-    };
+    }
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(

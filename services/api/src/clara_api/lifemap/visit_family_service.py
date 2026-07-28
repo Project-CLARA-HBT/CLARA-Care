@@ -11,9 +11,9 @@ import hashlib
 import json
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,8 @@ from clara_api.db.models import (
     LifeMapDecisionLedger,
     LifeMapEpisode,
     LifeMapEvent,
+    LifeMapEventRevision,
+    LifeMapTaskAction,
     LifeMapVisit,
     MedicationCourse,
     PhrProfile,
@@ -742,14 +744,14 @@ def confirm_visit_plan(
                 or not all(isinstance(value, int) for value in [*task_ids, *event_ids])
             ):
                 raise DomainValidationError("Stored plan confirmation result is invalid")
-            tasks = [db.get(LifeMapCareTask, task_id) for task_id in task_ids]
-            events = [db.get(LifeMapEvent, event_id) for event_id in event_ids]
-            if any(item is None for item in [*tasks, *events]):
+            replay_tasks = [db.get(LifeMapCareTask, task_id) for task_id in task_ids]
+            replay_events = [db.get(LifeMapEvent, event_id) for event_id in event_ids]
+            if any(item is None for item in [*replay_tasks, *replay_events]):
                 raise DomainValidationError("Stored plan confirmation result is unavailable")
             return (
                 draft,
-                [item for item in tasks if item is not None],
-                [item for item in events if item is not None],
+                [item for item in replay_tasks if item is not None],
+                [item for item in replay_events if item is not None],
             )
         raise DomainValidationError("Plan has already been confirmed with a different request")
     if draft.withdrawn_at is not None or draft.deleted_at is not None:
@@ -826,6 +828,32 @@ def confirm_visit_plan(
     if episode is not None:
         episode.version_no += 1
     db.flush()
+    for task in tasks:
+        db.add(
+            LifeMapTaskAction(
+                task_id=task.id,
+                profile_id=visit.profile_id,
+                action="visit_plan_confirm",
+                from_state="",
+                to_state=task.status,
+                actor_user_id=owner.id,
+                reason="confirmed_grounded_visit_plan",
+            )
+        )
+    for event in events:
+        db.add(
+            LifeMapEventRevision(
+                event_id=event.id,
+                profile_id=visit.profile_id,
+                revision_no=1,
+                truth_state=event.truth_state,
+                payload_json=event.payload_json,
+                provenance_json=event.provenance_json,
+                asserted_by_user_id=owner.id,
+                reason_code="confirmed_grounded_visit_plan",
+                policy_version="lifemap-visit-closed-loop-v2",
+            )
+        )
     draft.status = "confirmed"
     draft.confirmed_at = now
     draft.confirmed_by_user_id = owner.id
@@ -908,12 +936,10 @@ def create_visit_pack(
     if visit.status not in {"planning", "ready"}:
         raise DomainValidationError("Visit Pack cannot change after the visit starts")
     chosen = _selection(selection)
-    concern_ids = chosen["concern_ids"]
-    episode_ids = chosen["episode_ids"]
-    event_ids = chosen["event_ids"]
-    medication_ids = chosen["medication_course_ids"]
-    assert isinstance(concern_ids, list) and isinstance(episode_ids, list)
-    assert isinstance(event_ids, list) and isinstance(medication_ids, list)
+    concern_ids = cast(list[int], chosen["concern_ids"])
+    episode_ids = cast(list[int], chosen["episode_ids"])
+    event_ids = cast(list[int], chosen["event_ids"])
+    medication_ids = cast(list[int], chosen["medication_course_ids"])
 
     concerns = _rows_by_id(
         list(
@@ -1237,7 +1263,7 @@ def _validate_grant_scope(db: Session, *, profile_id: int, scope: dict[str, Any]
     object_type = scope["object_type"]
     object_id = scope["object_id"]
     actions = scope["allowed_actions"]
-    if object_type not in FAMILY_OBJECT_ACTIONS or not isinstance(object_id, int) or object_id <= 0:
+    if object_type not in FAMILY_OBJECT_ACTIONS or not isinstance(object_id, (int, str)):
         raise DomainValidationError("Unsupported grant object")
     if not isinstance(actions, list) or not actions or len(actions) != len(set(actions)):
         raise DomainValidationError("Grant actions must be a unique non-empty list")
@@ -1246,17 +1272,28 @@ def _validate_grant_scope(db: Session, *, profile_id: int, scope: dict[str, Any]
         for action in actions
     ):
         raise DomainValidationError("Grant action is not permitted for this object")
-    model = {
+    model: Any = {
         "episode": LifeMapEpisode,
         "care_task": LifeMapCareTask,
         "visit": LifeMapVisit,
     }[object_type]
+    selector = str(object_id).strip()
+    if not selector:
+        raise DomainValidationError("Unsupported grant object")
+    clauses = []
+    if hasattr(model, "public_id"):
+        clauses.append(model.public_id == selector)
+    if selector.isdecimal() and int(selector) > 0:
+        clauses.append(model.id == int(selector))
+    if not clauses:
+        raise DomainValidationError("Unsupported grant object")
     row = db.execute(
-        select(model).where(model.id == object_id, model.profile_id == profile_id)
+        select(model).where(or_(*clauses), model.profile_id == profile_id)
     ).scalar_one_or_none()
     if row is None:
         raise DomainNotFoundError("Grant object not found")
-    return {"object_type": object_type, "object_id": object_id, "allowed_actions": actions}
+    canonical_id = getattr(row, "public_id", None) or str(row.id)
+    return {"object_type": object_type, "object_id": canonical_id, "allowed_actions": actions}
 
 
 def _validate_invitation_expiry(expires_at: datetime) -> datetime:
@@ -1435,13 +1472,30 @@ def authorize_family_action(
     actor: User,
     profile_id: int,
     object_type: str,
-    object_id: int,
+    object_id: str | int,
     action: str,
     purpose: str,
 ) -> FamilyAccessGrant:
     """Check live grant state on every request and persist an allow/deny decision."""
 
     now = _now()
+    selector = str(object_id)
+    legacy_selector = selector
+    model: Any = {
+        "episode": LifeMapEpisode,
+        "care_task": LifeMapCareTask,
+        "visit": LifeMapVisit,
+    }.get(object_type)
+    if model is not None and hasattr(model, "public_id"):
+        clauses = [model.public_id == selector]
+        if selector.isdecimal():
+            clauses.append(model.id == int(selector))
+        row = db.execute(
+            select(model).where(or_(*clauses), model.profile_id == profile_id)
+        ).scalar_one_or_none()
+        if row is not None:
+            selector = row.public_id
+            legacy_selector = str(row.id)
     grant = (
         db.execute(
             select(FamilyAccessGrant)
@@ -1449,7 +1503,7 @@ def authorize_family_action(
                 FamilyAccessGrant.grantee_user_id == actor.id,
                 FamilyAccessGrant.profile_id == profile_id,
                 FamilyAccessGrant.object_type == object_type,
-                FamilyAccessGrant.object_id == str(object_id),
+                FamilyAccessGrant.object_id.in_({selector, legacy_selector}),
                 FamilyAccessGrant.purpose == purpose,
                 FamilyAccessGrant.status == "active",
                 FamilyAccessGrant.revoked_at.is_(None),
@@ -1470,7 +1524,7 @@ def authorize_family_action(
             action=action,
             outcome="denied",
             object_type=object_type,
-            object_id=str(object_id),
+            object_id=selector,
             purpose=purpose,
         )
         db.flush()
@@ -1519,33 +1573,37 @@ def record_caregiver_observation(
     *,
     caregiver: User,
     profile_id: int,
-    episode_id: int,
+    episode_id: str | int,
     purpose: str,
     text: str,
 ) -> LifeMapEvent:
     if not text.strip():
         raise DomainValidationError("Observation text is required")
+    selector = str(episode_id)
+    clauses = [LifeMapEpisode.public_id == selector]
+    if selector.isdecimal():
+        clauses.append(LifeMapEpisode.id == int(selector))
+    episode = db.execute(
+        select(LifeMapEpisode).where(
+            or_(*clauses), LifeMapEpisode.profile_id == profile_id
+        )
+    ).scalar_one_or_none()
+    if episode is None:
+        raise DomainNotFoundError("Episode not found")
     grant = authorize_family_action(
         db,
         actor=caregiver,
         profile_id=profile_id,
         object_type="episode",
-        object_id=episode_id,
+        object_id=episode.public_id,
         action="add_observation",
         purpose=purpose,
     )
-    episode = db.execute(
-        select(LifeMapEpisode).where(
-            LifeMapEpisode.id == episode_id, LifeMapEpisode.profile_id == profile_id
-        )
-    ).scalar_one_or_none()
-    if episode is None:
-        raise DomainNotFoundError("Episode not found")
     event = LifeMapEvent(
         profile_id=profile_id,
-        episode_id=episode_id,
+        episode_id=episode.id,
         event_type="caregiver_observation",
-        truth_state="reported",
+        truth_state="user_reported",
         occurred_at=_now(),
         payload_json={"text": text.strip()},
         provenance_json={
@@ -1559,6 +1617,19 @@ def record_caregiver_observation(
     )
     db.add(event)
     db.flush()
+    db.add(
+        LifeMapEventRevision(
+            event_id=event.id,
+            profile_id=profile_id,
+            revision_no=1,
+            truth_state="user_reported",
+            payload_json=event.payload_json,
+            provenance_json=event.provenance_json,
+            asserted_by_user_id=caregiver.id,
+            reason_code="caregiver_reported",
+            policy_version="lifemap-truth-v2",
+        )
+    )
     return event
 
 
@@ -1567,29 +1638,35 @@ def complete_delegated_task(
     *,
     caregiver: User,
     profile_id: int,
-    task_id: int,
+    task_id: str | int,
     purpose: str,
     evidence: dict[str, Any] | None = None,
 ) -> LifeMapCareTask:
+    selector = str(task_id)
+    clauses = [LifeMapCareTask.public_id == selector]
+    if selector.isdecimal():
+        clauses.append(LifeMapCareTask.id == int(selector))
+    task = db.execute(
+        select(LifeMapCareTask).where(
+            or_(*clauses), LifeMapCareTask.profile_id == profile_id
+        )
+    ).scalar_one_or_none()
+    if task is None:
+        raise DomainNotFoundError("Care task not found")
     grant = authorize_family_action(
         db,
         actor=caregiver,
         profile_id=profile_id,
         object_type="care_task",
-        object_id=task_id,
+        object_id=task.public_id,
         action="complete_task",
         purpose=purpose,
     )
-    task = db.execute(
-        select(LifeMapCareTask).where(
-            LifeMapCareTask.id == task_id, LifeMapCareTask.profile_id == profile_id
-        )
-    ).scalar_one_or_none()
-    if task is None:
-        raise DomainNotFoundError("Care task not found")
     if task.status != "accepted":
         raise DomainValidationError("Care task is not ready for completion")
+    previous_status = task.status
     task.status = "completed"
+    task.version_no += 1
     task.completed_at = _now()
     task.completion_evidence_json = {
         "source": "caregiver_completed",
@@ -1597,6 +1674,17 @@ def complete_delegated_task(
         "family_grant_id": grant.id,
         "evidence": evidence or {},
     }
+    db.add(
+        LifeMapTaskAction(
+            task_id=task.id,
+            profile_id=profile_id,
+            action="complete",
+            from_state=previous_status,
+            to_state="completed",
+            actor_user_id=caregiver.id,
+            reason="caregiver_completed_under_live_grant",
+        )
+    )
     db.flush()
     return task
 
@@ -1606,7 +1694,7 @@ def acknowledge_care_task_notification(
     *,
     caregiver: User,
     profile_id: int,
-    task_id: int,
+    task_id: str | int,
     purpose: str,
 ) -> LifeMapCareTask:
     """Record an in-app task-notification acknowledgement under a live grant.
@@ -1617,24 +1705,28 @@ def acknowledge_care_task_notification(
     for the profile owner, but contains no task text.
     """
 
-    grant = authorize_family_action(
-        db,
-        actor=caregiver,
-        profile_id=profile_id,
-        object_type="care_task",
-        object_id=task_id,
-        action="view",
-        purpose=purpose,
-    )
+    selector = str(task_id)
+    clauses = [LifeMapCareTask.public_id == selector]
+    if selector.isdecimal():
+        clauses.append(LifeMapCareTask.id == int(selector))
     task = db.execute(
         select(LifeMapCareTask).where(
-            LifeMapCareTask.id == task_id,
+            or_(*clauses),
             LifeMapCareTask.profile_id == profile_id,
             LifeMapCareTask.status == "accepted",
         )
     ).scalar_one_or_none()
     if task is None:
         raise DomainNotFoundError("Pending care task not found")
+    grant = authorize_family_action(
+        db,
+        actor=caregiver,
+        profile_id=profile_id,
+        object_type="care_task",
+        object_id=task.public_id,
+        action="view",
+        purpose=purpose,
+    )
     _access_log(
         db,
         profile_id=profile_id,
@@ -1643,7 +1735,7 @@ def acknowledge_care_task_notification(
         action="notification.acknowledged",
         outcome="success",
         object_type="care_task",
-        object_id=str(task.id),
+        object_id=task.public_id,
         purpose=purpose,
     )
     db.flush()

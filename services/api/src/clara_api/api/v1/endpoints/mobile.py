@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import APIRouter, Depends
 
+from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.schemas import MobileSummaryResponse
+from clara_api.schemas import MobileApiHealth, MobileSummaryResponse, Role
 
 router = APIRouter()
 
@@ -62,10 +64,32 @@ def mobile_summary(
         role,
         {"research": False, "careguard": False, "council": False, "system_monitor": False},
     )
-    return {
-        "role": role,
-        "api_health": {"status": "ok", "endpoint": "/api/v1/health"},
-        "quick_links": dict(_QUICK_LINKS),
-        "feature_flags": dict(feature_flags),
-        "last_updated": datetime.now(tz=UTC).isoformat(),
+    settings = get_settings()
+    feature_flags = {
+        **feature_flags,
+        "lifemap_v2": settings.lifemap_v2_enabled,
+        "lifemap_capture": settings.lifemap_capture_enabled,
+        "lifemap_baselines_v2": settings.lifemap_baselines_v2_enabled,
+        "lifemap_next_question_v2": settings.lifemap_next_question_v2_enabled,
+        "lifemap_replay_v2": settings.lifemap_replay_v2_enabled,
+        "lifemap_visit_extraction": settings.lifemap_visit_extraction_enabled,
+        "lifemap_evidence_monitor": settings.lifemap_evidence_monitor_enabled,
+        "lifemap_fhir_export": settings.lifemap_fhir_export_enabled,
+        "lifemap_ask_ai": settings.lifemap_ask_ai_enabled,
+        "lifemap_ai_summaries": settings.lifemap_ai_summaries_enabled,
+        "lifemap_ai_entity_resolution": settings.lifemap_ai_entity_resolution_enabled,
+        "lifemap_ai_review_findings": settings.lifemap_ai_review_findings_enabled,
+        "lifemap_ai_pattern_shadow": settings.lifemap_ai_pattern_shadow_enabled,
+        "lifemap_ai_forecast_shadow": settings.lifemap_ai_forecast_shadow_enabled,
+        "lifemap_ai_question_ranker_shadow": (
+            settings.lifemap_ai_question_ranker_shadow_enabled
+        ),
+        "lifemap_ai_evidence_matching": settings.lifemap_ai_evidence_matching_enabled,
     }
+    return MobileSummaryResponse(
+        role=cast(Role, role),
+        api_health=MobileApiHealth(status="ok", endpoint="/api/v1/health"),
+        quick_links=dict(_QUICK_LINKS),
+        feature_flags=dict(feature_flags),
+        last_updated=datetime.now(tz=UTC),
+    )

@@ -115,15 +115,16 @@ def _admin_rag_routes() -> list[tuple[str, str]]:
     """
 
     found: set[tuple[str, str]] = set()
-    for route in app.routes:
-        path = getattr(route, "path", "")
+    # FastAPI 0.135+ keeps included routers as lazy route nodes. OpenAPI is the
+    # stable flattened public surface across both eager and lazy versions.
+    for path, operations in app.openapi()["paths"].items():
         if "/admin/rag/" not in path:
             continue
         if path.count("/api/v1") != 1:
             continue
-        methods = getattr(route, "methods", set()) or set()
-        for method in methods:
-            if method in {"HEAD", "OPTIONS"}:
+        for method in operations:
+            method = method.upper()
+            if method in {"HEAD", "OPTIONS", "PARAMETERS"}:
                 continue
             found.add((method, path))
     return sorted(found)

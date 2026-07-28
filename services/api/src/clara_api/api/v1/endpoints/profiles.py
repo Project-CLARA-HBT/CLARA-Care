@@ -4,9 +4,10 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import FamilyAccessGrant, PhrProfile, User
@@ -64,9 +65,20 @@ def current_user(db: Session, token: TokenPayload) -> User:
     return user
 
 
-def owned_profile(db: Session, user: User, profile_id: int) -> PhrProfile:
+def _profile_selector(profile_id: str):
+    clauses = [PhrProfile.public_id == profile_id]
+    if profile_id.isdecimal():
+        clauses.append(PhrProfile.id == int(profile_id))
+    return or_(*clauses)
+
+
+def owned_profile(db: Session, user: User, profile_id: str) -> PhrProfile:
     profile = db.execute(
-        select(PhrProfile).where(PhrProfile.id == profile_id, PhrProfile.user_id == user.id)
+        select(PhrProfile).where(
+            _profile_selector(profile_id),
+            PhrProfile.user_id == user.id,
+            PhrProfile.status == "active",
+        )
     ).scalar_one_or_none()
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
@@ -75,7 +87,7 @@ def owned_profile(db: Session, user: User, profile_id: int) -> PhrProfile:
 
 def serialize(profile: PhrProfile, *, kind: str = "self", active: bool = False) -> ProfileResponse:
     return ProfileResponse(
-        id=str(profile.id),
+        id=profile.public_id,
         # A recipient may be allowed to act on one object only. Do not expose
         # the profile's real name merely to render a context picker.
         display_name=(
@@ -128,11 +140,12 @@ def _resolved_context(
     )
     owned_ids = {profile.id for profile in owned}
     shared_ids = _live_shared_profile_ids(db, user)
-    requested_id: int | None
-    try:
-        requested_id = int(requested_profile_id) if requested_profile_id else None
-    except (TypeError, ValueError):
-        requested_id = None
+    requested_id: int | None = None
+    if requested_profile_id:
+        requested = db.execute(
+            select(PhrProfile.id).where(_profile_selector(requested_profile_id))
+        ).scalar_one_or_none()
+        requested_id = requested
 
     # An invalid, expired, or revoked context header always falls back to the
     # user's own profile. It can never select an arbitrary profile.
@@ -149,16 +162,23 @@ def _resolved_context(
         serialize(profile, kind="self", active=profile.id == active_id)
         for profile in owned
     ]
+    shared: list[PhrProfile] = []
     if shared_ids:
-        shared_profiles = db.execute(
-            select(PhrProfile).where(PhrProfile.id.in_(shared_ids)).order_by(PhrProfile.id)
-        ).scalars()
+        shared = list(
+            db.execute(
+                select(PhrProfile).where(PhrProfile.id.in_(shared_ids)).order_by(PhrProfile.id)
+            ).scalars()
+        )
         profiles.extend(
             serialize(profile, kind="shared", active=profile.id == active_id)
-            for profile in shared_profiles
+            for profile in shared
             if profile.id not in owned_ids
         )
-    return profiles, str(active_id) if active_id is not None else None, active_kind
+    active_profile = next(
+        (profile for profile in [*owned, *shared] if profile.id == active_id),
+        None,
+    )
+    return profiles, active_profile.public_id if active_profile is not None else None, active_kind
 
 
 @router.get("/profiles", response_model=list[ProfileResponse])
@@ -176,7 +196,7 @@ def list_profiles(
 
 @router.post("/profiles/{profile_id}/activate", response_model=ProfileActivationResponse)
 def activate_profile(
-    profile_id: int,
+    profile_id: str,
     response: Response,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
@@ -188,8 +208,8 @@ def activate_profile(
     return ProfileActivationResponse(
         profile=serialize(profile, active=True),
         activated_at=datetime.now(UTC),
-        active_profile_id=str(profile.id),
-        cache_scope=f"profile:{profile.id}",
+        active_profile_id=profile.public_id,
+        cache_scope=f"profile:{profile.public_id}",
     )
 
 
@@ -219,18 +239,37 @@ def profile_context(
 
 @router.get("/profiles/{profile_id}/capabilities", response_model=ProfileCapabilitiesResponse)
 def profile_capabilities(
-    profile_id: int,
+    profile_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> ProfileCapabilitiesResponse:
     profile = owned_profile(db, current_user(db, token), profile_id)
+    settings = get_settings()
     return ProfileCapabilitiesResponse(
-        profile_id=str(profile.id),
+        profile_id=profile.public_id,
         capabilities={
             "connected_health": True,
             "lifemap_events": True,
             "care_loops": True,
             "family_sharing": False,
             "provider_handoff": False,
+            "lifemap_v2": settings.lifemap_v2_enabled,
+            "lifemap_capture": settings.lifemap_capture_enabled,
+            "lifemap_baselines_v2": settings.lifemap_baselines_v2_enabled,
+            "lifemap_next_question_v2": settings.lifemap_next_question_v2_enabled,
+            "lifemap_replay_v2": settings.lifemap_replay_v2_enabled,
+            "lifemap_visit_extraction": settings.lifemap_visit_extraction_enabled,
+            "lifemap_evidence_monitor": settings.lifemap_evidence_monitor_enabled,
+            "lifemap_fhir_export": settings.lifemap_fhir_export_enabled,
+            "lifemap_ask_ai": settings.lifemap_ask_ai_enabled,
+            "lifemap_ai_summaries": settings.lifemap_ai_summaries_enabled,
+            "lifemap_ai_entity_resolution": settings.lifemap_ai_entity_resolution_enabled,
+            "lifemap_ai_review_findings": settings.lifemap_ai_review_findings_enabled,
+            "lifemap_ai_pattern_shadow": settings.lifemap_ai_pattern_shadow_enabled,
+            "lifemap_ai_forecast_shadow": settings.lifemap_ai_forecast_shadow_enabled,
+            "lifemap_ai_question_ranker_shadow": (
+                settings.lifemap_ai_question_ranker_shadow_enabled
+            ),
+            "lifemap_ai_evidence_matching": settings.lifemap_ai_evidence_matching_enabled,
         },
     )

@@ -42,7 +42,9 @@ Map<String, dynamic> _envelope() => <String, dynamic>{
       'debug': {'pipeline': 'local-synth-v1'},
       'metadata': {
         'retrieval_errors': ['rxnav status=503'],
-        'source_errors': {'rxnav': ['rxnav status=503']},
+        'source_errors': {
+          'rxnav': ['rxnav status=503']
+        },
         'note': 'kept',
       },
     };
@@ -178,8 +180,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Answer text + a citation are shown.
+      // Answer text is shown; references live in the explicit technical-detail
+      // panel so the primary consumer answer remains clean.
       expect(find.textContaining('uống theo chỉ định'), findsOneWidget);
+      await tester.tap(find.text('Chi tiết kỹ thuật'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Hướng dẫn sử dụng thuốc'), findsOneWidget);
 
       // No internal runtime value is rendered anywhere in the tree.
@@ -209,7 +214,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('end-user-safe-admin-detail')), findsOneWidget);
+      expect(
+          find.byKey(const Key('end-user-safe-admin-detail')), findsOneWidget);
     });
   });
 }

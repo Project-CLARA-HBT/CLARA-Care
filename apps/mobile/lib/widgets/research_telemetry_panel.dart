@@ -225,27 +225,30 @@ class ResearchTelemetryPanel extends StatelessWidget {
             ),
           ),
           clipBehavior: Clip.antiAlias,
-          child: ExpansionTile(
-            initiallyExpanded: initiallyExpanded,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            leading: const Icon(Icons.insights_outlined, size: 20),
-            title: Text(
-              'Chi tiết kỹ thuật',
-              style: theme.textTheme.labelLarge,
-            ),
-            subtitle: Text(
-              'Kiểm chứng, suy luận & nguồn',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          child: Material(
+            color: Colors.transparent,
+            child: ExpansionTile(
+              initiallyExpanded: initiallyExpanded,
+              tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+              childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              leading: const Icon(Icons.insights_outlined, size: 20),
+              title: Text(
+                'Chi tiết kỹ thuật',
+                style: theme.textTheme.labelLarge,
               ),
-            ),
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: children,
+              subtitle: Text(
+                'Kiểm chứng, suy luận & nguồn',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ],
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: children,
+                ),
+              ],
+            ),
           ),
         ),
       ),

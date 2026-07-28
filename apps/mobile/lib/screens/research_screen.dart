@@ -25,17 +25,6 @@ extension on ResearchMode {
     }
   }
 
-  String get label {
-    switch (this) {
-      case ResearchMode.fast:
-        return 'Nhanh';
-      case ResearchMode.deep:
-        return 'Tư duy';
-      case ResearchMode.deepBeta:
-        return 'Pro';
-    }
-  }
-
   /// Fast mode answers synchronously via `POST /research/tier2`. Deep and
   /// deep_beta enqueue a tier2 job and stream progress over SSE.
   bool get usesJobStream => this != ResearchMode.fast;

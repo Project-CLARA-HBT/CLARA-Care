@@ -145,7 +145,7 @@ def test_family_scope_cannot_widen_and_revoke_blocks_next_write() -> None:
             purpose="care_coordination",
             text="Walked comfortably this morning.",
         )
-        assert observation.truth_state == "reported"
+        assert observation.truth_state == "user_reported"
         assert observation.provenance_json["actor_user_id"] == caregiver.id
         assert observation.provenance_json["family_grant_id"] == grant.id
         revoke_family_access_grant(db, owner=owner, grant_id=grant.id)

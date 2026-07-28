@@ -33,6 +33,7 @@ class _GuardedForm extends StatefulWidget {
 class _GuardedFormState extends State<_GuardedForm> {
   static const _guard = OfflineMutationGuard();
   final _controller = TextEditingController();
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void dispose() {
@@ -44,14 +45,15 @@ class _GuardedFormState extends State<_GuardedForm> {
     await _guard.run(
       isOnline: widget.connectivity.currentValue,
       mutate: widget.onMutate,
-      onBlocked: (message) => ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message))),
+      onBlocked: (message) => _messengerKey.currentState
+          ?.showSnackBar(SnackBar(content: Text(message))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: _messengerKey,
       home: Scaffold(
         body: Column(
           children: [
@@ -109,13 +111,13 @@ void main() {
 
     // Go offline: banner appears with non-PII Vietnamese copy.
     connectivity.setOnline(false);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('offline-banner')), findsOneWidget);
     expect(find.text(kDefaultOfflineMessage), findsOneWidget);
 
     // Reconnect: banner collapses again.
     connectivity.setOnline(true);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('offline-banner')), findsNothing);
   });
 
@@ -137,7 +139,7 @@ void main() {
 
     // Tap save while offline.
     await tester.tap(find.text('Lưu'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     // The mutation was NOT invoked (blocked), the user is informed, and the
     // entered input is preserved (Property P12, Req 9.5).
@@ -147,9 +149,9 @@ void main() {
 
     // Reconnect, then retry: the mutation now runs and input is still intact.
     connectivity.setOnline(true);
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lưu'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(mutateCalls, 1);
     expect(find.text('liều 5mg'), findsOneWidget);

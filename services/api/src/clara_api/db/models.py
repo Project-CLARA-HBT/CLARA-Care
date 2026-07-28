@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
@@ -17,6 +18,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from clara_api.db.base import Base
+
+
+def _public_id() -> str:
+    """Return a non-enumerable API identifier without database-specific defaults."""
+
+    return str(uuid4())
 
 
 class User(Base):
@@ -784,6 +791,9 @@ class PhrProfile(Base):
     __tablename__ = "phr_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
@@ -820,6 +830,13 @@ class PhrProfile(Base):
     )
     # New — monotonic per-profile version counter, bumped on each committed change.
     current_version_no: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    status: Mapped[str] = mapped_column(
+        String(24), default="active", server_default="active", index=True
+    )
+    locale: Mapped[str] = mapped_column(String(16), default="vi", server_default="vi")
+    timezone: Mapped[str] = mapped_column(
+        String(64), default="Asia/Ho_Chi_Minh", server_default="Asia/Ho_Chi_Minh"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -892,6 +909,9 @@ class LifeMapEvent(Base):
     __tablename__ = "lifemap_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -906,6 +926,12 @@ class LifeMapEvent(Base):
     source_kind: Mapped[str] = mapped_column(String(32), default="reported", index=True)
     version_no: Mapped[int] = mapped_column(Integer, default=1)
     supersedes_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    lifecycle_status: Mapped[str] = mapped_column(
+        String(24), default="active", server_default="active", index=True
+    )
+    current_revision_no: Mapped[int] = mapped_column(
+        Integer, default=1, server_default="1"
+    )
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -921,6 +947,9 @@ class LifeMapEpisode(Base):
     __tablename__ = "lifemap_episodes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -947,6 +976,9 @@ class LifeMapCareTask(Base):
     __tablename__ = "lifemap_care_tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -962,6 +994,7 @@ class LifeMapCareTask(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completion_evidence_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     provenance_json: Mapped[dict] = mapped_column(JSON)
+    version_no: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -1005,8 +1038,177 @@ class LifeMapOutboxEvent(Base):
     event_type: Mapped[str] = mapped_column(String(96), index=True)
     payload_json: Mapped[dict] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, default=8, server_default="8")
+    lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    lease_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    last_error_code: Mapped[str] = mapped_column(String(96), default="", server_default="")
+    dead_lettered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class HealthSourceReference(Base):
+    """Immutable origin metadata for a canonical or candidate LifeMap fact."""
+
+    __tablename__ = "health_source_references"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    source_kind: Mapped[str] = mapped_column(String(32), index=True)
+    source_identity: Mapped[str] = mapped_column(String(255), default="")
+    author_type: Mapped[str] = mapped_column(String(32), default="")
+    author_public_id: Mapped[str] = mapped_column(String(64), default="")
+    device_identity: Mapped[str] = mapped_column(String(128), default="")
+    checksum: Mapped[str] = mapped_column(String(128), default="", index=True)
+    original_language: Mapped[str] = mapped_column(String(16), default="")
+    source_span_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapEventRevision(Base):
+    """Append-only truth and provenance revision for a LifeMap event."""
+
+    __tablename__ = "lifemap_event_revisions"
+    __table_args__ = (
+        UniqueConstraint("event_id", "revision_no", name="uq_lifemap_event_revision_no"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_events.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    revision_no: Mapped[int] = mapped_column(Integer)
+    truth_state: Mapped[str] = mapped_column(String(24), index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON)
+    display_summary: Mapped[str] = mapped_column(Text, default="")
+    provenance_json: Mapped[dict] = mapped_column(JSON)
+    source_reference_id: Mapped[int | None] = mapped_column(
+        ForeignKey("health_source_references.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    asserted_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reason_code: Mapped[str] = mapped_column(String(64), default="")
+    supersedes_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    policy_version: Mapped[str] = mapped_column(String(64), default="")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class LifeMapTaskAction(Base):
+    """Append-only task state transition ledger."""
+
+    __tablename__ = "lifemap_task_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_care_tasks.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    from_state: Mapped[str] = mapped_column(String(24))
+    to_state: Mapped[str] = mapped_column(String(24))
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class LifeMapCommandRecord(Base):
+    """Idempotency result keyed by actor, profile, operation, key, and digest."""
+
+    __tablename__ = "lifemap_command_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "actor_user_id",
+            "operation",
+            "idempotency_key_hash",
+            name="uq_lifemap_command_scope_key",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    operation: Mapped[str] = mapped_column(String(96), index=True)
+    idempotency_key_hash: Mapped[str] = mapped_column(String(64))
+    request_digest: Mapped[str] = mapped_column(String(64))
+    status_code: Mapped[int] = mapped_column(Integer)
+    response_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class LifeMapProjectionDependency(Base):
+    """Input lineage and invalidation state for a derived LifeMap projection."""
+
+    __tablename__ = "lifemap_projection_dependencies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    projection_type: Mapped[str] = mapped_column(String(64), index=True)
+    projection_public_id: Mapped[str] = mapped_column(String(64), index=True)
+    input_type: Mapped[str] = mapped_column(String(64))
+    input_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="CASCADE"), index=True
+    )
+    rule_version: Mapped[str] = mapped_column(String(64))
+    produced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    invalidated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    invalidation_reason: Mapped[str] = mapped_column(String(96), default="")
 
 
 class MedicationCourse(Base):

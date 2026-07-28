@@ -41,6 +41,23 @@ def _profile(db: Session, token: TokenPayload) -> PhrProfile:
     return profile
 
 
+def _episode_for_profile(
+    db: Session, profile_id: int, episode_ref: str
+) -> LifeMapEpisode:
+    selector = LifeMapEpisode.public_id == episode_ref
+    if episode_ref.isdigit():
+        selector = selector | (LifeMapEpisode.id == int(episode_ref))
+    episode = db.execute(
+        select(LifeMapEpisode).where(
+            selector,
+            LifeMapEpisode.profile_id == profile_id,
+        )
+    ).scalar_one_or_none()
+    if episode is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    return episode
+
+
 def _aggregate_value(row: WearableDailyAggregate) -> float | None:
     value = row.value_json if isinstance(row.value_json, dict) else {}
     scalar = value.get("scalar")
@@ -103,7 +120,7 @@ def baseline(
 
 @router.get("/episodes/{episode_id}/next-question")
 def episode_next_question(
-    episode_id: int,
+    episode_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict:
@@ -118,33 +135,19 @@ def episode_next_question(
     if not get_settings().lifemap_next_question_enabled:
         raise HTTPException(status_code=404, detail="Feature not enabled")
     profile = _profile(db, token)
-    episode = db.execute(
-        select(LifeMapEpisode).where(
-            LifeMapEpisode.id == episode_id,
-            LifeMapEpisode.profile_id == profile.id,
-        )
-    ).scalar_one_or_none()
-    if episode is None:
-        raise HTTPException(status_code=404, detail="Episode not found")
+    episode = _episode_for_profile(db, profile.id, episode_id)
     result = compute_next_best_question(db, profile_id=profile.id, episode=episode)
-    return {"episode_id": str(episode.id), **result.as_dict()}
+    return {"episode_id": episode.public_id, **result.as_dict()}
 
 
 @router.get("/episodes/{episode_id}/replay")
 def episode_replay(
-    episode_id: int,
+    episode_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict:
     profile = _profile(db, token)
-    episode = db.execute(
-        select(LifeMapEpisode).where(
-            LifeMapEpisode.id == episode_id,
-            LifeMapEpisode.profile_id == profile.id,
-        )
-    ).scalar_one_or_none()
-    if episode is None:
-        raise HTTPException(status_code=404, detail="Episode not found")
+    episode = _episode_for_profile(db, profile.id, episode_id)
     events = list(
         db.execute(
             select(LifeMapEvent)
@@ -176,10 +179,14 @@ def episode_replay(
         ).scalars()
     )
     return {
-        "episode": {"id": str(episode.id), "title": episode.title, "status": episode.status},
+        "episode": {
+            "id": episode.public_id,
+            "title": episode.title,
+            "status": episode.status,
+        },
         "events": [
             {
-                "id": str(row.id),
+                "id": row.public_id,
                 "type": row.event_type,
                 "truth_state": row.truth_state,
                 "occurred_at": row.occurred_at,
@@ -187,7 +194,10 @@ def episode_replay(
             }
             for row in events
         ],
-        "tasks": [{"id": str(row.id), "title": row.title, "status": row.status} for row in tasks],
+        "tasks": [
+            {"id": row.public_id, "title": row.title, "status": row.status}
+            for row in tasks
+        ],
         "decisions": [
             {
                 "id": str(row.id),

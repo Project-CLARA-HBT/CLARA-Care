@@ -139,5 +139,7 @@ def test_completed_profile_cannot_be_downgraded_to_skipped() -> None:
 
 
 def test_onboarding_requires_authentication() -> None:
+    client.cookies.clear()
     assert client.get("/api/v1/phr/onboarding").status_code == 401
+    client.cookies.clear()
     assert client.patch("/api/v1/phr/onboarding", json={"action": "skip"}).status_code == 401
