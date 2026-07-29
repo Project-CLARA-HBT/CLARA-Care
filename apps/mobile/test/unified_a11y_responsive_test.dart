@@ -11,10 +11,10 @@
 //     (`ClaraButton`, `ListTile`).
 //   * Stable Vietnamese semantics for the primary controls.
 //
-// Surfaces with initState side-effects (they reassign `ErrorWidget.builder`
-// and probe connectivity / hit endpoints on mount) — Today, LifeMap, Medicines
-// cabinet — are intentionally excluded here and covered by their own
-// api-client/unit tests; hands-on runtime QA for those is a device task.
+// Networked surfaces use deterministic fake clients. Hands-on screen-reader
+// runtime QA on real devices remains a separate release task.
+
+import 'dart:convert';
 
 import 'package:clara_mobile/core/a11y.dart';
 import 'package:clara_mobile/core/analytics.dart';
@@ -26,12 +26,34 @@ import 'package:clara_mobile/theme/clara_theme.dart';
 import 'package:clara_mobile/theme/components/clara_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'fakes/fakes.dart';
 
 /// Common phone / tablet logical sizes for the responsive sweep.
 const Size _phone = Size(390, 844);
 const Size _tablet = Size(834, 1112);
+
+class _FakeImagePicker extends ImagePicker {
+  @override
+  Future<XFile?> pickImage({
+    required ImageSource source,
+    double? maxWidth,
+    double? maxHeight,
+    int? imageQuality,
+    CameraDevice preferredCameraDevice = CameraDevice.rear,
+    bool requestFullMetadata = true,
+  }) async {
+    return XFile.fromData(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4n'
+        'GNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+      ),
+      name: 'nhan-thuoc.png',
+      mimeType: 'image/png',
+    );
+  }
+}
 
 void main() {
   setUp(resetAnalyticsClientForTest);
@@ -259,6 +281,7 @@ void main() {
       required Size size,
       double? textScale,
       bool reduceMotion = false,
+      ImagePicker? imagePicker,
     }) async {
       await setSurface(tester, size);
       final api = FakeApiClient()
@@ -271,6 +294,15 @@ void main() {
             'lifemap_ai_review_findings': true,
             'lifemap_baselines_v2': true,
           },
+        })
+        ..stub('startLifeMapArtifactCapture', response: {
+          'id': 'capture-session-1',
+          'status': 'draft',
+          'candidates': [],
+        })
+        ..stub('uploadLifeMapCaptureArtifact', response: {
+          'id': 'artifact-1',
+          'job': {'id': 'job-1', 'status': 'queued'},
         })
         ..stub('getLifeMapBaselines', response: {'data': []})
         ..stub('getLifeMapToday', response: {
@@ -289,7 +321,11 @@ void main() {
       final session = await FakeSessionStore.authenticated(role: 'normal');
       await tester.pumpWidget(
         wrap(
-          LifeMapSurface(apiClient: api, sessionStore: session),
+          LifeMapSurface(
+            apiClient: api,
+            sessionStore: session,
+            imagePicker: imagePicker,
+          ),
           textScale: textScale,
           reduceMotion: reduceMotion,
         ),
@@ -313,6 +349,41 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Điều bạn muốn ghi lại'), findsOneWidget);
+      expect(find.text('Chụp ảnh'), findsOneWidget);
+      expect(find.text('Chọn ảnh'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    });
+
+    testWidgets('image capture remains a reviewable in-memory draft',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpLifeMap(
+        tester,
+        size: _phone,
+        imagePicker: _FakeImagePicker(),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Chọn ảnh'),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Chọn ảnh'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chọn ảnh'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bản nháp nguồn đang xử lý'), findsOneWidget);
+      expect(
+        find.textContaining('chỉ giữ tạm trong bộ nhớ khi xem xét'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Nguồn đang được đọc. Chưa có dữ liệu nào được xác nhận.',
+        ),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
       semantics.dispose();
     });

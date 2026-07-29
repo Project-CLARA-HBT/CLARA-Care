@@ -1560,6 +1560,47 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> startLifeMapArtifactCapture({
+    required String accessToken,
+    required String inputKind,
+    String locale = 'vi',
+  }) {
+    return _post(
+      '/api/v1/lifemap/capture/artifact-sessions',
+      body: <String, dynamic>{
+        'input_kind': inputKind,
+        'locale': locale,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadLifeMapCaptureArtifact({
+    required String accessToken,
+    required String sessionId,
+    required List<int> bytes,
+    required String filename,
+  }) {
+    return _postMultipart(
+      '/api/v1/lifemap/capture/sessions/$sessionId/artifacts',
+      fields: const <String, String>{},
+      accessToken: accessToken,
+      fileField: 'artifact',
+      fileBytes: bytes,
+      filename: filename,
+    );
+  }
+
+  Future<Map<String, dynamic>> getLifeMapCaptureJob({
+    required String accessToken,
+    required String jobId,
+  }) {
+    return _get(
+      '/api/v1/lifemap/capture/jobs/$jobId',
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> getLifeMapSummary({
     required String accessToken,
     required String level,

@@ -430,7 +430,7 @@ an unsigned artifact.
   reranking, calibration, ambiguity, and mapping revisions. _R26_
 - [x] 16.10 Implement rule-first contradiction/duplicate/missingness findings
   with bounded NLI/LLM proposals and human resolution workflow. _R27_
-- [ ] 16.11 Build web/mobile Ask, summary, citation/source, multimodal review,
+- [x] 16.11 Build web/mobile Ask, summary, citation/source, multimodal review,
   normalization candidate, and conflict-review experiences. _R19, R23, R24,
   R25, R26, R27_
 - [ ] 16.12 Evaluate claim citation, temporal accuracy, cross-profile isolation,

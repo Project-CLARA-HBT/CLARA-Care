@@ -360,6 +360,60 @@ void main() {
         {'locale': 'vi', 'episode_id': 'episode/id'},
       );
     });
+
+    test('multimodal capture starts, uploads, and checks a draft job',
+        () async {
+      final requests = <http.Request>[];
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          if (request.url.path.endsWith('/artifact-sessions')) {
+            return ok({'id': 'session-1', 'status': 'draft'});
+          }
+          if (request.url.path.endsWith('/artifacts')) {
+            return ok({
+              'id': 'artifact-1',
+              'job': {'id': 'job-1', 'status': 'queued'},
+            });
+          }
+          return ok({'id': 'job-1', 'status': 'completed'});
+        }),
+      );
+
+      await client.startLifeMapArtifactCapture(
+        accessToken: token,
+        inputKind: 'medication_label',
+      );
+      await client.uploadLifeMapCaptureArtifact(
+        accessToken: token,
+        sessionId: 'session-1',
+        bytes: const [1, 2, 3, 4],
+        filename: 'nhan-thuoc.jpg',
+      );
+      await client.getLifeMapCaptureJob(
+        accessToken: token,
+        jobId: 'job-1',
+      );
+
+      expect(
+        jsonDecode(requests[0].body),
+        {'input_kind': 'medication_label', 'locale': 'vi'},
+      );
+      expect(
+        requests[1].url.path,
+        '/api/v1/lifemap/capture/sessions/session-1/artifacts',
+      );
+      expect(
+        requests[1].headers['content-type'],
+        startsWith('multipart/form-data; boundary='),
+      );
+      expect(requests[1].body, contains('nhan-thuoc.jpg'));
+      expect(
+        requests[2].url.path,
+        '/api/v1/lifemap/capture/jobs/job-1',
+      );
+    });
   });
 
   group('PHR onboarding wrappers', () {

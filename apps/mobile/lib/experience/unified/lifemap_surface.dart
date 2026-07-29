@@ -16,7 +16,9 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
 import '../../core/session_store.dart';
@@ -82,16 +84,19 @@ class LifeMapSurface extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
-  });
+    @visibleForTesting ImagePicker? imagePicker,
+  }) : _imagePicker = imagePicker;
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final ImagePicker? _imagePicker;
 
   @override
   State<LifeMapSurface> createState() => _LifeMapSurfaceState();
 }
 
 class _LifeMapSurfaceState extends State<LifeMapSurface> {
+  late final ImagePicker _imagePicker = widget._imagePicker ?? ImagePicker();
   bool _loading = true;
   String? _error;
   bool _needsOnboarding = false;
@@ -106,6 +111,11 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   List<Map<String, dynamic>> _baselines = const [];
   bool _capturing = false;
   Map<String, dynamic>? _captureSession;
+  String _artifactKind = 'medication_label';
+  String? _captureJobId;
+  String? _captureJobStatus;
+  Uint8List? _captureSourceBytes;
+  String? _captureSourceName;
   final Map<String, Map<String, dynamic>?> _captureNormalizations =
       <String, Map<String, dynamic>?>{};
   final Set<String> _acceptedNormalizations = <String>{};
@@ -147,6 +157,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     _taskTitleController.dispose();
     _captureController.dispose();
     _askController.dispose();
+    _captureSourceBytes = null;
+    _captureSourceName = null;
     super.dispose();
   }
 
@@ -351,6 +363,154 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _showSnack(error.message);
     } catch (_) {
       _showSnack('Không thể tạo bản nháp. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _startArtifactCapture(ImageSource source) async {
+    final token = _token;
+    if (token == null || _capturing) return;
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 90,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      _showSnack('Ảnh phải nhỏ hơn 10 MB và không được để trống.');
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _capturing = true;
+      _captureJobStatus = 'Đang tải nguồn an toàn…';
+      _captureSourceBytes = bytes;
+      _captureSourceName = picked.name;
+    });
+    String? startedSessionId;
+    try {
+      final session = await widget.apiClient.startLifeMapArtifactCapture(
+        accessToken: token,
+        inputKind: _artifactKind,
+      );
+      final sessionId = _str(session['id']);
+      if (sessionId.isEmpty) throw const FormatException();
+      startedSessionId = sessionId;
+      final uploaded = await widget.apiClient.uploadLifeMapCaptureArtifact(
+        accessToken: token,
+        sessionId: sessionId,
+        bytes: bytes,
+        filename: picked.name,
+      );
+      final rawJob = uploaded['job'];
+      final job = rawJob is Map ? rawJob : const <String, dynamic>{};
+      if (!mounted) return;
+      setState(() {
+        _captureSession = session;
+        _captureJobId = _str(job['id']);
+        _captureJobStatus =
+            'Nguồn đang được đọc. Chưa có dữ liệu nào được xác nhận.';
+      });
+      await widget.sessionStore.writeLifeMapCaptureSessionId(sessionId);
+    } on ApiException catch (error) {
+      if (startedSessionId != null) {
+        try {
+          await widget.apiClient.abandonLifeMapCaptureSession(
+            accessToken: token,
+            sessionId: startedSessionId,
+          );
+        } catch (_) {
+          // The expiring server draft remains unconfirmed if cleanup is offline.
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _captureSourceBytes = null;
+          _captureSourceName = null;
+          _captureJobStatus = null;
+        });
+      }
+      _showSnack(error.message);
+    } catch (_) {
+      if (startedSessionId != null) {
+        try {
+          await widget.apiClient.abandonLifeMapCaptureSession(
+            accessToken: token,
+            sessionId: startedSessionId,
+          );
+        } catch (_) {
+          // The expiring server draft remains unconfirmed if cleanup is offline.
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _captureSourceBytes = null;
+          _captureSourceName = null;
+          _captureJobStatus = null;
+        });
+      }
+      _showSnack('Không thể tải nguồn. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _refreshArtifactCapture() async {
+    final token = _token;
+    final sessionId = _str(_captureSession?['id']);
+    if (token == null || sessionId.isEmpty || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      if (_captureJobId != null && _captureJobId!.isNotEmpty) {
+        final job = await widget.apiClient.getLifeMapCaptureJob(
+          accessToken: token,
+          jobId: _captureJobId!,
+        );
+        final status = _str(job['status']);
+        if (status == 'failed') {
+          _showSnack('Không thể đọc nguồn. Bản nháp chưa được xác nhận.');
+          return;
+        }
+        if (status == 'escalated' || job['emergency'] == true) {
+          if (mounted) {
+            setState(() {
+              _captureSession = <String, dynamic>{
+                ...?_captureSession,
+                'emergency': true,
+                'message': _str(job['message']),
+              };
+              _captureJobStatus = null;
+              _captureSourceBytes = null;
+              _captureSourceName = null;
+            });
+          }
+          return;
+        }
+        if (status != 'completed' && status != 'escalated') {
+          if (mounted) {
+            setState(() {
+              _captureJobStatus =
+                  'Tác vụ vẫn đang xử lý. Hãy kiểm tra lại sau.';
+            });
+          }
+          return;
+        }
+      }
+      final session = await widget.apiClient.getLifeMapCaptureSession(
+        accessToken: token,
+        sessionId: sessionId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _captureSession = session;
+        _captureJobStatus = null;
+      });
+      await _loadCaptureNormalizations(session);
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể làm mới bản nháp. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _capturing = false);
     }
@@ -616,6 +776,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       );
       if (action == 'confirm') {
         await widget.sessionStore.clearLifeMapCaptureSessionId();
+        _captureSourceBytes = null;
+        _captureSourceName = null;
+        _captureJobId = null;
+        _captureJobStatus = null;
         await _load();
       }
     } on ApiException catch (error) {
@@ -641,6 +805,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       if (mounted) setState(() => _captureSession = null);
       _captureNormalizations.clear();
       _acceptedNormalizations.clear();
+      _captureSourceBytes = null;
+      _captureSourceName = null;
+      _captureJobId = null;
+      _captureJobStatus = null;
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
@@ -1292,15 +1460,31 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     final session = _captureSession;
     if (session?['emergency'] == true) {
       return ClaraCard.static_(
-        child: Semantics(
-          liveRegion: true,
-          child: Text(
-            _str(session?['message']),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.error,
-              fontWeight: FontWeight.w600,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _str(session?['message']).isNotEmpty
+                    ? _str(session?['message'])
+                    : 'Nếu bạn đang gặp nguy hiểm ngay lập tức, hãy gọi cấp '
+                        'cứu địa phương hoặc đến cơ sở cấp cứu gần nhất.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ),
+            if (_str(session?['id']).isNotEmpty) ...[
+              const SizedBox(height: ClaraTokens.spaceMd),
+              TextButton.icon(
+                onPressed: _capturing ? null : _abandonCapture,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Xóa bản nháp nguồn'),
+              ),
+            ],
+          ],
         ),
       );
     }
@@ -1350,6 +1534,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                 ),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
+              _buildCaptureSourcePreview(context),
+              if (_captureSourceBytes != null)
+                const SizedBox(height: ClaraTokens.spaceSm),
               ...fields.map(
                 (entry) => Padding(
                   padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXs),
@@ -1509,6 +1696,48 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         );
       }
     }
+    if (_str(session?['id']).isNotEmpty) {
+      return ClaraCard.static_(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bản nháp nguồn đang xử lý',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: ClaraTokens.spaceSm),
+            _buildCaptureSourcePreview(context),
+            if (_captureJobStatus != null) ...[
+              const SizedBox(height: ClaraTokens.spaceSm),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _captureJobStatus!,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Wrap(
+              spacing: ClaraTokens.spaceSm,
+              runSpacing: ClaraTokens.spaceSm,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _capturing ? null : _refreshArtifactCapture,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Kiểm tra kết quả'),
+                ),
+                TextButton.icon(
+                  onPressed: _capturing ? null : _abandonCapture,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Hủy và xóa bản nháp'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
     return ClaraCard.static_(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1538,7 +1767,133 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               onPressed: _startCapture,
             ),
           ),
+          const Divider(height: ClaraTokens.spaceXl),
+          Text(
+            'Ghi nhận từ ảnh',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: ClaraTokens.spaceXs),
+          Text(
+            'Ảnh chỉ tạo dữ liệu nháp. Bạn phải đối chiếu nguồn, sửa trường '
+            'thiếu và xác nhận rõ ràng trước khi lưu.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          DropdownButtonFormField<String>(
+            key: ValueKey<String>(_artifactKind),
+            initialValue: _artifactKind,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Loại nguồn'),
+            items: const [
+              DropdownMenuItem(
+                value: 'medication_label',
+                child: Text('Nhãn thuốc'),
+              ),
+              DropdownMenuItem(
+                value: 'visit_document',
+                child: Text('Tài liệu khám'),
+              ),
+            ],
+            onChanged: _capturing
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _artifactKind = value);
+                    }
+                  },
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Wrap(
+            spacing: ClaraTokens.spaceSm,
+            runSpacing: ClaraTokens.spaceSm,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _capturing
+                    ? null
+                    : () => _startArtifactCapture(ImageSource.camera),
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Chụp ảnh'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _capturing
+                    ? null
+                    : () => _startArtifactCapture(ImageSource.gallery),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Chọn ảnh'),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCaptureSourcePreview(BuildContext context) {
+    final theme = Theme.of(context);
+    final bytes = _captureSourceBytes;
+    final rawArtifacts = _captureSession?['artifacts'];
+    final artifacts = rawArtifacts is List ? rawArtifacts : const <dynamic>[];
+    if (bytes != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Semantics(
+            label: 'Ảnh nguồn ${_captureSourceName ?? ''}',
+            image: true,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240),
+                child: Image.memory(
+                  bytes,
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Text(
+                    'Không thể hiển thị ảnh nguồn.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceXs),
+          Text(
+            'Nguồn: ${_captureSourceName ?? 'ảnh đã chọn'} · '
+            'chỉ giữ tạm trong bộ nhớ khi xem xét.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      );
+    }
+    if (artifacts.isNotEmpty) {
+      final artifact = artifacts.first;
+      if (artifact is Map) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(ClaraTokens.spaceSm),
+            child: Text(
+              'Nguồn: ${_str(artifact['filename'])} · '
+              '${_str(artifact['media_type'])}\n'
+              'Ảnh nguồn không được lưu vào bộ nhớ đệm trên thiết bị.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        );
+      }
+    }
+    return Text(
+      'Ảnh nguồn không được lưu vào bộ nhớ đệm trên thiết bị. '
+      'Hãy đối chiếu lại bản gốc trước khi xác nhận.',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
       ),
     );
   }

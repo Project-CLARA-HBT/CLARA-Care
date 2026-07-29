@@ -671,6 +671,49 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> startLifeMapArtifactCapture({
+    required String accessToken,
+    required String inputKind,
+    String locale = 'vi',
+  }) {
+    return _dispatch(
+      'startLifeMapArtifactCapture',
+      {'inputKind': inputKind, 'locale': locale},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> uploadLifeMapCaptureArtifact({
+    required String accessToken,
+    required String sessionId,
+    required List<int> bytes,
+    required String filename,
+  }) {
+    return _dispatch(
+      'uploadLifeMapCaptureArtifact',
+      {
+        'sessionId': sessionId,
+        'byteCount': bytes.length,
+        'filename': filename,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapCaptureJob({
+    required String accessToken,
+    required String jobId,
+  }) {
+    return _dispatch(
+      'getLifeMapCaptureJob',
+      {'jobId': jobId},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> getLifeMapSummary({
     required String accessToken,
     required String level,

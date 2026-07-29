@@ -281,7 +281,7 @@ when enabled, displaying per-claim source, time, revision, ambiguity warning,
 and the non-medical/read-only disclosure. Five API contracts and seven focused
 web client contracts pass; web lint passes with the five pre-existing warnings.
 
-Tasks 16.2, 16.4, and 16.11 remain open: the current retrieval champion is
+At this increment, Tasks 16.2, 16.4, and 16.11 remained open: the retrieval champion was
 profile-partitioned lexical/temporal SQL, not yet the governed dense/graph
 index; verifier integration for future generated claims still needs bounded
 NLI/FIDES evaluation; and mobile Ask/review surfaces are not yet implemented.
@@ -290,7 +290,8 @@ The Flutter unified LifeMap surface now also reads `lifemap_ask_ai` from the
 server summary, calls only the governed `/lifemap/v2/ask` contract, and renders
 the read-only disclosure plus exact citation attribution/revision. It remains
 hidden when the server flag is off. Focused Flutter analysis is clean and 22
-API-client/accessibility-responsive tests pass. Task 16.11 stays open because
+API-client/accessibility-responsive tests pass. At that increment Task 16.11
+stayed open because
 the broader summary, multimodal, normalization, and conflict-review experiences
 are not yet complete.
 
@@ -329,14 +330,14 @@ scan current exact revisions, list effective status, and accept only explicit
 audit. A repeated scan cannot duplicate a finding; a repeated action returns
 the original result. Full SQLite upgrade, downgrade to `0040`, and re-upgrade
 to `0041` passed. Five focused API tests pass. The web/mobile conflict-review
-experience remains tracked under task 16.11.
+experience was still tracked under task 16.11.
 
 The capability-gated web LifeMap surface now makes scanning an explicit user
 action, labels duplicate/contradiction/missingness as possibilities rather than
 truth, and exposes explicit reviewed/dismissed actions. It never edits source
 facts. Eight focused web client contracts pass and web lint remains clean apart
 from the five documented pre-existing warnings. Flutter conflict review and
-the other Phase 16.11 experiences remain open.
+the other Phase 16.11 experiences were still open at that increment.
 
 Flutter now mirrors the explicit scan and online-only reviewed/dismissed
 actions, with possible-not-certain wording and no source-fact mutation. Focused
@@ -359,8 +360,23 @@ accept or decline it, but cannot submit a code; confirmation recomputes the
 mapping from the final edited medicine name, rejects unmapped acceptance, and
 records the decision, policy, source, confidence, and structured course fields
 in append-only provenance. Focused API, TypeScript, and Dart client tests pass.
-Task 16.11 remains open for the remaining mobile multimodal source-preview
-experience and a complete cross-surface accessibility/E2E release proof.
+Flutter now completes the missing multimodal slice: it can capture a medication
+label or visit-document image from camera/gallery, enforces a 10 MB client
+bound, starts the draft-only artifact session, uploads through the authenticated
+multipart contract, resumes or explicitly refreshes the extraction job, and
+never auto-confirms output. The selected image is previewed only in memory and
+is cleared after confirm/abandon/failure; resumed sessions show source metadata
+without caching the health image. Failed upload attempts best-effort abandon the
+server draft, while offline cleanup still expires unconfirmed. API-client,
+phone/tablet/large-text/reduced-motion, and in-memory draft widget tests pass
+with clean Flutter analysis.
+
+With Ask, source citations, hierarchical summaries, web/mobile multimodal
+review, server-owned normalization acceptance, and human conflict review now
+present on both clients behind their default-off capabilities, Task 16.11 is
+complete. Real-device screen-reader and broader all-module usability evidence
+remain correctly tracked under Tasks 12.2, 12.3, and 12.6 rather than weakening
+this feature contract.
 
 The delegated digest endpoint resolves a live purpose-bound Family grant before
 any revision query, requires the `lifemap` data class and `view` action, applies
