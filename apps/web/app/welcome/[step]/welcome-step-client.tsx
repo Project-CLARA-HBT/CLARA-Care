@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -193,22 +193,30 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
       }
     />
   );
-  const bodyPatch = {
-    height_cm: numeric(heightCm),
-    weight_kg: numeric(weightKg),
-  };
-  const navigateFromBody = (target: WelcomeStepId | null) => {
-    const errors = [
-      measurementError(heightCm, 300, "welcome-height", "Chiều cao"),
-      measurementError(weightKg, 800, "welcome-weight", "Cân nặng"),
-    ].filter((error): error is GuidedFlowError => error !== null);
-    setValidationErrors(errors);
-    if (errors.length) {
-      if (errors[0].fieldId === "welcome-height") heightRef.current?.focus();
-      else weightRef.current?.focus();
+  const navigateWithMeasurement = ({
+    value,
+    maximum,
+    fieldId,
+    fieldLabel,
+    ref,
+    patch,
+    target,
+  }: {
+    value: string;
+    maximum: number;
+    fieldId: string;
+    fieldLabel: string;
+    ref: RefObject<HTMLInputElement | null>;
+    patch: WelcomeDraftPatch;
+    target: WelcomeStepId | null;
+  }) => {
+    const error = measurementError(value, maximum, fieldId, fieldLabel);
+    setValidationErrors(error ? [error] : []);
+    if (error) {
+      ref.current?.focus();
       return;
     }
-    void saveAndNavigate(bodyPatch, target);
+    void saveAndNavigate(patch, target);
   };
 
   let content;
@@ -310,7 +318,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         {actions({ blood_type: bloodType })}
       </div>
     );
-  } else if (step === "body") {
+  } else if (step === "height") {
     content = (
       <div className="space-y-5">
         <ErrorSummary errors={validationErrors} />
@@ -331,6 +339,47 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
           onChange={(event) => setHeightCm(event.target.value)}
           placeholder="170"
         />
+        <StepActions
+          saving={saving}
+          nextType="button"
+          onNext={() =>
+            navigateWithMeasurement({
+              value: heightCm,
+              maximum: 300,
+              fieldId: "welcome-height",
+              fieldLabel: "Chiều cao",
+              ref: heightRef,
+              patch: { height_cm: numeric(heightCm) },
+              target: next,
+            })
+          }
+          back={
+            previous
+              ? {
+                  label: "Quay lại",
+                  onClick: () =>
+                    navigateWithMeasurement({
+                      value: heightCm,
+                      maximum: 300,
+                      fieldId: "welcome-height",
+                      fieldLabel: "Chiều cao",
+                      ref: heightRef,
+                      patch: { height_cm: numeric(heightCm) },
+                      target: previous,
+                    }),
+                }
+              : undefined
+          }
+          skip={
+            next ? { label: "Bỏ qua", href: path(next) } : undefined
+          }
+        />
+      </div>
+    );
+  } else if (step === "weight") {
+    content = (
+      <div className="space-y-5">
+        <ErrorSummary errors={validationErrors} />
         <Field
           ref={weightRef}
           id="welcome-weight"
@@ -351,12 +400,31 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         <StepActions
           saving={saving}
           nextType="button"
-          onNext={() => navigateFromBody(next)}
+          onNext={() =>
+            navigateWithMeasurement({
+              value: weightKg,
+              maximum: 800,
+              fieldId: "welcome-weight",
+              fieldLabel: "Cân nặng",
+              ref: weightRef,
+              patch: { weight_kg: numeric(weightKg) },
+              target: next,
+            })
+          }
           back={
             previous
               ? {
                   label: "Quay lại",
-                  onClick: () => navigateFromBody(previous),
+                  onClick: () =>
+                    navigateWithMeasurement({
+                      value: weightKg,
+                      maximum: 800,
+                      fieldId: "welcome-weight",
+                      fieldLabel: "Cân nặng",
+                      ref: weightRef,
+                      patch: { weight_kg: numeric(weightKg) },
+                      target: previous,
+                    }),
                 }
               : undefined
           }

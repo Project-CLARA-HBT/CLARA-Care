@@ -91,10 +91,12 @@ async function renderStep(
 }
 
 describe("WelcomeStepClient", () => {
-  it("rejects an invalid measurement locally and focuses the first invalid field", async () => {
-    await renderStep("body");
+  it("rejects an invalid height locally and focuses that single field", async () => {
+    await renderStep("height");
 
-    const height = await screen.findByLabelText(/Chiều cao/);
+    const height = await screen.findByLabelText(/Chiều cao/, {
+      selector: "input",
+    });
     fireEvent.change(height, { target: { value: "không phải số" } });
     fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
 
@@ -104,6 +106,24 @@ describe("WelcomeStepClient", () => {
     expect(height).toHaveAttribute("aria-invalid", "true");
     expect(height).toHaveFocus();
     expect(mocks.updateOnboarding).not.toHaveBeenCalled();
+  });
+
+  it("saves only the weight field before moving to the next step", async () => {
+    await renderStep("weight");
+
+    const weight = await screen.findByLabelText(/Cân nặng/, {
+      selector: "input",
+    });
+    fireEvent.change(weight, { target: { value: "60.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+
+    await waitFor(() => {
+      expect(mocks.updateOnboarding).toHaveBeenCalledWith({
+        action: "save",
+        weight_kg: 60.5,
+      });
+      expect(mocks.push).toHaveBeenCalledWith("/welcome/personalization");
+    });
   });
 
   it("saves edits before Back so route navigation does not discard the current step", async () => {

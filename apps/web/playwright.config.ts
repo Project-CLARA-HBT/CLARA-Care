@@ -24,7 +24,11 @@ export default defineConfig({
   ],
   webServer: {
     // E2E validates the same optimized artifact shipped to production.
-    command: "npm run build && HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
+    // Next does not copy static/public assets into the standalone directory.
+    // Mirror the production image before testing so CSS, hydration and the
+    // accessibility tree are tested as users receive them.
+    command:
+      "npm run build && cp -R public .next/standalone/ && mkdir -p .next/standalone/.next && cp -R .next/static .next/standalone/.next/ && HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

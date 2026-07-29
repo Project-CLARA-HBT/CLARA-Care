@@ -11,7 +11,7 @@ import {
   StatCard,
   SurfaceCard,
 } from "@/components/ui/surface";
-import { completeLifeMapTask, getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
+import { getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
 
 function dueLabel(value: string | null): string {
   if (!value) return "Không có hạn cụ thể";
@@ -30,7 +30,6 @@ export default function TodayPage() {
   const [today, setToday] = useState<LifeMapToday | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [completing, setCompleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,19 +46,6 @@ export default function TodayPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const complete = async (id: string) => {
-    setCompleting(id);
-    setError("");
-    try {
-      await completeLifeMapTask(id);
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hoàn tất việc này.");
-    } finally {
-      setCompleting(null);
-    }
-  };
 
   const tasks = today?.tasks ?? [];
 
@@ -134,12 +120,8 @@ export default function TodayPage() {
                           {dueLabel(task.due_at)}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        loading={completing === task.id}
-                        onClick={() => void complete(task.id)}
-                      >
-                        Hoàn tất
+                      <Button as="link" href={`/today/tasks/${encodeURIComponent(task.id)}`} size="sm">
+                        Xem việc
                       </Button>
                     </li>
                   ))}

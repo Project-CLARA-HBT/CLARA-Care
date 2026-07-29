@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 
-import LegacyChatWorkspacePage from "@/app/chat/_legacy/page-legacy";
 import { isChatV2Enabled } from "@/app/chat/_v2/flag";
 
 /**
@@ -13,13 +12,18 @@ import { isChatV2Enabled } from "@/app/chat/_v2/flag";
  * (`NEXT_PUBLIC_CHAT_V2=false|0|off`), in which case it falls back to the legacy
  * `ChatWorkspacePage` implementation verbatim and unchanged for instant rollback.
  *
- * The v2 shell is loaded lazily via `next/dynamic` so its code (and the new
- * design system) is never pulled into the bundle while the flag is off — the
- * legacy experience stays fully isolated.
+ * Both implementations are loaded lazily. This keeps the preserved rollback
+ * page available without coupling its large legacy workspace to the default
+ * V2 route bundle.
  */
 const ChatV2Shell = dynamic(() => import("@/app/chat/_v2/ChatShell"), {
   ssr: false,
 });
+
+const LegacyChatWorkspacePage = dynamic(
+  () => import("@/app/chat/_legacy/page-legacy"),
+  { ssr: false },
+);
 
 export default function ChatRouteGate() {
   if (isChatV2Enabled()) {

@@ -22,7 +22,8 @@ describe("guided-flow registry", () => {
     );
     expect(guidedFlowSteps("lifemapEpisode", "vi")).toHaveLength(4);
     expect(isGuidedFlowStep("lifemapEpisode", "priority")).toBe(true);
-    expect(isGuidedFlowStep("welcome", "body")).toBe(true);
+    expect(isGuidedFlowStep("welcome", "height")).toBe(true);
+    expect(isGuidedFlowStep("welcome", "weight")).toBe(true);
     expect(isGuidedFlowStep("welcome", "not-a-step")).toBe(false);
     expect(isGuidedFlowStepAhead("lifemapEpisode", "review", "goal")).toBe(true);
     expect(isGuidedFlowStepAhead("lifemapEpisode", "title", "goal")).toBe(false);
@@ -58,8 +59,8 @@ describe("guided-flow registry", () => {
       surface: "web",
       flowId: "welcome",
       stepId: "personalization",
-      stepIndex: 6,
-      totalSteps: 8,
+      stepIndex: 7,
+      totalSteps: 9,
     });
     expect(JSON.stringify(event)).not.toMatch(
       /name|birth|blood|height|weight|consent|draft|user/i,

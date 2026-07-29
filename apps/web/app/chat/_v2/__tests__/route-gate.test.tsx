@@ -12,13 +12,14 @@ import { render, screen } from "@testing-library/react";
 const legacySentinel = vi.fn(() => <div data-testid="legacy-chat">legacy</div>);
 const v2Sentinel = vi.fn(() => <div data-testid="v2-chat">v2</div>);
 const isChatV2Enabled = vi.fn();
+let dynamicCall = 0;
 
 vi.mock("@/app/chat/_legacy/page-legacy", () => ({ default: legacySentinel }));
 vi.mock("@/app/chat/_v2/flag", () => ({ isChatV2Enabled }));
-// `next/dynamic` is replaced with an eager passthrough so the v2 sentinel
-// renders synchronously in the test (the real route still code-splits it).
+// `next/dynamic` is replaced with eager sentinels so both independently
+// code-split rollback paths render synchronously in the test.
 vi.mock("next/dynamic", () => ({
-  default: () => v2Sentinel,
+  default: () => (dynamicCall++ === 0 ? v2Sentinel : legacySentinel),
 }));
 
 async function renderGate() {
@@ -30,6 +31,7 @@ async function renderGate() {
 afterEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
+  dynamicCall = 0;
 });
 
 describe("chat route gate", () => {
