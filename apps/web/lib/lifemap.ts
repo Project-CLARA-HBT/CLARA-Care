@@ -555,6 +555,12 @@ export async function getLifeMapCaptureSession(
   ).data;
 }
 
+export async function getActiveLifeMapCaptureSession(): Promise<CaptureSession | null> {
+  return (
+    await api.get<{ session: CaptureSession | null }>("/lifemap/capture/active-session")
+  ).data.session;
+}
+
 export async function getLifeMapCaptureJob(jobId: string): Promise<{
   id: string;
   status: string;

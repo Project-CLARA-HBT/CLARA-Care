@@ -219,6 +219,45 @@ def _serialize_artifact_access(row: LifeMapCaptureArtifact) -> dict:
     }
 
 
+def _serialize_session(db: Session, session: LifeMapCaptureSession) -> dict:
+    """Render only the current profile's server-owned review state."""
+
+    candidates = list(
+        db.execute(
+            select(LifeMapCaptureCandidate)
+            .where(LifeMapCaptureCandidate.session_id == session.id)
+            .order_by(LifeMapCaptureCandidate.id)
+        ).scalars()
+    )
+    artifacts = list(
+        db.execute(
+            select(LifeMapCaptureArtifact)
+            .where(
+                LifeMapCaptureArtifact.session_id == session.id,
+                LifeMapCaptureArtifact.deleted_at.is_(None),
+                LifeMapCaptureArtifact.malware_status == "clean",
+            )
+            .order_by(LifeMapCaptureArtifact.id)
+        ).scalars()
+    )
+    artifact_ids = {row.id: row.public_id for row in artifacts}
+    return {
+        "id": session.public_id,
+        "status": session.status,
+        "expires_at": session.expires_at,
+        "candidates": [
+            _serialize_candidate(
+                row,
+                artifact_public_id=artifact_ids.get(row.artifact_id)
+                if row.artifact_id is not None
+                else None,
+            )
+            for row in candidates
+        ],
+        "artifacts": [_serialize_artifact_access(row) for row in artifacts],
+    }
+
+
 def _artifact_store() -> EncryptedCaptureArtifactStore:
     try:
         return build_capture_artifact_store()
@@ -462,25 +501,6 @@ def get_capture_session(
     _require_enabled()
     scope = _scope(db, token, x_profile, action="view")
     session = _session(db, scope, session_id)
-    candidates = list(
-        db.execute(
-            select(LifeMapCaptureCandidate)
-            .where(LifeMapCaptureCandidate.session_id == session.id)
-            .order_by(LifeMapCaptureCandidate.id)
-        ).scalars()
-    )
-    artifacts = list(
-        db.execute(
-            select(LifeMapCaptureArtifact)
-            .where(
-                LifeMapCaptureArtifact.session_id == session.id,
-                LifeMapCaptureArtifact.deleted_at.is_(None),
-                LifeMapCaptureArtifact.malware_status == "clean",
-            )
-            .order_by(LifeMapCaptureArtifact.id)
-        ).scalars()
-    )
-    artifact_ids = {row.id: row.public_id for row in artifacts}
     write_audit(
         db,
         profile_id=scope.profile.id,
@@ -491,21 +511,41 @@ def get_capture_session(
         scope=f"{scope.actor_role}:{scope.purpose}",
     )
     db.commit()
-    return {
-        "id": session.public_id,
-        "status": session.status,
-        "expires_at": session.expires_at,
-        "candidates": [
-            _serialize_candidate(
-                row,
-                artifact_public_id=artifact_ids.get(row.artifact_id)
-                if row.artifact_id is not None
-                else None,
-            )
-            for row in candidates
-        ],
-        "artifacts": [_serialize_artifact_access(row) for row in artifacts],
-    }
+    return _serialize_session(db, session)
+
+
+@router.get("/active-session")
+def get_active_capture_session(
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Resume the newest open Capture session without browser-stored health state."""
+
+    _require_enabled()
+    scope = _scope(db, token, x_profile, action="view")
+    session = db.execute(
+        select(LifeMapCaptureSession)
+        .where(
+            LifeMapCaptureSession.profile_id == scope.profile.id,
+            LifeMapCaptureSession.status.not_in(("completed", "abandoned")),
+            LifeMapCaptureSession.expires_at > datetime.now(UTC),
+        )
+        .order_by(LifeMapCaptureSession.updated_at.desc(), LifeMapCaptureSession.id.desc())
+    ).scalars().first()
+    if session is None:
+        return {"session": None}
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="read",
+        entity="capture_session",
+        entity_id=session.public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
+    db.commit()
+    return {"session": _serialize_session(db, session)}
 
 
 @router.get("/candidates/{candidate_id}/duplicates")

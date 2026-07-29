@@ -17,6 +17,7 @@ import {
   createLifeMapTask,
   getLifeMapBaselines,
   getLifeMapCaptureArtifact,
+  getActiveLifeMapCaptureSession,
   getLifeMapCaptureJob,
   getLifeMapCaptureNormalization,
   getLifeMapCaptureSession,
@@ -159,13 +160,11 @@ export default function LifeMapPage() {
 
   useEffect(() => {
     if (!captureEnabled) return;
-    const sessionId = window.localStorage.getItem("clara.lifemap.capture.session");
-    if (!sessionId) return;
-    void getLifeMapCaptureSession(sessionId)
+    // Capture review is server-resumable and profile-scoped. Never keep a
+    // health-session pointer in localStorage or browser cache.
+    void getActiveLifeMapCaptureSession()
       .then(setCaptureSession)
-      .catch(() => {
-        window.localStorage.removeItem("clara.lifemap.capture.session");
-      });
+      .catch(() => setCaptureSession(null));
   }, [captureEnabled]);
 
   useEffect(
@@ -177,9 +176,6 @@ export default function LifeMapPage() {
 
   const rememberCapture = (session: CaptureSession) => {
     setCaptureSession(session);
-    if (session.id) {
-      window.localStorage.setItem("clara.lifemap.capture.session", session.id);
-    }
   };
 
   const startCapture = async (event: FormEvent) => {
@@ -299,7 +295,6 @@ export default function LifeMapPage() {
           : current,
       );
       if (action === "confirm") {
-        window.localStorage.removeItem("clara.lifemap.capture.session");
         await load();
       }
     } catch (cause) {
@@ -349,7 +344,6 @@ export default function LifeMapPage() {
     setSaving(true);
     try {
       await abandonLifeMapCaptureSession(captureSession.id);
-      window.localStorage.removeItem("clara.lifemap.capture.session");
       setCaptureSession(null);
       setCaptureJobStatus("");
     } catch (cause) {

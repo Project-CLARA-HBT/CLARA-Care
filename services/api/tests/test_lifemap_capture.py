@@ -137,6 +137,13 @@ def test_capture_review_is_resumable_profile_scoped_and_idempotent(monkeypatch) 
         f"/api/v1/lifemap/capture/sessions/{session['id']}", headers=owner
     )
     assert resumed.status_code == 200
+    active = client.get("/api/v1/lifemap/capture/active-session", headers=owner)
+    assert active.status_code == 200
+    assert active.json()["session"]["id"] == session["id"]
+    # A different account must never discover an owner's resumable draft.
+    assert client.get(
+        "/api/v1/lifemap/capture/active-session", headers=stranger
+    ).json() == {"session": None}
     denied = client.get(
         f"/api/v1/lifemap/capture/sessions/{session['id']}",
         headers={**stranger, "X-CLARA-Profile-Context": owner_profile},
@@ -177,6 +184,9 @@ def test_capture_review_is_resumable_profile_scoped_and_idempotent(monkeypatch) 
     assert replay.status_code == 200
     assert replay.json()["event_id"] == confirmed.json()["event_id"]
     assert replay.json()["idempotent_replay"] is True
+    assert client.get(
+        "/api/v1/lifemap/capture/active-session", headers=owner
+    ).json() == {"session": None}
 
     with SessionLocal() as db:
         event = db.execute(

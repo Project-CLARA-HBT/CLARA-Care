@@ -16,6 +16,7 @@ import {
   disputeLifeMapEvent,
   getLifeMapCaptureCapability,
   getLifeMapCaptureArtifact,
+  getActiveLifeMapCaptureSession,
   getLifeMapCaptureNormalization,
   getLifeMapCaptureSession,
   getLifeMapDisputes,
@@ -65,12 +66,14 @@ describe("LifeMap Universal Capture client", () => {
       .mockResolvedValueOnce({
         data: { id: "session/id", status: "draft", candidates: [] },
       })
+      .mockResolvedValueOnce({ data: { session: null } })
       .mockResolvedValueOnce({ data: new Blob(["source"]) });
 
     const session = await startLifeMapArtifactCapture("medication_label");
     const file = new File(["image"], "label.png", { type: "image/png" });
     await uploadLifeMapCaptureArtifact(String(session.id), file);
     await getLifeMapCaptureSession("session/id");
+    await getActiveLifeMapCaptureSession();
     await getLifeMapCaptureArtifact({
       id: "artifact/id",
       media_type: "image/png",
@@ -96,6 +99,10 @@ describe("LifeMap Universal Capture client", () => {
     );
     expect(get).toHaveBeenNthCalledWith(
       2,
+      "/lifemap/capture/active-session",
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      3,
       "/lifemap/capture/artifacts/artifact%2Fid/content",
       {
         headers: { "X-Capture-Artifact-Token": "short-lived" },
