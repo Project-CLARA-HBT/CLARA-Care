@@ -31,13 +31,21 @@ def upgrade() -> None:
         )
 
     bind = op.get_bind()
+    # PostgreSQL's ``json`` type deliberately has no equality operator.  Cast
+    # only there so that a production upgrade can recognize the server default
+    # while retaining the SQLite migration contract used in lightweight tests.
+    empty_value_predicate = (
+        "data_classes_json::jsonb = '[]'::jsonb"
+        if bind.dialect.name == "postgresql"
+        else "data_classes_json = '[]'"
+    )
     rows = bind.execute(
         sa.text(
-            """
+            f"""
             SELECT id, object_type
             FROM family_access_grants
             WHERE data_classes_json IS NULL
-               OR data_classes_json = '[]'
+               OR {empty_value_predicate}
             ORDER BY id
             """
         )
