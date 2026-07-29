@@ -4,21 +4,21 @@ This is a delivery ledger, not proof that a checkpoint is done.
 
 | PR | Scope | State | Evidence gate |
 | --- | --- | --- | --- |
-| 01 | Audit, ADRs, baseline | in progress | source inventory, ADRs, command record |
-| 02 | i18n foundation | planned | typed catalogs, parity and hard-code checks |
-| 03 | Personal task-first UX | planned | journeys, a11y and visual checks |
-| 04 | Model registry/contracts | planned | typed contracts and rollback config |
-| 05 | Vietnamese clinical NLP | planned | language-slice evaluation and safety tests |
-| 06 | Hybrid task/risk router | planned | shadow comparison and under-routing gate |
-| 07 | Structured renderer/verifier | planned | fidelity tests and deterministic fallback |
-| 08 | CareGuard VN normalization | planned | DrugBank integrity and benchmark evidence |
-| 09 | Scribe safety refactor | planned | grounding/no-auto-code/retention evidence |
-| 10 | Council hybrid shadow | planned | ablation and safety comparison |
-| 11 | Research verifier | planned | claim/citation matrix and RAG evaluation |
-| 12 | LifeMap VN features | in progress | invariant and source-review evidence |
-| 13 | CLARA-Eval VN | in progress | suites, manifests, artifacts, active-eval |
-| 14 | Security/ops hardening | planned | release/restore/security gate evidence |
-| 15 | Mobile parity | in progress | contract, locale, consent, a11y evidence |
+| 01 | Audit, ADRs, baseline | implemented | source inventory, ADRs and an explicit static NO-GO baseline |
+| 02 | i18n foundation | partial | typed vi/en catalog, parity and shell literal checks; domain migration remains |
+| 03 | Personal task-first UX | partial/pre-existing | focused onboarding/profile/medicine journeys exist; dense legacy surfaces remain |
+| 04 | Model registry/contracts | implemented for bounded safety tasks | typed contracts, DeepSeek-only resolution and explicit rollback config |
+| 05 | Vietnamese clinical NLP | implemented v1 | deterministic language cues and regression tests; no bundled encoder SLM |
+| 06 | Hybrid task/risk router | partial/pre-existing | semantic closed-schema primary with deterministic safety fallback; no evaluated SLM shadow |
+| 07 | Structured renderer/verifier | partial/pre-existing | evidence/uncertainty gate exists; semantic-fidelity scorer remains |
+| 08 | CareGuard VN normalization | partial/pre-existing | DrugBank readiness/fail-closed behavior exists; licensed full benchmark unavailable |
+| 09 | Scribe safety refactor | implemented UI correction | no automatic R69/code assignment or uncalibrated confidence display |
+| 10 | Council hybrid shadow | partial/pre-existing | structured intake and ablation path; heuristic remains correctly labeled |
+| 11 | Research verifier | partial/pre-existing | claim/citation tracing exists; reviewed RAG gold set unavailable |
+| 12 | LifeMap VN features | partial/pre-existing | revision/provenance/review exist; approved NL-query evaluation remains |
+| 13 | CLARA-Eval VN | implemented foundation | nine tracks, manifests, suite configs, artifacts and active-eval integration |
+| 14 | Security/ops hardening | partial | release gate fails closed on missing locked evidence; external operational proof remains |
+| 15 | Mobile parity | partial/pre-existing | unified mobile/locale/consent paths exist; shared catalog and device E2E remain |
 
 ## Required exit evidence
 

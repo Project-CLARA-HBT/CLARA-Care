@@ -43,7 +43,8 @@ tokens, patient content, or provider keys.
 
 ## Data and model cards
 
-- Dataset card: `evaluation/clara_eval/datasets/README.md` and
-  `evaluation/clara_eval/datasets/manifest.json`.
+- Dataset card: `evaluation/clara_eval/datasets/README.md`,
+  `evaluation/clara_eval/datasets/manifest.json` and
+  [`docs/ml-governance/clara-eval-vn-dataset-card.md`](../ml-governance/clara-eval-vn-dataset-card.md).
 - Model/runtime card: `docs/ml-governance/clara-eval-vn-model-card.md`.
 - Operational response: `docs/runbooks/clara-eval-vn.md`.
