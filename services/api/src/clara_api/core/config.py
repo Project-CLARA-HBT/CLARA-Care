@@ -811,6 +811,9 @@ class Settings(BaseSettings):
     lifemap_fhir_export_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_FHIR_EXPORT_ENABLED"
     )
+    lifemap_fhir_import_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_FHIR_IMPORT_ENABLED"
+    )
     lifemap_ask_ai_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_ASK_AI_ENABLED"
     )

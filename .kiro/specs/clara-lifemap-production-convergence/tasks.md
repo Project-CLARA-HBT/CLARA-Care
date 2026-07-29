@@ -286,18 +286,18 @@ change, not merely “new search results exist.”
 
 - [ ] 11.1 Approve terminology/licensing strategy and pin FHIR R4 validator,
   IPS package, UCUM, and supported code systems. _R14_
-- [ ] 11.2 Implement pure mapping layer for Patient, Observation, allergy,
+- [x] 11.2 Implement pure mapping layer for Patient, Observation, allergy,
   condition, medication, CarePlan, Goal, Task, QuestionnaireResponse,
   DocumentReference, Provenance, Consent, and AuditEvent. _R14_
 - [ ] 11.3 Implement authorized, purpose-bound IPS summary export with redaction
   and minimum-necessary selection. _R12, R14, R15_
-- [ ] 11.4 Validate every fixture and generated Bundle; fail closed on modifier,
+- [x] 11.4 Validate every fixture and generated Bundle; fail closed on modifier,
   patient identity, critical coding, or profile errors. _R14_
-- [ ] 11.5 Implement import as provenance-bearing Capture drafts; define trusted-
+- [x] 11.5 Implement import as provenance-bearing Capture drafts; define trusted-
   source policy separately. _R3, R4, R14_
-- [ ] 11.6 Add conformance statement, mapping documentation, golden fixtures,
+- [x] 11.6 Add conformance statement, mapping documentation, golden fixtures,
   round-trip semantic tests, and version-upgrade procedure. _R14_
-- [ ] 11.7 Security-test parser limits, references, external URLs, narrative,
+- [x] 11.7 Security-test parser limits, references, external URLs, narrative,
   unknown extensions, and malicious Bundles. _R16_
 
 Exit gate: all claimed-conformant exports validate against pinned packages;

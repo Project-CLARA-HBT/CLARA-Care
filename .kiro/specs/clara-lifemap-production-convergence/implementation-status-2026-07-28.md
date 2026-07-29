@@ -111,6 +111,41 @@ All new LifeMap V2 and AI flags therefore remain off. No unchecked task should
 be converted to complete until its task-level definition of done and phase exit
 gate are evidenced.
 
+## Phase 11 interoperability engineering update — 2026-07-29
+
+The implementable FHIR R4 boundary is complete without overstating IPS
+conformance:
+
+- a pure `clara-lifemap-fhir-r4-v1` mapper projects the canonical profile into
+  Patient, Observation, AllergyIntolerance, Condition, MedicationStatement,
+  CarePlan, Goal, Task, QuestionnaireResponse, DocumentReference, Provenance,
+  Consent, and AuditEvent resources;
+- every generated collection Bundle passes the in-process fail-closed
+  structural/security validator before export;
+- the committed golden fixture passed the official validator CLI `6.9.12`
+  (SHA-256
+  `0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6`)
+  against FHIR R4 `4.0.1` with zero errors;
+- imports are bounded to 1 MB, 500 entries, and 20 nesting levels and create
+  only provenance-bearing, untrusted Capture drafts;
+- security tests reject modifier/contained semantics, unknown elements,
+  external/versioned/dangling references, duplicate full URLs, unsafe
+  narrative, incomplete codes, non-UCUM quantities, excess size/depth, and
+  ambiguous patient identity;
+- export/import are independent, default-off capabilities and export is
+  purpose-bound, consent-gated, profile-authorized, audited, and
+  minimum-necessary; and
+- the machine-readable conformance boundary, toolchain lock, mapping guide,
+  upgrade procedure, validator script, and golden fixture are committed.
+
+The IPS candidate is pinned to `hl7.fhir.uv.ips#2.0.1`, but task 11.1 remains
+open for terminology/licensing approval and task 11.3 remains open because no
+IPS claim may be made before the candidate document Bundle passes the IPS
+package and named clinical/interoperability/privacy/legal sign-offs. The
+`/export/ips` route therefore fails closed with
+`ips_conformance_not_approved`. This is an intentional release gate, not an
+implementation omission.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

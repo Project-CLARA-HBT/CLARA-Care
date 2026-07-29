@@ -9,18 +9,23 @@ append-only action/revision, and transactional outbox event.
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
+import json
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.compliance.redaction import hash_user_ref
 from clara_api.core.config import get_settings
+from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    LifeMapCaptureCandidate,
+    LifeMapCaptureSession,
     LifeMapCareTask,
     LifeMapCommandRecord,
     LifeMapEpisode,
@@ -31,8 +36,11 @@ from clara_api.db.models import (
     LifeMapOutboxEvent,
     LifeMapProjectionDependency,
     LifeMapTaskAction,
+    MedicationCourse,
+    VisitDocument,
 )
 from clara_api.db.session import get_db
+from clara_api.lifemap.capture_domain import CAPTURE_SCHEMA_VERSION
 from clara_api.lifemap.commands import (
     add_outbox,
     replay_command,
@@ -44,6 +52,17 @@ from clara_api.lifemap.domain import (
     canonical_truth_state,
     require_task_transition,
     require_truth_transition,
+)
+from clara_api.lifemap.fhir_r4 import (
+    CLARA_MAPPING_VERSION,
+    FHIR_R4_VERSION,
+    FHIR_VALIDATOR_SHA256,
+    FHIR_VALIDATOR_VERSION,
+    IPS_PACKAGE,
+    FhirValidationError,
+    build_summary_bundle,
+    import_candidates,
+    parse_import_bundle,
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
 from clara_api.lifemap.visit_family_service import invalidate_visit_packs_for_source
@@ -109,6 +128,13 @@ class TaskActionRequest(BaseModel):
 
 class DeadLetterReplayRequest(BaseModel):
     reason_code: str = Field(min_length=2, max_length=64)
+
+
+FHIR_IMPORT_SESSION_LIFETIME = timedelta(days=7)
+FHIR_DEFAULT_INCLUDE = (
+    "observations,allergies,conditions,medications,care_plan,answers,"
+    "documents,consent,audit"
+)
 
 
 class TodayResponse(BaseModel):
@@ -1390,6 +1416,408 @@ def resolve_dead_letter(
     )
     db.commit()
     return {"event_id": event_id, "status": "resolved"}
+
+
+def _fhir_scope(
+    db: Session,
+    token: TokenPayload,
+    *,
+    requested_profile: str | None,
+    action: str,
+    purpose: str,
+) -> ProfileScope:
+    if purpose not in {
+        "self_care",
+        "self_download",
+        "clinician_handoff",
+        "care_coordination",
+    }:
+        raise HTTPException(
+            status_code=422, detail={"code": "unsupported_export_purpose"}
+        )
+    return resolve_profile_scope(
+        db,
+        token,
+        requested_profile=requested_profile,
+        action=action,
+        data_class="lifemap",
+        purpose=purpose,
+    )
+
+
+def _fhir_snapshot(
+    db: Session,
+    scope: ProfileScope,
+    *,
+    include: frozenset[str],
+) -> dict:
+    if not scope.is_owner:
+        required_classes = {"lifemap"}
+        if "medications" in include:
+            required_classes.add("medications")
+        if "documents" in include:
+            required_classes.add("visits")
+        if "demographics" in include:
+            required_classes.add("profile")
+        if not required_classes.issubset(scope.allowed_data_classes):
+            raise HTTPException(
+                status_code=404, detail={"code": "scope_forbidden"}
+            )
+    profile = scope.profile
+    events = list(
+        db.execute(
+            select(LifeMapEvent).where(
+                LifeMapEvent.profile_id == profile.id,
+                LifeMapEvent.lifecycle_status == "active",
+            )
+        ).scalars()
+    )
+    episodes = list(
+        db.execute(
+            select(LifeMapEpisode).where(LifeMapEpisode.profile_id == profile.id)
+        ).scalars()
+    )
+    tasks = list(
+        db.execute(
+            select(LifeMapCareTask).where(
+                LifeMapCareTask.profile_id == profile.id
+            )
+        ).scalars()
+    )
+    medications = list(
+        db.execute(
+            select(MedicationCourse).where(
+                MedicationCourse.profile_id == profile.id
+            )
+        ).scalars()
+    )
+    documents = list(
+        db.execute(
+            select(VisitDocument).where(VisitDocument.profile_id == profile.id)
+        ).scalars()
+    )
+    return {
+        "profile": {
+            "public_id": profile.public_id,
+            "full_name": profile.full_name,
+            "date_of_birth": profile.date_of_birth,
+            "gender": profile.gender,
+            "allergies": (
+                profile.allergies_json
+                if isinstance(profile.allergies_json, list)
+                else []
+            ),
+            "conditions": (
+                profile.conditions_json
+                if isinstance(profile.conditions_json, list)
+                else []
+            ),
+        },
+        "actor_role": scope.actor_role,
+        "events": [
+            {
+                "public_id": row.public_id,
+                "event_type": row.event_type,
+                "truth_state": row.truth_state,
+                "occurred_at": row.occurred_at,
+                "payload": row.payload_json,
+                "source_kind": row.source_kind,
+            }
+            for row in events
+            if row.event_type != "guided_answer"
+        ],
+        "answers": [
+            {
+                "public_id": row.public_id,
+                "truth_state": row.truth_state,
+                "occurred_at": row.occurred_at,
+                "payload": row.payload_json,
+            }
+            for row in events
+            if row.event_type == "guided_answer"
+        ],
+        "episodes": [
+            {
+                "id": row.id,
+                "public_id": row.public_id,
+                "title": row.title,
+                "goal": row.goal,
+                "status": row.status,
+            }
+            for row in episodes
+        ],
+        "tasks": [
+            {
+                "public_id": row.public_id,
+                "episode_id": row.episode_id,
+                "title": row.title,
+                "status": row.status,
+                "created_at": row.created_at,
+                "due_at": row.due_at,
+            }
+            for row in tasks
+        ],
+        "medications": [
+            {
+                "public_id": row.public_id,
+                "medication_name": row.medication_name,
+                "original_text": row.original_text,
+                "normalization_system": row.normalization_system,
+                "normalization_code": row.normalization_code,
+                "status": row.status,
+                "dose_text": row.dose_text,
+                "schedule_text": row.schedule_text,
+                "route_text": row.route_text,
+                "started_at": row.started_at,
+                "ended_at": row.ended_at,
+                "truth_state": row.truth_state,
+            }
+            for row in medications
+        ],
+        "documents": [
+            {
+                "public_id": row.public_id,
+                "title": row.title,
+                "document_kind": row.document_kind,
+                "media_type": row.media_type,
+                "content_digest": row.content_digest,
+                "status": row.status,
+                "created_at": row.created_at,
+            }
+            for row in documents
+        ],
+    }
+
+
+@router.get("/v2/export/fhir-r4")
+def export_fhir_r4_summary(
+    purpose: str = "self_download",
+    include: str = FHIR_DEFAULT_INCLUDE,
+    x_profile: str | None = Header(
+        default=None, alias="X-CLARA-Profile-Context"
+    ),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> Response:
+    settings = get_settings()
+    if not settings.lifemap_fhir_export_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_disabled"})
+    scope = _fhir_scope(
+        db,
+        token,
+        requested_profile=x_profile,
+        action="export",
+        purpose=purpose,
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    include_set = frozenset(
+        item.strip() for item in include.split(",") if item.strip()
+    )
+    try:
+        bundle = build_summary_bundle(
+            _fhir_snapshot(db, scope, include=include_set),
+            export_id=str(uuid4()),
+            generated_at=datetime.now(UTC),
+            purpose=purpose,
+            include=include_set,
+        )
+    except FhirValidationError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "fhir_validation_failed", "errors": error.errors},
+        ) from error
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="export",
+        entity="lifemap_fhir_r4",
+        entity_id=bundle["id"],
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{purpose}",
+    )
+    db.commit()
+    return Response(
+        content=json.dumps(bundle, ensure_ascii=False, default=str),
+        media_type="application/fhir+json",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": (
+                f'attachment; filename="clara-lifemap-{bundle["id"]}.fhir.json"'
+            ),
+            "X-CLARA-FHIR-Version": FHIR_R4_VERSION,
+            "X-CLARA-Mapping-Version": CLARA_MAPPING_VERSION,
+            "X-CLARA-Conformance": "fhir-r4-summary-not-ips",
+            "X-CLARA-IPS-Package-Candidate": IPS_PACKAGE,
+        },
+    )
+
+
+@router.get("/v2/fhir/conformance")
+def fhir_conformance_statement(
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    """Machine-readable boundary; deliberately not a FHIR-server claim."""
+
+    del token
+    settings = get_settings()
+    return {
+        "name": "CLARA LifeMap FHIR R4 projection",
+        "fhir_version": FHIR_R4_VERSION,
+        "mapping_version": CLARA_MAPPING_VERSION,
+        "conformance": "fhir-r4-summary-not-ips",
+        "bundle_types": ["collection"],
+        "operations": {
+            "export": {
+                "enabled": settings.lifemap_fhir_export_enabled,
+                "method": "GET",
+                "path": "/api/v1/lifemap/v2/export/fhir-r4",
+                "purpose_bound": True,
+                "minimum_necessary": True,
+            },
+            "import": {
+                "enabled": settings.lifemap_fhir_import_enabled,
+                "method": "POST",
+                "path": "/api/v1/lifemap/v2/import/fhir-r4",
+                "result": "untrusted_capture_drafts",
+            },
+            "ips_export": {
+                "enabled": False,
+                "reason": "external_conformance_and_licensing_gate",
+            },
+        },
+        "toolchain": {
+            "validator_cli_version": FHIR_VALIDATOR_VERSION,
+            "validator_cli_sha256": FHIR_VALIDATOR_SHA256,
+            "ips_candidate_package": IPS_PACKAGE,
+        },
+        "general_fhir_server": False,
+    }
+
+
+@router.get("/v2/export/ips")
+def export_ips_requires_certification(
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    """Never claim IPS conformance before the external validator/legal gate."""
+
+    del token
+    raise HTTPException(
+        status_code=409,
+        detail={
+            "code": "ips_conformance_not_approved",
+            "message": (
+                "IPS export remains unavailable until the pinned package, "
+                "terminology licensing, and external validator gate are approved."
+            ),
+            "candidate_package": IPS_PACKAGE,
+        },
+    )
+
+
+@router.post("/v2/import/fhir-r4", status_code=201)
+async def import_fhir_r4_as_capture_drafts(
+    request: Request,
+    purpose: str = "self_care",
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=8, max_length=128
+    ),
+    x_profile: str | None = Header(
+        default=None, alias="X-CLARA-Profile-Context"
+    ),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    settings = get_settings()
+    if not settings.lifemap_fhir_import_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_disabled"})
+    scope = _fhir_scope(
+        db,
+        token,
+        requested_profile=x_profile,
+        action="create",
+        purpose=purpose,
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    raw = await request.body()
+    try:
+        bundle = parse_import_bundle(raw)
+        candidates = import_candidates(bundle)
+    except FhirValidationError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "fhir_import_rejected", "errors": error.errors},
+        ) from error
+    bundle_digest = hashlib.sha256(raw).hexdigest()
+    digest, replay = _begin(
+        db,
+        scope,
+        operation="fhir_r4_import",
+        idempotency_key=idempotency_key,
+        payload={"bundle_digest": bundle_digest},
+    )
+    if replay is not None:
+        return replay
+    now = datetime.now(UTC)
+    session = LifeMapCaptureSession(
+        profile_id=scope.profile.id,
+        created_by_user_id=scope.actor.id,
+        input_kind="fhir_r4_import",
+        schema_version=CAPTURE_SCHEMA_VERSION,
+        locale=scope.profile.locale,
+        expires_at=now + FHIR_IMPORT_SESSION_LIFETIME,
+    )
+    db.add(session)
+    db.flush()
+    created: list[LifeMapCaptureCandidate] = []
+    for candidate in candidates:
+        row = LifeMapCaptureCandidate(
+            session_id=session.id,
+            profile_id=scope.profile.id,
+            candidate_type=candidate["candidate_type"],
+            field_path=candidate["field_path"],
+            value_json={
+                **candidate["value"],
+                "bundle_digest": bundle_digest,
+                "mapping_version": CLARA_MAPPING_VERSION,
+            },
+            confidence=None,
+            source_span_json=candidate["source_span"],
+            missing_critical_fields_json=[],
+            extraction_schema_version=CAPTURE_SCHEMA_VERSION,
+            extractor_version=CLARA_MAPPING_VERSION,
+            security_findings_json=[],
+            status="draft",
+        )
+        db.add(row)
+        created.append(row)
+    db.flush()
+    response = {
+        "id": session.public_id,
+        "status": session.status,
+        "source_trust": "untrusted_external_draft",
+        "candidate_count": len(created),
+        "candidates": [
+            {
+                "id": row.public_id,
+                "type": row.candidate_type,
+                "status": row.status,
+            }
+            for row in created
+        ],
+        "requires_review": True,
+    }
+    return _finish(
+        db,
+        scope,
+        operation="fhir_r4_import",
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response=response,
+        status_code=201,
+        aggregate_type="capture_session",
+        aggregate_public_id=session.public_id,
+        event_type="lifemap.fhir_import_drafts_created",
+    )
 
 
 def _legacy_pending_outbox_replay(

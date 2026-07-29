@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-29",
+  "fhir": {
+    "release": "R4",
+    "version": "4.0.1",
+    "package": "hl7.fhir.r4.core#4.0.1"
+  },
+  "validator": {
+    "version": "6.9.12",
+    "artifact": "validator_cli.jar",
+    "url": "https://github.com/hapifhir/org.hl7.fhir.core/releases/download/6.9.12/validator_cli.jar",
+    "sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6"
+  },
+  "ips_candidate": {
+    "package": "hl7.fhir.uv.ips#2.0.1",
+    "approved_for_conformance_claims": false
+  },
+  "terminology": {
+    "ucum_system": "http://unitsofmeasure.org",
+    "supported_when_present_in_source": [
+      "http://loinc.org",
+      "http://snomed.info/sct",
+      "http://hl7.org/fhir/sid/icd-10",
+      "http://www.nlm.nih.gov/research/umls/rxnorm"
+    ],
+    "license_review_approved": false
+  }
+}

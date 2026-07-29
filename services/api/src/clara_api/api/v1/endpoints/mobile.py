@@ -75,6 +75,7 @@ def mobile_summary(
         "lifemap_visit_extraction": settings.lifemap_visit_extraction_enabled,
         "lifemap_evidence_monitor": settings.lifemap_evidence_monitor_enabled,
         "lifemap_fhir_export": settings.lifemap_fhir_export_enabled,
+        "lifemap_fhir_import": settings.lifemap_fhir_import_enabled,
         "lifemap_ask_ai": settings.lifemap_ask_ai_enabled,
         "lifemap_ai_summaries": settings.lifemap_ai_summaries_enabled,
         "lifemap_ai_entity_resolution": settings.lifemap_ai_entity_resolution_enabled,
