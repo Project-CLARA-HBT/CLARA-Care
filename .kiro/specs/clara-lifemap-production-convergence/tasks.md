@@ -428,7 +428,7 @@ an unsigned artifact.
 - [x] 16.9 Implement entity-resolution ensemble: Vietnamese normalization,
   exact/alias dictionary, dense candidates, graph constraints, optional
   reranking, calibration, ambiguity, and mapping revisions. _R26_
-- [ ] 16.10 Implement rule-first contradiction/duplicate/missingness findings
+- [x] 16.10 Implement rule-first contradiction/duplicate/missingness findings
   with bounded NLI/LLM proposals and human resolution workflow. _R27_
 - [ ] 16.11 Build web/mobile Ask, summary, citation/source, multimodal review,
   normalization candidate, and conflict-review experiences. _R19, R23, R24,

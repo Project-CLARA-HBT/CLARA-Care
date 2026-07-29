@@ -1,10 +1,17 @@
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
+from fastapi.testclient import TestClient
+
+from clara_api.core.config import get_settings
 from clara_api.lifemap.review_findings import (
     ReviewFact,
     rule_first_findings,
     validate_model_proposals,
 )
+from clara_api.main import app
+
+client = TestClient(app)
 
 
 def _fact(ref: str, value: object, hour: int = 0) -> ReviewFact:
@@ -73,3 +80,63 @@ def test_duplicate_window_is_bounded() -> None:
         duplicate_window=timedelta(hours=1),
     )
     assert findings == ()
+
+
+def _account() -> dict[str, str]:
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": f"review-{uuid4().hex}@normal.clara",
+            "password": "secret123",
+        },
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    assert client.put(
+        "/api/v1/phr/record", headers=headers, json={"full_name": "Review"}
+    ).status_code == 200
+    consent = client.get("/api/v1/auth/consent-status", headers=headers).json()
+    assert client.post(
+        "/api/v1/auth/consent",
+        headers=headers,
+        json={"consent_version": consent["required_version"]},
+    ).status_code == 200
+    return headers
+
+
+def test_persisted_findings_require_human_action_and_are_idempotent(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(get_settings(), "lifemap_ai_review_findings_enabled", True)
+    headers = _account()
+    for suffix in ("a", "b"):
+        response = client.post(
+            "/api/v1/lifemap/events",
+            headers={**headers, "Idempotency-Key": f"{suffix}-{uuid4().hex}"},
+            json={
+                "event_type": "symptom_report",
+                "occurred_at": "2026-07-29T08:00:00Z",
+                "payload": {"symptom": "đau đầu"},
+                "truth_state": "confirmed",
+            },
+        )
+        assert response.status_code == 201
+    first = client.post("/api/v1/lifemap/v2/review-findings/scan", headers=headers)
+    second = client.post("/api/v1/lifemap/v2/review-findings/scan", headers=headers)
+    assert first.status_code == 200
+    assert len(first.json()) == len(second.json()) == 1
+    finding = first.json()[0]
+    assert finding["status"] == "pending"
+    action_headers = {**headers, "Idempotency-Key": uuid4().hex}
+    resolved = client.post(
+        f"/api/v1/lifemap/v2/review-findings/{finding['id']}/actions",
+        headers=action_headers,
+        json={"action": "resolved", "reason": "Đã kiểm tra nguồn"},
+    )
+    replay = client.post(
+        f"/api/v1/lifemap/v2/review-findings/{finding['id']}/actions",
+        headers=action_headers,
+        json={"action": "resolved", "reason": "Đã kiểm tra nguồn"},
+    )
+    assert resolved.status_code == 200
+    assert replay.json()["idempotent_replay"] is True
+    assert replay.json()["status"] == "resolved"

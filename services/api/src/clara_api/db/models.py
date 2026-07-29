@@ -1431,6 +1431,64 @@ class MLInferenceManifest(Base):
     )
 
 
+class LifeMapReviewFinding(Base):
+    """Immutable rule/model review proposal linked to exact fact revisions."""
+
+    __tablename__ = "lifemap_review_findings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), index=True)
+    field_key: Mapped[str] = mapped_column(String(64), index=True)
+    reason_code: Mapped[str] = mapped_column(String(64))
+    proposal_source: Mapped[str] = mapped_column(String(16))
+    revision_refs_json: Mapped[list[str]] = mapped_column(JSON)
+    rule_version: Mapped[str] = mapped_column(String(64))
+    dedupe_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class LifeMapReviewFindingAction(Base):
+    """Append-only human resolution/dismissal for a review finding."""
+
+    __tablename__ = "lifemap_review_finding_actions"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "actor_user_id",
+            "idempotency_key",
+            name="uq_lifemap_review_action_idempotency",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    finding_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_review_findings.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(24), index=True)
+    reason: Mapped[str] = mapped_column(String(500), default="")
+    idempotency_key: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 def _reject_governance_manifest_mutation(*_args: object, **_kwargs: object) -> None:
     raise ValueError("AI/ML governance manifests are immutable; append a new version")
 

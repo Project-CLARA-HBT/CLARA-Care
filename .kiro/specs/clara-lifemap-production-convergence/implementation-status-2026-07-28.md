@@ -273,9 +273,17 @@ contradictions from exact active revisions and reports required-field
 missingness. Invalidated/superseded/error facts are excluded. Bounded NLI/LLM
 proposals are accepted only when every referenced revision is already in the
 authorized candidate set; they remain explicitly `model_proposal` findings
-requiring human resolution and cannot change truth. Four focused tests pass.
-Task 16.10 remains open until persisted findings, idempotent human
-resolve/dismiss actions, and web/mobile conflict-review workflows are wired.
+requiring human resolution and cannot change truth. Four focused unit tests
+pass.
+
+Migration `20260729_0041` now persists immutable, deduplicated findings and
+append-only human actions. Profile-scoped, consent- and flag-gated API routes
+scan current exact revisions, list effective status, and accept only explicit
+`resolved`/`dismissed` actions with idempotency-conflict detection and PHR
+audit. A repeated scan cannot duplicate a finding; a repeated action returns
+the original result. Full SQLite upgrade, downgrade to `0040`, and re-upgrade
+to `0041` passed. Five focused API tests pass. The web/mobile conflict-review
+experience remains tracked under task 16.11.
 
 ## Production deployment evidence
 

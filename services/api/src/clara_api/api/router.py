@@ -16,6 +16,7 @@ from clara_api.api.v1.endpoints import (
     lifemap,
     lifemap_capture,
     lifemap_insights,
+    lifemap_review,
     medications,
     mobile,
     phr,
@@ -38,6 +39,7 @@ api_router.include_router(
     lifemap_capture.router, prefix="/lifemap/capture", tags=["lifemap-capture"]
 )
 api_router.include_router(lifemap_insights.router, tags=["lifemap-insights"])
+api_router.include_router(lifemap_review.router, tags=["lifemap-review"])
 api_router.include_router(evidence_questions.router, tags=["evidence"])
 api_router.include_router(visits.router, prefix="/visits", tags=["visits"])
 api_router.include_router(visits.pack_router, prefix="/visit-packs", tags=["visit-packs"])
