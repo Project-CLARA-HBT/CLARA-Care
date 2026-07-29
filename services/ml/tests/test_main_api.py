@@ -510,6 +510,9 @@ def test_medical_semantic_router_uses_llm_context(
     expected_reason: str,
 ):
     class _SemanticClient:
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
         def generate(self, *_args, **_kwargs):
             from types import SimpleNamespace
             import json

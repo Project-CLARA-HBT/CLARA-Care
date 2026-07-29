@@ -15,23 +15,14 @@ from typing import Any
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 
 _TRIAGE = {"routine_follow_up", "same_day_review", "emergency_escalation"}
 
 
 def _client() -> DeepSeekClient:
-    return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
-        fallback_model=settings.deepseek_fallback_model,
-        timeout_seconds=settings.deepseek_timeout_seconds,
-        retries_per_base=settings.deepseek_retries_per_base,
-        retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
-    )
+    client, _selection = build_task_client(ModelTask.COUNCIL_SHADOW, settings)
+    return client
 
 
 def _json_object(text: str) -> dict[str, Any] | None:

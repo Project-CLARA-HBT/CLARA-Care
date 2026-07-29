@@ -114,6 +114,22 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="DEEPSEEK_REQUIRED",
     )
+    # Registry is a typed selection layer around the existing DeepSeek client,
+    # not a user-selectable provider switch.  Defaults preserve the deployed
+    # model; the rollback switch can only select an explicitly configured prior
+    # DeepSeek model and is safe to turn off immediately during an incident.
+    model_registry_enabled: bool = Field(
+        default=True,
+        validation_alias="MODEL_REGISTRY_ENABLED",
+    )
+    model_registry_force_rollback: bool = Field(
+        default=False,
+        validation_alias="MODEL_REGISTRY_FORCE_ROLLBACK",
+    )
+    model_registry_rollback_model: str = Field(
+        default="",
+        validation_alias="MODEL_REGISTRY_ROLLBACK_MODEL",
+    )
     chat_llm_query_planner_enabled: bool = Field(
         # When true, plain chat (routed_chat_infer) runs the same LLM query
         # planner used by research tier2 to refine the raw query into a smaller

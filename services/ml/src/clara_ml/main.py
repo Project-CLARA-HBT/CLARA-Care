@@ -31,6 +31,7 @@ from clara_ml.factcheck import run_fides_lite
 from clara_ml.lifemap.capture_extraction import extract_capture_text_validated
 from clara_ml.lifemap.visit_extraction import extract_visit_instructions
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
 from clara_ml.nlp.pii_filter import redact_pii
@@ -191,20 +192,13 @@ _ALLOWED_AUDIO_TYPES = {
 }
 
 
-def _build_deepseek_client() -> DeepSeekClient:
-    return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
-        fallback_model=settings.deepseek_fallback_model,
-        timeout_seconds=settings.deepseek_timeout_seconds,
-        retries_per_base=settings.deepseek_retries_per_base,
-        retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
-        audio_base_url=settings.deepseek_audio_base_url,
-    )
+def _build_deepseek_client(
+    task: ModelTask = ModelTask.MEDICAL_SAFETY_ROUTER,
+) -> DeepSeekClient:
+    """Build a task-constrained client through the registry/rollback boundary."""
+
+    client, _selection = build_task_client(task, settings)
+    return client
 
 
 def _build_scribe_audio_client() -> DeepSeekClient:
@@ -216,22 +210,17 @@ def _build_scribe_audio_client() -> DeepSeekClient:
     contract instead of inheriting the shorter generic LLM timeout.
     """
 
-    return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
-        fallback_model=settings.deepseek_fallback_model,
+    client, _selection = build_task_client(
+        ModelTask.SCRIBE_TRANSCRIPTION,
+        settings,
         timeout_seconds=max(
             float(settings.deepseek_timeout_seconds),
             float(settings.scribe_asr_timeout_seconds),
         ),
         retries_per_base=0,
-        retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
-        audio_base_url=settings.deepseek_audio_base_url,
+        audio=True,
     )
+    return client
 
 
 def _now_iso() -> str:
@@ -532,7 +521,7 @@ def _classify_medical_request_with_llm(
     clinical prose is trusted at this stage.
     """
 
-    response = _build_deepseek_client().generate(
+    response = _build_deepseek_client(ModelTask.MEDICAL_SAFETY_ROUTER).generate(
         json.dumps(
             {
                 "message": query,
@@ -609,7 +598,7 @@ def _classify_lifemap_capture_with_llm(
     for an upstream model.
     """
 
-    response = _build_deepseek_client().generate(
+    response = _build_deepseek_client(ModelTask.LIFEMAP_CAPTURE_TRIAGE).generate(
         json.dumps({"source_text": source_text, "locale": locale}, ensure_ascii=False),
         system_prompt=(
             "You are a safety triage classifier for an untrusted health document or "
@@ -1472,7 +1461,11 @@ def lifemap_visit_extract(payload: dict) -> dict:
     document_digest = str(payload.get("document_digest", "")).strip()
     if not document_digest:
         raise HTTPException(status_code=422, detail="document_digest_required")
-    generator = _build_deepseek_client() if settings.deepseek_api_key.strip() else None
+    generator = (
+        _build_deepseek_client(ModelTask.LIFEMAP_VISIT_EXTRACTION)
+        if settings.deepseek_api_key.strip()
+        else None
+    )
     result = extract_visit_instructions(
         document_text,
         document_digest=document_digest,
@@ -1585,7 +1578,7 @@ def _build_scribe_note_generator():
 
     from clara_ml.scribe.generator import NoteGenerator
 
-    client = _build_deepseek_client()
+    client = _build_deepseek_client(ModelTask.SCRIBE_NOTE)
 
     def complete(prompt: str) -> str:
         response = client.generate(

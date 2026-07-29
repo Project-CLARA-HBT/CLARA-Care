@@ -1,0 +1,111 @@
+"""Focused regression tests for typed model-task routing and rollback."""
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+
+from clara_ml.llm.model_registry import (
+    PRIMARY_MODEL_VERSION,
+    ROLLBACK_MODEL_VERSION,
+    TASK_CONTRACTS,
+    ModelTask,
+    build_task_client,
+    resolve_model_selection,
+)
+
+
+def _settings(**overrides: object) -> SimpleNamespace:
+    values: dict[str, object] = {
+        "deepseek_api_key": "test-key",
+        "deepseek_base_url": "https://example.invalid/v1",
+        "deepseek_model": "deepseek-primary",
+        "deepseek_fallback_model": "",
+        "model_registry_enabled": True,
+        "model_registry_force_rollback": False,
+        "model_registry_rollback_model": "",
+        "deepseek_timeout_seconds": 45.0,
+        "deepseek_retries_per_base": 2,
+        "deepseek_retry_backoff_seconds": 0.25,
+        "llm_global_max_concurrency": 2,
+        "llm_global_min_interval_seconds": 0.4,
+        "llm_global_jitter_seconds": 0.15,
+        "deepseek_audio_base_url": "https://audio.example.invalid/v1",
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -> None:
+    assert set(TASK_CONTRACTS) == set(ModelTask)
+    for task, contract in TASK_CONTRACTS.items():
+        assert contract.task is task
+        assert contract.prompt_version
+        assert contract.output_contract
+        assert contract.safety_fallback
+
+
+def test_default_selection_preserves_configured_deepseek_model() -> None:
+    selection = resolve_model_selection(
+        ModelTask.LIFEMAP_CAPTURE_TRIAGE,
+        _settings(),
+    )
+
+    assert selection.provider == "deepseek"
+    assert selection.model == "deepseek-primary"
+    assert selection.model_version == PRIMARY_MODEL_VERSION
+    assert selection.prompt_version == "lifemap-capture-triage.v1"
+    assert selection.rollback_applied is False
+
+
+def test_rollback_needs_an_explicit_prior_model_and_never_fakes_it() -> None:
+    unavailable = resolve_model_selection(
+        ModelTask.MEDICAL_SAFETY_ROUTER,
+        _settings(model_registry_force_rollback=True),
+    )
+    assert unavailable.model == "deepseek-primary"
+    assert unavailable.rollback_applied is False
+    assert unavailable.model_version == PRIMARY_MODEL_VERSION
+
+    rolled_back = resolve_model_selection(
+        ModelTask.MEDICAL_SAFETY_ROUTER,
+        _settings(
+            model_registry_force_rollback=True,
+            model_registry_rollback_model="deepseek-previous",
+        ),
+    )
+    assert rolled_back.model == "deepseek-previous"
+    assert rolled_back.rollback_applied is True
+    assert rolled_back.model_version == ROLLBACK_MODEL_VERSION
+
+
+def test_kill_switch_preserves_primary_even_if_rollback_is_requested() -> None:
+    selection = resolve_model_selection(
+        ModelTask.SCRIBE_NOTE,
+        _settings(
+            model_registry_enabled=False,
+            model_registry_force_rollback=True,
+            model_registry_rollback_model="deepseek-previous",
+        ),
+    )
+    assert selection.registry_enabled is False
+    assert selection.model == "deepseek-primary"
+    assert selection.rollback_applied is False
+
+
+def test_task_client_uses_selected_rollback_and_keeps_audio_endpoint_scoped() -> None:
+    client, selection = build_task_client(
+        ModelTask.SCRIBE_TRANSCRIPTION,
+        _settings(
+            model_registry_force_rollback=True,
+            model_registry_rollback_model="deepseek-previous",
+        ),
+        timeout_seconds=90.0,
+        retries_per_base=0,
+        audio=True,
+    )
+
+    assert selection.rollback_applied is True
+    assert client.model == "deepseek-previous"
+    assert client._timeout_seconds == 90.0
+    assert client._retries_per_base == 0
+    assert client._audio_base_urls == ["https://audio.example.invalid/v1"]

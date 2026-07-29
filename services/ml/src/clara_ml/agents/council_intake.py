@@ -6,6 +6,7 @@ from typing import Any
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 
 #: Sentinel ``model_used`` value for the degraded heuristic extraction path.
 _HEURISTIC_FALLBACK_MODEL = "heuristic-fallback-v1"
@@ -23,15 +24,8 @@ _INTAKE_FALLBACK_NOTICE = (
 
 
 def _build_client() -> DeepSeekClient:
-    return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
-        timeout_seconds=settings.deepseek_timeout_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
-    )
+    client, _selection = build_task_client(ModelTask.COUNCIL_SHADOW, settings)
+    return client
 
 
 def _strip_code_fence(value: str) -> str:
