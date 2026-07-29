@@ -137,8 +137,24 @@ class _UnifiedRootState extends State<UnifiedRoot> {
   }
 
   Widget _buildShell(MobileFeatureFlagResolver resolver) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildLocalizedShell(resolver, 'vi');
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) =>
+          _buildLocalizedShell(resolver, languageController.languageCode),
+    );
+  }
+
+  Widget _buildLocalizedShell(
+    MobileFeatureFlagResolver resolver,
+    String languageCode,
+  ) {
+    final english = languageCode == 'en';
     return RedesignShell(
-      chatLabel: 'Hỏi CLARA',
+      chatLabel: english ? 'Ask CLARA' : 'Hỏi CLARA',
       chatIcon: Icons.forum_rounded,
       chatBody: ChatSurfaceV3(
         apiClient: widget.apiClient,
@@ -149,7 +165,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.today_outlined,
           selectedIcon: Icons.today,
-          label: 'Hôm nay',
+          label: english ? 'Today' : 'Hôm nay',
           body: TodaySurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -160,7 +176,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.route_outlined,
           selectedIcon: Icons.route,
-          label: 'LifeMap',
+          label: english ? 'Health journey' : 'Hành trình sức khỏe',
           body: LifeMapSurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -169,7 +185,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.medication_outlined,
           selectedIcon: Icons.medication,
-          label: 'Thuốc',
+          label: english ? 'Medicines' : 'Thuốc',
           body: MedicinesHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -179,7 +195,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.folder_shared_outlined,
           selectedIcon: Icons.folder_shared,
-          label: 'Hồ sơ',
+          label: english ? 'Profile' : 'Hồ sơ',
           body: ProfileHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,

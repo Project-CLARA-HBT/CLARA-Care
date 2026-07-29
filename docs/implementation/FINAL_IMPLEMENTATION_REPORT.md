@@ -58,7 +58,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist; broader NL-query/visit-summary evaluation needs approved cases. |
 | PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. Product quality metrics remain `not_measured` until approved data/execution exists. |
 | PR-14 security/ops | partial | Release gate now fails closed on missing locked evidence; restore/security certification evidence remains an external operational task. |
-| PR-15 mobile parity | partial/pre-existing | Unified mobile, locale wiring and consent paths exist; a shared web/mobile catalog and device E2E execution require Flutter tooling/device availability. |
+| PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. Checkpoint `mobile-unified-locale-nav` makes the shipped Unified shell rebuild its four task destinations and primary Ask action when the persisted locale changes; `flutter test test/unified_root_test.dart` and targeted `flutter analyze` passed. A shared web/mobile catalog and device E2E execution remain outstanding. |
 
 ## Features and safety invariants preserved
 
