@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import re
-import unicodedata
 from dataclasses import dataclass
+from typing import ClassVar
+
+from clara_ml.nlp.vietnamese_clinical import fold_vietnamese_for_matching
 
 
 @dataclass
@@ -27,7 +28,7 @@ class P1RoleIntentRouter:
         "overdose",
     )
 
-    ROLE_KEYWORDS = {
+    ROLE_KEYWORDS: ClassVar[dict[str, tuple[str, ...]]] = {
         "doctor": (
             "benh nhan",
             "chan doan",
@@ -60,7 +61,7 @@ class P1RoleIntentRouter:
         ),
     }
 
-    INTENT_KEYWORDS = {
+    INTENT_KEYWORDS: ClassVar[dict[str, dict[str, tuple[str, ...]]]] = {
         "normal": {
             "symptom_triage": ("trieu chung", "dau", "sot", "ho", "kham"),
             "medication_safety": ("thuoc", "lieu", "tuong tac", "di ung", "quen lieu"),
@@ -78,7 +79,7 @@ class P1RoleIntentRouter:
         },
     }
 
-    INTENT_PRIORITY = {
+    INTENT_PRIORITY: ClassVar[dict[str, tuple[str, ...]]] = {
         "normal": ("medication_safety", "symptom_triage", "lifestyle_guidance"),
         "researcher": ("evidence_review", "study_design", "data_analysis"),
         "doctor": ("doctor_ddi_check", "doctor_case_review", "doctor_treatment_plan"),
@@ -127,17 +128,7 @@ class P1RoleIntentRouter:
 
     @staticmethod
     def _normalize(text: str) -> str:
-        lowered = text.lower().strip()
-        folded = unicodedata.normalize("NFD", lowered)
-        without_marks = "".join(ch for ch in folded if unicodedata.category(ch) != "Mn")
-        # NFD does not decompose 'đ' (U+0111) / 'Đ' (U+0110): the stroke is part
-        # of the base letter, not a combining mark, so it survives mark removal.
-        # Map it explicitly to ASCII 'd' so Vietnamese words like 'đột quỵ'
-        # ('đot quy' after mark removal) fold to their ASCII form ('dot quy')
-        # and match the ASCII keyword tables (emergency fast-path, role/intent).
-        deascii = without_marks.replace("đ", "d").replace("Đ", "d")
-        collapsed = re.sub(r"\s+", " ", deascii)
-        return collapsed
+        return fold_vietnamese_for_matching(text)
 
     @staticmethod
     def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
