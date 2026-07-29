@@ -110,3 +110,127 @@ def test_diagnostic_image_schema_is_never_registered() -> None:
         ExtractionRejected, match="diagnostic_image_interpretation_unsupported"
     ):
         _schema(diagnostic=True).validate()
+
+
+@pytest.mark.asyncio
+async def test_text_span_cannot_escape_authorized_artifact() -> None:
+    async def outside(artifact, _schema):
+        return {
+            "artifact_checksum": artifact.checksum_sha256,
+            "candidates": [
+                {
+                    "field_path": "symptom",
+                    "value": "invented",
+                    "confidence": 0.9,
+                    "source_span": {
+                        "kind": "text_offset",
+                        "start": 0,
+                        "end": len(artifact.content) + 100,
+                    },
+                }
+            ],
+        }
+
+    adapter = current_adapters(
+        ocr_backend=outside,
+        asr_backend=outside,
+        layout_backend=outside,
+        deepseek_backend=outside,
+    )["deepseek"]
+    with pytest.raises(ExtractionRejected, match="outside_artifact"):
+        await adapter.extract(_artifact(), _schema())
+
+
+@pytest.mark.asyncio
+async def test_page_region_requires_finite_ordered_nonnegative_bounds() -> None:
+    async def invalid_region(artifact, _schema):
+        return {
+            "artifact_checksum": artifact.checksum_sha256,
+            "candidates": [
+                {
+                    "field_path": "symptom",
+                    "value": "đau đầu",
+                    "confidence": 0.9,
+                    "source_span": {
+                        "kind": "page_region",
+                        "page": 1,
+                        "box": [10, 10, 5, float("inf")],
+                    },
+                }
+            ],
+        }
+
+    adapter = current_adapters(
+        ocr_backend=invalid_region,
+        asr_backend=invalid_region,
+        layout_backend=invalid_region,
+        deepseek_backend=invalid_region,
+    )["layout"]
+    with pytest.raises(ExtractionRejected, match="page_region_invalid"):
+        await adapter.extract(_artifact("document"), _schema())
+
+
+@pytest.mark.asyncio
+async def test_audio_timestamp_requires_ordered_nonnegative_bounds() -> None:
+    async def invalid_timestamp(artifact, _schema):
+        return {
+            "artifact_checksum": artifact.checksum_sha256,
+            "candidates": [
+                {
+                    "field_path": "symptom",
+                    "value": "đau đầu",
+                    "confidence": 0.9,
+                    "source_span": {
+                        "kind": "timestamp",
+                        "start_ms": 2_000,
+                        "end_ms": 1_000,
+                    },
+                }
+            ],
+        }
+
+    adapter = current_adapters(
+        ocr_backend=invalid_timestamp,
+        asr_backend=invalid_timestamp,
+        layout_backend=invalid_timestamp,
+        deepseek_backend=invalid_timestamp,
+    )["asr"]
+    with pytest.raises(ExtractionRejected, match="timestamp_invalid"):
+        await adapter.extract(_artifact("audio"), _schema())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("confidence", "unit", "expected"),
+    [
+        (float("nan"), "", "confidence_invalid"),
+        (0.9, "tablet", "unit_not_allowed"),
+    ],
+)
+async def test_nonfinite_confidence_and_unknown_units_fail_closed(
+    confidence: float,
+    unit: str,
+    expected: str,
+) -> None:
+    async def invalid_value(artifact, _schema):
+        return {
+            "artifact_checksum": artifact.checksum_sha256,
+            "candidates": [
+                {
+                    "field_path": "symptom",
+                    "value": "đau đầu",
+                    "confidence": confidence,
+                    "unit": unit,
+                    "source_span": {"kind": "text_offset", "start": 0, "end": 7},
+                }
+            ],
+        }
+
+    adapter = current_adapters(
+        ocr_backend=invalid_value,
+        asr_backend=invalid_value,
+        layout_backend=invalid_value,
+        deepseek_backend=invalid_value,
+    )["deepseek"]
+    with pytest.raises(ExtractionRejected, match=expected):
+        await adapter.extract(_artifact(), _schema())

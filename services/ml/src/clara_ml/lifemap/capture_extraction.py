@@ -13,6 +13,12 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from clara_ml.lifemap.multimodal import (
+    AuthorizedArtifact,
+    ExtractionSchema,
+    ValidatedAdapter,
+)
+
 CaptureKind = Literal["medication_label", "visit_document"]
 
 _INJECTION = re.compile(
@@ -24,6 +30,7 @@ _STRENGTH = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:mcg|mg|g|ml)\b", re.IGNORECASE)
 _DATE = re.compile(
     r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\b"
 )
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 _ROUTES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b(?:uống|oral|by mouth|po)\b", re.IGNORECASE), "oral"),
     (re.compile(r"\b(?:bôi|topical)\b", re.IGNORECASE), "topical"),
@@ -181,5 +188,131 @@ def extract_capture_text(
             "draft_only": True,
         },
         "source_text_checksum": actual_checksum,
+        "draft_only": True,
+    }
+
+
+async def extract_capture_text_validated(
+    *,
+    kind: CaptureKind,
+    source_text: str,
+    source_text_checksum: str,
+    source_artifact_checksum: str,
+    artifact_id: str,
+    profile_partition: str,
+    locale: str = "vi",
+) -> dict[str, Any]:
+    """Run the production OCR-text bridge through the common draft boundary."""
+
+    if _SHA256.fullmatch(source_artifact_checksum) is None:
+        raise ValueError("source_artifact_checksum_invalid")
+    content = source_text.encode()
+    modality: Literal["medication_label", "document"] = (
+        "medication_label" if kind == "medication_label" else "document"
+    )
+    required = (
+        frozenset({"medication_name", "strength", "route"})
+        if kind == "medication_label"
+        else frozenset({"document_type", "document_date"})
+    )
+    schema = ExtractionSchema(
+        schema_id=f"lifemap.capture.{kind}.v1",
+        allowed_fields=required,
+        required_fields=required,
+        allowed_modalities=frozenset({modality}),
+    )
+    artifact = AuthorizedArtifact(
+        artifact_id=artifact_id,
+        profile_partition=profile_partition,
+        modality=modality,
+        content=content,
+        checksum_sha256=source_text_checksum,
+        locale=locale,
+    )
+
+    async def grounded_backend(
+        _artifact: AuthorizedArtifact,
+        _schema: ExtractionSchema,
+    ) -> dict[str, Any]:
+        baseline = extract_capture_text(
+            kind=kind,
+            source_text=source_text,
+            source_text_checksum=source_text_checksum,
+        )
+        composite = baseline["candidate"]
+        values = composite["value"]
+        confidences = composite["field_confidence"]
+        spans = composite["source_span"]["fields"]
+        return {
+            "artifact_checksum": source_text_checksum,
+            "security_findings": composite["security_findings"],
+            "degraded": bool(composite["missing_critical_fields"]),
+            "candidates": [
+                {
+                    "field_path": field,
+                    "value": value,
+                    "confidence": confidences[field],
+                    "missing": False,
+                    "ambiguous": confidences[field] < 0.8,
+                    "unit": "",
+                    "source_span": {
+                        "kind": "text_offset",
+                        "start": spans[field]["start"],
+                        "end": spans[field]["end"],
+                    },
+                    "model_ref": "grounded-ocr-baseline-v1",
+                }
+                for field, value in values.items()
+            ],
+        }
+
+    validated = await ValidatedAdapter(
+        extractor_ref="current-ocr-grounded-bridge@1",
+        supported_modalities=frozenset({"medication_label", "document"}),
+        backend=grounded_backend,
+    ).extract(artifact, schema)
+    values = {
+        candidate.field_path: candidate.value
+        for candidate in validated.candidates
+        if not candidate.missing
+    }
+    confidences = {
+        candidate.field_path: candidate.confidence
+        for candidate in validated.candidates
+        if not candidate.missing
+    }
+    spans = {
+        candidate.field_path: {
+            "start": candidate.locator["start"],
+            "end": candidate.locator["end"],
+        }
+        for candidate in validated.candidates
+        if not candidate.missing
+    }
+    overall = min(confidences.values()) if confidences else 0.0
+    return {
+        "status": "ready_for_review" if values else "insufficient_source",
+        "candidate": {
+            "candidate_type": kind,
+            "field_path": kind,
+            "value": values,
+            "confidence": overall,
+            "field_confidence": confidences,
+            "source_span": {
+                "kind": "text_fields",
+                "fields": spans,
+                "text_checksum": source_text_checksum,
+            },
+            "missing_critical_fields": list(validated.missing_required_fields),
+            "security_findings": list(validated.security_findings),
+            "schema_version": "lifemap.capture.v1",
+            "extractor_version": validated.extractor_ref,
+            "draft_only": True,
+        },
+        "artifact_id": artifact_id,
+        "artifact_checksum": source_artifact_checksum,
+        "source_text_checksum": source_text_checksum,
+        "validated_boundary": "lifemap-multimodal-v1",
+        "degraded": validated.degraded,
         "draft_only": True,
     }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -145,6 +146,14 @@ def _locator(raw: Any) -> tuple[LocatorKind, dict[str, Any]]:
             or not isinstance(box, list)
             or len(box) != 4
             or any(not isinstance(value, int | float) for value in box)
+            or any(
+                isinstance(value, bool)
+                or not math.isfinite(float(value))
+                or float(value) < 0
+                for value in box
+            )
+            or float(box[2]) <= float(box[0])
+            or float(box[3]) <= float(box[1])
         ):
             raise ExtractionRejected("page_region_invalid")
         return "page_region", {"page": page, "box": box}
@@ -170,7 +179,17 @@ def validate_backend_output(
     if not isinstance(raw_candidates, list):
         raise ExtractionRejected("candidates_schema_invalid")
 
-    findings: set[str] = set()
+    raw_findings = raw.get("security_findings", [])
+    if (
+        not isinstance(raw_findings, list)
+        or any(
+            finding
+            not in {"prompt_injection_source", "prompt_injection_candidate"}
+            for finding in raw_findings
+        )
+    ):
+        raise ExtractionRejected("security_findings_invalid")
+    findings: set[str] = set(raw_findings)
     candidates: list[ExtractionCandidate] = []
     seen_fields: set[str] = set()
     for item in raw_candidates:
@@ -183,7 +202,7 @@ def validate_backend_output(
         if not isinstance(confidence, int | float) or isinstance(confidence, bool):
             raise ExtractionRejected("confidence_invalid")
         confidence = float(confidence)
-        if confidence < 0 or confidence > 1:
+        if not math.isfinite(confidence) or confidence < 0 or confidence > 1:
             raise ExtractionRejected("confidence_invalid")
         unit = str(item.get("unit") or "").strip().casefold()
         if unit not in _ALLOWED_UNITS:
@@ -193,6 +212,13 @@ def validate_backend_output(
             findings.add("prompt_injection_candidate")
             continue
         locator_kind, locator = _locator(item.get("source_span"))
+        if locator_kind == "text_offset":
+            try:
+                source_text = artifact.content.decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise ExtractionRejected("text_artifact_encoding_invalid") from error
+            if int(locator["end"]) > len(source_text):
+                raise ExtractionRejected("text_offset_outside_artifact")
         candidate = ExtractionCandidate(
             field_path=field,
             value=value,

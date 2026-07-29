@@ -21,6 +21,7 @@ class Store:
 
 def _rows(content: bytes) -> tuple[LifeMapCaptureArtifact, LifeMapCaptureSession]:
     artifact = LifeMapCaptureArtifact(
+        public_id="artifact-1",
         session_id=1,
         profile_id=1,
         storage_key="capture/source",
@@ -52,6 +53,10 @@ def test_worker_accepts_only_draft_exact_checksum_extraction(monkeypatch) -> Non
         "proxy_ml_post",
         lambda *_args, **_kwargs: {
             "draft_only": True,
+            "validated_boundary": "lifemap-multimodal-v1",
+            "artifact_id": "artifact-1",
+            "artifact_checksum": artifact.checksum,
+            "source_text_checksum": source_checksum,
             "candidate": {
                 "candidate_type": "medication_label",
                 "field_path": "medication_label",
@@ -96,6 +101,29 @@ def test_worker_rejects_tampered_artifact_before_ocr(monkeypatch) -> None:
         lambda: Store(b"tampered"),
     )
     with pytest.raises(ValueError, match="artifact_checksum"):
+        capture_worker._extract(artifact, session)
+
+
+def test_worker_rejects_mismatched_ml_lineage(monkeypatch) -> None:
+    content = b"Paracetamol\n500 mg\noral"
+    source_checksum = hashlib.sha256(content).hexdigest()
+    artifact, session = _rows(content)
+    monkeypatch.setattr(
+        capture_worker, "build_capture_artifact_store", lambda: Store(content)
+    )
+    monkeypatch.setattr(
+        capture_worker,
+        "proxy_ml_post",
+        lambda *_args, **_kwargs: {
+            "draft_only": True,
+            "validated_boundary": "lifemap-multimodal-v1",
+            "artifact_id": "artifact-from-another-profile",
+            "artifact_checksum": artifact.checksum,
+            "source_text_checksum": source_checksum,
+            "candidate": {},
+        },
+    )
+    with pytest.raises(ValueError, match="capture_extraction_lineage_mismatch"):
         capture_worker._extract(artifact, session)
 
 

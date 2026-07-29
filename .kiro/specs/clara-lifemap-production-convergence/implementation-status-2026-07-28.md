@@ -878,3 +878,22 @@ until those external gates pass, periodic execution must stay disabled.
 
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.
+
+The Phase 16 multimodal extraction contract is now complete as an engineering
+boundary. A model-neutral adapter interface covers the existing OCR, ASR,
+document-layout and DeepSeek paths plus an optional VLM candidate path. Every
+adapter is draft-only and validates the authorized profile partition, artifact
+checksum, bounded schema and modalities, finite confidence, canonical units,
+required-field missingness, prompt-injection findings, and exact text,
+timestamp, or page-region locators. Diagnostic image interpretation is
+explicitly unsupported.
+
+The production Universal Capture worker now routes its current OCR output
+through that common boundary and independently verifies both the immutable
+source-artifact lineage and the OCR-text digest before persisting a review
+candidate. The emergency detector still runs before ML. Focused evidence
+includes the model-neutral adapter suite, validated OCR bridge tests, and API
+worker lineage/tamper/emergency tests with clean focused Ruff and mypy. These
+tests complete engineering tasks 16.7 and 16.8; they do not satisfy task 16.12
+or authorize any provider/model promotion, which still requires an approved
+frozen evaluation run and human governance review.

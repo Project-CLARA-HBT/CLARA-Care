@@ -419,10 +419,10 @@ an unsigned artifact.
   R24_
 - [x] 16.6 Implement consent-filtered caregiver/clinician digest generation;
   test withheld categories and revocation invalidation. _R12, R24_
-- [ ] 16.7 Create the model-neutral multimodal extractor interface and adapters
+- [x] 16.7 Create the model-neutral multimodal extractor interface and adapters
   for current OCR, ASR, document layout, DeepSeek extraction, and optional VLM
   candidate generation. _R4, R25_
-- [ ] 16.8 Validate multimodal typed output, checksums, page/region/timestamps,
+- [x] 16.8 Validate multimodal typed output, checksums, page/region/timestamps,
   units, confidence, missing fields, prompt injection, and degraded fallback.
   _R16, R25_
 - [x] 16.9 Implement entity-resolution ensemble: Vietnamese normalization,

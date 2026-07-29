@@ -27,7 +27,7 @@ from clara_ml.agents.scribe_soap import run_scribe_soap
 from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
-from clara_ml.lifemap.capture_extraction import extract_capture_text
+from clara_ml.lifemap.capture_extraction import extract_capture_text_validated
 from clara_ml.lifemap.visit_extraction import extract_visit_instructions
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
@@ -1430,17 +1430,21 @@ def lifemap_visit_extract(payload: dict) -> dict:
 
 
 @app.post("/v1/lifemap/capture/extract")
-def lifemap_capture_extract(payload: dict) -> dict:
+async def lifemap_capture_extract(payload: dict) -> dict:
     """Extract exact-span OCR candidates; never confirm or mutate LifeMap."""
 
     kind = str(payload.get("kind", "")).strip()
     if kind not in {"medication_label", "visit_document"}:
         raise HTTPException(status_code=422, detail="capture_kind_unsupported")
     try:
-        return extract_capture_text(
+        return await extract_capture_text_validated(
             kind=kind,  # type: ignore[arg-type]
             source_text=str(payload.get("source_text", "")),
             source_text_checksum=str(payload.get("source_text_checksum", "")),
+            source_artifact_checksum=str(payload.get("artifact_checksum", "")),
+            artifact_id=str(payload.get("artifact_id", "")),
+            profile_partition=str(payload.get("profile_partition", "")),
+            locale=str(payload.get("locale", "vi")),
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

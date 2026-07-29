@@ -95,10 +95,19 @@ def _extract(
             "source_text": source_text,
             "source_text_checksum": source_text_checksum,
             "artifact_checksum": artifact.checksum,
+            "artifact_id": artifact.public_id,
+            "profile_partition": f"lifemap-profile:{artifact.profile_id}",
             "locale": session.locale,
         },
         timeout_seconds=45.0,
     )
+    if (
+        result.get("validated_boundary") != "lifemap-multimodal-v1"
+        or result.get("artifact_id") != artifact.public_id
+        or result.get("artifact_checksum") != artifact.checksum
+        or result.get("source_text_checksum") != source_text_checksum
+    ):
+        raise ValueError("capture_extraction_lineage_mismatch")
     raw = result.get("candidate")
     if result.get("draft_only") is not True or not isinstance(raw, dict):
         raise ValueError("capture_extraction_unavailable")
