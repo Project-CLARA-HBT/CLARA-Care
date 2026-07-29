@@ -158,6 +158,13 @@ class ApiClient {
   final String _baseUrl;
   final http.Client _httpClient;
 
+  /// Resolved API origin used by this client.
+  ///
+  /// This exposes configuration only (never credentials) for the few
+  /// authenticated, additive surfaces that have their own narrowly scoped
+  /// transport seam, such as the PDPD data-rights request screen.
+  String get baseUrl => _baseUrl;
+
   /// Session seam enabling pre-flight expiry refresh and the single 401-retry
   /// (Req 6.2, 6.3). Null until attached (default), keeping the legacy path
   /// untouched. Settable so the store and client can be constructed in either

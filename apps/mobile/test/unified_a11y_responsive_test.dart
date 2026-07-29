@@ -220,6 +220,9 @@ void main() {
       expect(find.text('Chuẩn bị đi khám'), findsOneWidget);
       expect(find.text('Người thân & chia sẻ'), findsOneWidget);
       expect(find.text('Cài đặt'), findsOneWidget);
+      // A PDPD data-rights route is only exposed together with the existing
+      // consent centre gate, so the default fail-closed shell shows none.
+      expect(find.text('Quyền dữ liệu cá nhân'), findsNothing);
 
       // Every ListTile row meets the ≥48dp minimum tap target.
       final tiles = find.byType(ListTile);
@@ -248,6 +251,38 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Cài đặt'), findsOneWidget);
+    });
+
+    testWidgets(
+        'exposes an actionable data-rights entry only with consent gate',
+        (tester) async {
+      await setSurface(tester, _phone);
+      final session = await FakeSessionStore.authenticated(role: 'normal');
+
+      await tester.pumpWidget(
+        wrap(ProfileHub(
+          apiClient: FakeApiClient(),
+          sessionStore: session,
+          resolver: MobileFeatureFlagResolver(summary: {
+            'feature_flags': {
+              MobileFeatureFlags.consentCenterMobileEnabled: true,
+            },
+          }),
+          role: 'normal',
+          phrBody: const SizedBox(height: 40, child: Text('PHR_BODY')),
+        )),
+      );
+      await tester.pumpAndSettle();
+
+      final dataRights = find.text('Quyền dữ liệu cá nhân');
+      expect(dataRights, findsOneWidget);
+      final tile = find.ancestor(
+        of: dataRights,
+        matching: find.byType(ListTile),
+      );
+      expect(tile, findsOneWidget);
+      expect(tester.widget<ListTile>(tile).onTap, isNotNull);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('renders without overflow at large text scale', (tester) async {

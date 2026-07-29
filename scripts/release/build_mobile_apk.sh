@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the CLARA mobile release APK (Experience_V3 redesign) with the
-# production API base URL. Reuses the locally-provisioned JDK17 + Android SDK.
+# Build the CLARA mobile release APK (Unified experience) with the production
+# API base URL. Reuses the locally-provisioned JDK17 + Android SDK.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -23,15 +23,12 @@ echo "== ensure android project =="
 echo "== pub get =="
 for a in 1 2 3; do "$FLUTTER" pub get 2>&1 | tail -6 && break; sleep 5; done
 
-echo "== build apk (redesign, base=$API_BASE) =="
+echo "== build apk (unified, base=$API_BASE) =="
+# The unified root is the only client-side default we force here. Additive
+# medical/clinical surfaces stay server-role-gated in production; do not turn
+# their rollout flags into permanent build defaults in a release artifact.
 "$FLUTTER" build apk --release \
-  --dart-define=MOBILE_REDESIGN_ENABLED=true \
-  --dart-define=MOBILE_LIQUID_GLASS_ENABLED=true \
-  --dart-define=MOBILE_UX_POLISH_ENABLED=true \
-  --dart-define=CHAT_MOBILE_ENABLED=true \
-  --dart-define=COUNCIL_MOBILE_PARITY_ENABLED=true \
-  --dart-define=CAREGUARD_MOBILE_CABINET_ENABLED=true \
-  --dart-define=MOBILE_SOCIAL_ENABLED=true \
+  --dart-define=MOBILE_UNIFIED_ENABLED=true \
   --dart-define=CLARA_API_BASE_URL="$API_BASE" 2>&1 | tail -40
 
 APK=build/app/outputs/flutter-apk/app-release.apk

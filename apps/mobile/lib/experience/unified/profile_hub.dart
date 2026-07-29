@@ -17,6 +17,7 @@ import '../../core/api_client.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
+import '../../screens/dsar_screen.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../../screens/council_case_screen.dart'
@@ -186,6 +187,24 @@ class ProfileHub extends StatelessWidget {
           builder: (_) => ConsentCenterScreen(
             resolver: resolver,
             sessionStore: sessionStore,
+          ),
+        ),
+      );
+      entries.add(
+        _ProfileEntry(
+          icon: Icons.manage_search_outlined,
+          title: 'Quyền dữ liệu cá nhân',
+          subtitle: 'Xuất, chỉnh sửa, hạn chế hoặc xoá dữ liệu của bạn',
+          builder: (_) => DsarScreen(
+            resolver: resolver,
+            // The DSAR surface sends only the chosen coarse request kind.
+            // It reads the current bearer token at submit time so an expired
+            // or logged-out session cannot be replayed from this navigation
+            // entry.
+            submitter: createHttpDsarSubmitter(
+              baseUrl: apiClient.baseUrl,
+              accessToken: () => sessionStore.accessToken ?? '',
+            ),
           ),
         ),
       );
