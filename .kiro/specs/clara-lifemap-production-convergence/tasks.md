@@ -446,15 +446,15 @@ reversible, and safely degradable; multimodal AI still creates drafts only.
 - [ ] 17.1 Approve each candidate target, label, permitted output, sample/event
   requirement, subgroup, horizon, evaluation split, and clinical/regulatory risk
   before dataset creation. _R28, R31_
-- [ ] 17.2 Implement versioned feature snapshots with normalization, source/
+- [x] 17.2 Implement versioned feature snapshots with normalization, source/
   device/timezone, missingness masks, input watermark, and revision lineage.
   _R28, R31_
-- [ ] 17.3 Build engineered coverage, robust statistics, trend, seasonality,
+- [x] 17.3 Build engineered coverage, robust statistics, trend, seasonality,
   variability/entropy, missingness, and task-history features. _R28_
 - [ ] 17.4 Implement champion/challenger bake-off: deterministic, regularized
   linear/logistic/survival, tree/boosting, isolation/one-class, then neural
   sequence/foundation models where justified. _R28, R31_
-- [ ] 17.5 Audit every windowed dataset for user, household, source, overlapping
+- [x] 17.5 Audit every windowed dataset for user, household, source, overlapping
   window, device, site, and future-time leakage. _R28, R31_
 - [ ] 17.6 Add calibrated probabilities/intervals, conformal outputs where their
   assumptions pass, ensemble disagreement, sufficiency, OOD, and abstention.

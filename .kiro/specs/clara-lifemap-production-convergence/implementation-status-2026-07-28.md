@@ -329,6 +329,21 @@ Exact revision reporting is explicitly FIDES-not-applicable; any generated
 medication/dose fragment cannot release without a `pass` FIDES verdict. Nine
 focused Ask/verifier/summary/digest tests pass.
 
+## Phase 17 non-predictive feature foundation — 2026-07-29
+
+The offline ML package now creates deterministic versioned feature snapshots
+from exact revision IDs within a closed time window. Snapshots include canonical
+unit enforcement, source/device/site/household/timezone provenance, input
+watermark, missingness masks, coverage, median/MAD, trend, variability,
+entropy, weekly repeatability, and task-completion history. Mixed units fail
+until normalized; no absent feature is imputed into a fact.
+
+The split audit fails on person, household, site, source, or device reuse across
+splits and on overlapping windows across splits. Window construction excludes
+future observations by definition. Three focused feature/leakage tests pass
+with clean Ruff and mypy. No prediction target, learned model, or live inference
+is introduced by this foundation.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
