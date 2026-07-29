@@ -40,6 +40,22 @@ def _rows(content: bytes) -> tuple[LifeMapCaptureArtifact, LifeMapCaptureSession
     return artifact, session
 
 
+def _triage_result(
+    artifact: LifeMapCaptureArtifact,
+    source_checksum: str,
+    *,
+    emergency: bool = False,
+) -> dict:
+    return {
+        "validated_boundary": "lifemap-capture-triage-v1",
+        "artifact_id": artifact.public_id,
+        "artifact_checksum": artifact.checksum,
+        "source_text_checksum": source_checksum,
+        "emergency": emergency,
+        "degraded": False,
+    }
+
+
 def test_worker_accepts_only_draft_exact_checksum_extraction(monkeypatch) -> None:
     content = b"Paracetamol\n500 mg\noral"
     source = content.decode()
@@ -48,10 +64,10 @@ def test_worker_accepts_only_draft_exact_checksum_extraction(monkeypatch) -> Non
     monkeypatch.setattr(
         capture_worker, "build_capture_artifact_store", lambda: Store(content)
     )
-    monkeypatch.setattr(
-        capture_worker,
-        "proxy_ml_post",
-        lambda *_args, **_kwargs: {
+    def ml_response(path: str, *_args, **_kwargs):
+        if path == "/v1/lifemap/capture/triage":
+            return _triage_result(artifact, source_checksum)
+        return {
             "draft_only": True,
             "validated_boundary": "lifemap-multimodal-v1",
             "artifact_id": "artifact-1",
@@ -84,8 +100,9 @@ def test_worker_accepts_only_draft_exact_checksum_extraction(monkeypatch) -> Non
                 "extractor_version": "worker-test",
                 "security_findings": [],
             },
-        },
-    )
+        }
+
+    monkeypatch.setattr(capture_worker, "proxy_ml_post", ml_response)
     candidates = capture_worker._extract(artifact, session)
     assert len(candidates) == 1
     assert candidates[0].value["medication_name"] == source[:11]
@@ -111,18 +128,19 @@ def test_worker_rejects_mismatched_ml_lineage(monkeypatch) -> None:
     monkeypatch.setattr(
         capture_worker, "build_capture_artifact_store", lambda: Store(content)
     )
-    monkeypatch.setattr(
-        capture_worker,
-        "proxy_ml_post",
-        lambda *_args, **_kwargs: {
+    def ml_response(path: str, *_args, **_kwargs):
+        if path == "/v1/lifemap/capture/triage":
+            return _triage_result(artifact, source_checksum)
+        return {
             "draft_only": True,
             "validated_boundary": "lifemap-multimodal-v1",
             "artifact_id": "artifact-from-another-profile",
             "artifact_checksum": artifact.checksum,
             "source_text_checksum": source_checksum,
             "candidate": {},
-        },
-    )
+        }
+
+    monkeypatch.setattr(capture_worker, "proxy_ml_post", ml_response)
     with pytest.raises(ValueError, match="capture_extraction_lineage_mismatch"):
         capture_worker._extract(artifact, session)
 
@@ -144,3 +162,20 @@ def test_worker_runs_emergency_fast_path_before_ml(monkeypatch) -> None:
     with pytest.raises(capture_worker.EmergencyCaptureDetected):
         capture_worker._extract(artifact, session)
     assert called is False
+
+
+def test_worker_escalates_semantic_vietnamese_emergency_after_fast_path(monkeypatch) -> None:
+    content = "Người bệnh đang tím tái, thở hổn hển và lơ mơ.".encode()
+    artifact, session = _rows(content)
+    source_checksum = hashlib.sha256(content).hexdigest()
+    monkeypatch.setattr(
+        capture_worker, "build_capture_artifact_store", lambda: Store(content)
+    )
+
+    def ml_response(path: str, *_args, **_kwargs):
+        assert path == "/v1/lifemap/capture/triage"
+        return _triage_result(artifact, source_checksum, emergency=True)
+
+    monkeypatch.setattr(capture_worker, "proxy_ml_post", ml_response)
+    with pytest.raises(capture_worker.EmergencyCaptureDetected):
+        capture_worker._extract(artifact, session)

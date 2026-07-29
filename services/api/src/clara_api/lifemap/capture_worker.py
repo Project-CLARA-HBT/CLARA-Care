@@ -73,6 +73,47 @@ def _load_job_context(
     return job, artifact, session
 
 
+def _semantic_emergency_detected(
+    *,
+    artifact: LifeMapCaptureArtifact,
+    session: LifeMapCaptureSession,
+    source_text: str,
+    source_text_checksum: str,
+) -> bool:
+    """Use the LLM's multilingual semantic triage after the hard fast-path.
+
+    Capture documents can phrase acute symptoms indirectly in Vietnamese.  The
+    ML result is accepted only when bound to this exact artifact/text pair.  An
+    unavailable model degrades to ``False`` here because the deterministic
+    fast-path immediately before this call remains the outage safety floor.
+    """
+
+    result = proxy_ml_post(
+        "/v1/lifemap/capture/triage",
+        {
+            "source_text": source_text,
+            "source_text_checksum": source_text_checksum,
+            "artifact_checksum": artifact.checksum,
+            "artifact_id": artifact.public_id,
+            "profile_partition": f"lifemap-profile:{artifact.profile_id}",
+            "locale": session.locale,
+        },
+        fail_soft_payload={"degraded": True, "emergency": False},
+        timeout_seconds=30.0,
+    )
+    if result.get("degraded") is True and result.get("fallback") is True:
+        return False
+    if (
+        result.get("validated_boundary") != "lifemap-capture-triage-v1"
+        or result.get("artifact_id") != artifact.public_id
+        or result.get("artifact_checksum") != artifact.checksum
+        or result.get("source_text_checksum") != source_text_checksum
+        or not isinstance(result.get("emergency"), bool)
+    ):
+        raise ValueError("capture_triage_lineage_mismatch")
+    return result["emergency"]
+
+
 def _extract(
     artifact: LifeMapCaptureArtifact,
     session: LifeMapCaptureSession,
@@ -85,9 +126,18 @@ def _extract(
     source_text = _ocr_text(artifact, content)
     if not source_text:
         raise ValueError("ocr_text_unavailable")
+    # This is the irreducible immediate safety floor.  It remains ahead of the
+    # provider call so an obvious emergency never waits for network/LLM latency.
     if emergency_fast_path(source_text):
         raise EmergencyCaptureDetected
     source_text_checksum = hashlib.sha256(source_text.encode()).hexdigest()
+    if _semantic_emergency_detected(
+        artifact=artifact,
+        session=session,
+        source_text=source_text,
+        source_text_checksum=source_text_checksum,
+    ):
+        raise EmergencyCaptureDetected
     result = proxy_ml_post(
         "/v1/lifemap/capture/extract",
         {
