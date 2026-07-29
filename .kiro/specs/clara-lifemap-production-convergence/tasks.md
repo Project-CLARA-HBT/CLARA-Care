@@ -414,7 +414,7 @@ an unsigned artifact.
 - [ ] 16.4 Add citation existence, entailment, temporal-order, contradiction,
   profile-scope, legal-guard, and FIDES verification before answer release.
   _R18, R23_
-- [ ] 16.5 Build hierarchical event/day/episode/week/visit summaries from
+- [x] 16.5 Build hierarchical event/day/episode/week/visit summaries from
   structured child claims, dependency links, and deterministic fallback. _R10,
   R24_
 - [ ] 16.6 Implement consent-filtered caregiver/clinician digest generation;

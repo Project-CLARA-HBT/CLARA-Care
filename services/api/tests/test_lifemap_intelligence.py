@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -10,7 +11,9 @@ from clara_api.core.config import get_settings
 from clara_api.db.models import AIContextManifest, MLInferenceManifest
 from clara_api.db.session import SessionLocal
 from clara_api.lifemap.intelligence import (
+    EvidenceRow,
     deterministic_answer,
+    hierarchical_summary,
     route_ask_query,
     verify_grounded_answer,
 )
@@ -65,8 +68,36 @@ def test_empty_evidence_abstains_instead_of_inventing() -> None:
     assert result["abstention_code"] == "insufficient_information"
 
 
+def test_hierarchical_summary_preserves_order_truth_and_exact_citations() -> None:
+    rows = [
+        EvidenceRow(
+            evidence_id=f"ev:r{index}",
+            revision_id=f"r{index}",
+            event_id=f"e{index}",
+            event_type="symptom_report",
+            occurred_at=datetime(2026, 7, 28 + index, 8, tzinfo=UTC),
+            recorded_at=datetime(2026, 7, 28 + index, 9, tzinfo=UTC),
+            truth_state="disputed" if index == 1 else "confirmed",
+            source_kind="reported",
+            attribution="user_report",
+            text=f"claim {index}",
+        )
+        for index in (0, 1)
+    ]
+    summary = hierarchical_summary(rows[::-1], level="day", locale="vi")
+    children = summary["children"]
+    assert isinstance(children, list)
+    assert [item["claims"][0]["citation_ids"] for item in children] == [
+        ["ev:r0"],
+        ["ev:r1"],
+    ]
+    assert summary["disputed"] == ["ev:r1"]
+    assert summary["fallback_used"] is True
+
+
 def test_ask_endpoint_is_revision_cited_and_persists_private_lineage(monkeypatch) -> None:
     monkeypatch.setattr(get_settings(), "lifemap_ask_ai_enabled", True)
+    monkeypatch.setattr(get_settings(), "lifemap_ai_summaries_enabled", True)
     headers = _account()
     created = client.post(
         "/api/v1/lifemap/events",
@@ -95,6 +126,15 @@ def test_ask_endpoint_is_revision_cited_and_persists_private_lineage(monkeypatch
     assert all(
         set(claim["citation_ids"]) <= evidence_ids for claim in body["claims"]
     )
+    summary = client.get(
+        "/api/v1/lifemap/v2/summaries/day",
+        headers=headers,
+    )
+    assert summary.status_code == 200
+    assert summary.json()["input_revision_ids"] == [
+        row["revision_id"] for row in body["evidence"]
+    ]
+    assert summary.json()["disclosure"]["preserves_truth_state"] is True
 
     with SessionLocal() as db:
         context = db.execute(

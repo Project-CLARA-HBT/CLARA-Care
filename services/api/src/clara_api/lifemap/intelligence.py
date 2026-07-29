@@ -7,6 +7,8 @@ already-authorized profile identifier and can never broaden that partition.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -272,4 +274,73 @@ def verify_grounded_answer(
         "legal_guard": "pass",
         "fides": "not_applicable_no_generated_medication_claim",
         "unsupported_claims": 0,
+    }
+
+
+def hierarchical_summary(
+    evidence: list[EvidenceRow],
+    *,
+    level: Literal["event", "day", "episode", "week", "visit"],
+    locale: str,
+) -> dict[str, object]:
+    """Build a deterministic structured summary from exact child claims."""
+
+    ordered = sorted(evidence, key=lambda row: (row.occurred_at, row.revision_id))
+    groups: dict[str, list[EvidenceRow]] = {}
+    for row in ordered:
+        if level == "event":
+            key = row.evidence_id
+        elif level == "day":
+            key = row.occurred_at.date().isoformat()
+        elif level == "week":
+            year, week, _ = row.occurred_at.isocalendar()
+            key = f"{year}-W{week:02d}"
+        else:
+            key = level
+        groups.setdefault(key, []).append(row)
+    children = [
+        {
+            "group": key,
+            "claims": [
+                {
+                    "text": row.text,
+                    "citation_ids": [row.evidence_id],
+                    "truth_state": row.truth_state,
+                    "attribution": row.attribution,
+                    "occurred_at": row.occurred_at.isoformat(),
+                }
+                for row in rows
+            ],
+        }
+        for key, rows in groups.items()
+    ]
+    digest = hashlib.sha256(
+        json.dumps(
+            {
+                "level": level,
+                "revision_ids": [row.revision_id for row in ordered],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    return {
+        "id": digest,
+        "level": level,
+        "status": "ready" if ordered else "abstained",
+        "summary": (
+            f"Tóm tắt gồm {len(ordered)} bản ghi có dẫn nguồn."
+            if locale.startswith("vi")
+            else f"Summary of {len(ordered)} source-cited records."
+        ),
+        "children": children,
+        "input_revision_ids": [row.revision_id for row in ordered],
+        "conflicting": [
+            row.evidence_id for row in ordered if row.truth_state == "conflicting"
+        ],
+        "disputed": [
+            row.evidence_id for row in ordered if row.truth_state == "disputed"
+        ],
+        "fallback_used": True,
+        "rule_version": "lifemap-hierarchical-summary-v1",
     }

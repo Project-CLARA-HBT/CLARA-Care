@@ -296,6 +296,15 @@ Flutter now mirrors the explicit scan and online-only reviewed/dismissed
 actions, with possible-not-certain wording and no source-fact mutation. Focused
 analysis is clean and 23 API-client/accessibility-responsive tests pass.
 
+The default-off summary API now builds event/day/episode/week/visit projections
+from temporally ordered structured child claims. Every child retains exact
+revision citation, attribution, and truth state; disputed/conflicting inputs
+remain explicit. The deterministic fallback never converts absence into a fact.
+Each summary has a content-derived opaque ID and deduplicated
+`LifeMapProjectionDependency` rows, so the existing correction/invalidation
+traversal marks every affected ancestor stale. Six focused Ask/summary API tests
+pass with clean Ruff and mypy.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

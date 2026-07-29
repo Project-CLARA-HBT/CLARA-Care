@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from statistics import median
 from time import perf_counter
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,6 +41,7 @@ from clara_api.lifemap.commands import (
 )
 from clara_api.lifemap.intelligence import (
     deterministic_answer,
+    hierarchical_summary,
     retrieve_revision_evidence,
     route_ask_query,
     verify_grounded_answer,
@@ -275,6 +276,81 @@ def ask_lifemap_v2(
         "template": "ask-lifemap-v1",
         "retrieval_index": "profile-sql-current-revisions-v1",
         "policy": "lifemap-ai-safe-read-v1",
+    }
+
+
+@router.get("/lifemap/v2/summaries/{level}")
+def lifemap_summary_v2(
+    level: str,
+    episode_id: str | None = Query(default=None),
+    locale: str = Query(default="vi", pattern=r"^(vi|en)(-[A-Za-z]{2})?$"),
+    start_at: datetime | None = Query(default=None),
+    end_at: datetime | None = Query(default=None),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    if not get_settings().lifemap_ai_summaries_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_not_enabled"})
+    if level not in {"event", "day", "episode", "week", "visit"}:
+        raise HTTPException(status_code=422, detail={"code": "summary_level_invalid"})
+    scope = _scope(db, token, x_profile)
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    episode = (
+        _episode_for_profile(db, scope.profile.id, episode_id) if episode_id else None
+    )
+    evidence = retrieve_revision_evidence(
+        db,
+        profile_id=scope.profile.id,
+        query="",
+        episode_id=episode.id if episode else None,
+        start_at=start_at,
+        end_at=end_at,
+        limit=50,
+    )
+    summary = hierarchical_summary(
+        evidence,
+        level=level,  # type: ignore[arg-type]
+        locale=locale,
+    )
+    revision_ids = [row.revision_id for row in evidence]
+    if revision_ids:
+        revisions = list(
+            db.execute(
+                select(LifeMapEventRevision).where(
+                    LifeMapEventRevision.profile_id == scope.profile.id,
+                    LifeMapEventRevision.public_id.in_(revision_ids),
+                )
+            ).scalars()
+        )
+        for revision in revisions:
+            exists = db.execute(
+                select(LifeMapProjectionDependency.id).where(
+                    LifeMapProjectionDependency.profile_id == scope.profile.id,
+                    LifeMapProjectionDependency.projection_type == f"summary:{level}",
+                    LifeMapProjectionDependency.projection_public_id == summary["id"],
+                    LifeMapProjectionDependency.input_revision_id == revision.id,
+                )
+            ).scalar_one_or_none()
+            if exists is None:
+                db.add(
+                    LifeMapProjectionDependency(
+                        profile_id=scope.profile.id,
+                        projection_type=f"summary:{level}",
+                        projection_public_id=str(summary["id"]),
+                        input_type="event_revision",
+                        input_revision_id=revision.id,
+                        rule_version=str(summary["rule_version"]),
+                    )
+                )
+        db.commit()
+    return {
+        **summary,
+        "disclosure": {
+            "deterministic_fallback": True,
+            "medical_advice": False,
+            "preserves_truth_state": True,
+        },
     }
 
 
