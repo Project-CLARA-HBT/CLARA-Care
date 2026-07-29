@@ -16,9 +16,11 @@ import {
   disputeLifeMapEvent,
   getLifeMapCaptureCapability,
   getLifeMapCaptureArtifact,
+  getLifeMapCaptureNormalization,
   getLifeMapCaptureSession,
   getLifeMapDisputes,
   getLifeMapReplay,
+  getLifeMapSummary,
   getLifeMapNextQuestion,
   reviewLifeMapCaptureCandidate,
   scanLifeMapReviewFindings,
@@ -151,12 +153,47 @@ describe("LifeMap Universal Capture client", () => {
     });
     await reviewLifeMapCaptureCandidate("candidate", "confirm", {
       reason: "reviewed",
+      accept_normalization: true,
     });
     expect(post).toHaveBeenCalledWith(
       "/lifemap/capture/candidates/candidate/review",
-      { action: "confirm", reason: "reviewed" },
+      {
+        action: "confirm",
+        reason: "reviewed",
+        accept_normalization: true,
+      },
       { headers: { "Idempotency-Key": expect.any(String) } },
     );
+  });
+
+  it("reads a server-owned medication normalization proposal", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        candidate_id: "candidate/id",
+        status: "candidate",
+        proposal: { system: "rxnorm", code: "161" },
+        auto_confirmable: false,
+      },
+    });
+    await getLifeMapCaptureNormalization("candidate/id");
+    expect(get).toHaveBeenCalledWith(
+      "/lifemap/capture/candidates/candidate%2Fid/normalization",
+    );
+  });
+
+  it("loads an episode summary with exact server-side scoping", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        id: "summary",
+        level: "episode",
+        status: "ready",
+        children: [],
+      },
+    });
+    await getLifeMapSummary("episode", "episode/id");
+    expect(get).toHaveBeenCalledWith("/lifemap/v2/summaries/episode", {
+      params: { locale: "vi", episode_id: "episode/id" },
+    });
   });
 
   it("reads the server-authoritative profile capability", async () => {

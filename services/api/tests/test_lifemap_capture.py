@@ -23,6 +23,7 @@ from clara_api.lifemap.capture_domain import (
     validate_candidate,
 )
 from clara_api.main import app
+from clara_api.phr.normalizer import NormalizedMedication
 
 client = TestClient(app)
 
@@ -257,6 +258,18 @@ def test_medication_capture_requires_critical_review_then_creates_confirmed_cour
 ) -> None:
     owner, _profile_id = _account("medication-review")
     monkeypatch.setattr(get_settings(), "lifemap_capture_enabled", True)
+    monkeypatch.setattr(
+        capture_endpoint,
+        "normalize_medication_name",
+        lambda name, db=None: NormalizedMedication(
+            display_name="Paracetamol",
+            normalized_name="paracetamol",
+            rx_cui="161",
+            normalization_source="db",
+            confidence=1.0,
+            is_normalized=True,
+        ),
+    )
     created = client.post(
         "/api/v1/lifemap/capture/artifact-sessions",
         headers=owner,
@@ -309,13 +322,35 @@ def test_medication_capture_requires_critical_review_then_creates_confirmed_cour
         json={"action": "edit", "value": edited_value},
     )
     assert edited.status_code == 200, edited.text
+    proposal = client.get(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/normalization",
+        headers=owner,
+    )
+    assert proposal.status_code == 200, proposal.text
+    assert proposal.json() == {
+        "candidate_id": candidate_id,
+        "original_text": "Paracetamol",
+        "status": "candidate",
+        "proposal": {
+            "display_name": "Paracetamol",
+            "normalized_name": "paracetamol",
+            "system": "rxnorm",
+            "code": "161",
+            "source": "db",
+            "confidence": 1.0,
+        },
+        "auto_confirmable": False,
+        "requires_explicit_acceptance": True,
+        "mapping_policy_version": "lifemap-medication-normalization-v1",
+    }
     confirmed = client.post(
         f"/api/v1/lifemap/capture/candidates/{candidate_id}/review",
         headers={**owner, "Idempotency-Key": f"confirm-{uuid4().hex}"},
-        json={"action": "confirm"},
+        json={"action": "confirm", "accept_normalization": True},
     )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["medication_course_id"]
+    assert confirmed.json()["normalization"]["accepted"] is True
     with SessionLocal() as db:
         course = db.execute(
             select(MedicationCourse).where(
@@ -327,3 +362,70 @@ def test_medication_capture_requires_critical_review_then_creates_confirmed_cour
         assert course.dose_text == "500 mg"
         assert course.route_text == "oral"
         assert course.truth_state == "confirmed"
+        assert course.normalized_name == "paracetamol"
+        assert course.normalization_system == "rxnorm"
+        assert course.normalization_code == "161"
+        assert course.provenance_json["normalization"]["decision"] == "accepted"
+
+
+def test_medication_capture_never_accepts_an_unmapped_normalization(
+    monkeypatch,
+) -> None:
+    owner, _profile_id = _account("medication-unmapped")
+    monkeypatch.setattr(get_settings(), "lifemap_capture_enabled", True)
+    monkeypatch.setattr(
+        capture_endpoint,
+        "normalize_medication_name",
+        lambda name, db=None: NormalizedMedication(
+            display_name=name,
+            normalized_name=name.casefold(),
+            rx_cui="",
+            normalization_source="fallback",
+            confidence=0.0,
+            is_normalized=False,
+        ),
+    )
+    created = client.post(
+        "/api/v1/lifemap/capture/artifact-sessions",
+        headers=owner,
+        json={"input_kind": "medication_label", "locale": "vi"},
+    )
+    session_id = created.json()["id"]
+    with SessionLocal() as db:
+        session = db.execute(
+            select(LifeMapCaptureSession).where(
+                LifeMapCaptureSession.public_id == session_id
+            )
+        ).scalar_one()
+        candidate = LifeMapCaptureCandidate(
+            session_id=session.id,
+            profile_id=session.profile_id,
+            candidate_type="medication_label",
+            field_path="medication_label",
+            value_json={
+                "medication_name": "Unknown medicine",
+                "strength": "1 tablet",
+                "route": "oral",
+            },
+            missing_critical_fields_json=[],
+            extraction_schema_version="lifemap.capture.v1",
+            extractor_version="test",
+        )
+        db.add(candidate)
+        db.commit()
+        candidate_id = candidate.public_id
+
+    proposal = client.get(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/normalization",
+        headers=owner,
+    )
+    assert proposal.status_code == 200
+    assert proposal.json()["status"] == "unmapped"
+    assert proposal.json()["proposal"] is None
+    blocked = client.post(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/review",
+        headers={**owner, "Idempotency-Key": f"unmapped-{uuid4().hex}"},
+        json={"action": "confirm", "accept_normalization": True},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"]["code"] == "normalization_not_available"

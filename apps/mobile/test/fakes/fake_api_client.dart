@@ -643,6 +643,7 @@ class FakeApiClient extends ApiClient {
     required String action,
     Map<String, dynamic>? value,
     String reason = '',
+    bool acceptNormalization = false,
   }) {
     return _dispatch(
       'reviewLifeMapCaptureCandidate',
@@ -651,7 +652,34 @@ class FakeApiClient extends ApiClient {
         'action': action,
         'value': value,
         'reason': reason,
+        'acceptNormalization': acceptNormalization,
       },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapCaptureNormalization({
+    required String accessToken,
+    required String candidateId,
+  }) {
+    return _dispatch(
+      'getLifeMapCaptureNormalization',
+      {'candidateId': candidateId},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapSummary({
+    required String accessToken,
+    required String level,
+    String? episodeId,
+    String locale = 'vi',
+  }) {
+    return _dispatch(
+      'getLifeMapSummary',
+      {'level': level, 'episodeId': episodeId, 'locale': locale},
       accessToken: accessToken,
     );
   }

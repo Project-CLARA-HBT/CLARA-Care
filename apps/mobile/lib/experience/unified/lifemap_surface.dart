@@ -101,14 +101,21 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   bool _captureEnabled = false;
   bool _questionEnabled = false;
   bool _askEnabled = false;
+  bool _summaryEnabled = false;
   bool _reviewEnabled = false;
   List<Map<String, dynamic>> _baselines = const [];
   bool _capturing = false;
   Map<String, dynamic>? _captureSession;
+  final Map<String, Map<String, dynamic>?> _captureNormalizations =
+      <String, Map<String, dynamic>?>{};
+  final Set<String> _acceptedNormalizations = <String>{};
   final TextEditingController _captureController = TextEditingController();
   final TextEditingController _askController = TextEditingController();
   bool _asking = false;
   Map<String, dynamic>? _askAnswer;
+  bool _summarizing = false;
+  String _summaryLevel = 'day';
+  Map<String, dynamic>? _lifeMapSummary;
   bool _reviewing = false;
   List<Map<String, dynamic>> _reviewFindings = const [];
   List<Map<String, dynamic>> _disputes = const [];
@@ -171,6 +178,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       final questionEnabled =
           flags is Map && flags['lifemap_next_question_v2'] == true;
       final askEnabled = flags is Map && flags['lifemap_ask_ai'] == true;
+      final summaryEnabled =
+          flags is Map && flags['lifemap_ai_summaries'] == true;
       final reviewEnabled =
           flags is Map && flags['lifemap_ai_review_findings'] == true;
       final baselineEnabled =
@@ -213,6 +222,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _captureEnabled = captureEnabled;
         _questionEnabled = questionEnabled;
         _askEnabled = askEnabled;
+        _summaryEnabled = summaryEnabled;
         _reviewEnabled = reviewEnabled;
         _baselines = baselines;
         _disputes = disputes;
@@ -336,6 +346,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       if (sessionId.isNotEmpty && session['persisted'] == true) {
         await widget.sessionStore.writeLifeMapCaptureSessionId(sessionId);
       }
+      await _loadCaptureNormalizations(session);
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
@@ -356,8 +367,43 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         sessionId: sessionId,
       );
       if (mounted) setState(() => _captureSession = session);
+      await _loadCaptureNormalizations(session);
     } catch (_) {
       await widget.sessionStore.clearLifeMapCaptureSessionId();
+    }
+  }
+
+  Future<void> _loadCaptureNormalizations(
+    Map<String, dynamic> session,
+  ) async {
+    final token = _token;
+    final candidates = session['candidates'];
+    if (token == null || candidates is! List) return;
+    for (final raw in candidates) {
+      if (raw is! Map ||
+          _str(raw['type']) != 'medication_label' ||
+          _str(raw['status']) != 'draft') {
+        continue;
+      }
+      final candidateId = _str(raw['id']);
+      if (candidateId.isEmpty) continue;
+      try {
+        final proposal = await widget.apiClient.getLifeMapCaptureNormalization(
+          accessToken: token,
+          candidateId: candidateId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _captureNormalizations[candidateId] = proposal;
+          _acceptedNormalizations.remove(candidateId);
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _captureNormalizations[candidateId] = null;
+          _acceptedNormalizations.remove(candidateId);
+        });
+      }
     }
   }
 
@@ -380,6 +426,27 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _showSnack('Không thể tra cứu LifeMap. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _asking = false);
+    }
+  }
+
+  Future<void> _loadLifeMapSummary() async {
+    final token = _token;
+    if (token == null || _summarizing) return;
+    setState(() => _summarizing = true);
+    try {
+      final result = await widget.apiClient.getLifeMapSummary(
+        accessToken: token,
+        level: _summaryLevel,
+        episodeId: _summaryLevel == 'episode' ? _selectedEpisodeId : null,
+      );
+      if (!mounted) return;
+      setState(() => _lifeMapSummary = result);
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tạo bản tóm tắt. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _summarizing = false);
     }
   }
 
@@ -518,6 +585,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         candidateId: _str(candidate['id']),
         action: action,
         value: reviewedValue,
+        acceptNormalization: action == 'confirm' &&
+            _acceptedNormalizations.contains(
+              _str(candidate['id']),
+            ),
         reason: action == 'edit'
             ? 'Người dùng chỉnh sửa trường trích xuất'
             : action == 'reject'
@@ -540,6 +611,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         if (action == 'confirm') session['status'] = 'completed';
         _captureSession = session;
       });
+      await _loadCaptureNormalizations(
+        Map<String, dynamic>.from(_captureSession ?? const {}),
+      );
       if (action == 'confirm') {
         await widget.sessionStore.clearLifeMapCaptureSessionId();
         await _load();
@@ -565,6 +639,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       );
       await widget.sessionStore.clearLifeMapCaptureSessionId();
       if (mounted) setState(() => _captureSession = null);
+      _captureNormalizations.clear();
+      _acceptedNormalizations.clear();
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
@@ -841,6 +917,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       );
       if (!mounted) return;
       setState(() => _captureSession = session);
+      await _loadCaptureNormalizations(session);
       _showSnack('Đã tạo bản nháp. Hãy kiểm tra rồi xác nhận.');
     } on ApiException catch (error) {
       _showSnack(error.message);
@@ -951,6 +1028,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               ClaraTokens.spaceMd,
             ),
             child: _buildAskCard(context),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
+
+        if (_summaryEnabled) ...[
+          const SectionHeader(title: 'Nhìn lại LifeMap'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: _buildSummaryCard(context),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
         ],
@@ -1235,6 +1326,14 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             rawConfidence.values.any(
               (score) => score is num && score.toDouble() < 0.8,
             );
+        final candidateId = _str(candidate['id']);
+        final isMedication = _str(candidate['type']) == 'medication_label';
+        final hasNormalization =
+            _captureNormalizations.containsKey(candidateId);
+        final normalization = _captureNormalizations[candidateId];
+        final proposal = normalization?['proposal'];
+        final proposalMap =
+            proposal is Map ? proposal.cast<String, dynamic>() : null;
         return ClaraCard.static_(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1296,6 +1395,63 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (isMedication && status == 'draft') ...[
+                const SizedBox(height: ClaraTokens.spaceMd),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(ClaraTokens.spaceSm),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chuẩn hóa tên thuốc',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: ClaraTokens.spaceXs),
+                      if (!hasNormalization)
+                        Text(
+                          'Đang kiểm tra từ điển thuốc…',
+                          style: theme.textTheme.bodySmall,
+                        )
+                      else if (proposalMap == null)
+                        Text(
+                          'Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được '
+                          'giữ nguyên và chưa được chuẩn hóa.',
+                          style: theme.textTheme.bodySmall,
+                        )
+                      else ...[
+                        Text(
+                          'Đề xuất: ${_str(proposalMap['display_name'])} · '
+                          'RxNorm ${_str(proposalMap['code'])}',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: _acceptedNormalizations.contains(candidateId),
+                          onChanged: (checked) => setState(() {
+                            if (checked == true) {
+                              _acceptedNormalizations.add(candidateId);
+                            } else {
+                              _acceptedNormalizations.remove(candidateId);
+                            }
+                          }),
+                          title: const Text(
+                            'Dùng mã chuẩn này cho hồ sơ thuốc',
+                          ),
+                          subtitle: const Text(
+                            'Bản ghi chỉ được tạo sau khi bạn xác nhận.',
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -1482,6 +1638,149 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             const SizedBox(height: ClaraTokens.spaceMd),
             Text(
               'AI có dẫn nguồn · Chỉ đọc · Không phải tư vấn y tế.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final summary = _lifeMapSummary;
+    final rawChildren = summary?['children'];
+    final children = rawChildren is List ? rawChildren : const <dynamic>[];
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang '
+            'tranh chấp hay mâu thuẫn.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          DropdownButtonFormField<String>(
+            key: ValueKey<String>(_summaryLevel),
+            initialValue: _summaryLevel,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Phạm vi'),
+            items: <DropdownMenuItem<String>>[
+              const DropdownMenuItem(value: 'day', child: Text('Theo ngày')),
+              const DropdownMenuItem(value: 'week', child: Text('Theo tuần')),
+              DropdownMenuItem(
+                value: 'episode',
+                enabled: _selectedEpisodeId != null,
+                child: const Text('Hành trình đang chọn'),
+              ),
+            ],
+            onChanged: _summarizing
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _summaryLevel = value;
+                      _lifeMapSummary = null;
+                    });
+                  },
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.secondary(
+              label: 'Tạo tóm tắt',
+              icon: Icons.summarize_outlined,
+              loading: _summarizing,
+              onPressed: _loadLifeMapSummary,
+            ),
+          ),
+          if (summary != null) ...[
+            const Divider(height: ClaraTokens.spaceXl),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _str(summary['summary']),
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (children.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: ClaraTokens.spaceSm),
+                child: Text(
+                  'Chưa đủ bản ghi để tạo tóm tắt.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ...children.map((rawGroup) {
+              if (rawGroup is! Map) return const SizedBox.shrink();
+              final rawClaims = rawGroup['claims'];
+              final claims = rawClaims is List ? rawClaims : const <dynamic>[];
+              return Padding(
+                padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _str(rawGroup['group']),
+                          style: theme.textTheme.labelLarge,
+                        ),
+                        ...claims.map((rawClaim) {
+                          if (rawClaim is! Map) {
+                            return const SizedBox.shrink();
+                          }
+                          final citationIds = rawClaim['citation_ids'];
+                          final citations = citationIds is List
+                              ? citationIds.map(_str).join(', ')
+                              : '';
+                          final truthState = _str(rawClaim['truth_state']);
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              top: ClaraTokens.spaceSm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_str(rawClaim['text'])),
+                                Text(
+                                  '${_str(rawClaim['attribution'])} · '
+                                  '${_str(rawClaim['occurred_at'])} · '
+                                  'nguồn $citations',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                if (truthState != 'confirmed')
+                                  Text(
+                                    truthState,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.tertiary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Text(
+              'Tóm tắt theo quy tắc, có liên kết nguồn và không phải tư vấn y tế.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

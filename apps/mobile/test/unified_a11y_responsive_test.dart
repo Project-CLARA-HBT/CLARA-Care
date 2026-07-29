@@ -267,6 +267,7 @@ void main() {
             'lifemap_capture': true,
             'lifemap_next_question_v2': true,
             'lifemap_ask_ai': true,
+            'lifemap_ai_summaries': true,
             'lifemap_ai_review_findings': true,
             'lifemap_baselines_v2': true,
           },
@@ -303,6 +304,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.bySemanticsLabel('Bạn muốn tìm điều gì?'), findsOneWidget);
+      expect(find.text('Nhìn lại LifeMap'), findsOneWidget);
+      expect(find.text('Tạo tóm tắt'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Ghi nhận nhanh'),
         500,
@@ -332,6 +335,12 @@ void main() {
       await pumpLifeMap(tester, size: _phone, reduceMotion: true);
 
       expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Ghi nhận nhanh'),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Ghi nhận nhanh'), findsOneWidget);
     });
   });

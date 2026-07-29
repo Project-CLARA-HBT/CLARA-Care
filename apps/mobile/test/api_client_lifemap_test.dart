@@ -290,11 +290,16 @@ void main() {
         accessToken: token,
         sessionId: 'session-opaque',
       );
+      await client.getLifeMapCaptureNormalization(
+        accessToken: token,
+        candidateId: 'candidate-1',
+      );
       await client.reviewLifeMapCaptureCandidate(
         accessToken: token,
         candidateId: 'candidate-1',
         action: 'confirm',
         reason: 'reviewed',
+        acceptNormalization: true,
       );
       await client.abandonLifeMapCaptureSession(
         accessToken: token,
@@ -312,12 +317,47 @@ void main() {
       );
       expect(
         requests[2].url.path,
-        '/api/v1/lifemap/capture/candidates/candidate-1/review',
+        '/api/v1/lifemap/capture/candidates/candidate-1/normalization',
       );
-      expect(requests[2].headers['Idempotency-Key'], isNotEmpty);
       expect(
         requests[3].url.path,
+        '/api/v1/lifemap/capture/candidates/candidate-1/review',
+      );
+      expect(requests[3].headers['Idempotency-Key'], isNotEmpty);
+      expect(
+        jsonDecode(requests[3].body),
+        {
+          'action': 'confirm',
+          'reason': 'reviewed',
+          'accept_normalization': true,
+        },
+      );
+      expect(
+        requests[4].url.path,
         '/api/v1/lifemap/capture/sessions/session-opaque/abandon',
+      );
+    });
+
+    test('LifeMap summary wrapper scopes an opaque episode id', () async {
+      late http.Request captured;
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return ok({'id': 'summary-1', 'status': 'ready'});
+        }),
+      );
+
+      await client.getLifeMapSummary(
+        accessToken: token,
+        level: 'episode',
+        episodeId: 'episode/id',
+      );
+
+      expect(captured.url.path, '/api/v1/lifemap/v2/summaries/episode');
+      expect(
+        captured.url.queryParameters,
+        {'locale': 'vi', 'episode_id': 'episode/id'},
       );
     });
   });

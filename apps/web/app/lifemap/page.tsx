@@ -19,10 +19,12 @@ import {
   getLifeMapBaselines,
   getLifeMapCaptureArtifact,
   getLifeMapCaptureJob,
+  getLifeMapCaptureNormalization,
   getLifeMapCaptureSession,
   getLifeMapDisputes,
   getLifeMapNextQuestion,
   getLifeMapReplay,
+  getLifeMapSummary,
   getLifeMapToday,
   getLifeMapV2Capabilities,
   recordLifeMapQuestionInteraction,
@@ -41,6 +43,8 @@ import {
   type LifeMapDisputeCase,
   type LifeMapQuestion,
   type LifeMapReviewFinding,
+  type LifeMapSummary,
+  type MedicationNormalizationProposal,
   type LifeMapToday,
   type LifeMapReplay,
 } from "@/lib/lifemap";
@@ -78,6 +82,13 @@ export default function LifeMapPage() {
   const [questionEnabled, setQuestionEnabled] = useState(false);
   const [askEnabled, setAskEnabled] = useState(false);
   const [reviewEnabled, setReviewEnabled] = useState(false);
+  const [summaryEnabled, setSummaryEnabled] = useState(false);
+  const [summaryLevel, setSummaryLevel] = useState<"day" | "week" | "episode">(
+    "day",
+  );
+  const [lifeMapSummary, setLifeMapSummary] = useState<LifeMapSummary | null>(
+    null,
+  );
   const [baselines, setBaselines] = useState<LifeMapBaseline[]>([]);
   const [nextQuestion, setNextQuestion] = useState<LifeMapQuestion | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
@@ -92,6 +103,12 @@ export default function LifeMapPage() {
     url: string;
   } | null>(null);
   const [captureSession, setCaptureSession] = useState<CaptureSession | null>(null);
+  const [captureNormalizations, setCaptureNormalizations] = useState<
+    Record<string, MedicationNormalizationProposal | null>
+  >({});
+  const [acceptedNormalizations, setAcceptedNormalizations] = useState<
+    Record<string, boolean>
+  >({});
   const [replay, setReplay] = useState<LifeMapReplay | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
   const [editingEvent, setEditingEvent] = useState("");
@@ -132,6 +149,7 @@ export default function LifeMapPage() {
         setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
         setAskEnabled(Boolean(capabilities.lifemap_ask_ai));
         setReviewEnabled(Boolean(capabilities.lifemap_ai_review_findings));
+        setSummaryEnabled(Boolean(capabilities.lifemap_ai_summaries));
         if (capabilities.lifemap_baselines_v2) {
           setBaselines(await getLifeMapBaselines());
         }
@@ -141,6 +159,7 @@ export default function LifeMapPage() {
         setQuestionEnabled(false);
         setAskEnabled(false);
         setReviewEnabled(false);
+        setSummaryEnabled(false);
       });
   }, [load]);
 
@@ -261,6 +280,10 @@ export default function LifeMapPage() {
     try {
       const result = await reviewLifeMapCaptureCandidate(candidate.id, action, {
         value: candidate.value,
+        accept_normalization:
+          action === "confirm"
+            ? Boolean(acceptedNormalizations[candidate.id])
+            : false,
         reason:
           action === "edit"
             ? "Người dùng chỉnh sửa trường trích xuất"
@@ -291,6 +314,41 @@ export default function LifeMapPage() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    const medicationCandidates =
+      captureSession?.candidates?.filter(
+        (candidate) =>
+          candidate.type === "medication_label" && candidate.status === "draft",
+      ) ?? [];
+    if (!medicationCandidates.length) return;
+    let active = true;
+    void Promise.all(
+      medicationCandidates.map(async (candidate) => {
+        try {
+          return [
+            candidate.id,
+            await getLifeMapCaptureNormalization(candidate.id),
+          ] as const;
+        } catch {
+          return [candidate.id, null] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (!active) return;
+      setCaptureNormalizations((current) => ({
+        ...current,
+        ...Object.fromEntries(entries),
+      }));
+      setAcceptedNormalizations((current) => ({
+        ...current,
+        ...Object.fromEntries(entries.map(([candidateId]) => [candidateId, false])),
+      }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [captureSession]);
 
   const abandonCapture = async () => {
     if (!captureSession?.id) return;
@@ -548,6 +606,27 @@ export default function LifeMapPage() {
     }
   };
 
+  const loadSummary = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      setLifeMapSummary(
+        await getLifeMapSummary(
+          summaryLevel,
+          summaryLevel === "episode" ? episodeId || undefined : undefined,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể tạo bản tóm tắt.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell
       variant="plain"
@@ -638,6 +717,101 @@ export default function LifeMapPage() {
                       ) : null}
                       <p className="mt-4 text-xs text-[var(--text-muted)]">
                         Chế độ: {askAnswer.disclosure.mode}. Không phải tư vấn y tế.
+                      </p>
+                    </div>
+                  ) : null}
+                </SurfaceCard>
+              ) : null}
+
+              {summaryEnabled ? (
+                <SurfaceCard className="p-5">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <Badge tone="brand">Tóm tắt có dẫn nguồn</Badge>
+                      <h2 className="mt-2 font-semibold text-[var(--text-primary)]">
+                        Nhìn lại LifeMap
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang
+                        tranh chấp hay mâu thuẫn.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <Select
+                        label="Phạm vi"
+                        value={summaryLevel}
+                        onChange={(event) => {
+                          setSummaryLevel(
+                            event.target.value as "day" | "week" | "episode",
+                          );
+                          setLifeMapSummary(null);
+                        }}
+                      >
+                        <option value="day">Theo ngày</option>
+                        <option value="week">Theo tuần</option>
+                        <option value="episode" disabled={!episodeId}>
+                          Hành trình đang chọn
+                        </option>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon="summarize"
+                        loading={saving}
+                        onClick={() => void loadSummary()}
+                      >
+                        Tạo tóm tắt
+                      </Button>
+                    </div>
+                  </div>
+                  {lifeMapSummary ? (
+                    <div className="mt-4" aria-live="polite">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {lifeMapSummary.summary}
+                      </p>
+                      {lifeMapSummary.children.length ? (
+                        <ol className="mt-3 space-y-3">
+                          {lifeMapSummary.children.map((group) => (
+                            <li
+                              key={group.group}
+                              className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4"
+                            >
+                              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                {group.group}
+                              </p>
+                              <ul className="mt-2 space-y-2">
+                                {group.claims.map((claim) => (
+                                  <li
+                                    key={`${group.group}-${claim.citation_ids.join("-")}`}
+                                    className="text-sm text-[var(--text-primary)]"
+                                  >
+                                    <p>{claim.text}</p>
+                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                      {claim.attribution} ·{" "}
+                                      {new Date(claim.occurred_at).toLocaleString(
+                                        "vi-VN",
+                                      )}{" "}
+                                      · nguồn {claim.citation_ids.join(", ")}
+                                    </p>
+                                    {claim.truth_state !== "confirmed" ? (
+                                      <Badge tone="warn">
+                                        {claim.truth_state}
+                                      </Badge>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                          Chưa đủ bản ghi để tạo tóm tắt.
+                        </p>
+                      )}
+                      <p className="mt-3 text-xs text-[var(--text-muted)]">
+                        Bản tóm tắt xác định theo quy tắc, không phải tư vấn y tế.
+                        Mọi nội dung đều giữ liên kết đến bản ghi nguồn.
                       </p>
                     </div>
                   ) : null}
@@ -1237,6 +1411,60 @@ export default function LifeMapPage() {
                         <p className="mt-2 text-xs font-medium text-[var(--status-danger-text)]" role="alert">
                           Nguồn có nội dung không an toàn; chỉ có thể từ chối bản nháp này.
                         </p>
+                      ) : null}
+                      {candidate.type === "medication_label" &&
+                      candidate.status === "draft" ? (
+                        <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">
+                            Chuẩn hóa tên thuốc
+                          </p>
+                          {captureNormalizations[candidate.id]?.proposal ? (
+                            <>
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                CLARA đề xuất{" "}
+                                <span className="font-medium text-[var(--text-primary)]">
+                                  {
+                                    captureNormalizations[candidate.id]?.proposal
+                                      ?.display_name
+                                  }
+                                </span>{" "}
+                                · RxNorm{" "}
+                                {
+                                  captureNormalizations[candidate.id]?.proposal
+                                    ?.code
+                                }
+                              </p>
+                              <label className="mt-2 flex cursor-pointer items-start gap-2 text-sm text-[var(--text-secondary)]">
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5 size-4 accent-[var(--brand-primary)]"
+                                  checked={Boolean(
+                                    acceptedNormalizations[candidate.id],
+                                  )}
+                                  onChange={(event) =>
+                                    setAcceptedNormalizations((current) => ({
+                                      ...current,
+                                      [candidate.id]: event.target.checked,
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  Dùng mã chuẩn này cho hồ sơ thuốc. Bản ghi chỉ
+                                  được tạo sau khi bạn xác nhận bên dưới.
+                                </span>
+                              </label>
+                            </>
+                          ) : captureNormalizations[candidate.id] === undefined ? (
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]" role="status">
+                              Đang kiểm tra từ điển thuốc…
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                              Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ
+                              nguyên và chưa được chuẩn hóa.
+                            </p>
+                          )}
+                        </div>
                       ) : null}
                       {candidate.status === "draft" ? (
                         <div className="mt-3 flex flex-wrap gap-2">

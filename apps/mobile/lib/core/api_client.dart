@@ -1535,6 +1535,7 @@ class ApiClient {
     required String action,
     Map<String, dynamic>? value,
     String reason = '',
+    bool acceptNormalization = false,
   }) {
     return _post(
       '/api/v1/lifemap/capture/candidates/$candidateId/review',
@@ -1542,9 +1543,38 @@ class ApiClient {
         'action': action,
         if (value != null) 'value': value,
         'reason': reason,
+        'accept_normalization': acceptNormalization,
       },
       accessToken: accessToken,
       extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> getLifeMapCaptureNormalization({
+    required String accessToken,
+    required String candidateId,
+  }) {
+    return _get(
+      '/api/v1/lifemap/capture/candidates/$candidateId/normalization',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getLifeMapSummary({
+    required String accessToken,
+    required String level,
+    String? episodeId,
+    String locale = 'vi',
+  }) {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'locale': locale,
+        if (episodeId != null && episodeId.isNotEmpty) 'episode_id': episodeId,
+      },
+    ).query;
+    return _get(
+      '/api/v1/lifemap/v2/summaries/$level?$query',
+      accessToken: accessToken,
     );
   }
 

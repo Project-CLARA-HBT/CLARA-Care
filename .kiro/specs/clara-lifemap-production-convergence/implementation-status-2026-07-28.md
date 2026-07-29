@@ -351,6 +351,17 @@ Each summary has a content-derived opaque ID and deduplicated
 traversal marks every affected ancestor stale. Six focused Ask/summary API tests
 pass with clean Ruff and mypy.
 
+Web and Flutter now expose the default-off hierarchical summary contract with
+day/week/selected-episode scopes, source identifiers, attribution, timestamps,
+and non-confirmed truth states visible in the primary experience. Medication
+capture also exposes a server-owned RxNorm proposal in both clients. A user may
+accept or decline it, but cannot submit a code; confirmation recomputes the
+mapping from the final edited medicine name, rejects unmapped acceptance, and
+records the decision, policy, source, confidence, and structured course fields
+in append-only provenance. Focused API, TypeScript, and Dart client tests pass.
+Task 16.11 remains open for the remaining mobile multimodal source-preview
+experience and a complete cross-surface accessibility/E2E release proof.
+
 The delegated digest endpoint resolves a live purpose-bound Family grant before
 any revision query, requires the `lifemap` data class and `view` action, applies
 optional event-type withholding before summary construction, and returns only

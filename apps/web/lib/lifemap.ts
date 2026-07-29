@@ -178,6 +178,33 @@ export type LifeMapReviewFinding = {
   requires_human_resolution: boolean;
 };
 
+export type LifeMapSummary = {
+  id: string;
+  level: "event" | "day" | "episode" | "week" | "visit";
+  status: "ready" | "abstained";
+  summary: string;
+  children: Array<{
+    group: string;
+    claims: Array<{
+      text: string;
+      citation_ids: string[];
+      truth_state: string;
+      attribution: string;
+      occurred_at: string;
+    }>;
+  }>;
+  input_revision_ids: string[];
+  conflicting: string[];
+  disputed: string[];
+  fallback_used: boolean;
+  rule_version: string;
+  disclosure: {
+    deterministic_fallback: boolean;
+    medical_advice: boolean;
+    preserves_truth_state: boolean;
+  };
+};
+
 export type CaptureCandidate = {
   id: string;
   type: string;
@@ -198,6 +225,23 @@ export type CaptureCandidate = {
   schema_version: string;
   status: string;
   artifact_id?: string | null;
+};
+
+export type MedicationNormalizationProposal = {
+  candidate_id: string;
+  original_text: string;
+  status: "candidate" | "unmapped";
+  proposal: {
+    display_name: string;
+    normalized_name: string;
+    system: "rxnorm";
+    code: string;
+    source: string;
+    confidence: number;
+  } | null;
+  auto_confirmable: false;
+  requires_explicit_acceptance: true;
+  mapping_policy_version: string;
 };
 
 export type CaptureArtifact = {
@@ -449,6 +493,20 @@ export async function getLifeMapV2Capabilities(
   return result;
 }
 
+export async function getLifeMapSummary(
+  level: "day" | "episode" | "week" | "visit",
+  episodeId?: string,
+): Promise<LifeMapSummary> {
+  return (
+    await api.get(`/lifemap/v2/summaries/${level}`, {
+      params: {
+        locale: "vi",
+        ...(episodeId ? { episode_id: episodeId } : {}),
+      },
+    })
+  ).data;
+}
+
 export async function startLifeMapTextCapture(
   text: string,
   locale = "vi",
@@ -537,7 +595,11 @@ export async function getLifeMapCaptureArtifact(
 export async function reviewLifeMapCaptureCandidate(
   candidateId: string,
   action: "edit" | "reject" | "confirm",
-  input: { value?: Record<string, unknown>; reason?: string } = {},
+  input: {
+    value?: Record<string, unknown>;
+    reason?: string;
+    accept_normalization?: boolean;
+  } = {},
 ): Promise<{
   id: string;
   status: string;
@@ -550,6 +612,16 @@ export async function reviewLifeMapCaptureCandidate(
       `/lifemap/capture/candidates/${encodeURIComponent(candidateId)}/review`,
       { action, ...input },
       { headers: { "Idempotency-Key": idempotencyKey() } },
+    )
+  ).data;
+}
+
+export async function getLifeMapCaptureNormalization(
+  candidateId: string,
+): Promise<MedicationNormalizationProposal> {
+  return (
+    await api.get(
+      `/lifemap/capture/candidates/${encodeURIComponent(candidateId)}/normalization`,
     )
   ).data;
 }

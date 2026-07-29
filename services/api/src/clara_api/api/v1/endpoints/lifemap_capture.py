@@ -50,6 +50,7 @@ from clara_api.lifemap.capture_domain import (
 from clara_api.lifemap.commands import add_outbox, replay_command, request_digest, store_command
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
 from clara_api.phr.audit import write_audit
+from clara_api.phr.normalizer import NormalizedMedication, normalize_medication_name
 
 router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -71,6 +72,7 @@ class ReviewRequest(BaseModel):
     action: str
     value: dict | None = None
     reason: str = Field(default="", max_length=255)
+    accept_normalization: bool = False
 
 
 class GuidedAnswerCaptureRequest(BaseModel):
@@ -175,6 +177,33 @@ def _serialize_candidate(
         "status": row.status,
         "artifact_id": artifact_public_id,
     }
+
+
+def _medication_normalization_proposal(
+    value: dict, *, db: Session
+) -> tuple[NormalizedMedication, dict]:
+    original_text = str(value.get("medication_name", "")).strip()
+    normalized = normalize_medication_name(original_text, db=db)
+    proposal = {
+        "original_text": original_text,
+        "status": "candidate" if normalized.is_normalized else "unmapped",
+        "proposal": (
+            {
+                "display_name": normalized.display_name,
+                "normalized_name": normalized.normalized_name,
+                "system": "rxnorm",
+                "code": normalized.rx_cui,
+                "source": normalized.normalization_source,
+                "confidence": normalized.confidence,
+            }
+            if normalized.is_normalized
+            else None
+        ),
+        "auto_confirmable": False,
+        "requires_explicit_acceptance": True,
+        "mapping_policy_version": "lifemap-medication-normalization-v1",
+    }
+    return normalized, proposal
 
 
 def _serialize_artifact_access(row: LifeMapCaptureArtifact) -> dict:
@@ -763,6 +792,33 @@ def abandon_capture_session(
     return {"id": session.public_id, "status": session.status}
 
 
+@router.get("/candidates/{candidate_id}/normalization")
+def get_candidate_normalization(
+    candidate_id: str,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Return a server-owned medication mapping proposal without mutating truth."""
+
+    _require_enabled()
+    scope = _scope(db, token, x_profile, action="read")
+    ensure_medical_disclaimer_consent(db, user_id=scope.actor.id)
+    candidate = _candidate(db, scope, candidate_id)
+    if candidate.candidate_type != "medication_label":
+        raise HTTPException(
+            status_code=409, detail={"code": "normalization_not_applicable"}
+        )
+    if candidate.status != "draft":
+        raise HTTPException(
+            status_code=409, detail={"code": "candidate_already_reviewed"}
+        )
+    _normalized, proposal = _medication_normalization_proposal(
+        candidate.value_json, db=db
+    )
+    return {"candidate_id": candidate.public_id, **proposal}
+
+
 @router.post("/candidates/{candidate_id}/review")
 def review_candidate(
     candidate_id: str,
@@ -842,6 +898,23 @@ def review_candidate(
         "status": candidate.status,
         "candidate": _serialize_candidate(candidate),
     }
+    accepted_normalization: NormalizedMedication | None = None
+    normalization_proposal: dict | None = None
+    if payload.action == "confirm" and candidate.candidate_type == "medication_label":
+        normalized, normalization_proposal = _medication_normalization_proposal(
+            value, db=db
+        )
+        if payload.accept_normalization:
+            if not normalized.is_normalized:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "normalization_not_available"},
+                )
+            accepted_normalization = normalized
+        response["normalization"] = {
+            **normalization_proposal,
+            "accepted": accepted_normalization is not None,
+        }
     event: LifeMapEvent | None = None
     if payload.action == "confirm":
         canonical = json.dumps(value, sort_keys=True, separators=(",", ":"))
@@ -878,6 +951,22 @@ def review_candidate(
                 "source_reference_id": source.public_id,
                 "capture_session_id": session.public_id,
                 "confirmation": "explicit_candidate_review",
+                **(
+                    {
+                        "normalization": {
+                            "decision": (
+                                "accepted"
+                                if accepted_normalization is not None
+                                else "declined"
+                            ),
+                            "policy_version": (
+                                normalization_proposal or {}
+                            ).get("mapping_policy_version"),
+                        }
+                    }
+                    if candidate.candidate_type == "medication_label"
+                    else {}
+                ),
             },
             source_kind="direct_capture",
             created_by_user_id=scope.actor.id,
@@ -924,6 +1013,19 @@ def review_candidate(
                 profile_id=scope.profile.id,
                 medication_name=medication_name,
                 original_text=medication_name,
+                normalized_name=(
+                    accepted_normalization.normalized_name
+                    if accepted_normalization is not None
+                    else ""
+                ),
+                normalization_system=(
+                    "rxnorm" if accepted_normalization is not None else ""
+                ),
+                normalization_code=(
+                    accepted_normalization.rx_cui
+                    if accepted_normalization is not None
+                    else ""
+                ),
                 dose_text=str(value.get("strength", "")).strip(),
                 route_text=str(value.get("route", "")).strip(),
                 reconciliation_status="unknown",
@@ -932,7 +1034,23 @@ def review_candidate(
                     "source": "capture_review",
                     "capture_candidate_id": candidate.public_id,
                     "event_revision_id": revision.public_id,
-                    "normalization": "unverified",
+                    "normalization": (
+                        {
+                            "decision": "accepted",
+                            "source": accepted_normalization.normalization_source,
+                            "confidence": accepted_normalization.confidence,
+                            "policy_version": (
+                                normalization_proposal or {}
+                            ).get("mapping_policy_version"),
+                        }
+                        if accepted_normalization is not None
+                        else {
+                            "decision": "declined",
+                            "policy_version": (
+                                normalization_proposal or {}
+                            ).get("mapping_policy_version"),
+                        }
+                    ),
                 },
                 source_reference_id=source.id,
                 created_by_user_id=scope.actor.id,
@@ -950,6 +1068,14 @@ def review_candidate(
                         "dose_text": course.dose_text,
                         "route_text": course.route_text,
                         "truth_state": course.truth_state,
+                        "normalized_name": course.normalized_name,
+                        "normalization_system": course.normalization_system,
+                        "normalization_code": course.normalization_code,
+                        "normalization_decision": (
+                            "accepted"
+                            if accepted_normalization is not None
+                            else "declined"
+                        ),
                     },
                     reason_code="capture_explicit_user_confirmation",
                     actor_user_id=scope.actor.id,
