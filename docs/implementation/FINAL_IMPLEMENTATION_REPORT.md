@@ -41,15 +41,15 @@ closed JSON and is followed by deterministic safety policy.
 | PR | Status | Evidence / limitation |
 | --- | --- | --- |
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
-| PR-02 i18n | partial | Typed vi/en catalog, parity test and primary-shell literal scanner: `63b0df1e`. Domain-page migration remains incremental. |
-| PR-03 task-first UX | partial/pre-existing | Focused onboarding, Today, PHR and medicine flows were already delivered in prior commits; legacy dense surfaces remain. |
-| PR-04 registry/contracts | implemented for bounded safety tasks | `895c3e73` routes safety triage, LifeMap capture/visit, Scribe and Council shadow; the RAG reranker and NLI verifier now also use registry task contracts. RAG synthesis/research-agent construction remains migration work. |
+| PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
+| PR-03 task-first UX | partial/pre-existing | Focused onboarding, Today, PHR and medicine flows exist; consumer navigation labels now describe tasks rather than modules. Dense legacy surfaces remain. |
+| PR-04 registry/contracts | implemented for bounded safety tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI and default RAG synthesis use registry task contracts. Research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
 | PR-07 renderer | partial/pre-existing | `medical_answer_v2` validates evidence, uncertainty and safety release gates. A dedicated semantic-fidelity scorer is not yet available. |
 | PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
 | PR-09 Scribe | implemented UI safety correction | `eaa749c0` removes automatic code/R69 and uncalibrated percentage. Existing grounding/ASR tests remain. |
-| PR-10 Council | partial/pre-existing | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic remains accurately labeled and does not drive deterministic triage. |
+| PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. |
 | PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist; reviewed RAG gold set is absent. |
 | PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist; broader NL-query/visit-summary evaluation needs approved cases. |
 | PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. Product quality metrics remain `not_measured` until approved data/execution exists. |
@@ -85,6 +85,8 @@ Executed in this workspace:
 | Model registry focused suite | pass: 39 tests (registry, Council shadow, capture triage, main API) |
 | Vietnamese language/router focused suite | pass: 14 tests |
 | LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
+| CareGuard normalization/DrugBank focused suite | pass: 42 tests |
+| Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Static active-eval | executed, NO-GO; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so
