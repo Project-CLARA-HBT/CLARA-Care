@@ -425,7 +425,7 @@ an unsigned artifact.
 - [ ] 16.8 Validate multimodal typed output, checksums, page/region/timestamps,
   units, confidence, missing fields, prompt injection, and degraded fallback.
   _R16, R25_
-- [ ] 16.9 Implement entity-resolution ensemble: Vietnamese normalization,
+- [x] 16.9 Implement entity-resolution ensemble: Vietnamese normalization,
   exact/alias dictionary, dense candidates, graph constraints, optional
   reranking, calibration, ambiguity, and mapping revisions. _R26_
 - [ ] 16.10 Implement rule-first contradiction/duplicate/missingness findings

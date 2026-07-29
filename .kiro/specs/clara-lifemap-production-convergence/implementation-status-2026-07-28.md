@@ -259,6 +259,15 @@ Four focused ML tests pass. Tasks 16.7 and 16.8 remain open until each productio
 backend is wired through this boundary and field-level evaluation proves the
 degraded fallbacks.
 
+The governed entity-resolution ensemble now performs Vietnamese diacritic and
+whitespace normalization, exact/alias lookup, calibrated dense-candidate
+merging, terminology-graph filtering, and bounded optional reranking. Dense
+search or reranking cannot introduce an inactive/unknown/out-of-graph code;
+reranking cannot raise calibrated confidence. Every candidate carries its
+terminology system and mapping revision, close/low-confidence candidates remain
+ambiguous, and no candidate is auto-confirmable. Four focused tests cover alias
+resolution, graph containment, ambiguity, and unknown-code rejection.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
