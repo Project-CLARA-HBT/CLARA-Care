@@ -402,13 +402,13 @@ an unsigned artifact.
 
 ## Phase 16 — Grounded LifeMap intelligence
 
-- [ ] 16.1 Implement `AIUseCaseDefinition` and private `AIContextManifest`;
+- [x] 16.1 Implement `AIUseCaseDefinition` and private `AIContextManifest`;
   authorization, purpose, consent, data-class, and time/episode filters compile
   before ML context. _R2, R15, R23, R31_
 - [ ] 16.2 Build a profile-partitioned, revision-aware temporal retrieval index
   with lexical/dense/time/graph search and hard filtered candidate sets. _R23,
   R26_
-- [ ] 16.3 Implement Ask My LifeMap typed intents and answer schema with evidence
+- [x] 16.3 Implement Ask My LifeMap typed intents and answer schema with evidence
   table, exact citations, unknown/conflict/stale fields, disclosure, and
   abstention. _R23_
 - [ ] 16.4 Add citation existence, entailment, temporal-order, contradiction,

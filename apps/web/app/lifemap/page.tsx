@@ -9,6 +9,7 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import {
   acceptLifeMapTask,
+  askLifeMap,
   correctLifeMapEvent,
   createLifeMapEpisode,
   createLifeMapTask,
@@ -23,6 +24,7 @@ import {
   startLifeMapGuidedAnswer,
   type CaptureSession,
   type LifeMapBaseline,
+  type LifeMapAskAnswer,
   type LifeMapQuestion,
   type LifeMapToday,
   type LifeMapReplay,
@@ -59,6 +61,7 @@ export default function LifeMapPage() {
   const [episodeId, setEpisodeId] = useState("");
   const [captureEnabled, setCaptureEnabled] = useState(false);
   const [questionEnabled, setQuestionEnabled] = useState(false);
+  const [askEnabled, setAskEnabled] = useState(false);
   const [baselines, setBaselines] = useState<LifeMapBaseline[]>([]);
   const [nextQuestion, setNextQuestion] = useState<LifeMapQuestion | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
@@ -68,6 +71,8 @@ export default function LifeMapPage() {
   const [replayLoading, setReplayLoading] = useState(false);
   const [editingEvent, setEditingEvent] = useState("");
   const [correctionText, setCorrectionText] = useState("");
+  const [askQuery, setAskQuery] = useState("");
+  const [askAnswer, setAskAnswer] = useState<LifeMapAskAnswer | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +98,7 @@ export default function LifeMapPage() {
         );
         setCaptureEnabled(Boolean(capabilities.lifemap_capture));
         setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
+        setAskEnabled(Boolean(capabilities.lifemap_ask_ai));
         if (capabilities.lifemap_baselines_v2) {
           setBaselines(await getLifeMapBaselines());
         }
@@ -100,6 +106,7 @@ export default function LifeMapPage() {
       .catch(() => {
         setCaptureEnabled(false);
         setQuestionEnabled(false);
+        setAskEnabled(false);
       });
   }, [load]);
 
@@ -284,6 +291,22 @@ export default function LifeMapPage() {
     }
   };
 
+  const submitAsk = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!askQuery.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      setAskAnswer(await askLifeMap(askQuery.trim(), episodeId || undefined));
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Không thể tra cứu LifeMap.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell
       variant="plain"
@@ -298,6 +321,88 @@ export default function LifeMapPage() {
             <LoadingCards count={2} />
           ) : (
             <>
+              {askEnabled ? (
+                <SurfaceCard className="overflow-hidden">
+                  <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
+                    <Badge tone="brand">AI có dẫn nguồn</Badge>
+                    <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                      Hỏi LifeMap của tôi
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                      Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán,
+                      kê đơn hay tự thay đổi LifeMap.
+                    </p>
+                  </div>
+                  <form
+                    className="space-y-3 p-5"
+                    onSubmit={(event) => void submitAsk(event)}
+                  >
+                    <Textarea
+                      label="Bạn muốn tìm điều gì?"
+                      value={askQuery}
+                      onChange={(event) => setAskQuery(event.target.value)}
+                      placeholder="Ví dụ: Các ghi nhận đau đầu gần đây của tôi là gì?"
+                      hint="Câu trả lời sẽ chỉ ra đúng bản ghi và phiên bản đã dùng."
+                    />
+                    <Button
+                      type="submit"
+                      icon="search"
+                      loading={saving}
+                      loadingLabel="Đang tra cứu…"
+                    >
+                      Tra cứu
+                    </Button>
+                  </form>
+                  {askAnswer ? (
+                    <div
+                      className="border-t border-[color:var(--shell-border)] p-5"
+                      aria-live="polite"
+                    >
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {askAnswer.answer}
+                      </p>
+                      {askAnswer.claims.length ? (
+                        <ol className="mt-4 space-y-3">
+                          {askAnswer.claims.map((claim) => {
+                            const source = askAnswer.evidence.find((item) =>
+                              claim.citation_ids.includes(item.evidence_id),
+                            );
+                            return (
+                              <li
+                                key={claim.claim_id}
+                                className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4"
+                              >
+                                <p className="text-sm text-[var(--text-primary)]">
+                                  {claim.text}
+                                </p>
+                                {source ? (
+                                  <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                                    Nguồn: {source.attribution} ·{" "}
+                                    {new Date(source.occurred_at).toLocaleString("vi-VN")} ·
+                                    phiên bản {source.revision_id.slice(0, 8)}
+                                  </p>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      ) : null}
+                      {askAnswer.disputed.length ||
+                      askAnswer.conflicting.length ||
+                      askAnswer.stale.length ? (
+                        <p className="mt-3 text-sm text-[var(--status-warn-text)]">
+                          Có thông tin đang tranh chấp, mâu thuẫn hoặc đã cũ; CLARA
+                          không tự giải quyết thay bạn.
+                        </p>
+                      ) : null}
+                      <p className="mt-4 text-xs text-[var(--text-muted)]">
+                        Chế độ: {askAnswer.disclosure.mode}. Không phải tư vấn y tế.
+                      </p>
+                    </div>
+                  ) : null}
+                </SurfaceCard>
+              ) : null}
+
               <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">

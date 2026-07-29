@@ -111,6 +111,44 @@ export type LifeMapQuestion = {
   policy_version: string;
 };
 
+export type LifeMapAskEvidence = {
+  evidence_id: string;
+  revision_id: string;
+  event_id: string;
+  event_type: string;
+  occurred_at: string;
+  recorded_at: string;
+  truth_state: string;
+  source_kind: string;
+  attribution: string;
+  text: string;
+};
+
+export type LifeMapAskAnswer = {
+  status: "grounded" | "abstained" | "emergency_escalation";
+  intent: string;
+  answer: string;
+  claims: Array<{
+    claim_id: string;
+    text: string;
+    citation_ids: string[];
+    truth_state: string;
+    attribution: string;
+  }>;
+  evidence: LifeMapAskEvidence[];
+  unknown: string[];
+  conflicting: string[];
+  stale: string[];
+  disputed: string[];
+  abstention_code: string;
+  disclosure: {
+    ai_assisted: boolean;
+    mode: string;
+    medical_advice: false;
+    mutates_lifemap: false;
+  };
+};
+
 export type CaptureCandidate = {
   id: string;
   type: string;
@@ -243,6 +281,20 @@ export async function getLifeMapNextQuestion(
       `/episodes/${encodeURIComponent(episodeId)}/next-question`,
       { params: { locale } },
     )
+  ).data;
+}
+
+export async function askLifeMap(
+  query: string,
+  episodeId?: string,
+  locale = "vi",
+): Promise<LifeMapAskAnswer> {
+  return (
+    await api.post<LifeMapAskAnswer>("/lifemap/v2/ask", {
+      query,
+      episode_id: episodeId || null,
+      locale,
+    })
   ).data;
 }
 

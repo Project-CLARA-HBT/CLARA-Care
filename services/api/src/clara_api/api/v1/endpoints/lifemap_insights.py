@@ -3,6 +3,7 @@
 import hashlib
 from datetime import UTC, datetime, timedelta
 from statistics import median
+from time import perf_counter
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -14,6 +15,7 @@ from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    AIContextManifest,
     LifeMapBaselineDefinition,
     LifeMapBaselineSnapshot,
     LifeMapCareTask,
@@ -26,6 +28,7 @@ from clara_api.db.models import (
     LifeMapProjectionDependency,
     LifeMapQuestionDefinition,
     LifeMapQuestionInteraction,
+    MLInferenceManifest,
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
@@ -36,8 +39,19 @@ from clara_api.lifemap.commands import (
     request_digest,
     store_command,
 )
+from clara_api.lifemap.intelligence import (
+    deterministic_answer,
+    retrieve_revision_evidence,
+    route_ask_query,
+    verify_grounded_answer,
+)
 from clara_api.lifemap.next_best_question import compute_next_best_question
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.ml_governance.registry import (
+    GovernanceError,
+    compile_private_context,
+    safe_operational_manifest,
+)
 from clara_api.phr.audit import write_audit
 
 router = APIRouter()
@@ -51,6 +65,15 @@ class DecisionDisputeRequest(BaseModel):
 class QuestionInteractionRequest(BaseModel):
     action: str
     reason: str = Field(default="", max_length=255)
+
+
+class AskLifeMapRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=500)
+    locale: str = Field(default="vi", pattern=r"^(vi|en)(-[A-Za-z]{2})?$")
+    episode_id: str | None = None
+    start_at: datetime | None = None
+    end_at: datetime | None = None
+    limit: int = Field(default=20, ge=1, le=50)
 
 
 def _scope(
@@ -85,6 +108,174 @@ def _episode_for_profile(
     if episode is None:
         raise HTTPException(status_code=404, detail="Episode not found")
     return episode
+
+
+_ASK_LIFEMAP_USE_CASE = {
+    "use_case_id": "lifemap.ask.v1",
+    "release_state": "champion",
+    "allowed_purposes": ["self_care"],
+    "allowed_data_classes": ["lifemap"],
+    "requires_consent": True,
+}
+
+
+@router.post("/lifemap/v2/ask")
+def ask_lifemap_v2(
+    payload: AskLifeMapRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Return a read-only, exact-revision-cited LifeMap answer.
+
+    The first release is deliberately the deterministic governed fallback. It
+    proves the authorization, context-lineage, citation, abstention and safety
+    boundary before a separately evaluated LLM synthesizer may be promoted.
+    """
+
+    if not get_settings().lifemap_ask_ai_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_not_enabled"})
+    route = route_ask_query(payload.query)
+    disclosure = {
+        "ai_assisted": True,
+        "mode": "deterministic_grounded_fallback",
+        "medical_advice": False,
+        "mutates_lifemap": False,
+    }
+    if route.emergency:
+        return {
+            "status": "emergency_escalation",
+            "intent": route.intent,
+            "answer": (
+                "Hãy gọi cấp cứu địa phương ngay hoặc đến khoa cấp cứu gần nhất."
+                if payload.locale.startswith("vi")
+                else "Call local emergency services now or go to the nearest emergency department."
+            ),
+            "claims": [],
+            "evidence": [],
+            "unknown": [],
+            "conflicting": [],
+            "stale": [],
+            "disputed": [],
+            "abstention_code": "emergency_fast_path",
+            "verification": {"retrieval_bypassed": True},
+            "disclosure": disclosure,
+        }
+    if route.blocked_reason:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": route.blocked_reason,
+                "message": (
+                    "LifeMap chỉ có thể hỗ trợ tra cứu và chuẩn bị câu hỏi; "
+                    "không chẩn đoán, kê đơn hoặc đưa liều cá nhân."
+                ),
+            },
+        )
+
+    started = perf_counter()
+    scope = _scope(db, token, x_profile)
+    consent = ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    episode = (
+        _episode_for_profile(db, scope.profile.id, payload.episode_id)
+        if payload.episode_id
+        else None
+    )
+    evidence = retrieve_revision_evidence(
+        db,
+        profile_id=scope.profile.id,
+        query=payload.query,
+        episode_id=episode.id if episode else None,
+        start_at=payload.start_at,
+        end_at=payload.end_at,
+        limit=payload.limit,
+    )
+    answer = deterministic_answer(
+        intent=route.intent,
+        evidence=evidence,
+        locale=payload.locale,
+    )
+    verification = verify_grounded_answer(answer, evidence)
+    revision_refs = [row.revision_id for row in evidence]
+    context_id: str | None = None
+    inference_id: str | None = None
+    if revision_refs:
+        try:
+            context = compile_private_context(
+                use_case=_ASK_LIFEMAP_USE_CASE,
+                profile_id=scope.profile.id,
+                purpose=scope.purpose,
+                actor_category=scope.actor_role,
+                requested_data_classes={"lifemap"},
+                revision_refs=revision_refs,
+                consent_version=consent.consent_version,
+                grant_version=scope.grant_id,
+            )
+        except GovernanceError as exc:
+            raise HTTPException(
+                status_code=409, detail={"code": "ai_context_rejected"}
+            ) from exc
+        context_manifest = AIContextManifest(
+            profile_id=scope.profile.id,
+            use_case_id=str(context["use_case_id"]),
+            purpose=scope.purpose,
+            actor_category=scope.actor_role,
+            data_classes_json=context["data_classes"],
+            revision_refs_json=context["revision_refs"],
+            context_digest=str(context["context_digest"]),
+            consent_version=consent.consent_version,
+            grant_version=scope.grant_id,
+            expires_at=context["expires_at"],
+        )
+        db.add(context_manifest)
+        db.flush()
+        claims = answer.get("claims")
+        citation_count = 0
+        if isinstance(claims, list):
+            for claim in claims:
+                if isinstance(claim, dict) and isinstance(
+                    claim.get("citation_ids"), list
+                ):
+                    citation_count += len(claim["citation_ids"])
+        operational = safe_operational_manifest(
+            {
+                "latency_ms": round((perf_counter() - started) * 1000),
+                "input_revision_count": len(evidence),
+                "citation_count": citation_count,
+                "abstained": answer["status"] == "abstained",
+                "ood": False,
+                "fallback_used": True,
+                "locale": payload.locale,
+            }
+        )
+        inference = MLInferenceManifest(
+            context_manifest_id=context_manifest.id,
+            use_case_id="lifemap.ask.v1",
+            model_ref="deterministic-grounded-fallback@1",
+            release_state="fallback",
+            outcome=str(answer["status"]),
+            abstention_code=str(answer["abstention_code"]),
+            operational_json=operational,
+        )
+        db.add(inference)
+        db.flush()
+        context_id = context_manifest.public_id
+        inference_id = inference.public_id
+        db.commit()
+
+    return {
+        **answer,
+        "intent": route.intent,
+        "evidence": [row.public_dict() for row in evidence],
+        "verification": verification,
+        "disclosure": disclosure,
+        "context_manifest_id": context_id,
+        "inference_manifest_id": inference_id,
+        "model": "deterministic-grounded-fallback@1",
+        "template": "ask-lifemap-v1",
+        "retrieval_index": "profile-sql-current-revisions-v1",
+        "policy": "lifemap-ai-safe-read-v1",
+    }
 
 
 def _aggregate_value(row: WearableDailyAggregate) -> float | None:

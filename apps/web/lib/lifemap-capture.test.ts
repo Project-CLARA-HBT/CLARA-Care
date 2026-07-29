@@ -10,6 +10,7 @@ vi.mock("@/lib/http-client", () => ({
 }));
 
 import {
+  askLifeMap,
   correctLifeMapEvent,
   getLifeMapCaptureCapability,
   getLifeMapReplay,
@@ -35,6 +36,23 @@ describe("LifeMap Universal Capture client", () => {
     });
     expect(post).toHaveBeenCalledWith("/lifemap/capture/sessions", {
       text: "đau ngực",
+      locale: "vi",
+    });
+  });
+
+  it("asks only through the governed LifeMap endpoint", async () => {
+    post.mockResolvedValueOnce({
+      data: {
+        status: "grounded",
+        claims: [],
+        evidence: [],
+        disclosure: { mutates_lifemap: false },
+      },
+    });
+    await askLifeMap("Các ghi nhận gần đây?", "episode/id");
+    expect(post).toHaveBeenCalledWith("/lifemap/v2/ask", {
+      query: "Các ghi nhận gần đây?",
+      episode_id: "episode/id",
       locale: "vi",
     });
   });

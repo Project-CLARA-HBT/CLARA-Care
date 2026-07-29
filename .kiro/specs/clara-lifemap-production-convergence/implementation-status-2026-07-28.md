@@ -210,6 +210,36 @@ until its real artifact is signed in an approved offline pipeline, wired to the
 online loader/fallback, and a production-authorized audited snapshot job is
 approved. No learned LifeMap feature is promoted by this work.
 
+## Phase 16 grounded Ask vertical slice — 2026-07-29
+
+`POST /api/v1/lifemap/v2/ask` now resolves a server-owned use-case definition,
+runs emergency and legal intent gates before health retrieval, resolves the
+authorized `ProfileScope`, requires current medical consent, then applies
+episode/time/profile filters before materializing current exact revisions.
+Empty retrieval abstains. Emergency wording bypasses retrieval and returns the
+existing escalation class. Diagnosis, prescribing, and personal-dose requests
+are rejected.
+
+The typed response separates claims from an evidence table and exposes unknown,
+conflicting, stale, and disputed states, source attribution, disclosure,
+abstention, verifier status, model/template/retrieval/policy identity, and exact
+revision citations. Released claim text in this first slice is a deterministic
+copy of its cited revision summary; no generative medication claim is created,
+so FIDES is explicitly not applicable rather than falsely marked passed.
+Citation existence and profile containment fail closed. A private
+`AIContextManifest` and no-content `MLInferenceManifest` are appended for each
+non-empty inference.
+
+The default-off web experience reads the server capability and offers Ask only
+when enabled, displaying per-claim source, time, revision, ambiguity warning,
+and the non-medical/read-only disclosure. Five API contracts and seven focused
+web client contracts pass; web lint passes with the five pre-existing warnings.
+
+Tasks 16.2, 16.4, and 16.11 remain open: the current retrieval champion is
+profile-partitioned lexical/temporal SQL, not yet the governed dense/graph
+index; verifier integration for future generated claims still needs bounded
+NLI/FIDES evaluation; and mobile Ask/review surfaces are not yet implemented.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
