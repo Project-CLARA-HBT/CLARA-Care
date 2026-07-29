@@ -97,7 +97,7 @@ Executed in this workspace:
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |
-| Static active-eval | executed, NO-GO; it recorded zero runtime measurements and no latency samples |
+| Static active-eval | executed after portable previous-run selector fix, NO-GO as expected; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so
 `make eval-judge-report` could not be invoked literally here. The exact Python

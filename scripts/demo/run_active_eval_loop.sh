@@ -258,7 +258,15 @@ discover_previous_kpi() {
     if [[ "$item" == *"/${current_post}/kpi-report/kpi-report.json" ]]; then
       continue
     fi
-    mtime="$(stat -f "%m" "$item" 2>/dev/null || echo 0)"
+    # GNU coreutils (Linux CI/VPS) and BSD/macOS use different `stat` flags.
+    # A failed BSD invocation on Linux prints a human header beginning with
+    # "File:"; under `set -u`, bash then treats it as an arithmetic variable.
+    # Accept only a numeric mtime so a diagnostic can never corrupt the
+    # previous-run selector or bypass the NO-GO gate.
+    mtime="$(stat -c "%Y" "$item" 2>/dev/null || stat -f "%m" "$item" 2>/dev/null || echo 0)"
+    if [[ ! "$mtime" =~ ^[0-9]+$ ]]; then
+      continue
+    fi
     if [[ "$mtime" -gt "$best_mtime" ]]; then
       best_mtime="$mtime"
       best_path="$item"
