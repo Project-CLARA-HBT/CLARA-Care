@@ -371,29 +371,29 @@ component.
 
 ## Phase 15 — ML foundation and truthful model inventory
 
-- [ ] 15.1 Register every existing ML/LLM capability, provider, embedding model,
+- [x] 15.1 Register every existing ML/LLM capability, provider, embedding model,
   reranker, NLI path, OCR/ASR component, Council scorer, fallback, dataset, and
   release flag with intended/forbidden use and owner. _R31_
 - [x] 15.2 Reclassify `council-neural-shadow-v1` as a fixed-weight heuristic in
   API/UI/docs/telemetry until a governed trained artifact exists; preserve
   shadow containment. _R18, R31_
-- [ ] 15.3 Define and migrate registry/manifests for datasets, feature schemas,
+- [x] 15.3 Define and migrate registry/manifests for datasets, feature schemas,
   training runs, artifacts, evaluations, deployments, inference, drift, and
   feedback. _R31_
 - [ ] 15.4 Implement signed artifact storage/loading, immutable provider model
   resolution, champion/challenger/fallback selection, and fail-closed signature
   checks. _R31_
-- [ ] 15.5 Create datasheet, model-card, evaluation-report, use-case, and change-
+- [x] 15.5 Create datasheet, model-card, evaluation-report, use-case, and change-
   control templates; validate completeness in CI. _R31_
 - [ ] 15.6 Build audited purpose/consent-filtered dataset snapshots outside OLTP;
   enforce person/household/site/time splits before window generation. _R15,
   R31_
-- [ ] 15.7 Select a separate locked offline training image/package; keep PyTorch,
+- [x] 15.7 Select a separate locked offline training image/package; keep PyTorch,
   scikit-learn/boosting, notebooks, and training credentials out of the online
   ML service unless required for inference. _R16, R31_
-- [ ] 15.8 Implement no-PII ML metrics and private input-lineage manifests;
+- [x] 15.8 Implement no-PII ML metrics and private input-lineage manifests;
   verify exact revisions never enter logs/traces. _R15, R20, R31_
-- [ ] 15.9 Add drift, OOD, calibration, artifact, provider-alias, and model-
+- [x] 15.9 Add drift, OOD, calibration, artifact, provider-alias, and model-
   fallback runbooks with pause/rollback behavior and no auto-retraining. _R31_
 
 Exit gate: all deployed “models” are truthfully classified and versioned;

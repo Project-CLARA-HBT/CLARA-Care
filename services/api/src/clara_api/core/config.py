@@ -838,6 +838,10 @@ class Settings(BaseSettings):
     lifemap_ai_evidence_matching_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_EVIDENCE_MATCHING_ENABLED"
     )
+    ml_artifact_root: str = Field(default="/models", validation_alias="ML_ARTIFACT_ROOT")
+    ml_artifact_public_keys_json: str = Field(
+        default="{}", validation_alias="ML_ARTIFACT_PUBLIC_KEYS_JSON"
+    )
 
     # --- LifeMap next-best-question engine (Phase 2, P2-WP5) --------------------
     # Additive + default OFF ⇒ the endpoint returns the feature-disabled (404)

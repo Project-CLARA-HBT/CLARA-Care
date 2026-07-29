@@ -1333,6 +1333,126 @@ class LifeMapQuestionInteraction(Base):
     )
 
 
+class AIUseCaseDefinition(Base):
+    """Governed authority boundary for one AI/ML use case and version."""
+
+    __tablename__ = "ai_use_case_definitions"
+    __table_args__ = (UniqueConstraint("use_case_id", "version", name="uq_ai_use_case_version"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    use_case_id: Mapped[str] = mapped_column(String(96), index=True)
+    version: Mapped[str] = mapped_column(String(64))
+    risk_class: Mapped[str] = mapped_column(String(32), index=True)
+    owner: Mapped[str] = mapped_column(String(96))
+    intended_users_json: Mapped[dict | list] = mapped_column(JSON)
+    allowed_inputs_json: Mapped[dict | list] = mapped_column(JSON)
+    allowed_outputs_json: Mapped[dict | list] = mapped_column(JSON)
+    forbidden_uses_json: Mapped[dict | list] = mapped_column(JSON)
+    champion_ref: Mapped[str] = mapped_column(String(160), default="")
+    fallback_ref: Mapped[str] = mapped_column(String(160), default="")
+    metrics_json: Mapped[dict | list] = mapped_column(JSON)
+    release_state: Mapped[str] = mapped_column(
+        String(32), default="research", server_default="research", index=True
+    )
+    requires_consent: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MLRegistryObject(Base):
+    """Immutable manifest for datasets, models, evaluations and deployments."""
+
+    __tablename__ = "ml_registry_objects"
+    __table_args__ = (
+        UniqueConstraint("object_kind", "stable_id", "version", name="uq_ml_registry_object"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    object_kind: Mapped[str] = mapped_column(String(40), index=True)
+    stable_id: Mapped[str] = mapped_column(String(128), index=True)
+    version: Mapped[str] = mapped_column(String(96))
+    status: Mapped[str] = mapped_column(
+        String(32), default="draft", server_default="draft", index=True
+    )
+    checksum_sha256: Mapped[str] = mapped_column(String(64), default="")
+    manifest_json: Mapped[dict | list] = mapped_column(JSON)
+    parent_refs_json: Mapped[dict | list] = mapped_column(JSON)
+    signature_key_id: Mapped[str] = mapped_column(String(96), default="")
+    signature_base64: Mapped[str] = mapped_column(Text, default="")
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIContextManifest(Base):
+    """Private, content-free exact revision lineage compiled before inference."""
+
+    __tablename__ = "ai_context_manifests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    use_case_id: Mapped[str] = mapped_column(String(96), index=True)
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    actor_category: Mapped[str] = mapped_column(String(32))
+    data_classes_json: Mapped[dict | list] = mapped_column(JSON)
+    revision_refs_json: Mapped[dict | list] = mapped_column(JSON)
+    context_digest: Mapped[str] = mapped_column(String(64), index=True)
+    consent_version: Mapped[str] = mapped_column(String(64))
+    grant_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MLInferenceManifest(Base):
+    """No-content operational record linked to a private context manifest."""
+
+    __tablename__ = "ml_inference_manifests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    context_manifest_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_context_manifests.id", ondelete="CASCADE"), index=True
+    )
+    use_case_id: Mapped[str] = mapped_column(String(96), index=True)
+    model_ref: Mapped[str] = mapped_column(String(160), index=True)
+    release_state: Mapped[str] = mapped_column(String(32), index=True)
+    outcome: Mapped[str] = mapped_column(String(32), index=True)
+    abstention_code: Mapped[str] = mapped_column(String(64), default="")
+    operational_json: Mapped[dict | list] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+def _reject_governance_manifest_mutation(*_args: object, **_kwargs: object) -> None:
+    raise ValueError("AI/ML governance manifests are immutable; append a new version")
+
+
+for _immutable_governance_model in (
+    AIUseCaseDefinition,
+    MLRegistryObject,
+    AIContextManifest,
+    MLInferenceManifest,
+):
+    sa_event.listen(
+        _immutable_governance_model,
+        "before_update",
+        _reject_governance_manifest_mutation,
+    )
+    sa_event.listen(
+        _immutable_governance_model,
+        "before_delete",
+        _reject_governance_manifest_mutation,
+    )
+
+
 class LifeMapCaptureSession(Base):
     """A resumable, expiring Universal Capture review boundary."""
 

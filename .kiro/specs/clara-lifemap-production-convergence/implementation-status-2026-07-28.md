@@ -169,6 +169,47 @@ Tasks 12.2 and 12.3 remain open pending the final all-module accessibility and
 responsive evidence sweep. Task 12.6 remains a real bilingual usability study,
 not a repository test.
 
+## Phase 15 ML-governance foundation — 2026-07-29
+
+Migration `20260729_0040` adds versioned, append-only AI use-case definitions,
+generic registry objects for datasets/features/training/artifacts/evaluations/
+deployments/drift/feedback, private context-lineage manifests, and no-content
+inference manifests. ORM update/delete hooks reject mutation; a changed record
+must append a new version. SQLite full upgrade, downgrade to `0039`, and
+re-upgrade to `0040` passed.
+
+The committed `clara-ml-inventory-v1` catalog truthfully identifies 18 deployed
+or staged capabilities: DeepSeek chat/research/Council, the Council fixed-weight
+shadow heuristic, embeddings, reranking, NLI, FIDES, CareGuard DDI, three OCR
+paths, three ASR paths, deterministic baselines/questions, and evidence-change
+rules. Every entry includes provider/implementation, intended and forbidden
+use, owner, risk, release state, flag, fallback, and data origin.
+
+The governance library now provides:
+
+- a forward-only promotion state machine with recall/retirement;
+- purpose/consent/data-class/revision filtering before an ML context manifest
+  can be compiled;
+- a strict no-content operational-manifest allowlist;
+- Ed25519 canonical-manifest verification, SHA-256 byte verification, artifact
+  root containment, and approved-state enforcement;
+- immutable provider-alias resolution and silent-provider-change detection;
+- deterministic pseudonymized snapshot construction with consent/purpose
+  rejection and person/household/site/source/device/window leakage audits; and
+- mandatory use-case, datasheet, model-card, evaluation, and change-control
+  templates plus incident/recall/fallback runbook.
+
+The separate digest-pinned Python 3.11 offline-training image contains only
+exact-pinned classical ML dependencies. PyTorch, notebooks, credentials, and
+production OLTP access are intentionally absent pending an approved neural use
+case.
+
+Tasks 15.4 and 15.6 remain open: the verifier and snapshot builder are complete
+foundations, but no existing live model may be relabeled “signed/governed”
+until its real artifact is signed in an approved offline pipeline, wired to the
+online loader/fallback, and a production-authorized audited snapshot job is
+approved. No learned LifeMap feature is promoted by this work.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
