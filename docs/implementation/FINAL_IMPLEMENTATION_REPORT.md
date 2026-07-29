@@ -84,6 +84,7 @@ Executed in this workspace:
 | Eval release suite | expected non-zero (2): no approved locked/live evidence; diagnostics written |
 | Model registry focused suite | pass: 39 tests (registry, Council shadow, capture triage, main API) |
 | Vietnamese language/router focused suite | pass: 14 tests |
+| LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
 | Static active-eval | executed, NO-GO; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so
