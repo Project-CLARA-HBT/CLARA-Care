@@ -1,0 +1,29 @@
+{
+  "dataset_version": "synthetic-contract-only-v1",
+  "evaluation": {
+    "features": [[0.05], [0.25], [0.45], [0.65], [0.85]],
+    "labels": [0, 0, 0, 1, 1]
+  },
+  "feature_schema_version": "lifemap-training-contract-v1",
+  "leakage_audit": "passed",
+  "split_policy": "person_household_site_source_device_time",
+  "target_approval_id": "synthetic-test-approval",
+  "target_key": "weekly_planning_load",
+  "task_kind": "binary",
+  "train": {
+    "features": [
+      [0.01], [0.03], [0.05], [0.07], [0.09],
+      [0.11], [0.13], [0.15], [0.17], [0.19],
+      [0.21], [0.23], [0.25], [0.27], [0.29],
+      [0.71], [0.73], [0.75], [0.77], [0.79],
+      [0.81], [0.83], [0.85], [0.87], [0.89],
+      [0.91], [0.93], [0.95], [0.97], [0.99]
+    ],
+    "labels": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    ]
+  },
+  "use_case_id": "synthetic-wellness-planning-v1"
+}

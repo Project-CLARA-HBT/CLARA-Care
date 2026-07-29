@@ -344,6 +344,83 @@ future observations by definition. Three focused feature/leakage tests pass
 with clean Ruff and mypy. No prediction target, learned model, or live inference
 is introduced by this foundation.
 
+The offline-only training image now contains an executable, fixed-seed
+champion/challenger path for an explicitly approved, leakage-audited binary
+target snapshot. It fits a deterministic robust champion, regularized logistic
+challenger, and histogram gradient-boosting challenger and emits only
+research-state, checksummed artifacts plus predictions. It has no service
+credentials, OLTP connection, promotion authority, neural dependency, or
+online inference path.
+
+The model-neutral evaluator supports deterministic, regularized linear/logistic,
+survival, tree/boosting, isolation/one-class, and separately justified neural
+candidate families. It requires the deterministic robust model first and
+retains it unless a challenger materially improves both overall and worst-slice
+loss while also passing false-alert, calibration, latency, cost, and
+explainability gates. An eligible result means only offline review; it does not
+authorize shadow, pilot, or deployment.
+
+Task-specific uncertainty utilities now cover reliability error, interval
+inputs, assumption-gated split conformal intervals, ensemble disagreement,
+standardized OOD scoring, data sufficiency, source revocation, release state,
+and explicit abstain/private-shadow/needs-review/bounded-release decisions.
+Conformal output fails closed on detected shift or unapproved exchangeability
+assumptions.
+
+The deterministic relationship engine requires paired coverage and independent
+discovery/confirmation partitions, reports effect size and uncertainty, applies
+Bonferroni multiplicity adjustment, checks direction and minimum-effect
+replication, records known confounders, and emits constrained Vietnamese and
+English association-only explanations that explicitly reject causality.
+
+Fifteen focused tests pass, and the new source is clean under Ruff and mypy.
+Tasks 17.1 and 17.8–17.10 remain external release gates: no real target has
+clinical/privacy approval, no governed snapshot or artifact was created, no
+shadow comparison ran, and no user/clinical review occurred. The registry
+hard-rejects disease, diagnosis, deterioration, hospitalization, treatment,
+medication-effect, emergency, and triage targets under the current intended use.
+
+## Phase 18 contained adaptive and evidence foundation — 2026-07-29
+
+Question utility labels now explicitly combine information value, safety impact,
+user-reported usefulness, burden, and dismissal. Click state is retained for
+audit but mathematically excluded from utility. A learned scorer can only
+reorder IDs already emitted by the deterministic consent, emergency, cooldown,
+do-not-ask, and burden policy. Its artifact must already be verified, it cannot
+add or remove an action, and deterministic fallback remains available.
+
+The shadow contract records model and policy identity, ranking, top-action
+propensity, action-set preservation, and rank agreement. The offline policy
+evaluator reports inverse-propensity value, support violations, clipping, and
+effective sample size; lack of action support blocks shadow-review eligibility.
+A contextual-bandit protocol validator fixes the safe action set, exploration
+floor/ceiling, consent, cohort, sample size, daily/weekly burden, monitoring,
+and stop criteria. No protocol has approval or activation authority.
+
+Friction scoring receives only bounded counts for reminder attempts,
+dismissals, deferrals, user-step count, and local hour. An unverified artifact
+cannot score. Its output is contained to reduce reminders, change time, offer a
+pause, offer a smaller user step, or offer help. The independent notification
+pressure ceiling cannot be raised by the model.
+
+The evidence extraction boundary accepts only typed PICO, guideline-condition,
+or trial-criterion candidates with an exact source ID, checksum, character
+span, quote, confidence, operator, and extractor version. All output remains
+`awaiting_review`. Validated rules compare candidates only with uniquely
+confirmed fact revisions and return separate match, mismatch, or unknown;
+missing or conflicting facts stay unknown.
+
+Evidence review exposes source class/revision/retrieval time, citation checksum,
+supersession, contradiction, possible-match wording, safe clinician-discussion
+questions, and abstention. It does not infer eligibility, diagnosis, enrollment,
+or treatment, and it cannot mutate facts, medication courses, or tasks.
+Thirteen focused tests pass with clean Ruff and mypy.
+
+Task 18.9 remains open because no approved dataset, real learned artifact,
+off-policy study, fairness evaluation, eligibility precision study, or
+bilingual comprehension study exists. Every new adaptive path remains
+non-deployed and shadow-only by contract.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

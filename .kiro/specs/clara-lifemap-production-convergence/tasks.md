@@ -451,15 +451,15 @@ reversible, and safely degradable; multimodal AI still creates drafts only.
   _R28, R31_
 - [x] 17.3 Build engineered coverage, robust statistics, trend, seasonality,
   variability/entropy, missingness, and task-history features. _R28_
-- [ ] 17.4 Implement champion/challenger bake-off: deterministic, regularized
+- [x] 17.4 Implement champion/challenger bake-off: deterministic, regularized
   linear/logistic/survival, tree/boosting, isolation/one-class, then neural
   sequence/foundation models where justified. _R28, R31_
 - [x] 17.5 Audit every windowed dataset for user, household, source, overlapping
   window, device, site, and future-time leakage. _R28, R31_
-- [ ] 17.6 Add calibrated probabilities/intervals, conformal outputs where their
+- [x] 17.6 Add calibrated probabilities/intervals, conformal outputs where their
   assumptions pass, ensemble disagreement, sufficiency, OOD, and abstention.
   _R28, R31_
-- [ ] 17.7 Implement deterministic pattern-relationship discovery with coverage,
+- [x] 17.7 Implement deterministic pattern-relationship discovery with coverage,
   effect size, uncertainty, multiplicity/discovery-confirmation control, known
   confounders, and constrained non-causal LLM explanation. _R28_
 - [ ] 17.8 Run anomaly challengers shadow-only; measure false alerts/user-week,
@@ -476,26 +476,26 @@ champion and safely abstains; clinical prediction remains research-only.
 
 ## Phase 18 — Adaptive and evidence intelligence
 
-- [ ] 18.1 Define explicit utility labels for questions using information value,
+- [x] 18.1 Define explicit utility labels for questions using information value,
   safety impact, user usefulness, burden, and dismissal—not click/answer rate
   alone. _R29, R31_
-- [ ] 18.2 Implement learned scoring only over the deterministic eligible
+- [x] 18.2 Implement learned scoring only over the deterministic eligible
   question set; assert it cannot generate text, modify eligibility, or affect
   emergency routing. _R8, R18, R29_
-- [ ] 18.3 Add supervised ranking, propensity logging, offline policy evaluation,
+- [x] 18.3 Add supervised ranking, propensity logging, offline policy evaluation,
   deterministic fallback, and shadow comparison. _R29_
-- [ ] 18.4 Specify a bounded contextual-bandit pilot protocol with safe action
+- [x] 18.4 Specify a bounded contextual-bandit pilot protocol with safe action
   set, exploration bounds, consent, burden ceilings, cohort, sample size,
   monitoring, and stop criteria; do not activate without approval. _R29, R31_
-- [ ] 18.5 Build friction features/model with only reduce/change-time/pause/
+- [x] 18.5 Build friction features/model with only reduce/change-time/pause/
   smaller-user-step/help actions and a hard notification-pressure ceiling.
   _R29_
-- [ ] 18.6 Implement source-spanned PICO, guideline-condition, and trial-
+- [x] 18.6 Implement source-spanned PICO, guideline-condition, and trial-
   criterion extraction into reviewable candidates. _R13, R30_
-- [ ] 18.7 Implement validated rule comparison against confirmed facts with
+- [x] 18.7 Implement validated rule comparison against confirmed facts with
   separate match, mismatch, and unknown results; model inference cannot fill
   eligibility facts. _R30_
-- [ ] 18.8 Add evidence contradiction/supersession, citation validation,
+- [x] 18.8 Add evidence contradiction/supersession, citation validation,
   possible-match wording, clinician-discussion questions, and safe abstention.
   _R13, R18, R30_
 - [ ] 18.9 Evaluate ranking utility/burden/safety, off-policy uncertainty,

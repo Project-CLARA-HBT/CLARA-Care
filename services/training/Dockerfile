@@ -11,6 +11,7 @@ RUN groupadd --system clara-training \
 WORKDIR /workspace
 COPY requirements.lock /tmp/clara-training-requirements.lock
 RUN python -m pip install --no-cache-dir -r /tmp/clara-training-requirements.lock
+COPY lifemap_bakeoff.py /workspace/lifemap_bakeoff.py
 
 USER clara-training
-ENTRYPOINT ["python"]
+ENTRYPOINT ["python", "/workspace/lifemap_bakeoff.py"]

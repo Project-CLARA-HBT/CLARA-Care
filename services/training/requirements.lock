@@ -1,9 +1,10 @@
 # Offline-only classical ML environment. Exact versions verified from PyPI on
 # 2026-07-29. PyTorch is intentionally absent until an approved neural use case
 # justifies its supply-chain and runtime cost.
-numpy==2.5.1
-scipy==1.18.0
+numpy==2.4.6
+scipy==1.17.1
 scikit-learn==1.9.0
 lightgbm==4.7.0
 joblib==1.5.3
 threadpoolctl==3.6.0
+narwhals==2.24.0

@@ -21,5 +21,22 @@ Build:
 podman build -t clara-training:classical-20260729 services/training
 ```
 
+Run the initial governed binary-target bake-off only with an approved,
+leakage-audited snapshot:
+
+```bash
+podman run --rm \
+  -v /approved/snapshot.json:/input/snapshot.json:ro \
+  -v /empty/output:/output \
+  clara-training:classical-20260729 \
+  --snapshot /input/snapshot.json --output /output/run-001
+```
+
+The program compares a deterministic prevalence champion, regularized logistic
+regression, and histogram gradient boosting with a fixed seed. It emits
+checksummed research-state artifacts and predictions for the governed evaluator;
+it cannot promote or deploy a model. Neural models are deliberately absent
+until an approved use case records why classical challengers are insufficient.
+
 Do not mount `.env`, cloud credentials, production database sockets, or raw
 identity mapping keys into this image.
