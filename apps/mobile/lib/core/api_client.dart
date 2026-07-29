@@ -1380,6 +1380,30 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> scanLifeMapReviewFindings({
+    required String accessToken,
+  }) {
+    return _post(
+      '/api/v1/lifemap/v2/review-findings/scan',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> actOnLifeMapReviewFinding({
+    required String accessToken,
+    required String findingId,
+    required String action,
+    required String reason,
+  }) {
+    return _post(
+      '/api/v1/lifemap/v2/review-findings/$findingId/actions',
+      body: <String, dynamic>{'action': action, 'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
   Future<Map<String, dynamic>> getLifeMapNextQuestion({
     required String accessToken,
     required String episodeId,

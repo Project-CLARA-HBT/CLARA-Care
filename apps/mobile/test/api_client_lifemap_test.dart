@@ -227,6 +227,31 @@ void main() {
       expect(body['locale'], 'vi');
     });
 
+    test('review findings use explicit scan and idempotent human action',
+        () async {
+      final requests = <http.Request>[];
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return ok({'id': 'finding-1', 'status': 'resolved'});
+        }),
+      );
+      await client.scanLifeMapReviewFindings(accessToken: token);
+      await client.actOnLifeMapReviewFinding(
+        accessToken: token,
+        findingId: 'finding-1',
+        action: 'resolved',
+        reason: 'Đã kiểm tra nguồn',
+      );
+      expect(requests[0].url.path, '/api/v1/lifemap/v2/review-findings/scan');
+      expect(
+        requests[1].url.path,
+        '/api/v1/lifemap/v2/review-findings/finding-1/actions',
+      );
+      expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
+    });
+
     test('Universal Capture wrappers use draft and idempotent review routes',
         () async {
       final requests = <http.Request>[];

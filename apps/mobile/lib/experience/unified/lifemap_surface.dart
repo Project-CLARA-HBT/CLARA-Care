@@ -99,6 +99,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   bool _captureEnabled = false;
   bool _questionEnabled = false;
   bool _askEnabled = false;
+  bool _reviewEnabled = false;
   List<Map<String, dynamic>> _baselines = const [];
   bool _capturing = false;
   Map<String, dynamic>? _captureSession;
@@ -106,6 +107,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   final TextEditingController _askController = TextEditingController();
   bool _asking = false;
   Map<String, dynamic>? _askAnswer;
+  bool _reviewing = false;
+  List<Map<String, dynamic>> _reviewFindings = const [];
 
   // --- "Tạo hành trình" (create episode) form state ------------------------
   bool _episodeFormOpen = false;
@@ -164,6 +167,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       final questionEnabled =
           flags is Map && flags['lifemap_next_question_v2'] == true;
       final askEnabled = flags is Map && flags['lifemap_ask_ai'] == true;
+      final reviewEnabled =
+          flags is Map && flags['lifemap_ai_review_findings'] == true;
       final baselineEnabled =
           flags is Map && flags['lifemap_baselines_v2'] == true;
       final baselinePayload = baselineEnabled
@@ -202,6 +207,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _captureEnabled = captureEnabled;
         _questionEnabled = questionEnabled;
         _askEnabled = askEnabled;
+        _reviewEnabled = reviewEnabled;
         _baselines = baselines;
         // Keep the task-form selection valid against the freshly loaded set.
         if (_selectedEpisodeId != null &&
@@ -347,6 +353,61 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _showSnack('Không thể tra cứu LifeMap. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _asking = false);
+    }
+  }
+
+  Future<void> _scanReviewFindings() async {
+    final token = _token;
+    if (token == null || _reviewing) return;
+    setState(() => _reviewing = true);
+    try {
+      final response =
+          await widget.apiClient.scanLifeMapReviewFindings(accessToken: token);
+      final raw = response['data'];
+      final findings = <Map<String, dynamic>>[];
+      if (raw is List) {
+        for (final item in raw) {
+          if (item is Map) findings.add(item.cast<String, dynamic>());
+        }
+      }
+      if (mounted) setState(() => _reviewFindings = findings);
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể kiểm tra thông tin. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _reviewing = false);
+    }
+  }
+
+  Future<void> _actOnFinding(
+    Map<String, dynamic> finding,
+    String action,
+  ) async {
+    final token = _token;
+    if (token == null || _reviewing) return;
+    setState(() => _reviewing = true);
+    try {
+      final updated = await widget.apiClient.actOnLifeMapReviewFinding(
+        accessToken: token,
+        findingId: _str(finding['id']),
+        action: action,
+        reason: action == 'resolved'
+            ? 'Người dùng đã kiểm tra các bản ghi nguồn'
+            : 'Người dùng xác nhận không cần xử lý',
+      );
+      if (!mounted) return;
+      setState(() {
+        _reviewFindings = _reviewFindings
+            .map((item) => item['id'] == finding['id'] ? updated : item)
+            .toList();
+      });
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể lưu lựa chọn. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _reviewing = false);
     }
   }
 
@@ -673,6 +734,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               ClaraTokens.spaceMd,
             ),
             child: _buildAskCard(context),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
+
+        if (_reviewEnabled) ...[
+          const SectionHeader(title: 'Thông tin cần bạn kiểm tra'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: _buildReviewCard(context),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
         ],
@@ -1021,6 +1096,89 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewCard(BuildContext context) {
+    final theme = Theme.of(context);
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA '
+            'không tự chọn bản nào đúng.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          ClaraButton.secondary(
+            label: 'Kiểm tra',
+            icon: Icons.fact_check_outlined,
+            loading: _reviewing,
+            onPressed: _scanReviewFindings,
+          ),
+          ..._reviewFindings.map((finding) {
+            final status = _str(finding['status']);
+            final kind = _str(finding['kind']);
+            final label = kind == 'contradiction'
+                ? 'Có thể mâu thuẫn'
+                : kind == 'duplicate'
+                    ? 'Có thể trùng'
+                    : 'Cần bổ sung';
+            return Padding(
+              padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: ClaraTokens.spaceXs),
+                      Text(
+                        '${_str(finding['field_key'])} · '
+                        '${_str(finding['rule_version'])}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (status == 'pending') ...[
+                        const SizedBox(height: ClaraTokens.spaceMd),
+                        Wrap(
+                          spacing: ClaraTokens.spaceSm,
+                          runSpacing: ClaraTokens.spaceSm,
+                          children: [
+                            ClaraButton.primary(
+                              label: 'Tôi đã kiểm tra',
+                              onPressed: () =>
+                                  _actOnFinding(finding, 'resolved'),
+                            ),
+                            ClaraButton.secondary(
+                              label: 'Không cần xử lý',
+                              onPressed: () =>
+                                  _actOnFinding(finding, 'dismissed'),
+                            ),
+                          ],
+                        ),
+                      ] else
+                        Text(
+                          'Đã ghi nhận lựa chọn của bạn.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

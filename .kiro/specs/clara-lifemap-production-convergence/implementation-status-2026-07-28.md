@@ -292,6 +292,10 @@ facts. Eight focused web client contracts pass and web lint remains clean apart
 from the five documented pre-existing warnings. Flutter conflict review and
 the other Phase 16.11 experiences remain open.
 
+Flutter now mirrors the explicit scan and online-only reviewed/dismissed
+actions, with possible-not-certain wording and no source-fact mutation. Focused
+analysis is clean and 23 API-client/accessibility-responsive tests pass.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
