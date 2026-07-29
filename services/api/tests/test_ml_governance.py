@@ -12,10 +12,13 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from clara_api.core.config import Settings
 from clara_api.db.models import MLRegistryObject
 from clara_api.db.session import SessionLocal
 from clara_api.ml_governance.artifacts import (
     ArtifactVerificationError,
+    SignedArtifactStore,
+    select_deployment,
     sign_manifest_for_offline_pipeline,
     verify_artifact,
 )
@@ -31,6 +34,11 @@ from clara_api.ml_governance.registry import (
     require_transition,
     safe_operational_manifest,
     validate_catalog_entry,
+)
+from clara_api.ml_governance.runtime import (
+    RuntimeGovernanceError,
+    load_deployment_selection,
+    resolve_immutable_provider_model,
 )
 
 CATALOG = Path(__file__).parents[1] / "src/clara_api/ml_governance/catalog.json"
@@ -210,6 +218,242 @@ def test_artifact_signature_checksum_and_path_are_fail_closed(tmp_path: Path) ->
             ),
             key_id="test-key",
             public_keys={"test-key": base64.b64encode(public_key).decode()},
+        )
+
+
+def _signed_artifact(
+    root: Path,
+    *,
+    private_key: Ed25519PrivateKey,
+    artifact_id: str,
+    release_state: str,
+) -> tuple[dict, str]:
+    artifact = root / f"{artifact_id}.bin"
+    artifact.write_bytes(f"governed:{artifact_id}".encode())
+    manifest = {
+        "use_case_id": "lifemap.pattern",
+        "artifact_id": artifact_id,
+        "version": "1",
+        "relative_path": artifact.name,
+        "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest(),
+        "release_state": release_state,
+    }
+    return manifest, sign_manifest_for_offline_pipeline(manifest, private_key)
+
+
+def test_signed_store_is_immutable_and_reverifies_every_load(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    storage = tmp_path / "online"
+    staging.mkdir()
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    keys = {"release-key": base64.b64encode(public_key).decode()}
+    manifest, signature = _signed_artifact(
+        staging,
+        private_key=private_key,
+        artifact_id="pattern-champion",
+        release_state="champion",
+    )
+    store = SignedArtifactStore(root=storage, public_keys=keys)
+
+    installed = store.install_from_staging(
+        staging_root=staging,
+        manifest=manifest,
+        signature_base64=signature,
+        key_id="release-key",
+    )
+    assert installed.manifest == manifest
+    assert (
+        store.install_from_staging(
+            staging_root=staging,
+            manifest=manifest,
+            signature_base64=signature,
+            key_id="release-key",
+        ).sha256
+        == installed.sha256
+    )
+
+    changed = {**manifest, "sha256": "0" * 64}
+    with pytest.raises(ArtifactVerificationError, match="checksum_mismatch"):
+        store.install_from_staging(
+            staging_root=staging,
+            manifest=changed,
+            signature_base64=sign_manifest_for_offline_pipeline(changed, private_key),
+            key_id="release-key",
+        )
+
+    installed.path.write_bytes(b"tampered online bytes")
+    with pytest.raises(ArtifactVerificationError, match="checksum_mismatch"):
+        store.load(artifact_id="pattern-champion", version="1")
+
+
+def test_deployment_selection_never_promotes_challenger_and_fails_to_safe_fallback(
+    tmp_path: Path,
+) -> None:
+    staging = tmp_path / "staging"
+    storage = tmp_path / "online"
+    staging.mkdir()
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    store = SignedArtifactStore(
+        root=storage,
+        public_keys={
+            "release-key": base64.b64encode(public_key).decode(),
+        },
+    )
+    for artifact_id, state in (
+        ("pattern-champion", "champion"),
+        ("pattern-challenger", "challenger"),
+    ):
+        manifest, signature = _signed_artifact(
+            staging,
+            private_key=private_key,
+            artifact_id=artifact_id,
+            release_state=state,
+        )
+        store.install_from_staging(
+            staging_root=staging,
+            manifest=manifest,
+            signature_base64=signature,
+            key_id="release-key",
+        )
+    deployment = {
+        "use_case_id": "lifemap.pattern",
+        "champion": {"artifact_id": "pattern-champion", "version": "1"},
+        "challengers": [{"artifact_id": "pattern-challenger", "version": "1"}],
+        "fallback": {
+            "kind": "code",
+            "reference": "lifemap-deterministic-baseline-v2",
+        },
+    }
+
+    assert select_deployment(store=store, deployment=deployment).slot == "champion"
+    assert (
+        select_deployment(
+            store=store,
+            deployment=deployment,
+            slot="challenger",
+        ).slot
+        == "challenger"
+    )
+    champion = store.load(artifact_id="pattern-champion", version="1")
+    champion.path.write_bytes(b"tampered")
+    selected = select_deployment(store=store, deployment=deployment)
+    assert selected.slot == "fallback"
+    assert selected.fallback_ref == "lifemap-deterministic-baseline-v2"
+    assert selected.fallback_reason == "artifact_checksum_mismatch"
+
+
+def test_deployment_rejects_unsigned_or_wrong_use_case_fallback(tmp_path: Path) -> None:
+    store = SignedArtifactStore(root=tmp_path, public_keys={})
+    with pytest.raises(ArtifactVerificationError, match="bundle_invalid"):
+        select_deployment(
+            store=store,
+            deployment={
+                "use_case_id": "lifemap.pattern",
+                "champion": {"artifact_id": "missing", "version": "1"},
+                "fallback": {"artifact_id": "also-missing", "version": "1"},
+            },
+        )
+
+
+def test_runtime_loads_server_owned_deployment_and_immutable_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    staging = tmp_path / "staging"
+    storage = tmp_path / "online"
+    staging.mkdir()
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    encoded_key = base64.b64encode(public_key).decode()
+    manifest, signature = _signed_artifact(
+        staging,
+        private_key=private_key,
+        artifact_id="pattern-champion",
+        release_state="champion",
+    )
+    SignedArtifactStore(
+        root=storage,
+        public_keys={"release-key": encoded_key},
+    ).install_from_staging(
+        staging_root=staging,
+        manifest=manifest,
+        signature_base64=signature,
+        key_id="release-key",
+    )
+    deployment_path = tmp_path / "deployments.json"
+    deployment_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "deployments": [
+                    {
+                        "use_case_id": "lifemap.pattern",
+                        "champion": {
+                            "artifact_id": "pattern-champion",
+                            "version": "1",
+                        },
+                        "challengers": [],
+                        "fallback": {
+                            "kind": "code",
+                            "reference": "lifemap-deterministic-baseline-v2",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ML_ARTIFACT_ROOT", str(storage))
+    monkeypatch.setenv(
+        "ML_ARTIFACT_PUBLIC_KEYS_JSON",
+        json.dumps({"release-key": encoded_key}),
+    )
+    monkeypatch.setenv("ML_DEPLOYMENT_MANIFEST_PATH", str(deployment_path))
+    monkeypatch.setenv(
+        "ML_PROVIDER_MODEL_ALLOWLIST_JSON",
+        json.dumps(
+            {
+                "clara-default": {
+                    "provider": "deepseek",
+                    "immutable_id": "deepseek-chat-2026-07-15",
+                    "endpoint_class": "chat-completions",
+                }
+            }
+        ),
+    )
+    settings = Settings(_env_file=None)
+
+    assert (
+        load_deployment_selection(
+            settings,
+            use_case_id="lifemap.pattern",
+        ).artifact
+        is not None
+    )
+    assert (
+        resolve_immutable_provider_model(
+            settings,
+            provider="deepseek",
+            configured_model="clara-default",
+        ).immutable_id
+        == "deepseek-chat-2026-07-15"
+    )
+    with pytest.raises(RuntimeGovernanceError, match="not_allowlisted"):
+        resolve_immutable_provider_model(
+            settings,
+            provider="deepseek",
+            configured_model="latest",
         )
 
 

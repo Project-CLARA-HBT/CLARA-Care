@@ -32,9 +32,33 @@ offline pipeline. Path traversal, missing files, unknown keys, malformed
 signatures, checksum mismatch, and unapproved states prevent loading and select
 the governed fallback.
 
+`SignedArtifactStore` verifies a staged bundle before atomically installing it
+under the immutable `<artifact_id>/<version>` identity. Every load rechecks the
+manifest signature and artifact checksum. `ML_DEPLOYMENT_MANIFEST_PATH` points
+to a server-owned deployment map; its champion, explicitly selected challenger,
+and fallback slots are release-state checked. A champion verification failure
+can select only the declared deterministic fallback or another independently
+signed fallback artifact—it never promotes a challenger.
+
 Provider aliases must resolve through an allowlist to an immutable provider
 model ID. If the provider response reports a different ID, inference is held or
 falls back; CLARA never silently treats `latest` as an immutable deployment.
+The runtime allowlist is supplied through
+`ML_PROVIDER_MODEL_ALLOWLIST_JSON`; an absent alias fails closed.
+
+## Dataset snapshot boundary
+
+`write_snapshot_bundle` accepts only records already filtered to one approved
+purpose with active consent. It recursively restricts features to typed numeric,
+boolean, and missingness values, pseudonymizes person/household/site/source/
+device identities with a separate key, computes identity-connected splits, and
+runs the time-window leakage audit. It then atomically writes an immutable
+NDJSON/manifest/audit bundle outside configured OLTP roots. Every read verifies
+the dataset and audit checksums.
+
+The snapshot bundle does not grant target approval or model promotion. A
+production export still requires a named approval, active consent policy,
+audited job identity, and separately controlled pseudonymization key.
 
 ## Templates
 

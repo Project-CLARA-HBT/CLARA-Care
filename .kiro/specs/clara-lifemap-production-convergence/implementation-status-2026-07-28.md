@@ -210,6 +210,17 @@ until its real artifact is signed in an approved offline pipeline, wired to the
 online loader/fallback, and a production-authorized audited snapshot job is
 approved. No learned LifeMap feature is promoted by this work.
 
+The implementation foundation now also includes an immutable signed bundle
+store, atomic staging install, per-load signature/checksum re-verification,
+server-owned champion/challenger/fallback resolution, deterministic safe
+fallback, runtime provider allowlist parsing, and silent provider-identity
+rejection. Dataset export can now write an immutable audited bundle outside
+OLTP with recursive content rejection, separately keyed pseudonymization,
+identity-connected split assignment, leakage audit, and tamper detection.
+These close the code-path gaps but intentionally do not close Tasks 15.4 or
+15.6: no real learned artifact, immutable DeepSeek provider revision, target
+approval, or production-authorized export evidence has been supplied.
+
 ## Phase 16 grounded Ask vertical slice — 2026-07-29
 
 `POST /api/v1/lifemap/v2/ask` now resolves a server-owned use-case definition,

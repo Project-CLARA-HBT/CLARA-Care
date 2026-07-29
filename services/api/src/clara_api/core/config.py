@@ -842,6 +842,12 @@ class Settings(BaseSettings):
     ml_artifact_public_keys_json: str = Field(
         default="{}", validation_alias="ML_ARTIFACT_PUBLIC_KEYS_JSON"
     )
+    ml_deployment_manifest_path: str = Field(
+        default="", validation_alias="ML_DEPLOYMENT_MANIFEST_PATH"
+    )
+    ml_provider_model_allowlist_json: str = Field(
+        default="{}", validation_alias="ML_PROVIDER_MODEL_ALLOWLIST_JSON"
+    )
 
     # --- LifeMap next-best-question engine (Phase 2, P2-WP5) --------------------
     # Additive + default OFF ⇒ the endpoint returns the feature-disabled (404)

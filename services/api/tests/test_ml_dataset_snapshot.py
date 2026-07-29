@@ -6,7 +6,9 @@ from clara_api.ml_governance.dataset_snapshot import (
     DatasetSnapshotError,
     audit_split_leakage,
     build_snapshot_manifest,
+    load_snapshot_bundle,
     validate_snapshot_record,
+    write_snapshot_bundle,
 )
 
 
@@ -79,3 +81,90 @@ def test_leakage_audit_rejects_person_household_site_source_and_device_overlap()
         second[dimension] = first[dimension]
         with pytest.raises(DatasetSnapshotError, match=f"split_leakage:{dimension}"):
             audit_split_leakage([first, second])
+
+
+def test_snapshot_bundle_is_pseudonymized_audited_immutable_and_outside_oltp(
+    tmp_path,
+) -> None:
+    oltp = tmp_path / "oltp"
+    store = tmp_path / "offline-snapshots"
+    oltp.mkdir()
+    audit = {
+        "job_id": "export-job-1",
+        "actor_ref": "admin-user-7",
+        "approval_ref": "approval-2026-07",
+        "consent_policy_version": "consent-v4",
+        "source_export_ref": "source-export-1",
+        "exported_at": "2026-07-29T10:00:00+00:00",
+    }
+    stored = write_snapshot_bundle(
+        [_record()],
+        root=store,
+        forbidden_oltp_roots=(oltp,),
+        dataset_id="lifemap-pattern",
+        version="2026-07-29.1",
+        purpose="pattern_research",
+        secret_salt=b"test-split-secret-at-least-16-bytes",
+        pseudonymization_key=b"separate-pseudonym-key-at-least-32-bytes",
+        audit=audit,
+    )
+    content = (stored.path / "rows.ndjson").read_text(encoding="utf-8")
+    assert "person-a" not in content
+    assert "house-a" not in content
+    assert stored.audit["approval_ref"] == "approval-2026-07"
+    assert stored.manifest["split_audit"]["status"] == "passed"
+    assert (
+        write_snapshot_bundle(
+            [_record()],
+            root=store,
+            forbidden_oltp_roots=(oltp,),
+            dataset_id="lifemap-pattern",
+            version="2026-07-29.1",
+            purpose="pattern_research",
+            secret_salt=b"test-split-secret-at-least-16-bytes",
+            pseudonymization_key=b"separate-pseudonym-key-at-least-32-bytes",
+            audit=audit,
+        ).manifest
+        == stored.manifest
+    )
+
+    (stored.path / "rows.ndjson").write_text("tampered", encoding="utf-8")
+    with pytest.raises(DatasetSnapshotError, match="checksum_mismatch"):
+        load_snapshot_bundle(
+            root=store,
+            dataset_id="lifemap-pattern",
+            version="2026-07-29.1",
+        )
+
+
+def test_snapshot_bundle_rejects_oltp_destination_and_nested_content(tmp_path) -> None:
+    oltp = tmp_path / "oltp"
+    oltp.mkdir()
+    audit = {
+        "job_id": "export-job-1",
+        "actor_ref": "admin-user-7",
+        "approval_ref": "approval-2026-07",
+        "consent_policy_version": "consent-v4",
+        "source_export_ref": "source-export-1",
+        "exported_at": "2026-07-29T10:00:00+00:00",
+    }
+    with pytest.raises(DatasetSnapshotError, match="overlaps_oltp"):
+        write_snapshot_bundle(
+            [_record()],
+            root=oltp / "snapshots",
+            forbidden_oltp_roots=(oltp,),
+            dataset_id="lifemap-pattern",
+            version="1",
+            purpose="pattern_research",
+            secret_salt=b"test-split-secret-at-least-16-bytes",
+            pseudonymization_key=b"separate-pseudonym-key-at-least-32-bytes",
+            audit=audit,
+        )
+    with pytest.raises(DatasetSnapshotError, match="feature_value_forbidden"):
+        validate_snapshot_record(
+            {
+                **_record(),
+                "features": {"safe": {"note": "private free text"}},
+            },
+            purpose="pattern_research",
+        )
