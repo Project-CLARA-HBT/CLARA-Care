@@ -12,13 +12,15 @@ import {
   SurfaceCard,
 } from "@/components/ui/surface";
 import { getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
+import { t } from "@/lib/i18n/catalog";
+import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/ui-language";
 
-function dueLabel(value: string | null): string {
-  if (!value) return "Không có hạn cụ thể";
+function dueLabel(value: string | null, language: UILanguage): string {
+  if (!value) return t(language, "today.noDueDate");
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? "Không có hạn cụ thể"
-    : date.toLocaleString("vi-VN", {
+    ? t(language, "today.noDueDate")
+    : date.toLocaleString(language === "vi" ? "vi-VN" : "en-US", {
         day: "numeric",
         month: "short",
         hour: "2-digit",
@@ -30,6 +32,12 @@ export default function TodayPage() {
   const [today, setToday] = useState<LifeMapToday | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState<UILanguage>("vi");
+
+  useEffect(() => {
+    setLanguage(getStoredUILanguage());
+    return onUILanguageChange(setLanguage);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,11 +45,11 @@ export default function TodayPage() {
     try {
       setToday(await getLifeMapToday());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
+      setError(cause instanceof Error ? cause.message : t(language, "today.connectionError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     void load();
@@ -52,8 +60,8 @@ export default function TodayPage() {
   return (
     <PageShell
       variant="plain"
-      title="Hôm nay"
-      description="Một nhịp chăm sóc rõ ràng: chỉ những việc bạn đã chấp nhận mới xuất hiện ở đây."
+      title={t(language, "today.title")}
+      description={t(language, "today.description")}
     >
       <div className="space-y-5">
         {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
@@ -64,22 +72,22 @@ export default function TodayPage() {
           <>
             <div className="grid gap-4 sm:grid-cols-3">
               <StatCard
-                label="Việc đang chờ"
+                label={t(language, "today.pending")}
                 value={tasks.length}
-                hint="Đã đồng ý thực hiện"
+                hint={t(language, "today.accepted")}
                 icon="task_alt"
                 tone="brand"
               />
               <StatCard
-                label="Hành trình đang mở"
+                label={t(language, "today.episodes")}
                 value={today?.episodes.length ?? 0}
-                hint="Theo dõi cùng bạn"
+                hint={t(language, "today.following")}
                 icon="route"
               />
               <StatCard
-                label="Cần xác nhận"
+                label={t(language, "today.confirmation")}
                 value={today?.pending_confirmation_count ?? 0}
-                hint="Chưa dùng làm kết luận"
+                hint={t(language, "today.notConclusion")}
                 icon="pending_actions"
                 tone={today?.pending_confirmation_count ? "warn" : "neutral"}
               />
@@ -88,16 +96,16 @@ export default function TodayPage() {
             <SurfaceCard className="overflow-hidden">
               <div className="flex items-center justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-4">
                 <div>
-                  <h2 className="font-semibold text-[var(--text-primary)]">Việc nên làm tiếp theo</h2>
+                  <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "today.next")}</h2>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Bạn luôn có quyền bỏ qua hoặc điều chỉnh kế hoạch.
+                    {t(language, "today.control")}
                   </p>
                 </div>
                 <Link
                   href="/lifemap"
                   className="focus-ring shrink-0 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
                 >
-                  Mở LifeMap
+                  {t(language, "today.openLifeMap")}
                 </Link>
               </div>
 
@@ -117,11 +125,11 @@ export default function TodayPage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-[var(--text-primary)]">{task.title}</p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          {dueLabel(task.due_at)}
+                          {dueLabel(task.due_at, language)}
                         </p>
                       </div>
                       <Button as="link" href={`/today/tasks/${encodeURIComponent(task.id)}`} size="sm">
-                        Xem việc
+                        {t(language, "today.viewTask")}
                       </Button>
                     </li>
                   ))}
@@ -130,11 +138,11 @@ export default function TodayPage() {
                 <div className="p-5">
                   <EmptyState
                     icon="calendar_add_on"
-                    title="Hôm nay chưa có việc nào"
-                    description="Khi bạn chấp nhận một việc trong LifeMap, nó sẽ xuất hiện ở đây. CLARA không tự thêm việc thay bạn."
+                    title={t(language, "today.emptyTitle")}
+                    description={t(language, "today.emptyDescription")}
                   >
                     <Button as="link" href="/lifemap">
-                      Tạo hành trình
+                      {t(language, "today.createEpisode")}
                     </Button>
                   </EmptyState>
                 </div>
