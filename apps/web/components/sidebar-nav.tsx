@@ -11,6 +11,7 @@ import {
   isActiveRoute,
   type UserRole,
 } from "@/lib/navigation.config";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ProfileContextProfile } from "@/lib/profile-context";
@@ -26,28 +27,20 @@ type SidebarNavProps = {
   activeProfile?: ProfileContextProfile | null;
 };
 
-const GROUP_TRANSLATIONS: Record<string, Record<UILanguage, string>> = {
-  care: { vi: "Chăm sóc của bạn", en: "Your care" },
-  medicines: { vi: "Thuốc & an toàn", en: "Medication & safety" },
-  explore: { vi: "Tìm hiểu", en: "Explore" },
-  clinical: { vi: "Lâm sàng", en: "Clinical" },
-  admin: { vi: "Vận hành", en: "Operations" },
-  support: { vi: "Hỗ trợ", en: "Support" },
+const GROUP_KEYS: Record<string, UITranslationKey> = {
+  care: "navigation.care",
+  medicines: "navigation.medicines",
+  explore: "navigation.explore",
+  clinical: "navigation.clinical",
+  admin: "navigation.admin",
+  support: "navigation.support",
 };
 
-const ROLE_LABELS: Record<UILanguage, Record<UserRole, string>> = {
-  vi: {
-    normal: "Cá nhân",
-    researcher: "Nhà nghiên cứu",
-    doctor: "Bác sĩ",
-    admin: "Quản trị viên",
-  },
-  en: {
-    normal: "Personal",
-    researcher: "Researcher",
-    doctor: "Doctor",
-    admin: "Administrator",
-  },
+const ROLE_LABEL_KEYS: Record<UserRole, UITranslationKey> = {
+  normal: "role.normal",
+  researcher: "role.researcher",
+  doctor: "role.doctor",
+  admin: "role.admin",
 };
 
 export default function SidebarNav({
@@ -61,7 +54,9 @@ export default function SidebarNav({
   const groups = getGroupedNavItems(role);
   const homeHref = getRoleHomePath(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const isEnglish = uiLanguage === "en";
+  const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
+  const groupLabel = (key: string, fallback: string) =>
+    GROUP_KEYS[key] ? t(uiLanguage, GROUP_KEYS[key]) : fallback;
 
   const handleLogout = () => {
     if (isLoggingOut) return;
@@ -75,7 +70,7 @@ export default function SidebarNav({
         "app-navigation sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] lg:flex lg:flex-col",
         collapsed ? "w-[5rem] px-2" : "w-[17.5rem] px-3",
       ].join(" ")}
-      aria-label={isEnglish ? "Primary navigation" : "Điều hướng chính"}
+      aria-label={t(uiLanguage, "navigation.primary")}
     >
       <div
         className={[
@@ -98,7 +93,7 @@ export default function SidebarNav({
               CLARA
             </span>
             <span className="block truncate text-[11px] font-medium text-[var(--text-muted)]">
-              Trợ lý y tế của bạn
+              {uiLanguage === "en" ? "Your health assistant" : "Trợ lý y tế của bạn"}
             </span>
           </Link>
         ) : null}
@@ -108,7 +103,7 @@ export default function SidebarNav({
         <Link
           href="/chat"
           className={collapsed ? "app-new-chat !px-0" : "app-new-chat"}
-          title={isEnglish ? "Ask CLARA" : "Hỏi CLARA"}
+          title={t(uiLanguage, "action.askClara")}
         >
           <span
             className="material-symbols-outlined text-[19px]"
@@ -116,7 +111,7 @@ export default function SidebarNav({
           >
             auto_awesome
           </span>
-          {!collapsed ? <span>{isEnglish ? "Ask CLARA" : "Hỏi CLARA"}</span> : null}
+          {!collapsed ? <span>{t(uiLanguage, "action.askClara")}</span> : null}
         </Link>
       </div>
 
@@ -125,13 +120,13 @@ export default function SidebarNav({
           <section key={group.key}>
             {!collapsed ? (
               <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                {GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label}
+                {groupLabel(group.key, group.label)}
               </p>
             ) : null}
             <nav
               className="space-y-1"
               aria-label={
-                GROUP_TRANSLATIONS[group.key]?.[uiLanguage] ?? group.label
+                groupLabel(group.key, group.label)
               }
             >
               {group.items.map((item) => (
@@ -157,19 +152,15 @@ export default function SidebarNav({
             ].join(" ")}
           >
             <span className="app-profile-avatar shrink-0" aria-hidden="true">
-              {ROLE_LABELS[uiLanguage][role].slice(0, 1)}
+              {roleLabel.slice(0, 1)}
             </span>
             {!collapsed ? (
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-semibold text-[var(--text-primary)]">
-                  {activeProfile?.display_name ?? "Tài khoản của bạn"}
+                  {activeProfile?.display_name ?? t(uiLanguage, "profile.yourAccount")}
                 </span>
                 <span className="block truncate text-[11px] text-[var(--text-muted)]">
-                  {activeProfile?.kind === "shared"
-                    ? isEnglish
-                      ? "Shared access"
-                      : "Quyền được chia sẻ"
-                    : ROLE_LABELS[uiLanguage][role]}
+                  {activeProfile?.kind === "shared" ? t(uiLanguage, "profile.sharedAccess") : roleLabel}
                 </span>
               </span>
             ) : null}
@@ -188,10 +179,10 @@ export default function SidebarNav({
             className="app-sidebar-action"
             aria-label={
               collapsed
-                ? "Mở rộng thanh điều hướng"
-                : "Thu gọn thanh điều hướng"
+                ? t(uiLanguage, "action.expand")
+                : t(uiLanguage, "action.collapse")
             }
-            title={collapsed ? "Mở rộng" : "Thu gọn"}
+            title={collapsed ? t(uiLanguage, "action.expand") : t(uiLanguage, "action.collapse")}
           >
             <span
               className="material-symbols-outlined text-[18px]"
@@ -200,7 +191,7 @@ export default function SidebarNav({
               {collapsed ? "right_panel_open" : "left_panel_close"}
             </span>
             {!collapsed ? (
-              <span>{isEnglish ? "Collapse" : "Thu gọn"}</span>
+              <span>{t(uiLanguage, "action.collapse")}</span>
             ) : null}
           </button>
           <button
@@ -208,8 +199,8 @@ export default function SidebarNav({
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="app-sidebar-action hover:!text-[var(--status-danger-text)]"
-            aria-label={isEnglish ? "Sign out" : "Đăng xuất"}
-            title={isEnglish ? "Sign out" : "Đăng xuất"}
+            aria-label={t(uiLanguage, "action.signOut")}
+            title={t(uiLanguage, "action.signOut")}
           >
             <span
               className="material-symbols-outlined text-[18px]"
@@ -219,7 +210,7 @@ export default function SidebarNav({
             </span>
             {!collapsed ? (
               <span>
-                {isLoggingOut ? "..." : isEnglish ? "Sign out" : "Đăng xuất"}
+                {isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}
               </span>
             ) : null}
           </button>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getPageMeta, type UserRole } from "@/lib/navigation.config";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ProfileContextProfile } from "@/lib/profile-context";
@@ -20,11 +21,11 @@ type AppTopbarProps = {
   familyNotificationCount?: number;
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  normal: "Cá nhân",
-  researcher: "Nghiên cứu",
-  doctor: "Bác sĩ",
-  admin: "Quản trị",
+const ROLE_LABEL_KEYS: Record<UserRole, UITranslationKey> = {
+  normal: "role.normal",
+  researcher: "role.researcher",
+  doctor: "role.doctor",
+  admin: "role.admin",
 };
 
 export default function AppTopbar({
@@ -41,12 +42,13 @@ export default function AppTopbar({
 }: AppTopbarProps) {
   const pathname = usePathname();
   const page = getPageMeta(pathname);
+  const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
   const nextTheme: ThemePreference =
     themePreference === "dark" ? "light" : "dark";
   const themeLabel =
     nextTheme === "dark"
-      ? "Chuyển sang giao diện tối"
-      : "Chuyển sang giao diện sáng";
+      ? t(uiLanguage, "theme.switchToDark")
+      : t(uiLanguage, "theme.switchToLight");
 
   return (
     <header className="app-command-bar sticky top-0 z-40 hidden h-[4.5rem] items-center justify-between gap-5 border-b border-[color:var(--shell-border)] px-6 lg:flex xl:px-8">
@@ -55,7 +57,7 @@ export default function AppTopbar({
           {page.title}
         </p>
         <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-          {ROLE_LABELS[role]}
+          {roleLabel}
         </p>
       </div>
 
@@ -65,9 +67,9 @@ export default function AppTopbar({
             <span className="material-symbols-outlined text-[18px] text-[var(--brand-600)]" aria-hidden="true">
               person_pin_circle
             </span>
-            <span className="sr-only">Hồ sơ đang dùng</span>
+            <span className="sr-only">{t(uiLanguage, "profile.active")}</span>
             <select
-              aria-label="Hồ sơ đang dùng"
+              aria-label={t(uiLanguage, "profile.active")}
               value={activeProfileId ?? ""}
               disabled={isProfileChanging || !onProfileChange}
               onChange={(event) => onProfileChange?.(event.target.value)}
@@ -75,7 +77,7 @@ export default function AppTopbar({
             >
               {profiles.map((profile) => (
                 <option key={profile.id} value={profile.id} disabled={profile.kind !== "self"}>
-                  {profile.kind === "shared" ? "Được chia sẻ · " : ""}{profile.display_name}
+                  {profile.kind === "shared" ? t(uiLanguage, "profile.shared") : ""}{profile.display_name}
                 </option>
               ))}
             </select>
@@ -84,7 +86,7 @@ export default function AppTopbar({
         <Link
           href="/chat"
           className="app-ask-button"
-          aria-label="Mở CLARA Chat"
+          aria-label={t(uiLanguage, "action.askClara")}
         >
           <span
             className="material-symbols-outlined text-[19px]"
@@ -92,14 +94,14 @@ export default function AppTopbar({
           >
             auto_awesome
           </span>
-          <span>Hỏi CLARA</span>
+          <span>{t(uiLanguage, "action.askClara")}</span>
         </Link>
 
         <Link
           href="/huong-dan"
           className="app-topbar-icon"
-          aria-label="Mở trung tâm hướng dẫn"
-          title="Hướng dẫn"
+          aria-label={t(uiLanguage, "help.open")}
+          title={t(uiLanguage, "help.title")}
         >
           <span
             className="material-symbols-outlined text-[20px]"
@@ -114,10 +116,10 @@ export default function AppTopbar({
           className="app-topbar-icon relative"
           aria-label={
             familyNotificationCount > 0
-              ? `${familyNotificationCount} nhiệm vụ chăm sóc được chia sẻ đang chờ`
-              : "Family Circle"
+              ? t(uiLanguage, "family.pendingTasks", { count: familyNotificationCount })
+              : t(uiLanguage, "family.title")
           }
-          title="Family Circle"
+          title={t(uiLanguage, "family.title")}
         >
           <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
             family_restroom
@@ -148,25 +150,25 @@ export default function AppTopbar({
           type="button"
           onClick={() => onLanguageChange(uiLanguage === "vi" ? "en" : "vi")}
           className="app-topbar-language"
-          aria-label="Đổi ngôn ngữ"
-          title="Đổi ngôn ngữ"
+          aria-label={t(uiLanguage, "language.change")}
+          title={t(uiLanguage, "language.change")}
         >
           {uiLanguage.toUpperCase()}
         </button>
 
         <div
           className="app-profile-chip"
-          aria-label={`Vai trò hiện tại: ${ROLE_LABELS[role]}`}
+          aria-label={t(uiLanguage, "profile.currentRole", { role: roleLabel })}
         >
           <span className="app-profile-avatar" aria-hidden="true">
-            {ROLE_LABELS[role].slice(0, 1)}
+            {roleLabel.slice(0, 1)}
           </span>
           <span className="hidden text-left xl:block">
             <span className="block text-xs font-semibold text-[var(--text-primary)]">
-              {profiles.find((profile) => profile.id === activeProfileId)?.display_name ?? "Tài khoản"}
+              {profiles.find((profile) => profile.id === activeProfileId)?.display_name ?? t(uiLanguage, "profile.account")}
             </span>
             <span className="block text-[11px] text-[var(--text-muted)]">
-              {ROLE_LABELS[role]}
+              {roleLabel}
             </span>
           </span>
         </div>

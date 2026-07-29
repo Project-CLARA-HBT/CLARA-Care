@@ -45,6 +45,7 @@ import {
 import { activateOwnedProfile, getProfileContext } from "@/lib/profile-context-api";
 import { listFamilyNotifications } from "@/lib/visit-family";
 import { getPhrOnboarding } from "@/lib/phr-onboarding";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 type Props = {
   children: ReactNode;
@@ -52,17 +53,17 @@ type Props = {
 
 const THEME_OPTIONS: Array<{
   value: ThemePreference;
-  label: string;
+  labelKey: UITranslationKey;
   iconClass: string;
 }> = [
-  { value: "light", label: "Sang", iconClass: "fa-sun-o" },
-  { value: "dark", label: "Toi", iconClass: "fa-moon-o" },
-  { value: "system", label: "System", iconClass: "fa-desktop" },
+  { value: "light", labelKey: "theme.light", iconClass: "fa-sun-o" },
+  { value: "dark", labelKey: "theme.dark", iconClass: "fa-moon-o" },
+  { value: "system", labelKey: "theme.system", iconClass: "fa-desktop" },
 ];
 
-const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string }> = [
-  { value: "vi", label: "VI" },
-  { value: "en", label: "EN" },
+const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string; labelKey: UITranslationKey }> = [
+  { value: "vi", label: "VI", labelKey: "language.vi" },
+  { value: "en", label: "EN", labelKey: "language.en" },
 ];
 
 
@@ -444,7 +445,7 @@ export default function AppShell({ children }: Props) {
             <Link
               href="/chat"
               className="app-mobile-ask"
-              aria-label="Hỏi CLARA"
+              aria-label={t(uiLanguage, "action.askClara")}
             >
               <span
                 className="material-symbols-outlined text-[18px]"
@@ -567,6 +568,7 @@ export default function AppShell({ children }: Props) {
                     <span className="sr-only">Theme</span>
                     {THEME_OPTIONS.map((option) => {
                       const active = themePreference === option.value;
+                      const optionLabel = t(uiLanguage, option.labelKey);
                       return (
                         <button
                           key={option.value}
@@ -578,15 +580,15 @@ export default function AppShell({ children }: Props) {
                               ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
                               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                           ].join(" ")}
-                          aria-label={`Theme ${option.label}`}
+                          aria-label={optionLabel}
                           aria-pressed={active}
-                          title={`Theme: ${option.label}`}
+                          title={optionLabel}
                         >
                           <i
                             className={`fa ${option.iconClass} text-[13px]`}
                             aria-hidden="true"
                           />
-                          <span className="sr-only">{option.label}</span>
+                          <span className="sr-only">{optionLabel}</span>
                         </button>
                       );
                     })}
@@ -595,9 +597,9 @@ export default function AppShell({ children }: Props) {
                   <div
                     className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
                     role="group"
-                    aria-label="Language preferences"
+                    aria-label={t(uiLanguage, "language.preference")}
                   >
-                    <span className="sr-only">Language</span>
+                    <span className="sr-only">{t(uiLanguage, "language.preference")}</span>
                     {LANGUAGE_OPTIONS.map((option) => {
                       const active = uiLanguage === option.value;
                       return (
@@ -611,9 +613,9 @@ export default function AppShell({ children }: Props) {
                               ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
                               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                           ].join(" ")}
-                          aria-label={`Language ${option.label}`}
+                          aria-label={t(uiLanguage, option.labelKey)}
                           aria-pressed={active}
-                          title={`Language: ${option.label}`}
+                          title={t(uiLanguage, option.labelKey)}
                         >
                           {option.label}
                         </button>
@@ -632,7 +634,7 @@ export default function AppShell({ children }: Props) {
                 <span className="material-symbols-outlined text-[18px]">
                   logout
                 </span>
-                <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
+                <span>{isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}</span>
               </button>
             </div>
           </aside>
