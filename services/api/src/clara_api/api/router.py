@@ -12,6 +12,7 @@ from clara_api.api.v1.endpoints import (
     council,
     evidence_questions,
     family,
+    guided_flows,
     health,
     lifemap,
     lifemap_capture,
@@ -35,6 +36,9 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(profiles.router, tags=["profiles"])
 api_router.include_router(lifemap.router, prefix="/lifemap", tags=["lifemap"])
+api_router.include_router(
+    guided_flows.router, prefix="/guided-flows", tags=["guided-flows"]
+)
 api_router.include_router(
     lifemap_capture.router, prefix="/lifemap/capture", tags=["lifemap-capture"]
 )

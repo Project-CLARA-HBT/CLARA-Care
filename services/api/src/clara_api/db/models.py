@@ -1010,6 +1010,59 @@ class LifeMapEpisodeGoalRevision(Base):
     )
 
 
+class GuidedFlowDraft(Base):
+    """Owner/profile-scoped resumable draft for an allowlisted guided flow."""
+
+    __tablename__ = "guided_flow_drafts"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'committed', 'abandoned')",
+            name="ck_guided_flow_drafts_status",
+        ),
+        CheckConstraint(
+            "flow_type = 'lifemap_episode'",
+            name="ck_guided_flow_drafts_allowlist",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    owner_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    flow_type: Mapped[str] = mapped_column(String(64), index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    current_step: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(
+        String(24), default="active", server_default="active", index=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    committed_resource_type: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    committed_resource_public_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    committed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    abandoned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class LifeMapCareTask(Base):
     """An explicit, trackable next action in a care loop."""
 

@@ -24,7 +24,7 @@ evidence mappings.
 - [x] 1.2 Implement Flutter equivalents with phone/tablet/text-scale semantics.
 - [x] 1.3 Add typed flow registries, step-order guards, stable analytics schema,
   and localized labels.
-- [ ] 1.4 Add/reuse server draft envelopes, opaque IDs, revisions,
+- [x] 1.4 Add/reuse server draft envelopes, opaque IDs, revisions,
   idempotency, expiry, resume, and abandon.
 - [x] 1.5 Add component/property/accessibility tests.
 
