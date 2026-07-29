@@ -17,10 +17,7 @@ from sqlalchemy.orm import Session
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
-from clara_api.core.research_upload_store import (
-    ResearchUploadStoreUnavailable,
-    build_object_store_client,
-)
+from clara_api.core.research_upload_store import ResearchUploadStoreUnavailable
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     HealthSourceReference,
@@ -35,13 +32,15 @@ from clara_api.db.models import (
     LifeMapEventRevision,
     LifeMapQuestionDefinition,
     LifeMapQuestionInteraction,
+    MedicationCourse,
+    MedicationCourseChange,
 )
 from clara_api.db.session import get_db
 from clara_api.lifemap.capture_artifacts import (
     ArtifactSecurityError,
-    ClamAvScanner,
     EncryptedCaptureArtifactStore,
     MalwareScannerUnavailable,
+    build_capture_artifact_store,
 )
 from clara_api.lifemap.capture_domain import (
     CAPTURE_SCHEMA_VERSION,
@@ -60,6 +59,11 @@ ARTIFACT_ACCESS_SECONDS = 300
 
 class TextCaptureRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20_000)
+    locale: str = Field(default="vi", min_length=2, max_length=16)
+
+
+class ArtifactCaptureRequest(BaseModel):
+    input_kind: str
     locale: str = Field(default="vi", min_length=2, max_length=16)
 
 
@@ -154,44 +158,41 @@ def _guided_scope_objects(
     return episode, question
 
 
-def _serialize_candidate(row: LifeMapCaptureCandidate) -> dict:
+def _serialize_candidate(
+    row: LifeMapCaptureCandidate, *, artifact_public_id: str | None = None
+) -> dict:
     return {
         "id": row.public_id,
         "type": row.candidate_type,
         "field_path": row.field_path,
         "value": row.value_json,
         "confidence": row.confidence,
+        "field_confidence": row.field_confidence_json,
         "source_span": row.source_span_json,
         "missing_critical_fields": row.missing_critical_fields_json,
         "security_findings": row.security_findings_json,
         "schema_version": row.extraction_schema_version,
         "status": row.status,
+        "artifact_id": artifact_public_id,
+    }
+
+
+def _serialize_artifact_access(row: LifeMapCaptureArtifact) -> dict:
+    expires_at = int(time.time()) + ARTIFACT_ACCESS_SECONDS
+    metadata = row.metadata_json if isinstance(row.metadata_json, dict) else {}
+    return {
+        "id": row.public_id,
+        "media_type": row.media_type,
+        "filename": str(metadata.get("filename") or "artifact"),
+        "checksum": row.checksum,
+        "access_expires_at": datetime.fromtimestamp(expires_at, tz=UTC),
+        "access_token": _artifact_token(row.public_id, row.profile_id, expires_at),
     }
 
 
 def _artifact_store() -> EncryptedCaptureArtifactStore:
-    settings = get_settings()
-    if (
-        not settings.lifemap_capture_object_store_url.strip()
-        or not settings.lifemap_capture_encryption_key.strip()
-        or not settings.lifemap_capture_clamav_host.strip()
-    ):
-        raise HTTPException(
-            status_code=503, detail={"code": "capture_artifact_store_unavailable"}
-        )
     try:
-        client = build_object_store_client(
-            settings.lifemap_capture_object_store_url
-        )
-        return EncryptedCaptureArtifactStore(
-            client,
-            encryption_key=settings.lifemap_capture_encryption_key,
-            scanner=ClamAvScanner(
-                settings.lifemap_capture_clamav_host,
-                settings.lifemap_capture_clamav_port,
-            ),
-            max_bytes=settings.lifemap_capture_max_artifact_bytes,
-        )
+        return build_capture_artifact_store()
     except (ArtifactSecurityError, ResearchUploadStoreUnavailable) as error:
         raise HTTPException(
             status_code=503, detail={"code": "capture_artifact_store_unavailable"}
@@ -375,6 +376,53 @@ def start_guided_answer_capture(
     }
 
 
+@router.post("/artifact-sessions", status_code=201)
+def start_artifact_capture(
+    payload: ArtifactCaptureRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Start an upload session whose extraction remains draft-only."""
+
+    _require_enabled()
+    if payload.input_kind not in {"medication_label", "visit_document"}:
+        raise HTTPException(
+            status_code=422, detail={"code": "capture_input_kind_unsupported"}
+        )
+    scope = _scope(db, token, x_profile, action="create")
+    ensure_medical_disclaimer_consent(db, user_id=scope.actor.id)
+    now = datetime.now(UTC)
+    session = LifeMapCaptureSession(
+        profile_id=scope.profile.id,
+        created_by_user_id=scope.actor.id,
+        input_kind=payload.input_kind,
+        schema_version=CAPTURE_SCHEMA_VERSION,
+        locale=payload.locale,
+        expires_at=now + SESSION_LIFETIME,
+    )
+    db.add(session)
+    db.flush()
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="create",
+        entity="capture_session",
+        entity_id=session.public_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{scope.purpose}",
+    )
+    db.commit()
+    return {
+        "id": session.public_id,
+        "status": session.status,
+        "expires_at": session.expires_at,
+        "candidates": [],
+        "emergency": False,
+        "persisted": True,
+    }
+
+
 @router.get("/sessions/{session_id}")
 def get_capture_session(
     session_id: str,
@@ -392,6 +440,18 @@ def get_capture_session(
             .order_by(LifeMapCaptureCandidate.id)
         ).scalars()
     )
+    artifacts = list(
+        db.execute(
+            select(LifeMapCaptureArtifact)
+            .where(
+                LifeMapCaptureArtifact.session_id == session.id,
+                LifeMapCaptureArtifact.deleted_at.is_(None),
+                LifeMapCaptureArtifact.malware_status == "clean",
+            )
+            .order_by(LifeMapCaptureArtifact.id)
+        ).scalars()
+    )
+    artifact_ids = {row.id: row.public_id for row in artifacts}
     write_audit(
         db,
         profile_id=scope.profile.id,
@@ -406,7 +466,16 @@ def get_capture_session(
         "id": session.public_id,
         "status": session.status,
         "expires_at": session.expires_at,
-        "candidates": [_serialize_candidate(row) for row in candidates],
+        "candidates": [
+            _serialize_candidate(
+                row,
+                artifact_public_id=artifact_ids.get(row.artifact_id)
+                if row.artifact_id is not None
+                else None,
+            )
+            for row in candidates
+        ],
+        "artifacts": [_serialize_artifact_access(row) for row in artifacts],
     }
 
 
@@ -482,6 +551,21 @@ async def upload_capture_artifact(
             data=data,
             declared_type=artifact.content_type or "application/octet-stream",
         )
+        allowed_for_kind = {
+            "medication_label": {"image/jpeg", "image/png"},
+            "visit_document": {
+                "application/pdf",
+                "image/jpeg",
+                "image/png",
+                "text/plain",
+            },
+        }
+        if (
+            session.input_kind not in allowed_for_kind
+            or stored.media_type not in allowed_for_kind[session.input_kind]
+        ):
+            store.delete(storage_key=stored.storage_key)
+            raise ArtifactSecurityError("Artifact type is invalid for capture kind")
     except ArtifactSecurityError as error:
         raise HTTPException(
             status_code=422, detail={"code": "artifact_security_rejected"}
@@ -611,11 +695,28 @@ def get_capture_job(
             .order_by(LifeMapCaptureCandidate.id)
         ).scalars()
     )
+    artifact_public_id = db.execute(
+        select(LifeMapCaptureArtifact.public_id).where(
+            LifeMapCaptureArtifact.id == job.artifact_id
+        )
+    ).scalar_one()
     return {
         "id": job.public_id,
         "status": job.status,
-        "error_code": job.error_code if job.status == "failed" else "",
-        "candidates": [_serialize_candidate(item) for item in candidates],
+        "error_code": (
+            job.error_code if job.status in {"failed", "escalated"} else ""
+        ),
+        "emergency": job.status == "escalated",
+        "message": (
+            "Nếu bạn đang gặp nguy hiểm ngay lập tức, hãy gọi cấp cứu địa phương "
+            "hoặc đến cơ sở cấp cứu gần nhất."
+            if job.status == "escalated"
+            else ""
+        ),
+        "candidates": [
+            _serialize_candidate(item, artifact_public_id=artifact_public_id)
+            for item in candidates
+        ],
     }
 
 
@@ -711,6 +812,14 @@ def review_candidate(
             status_code=409,
             detail={"code": "critical_fields_missing", "fields": validation.missing_critical},
         )
+    if payload.action == "confirm" and candidate.security_findings_json:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "capture_security_review_required",
+                "findings": candidate.security_findings_json,
+            },
+        )
 
     candidate.value_json = value
     candidate.missing_critical_fields_json = list(validation.missing_critical)
@@ -728,7 +837,11 @@ def review_candidate(
             reason_code=payload.reason,
         )
     )
-    response: dict = {"id": candidate.public_id, "status": candidate.status}
+    response: dict = {
+        "id": candidate.public_id,
+        "status": candidate.status,
+        "candidate": _serialize_candidate(candidate),
+    }
     event: LifeMapEvent | None = None
     if payload.action == "confirm":
         canonical = json.dumps(value, sort_keys=True, separators=(",", ":"))
@@ -757,7 +870,7 @@ def review_candidate(
         event = LifeMapEvent(
             profile_id=scope.profile.id,
             episode_id=episode.id if episode else None,
-            event_type=question.field_key if question else "captured_text",
+            event_type=question.field_key if question else candidate.candidate_type,
             truth_state="confirmed",
             occurred_at=datetime.now(UTC),
             payload_json=value,
@@ -805,6 +918,44 @@ def review_candidate(
                 )
             )
         response["event_id"] = event.public_id
+        if candidate.candidate_type == "medication_label":
+            medication_name = str(value.get("medication_name", "")).strip()
+            course = MedicationCourse(
+                profile_id=scope.profile.id,
+                medication_name=medication_name,
+                original_text=medication_name,
+                dose_text=str(value.get("strength", "")).strip(),
+                route_text=str(value.get("route", "")).strip(),
+                reconciliation_status="unknown",
+                truth_state="confirmed",
+                provenance_json={
+                    "source": "capture_review",
+                    "capture_candidate_id": candidate.public_id,
+                    "event_revision_id": revision.public_id,
+                    "normalization": "unverified",
+                },
+                source_reference_id=source.id,
+                created_by_user_id=scope.actor.id,
+            )
+            db.add(course)
+            db.flush()
+            db.add(
+                MedicationCourseChange(
+                    course_id=course.id,
+                    profile_id=scope.profile.id,
+                    version_no=1,
+                    action="confirmed_create",
+                    snapshot_json={
+                        "medication_name": course.medication_name,
+                        "dose_text": course.dose_text,
+                        "route_text": course.route_text,
+                        "truth_state": course.truth_state,
+                    },
+                    reason_code="capture_explicit_user_confirmation",
+                    actor_user_id=scope.actor.id,
+                )
+            )
+            response["medication_course_id"] = course.public_id
         session.status = "completed"
         session.completed_at = datetime.now(UTC)
 

@@ -1,7 +1,10 @@
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from clara_api.core.config import get_settings
 from clara_api.core.security import create_access_token
+from clara_api.db.models import LifeMapCaptureCandidate, MedicationCourse
+from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
 client = TestClient(app)
@@ -239,6 +242,49 @@ def test_scan_and_import_detection() -> None:
     )
     assert import_response.status_code == 200
     assert import_response.json()["inserted"] >= 1
+
+
+def test_scan_and_import_converges_through_capture_draft(monkeypatch) -> None:
+    token = _login("scan-capture-convergence@example.com")
+    monkeypatch.setattr(get_settings(), "lifemap_capture_enabled", True)
+    scan_response = client.post(
+        "/api/v1/careguard/cabinet/scan-text",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"text": "Panadol 500mg"},
+    )
+    assert scan_response.status_code == 200, scan_response.text
+    payload = scan_response.json()
+    assert payload["capture_session_id"]
+    detection = payload["detections"][0]
+    assert detection["capture_candidate_id"]
+    assert detection["requires_manual_confirm"] is True
+    assert detection["confirmed"] is False
+
+    detection["confirmed"] = True
+    detection["requires_manual_confirm"] = False
+    imported = client.post(
+        "/api/v1/careguard/cabinet/import-detections",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"detections": [detection]},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["inserted"] == 1
+    with SessionLocal() as db:
+        candidate = db.execute(
+            select(LifeMapCaptureCandidate).where(
+                LifeMapCaptureCandidate.public_id
+                == detection["capture_candidate_id"]
+            )
+        ).scalar_one()
+        assert candidate.status == "confirmed"
+        assert candidate.value_json["route"] == "unknown"
+        course = db.execute(
+            select(MedicationCourse).where(
+                MedicationCourse.provenance_json["capture_candidate_id"].as_string()
+                == candidate.public_id
+            )
+        ).scalar_one()
+        assert course.truth_state == "confirmed"
 
 
 def test_scan_text_applies_ocr_post_correction() -> None:

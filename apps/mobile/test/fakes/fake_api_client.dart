@@ -613,6 +613,30 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> getLifeMapCaptureSession({
+    required String accessToken,
+    required String sessionId,
+  }) {
+    return _dispatch(
+      'getLifeMapCaptureSession',
+      {'sessionId': sessionId},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> abandonLifeMapCaptureSession({
+    required String accessToken,
+    required String sessionId,
+  }) {
+    return _dispatch(
+      'abandonLifeMapCaptureSession',
+      {'sessionId': sessionId},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> reviewLifeMapCaptureCandidate({
     required String accessToken,
     required String candidateId,

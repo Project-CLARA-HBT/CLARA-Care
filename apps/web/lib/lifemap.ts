@@ -184,11 +184,29 @@ export type CaptureCandidate = {
   field_path: string;
   value: Record<string, unknown>;
   confidence: number | null;
-  source_span: { start: number; end: number } | null;
+  field_confidence: Record<string, number>;
+  source_span:
+    | { start: number; end: number }
+    | {
+        kind: "text_fields";
+        fields: Record<string, { start: number; end: number }>;
+        text_checksum?: string;
+      }
+    | null;
   missing_critical_fields: string[];
   security_findings: string[];
   schema_version: string;
   status: string;
+  artifact_id?: string | null;
+};
+
+export type CaptureArtifact = {
+  id: string;
+  media_type: string;
+  filename: string;
+  checksum: string;
+  access_token: string;
+  access_expires_at: string;
 };
 
 export type CaptureSession = {
@@ -196,8 +214,9 @@ export type CaptureSession = {
   status?: string;
   expires_at?: string;
   candidates?: CaptureCandidate[];
-  emergency: boolean;
-  persisted: boolean;
+  artifacts?: CaptureArtifact[];
+  emergency?: boolean;
+  persisted?: boolean;
   message?: string;
 };
 
@@ -439,11 +458,93 @@ export async function startLifeMapTextCapture(
   ).data;
 }
 
+export async function startLifeMapArtifactCapture(
+  inputKind: "medication_label" | "visit_document",
+  locale = "vi",
+): Promise<CaptureSession> {
+  return (
+    await api.post<CaptureSession>("/lifemap/capture/artifact-sessions", {
+      input_kind: inputKind,
+      locale,
+    })
+  ).data;
+}
+
+export async function uploadLifeMapCaptureArtifact(
+  sessionId: string,
+  file: File,
+): Promise<{
+  id: string;
+  job: { id: string; status: string };
+}> {
+  const body = new FormData();
+  body.append("artifact", file);
+  return (
+    await api.post(
+      `/lifemap/capture/sessions/${encodeURIComponent(sessionId)}/artifacts`,
+      body,
+    )
+  ).data;
+}
+
+export async function getLifeMapCaptureSession(
+  sessionId: string,
+): Promise<CaptureSession> {
+  return (
+    await api.get<CaptureSession>(
+      `/lifemap/capture/sessions/${encodeURIComponent(sessionId)}`,
+    )
+  ).data;
+}
+
+export async function getLifeMapCaptureJob(jobId: string): Promise<{
+  id: string;
+  status: string;
+  error_code: string;
+  emergency: boolean;
+  message: string;
+  candidates: CaptureCandidate[];
+}> {
+  return (
+    await api.get(`/lifemap/capture/jobs/${encodeURIComponent(jobId)}`)
+  ).data;
+}
+
+export async function abandonLifeMapCaptureSession(
+  sessionId: string,
+): Promise<void> {
+  await api.post(
+    `/lifemap/capture/sessions/${encodeURIComponent(sessionId)}/abandon`,
+  );
+}
+
+export async function getLifeMapCaptureArtifact(
+  artifact: CaptureArtifact,
+): Promise<Blob> {
+  return (
+    await api.get(
+      `/lifemap/capture/artifacts/${encodeURIComponent(artifact.id)}/content`,
+      {
+        headers: {
+          "X-Capture-Artifact-Token": artifact.access_token,
+        },
+        responseType: "blob",
+      },
+    )
+  ).data;
+}
+
 export async function reviewLifeMapCaptureCandidate(
   candidateId: string,
   action: "edit" | "reject" | "confirm",
   input: { value?: Record<string, unknown>; reason?: string } = {},
-): Promise<{ id: string; status: string; event_id?: string }> {
+): Promise<{
+  id: string;
+  status: string;
+  event_id?: string;
+  medication_course_id?: string;
+  candidate: CaptureCandidate;
+}> {
   return (
     await api.post(
       `/lifemap/capture/candidates/${encodeURIComponent(candidateId)}/review`,

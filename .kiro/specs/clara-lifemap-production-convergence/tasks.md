@@ -140,13 +140,13 @@ safe; API processes host no production long-running LifeMap loops.
   persistence-dependent extraction. _R4, R18_
 - [x] 4.4 Define versioned typed extraction schemas for text, medication label,
   visit document, guided answer, and supported imported observation. _R4_
-- [ ] 4.5 Implement ML/OCR extraction as candidates with per-field confidence,
+- [x] 4.5 Implement ML/OCR extraction as candidates with per-field confidence,
   exact source spans, missing critical fields, and prompt-injection defenses.
   _R4, R16, R18_
 - [x] 4.6 Implement duplicate suggestions without ambiguous auto-merge. _R4_
-- [ ] 4.7 Build web capture review: edit/reject/confirm, source preview, low-
+- [x] 4.7 Build web capture review: edit/reject/confirm, source preview, low-
   confidence warnings, abandon/resume, accessible states. _R4, R19_
-- [ ] 4.8 Build equivalent Flutter review, using online-only mutations and stale/
+- [x] 4.8 Build equivalent Flutter review, using online-only mutations and stale/
   offline labels. _R4, R19_
 - [ ] 4.9 Evaluate field-level precision/recall, critical-field miss rate, wrong-
   medication rate, source-span validity, emergency latency, and confirmation
@@ -207,7 +207,7 @@ gates pass; outputs never imply clinical abnormality or diagnosis.
   source, and append-only course-change schema. _R9_
 - [x] 7.2 Migrate current medication courses, preserving original text and
   marking unresolved normalization as unknown. _R9, R21_
-- [ ] 7.3 Make OCR/import results Capture drafts and require critical-field
+- [x] 7.3 Make OCR/import results Capture drafts and require critical-field
   confirmation. _R4, R9_
 - [x] 7.4 Ensure DDI analysis uses current confirmed courses by default; label
   hypothetical inputs separately. _R9_

@@ -14,6 +14,8 @@
 // accepted tasks), and reuses the same loading/error/empty/409 handling as the
 // Today surface. All copy is Vietnamese-first and PII-free.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -128,6 +130,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   void initState() {
     super.initState();
     _load();
+    _resumeCapture();
   }
 
   @override
@@ -329,12 +332,32 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _captureSession = session;
         if (session['persisted'] == true) _captureController.clear();
       });
+      final sessionId = _str(session['id']);
+      if (sessionId.isNotEmpty && session['persisted'] == true) {
+        await widget.sessionStore.writeLifeMapCaptureSessionId(sessionId);
+      }
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
       _showSnack('Không thể tạo bản nháp. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _resumeCapture() async {
+    final token = _token;
+    if (token == null) return;
+    final sessionId = await widget.sessionStore.readLifeMapCaptureSessionId();
+    if (sessionId == null || sessionId.isEmpty) return;
+    try {
+      final session = await widget.apiClient.getLifeMapCaptureSession(
+        accessToken: token,
+        sessionId: sessionId,
+      );
+      if (mounted) setState(() => _captureSession = session);
+    } catch (_) {
+      await widget.sessionStore.clearLifeMapCaptureSessionId();
     }
   }
 
@@ -415,40 +438,137 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     }
   }
 
-  Future<void> _confirmCapture(String candidateId) async {
+  Future<Map<String, dynamic>?> _editCaptureValue(
+    Map<String, dynamic> value,
+  ) async {
+    final controllers = <String, TextEditingController>{
+      for (final entry in value.entries)
+        entry.key: TextEditingController(
+          text: entry.value is Map || entry.value is List
+              ? jsonEncode(entry.value)
+              : _str(entry.value),
+        ),
+    };
+    try {
+      return await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Chỉnh sửa bản nháp'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: controllers.entries
+                  .map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: ClaraTokens.spaceMd,
+                      ),
+                      child: TextField(
+                        controller: entry.value,
+                        decoration: InputDecoration(
+                          labelText: entry.key.replaceAll('_', ' '),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(
+                <String, dynamic>{
+                  for (final entry in controllers.entries)
+                    entry.key: entry.value.text.trim(),
+                },
+              ),
+              child: const Text('Lưu chỉnh sửa'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      for (final controller in controllers.values) {
+        controller.dispose();
+      }
+    }
+  }
+
+  Future<void> _reviewCapture(
+    Map<String, dynamic> candidate,
+    String action,
+  ) async {
     final token = _token;
     if (token == null || _capturing) return;
+    var value = candidate['value'];
+    if (value is! Map) value = <String, dynamic>{};
+    Map<String, dynamic>? reviewedValue = value.cast<String, dynamic>();
+    if (action == 'edit') {
+      reviewedValue = await _editCaptureValue(reviewedValue);
+      if (reviewedValue == null) return;
+    }
     setState(() => _capturing = true);
     try {
-      await widget.apiClient.reviewLifeMapCaptureCandidate(
+      final result = await widget.apiClient.reviewLifeMapCaptureCandidate(
         accessToken: token,
-        candidateId: candidateId,
-        action: 'confirm',
-        reason: 'Người dùng đã kiểm tra bản ghi',
+        candidateId: _str(candidate['id']),
+        action: action,
+        value: reviewedValue,
+        reason: action == 'edit'
+            ? 'Người dùng chỉnh sửa trường trích xuất'
+            : action == 'reject'
+                ? 'Người dùng từ chối bản nháp'
+                : 'Người dùng đã kiểm tra bản ghi',
       );
       if (!mounted) return;
       setState(() {
         final session = Map<String, dynamic>.from(_captureSession ?? const {});
         final candidates = session['candidates'];
         if (candidates is List) {
-          session['candidates'] = candidates.map((candidate) {
-            if (candidate is Map && _str(candidate['id']) == candidateId) {
-              return <String, dynamic>{
-                ...candidate.cast<String, dynamic>(),
-                'status': 'confirmed',
-              };
+          session['candidates'] = candidates.map((item) {
+            if (item is Map && _str(item['id']) == _str(candidate['id'])) {
+              final updated = result['candidate'];
+              return updated is Map ? updated.cast<String, dynamic>() : item;
             }
-            return candidate;
+            return item;
           }).toList();
         }
-        session['status'] = 'completed';
+        if (action == 'confirm') session['status'] = 'completed';
         _captureSession = session;
       });
-      await _load();
+      if (action == 'confirm') {
+        await widget.sessionStore.clearLifeMapCaptureSessionId();
+        await _load();
+      }
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
       _showSnack('Không thể xác nhận bản ghi. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _abandonCapture() async {
+    final token = _token;
+    final sessionId = _str(_captureSession?['id']);
+    if (token == null || sessionId.isEmpty || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      await widget.apiClient.abandonLifeMapCaptureSession(
+        accessToken: token,
+        sessionId: sessionId,
+      );
+      await widget.sessionStore.clearLifeMapCaptureSessionId();
+      if (mounted) setState(() => _captureSession = null);
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Cần kết nối mạng để hủy bản nháp.');
     } finally {
       if (mounted) setState(() => _capturing = false);
     }
@@ -1098,35 +1218,134 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       final candidate = rawCandidates.first;
       if (candidate is Map) {
         final value = candidate['value'];
-        final text = value is Map ? _str(value['text']) : '';
+        final fields = value is Map
+            ? value.entries.toList()
+            : const <MapEntry<dynamic, dynamic>>[];
         final status = _str(candidate['status']);
+        final rawMissing = candidate['missing_critical_fields'];
+        final missing = rawMissing is List
+            ? rawMissing.map(_str).where((v) => v.isNotEmpty).toList()
+            : <String>[];
+        final rawFindings = candidate['security_findings'];
+        final findings = rawFindings is List
+            ? rawFindings.map(_str).where((v) => v.isNotEmpty).toList()
+            : <String>[];
+        final rawConfidence = candidate['field_confidence'];
+        final lowConfidence = rawConfidence is Map &&
+            rawConfidence.values.any(
+              (score) => score is num && score.toDouble() < 0.8,
+            );
         return ClaraCard.static_(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(text, style: theme.textTheme.bodyLarge),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  status == 'draft'
+                      ? 'Bản nháp chưa xác nhận'
+                      : status == 'rejected'
+                          ? 'Bản nháp đã bị từ chối'
+                          : 'Bản ghi đã xác nhận',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              const SizedBox(height: ClaraTokens.spaceSm),
+              ...fields.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXs),
+                  child: Text(
+                    '${entry.key.toString().replaceAll('_', ' ')}: '
+                    '${entry.value is Map || entry.value is List ? jsonEncode(entry.value) : _str(entry.value)}',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+              ),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Bản nháp do bạn kiểm tra; CLARA không tự xác nhận.',
+                'Chỉ xử lý khi có mạng. CLARA không tự xác nhận và dữ liệu '
+                'ngoại tuyến có thể đã cũ.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              if (status == 'draft') ...[
-                const SizedBox(height: ClaraTokens.spaceMd),
-                ClaraButton.primary(
-                  label: 'Tôi đã xem và xác nhận',
-                  icon: Icons.verified_outlined,
-                  loading: _capturing,
-                  onPressed: () => _confirmCapture(_str(candidate['id'])),
-                ),
-              ] else ...[
+              if (lowConfidence) ...[
                 const SizedBox(height: ClaraTokens.spaceSm),
                 Text(
-                  'Đã xác nhận',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
+                  'Một số trường có độ tin cậy thấp. Hãy đối chiếu nguồn.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+              ],
+              if (missing.isNotEmpty) ...[
+                const SizedBox(height: ClaraTokens.spaceSm),
+                Text(
+                  'Cần bổ sung: ${missing.join(', ')}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (findings.isNotEmpty) ...[
+                const SizedBox(height: ClaraTokens.spaceSm),
+                Text(
+                  'Nguồn có nội dung không an toàn; không thể xác nhận.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (status == 'draft') ...[
+                const SizedBox(height: ClaraTokens.spaceMd),
+                Wrap(
+                  spacing: ClaraTokens.spaceSm,
+                  runSpacing: ClaraTokens.spaceSm,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _capturing
+                          ? null
+                          : () => _reviewCapture(
+                                candidate.cast<String, dynamic>(),
+                                'edit',
+                              ),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Chỉnh sửa'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _capturing
+                          ? null
+                          : () => _reviewCapture(
+                                candidate.cast<String, dynamic>(),
+                                'reject',
+                              ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Từ chối'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _capturing ||
+                              missing.isNotEmpty ||
+                              findings.isNotEmpty
+                          ? null
+                          : () => _reviewCapture(
+                                candidate.cast<String, dynamic>(),
+                                'confirm',
+                              ),
+                      icon: const Icon(Icons.verified_outlined),
+                      label: const Text('Xác nhận'),
+                    ),
+                  ],
+                ),
+              ],
+              if (status != 'confirmed') ...[
+                const SizedBox(height: ClaraTokens.spaceSm),
+                TextButton.icon(
+                  onPressed: _capturing ? null : _abandonCapture,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Hủy và xóa bản nháp'),
                 ),
               ],
             ],

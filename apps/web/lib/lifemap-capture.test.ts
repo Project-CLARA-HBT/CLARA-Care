@@ -15,14 +15,19 @@ import {
   correctLifeMapEvent,
   disputeLifeMapEvent,
   getLifeMapCaptureCapability,
+  getLifeMapCaptureArtifact,
+  getLifeMapCaptureSession,
   getLifeMapDisputes,
   getLifeMapReplay,
   getLifeMapNextQuestion,
   reviewLifeMapCaptureCandidate,
   scanLifeMapReviewFindings,
   resolveLifeMapEvent,
+  abandonLifeMapCaptureSession,
+  startLifeMapArtifactCapture,
   startLifeMapGuidedAnswer,
   startLifeMapTextCapture,
+  uploadLifeMapCaptureArtifact,
 } from "@/lib/lifemap";
 
 describe("LifeMap Universal Capture client", () => {
@@ -43,6 +48,62 @@ describe("LifeMap Universal Capture client", () => {
       text: "đau ngực",
       locale: "vi",
     });
+  });
+
+  it("starts, uploads, resumes, previews, and abandons an artifact draft", async () => {
+    post
+      .mockResolvedValueOnce({
+        data: { id: "session/id", emergency: false, persisted: true },
+      })
+      .mockResolvedValueOnce({
+        data: { id: "artifact/id", job: { id: "job/id", status: "queued" } },
+      })
+      .mockResolvedValueOnce({ data: { id: "session/id", status: "abandoned" } });
+    get
+      .mockResolvedValueOnce({
+        data: { id: "session/id", status: "draft", candidates: [] },
+      })
+      .mockResolvedValueOnce({ data: new Blob(["source"]) });
+
+    const session = await startLifeMapArtifactCapture("medication_label");
+    const file = new File(["image"], "label.png", { type: "image/png" });
+    await uploadLifeMapCaptureArtifact(String(session.id), file);
+    await getLifeMapCaptureSession("session/id");
+    await getLifeMapCaptureArtifact({
+      id: "artifact/id",
+      media_type: "image/png",
+      filename: "label.png",
+      checksum: "checksum",
+      access_token: "short-lived",
+      access_expires_at: "2026-07-29T00:00:00Z",
+    });
+    await abandonLifeMapCaptureSession("session/id");
+
+    expect(post).toHaveBeenNthCalledWith(
+      1,
+      "/lifemap/capture/artifact-sessions",
+      { input_kind: "medication_label", locale: "vi" },
+    );
+    expect(post.mock.calls[1][0]).toBe(
+      "/lifemap/capture/sessions/session%2Fid/artifacts",
+    );
+    expect(post.mock.calls[1][1]).toBeInstanceOf(FormData);
+    expect(get).toHaveBeenNthCalledWith(
+      1,
+      "/lifemap/capture/sessions/session%2Fid",
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      2,
+      "/lifemap/capture/artifacts/artifact%2Fid/content",
+      {
+        headers: { "X-Capture-Artifact-Token": "short-lived" },
+        responseType: "blob",
+      },
+    );
+    expect(post).toHaveBeenNthCalledWith(
+      3,
+      "/lifemap/capture/sessions/session%2Fid/abandon",
+    );
   });
 
   it("asks only through the governed LifeMap endpoint", async () => {

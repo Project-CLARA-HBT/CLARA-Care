@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from clara_api.core.config import get_settings
 from clara_api.db.session import SessionLocal
+from clara_api.lifemap.capture_worker import drain_capture_jobs
 from clara_api.lifemap.outbox_metrics import get_lifemap_outbox_metrics
 from clara_api.lifemap.outbox_relay import drain_lifemap_outbox
 
@@ -79,6 +80,12 @@ def run_worker(stop: Event | None = None, *, health_port: int | None = None) -> 
                     lease_seconds=settings.lifemap_outbox_lease_seconds,
                     base_backoff_seconds=settings.lifemap_outbox_backoff_seconds,
                 )
+                if settings.lifemap_capture_enabled:
+                    drain_capture_jobs(
+                        db,
+                        worker_id=worker_id,
+                        batch_size=min(settings.lifemap_outbox_relay_batch_size, 20),
+                    )
             get_lifemap_outbox_metrics().record_cycle(
                 (perf_counter() - started) * 1000
             )

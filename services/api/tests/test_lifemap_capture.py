@@ -10,9 +10,11 @@ from sqlalchemy import func, select
 from clara_api.api.v1.endpoints import lifemap_capture as capture_endpoint
 from clara_api.core.config import get_settings
 from clara_api.db.models import (
+    LifeMapCaptureCandidate,
     LifeMapCaptureReviewAction,
     LifeMapCaptureSession,
     LifeMapEvent,
+    MedicationCourse,
 )
 from clara_api.db.session import SessionLocal
 from clara_api.lifemap.capture_artifacts import StoredCaptureArtifact
@@ -199,9 +201,9 @@ def test_capture_artifact_access_is_short_lived_scoped_and_deleted_on_abandon(
     store = ArtifactStore()
     monkeypatch.setattr(capture_endpoint, "_artifact_store", lambda: store)
     session = client.post(
-        "/api/v1/lifemap/capture/sessions",
+        "/api/v1/lifemap/capture/artifact-sessions",
         headers=owner,
-        json={"text": "Tài liệu cần xem lại", "locale": "vi"},
+        json={"input_kind": "visit_document", "locale": "vi"},
     ).json()
     uploaded = client.post(
         f"/api/v1/lifemap/capture/sessions/{session['id']}/artifacts",
@@ -248,3 +250,80 @@ def test_capture_artifact_access_is_short_lived_scoped_and_deleted_on_abandon(
     assert abandoned.status_code == 200
     assert abandoned.json()["status"] == "abandoned"
     assert store.objects == {}
+
+
+def test_medication_capture_requires_critical_review_then_creates_confirmed_course(
+    monkeypatch,
+) -> None:
+    owner, _profile_id = _account("medication-review")
+    monkeypatch.setattr(get_settings(), "lifemap_capture_enabled", True)
+    created = client.post(
+        "/api/v1/lifemap/capture/artifact-sessions",
+        headers=owner,
+        json={"input_kind": "medication_label", "locale": "vi"},
+    )
+    assert created.status_code == 201, created.text
+    session_id = created.json()["id"]
+    with SessionLocal() as db:
+        session = db.execute(
+            select(LifeMapCaptureSession).where(
+                LifeMapCaptureSession.public_id == session_id
+            )
+        ).scalar_one()
+        candidate = LifeMapCaptureCandidate(
+            session_id=session.id,
+            profile_id=session.profile_id,
+            candidate_type="medication_label",
+            field_path="medication_label",
+            value_json={"medication_name": "Paracetamol"},
+            confidence=0.62,
+            field_confidence_json={"medication_name": 0.62},
+            source_span_json={
+                "kind": "text_fields",
+                "fields": {"medication_name": {"start": 0, "end": 11}},
+            },
+            missing_critical_fields_json=["strength", "route"],
+            extraction_schema_version="lifemap.capture.v1",
+            extractor_version="grounded-ocr-baseline-v1",
+        )
+        db.add(candidate)
+        db.commit()
+        candidate_id = candidate.public_id
+
+    blocked = client.post(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/review",
+        headers={**owner, "Idempotency-Key": f"missing-{uuid4().hex}"},
+        json={"action": "confirm"},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"]["code"] == "critical_fields_missing"
+
+    edited_value = {
+        "medication_name": "Paracetamol",
+        "strength": "500 mg",
+        "route": "oral",
+    }
+    edited = client.post(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/review",
+        headers={**owner, "Idempotency-Key": f"edit-{uuid4().hex}"},
+        json={"action": "edit", "value": edited_value},
+    )
+    assert edited.status_code == 200, edited.text
+    confirmed = client.post(
+        f"/api/v1/lifemap/capture/candidates/{candidate_id}/review",
+        headers={**owner, "Idempotency-Key": f"confirm-{uuid4().hex}"},
+        json={"action": "confirm"},
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["medication_course_id"]
+    with SessionLocal() as db:
+        course = db.execute(
+            select(MedicationCourse).where(
+                MedicationCourse.public_id
+                == confirmed.json()["medication_course_id"]
+            )
+        ).scalar_one()
+        assert course.medication_name == "Paracetamol"
+        assert course.dose_text == "500 mg"
+        assert course.route_text == "oral"
+        assert course.truth_state == "confirmed"

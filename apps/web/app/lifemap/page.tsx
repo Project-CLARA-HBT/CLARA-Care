@@ -9,6 +9,7 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import {
   acceptLifeMapTask,
+  abandonLifeMapCaptureSession,
   actOnLifeMapReviewFinding,
   askLifeMap,
   correctLifeMapEvent,
@@ -16,6 +17,9 @@ import {
   createLifeMapEpisode,
   createLifeMapTask,
   getLifeMapBaselines,
+  getLifeMapCaptureArtifact,
+  getLifeMapCaptureJob,
+  getLifeMapCaptureSession,
   getLifeMapDisputes,
   getLifeMapNextQuestion,
   getLifeMapReplay,
@@ -26,7 +30,11 @@ import {
   reviewLifeMapCaptureCandidate,
   resolveLifeMapEvent,
   startLifeMapTextCapture,
+  startLifeMapArtifactCapture,
   startLifeMapGuidedAnswer,
+  uploadLifeMapCaptureArtifact,
+  type CaptureArtifact,
+  type CaptureCandidate,
   type CaptureSession,
   type LifeMapBaseline,
   type LifeMapAskAnswer,
@@ -74,6 +82,15 @@ export default function LifeMapPage() {
   const [nextQuestion, setNextQuestion] = useState<LifeMapQuestion | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
   const [captureText, setCaptureText] = useState("");
+  const [captureKind, setCaptureKind] = useState<
+    "medication_label" | "visit_document"
+  >("medication_label");
+  const [captureFile, setCaptureFile] = useState<File | null>(null);
+  const [captureJobStatus, setCaptureJobStatus] = useState("");
+  const [capturePreview, setCapturePreview] = useState<{
+    artifact: CaptureArtifact;
+    url: string;
+  } | null>(null);
   const [captureSession, setCaptureSession] = useState<CaptureSession | null>(null);
   const [replay, setReplay] = useState<LifeMapReplay | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
@@ -127,6 +144,31 @@ export default function LifeMapPage() {
       });
   }, [load]);
 
+  useEffect(() => {
+    if (!captureEnabled) return;
+    const sessionId = window.localStorage.getItem("clara.lifemap.capture.session");
+    if (!sessionId) return;
+    void getLifeMapCaptureSession(sessionId)
+      .then(setCaptureSession)
+      .catch(() => {
+        window.localStorage.removeItem("clara.lifemap.capture.session");
+      });
+  }, [captureEnabled]);
+
+  useEffect(
+    () => () => {
+      if (capturePreview) URL.revokeObjectURL(capturePreview.url);
+    },
+    [capturePreview],
+  );
+
+  const rememberCapture = (session: CaptureSession) => {
+    setCaptureSession(session);
+    if (session.id) {
+      window.localStorage.setItem("clara.lifemap.capture.session", session.id);
+    }
+  };
+
   const startCapture = async (event: FormEvent) => {
     event.preventDefault();
     if (!captureText.trim()) return;
@@ -134,7 +176,7 @@ export default function LifeMapPage() {
     setError("");
     try {
       const session = await startLifeMapTextCapture(captureText.trim());
-      setCaptureSession(session);
+      rememberCapture(session);
       if (session.persisted) setCaptureText("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi nhận.");
@@ -143,29 +185,136 @@ export default function LifeMapPage() {
     }
   };
 
-  const confirmCapture = async (candidateId: string) => {
+  const startArtifactCapture = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!captureFile) return;
+    setSaving(true);
+    setError("");
+    setCaptureJobStatus("Đang tải tệp an toàn…");
+    try {
+      const session = await startLifeMapArtifactCapture(captureKind);
+      if (!session.id) throw new Error("Phiên ghi nhận không hợp lệ.");
+      rememberCapture(session);
+      const uploaded = await uploadLifeMapCaptureArtifact(session.id, captureFile);
+      setCaptureJobStatus("Đang đọc nội dung. Chưa có dữ liệu nào được xác nhận.");
+      for (let attempt = 0; attempt < 45; attempt += 1) {
+        const job = await getLifeMapCaptureJob(uploaded.job.id);
+        if (job.status === "completed") {
+          rememberCapture(await getLifeMapCaptureSession(session.id));
+          setCaptureJobStatus("");
+          setCaptureFile(null);
+          return;
+        }
+        if (job.status === "escalated" || job.emergency) {
+          rememberCapture({
+            ...session,
+            emergency: true,
+            persisted: true,
+            message: job.message,
+          });
+          setCaptureJobStatus("");
+          return;
+        }
+        if (job.status === "failed") {
+          throw new Error("Không thể đọc tệp an toàn. Bản gốc vẫn chưa được xác nhận.");
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      }
+      setCaptureJobStatus(
+        "Tác vụ vẫn đang xử lý. Bạn có thể quay lại để tiếp tục xem xét.",
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể xử lý tệp.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateCaptureValue = (
+    candidateId: string,
+    field: string,
+    value: string,
+  ) => {
+    setCaptureSession((current) =>
+      current
+        ? {
+            ...current,
+            candidates: current.candidates?.map((candidate) =>
+              candidate.id === candidateId
+                ? {
+                    ...candidate,
+                    value: { ...candidate.value, [field]: value },
+                  }
+                : candidate,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const reviewCapture = async (
+    candidate: CaptureCandidate,
+    action: "edit" | "reject" | "confirm",
+  ) => {
     setSaving(true);
     setError("");
     try {
-      await reviewLifeMapCaptureCandidate(candidateId, "confirm", {
-        reason: "Người dùng đã kiểm tra bản ghi",
+      const result = await reviewLifeMapCaptureCandidate(candidate.id, action, {
+        value: candidate.value,
+        reason:
+          action === "edit"
+            ? "Người dùng chỉnh sửa trường trích xuất"
+            : action === "reject"
+              ? "Người dùng từ chối bản nháp"
+              : "Người dùng đã kiểm tra bản ghi",
       });
       setCaptureSession((current) =>
         current
           ? {
               ...current,
-              status: "completed",
-              candidates: current.candidates?.map((candidate) =>
-                candidate.id === candidateId
-                  ? { ...candidate, status: "confirmed" }
-                  : candidate,
+              status: action === "confirm" ? "completed" : current.status,
+              candidates: current.candidates?.map((item) =>
+                item.id === candidate.id
+                  ? { ...item, ...result.candidate }
+                  : item,
               ),
             }
           : current,
       );
-      await load();
+      if (action === "confirm") {
+        window.localStorage.removeItem("clara.lifemap.capture.session");
+        await load();
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xác nhận bản ghi.");
+      setError(cause instanceof Error ? cause.message : "Không thể lưu xem xét.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const abandonCapture = async () => {
+    if (!captureSession?.id) return;
+    setSaving(true);
+    try {
+      await abandonLifeMapCaptureSession(captureSession.id);
+      window.localStorage.removeItem("clara.lifemap.capture.session");
+      setCaptureSession(null);
+      setCaptureJobStatus("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể hủy bản nháp.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const previewCaptureArtifact = async (artifact: CaptureArtifact) => {
+    setSaving(true);
+    try {
+      const blob = await getLifeMapCaptureArtifact(artifact);
+      if (capturePreview) URL.revokeObjectURL(capturePreview.url);
+      setCapturePreview({ artifact, url: URL.createObjectURL(blob) });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể mở nguồn.");
     } finally {
       setSaving(false);
     }
@@ -257,7 +406,7 @@ export default function LifeMapPage() {
         nextQuestion.question_id,
         { value: questionAnswer.trim() },
       );
-      setCaptureSession(session);
+      rememberCapture(session);
       setNextQuestion(null);
       setQuestionAnswer("");
     } catch (cause) {
@@ -961,56 +1110,264 @@ export default function LifeMapPage() {
                   role="alert"
                 >
                   {captureSession.message}
+                  {captureSession.id ? (
+                    <Button
+                      className="mt-3"
+                      size="sm"
+                      variant="secondary"
+                      icon="delete"
+                      onClick={() => void abandonCapture()}
+                    >
+                      Xóa tệp đã tải lên
+                    </Button>
+                  ) : null}
                 </div>
               ) : captureSession?.candidates?.length ? (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 space-y-4" aria-live="polite">
+                  {captureSession.artifacts?.length ? (
+                    <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                        Nguồn gốc
+                      </p>
+                      {captureSession.artifacts.map((artifact) => (
+                        <Button
+                          key={artifact.id}
+                          className="mt-2"
+                          size="sm"
+                          variant="secondary"
+                          icon="visibility"
+                          onClick={() => void previewCaptureArtifact(artifact)}
+                        >
+                          Xem {artifact.filename}
+                        </Button>
+                      ))}
+                      {capturePreview ? (
+                        capturePreview.artifact.media_type.startsWith("image/") ? (
+                          // The URL is a short-lived authenticated blob URL,
+                          // never the object-store location.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className="mt-3 max-h-64 w-full rounded-lg object-contain"
+                            src={capturePreview.url}
+                            alt={`Nguồn ${capturePreview.artifact.filename}`}
+                          />
+                        ) : (
+                          <a
+                            className="focus-ring mt-3 inline-block rounded-lg text-sm font-semibold text-[var(--text-brand)] underline"
+                            href={capturePreview.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Mở bản nguồn trong thẻ mới
+                          </a>
+                        )
+                      ) : null}
+                    </div>
+                  ) : null}
                   {captureSession.candidates.map((candidate) => (
                     <div
                       key={candidate.id}
                       className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"
                     >
-                      <p className="text-sm text-[var(--text-primary)]">
-                        {String(candidate.value.text ?? "")}
-                      </p>
-                      {candidate.missing_critical_fields.length ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                          Bản nháp cần xem lại
+                        </p>
+                        <Badge tone={candidate.status === "confirmed" ? "ok" : "neutral"}>
+                          {candidate.status === "confirmed"
+                            ? "Đã xác nhận"
+                            : candidate.status === "rejected"
+                              ? "Đã từ chối"
+                              : "Chưa xác nhận"}
+                        </Badge>
+                      </div>
+                      {candidate.status === "draft" ? (
+                        <div className="mt-3 space-y-3">
+                          {Object.entries(candidate.value).map(([field, rawValue]) => (
+                            <Field
+                              key={field}
+                              label={field.replaceAll("_", " ")}
+                              value={
+                                typeof rawValue === "object"
+                                  ? JSON.stringify(rawValue)
+                                  : String(rawValue ?? "")
+                              }
+                              onChange={(event) =>
+                                updateCaptureValue(
+                                  candidate.id,
+                                  field,
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <dl className="mt-3 space-y-1 text-sm">
+                          {Object.entries(candidate.value).map(([field, rawValue]) => (
+                            <div key={field} className="flex gap-2">
+                              <dt className="font-medium text-[var(--text-secondary)]">
+                                {field.replaceAll("_", " ")}:
+                              </dt>
+                              <dd className="text-[var(--text-primary)]">
+                                {typeof rawValue === "object"
+                                  ? JSON.stringify(rawValue)
+                                  : String(rawValue ?? "")}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                      {Object.values(candidate.field_confidence ?? {}).some(
+                        (score) => score < 0.8,
+                      ) ? (
                         <p className="mt-2 text-xs text-[var(--status-warn-text)]">
+                          Một số trường có độ tin cậy thấp. Hãy đối chiếu với nguồn.
+                        </p>
+                      ) : null}
+                      {candidate.missing_critical_fields.length ? (
+                        <p
+                          className="mt-2 text-xs font-medium text-[var(--status-warn-text)]"
+                          role="alert"
+                        >
                           Cần bổ sung: {candidate.missing_critical_fields.join(", ")}
                         </p>
                       ) : null}
+                      {candidate.security_findings.length ? (
+                        <p className="mt-2 text-xs font-medium text-[var(--status-danger-text)]" role="alert">
+                          Nguồn có nội dung không an toàn; chỉ có thể từ chối bản nháp này.
+                        </p>
+                      ) : null}
                       {candidate.status === "draft" ? (
-                        <Button
-                          className="mt-3"
-                          size="sm"
-                          icon="verified"
-                          loading={saving}
-                          onClick={() => void confirmCapture(candidate.id)}
-                        >
-                          Tôi đã xem và xác nhận
-                        </Button>
-                      ) : (
-                        <Badge tone="ok">Đã xác nhận</Badge>
-                      )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            icon="save"
+                            loading={saving}
+                            onClick={() => void reviewCapture(candidate, "edit")}
+                          >
+                            Lưu chỉnh sửa
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            icon="delete"
+                            loading={saving}
+                            onClick={() => void reviewCapture(candidate, "reject")}
+                          >
+                            Từ chối
+                          </Button>
+                          <Button
+                            size="sm"
+                            icon="verified"
+                            loading={saving}
+                            disabled={
+                              candidate.missing_critical_fields.length > 0 ||
+                              candidate.security_findings.length > 0
+                            }
+                            onClick={() => void reviewCapture(candidate, "confirm")}
+                          >
+                            Xác nhận sau khi đối chiếu
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
+                  {captureSession.status !== "completed" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon="close"
+                      onClick={() => void abandonCapture()}
+                    >
+                      Hủy và xóa bản nháp
+                    </Button>
+                  ) : null}
+                </div>
+              ) : captureSession?.id ? (
+                <div className="mt-4 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4" role="status">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {captureJobStatus || "Bản nháp đã lưu. Đang chờ kết quả đọc tệp."}
+                  </p>
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    variant="ghost"
+                    icon="close"
+                    onClick={() => void abandonCapture()}
+                  >
+                    Hủy bản nháp
+                  </Button>
                 </div>
               ) : (
-                <form className="mt-4 space-y-3" onSubmit={(event) => void startCapture(event)}>
-                  <Textarea
-                    label="Điều bạn muốn ghi lại"
-                    value={captureText}
-                    onChange={(event) => setCaptureText(event.target.value)}
-                    placeholder="Ví dụ: Tối qua tôi ngủ khoảng 7 giờ"
-                  />
-                  <Button
-                    type="submit"
-                    block
-                    loading={saving}
-                    loadingLabel="Đang tạo bản nháp…"
-                    icon="add_notes"
+                <div className="mt-4 space-y-5">
+                  <form className="space-y-3" onSubmit={(event) => void startCapture(event)}>
+                    <Textarea
+                      label="Điều bạn muốn ghi lại"
+                      value={captureText}
+                      onChange={(event) => setCaptureText(event.target.value)}
+                      placeholder="Ví dụ: Tối qua tôi ngủ khoảng 7 giờ"
+                    />
+                    <Button
+                      type="submit"
+                      block
+                      loading={saving}
+                      loadingLabel="Đang tạo bản nháp…"
+                      icon="add_notes"
+                    >
+                      Tạo bản nháp văn bản
+                    </Button>
+                  </form>
+                  <form
+                    className="space-y-3 border-t border-[color:var(--shell-border)] pt-4"
+                    onSubmit={(event) => void startArtifactCapture(event)}
                   >
-                    Tạo bản nháp
-                  </Button>
-                </form>
+                    <Select
+                      label="Loại tài liệu"
+                      value={captureKind}
+                      onChange={(event) =>
+                        setCaptureKind(
+                          event.target.value as
+                            | "medication_label"
+                            | "visit_document",
+                        )
+                      }
+                    >
+                      <option value="medication_label">Nhãn thuốc</option>
+                      <option value="visit_document">Tài liệu sau khám</option>
+                    </Select>
+                    <label className="block text-sm font-medium text-[var(--text-primary)]">
+                      Tệp nguồn
+                      <input
+                        className="focus-ring mt-1 block w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-raised)] p-2 text-sm"
+                        type="file"
+                        accept={
+                          captureKind === "medication_label"
+                            ? "image/png,image/jpeg"
+                            : "image/png,image/jpeg,application/pdf,text/plain"
+                        }
+                        onChange={(event) =>
+                          setCaptureFile(event.target.files?.[0] ?? null)
+                        }
+                      />
+                    </label>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Cần kết nối mạng. CLARA chỉ tạo bản nháp và giữ nguồn để bạn
+                      đối chiếu.
+                    </p>
+                    <Button
+                      type="submit"
+                      block
+                      variant="secondary"
+                      loading={saving}
+                      disabled={!captureFile}
+                      icon="upload_file"
+                    >
+                      Tải lên và tạo bản nháp
+                    </Button>
+                  </form>
+                </div>
               )}
             </SurfaceCard>
           ) : null}

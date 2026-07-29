@@ -58,6 +58,8 @@ class PersistentSessionStore extends ChangeNotifier {
   // storage abstraction.
   static const String lifeMapReadCacheKey =
       'clara.lifemap.today.read_projection';
+  static const String lifeMapCaptureSessionKey =
+      'clara.lifemap.capture.active_session';
 
   final SessionSecureStorage _storage;
 
@@ -70,6 +72,15 @@ class PersistentSessionStore extends ChangeNotifier {
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   String? get role => _role;
+
+  Future<String?> readLifeMapCaptureSessionId() =>
+      _storage.read(lifeMapCaptureSessionKey);
+
+  Future<void> writeLifeMapCaptureSessionId(String sessionId) =>
+      _storage.write(lifeMapCaptureSessionKey, sessionId);
+
+  Future<void> clearLifeMapCaptureSessionId() =>
+      _storage.delete(lifeMapCaptureSessionKey);
 
   /// Whether an access token is currently held in memory.
   ///
@@ -151,6 +162,7 @@ class PersistentSessionStore extends ChangeNotifier {
     await _storage.delete(refreshTokenKey);
     await _storage.delete(roleKey);
     await _storage.delete(lifeMapReadCacheKey);
+    await _storage.delete(lifeMapCaptureSessionKey);
   }
 
   void _resetInMemory() {

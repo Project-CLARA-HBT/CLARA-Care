@@ -76,6 +76,7 @@ def complete_capture_job(
                 field_path=item.field_path,
                 value_json=item.value,
                 confidence=item.confidence,
+                field_confidence_json=item.field_confidence,
                 source_span_json=item.source_span,
                 missing_critical_fields_json=list(item.missing_critical_fields),
                 extraction_schema_version=item.extraction_schema_version,
@@ -120,3 +121,29 @@ def fail_capture_job(
     )
     db.commit()
     return job.status
+
+
+def escalate_capture_job(
+    db: Session,
+    *,
+    job_id: int,
+    worker_id: str,
+    now: datetime | None = None,
+) -> None:
+    """Terminate extraction when OCR text triggers the emergency fast-path."""
+
+    job = db.execute(
+        select(LifeMapCaptureJob).where(
+            LifeMapCaptureJob.id == job_id,
+            LifeMapCaptureJob.status == "processing",
+            LifeMapCaptureJob.lease_owner == worker_id,
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise ValueError("Capture job lease is not owned by this worker")
+    job.status = "escalated"
+    job.error_code = "emergency_content_detected"
+    job.completed_at = now or datetime.now(UTC)
+    job.lease_owner = None
+    job.lease_until = None
+    db.commit()

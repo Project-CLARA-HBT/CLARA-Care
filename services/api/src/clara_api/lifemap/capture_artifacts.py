@@ -12,7 +12,11 @@ from typing import Protocol
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from clara_api.core.research_upload_store import ObjectStoreClient
+from clara_api.core.config import get_settings
+from clara_api.core.research_upload_store import (
+    ObjectStoreClient,
+    build_object_store_client,
+)
 
 ALLOWED_MEDIA_TYPES = {
     "application/pdf",
@@ -144,3 +148,24 @@ class EncryptedCaptureArtifactStore:
 
     def delete(self, *, storage_key: str) -> None:
         self._client.delete_object(storage_key)
+
+
+def build_capture_artifact_store() -> EncryptedCaptureArtifactStore:
+    """Build the shared API/worker store without performing network I/O."""
+
+    settings = get_settings()
+    if (
+        not settings.lifemap_capture_object_store_url.strip()
+        or not settings.lifemap_capture_encryption_key.strip()
+        or not settings.lifemap_capture_clamav_host.strip()
+    ):
+        raise ArtifactSecurityError("Capture artifact store is not configured")
+    return EncryptedCaptureArtifactStore(
+        build_object_store_client(settings.lifemap_capture_object_store_url),
+        encryption_key=settings.lifemap_capture_encryption_key,
+        scanner=ClamAvScanner(
+            settings.lifemap_capture_clamav_host,
+            settings.lifemap_capture_clamav_port,
+        ),
+        max_bytes=settings.lifemap_capture_max_artifact_bytes,
+    )

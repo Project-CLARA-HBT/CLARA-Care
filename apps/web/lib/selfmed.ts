@@ -12,6 +12,7 @@ export type CabinetItem = {
   normalization_source?: "db" | "candidate" | "fallback" | null;
   normalization_confidence?: number | null;
   normalization_status?: NormalizationStatus | null;
+  capture_candidate_id?: string | null;
   needs_review?: boolean;
   dosage: string;
   dosage_form: string;
@@ -64,7 +65,10 @@ export type PrioritizedCabinetField = {
 export const LOW_CONFIDENCE_DETECTION_THRESHOLD = 0.9;
 
 export function isLowConfidenceDetection(detection: ScanDetection): boolean {
-  return detection.confidence < LOW_CONFIDENCE_DETECTION_THRESHOLD;
+  return (
+    detection.requires_manual_confirm === true ||
+    detection.confidence < LOW_CONFIDENCE_DETECTION_THRESHOLD
+  );
 }
 
 type ScanResponse = {
@@ -74,6 +78,7 @@ type ScanResponse = {
   ocr_endpoint?: string | null;
   prioritized_fields?: PrioritizedCabinetField[];
   confirm_gate?: OcrConfirmGate | null;
+  capture_session_id?: string | null;
 };
 
 export type AddCabinetItemPayload = {

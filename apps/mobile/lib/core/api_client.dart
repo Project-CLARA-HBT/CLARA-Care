@@ -1507,6 +1507,27 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> getLifeMapCaptureSession({
+    required String accessToken,
+    required String sessionId,
+  }) {
+    return _get(
+      '/api/v1/lifemap/capture/sessions/$sessionId',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> abandonLifeMapCaptureSession({
+    required String accessToken,
+    required String sessionId,
+  }) {
+    return _post(
+      '/api/v1/lifemap/capture/sessions/$sessionId/abandon',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
   /// Applies an explicit online review action to one capture candidate.
   Future<Map<String, dynamic>> reviewLifeMapCaptureCandidate({
     required String accessToken,

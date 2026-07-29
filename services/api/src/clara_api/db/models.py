@@ -1741,6 +1741,9 @@ class LifeMapCaptureCandidate(Base):
     field_path: Mapped[str] = mapped_column(String(160))
     value_json: Mapped[dict] = mapped_column(JSON)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    field_confidence_json: Mapped[dict] = mapped_column(
+        JSON, default=dict, server_default="{}"
+    )
     source_span_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     missing_critical_fields_json: Mapped[list[str]] = mapped_column(
         JSON, default=list, server_default="[]"

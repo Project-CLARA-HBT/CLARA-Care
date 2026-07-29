@@ -63,8 +63,18 @@ export default function SelfMedAddPage() {
   const [isAddingManual, setIsAddingManual] = useState(false);
 
   const selectedDetections = useMemo(
-    () => detections.filter((item, index) => selectedKeys[getDetectionKey(item, index)]),
-    [detections, selectedKeys]
+    () =>
+      detections.flatMap((item, index) => {
+        const key = getDetectionKey(item, index);
+        if (!selectedKeys[key]) return [];
+        return [
+          {
+            ...item,
+            confirmed: Boolean(confirmedLowConfidenceKeys[key]),
+          },
+        ];
+      }),
+    [confirmedLowConfidenceKeys, detections, selectedKeys]
   );
 
   const pendingLowConfidenceSelections = useMemo(() => {

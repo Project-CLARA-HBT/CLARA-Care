@@ -587,11 +587,28 @@ observations; job output remains draft with confidence, exact source span,
 missing-critical-field, extractor-version, and prompt-injection findings.
 Exact-checksum duplicates are suggestions only and never auto-merge.
 
-The initial web and Flutter review surfaces are server-capability-gated and
-preserve the explicit-confirmation boundary. Their focused lint/analyze and
-client tests pass. Phase 4.5 and the complete 4.7–4.9 gates remain open because
-production OCR/ML worker wiring, full artifact review UX, and field-level
-clinical evaluation evidence are not yet complete.
+Universal Capture now has a production worker path rather than only a durable
+queue. The standalone LifeMap worker claims capture leases, authenticates and
+decrypts the profile-partitioned artifact, verifies its checksum, runs the
+configured OCR bridge, and calls the internal ML extraction endpoint. The ML
+boundary emits draft-only medication-label and visit-document candidates with
+per-field confidence, exact OCR-text spans, schema/extractor versions, missing
+critical fields, and prompt-injection findings. The API independently
+revalidates the source-text checksum, field spans, value schema, confidence,
+and draft-only contract before persistence. Provider or validation failure
+retries through the existing bounded lease workflow and cannot create truth.
+
+Web now supports text and artifact capture, authenticated source preview,
+editable fields, low-confidence and critical-field warnings, reject/confirm,
+abandon, and local resume of the opaque session ID with accessible live states.
+Flutter supports the same explicit edit/reject/confirm boundary, secure
+session-ID resume, abandon, and clear online-only/stale copy; the existing
+Medicines OCR review continues to show its extracted source before import.
+Both clients remain capability-gated. Focused API/ML tests, web lint/client
+tests, Flutter analyze/client tests, and migration `20260729_0044` round-trip
+pass. Task 4.9 remains open because field-level clinical evaluation evidence
+and bilingual confirmation-burden thresholds require a governed frozen
+dataset and reviewer approval.
 
 The Phase 5 canonical Replay foundation is implemented behind the existing
 dark rollout controls. Migration `20260728_0034` adds append-only episode goal
@@ -658,9 +675,14 @@ completeness/expiry and directs clinical checks through DrugBank/FIDES.
 Focused evidence includes 10 API medication/migration/scope tests, 33 ML
 CareGuard/FIDES/medical-answer safety tests, five web medication client/copy
 tests, and sixteen Flutter wrapper/copy tests, plus clean focused lint, mypy,
-and Flutter analysis. Phase 7.3 remains open until all OCR/import writers create
-Universal Capture drafts with critical-field review. Phase 7.7 also remains open
-until legacy-route traffic and the approved redirect/rollback window permit
+and Flutter analysis. CareGuard text/file OCR now mirrors every detection into
+a profile-scoped Universal Capture draft. While Capture is enabled every OCR
+row starts unconfirmed, carries its opaque candidate ID through web/mobile
+review, and import fails closed unless the same owner explicitly confirms the
+matching candidate. Confirmation appends the Capture review action and creates
+a confirmed, provenance-linked medication course; unknown strength/route stay
+explicitly `unknown` instead of being fabricated. Phase 7.7 remains open until
+legacy-route traffic and the approved redirect/rollback window permit
 retirement.
 
 The Phase 8 Grounded Visit engineering path is now implemented behind

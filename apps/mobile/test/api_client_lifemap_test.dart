@@ -286,11 +286,19 @@ void main() {
         accessToken: token,
         text: 'Tôi ngủ 7 giờ',
       );
+      await client.getLifeMapCaptureSession(
+        accessToken: token,
+        sessionId: 'session-opaque',
+      );
       await client.reviewLifeMapCaptureCandidate(
         accessToken: token,
         candidateId: 'candidate-1',
         action: 'confirm',
         reason: 'reviewed',
+      );
+      await client.abandonLifeMapCaptureSession(
+        accessToken: token,
+        sessionId: 'session-opaque',
       );
 
       expect(requests[0].url.path, '/api/v1/lifemap/capture/sessions');
@@ -300,9 +308,17 @@ void main() {
       );
       expect(
         requests[1].url.path,
+        '/api/v1/lifemap/capture/sessions/session-opaque',
+      );
+      expect(
+        requests[2].url.path,
         '/api/v1/lifemap/capture/candidates/candidate-1/review',
       );
-      expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
+      expect(requests[2].headers['Idempotency-Key'], isNotEmpty);
+      expect(
+        requests[3].url.path,
+        '/api/v1/lifemap/capture/sessions/session-opaque/abandon',
+      );
     });
   });
 

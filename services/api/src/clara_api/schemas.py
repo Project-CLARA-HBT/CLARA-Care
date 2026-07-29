@@ -345,6 +345,7 @@ class CabinetScanDetection(BaseModel):
     ) = None
     requires_manual_confirm: bool = False
     confirmed: bool = False
+    capture_candidate_id: str | None = None
 
 
 class CabinetPrioritizedField(BaseModel):
@@ -376,6 +377,7 @@ class CabinetScanTextResponse(BaseModel):
     ocr_endpoint: str | None = None
     prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
     confirm_gate: OcrConfirmGate | None = None
+    capture_session_id: str | None = None
 
 
 class CabinetImportRequest(BaseModel):

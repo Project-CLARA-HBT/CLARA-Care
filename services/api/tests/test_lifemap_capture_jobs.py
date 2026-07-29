@@ -19,6 +19,7 @@ from clara_api.lifemap.capture_extraction import normalize_extraction
 from clara_api.lifemap.capture_jobs import (
     claim_capture_jobs,
     complete_capture_job,
+    escalate_capture_job,
     fail_capture_job,
 )
 
@@ -108,3 +109,14 @@ def test_capture_job_failure_retries_then_stops() -> None:
             )
             == "failed"
         )
+
+
+def test_capture_job_emergency_escalation_is_terminal() -> None:
+    with SessionLocal() as db:
+        job = _job(db)
+        assert claim_capture_jobs(db, worker_id="worker-a") == [job.id]
+        escalate_capture_job(db, job_id=job.id, worker_id="worker-a")
+        db.refresh(job)
+        assert job.status == "escalated"
+        assert job.error_code == "emergency_content_detected"
+        assert claim_capture_jobs(db, worker_id="worker-b") == []

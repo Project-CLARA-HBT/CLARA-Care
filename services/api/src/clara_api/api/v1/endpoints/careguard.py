@@ -36,6 +36,11 @@ from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    LifeMapCaptureCandidate,
+    LifeMapCaptureReviewAction,
+    LifeMapCaptureSession,
+    MedicationCourse,
+    MedicationCourseChange,
     MedicineCabinet,
     MedicineItem,
     PhrProfile,
@@ -45,6 +50,7 @@ from clara_api.db.models import (
     VnDrugMappingAudit,
 )
 from clara_api.db.session import get_db
+from clara_api.phr.audit import write_audit
 from clara_api.phr.features import phr_features
 from clara_api.phr.provenance import hedge_text_bilingual
 from clara_api.phr.reconciler import find_allergy_conflicts, reconcile
@@ -1874,13 +1880,125 @@ def delete_cabinet_item(
     return {"deleted": True}
 
 
+_CAPTURE_INJECTION = re.compile(
+    r"(ignore (all|previous) instructions|system prompt|developer message|"
+    r"b[oỏ] qua (mọi|tất cả) (chỉ dẫn|hướng dẫn))",
+    re.IGNORECASE,
+)
+
+
+def _capture_span(text: str, value: str) -> dict[str, int] | None:
+    if not value or value == "unknown":
+        return None
+    start = text.casefold().find(value.casefold())
+    if start < 0:
+        return None
+    return {"start": start, "end": start + len(value)}
+
+
+def _persist_cabinet_capture_drafts(
+    db: Session,
+    *,
+    user: User,
+    source_text: str,
+    detections: list[CabinetScanDetection],
+    extractor_version: str,
+) -> tuple[str, list[CabinetScanDetection]]:
+    """Mirror OCR rows into profile-scoped Capture drafts, never truth."""
+
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = PhrProfile(user_id=user.id)
+        db.add(profile)
+        db.flush()
+    now = datetime.now(UTC)
+    session = LifeMapCaptureSession(
+        profile_id=profile.id,
+        created_by_user_id=user.id,
+        input_kind="medication_label",
+        schema_version="lifemap.capture.v1",
+        locale="vi",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(session)
+    db.flush()
+    mirrored: list[CabinetScanDetection] = []
+    findings = (
+        ["prompt_injection_source"] if _CAPTURE_INJECTION.search(source_text) else []
+    )
+    for detection in detections:
+        strength = (detection.dosage or "").strip() or "unknown"
+        value = {
+            "medication_name": detection.drug_name.strip(),
+            "strength": strength,
+            "route": "unknown",
+        }
+        spans = {
+            field: span
+            for field, span in {
+                "medication_name": _capture_span(
+                    source_text, value["medication_name"]
+                ),
+                "strength": _capture_span(source_text, strength),
+            }.items()
+            if span is not None
+        }
+        field_confidence = {
+            "medication_name": detection.confidence,
+            "strength": detection.confidence if strength != "unknown" else 0.0,
+            "route": 0.0,
+        }
+        candidate = LifeMapCaptureCandidate(
+            session_id=session.id,
+            profile_id=profile.id,
+            candidate_type="medication_label",
+            field_path="medication_label",
+            value_json=value,
+            confidence=min(field_confidence.values()),
+            field_confidence_json=field_confidence,
+            source_span_json={
+                "kind": "text_fields",
+                "fields": spans,
+                "source": "careguard_ocr",
+            },
+            missing_critical_fields_json=[],
+            extraction_schema_version="lifemap.capture.v1",
+            extractor_version=extractor_version[:96],
+            security_findings_json=findings,
+            status="draft",
+        )
+        db.add(candidate)
+        db.flush()
+        mirrored.append(
+            detection.model_copy(
+                update={
+                    "capture_candidate_id": candidate.public_id,
+                    "requires_manual_confirm": True,
+                    "confirmed": False,
+                }
+            )
+        )
+    write_audit(
+        db,
+        profile_id=profile.id,
+        action="create",
+        entity="capture_session",
+        entity_id=session.public_id,
+        actor_user_id=user.id,
+        scope="owner:self_care",
+    )
+    return session.public_id, mirrored
+
+
 @router.post("/cabinet/scan-text", response_model=CabinetScanTextResponse)
 def scan_cabinet_text(
     payload: CabinetScanTextRequest,
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
 ) -> CabinetScanTextResponse:
-    _require_user(token, db)
+    user = _require_user(token, db)
     correction = _apply_ocr_correction(payload.text)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(
@@ -1889,6 +2007,17 @@ def scan_cabinet_text(
             skip_ocr_correction=True,
         )
     )
+    capture_session_id: str | None = None
+    if get_settings().lifemap_capture_enabled:
+        ensure_medical_disclaimer_consent(db, user_id=user.id)
+        capture_session_id, detections = _persist_cabinet_capture_drafts(
+            db,
+            user=user,
+            source_text=correction.corrected_text,
+            detections=detections,
+            extractor_version="careguard-ocr-postprocess-v1",
+        )
+        db.commit()
     return CabinetScanTextResponse(
         detections=detections,
         extracted_text=correction.corrected_text[:4000],
@@ -1896,6 +2025,7 @@ def scan_cabinet_text(
         ocr_endpoint="local-ocr-correction",
         prioritized_fields=_build_prioritized_fields(detections),
         confirm_gate=_build_ocr_confirm_gate(detections),
+        capture_session_id=capture_session_id,
     )
 
 
@@ -1905,7 +2035,7 @@ async def scan_cabinet_file(
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
 ) -> CabinetScanTextResponse:
-    _require_user(token, db)
+    user = _require_user(token, db)
     file_name = file.filename or "uploaded-receipt"
     content_type = file.content_type or "application/octet-stream"
     file_bytes = await file.read()
@@ -1930,6 +2060,17 @@ async def scan_cabinet_file(
             skip_ocr_correction=True,
         )
     )
+    capture_session_id: str | None = None
+    if get_settings().lifemap_capture_enabled:
+        ensure_medical_disclaimer_consent(db, user_id=user.id)
+        capture_session_id, detections = _persist_cabinet_capture_drafts(
+            db,
+            user=user,
+            source_text=correction.corrected_text,
+            detections=detections,
+            extractor_version=f"careguard-{ocr_provider}-v1",
+        )
+        db.commit()
     return CabinetScanTextResponse(
         detections=detections,
         extracted_text=correction.corrected_text[:4000],
@@ -1937,6 +2078,7 @@ async def scan_cabinet_file(
         ocr_endpoint=used_endpoint,
         prioritized_fields=_build_prioritized_fields(detections),
         confirm_gate=_build_ocr_confirm_gate(detections),
+        capture_session_id=capture_session_id,
     )
 
 
@@ -1948,6 +2090,60 @@ def import_detections(
 ) -> CabinetImportResponse:
     user = _require_user(token, db)
     cabinet = _get_or_create_cabinet(db, user.id)
+    capture_candidates: dict[str, LifeMapCaptureCandidate] = {}
+    profile: PhrProfile | None = None
+    if get_settings().lifemap_capture_enabled:
+        ensure_medical_disclaimer_consent(db, user_id=user.id)
+        profile = db.execute(
+            select(PhrProfile).where(PhrProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "health_profile_required"},
+            )
+        candidate_ids = [
+            str(item.capture_candidate_id or "") for item in payload.detections
+        ]
+        if any(not candidate_id for candidate_id in candidate_ids):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "capture_candidate_required"},
+            )
+        rows = list(
+            db.execute(
+                select(LifeMapCaptureCandidate).where(
+                    LifeMapCaptureCandidate.public_id.in_(candidate_ids),
+                    LifeMapCaptureCandidate.profile_id == profile.id,
+                )
+            ).scalars()
+        )
+        capture_candidates = {row.public_id: row for row in rows}
+        if len(capture_candidates) != len(set(candidate_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "capture_candidate_not_found"},
+            )
+        for detection in payload.detections:
+            candidate = capture_candidates[str(detection.capture_candidate_id)]
+            candidate_name = str(
+                (candidate.value_json or {}).get("medication_name", "")
+            ).strip()
+            candidate_strength = str(
+                (candidate.value_json or {}).get("strength", "")
+            ).strip()
+            expected_strength = (detection.dosage or "").strip() or "unknown"
+            if (
+                candidate.status != "draft"
+                or candidate.security_findings_json
+                or not detection.confirmed
+                or candidate_name.casefold() != detection.drug_name.strip().casefold()
+                or candidate_strength.casefold() != expected_strength.casefold()
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"code": "capture_candidate_review_mismatch"},
+                )
 
     existing_names = set(
         db.execute(
@@ -2022,6 +2218,57 @@ def import_detections(
             updated_at=datetime.now(tz=UTC),
         )
         db.add(item)
+        if profile is not None:
+            candidate = capture_candidates[str(detection.capture_candidate_id)]
+            candidate.status = "confirmed"
+            db.add(
+                LifeMapCaptureReviewAction(
+                    candidate_id=candidate.id,
+                    profile_id=profile.id,
+                    actor_user_id=user.id,
+                    action="confirm",
+                    reason_code="medicine_import_explicit_confirmation",
+                )
+            )
+            course = MedicationCourse(
+                profile_id=profile.id,
+                medication_name=detection.drug_name.strip(),
+                original_text=detection.evidence.strip(),
+                normalized_name=normalized,
+                normalization_system="careguard_dictionary",
+                normalization_code=mapped_rxcui or "",
+                reconciliation_status=(
+                    "matched" if mapped_rxcui else "unknown"
+                ),
+                dose_text=(detection.dosage or "").strip(),
+                route_text="unknown",
+                truth_state="confirmed",
+                provenance_json={
+                    "source": "capture_review",
+                    "capture_candidate_id": candidate.public_id,
+                    "confirmation": "explicit_medicine_import",
+                },
+                created_by_user_id=user.id,
+            )
+            db.add(course)
+            db.flush()
+            db.add(
+                MedicationCourseChange(
+                    course_id=course.id,
+                    profile_id=profile.id,
+                    version_no=1,
+                    action="confirmed_create",
+                    snapshot_json={
+                        "medication_name": course.medication_name,
+                        "normalized_name": course.normalized_name,
+                        "dose_text": course.dose_text,
+                        "route_text": course.route_text,
+                        "truth_state": course.truth_state,
+                    },
+                    reason_code="capture_explicit_user_confirmation",
+                    actor_user_id=user.id,
+                )
+            )
         existing_names.add(normalized)
         inserted += 1
         prioritized_fields.append(
