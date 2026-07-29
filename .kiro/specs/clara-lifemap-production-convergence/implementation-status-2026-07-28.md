@@ -268,6 +268,15 @@ terminology system and mapping revision, close/low-confidence candidates remain
 ambiguous, and no candidate is auto-confirmable. Four focused tests cover alias
 resolution, graph containment, ambiguity, and unknown-code rejection.
 
+The rule-first review engine now detects bounded-window duplicates and
+contradictions from exact active revisions and reports required-field
+missingness. Invalidated/superseded/error facts are excluded. Bounded NLI/LLM
+proposals are accepted only when every referenced revision is already in the
+authorized candidate set; they remain explicitly `model_proposal` findings
+requiring human resolution and cannot change truth. Four focused tests pass.
+Task 16.10 remains open until persisted findings, idempotent human
+resolve/dismiss actions, and web/mobile conflict-review workflows are wired.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
