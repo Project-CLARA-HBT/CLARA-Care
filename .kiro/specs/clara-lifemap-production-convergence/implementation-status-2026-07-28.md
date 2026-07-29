@@ -915,3 +915,17 @@ the docs validator pass. Task 19.2 remains open until an authorized LLM run is
 actually reviewed by authorized humans; fake test callbacks and reviewer
 references prove the workflow contract, not completion of that operational
 gate.
+
+Post-pilot monitoring now binds every policy and aggregate window to the same
+use-case ID and immutable artifact, records expected and observed provider
+identity, validates all rates and thresholds as finite bounded values, and
+hashes the exact owner-approved threshold manifest into the decision. Drift,
+correction, override, abstention, or insufficient-sample breaches pause
+expansion; an adverse-event breach or provider identity change recalls. The
+evaluator never retrains or silently changes rollout state. Four focused tests,
+Ruff, mypy, and docs validation pass.
+
+Task 19.8 remains operationally open because CLARA has no approved LifeMap AI
+pilot, predefined owner-approved production thresholds, real monitoring window,
+or exercised pause/recall action. The repository establishes the control and
+fail-closed contract; it cannot manufacture post-pilot evidence.
