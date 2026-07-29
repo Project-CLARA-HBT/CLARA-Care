@@ -7,6 +7,7 @@ from typing import Any
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 
 _NEGATION_TERMS = {
     "khong",
@@ -265,17 +266,13 @@ def _should_use_llm_nli(*, llm_enabled: bool | None) -> bool:
 
 def _build_nli_client(*, timeout_ms: int) -> DeepSeekClient:
     timeout_seconds = max(0.15, float(timeout_ms) / 1000.0)
-    return DeepSeekClient(
-        api_key=settings.deepseek_api_key,
-        base_url=settings.deepseek_base_url,
-        model=settings.deepseek_model,
+    client, _ = build_task_client(
+        ModelTask.FACTCHECK_NLI,
+        settings,
         timeout_seconds=timeout_seconds,
         retries_per_base=0,
-        retry_backoff_seconds=0.0,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
+    return client
 
 
 def _llm_verify_claims(
@@ -346,7 +343,10 @@ def _llm_verify_claims(
             if not isinstance(row, dict):
                 continue
             try:
-                claim_index = int(row.get("claim_index"))
+                raw_claim_index: object = row.get("claim_index")
+                if not isinstance(raw_claim_index, (int, float, str)):
+                    continue
+                claim_index = int(raw_claim_index)
             except (TypeError, ValueError):
                 continue
             if claim_index < 0 or claim_index >= len(claims):

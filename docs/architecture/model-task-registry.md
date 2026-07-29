@@ -6,9 +6,15 @@ requests choose a provider or model. Each task declares a prompt version,
 closed output contract, and deterministic/unavailable fallback.
 
 The current registry covers the medical safety router, LifeMap Capture triage
-and visit extraction, Scribe note/transcription, and Council shadow assessment.
-Those callers still retain their existing emergency, legal, provenance,
-template, and shadow-only guards; the registry cannot bypass them.
+and visit extraction, Scribe note/transcription, Council shadow assessment,
+LLM-assisted RAG reranking, and evidence-bound NLI claim verification. Those
+callers still retain their existing emergency, legal, provenance, template,
+FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
+
+The registry selects only the provider/model boundary. It never converts a
+heuristic, embedding scorer or fixed-weight Council rule into a neural model,
+and it never permits LLM output to confirm a LifeMap record, prescribe, change
+a dose, authorize access or replace DrugBank authority.
 
 Configuration is intentionally operational rather than user-facing:
 

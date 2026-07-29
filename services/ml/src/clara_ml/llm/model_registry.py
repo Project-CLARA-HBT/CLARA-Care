@@ -25,6 +25,8 @@ class ModelTask(StrEnum):
     SCRIBE_NOTE = "scribe_note"
     SCRIBE_TRANSCRIPTION = "scribe_transcription"
     COUNCIL_SHADOW = "council_shadow"
+    RAG_RERANKING = "rag_reranking"
+    FACTCHECK_NLI = "factcheck_nli"
 
 
 @dataclass(frozen=True)
@@ -84,6 +86,18 @@ TASK_CONTRACTS: dict[ModelTask, TaskContract] = {
         output_contract="case_packet_bound_json",
         safety_fallback="unavailable_shadow_result",
         shadow_only=True,
+    ),
+    ModelTask.RAG_RERANKING: TaskContract(
+        task=ModelTask.RAG_RERANKING,
+        prompt_version="rag-reranking.v1",
+        output_contract="candidate_ids_and_bounded_relevance_scores_json",
+        safety_fallback="embedding_or_original_retrieval_order",
+    ),
+    ModelTask.FACTCHECK_NLI: TaskContract(
+        task=ModelTask.FACTCHECK_NLI,
+        prompt_version="factcheck-nli.v1",
+        output_contract="evidence_bound_claim_verdicts_json",
+        safety_fallback="deterministic_overlap_verdicts_then_fides_gate",
     ),
 }
 

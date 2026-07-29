@@ -43,7 +43,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
 | PR-02 i18n | partial | Typed vi/en catalog, parity test and primary-shell literal scanner: `63b0df1e`. Domain-page migration remains incremental. |
 | PR-03 task-first UX | partial/pre-existing | Focused onboarding, Today, PHR and medicine flows were already delivered in prior commits; legacy dense surfaces remain. |
-| PR-04 registry/contracts | implemented for bounded safety tasks | `895c3e73` routes safety triage, LifeMap capture/visit, Scribe and Council shadow through registry. Research/RAG direct client construction remains migration work. |
+| PR-04 registry/contracts | implemented for bounded safety tasks | `895c3e73` routes safety triage, LifeMap capture/visit, Scribe and Council shadow; the RAG reranker and NLI verifier now also use registry task contracts. RAG synthesis/research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
 | PR-06 hybrid router | partial/pre-existing | Closed-schema semantic LLM router is primary with deterministic emergency/legal fallback. A separately evaluated encoder/SLM shadow router is not installed. |
 | PR-07 renderer | partial/pre-existing | `medical_answer_v2` validates evidence, uncertainty and safety release gates. A dedicated semantic-fidelity scorer is not yet available. |
@@ -127,8 +127,9 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
 4. Full web/domain-page i18n and common mobile terminology are not yet fully
    catalog-backed. Continue catalog migration surface by surface with parity
    tests; do not label it complete before the scanner scope covers them.
-5. Research/RAG direct model-client constructors remain to be migrated to the
-   model registry; add a task contract and regression tests before each move.
+5. RAG synthesis and research-agent direct model-client constructors remain to
+   be migrated to the model registry; add a task contract and regression tests
+   before each move. Reranking and NLI verification are already registry-bound.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
 

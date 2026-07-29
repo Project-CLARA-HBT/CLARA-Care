@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from collections import OrderedDict
-from dataclasses import dataclass
-from hashlib import sha1
 import json
 import math
+import re
+from collections import OrderedDict
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from hashlib import sha1
 from threading import Lock
 from time import perf_counter
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, ClassVar
 from urllib.request import Request, urlopen
-import re
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.rag.embedder import HttpEmbeddingClient
 
 from .domain import Document
@@ -34,7 +36,7 @@ class NeuralReranker:
     """Neural reranker using embedding cosine similarity with safe fallbacks."""
 
     _CACHE_LOCK = Lock()
-    _CACHE: OrderedDict[str, tuple[float, list[Document], dict[str, Any]]] = OrderedDict()
+    _CACHE: ClassVar[OrderedDict[str, tuple[float, list[Document], dict[str, Any]]]] = OrderedDict()
 
     def __init__(
         self,
@@ -56,9 +58,9 @@ class NeuralReranker:
         cross_encoder_scorer: CrossEncoderScorer | None = None,
     ) -> None:
         self.enabled = bool(settings.rag_reranker_enabled if enabled is None else enabled)
-        self.strategy = str(
-            strategy or settings.rag_reranker_strategy or "embedding"
-        ).strip().lower()
+        self.strategy = (
+            str(strategy or settings.rag_reranker_strategy or "embedding").strip().lower()
+        )
         self.model_name = str(model_name or settings.rag_reranker_model)
         self.top_n = max(1, int(settings.rag_reranker_top_n if top_n is None else top_n))
         self.timeout_ms = max(
@@ -81,16 +83,12 @@ class NeuralReranker:
             min(
                 1.0,
                 float(
-                    settings.rag_reranker_llm_min_score
-                    if llm_min_score is None
-                    else llm_min_score
+                    settings.rag_reranker_llm_min_score if llm_min_score is None else llm_min_score
                 ),
             ),
         )
         self.cache_enabled = bool(
-            settings.rag_reranker_cache_enabled
-            if cache_enabled is None
-            else cache_enabled
+            settings.rag_reranker_cache_enabled if cache_enabled is None else cache_enabled
         )
         self.cache_ttl_seconds = max(
             1,
@@ -253,9 +251,7 @@ class NeuralReranker:
                     "rerank_cache_hit": False,
                     "rerank_llm_used": bool(llm_scores),
                     "rerank_llm_error": (
-                        llm_info.get("error")
-                        if isinstance(llm_info, dict)
-                        else None
+                        llm_info.get("error") if isinstance(llm_info, dict) else None
                     ),
                 },
             )
@@ -269,7 +265,7 @@ class NeuralReranker:
         except TimeoutError:
             timed_out = True
             error_name = "TimeoutError"
-        except Exception as exc:  # pragma: no cover - defensive fallback
+        except Exception as exc:  # noqa: BLE001 - total, defensive retrieval fallback
             error_name = type(exc).__name__
 
         for doc in candidates:
@@ -518,10 +514,10 @@ class NeuralReranker:
         """Map a standard ``{"results": [{index, relevance_score}]}`` payload to doc scores."""
 
         if not isinstance(payload, dict):
-            raise ValueError("invalid_rerank_payload")
+            raise ValueError("invalid_rerank_payload")  # noqa: TRY004 - stable public error
         rows = payload.get("results")
         if not isinstance(rows, list):
-            raise ValueError("rerank_payload_missing_results")
+            raise ValueError("rerank_payload_missing_results")  # noqa: TRY004 - stable public error
         scores: dict[str, float] = {}
         for row in rows:
             if not isinstance(row, dict):
@@ -529,7 +525,9 @@ class NeuralReranker:
             index = row.get("index")
             if not isinstance(index, int) or not (0 <= index < len(documents)):
                 continue
-            raw_value = row.get("relevance_score", row.get("score"))
+            raw_value: object = row.get("relevance_score", row.get("score"))
+            if not isinstance(raw_value, (int, float, str)):
+                continue
             scores[documents[index].id] = float(raw_value)
         return scores
 
@@ -561,16 +559,11 @@ class NeuralReranker:
         if self._llm_client is not None:
             return self._llm_client
         timeout_seconds = max(float(self.llm_timeout_ms) / 1000.0, 0.15)
-        self._llm_client = DeepSeekClient(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
-            model=settings.deepseek_model,
+        self._llm_client, _ = build_task_client(
+            ModelTask.RAG_RERANKING,
+            settings,
             timeout_seconds=timeout_seconds,
             retries_per_base=0,
-            retry_backoff_seconds=0.0,
-            max_concurrency=settings.llm_global_max_concurrency,
-            min_interval_seconds=settings.llm_global_min_interval_seconds,
-            request_jitter_seconds=settings.llm_global_jitter_seconds,
         )
         return self._llm_client
 
@@ -583,9 +576,7 @@ class NeuralReranker:
         selected = list(documents[: max(1, min(self.llm_top_n, len(documents)))])
         if not selected:
             return {}, {"status": "skipped"}
-        system_prompt = (
-            "You are a strict biomedical reranker. Return JSON only without markdown."
-        )
+        system_prompt = "You are a strict biomedical reranker. Return JSON only without markdown."
         prompt_docs = [
             {
                 "doc_id": str(item.id),
@@ -635,7 +626,7 @@ class NeuralReranker:
                     continue
                 scores[doc_id] = self._clamp_unit(row.get("score"), default=0.5)
             return scores, {"status": "ok", "model": response.model}
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - score failure must retain retrieval fallback
             return {}, {"status": "error", "error": f"{exc.__class__.__name__}: {exc}"}
 
     @staticmethod
@@ -711,6 +702,8 @@ class NeuralReranker:
 
     @staticmethod
     def _safe_float(value: object, *, default: float) -> float:
+        if not isinstance(value, (int, float, str)):
+            return float(default)
         try:
             return float(value)
         except (TypeError, ValueError):

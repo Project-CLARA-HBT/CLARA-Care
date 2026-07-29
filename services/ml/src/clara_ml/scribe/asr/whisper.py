@@ -12,6 +12,7 @@ import logging
 from collections.abc import Iterable, Iterator
 
 from clara_ml.config import settings
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.scribe.asr.base import AsrEvent, AsrResult, AsrSegment
 
 logger = logging.getLogger(__name__)
@@ -24,33 +25,27 @@ class WhisperDeepSeekAsr:
 
     name = "whisper"
 
-    def __init__(self, client_factory=None) -> None:  # noqa: ANN001 - injectable for tests
+    def __init__(self, client_factory=None) -> None:
         # The client is built lazily so importing/constructing opens no socket.
         self._client_factory = client_factory
 
-    def _build_client(self):  # noqa: ANN202 - returns a DeepSeekClient
+    def _build_client(self):
         if self._client_factory is not None:
             return self._client_factory()
-        from clara_ml.llm.deepseek_client import DeepSeekClient
-
-        return DeepSeekClient(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
-            model=settings.deepseek_model,
-            # Local CPU Whisper can legitimately take longer than a text LLM
-            # request. Give it one bounded attempt; retrying the same audio while
-            # the first decode still consumes CPU creates a timeout storm.
+        # Local CPU Whisper can legitimately take longer than a text LLM
+        # request. Give it one bounded attempt; retrying the same audio while
+        # the first decode still consumes CPU creates a timeout storm.
+        client, _ = build_task_client(
+            ModelTask.SCRIBE_TRANSCRIPTION,
+            settings,
             timeout_seconds=max(
                 float(settings.deepseek_timeout_seconds),
                 float(settings.scribe_asr_timeout_seconds),
             ),
             retries_per_base=0,
-            retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-            max_concurrency=settings.llm_global_max_concurrency,
-            min_interval_seconds=settings.llm_global_min_interval_seconds,
-            request_jitter_seconds=settings.llm_global_jitter_seconds,
-            audio_base_url=settings.deepseek_audio_base_url,
+            audio=True,
         )
+        return client
 
     def transcribe(self, audio: bytes, *, language: str, content_type: str) -> AsrResult:
         """Transcribe a whole audio blob into a single (speaker-unknown) segment."""
