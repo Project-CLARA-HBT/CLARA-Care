@@ -14,6 +14,10 @@ This implementation pass strengthened CLARA's safety and evidence boundaries:
 - routed safety, LifeMap, Scribe and Council bounded LLM calls through typed
   model task contracts with a rollback switch;
 - added an auditable Vietnamese clinical language pre-processing layer;
+- added a structured wording renderer with an independent fidelity verifier and
+  deterministic Vietnamese fallback;
+- made Today start with the four consumer care tasks instead of requiring a
+  person to navigate technical module names;
 - removed Scribe's automatic code assignment (including fallback `R69`) and
   fabricated end-user “AI confidence” percentage.
 
@@ -80,7 +84,7 @@ Executed in this workspace:
 | Check | Result |
 | --- | --- |
 | Web lint + TypeScript | pass for i18n and Scribe checkpoints |
-| Web full unit/property suite | pass: 74 files, 635 tests |
+| Web full unit/property suite | pass: 75 files, 637 tests |
 | Eval formatting/Ruff/mypy | pass: 12 files; mypy clean |
 | Eval unit suite | pass: 8 tests |
 | Eval manifest validator | pass: 9 required tracks, checksums/counts validated |
@@ -138,9 +142,11 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
 4. Full web/domain-page i18n and common mobile terminology are not yet fully
    catalog-backed. Continue catalog migration surface by surface with parity
    tests; do not label it complete before the scanner scope covers them.
-5. RAG synthesis and research-agent direct model-client constructors remain to
-   be migrated to the model registry; add a task contract and regression tests
-   before each move. Reranking and NLI verification are already registry-bound.
+5. The default RAG synthesis, reranking and NLI verification paths are
+   registry-bound. Research-agent constructors that intentionally accept an
+   injected client for compatibility remain to be reviewed one by one before
+   conversion; retain their existing verifier and fallback tests during that
+   work.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
 7. GitHub reported 130 dependency advisories on the default branch at push time
