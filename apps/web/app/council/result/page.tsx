@@ -131,17 +131,9 @@ export default function CouncilResultPage() {
                   }
                 />
                 <CouncilMetricCard
-                  label="Neural Risk (Shadow)"
-                  value={
-                    view.quality.neuralEnabled
-                      ? `${fmtPercent(view.quality.neuralProbability)} (${view.quality.neuralBand || "-"})`
-                      : "disabled"
-                  }
-                  hint={
-                    view.quality.neuralRecommendedTriage
-                      ? `Recommended: ${view.quality.neuralRecommendedTriage}`
-                      : undefined
-                  }
+                  label="Tín hiệu nguy cơ theo quy tắc (chỉ theo dõi)"
+                  value={view.quality.neuralEnabled ? view.quality.neuralBand || "có tín hiệu" : "chưa bật"}
+                  hint="Đây là điểm heuristic chưa hiệu chuẩn; không thay thế phân luồng an toàn hoặc nhận định chuyên môn."
                 />
               </div>
 
