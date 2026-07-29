@@ -221,6 +221,26 @@ These close the code-path gaps but intentionally do not close Tasks 15.4 or
 15.6: no real learned artifact, immutable DeepSeek provider revision, target
 approval, or production-authorized export evidence has been supplied.
 
+## Phase 12 accessibility convergence increment — 2026-07-29
+
+The optimized web build now has a real LifeMap browser matrix on desktop and
+Pixel 7 viewports. It verifies keyboard-first skip navigation, semantic
+landmarks and labels, reduced-motion collapse, 200% text scaling without
+horizontal overflow, and computed text contrast. The matrix exposed two real
+intrinsic-sizing defects: the LifeMap one-column grid expanded to its content
+minimum on mobile, and rem-scaled topbar controls overflowed desktop at 200%.
+The grid now uses a zero-minimum track/children, command controls retain bounded
+physical targets under zoom, and the focused skip link wraps within the
+viewport. The complete optimized Playwright suite passes with 8 tests and 2
+project-appropriate skips; the focused style suite passes 9 tests.
+
+Flutter now mounts the real unified LifeMap surface with Ask, Capture, review,
+baseline, episode, and task capabilities under phone, tablet, 1.6x text, screen
+reader semantics, and reduced-motion configurations. All 10 focused widget
+tests pass and `flutter analyze` is clean. Tasks 12.2 and 12.3 remain open
+because every other V2 module and real-device screen-reader workflow has not
+yet completed the same matrix.
+
 ## Phase 16 grounded Ask vertical slice — 2026-07-29
 
 `POST /api/v1/lifemap/v2/ask` now resolves a server-owned use-case definition,

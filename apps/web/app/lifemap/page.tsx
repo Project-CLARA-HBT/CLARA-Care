@@ -554,8 +554,8 @@ export default function LifeMapPage() {
       title="LifeMap"
       description="Tổ chức các điều bạn muốn theo dõi thành hành trình nhỏ, có thể xem lại và thay đổi bất cứ lúc nào."
     >
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-5">
           {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
 
           {loading ? (
@@ -1084,7 +1084,7 @@ export default function LifeMapPage() {
           )}
         </div>
 
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           {captureEnabled ? (
             <SurfaceCard className="p-5">
               <div className="flex items-start gap-3">

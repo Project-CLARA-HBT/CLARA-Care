@@ -59,7 +59,7 @@ export default function AppTopbar({
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-[min(0.5rem,8px)]">
         {profiles.length > 0 ? (
           <label className="hidden max-w-[17rem] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 xl:flex">
             <span className="material-symbols-outlined text-[18px] text-[var(--brand-600)]" aria-hidden="true">

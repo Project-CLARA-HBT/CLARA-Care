@@ -19,6 +19,7 @@
 import 'package:clara_mobile/core/a11y.dart';
 import 'package:clara_mobile/core/analytics.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
+import 'package:clara_mobile/experience/unified/lifemap_surface.dart';
 import 'package:clara_mobile/experience/unified/onboarding_flow.dart';
 import 'package:clara_mobile/experience/unified/profile_hub.dart';
 import 'package:clara_mobile/theme/clara_theme.dart';
@@ -174,7 +175,8 @@ void main() {
   });
 
   group('Unified Profile hub — a11y + responsive (Phase 7.4)', () {
-    testWidgets('renders entries on phone with ≥48dp list rows', (tester) async {
+    testWidgets('renders entries on phone with ≥48dp list rows',
+        (tester) async {
       await setSurface(tester, _phone);
       final session = await FakeSessionStore.authenticated(role: 'normal');
 
@@ -248,6 +250,89 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Cài đặt'), findsOneWidget);
+    });
+  });
+
+  group('Unified LifeMap — a11y + responsive (Phase 12.3)', () {
+    Future<void> pumpLifeMap(
+      WidgetTester tester, {
+      required Size size,
+      double? textScale,
+      bool reduceMotion = false,
+    }) async {
+      await setSurface(tester, size);
+      final api = FakeApiClient()
+        ..stub('getMobileSummary', response: {
+          'feature_flags': {
+            'lifemap_capture': true,
+            'lifemap_next_question_v2': true,
+            'lifemap_ask_ai': true,
+            'lifemap_ai_review_findings': true,
+            'lifemap_baselines_v2': true,
+          },
+        })
+        ..stub('getLifeMapBaselines', response: {'data': []})
+        ..stub('getLifeMapToday', response: {
+          'episodes': [
+            {
+              'id': 'episode-1',
+              'title': 'Theo dõi giấc ngủ',
+              'priority': 'routine',
+            },
+          ],
+          'tasks': [
+            {'id': 'task-1', 'title': 'Ghi lại giờ đi ngủ'},
+          ],
+        })
+        ..stub('getLifeMapDisputes', response: {'data': []});
+      final session = await FakeSessionStore.authenticated(role: 'normal');
+      await tester.pumpWidget(
+        wrap(
+          LifeMapSurface(apiClient: api, sessionStore: session),
+          textScale: textScale,
+          reduceMotion: reduceMotion,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('phone exposes labelled Ask and Capture controls',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpLifeMap(tester, size: _phone);
+
+      expect(tester.takeException(), isNull);
+      expect(find.bySemanticsLabel('Bạn muốn tìm điều gì?'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Ghi nhận nhanh'),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Điều bạn muốn ghi lại'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    });
+
+    testWidgets('tablet and 1.6x text render without overflow', (tester) async {
+      await pumpLifeMap(tester, size: _tablet, textScale: 1.6);
+
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Theo dõi giấc ngủ'),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Theo dõi giấc ngủ'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reduced-motion phone flow remains stable', (tester) async {
+      await pumpLifeMap(tester, size: _phone, reduceMotion: true);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Ghi nhận nhanh'), findsOneWidget);
     });
   });
 }
