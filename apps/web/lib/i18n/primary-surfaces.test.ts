@@ -40,7 +40,11 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     expect(source).toContain('getStoredUILanguage');
     expect(source).toContain('t(language, "today.title")');
     expect(source).toContain('t(language, "today.emptyDescription")');
+    expect(source).toContain('t(language, "today.startHere")');
     expect(source).toContain('language === "vi" ? "vi-VN" : "en-US"');
+    for (const href of ['href: "/chat"', 'href: "/medicines"', 'href: "/phr"', 'href: "/visits"']) {
+      expect(source).toContain(href);
+    }
     for (const literal of ["Việc nên làm tiếp theo", "Hôm nay chưa có việc nào", "Mở LifeMap"]) {
       expect(source).not.toContain(`"${literal}"`);
     }

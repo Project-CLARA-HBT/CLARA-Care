@@ -42,7 +42,7 @@ closed JSON and is followed by deterministic safety policy.
 | --- | --- | --- |
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
 | PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
-| PR-03 task-first UX | partial/pre-existing | Focused onboarding, Today, PHR and medicine flows exist; consumer navigation labels now describe tasks rather than modules. Dense legacy surfaces remain. |
+| PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
 | PR-04 registry/contracts | implemented for bounded safety tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI and default RAG synthesis use registry task contracts. Research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
@@ -92,6 +92,7 @@ Executed in this workspace:
 | CareGuard normalization/DrugBank focused suite | pass: 42 tests |
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
+| Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |
 | Static active-eval | executed, NO-GO; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so

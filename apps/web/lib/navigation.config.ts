@@ -144,6 +144,7 @@ const NAV_ITEMS: NavigationItem[] = [
     desc: "Tổng hợp và kiểm chứng bằng chứng",
     group: "explore",
     roles: ["normal", "researcher", "doctor", "admin"],
+    hiddenForRoles: ["normal"],
     page: {
       title: "Tra cứu y khoa",
       subtitle: "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
@@ -156,6 +157,7 @@ const NAV_ITEMS: NavigationItem[] = [
     desc: "Câu hỏi LifeMap với nguồn kiểm chứng",
     group: "explore",
     roles: ["normal", "researcher", "doctor", "admin"],
+    hiddenForRoles: ["normal"],
     page: {
       title: "Bằng chứng đang cập nhật",
       subtitle: "Gắn câu hỏi với hành trình, xem nguồn và phần chưa chắc chắn.",

@@ -6,7 +6,7 @@ This is a delivery ledger, not proof that a checkpoint is done.
 | --- | --- | --- | --- |
 | 01 | Audit, ADRs, baseline | implemented | source inventory, ADRs and an explicit static NO-GO baseline |
 | 02 | i18n foundation | partial | typed vi/en catalog, parity and shell literal checks; domain migration remains |
-| 03 | Personal task-first UX | partial/pre-existing | focused onboarding/profile/medicine journeys exist; dense legacy surfaces remain |
+| 03 | Personal task-first UX | implemented primary journey | Today exposes the four plain-language consumer tasks; technical evidence pages are hidden from personal navigation but retain compatible deep links |
 | 04 | Model registry/contracts | implemented for bounded safety tasks | typed contracts, DeepSeek-only resolution and explicit rollback config |
 | 05 | Vietnamese clinical NLP | implemented v1 | deterministic language cues and regression tests; no bundled encoder SLM |
 | 06 | Hybrid task/risk router | partial/pre-existing | semantic closed-schema primary with deterministic safety fallback; no evaluated SLM shadow |

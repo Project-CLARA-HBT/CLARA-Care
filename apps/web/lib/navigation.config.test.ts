@@ -19,13 +19,18 @@ describe("authenticated navigation defaults", () => {
     }
   });
 
-  it("exposes Research as a first-class destination to every supported role", () => {
-    for (const role of ["normal", "researcher", "doctor", "admin"] as const) {
+  it("keeps research visible for evidence roles while preserving consumer deep links", () => {
+    for (const role of ["researcher", "doctor", "admin"] as const) {
       expect(getNavItemsByRole(role).some((item) => item.href === "/research")).toBe(true);
       expect(getNavItemsByRole(role).some((item) => item.href === "/evidence")).toBe(true);
       expect(getNavItemsByRole(role).some((item) => item.href === "/visits")).toBe(true);
       expect(getNavItemsByRole(role).some((item) => item.href === "/family")).toBe(true);
     }
+    const consumer = getNavItemsByRole("normal").map((item) => item.href);
+    expect(consumer).not.toContain("/research");
+    expect(consumer).not.toContain("/evidence");
+    expect(isRouteAllowedForRole("/research", "normal")).toBe(true);
+    expect(isRouteAllowedForRole("/evidence", "normal")).toBe(true);
   });
 
   it("preserves an explicit safe next destination after login", () => {

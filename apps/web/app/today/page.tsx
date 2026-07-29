@@ -28,6 +28,33 @@ function dueLabel(value: string | null, language: UILanguage): string {
       });
 }
 
+const QUICK_ACTIONS = [
+  {
+    href: "/chat",
+    icon: "chat_paste_go",
+    title: "today.askTitle",
+    description: "today.askDescription",
+  },
+  {
+    href: "/medicines",
+    icon: "medication",
+    title: "today.medicineTitle",
+    description: "today.medicineDescription",
+  },
+  {
+    href: "/phr",
+    icon: "description",
+    title: "today.recordTitle",
+    description: "today.recordDescription",
+  },
+  {
+    href: "/visits",
+    icon: "event_available",
+    title: "today.visitTitle",
+    description: "today.visitDescription",
+  },
+] as const;
+
 export default function TodayPage() {
   const [today, setToday] = useState<LifeMapToday | null>(null);
   const [error, setError] = useState("");
@@ -65,6 +92,46 @@ export default function TodayPage() {
     >
       <div className="space-y-5">
         {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
+
+        <SurfaceCard className="p-5">
+          <div className="max-w-2xl">
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              {t(language, "today.startHere")}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {t(language, "today.startHereDescription")}
+            </p>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {QUICK_ACTIONS.map((action) => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="focus-ring group flex min-h-28 items-start gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/45 p-4 transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-panel)]"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                  <span className="material-symbols-outlined text-xl" aria-hidden="true">
+                    {action.icon}
+                  </span>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium text-[var(--text-primary)]">
+                    {t(language, action.title)}
+                  </span>
+                  <span className="mt-1 block text-sm leading-5 text-[var(--text-secondary)]">
+                    {t(language, action.description)}
+                  </span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[var(--text-brand)]">
+                    {t(language, "today.openAction")}
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">
+                      arrow_forward
+                    </span>
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </SurfaceCard>
 
         {loading ? (
           <LoadingCards />
