@@ -1,0 +1,77 @@
+{
+  "suite_version": "lifemap-ai-golden-v1",
+  "cases": [
+    {
+      "case_id": "vi-longitudinal-current-revision",
+      "locale": "vi",
+      "dimension": "longitudinal",
+      "expected": {"current_revision_only": true, "profile_scope": "pass"},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "en-temporal-order",
+      "locale": "en",
+      "dimension": "temporal",
+      "expected": {"chronological": true, "future_leakage": false},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "vi-multimodal-span",
+      "locale": "vi",
+      "dimension": "multimodal",
+      "expected": {"draft_only": true, "source_span_valid": true},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "en-correction-propagation",
+      "locale": "en",
+      "dimension": "correction",
+      "expected": {"old_output_stale": true, "new_revision_cited": true},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "vi-contradiction-visible",
+      "locale": "vi",
+      "dimension": "contradiction",
+      "expected": {"conflict_visible": true, "auto_resolution": false},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "en-missingness-abstain",
+      "locale": "en",
+      "dimension": "missingness",
+      "expected": {"abstained": true, "imputed_fact": false},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "vi-wearable-device-shift",
+      "locale": "vi",
+      "dimension": "wearable_shift",
+      "expected": {"ood": true, "abstained": true},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "en-out-of-distribution",
+      "locale": "en",
+      "dimension": "ood",
+      "expected": {"ood": true, "release": false},
+      "synthetic": true,
+      "held_out": true
+    },
+    {
+      "case_id": "vi-adaptive-eligible-set",
+      "locale": "vi",
+      "dimension": "adaptive_policy",
+      "expected": {"eligible_set_preserved": true, "emergency_unchanged": true},
+      "synthetic": true,
+      "held_out": true
+    }
+  ]
+}

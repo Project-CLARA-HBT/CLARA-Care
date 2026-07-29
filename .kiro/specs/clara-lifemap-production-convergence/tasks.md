@@ -508,7 +508,7 @@ treatment advice.
 
 ## Phase 19 — AI evaluation, prospective validation, and research track
 
-- [ ] 19.1 Expand the medical harness with longitudinal, temporal, multimodal,
+- [x] 19.1 Expand the medical harness with longitudinal, temporal, multimodal,
   correction, contradiction, missingness, wearable-shift, OOD, and adaptive-
   policy golden sets in Vietnamese and English. _R18, R31_
 - [ ] 19.2 Use LLMs to generate labeled synthetic red-team candidates, then
@@ -522,10 +522,10 @@ treatment advice.
 - [ ] 19.5 For any AI feature that influences live health decisions, define and
   run proportional DECIDE-AI-style early clinical evaluation; use
   SPIRIT-AI/CONSORT-AI for prospective trials when applicable. _R22, R31_
-- [ ] 19.6 Keep disease/deterioration prediction, individual treatment effects,
+- [x] 19.6 Keep disease/deterioration prediction, individual treatment effects,
   digital twins, raw-waveform foundation models, federated/split learning, and
   continuous learning in separately approved research projects. _R28, R31_
-- [ ] 19.7 If federated learning is researched, threat-model gradient leakage,
+- [x] 19.7 If federated learning is researched, threat-model gradient leakage,
   non-IID bias, poisoning, secure aggregation, differential privacy, withdrawal/
   deletion, device energy, and reproducibility before any user device trial.
   _R15, R16, R31_

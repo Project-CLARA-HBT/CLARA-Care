@@ -421,6 +421,39 @@ off-policy study, fairness evaluation, eligibility precision study, or
 bilingual comprehension study exists. Every new adaptive path remains
 non-deployed and shadow-only by contract.
 
+## Phase 19 evaluation and research containment foundation — 2026-07-29
+
+The versioned `lifemap-ai-golden-v1` suite adds bilingual held-out synthetic
+contracts for longitudinal current-revision behavior, temporal ordering,
+multimodal source spans, correction propagation, visible contradiction,
+missingness abstention, wearable/device shift, OOD, and adaptive action-set
+containment. The harness validates exact case identity and coverage, attributes
+failures by dimension and locale, records latency/cost inputs, and explicitly
+cannot grant promotion even when all cases pass. Four focused harness tests
+pass.
+
+High-risk disease/deterioration prediction, individual treatment effects,
+digital twins, raw-waveform foundation models, federated/split learning, and
+continuous online learning now have a separate fail-closed research-authority
+contract. A generic LifeMap product flag cannot authorize them. A research
+project must separately record intended use, regulatory, privacy/security,
+dataset, and prospective-protocol authority and cannot have a production flag.
+Federated research additionally fails until gradient leakage, non-IID bias,
+poisoning, secure aggregation, differential privacy, withdrawal/deletion,
+device energy, and reproducibility are all threat-modeled.
+
+A no-content post-pilot monitor can evaluate drift, correction, override,
+abstention, adverse-event, provider-change, and sample-size thresholds. Breach
+pauses expansion or recalls; it never retrains automatically. It is not marked
+complete as a release control because real owner-approved use-case thresholds
+and a pilot do not exist.
+
+Sixteen focused Phase 19 tests pass with clean Ruff and mypy. Tasks 19.2–19.5
+and 19.8 remain open: no LLM-generated dataset has completed human review, no
+per-use-case evidence package or prospective clinical evaluation exists, no
+promotion transition has owner approval, and no post-pilot monitoring window
+has run.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
