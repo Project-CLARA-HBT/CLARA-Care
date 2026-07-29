@@ -22,6 +22,7 @@ from clara_api.db.models import (
     LifeMapEpisodeEventLink,
     LifeMapEvent,
     LifeMapEventRevision,
+    LifeMapSourceRevocation,
 )
 from clara_api.lifemap.temporal_index import RetrievalDocument, TemporalRetrievalIndex
 
@@ -148,6 +149,13 @@ def retrieve_revision_evidence(
             LifeMapEvent.profile_id == profile_id,
             LifeMapEventRevision.profile_id == profile_id,
             LifeMapEvent.lifecycle_status == "active",
+            ~select(LifeMapSourceRevocation.id)
+            .where(
+                LifeMapSourceRevocation.profile_id == profile_id,
+                LifeMapSourceRevocation.source_reference_id
+                == LifeMapEventRevision.source_reference_id,
+            )
+            .exists(),
         )
     )
     if episode_id is not None:

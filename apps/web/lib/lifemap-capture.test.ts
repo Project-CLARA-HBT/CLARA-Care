@@ -13,11 +13,14 @@ import {
   askLifeMap,
   actOnLifeMapReviewFinding,
   correctLifeMapEvent,
+  disputeLifeMapEvent,
   getLifeMapCaptureCapability,
+  getLifeMapDisputes,
   getLifeMapReplay,
   getLifeMapNextQuestion,
   reviewLifeMapCaptureCandidate,
   scanLifeMapReviewFindings,
+  resolveLifeMapEvent,
   startLifeMapGuidedAnswer,
   startLifeMapTextCapture,
 } from "@/lib/lifemap";
@@ -123,6 +126,36 @@ describe("LifeMap Universal Capture client", () => {
         headers: {
           "Idempotency-Key": expect.any(String),
           "If-Match": "2",
+        },
+      },
+    );
+  });
+
+  it("uses typed event dispute and resolution commands", async () => {
+    get.mockResolvedValueOnce({ data: [] });
+    await getLifeMapDisputes();
+    expect(get).toHaveBeenCalledWith("/lifemap/v2/disputes");
+
+    await disputeLifeMapEvent("event/id", 2, "nguồn chưa rõ");
+    expect(post).toHaveBeenCalledWith(
+      "/lifemap/events/event%2Fid/dispute",
+      { reason: "nguồn chưa rõ" },
+      {
+        headers: {
+          "Idempotency-Key": expect.any(String),
+          "If-Match": "2",
+        },
+      },
+    );
+
+    await resolveLifeMapEvent("event/id", 3, "đã kiểm tra");
+    expect(post).toHaveBeenCalledWith(
+      "/lifemap/events/event%2Fid/resolve",
+      { reason: "đã kiểm tra" },
+      {
+        headers: {
+          "Idempotency-Key": expect.any(String),
+          "If-Match": "3",
         },
       },
     );

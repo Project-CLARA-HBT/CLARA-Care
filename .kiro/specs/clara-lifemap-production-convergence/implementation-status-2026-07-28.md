@@ -454,6 +454,37 @@ per-use-case evidence package or prospective clinical evaluation exists, no
 promotion transition has owner approval, and no post-pilot monitoring window
 has run.
 
+## Phase 5 correction and dispute closure — 2026-07-29
+
+Migration `20260729_0042` extends projection lineage from a flat revision list
+to a profile-scoped directed graph. A correction, invalidation, source
+revocation, consent withdrawal, or late historical event now marks every direct
+and transitive derived output stale in the same command transaction. Cycles are
+bounded by visited projection identity, and another profile is never traversed.
+The downgrade removes graph-only rows before restoring the prior non-null
+revision constraint. Full SQLite upgrade, downgrade to `0041`, and re-upgrade
+passed.
+
+Migration `20260729_0043` adds immutable source-revocation records and exact-
+revision dispute cases with append-only resolution actions. Revoked sources are
+excluded before temporal retrieval, while all dependent outputs are invalidated
+without deleting the source fact or history. Every disputed revision appears in
+the profile-scoped queue. Medication, allergy, condition, diagnosis, lab, and
+clinician-instruction disputes require a live clinician-authorized profile
+scope; ordinary disputes remain owner-resolvable. Resolution or correction
+creates a new fact revision and one immutable case action.
+
+Web and Flutter Replay now offer explicit correction and dispute paths,
+describe the online-only/version-preserving behavior, show open/resolved review
+cases, and prevent owner resolution where clinical review is required. Flutter
+has only the unified LifeMap surface, so no duplicate route was removed.
+
+Five projection/property tests and 32 focused API safety/intelligence tests
+pass. The web client has nine passing contracts and lint passes with the five
+pre-existing warnings. Flutter focused analysis is clean and sixteen client
+tests pass. The property gate proves Today eligibility is exactly accepted or
+in-progress and that no current descendant survives transitive invalidation.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

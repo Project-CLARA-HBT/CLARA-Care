@@ -497,6 +497,49 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> disputeLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required String reason,
+  }) {
+    return _dispatch(
+      'disputeLifeMapEvent',
+      {'eventId': eventId, 'revision': revision, 'reason': reason},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> resolveLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required String reason,
+  }) {
+    return _dispatch(
+      'resolveLifeMapEvent',
+      {'eventId': eventId, 'revision': revision, 'reason': reason},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getLifeMapDisputes({
+    required String accessToken,
+  }) async {
+    final value = await _dispatch('getLifeMapDisputes', const {},
+        accessToken: accessToken);
+    final data = value['data'];
+    return data is List
+        ? data
+            .whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList()
+        : const <Map<String, dynamic>>[];
+  }
+
+  @override
   Future<Map<String, dynamic>> getLifeMapBaselines({
     required String accessToken,
   }) {

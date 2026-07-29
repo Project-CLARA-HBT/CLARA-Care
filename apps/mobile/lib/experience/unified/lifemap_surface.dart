@@ -109,6 +109,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   Map<String, dynamic>? _askAnswer;
   bool _reviewing = false;
   List<Map<String, dynamic>> _reviewFindings = const [];
+  List<Map<String, dynamic>> _disputes = const [];
 
   // --- "Tạo hành trình" (create episode) form state ------------------------
   bool _episodeFormOpen = false;
@@ -182,6 +183,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         }
       }
       final data = await widget.apiClient.getLifeMapToday(accessToken: token);
+      final disputes =
+          await widget.apiClient.getLifeMapDisputes(accessToken: token);
       final episodes = <_Episode>[];
       final rawEpisodes = data['episodes'];
       if (rawEpisodes is List) {
@@ -209,6 +212,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _askEnabled = askEnabled;
         _reviewEnabled = reviewEnabled;
         _baselines = baselines;
+        _disputes = disputes;
         // Keep the task-form selection valid against the freshly loaded set.
         if (_selectedEpisodeId != null &&
             !episodes.any((e) => e.id == _selectedEpisodeId)) {
@@ -473,6 +477,11 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                 final changed = await _correctReplayEvent(event);
                 if (changed && mounted) await _openReplay(episode);
               },
+              onDispute: (event) async {
+                Navigator.of(sheetContext).pop();
+                final changed = await _disputeReplayEvent(event);
+                if (changed && mounted) await _openReplay(episode);
+              },
             ),
           ),
         ),
@@ -544,6 +553,94 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _showSnack(
           'Không thể lưu. Thay đổi sức khỏe không được xếp hàng offline.');
       return false;
+    }
+  }
+
+  Future<bool> _disputeReplayEvent(Map<String, dynamic> event) async {
+    final token = _token;
+    if (token == null) return false;
+    final controller = TextEditingController();
+    final submitted = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Gửi để xem xét'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tranh chấp không xóa thông tin. CLARA giữ nguồn và tạo một '
+              'hàng đợi xem xét. Thao tác này cần mạng.',
+            ),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            TextField(
+              controller: controller,
+              minLines: 2,
+              maxLines: 5,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Vì sao thông tin này cần xem lại?',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
+            },
+            child: const Text('Gửi'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (submitted == null || submitted.isEmpty) return false;
+    try {
+      await widget.apiClient.disputeLifeMapEvent(
+        accessToken: token,
+        eventId: _str(event['id']),
+        revision: event['revision'] is int ? event['revision'] as int : 1,
+        reason: submitted,
+      );
+      final disputes =
+          await widget.apiClient.getLifeMapDisputes(accessToken: token);
+      if (mounted) setState(() => _disputes = disputes);
+      _showSnack('Đã đưa thông tin vào hàng đợi xem xét.');
+      return true;
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+      return false;
+    } catch (_) {
+      _showSnack(
+          'Không thể gửi. Thay đổi sức khỏe không được xếp hàng offline.');
+      return false;
+    }
+  }
+
+  Future<void> _resolveDispute(Map<String, dynamic> dispute) async {
+    final token = _token;
+    if (token == null) return;
+    try {
+      await widget.apiClient.resolveLifeMapEvent(
+        accessToken: token,
+        eventId: _str(dispute['event_id']),
+        revision: dispute['revision'] is int ? dispute['revision'] as int : 1,
+        reason: 'Đã kiểm tra lại nguồn và xác nhận phiên bản này',
+      );
+      final disputes =
+          await widget.apiClient.getLifeMapDisputes(accessToken: token);
+      if (mounted) setState(() => _disputes = disputes);
+      _showSnack('Đã xử lý tranh chấp bằng một phiên bản mới.');
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể xử lý khi ngoại tuyến.');
     }
   }
 
@@ -748,6 +845,81 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               ClaraTokens.spaceMd,
             ),
             child: _buildReviewCard(context),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
+
+        if (_disputes.isNotEmpty) ...[
+          const SectionHeader(title: 'Thông tin đang được xem xét'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: ClaraCard.static_(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo '
+                    'một phiên bản mới và giữ lịch sử nguồn.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  ..._disputes.map((item) {
+                    final open = _str(item['status']) == 'open';
+                    final clinical = item['requires_clinical_review'] == true;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: theme.colorScheme.outlineVariant),
+                          borderRadius:
+                              BorderRadius.circular(ClaraTokens.radiusMd),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_str(item['event_type'])} · '
+                                'phiên bản ${_str(item['revision'])}',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: ClaraTokens.spaceXs),
+                              Text(open ? 'Đang mở' : 'Đã xử lý'),
+                              if (open && clinical) ...[
+                                const SizedBox(height: ClaraTokens.spaceSm),
+                                Text(
+                                  'Loại thông tin này cần người có quyền '
+                                  'lâm sàng kiểm tra nguồn.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ],
+                              if (open && !clinical) ...[
+                                const SizedBox(height: ClaraTokens.spaceSm),
+                                ClaraButton.secondary(
+                                  label: 'Xác nhận sau khi kiểm tra nguồn',
+                                  icon: Icons.verified_outlined,
+                                  onPressed: () => _resolveDispute(item),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
         ],
@@ -1363,10 +1535,15 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
 }
 
 class _ReplaySheet extends StatelessWidget {
-  const _ReplaySheet({required this.replay, required this.onCorrect});
+  const _ReplaySheet({
+    required this.replay,
+    required this.onCorrect,
+    required this.onDispute,
+  });
 
   final Map<String, dynamic> replay;
   final Future<void> Function(Map<String, dynamic>) onCorrect;
+  final Future<void> Function(Map<String, dynamic>) onDispute;
 
   @override
   Widget build(BuildContext context) {
@@ -1466,13 +1643,22 @@ class _ReplaySheet extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: ClaraTokens.spaceSm),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () => onCorrect(event),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('Sửa thông tin'),
-                      ),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: ClaraTokens.spaceSm,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => onCorrect(event),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Sửa thông tin'),
+                        ),
+                        if (_str(event['truth_state']) != 'disputed')
+                          TextButton.icon(
+                            onPressed: () => onDispute(event),
+                            icon: const Icon(Icons.report_outlined, size: 18),
+                            label: const Text('Cần xem lại'),
+                          ),
+                      ],
                     ),
                   ],
                 ),

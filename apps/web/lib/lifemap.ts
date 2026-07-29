@@ -83,6 +83,22 @@ export type LifeMapReplay = {
   }>;
 };
 
+export type LifeMapDisputeCase = {
+  id: string;
+  event_id: string;
+  event_type: string;
+  disputed_revision_id: string;
+  revision: number;
+  requires_clinical_review: boolean;
+  status: "open" | "resolved";
+  resolution: {
+    action: string;
+    resolution_revision_id: string;
+    created_at: string;
+  } | null;
+  created_at: string;
+};
+
 export type LifeMapBaseline = {
   id: string;
   signal_key: string;
@@ -269,6 +285,44 @@ export async function correctLifeMapEvent(
       },
     },
   );
+}
+
+export async function disputeLifeMapEvent(
+  eventId: string,
+  revision: number,
+  reason: string,
+): Promise<void> {
+  await api.post(
+    `/lifemap/events/${encodeURIComponent(eventId)}/dispute`,
+    { reason },
+    {
+      headers: {
+        "Idempotency-Key": idempotencyKey(),
+        "If-Match": String(revision),
+      },
+    },
+  );
+}
+
+export async function resolveLifeMapEvent(
+  eventId: string,
+  revision: number,
+  reason: string,
+): Promise<void> {
+  await api.post(
+    `/lifemap/events/${encodeURIComponent(eventId)}/resolve`,
+    { reason },
+    {
+      headers: {
+        "Idempotency-Key": idempotencyKey(),
+        "If-Match": String(revision),
+      },
+    },
+  );
+}
+
+export async function getLifeMapDisputes(): Promise<LifeMapDisputeCase[]> {
+  return (await api.get<LifeMapDisputeCase[]>("/lifemap/v2/disputes")).data;
 }
 
 export async function disputeLifeMapDecision(

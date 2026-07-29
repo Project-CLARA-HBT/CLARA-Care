@@ -138,7 +138,8 @@ void main() {
       expect(keys.toSet().length, 2, reason: 'keys must be unique per call');
     });
 
-    test('Replay read and correction preserve exact revision', () async {
+    test('Replay correction and dispute commands preserve exact revision',
+        () async {
       final requests = <http.Request>[];
       final client = ApiClient(
         baseUrl: base,
@@ -159,6 +160,19 @@ void main() {
         payload: {'text': 'Thông tin đúng'},
         reason: 'Người dùng sửa',
       );
+      await client.disputeLifeMapEvent(
+        accessToken: token,
+        eventId: 'event-1',
+        revision: 3,
+        reason: 'Nguồn chưa rõ',
+      );
+      await client.resolveLifeMapEvent(
+        accessToken: token,
+        eventId: 'event-1',
+        revision: 4,
+        reason: 'Đã kiểm tra',
+      );
+      await client.getLifeMapDisputes(accessToken: token);
 
       expect(requests[0].method, 'GET');
       expect(requests[0].url.path, '/api/v1/episodes/episode-1/replay');
@@ -168,6 +182,11 @@ void main() {
       );
       expect(requests[1].headers['If-Match'], '2');
       expect(requests[1].headers['Idempotency-Key'], isNotEmpty);
+      expect(requests[2].url.path, '/api/v1/lifemap/events/event-1/dispute');
+      expect(requests[2].headers['If-Match'], '3');
+      expect(requests[3].url.path, '/api/v1/lifemap/events/event-1/resolve');
+      expect(requests[3].headers['If-Match'], '4');
+      expect(requests[4].url.path, '/api/v1/lifemap/v2/disputes');
     });
 
     test('baseline and governed-question routes stay server authoritative',

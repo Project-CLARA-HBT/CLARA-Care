@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -1489,6 +1490,92 @@ class LifeMapReviewFindingAction(Base):
     )
 
 
+class LifeMapSourceRevocation(Base):
+    """Append-only owner revocation of an immutable source reference."""
+
+    __tablename__ = "lifemap_source_revocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    source_reference_id: Mapped[int] = mapped_column(
+        ForeignKey("health_source_references.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+    actor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    reason: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class LifeMapDisputeCase(Base):
+    """Immutable queue case opened for one exact disputed revision."""
+
+    __tablename__ = "lifemap_dispute_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_events.id", ondelete="CASCADE"), index=True
+    )
+    disputed_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+    opened_by_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    requires_clinical_review: Mapped[bool] = mapped_column(Boolean)
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class LifeMapDisputeAction(Base):
+    """Append-only resolution for a dispute queue case."""
+
+    __tablename__ = "lifemap_dispute_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_dispute_cases.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    resolution_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(24), index=True)
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 def _reject_governance_manifest_mutation(*_args: object, **_kwargs: object) -> None:
     raise ValueError("AI/ML governance manifests are immutable; append a new version")
 
@@ -1507,6 +1594,17 @@ for _immutable_governance_model in (
     sa_event.listen(
         _immutable_governance_model,
         "before_delete",
+        _reject_governance_manifest_mutation,
+    )
+
+for _append_only_lifemap_model in (
+    LifeMapSourceRevocation,
+    LifeMapDisputeCase,
+    LifeMapDisputeAction,
+):
+    sa_event.listen(
+        _append_only_lifemap_model,
+        "before_update",
         _reject_governance_manifest_mutation,
     )
 
@@ -1868,6 +1966,13 @@ class LifeMapProjectionDependency(Base):
     """Input lineage and invalidation state for a derived LifeMap projection."""
 
     __tablename__ = "lifemap_projection_dependencies"
+    __table_args__ = (
+        CheckConstraint(
+            "(input_revision_id IS NOT NULL AND input_projection_public_id IS NULL) "
+            "OR (input_revision_id IS NULL AND input_projection_public_id IS NOT NULL)",
+            name="ck_lifemap_projection_dependency_one_input",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     profile_id: Mapped[int] = mapped_column(
@@ -1876,8 +1981,16 @@ class LifeMapProjectionDependency(Base):
     projection_type: Mapped[str] = mapped_column(String(64), index=True)
     projection_public_id: Mapped[str] = mapped_column(String(64), index=True)
     input_type: Mapped[str] = mapped_column(String(64))
-    input_revision_id: Mapped[int] = mapped_column(
-        ForeignKey("lifemap_event_revisions.id", ondelete="CASCADE"), index=True
+    input_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lifemap_event_revisions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    input_projection_type: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    input_projection_public_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
     )
     rule_version: Mapped[str] = mapped_column(String(64))
     produced_at: Mapped[datetime] = mapped_column(

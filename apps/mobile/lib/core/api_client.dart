@@ -1355,6 +1355,50 @@ class ApiClient {
     );
   }
 
+  /// Opens an exact-revision dispute. This online-only mutation never deletes
+  /// the source fact and creates a server-owned review case.
+  Future<Map<String, dynamic>> disputeLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required String reason,
+  }) {
+    return _post(
+      '/api/v1/lifemap/events/$eventId/dispute',
+      body: <String, dynamic>{'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'Idempotency-Key': _idempotencyKey(),
+        'If-Match': '$revision',
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> resolveLifeMapEvent({
+    required String accessToken,
+    required String eventId,
+    required int revision,
+    required String reason,
+  }) {
+    return _post(
+      '/api/v1/lifemap/events/$eventId/resolve',
+      body: <String, dynamic>{'reason': reason},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'Idempotency-Key': _idempotencyKey(),
+        'If-Match': '$revision',
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getLifeMapDisputes({
+    required String accessToken,
+  }) async {
+    final response =
+        await _get('/api/v1/lifemap/v2/disputes', accessToken: accessToken);
+    return _asMapList(response['data']);
+  }
+
   Future<Map<String, dynamic>> getLifeMapBaselines({
     required String accessToken,
   }) {

@@ -12,9 +12,11 @@ import {
   actOnLifeMapReviewFinding,
   askLifeMap,
   correctLifeMapEvent,
+  disputeLifeMapEvent,
   createLifeMapEpisode,
   createLifeMapTask,
   getLifeMapBaselines,
+  getLifeMapDisputes,
   getLifeMapNextQuestion,
   getLifeMapReplay,
   getLifeMapToday,
@@ -22,11 +24,13 @@ import {
   recordLifeMapQuestionInteraction,
   scanLifeMapReviewFindings,
   reviewLifeMapCaptureCandidate,
+  resolveLifeMapEvent,
   startLifeMapTextCapture,
   startLifeMapGuidedAnswer,
   type CaptureSession,
   type LifeMapBaseline,
   type LifeMapAskAnswer,
+  type LifeMapDisputeCase,
   type LifeMapQuestion,
   type LifeMapReviewFinding,
   type LifeMapToday,
@@ -80,6 +84,9 @@ export default function LifeMapPage() {
   const [reviewFindings, setReviewFindings] = useState<
     LifeMapReviewFinding[]
   >([]);
+  const [disputes, setDisputes] = useState<LifeMapDisputeCase[]>([]);
+  const [disputingEvent, setDisputingEvent] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +95,7 @@ export default function LifeMapPage() {
       const next = await getLifeMapToday();
       setData(next);
       setEpisodeId((current) => current || next.episodes[0]?.id || "");
+      setDisputes(await getLifeMapDisputes());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
     } finally {
@@ -295,6 +303,41 @@ export default function LifeMapPage() {
       await openReplay(replay?.episode.id ?? episodeId);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể lưu chỉnh sửa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const disputeEvent = async (item: LifeMapReplay["events"][number]) => {
+    if (!disputeReason.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      await disputeLifeMapEvent(item.id, item.revision, disputeReason.trim());
+      setDisputingEvent("");
+      setDisputeReason("");
+      setDisputes(await getLifeMapDisputes());
+      await openReplay(replay?.episode.id ?? episodeId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể gửi tranh chấp.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resolveDispute = async (item: LifeMapDisputeCase) => {
+    setSaving(true);
+    setError("");
+    try {
+      await resolveLifeMapEvent(
+        item.event_id,
+        item.revision,
+        "Đã kiểm tra lại nguồn và xác nhận phiên bản này",
+      );
+      setDisputes(await getLifeMapDisputes());
+      if (replay) await openReplay(replay.episode.id);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể xử lý tranh chấp.");
     } finally {
       setSaving(false);
     }
@@ -728,19 +771,58 @@ export default function LifeMapPage() {
                               </Button>
                             </div>
                           </div>
+                        ) : disputingEvent === item.id ? (
+                          <div className="mt-3 space-y-3">
+                            <Textarea
+                              label="Vì sao bạn chưa tin thông tin này?"
+                              value={disputeReason}
+                              onChange={(event) => setDisputeReason(event.target.value)}
+                              hint="Tranh chấp không xóa dữ liệu. CLARA giữ nguyên nguồn và tạo một hàng đợi xem xét."
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                loading={saving}
+                                onClick={() => void disputeEvent(item)}
+                              >
+                                Gửi để xem xét
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDisputingEvent("")}
+                              >
+                                Hủy
+                              </Button>
+                            </div>
+                          </div>
                         ) : (
-                          <Button
-                            className="mt-3"
-                            size="sm"
-                            variant="ghost"
-                            icon="edit"
-                            onClick={() => {
-                              setEditingEvent(item.id);
-                              setCorrectionText("");
-                            }}
-                          >
-                            Sửa thông tin
-                          </Button>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon="edit"
+                              onClick={() => {
+                                setEditingEvent(item.id);
+                                setCorrectionText("");
+                              }}
+                            >
+                              Sửa thông tin
+                            </Button>
+                            {item.truth_state !== "disputed" ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon="report"
+                                onClick={() => {
+                                  setDisputingEvent(item.id);
+                                  setDisputeReason("");
+                                }}
+                              >
+                                Chưa đúng / cần xem xét
+                              </Button>
+                            ) : null}
+                          </div>
                         )}
                       </div>
                     )) : (
@@ -756,6 +838,57 @@ export default function LifeMapPage() {
                         Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.
                       </div>
                     ) : null}
+                  </div>
+                </SurfaceCard>
+              ) : null}
+
+              {disputes.length ? (
+                <SurfaceCard className="p-5" aria-live="polite">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      Hàng đợi tranh chấp
+                    </p>
+                    <h2 className="mt-1 font-semibold text-[var(--text-primary)]">
+                      Thông tin đang được xem xét
+                    </h2>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo một
+                      phiên bản mới và giữ lại lịch sử nguồn.
+                    </p>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {disputes.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-4"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone={item.status === "resolved" ? "ok" : "warn"}>
+                            {item.status === "resolved" ? "Đã xử lý" : "Đang mở"}
+                          </Badge>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {item.event_type} · phiên bản {item.revision}
+                          </span>
+                        </div>
+                        {item.requires_clinical_review && item.status === "open" ? (
+                          <p className="mt-2 text-sm text-[var(--status-warn-text)]">
+                            Loại thông tin này cần người có quyền lâm sàng xem
+                            nguồn trước khi xác nhận lại.
+                          </p>
+                        ) : null}
+                        {!item.requires_clinical_review && item.status === "open" ? (
+                          <Button
+                            className="mt-3"
+                            size="sm"
+                            variant="secondary"
+                            loading={saving}
+                            onClick={() => void resolveDispute(item)}
+                          >
+                            Xác nhận sau khi kiểm tra nguồn
+                          </Button>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
                 </SurfaceCard>
               ) : null}

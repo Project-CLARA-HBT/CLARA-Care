@@ -16,10 +16,14 @@ from clara_api.db.models import (
     FamilyAccessGrant,
     FamilyAccessLog,
     HealthSourceReference,
+    LifeMapDisputeAction,
+    LifeMapDisputeCase,
     LifeMapEpisode,
     LifeMapEvent,
     LifeMapEventRevision,
     LifeMapOutboxEvent,
+    LifeMapProjectionDependency,
+    LifeMapSourceRevocation,
     PhrAudit,
     PhrProfile,
 )
@@ -31,6 +35,7 @@ from clara_api.lifemap.domain import (
     require_task_transition,
     require_truth_transition,
 )
+from clara_api.lifemap.intelligence import retrieve_revision_evidence
 from clara_api.lifemap.profile_scope import resolve_profile_scope
 from clara_api.main import app
 
@@ -124,6 +129,150 @@ def test_generic_capture_cannot_claim_confirmation_and_ids_are_opaque() -> None:
         "code": "invalid_transition",
         "transition": "resolve_requires_disputed",
     }
+
+
+def test_dispute_queue_is_exact_revision_linked_and_append_only() -> None:
+    headers, _profile_id = _account("dispute-queue")
+    created = client.post(
+        "/api/v1/lifemap/events",
+        headers=_idempotent(headers, f"event-{uuid4().hex}"),
+        json={
+            "event_type": "symptom_report",
+            "occurred_at": "2026-07-29T08:00:00Z",
+            "payload": {"text": "Headache"},
+        },
+    ).json()
+    disputed = client.post(
+        f"/api/v1/lifemap/events/{created['id']}/dispute",
+        headers=_idempotent(headers, f"dispute-{uuid4().hex}"),
+        json={"reason": "Source is unclear"},
+    )
+    assert disputed.status_code == 200
+    queue = client.get("/api/v1/lifemap/v2/disputes", headers=headers)
+    assert queue.status_code == 200
+    assert len(queue.json()) == 1
+    assert queue.json()[0]["status"] == "open"
+    assert queue.json()[0]["requires_clinical_review"] is False
+
+    resolved = client.post(
+        f"/api/v1/lifemap/events/{created['id']}/resolve",
+        headers=_idempotent(headers, f"resolve-{uuid4().hex}"),
+        json={"reason": "Source checked"},
+    )
+    assert resolved.status_code == 200
+    queue = client.get("/api/v1/lifemap/v2/disputes", headers=headers).json()
+    assert queue[0]["status"] == "resolved"
+    assert queue[0]["resolution"]["action"] == "resolve"
+    with SessionLocal() as db:
+        assert db.execute(select(LifeMapDisputeCase)).scalars().one()
+        assert db.execute(select(LifeMapDisputeAction)).scalars().one()
+
+
+def test_safety_critical_dispute_requires_clinical_resolution() -> None:
+    headers, _profile_id = _account("clinical-dispute")
+    created = client.post(
+        "/api/v1/lifemap/events",
+        headers=_idempotent(headers, f"event-{uuid4().hex}"),
+        json={
+            "event_type": "medication",
+            "occurred_at": "2026-07-29T08:00:00Z",
+            "payload": {"name": "source-only fixture"},
+        },
+    ).json()
+    assert client.post(
+        f"/api/v1/lifemap/events/{created['id']}/dispute",
+        headers=_idempotent(headers, f"dispute-{uuid4().hex}"),
+        json={"reason": "Medication source conflict"},
+    ).status_code == 200
+    queue = client.get("/api/v1/lifemap/v2/disputes", headers=headers).json()
+    assert queue[0]["requires_clinical_review"] is True
+    denied = client.post(
+        f"/api/v1/lifemap/events/{created['id']}/resolve",
+        headers=_idempotent(headers, f"resolve-{uuid4().hex}"),
+        json={"reason": "Owner cannot clinically resolve"},
+    )
+    assert denied.status_code == 403
+    assert denied.json()["detail"]["code"] == "clinical_dispute_review_required"
+
+
+def test_source_revocation_invalidates_outputs_and_removes_retrieval_context() -> None:
+    headers, profile_public_id = _account("source-revocation")
+    with SessionLocal() as db:
+        profile = db.execute(
+            select(PhrProfile).where(PhrProfile.public_id == profile_public_id)
+        ).scalar_one()
+        source = HealthSourceReference(
+            profile_id=profile.id,
+            source_kind="document",
+            source_identity="test-document",
+            checksum="a" * 64,
+        )
+        db.add(source)
+        db.flush()
+        event = LifeMapEvent(
+            profile_id=profile.id,
+            event_type="symptom_report",
+            truth_state="confirmed",
+            occurred_at=datetime(2026, 7, 29, tzinfo=UTC),
+            payload_json={"text": "Source-bound fact"},
+            provenance_json={"source": "document"},
+            source_kind="document",
+            current_revision_no=1,
+        )
+        db.add(event)
+        db.flush()
+        revision = LifeMapEventRevision(
+            event_id=event.id,
+            profile_id=profile.id,
+            revision_no=1,
+            truth_state="confirmed",
+            payload_json=event.payload_json,
+            display_summary="Source-bound fact",
+            provenance_json=event.provenance_json,
+            source_reference_id=source.id,
+            policy_version="test-v1",
+        )
+        db.add(revision)
+        db.flush()
+        db.add(
+            LifeMapProjectionDependency(
+                profile_id=profile.id,
+                projection_type="summary:day",
+                projection_public_id="summary-source-bound",
+                input_type="event_revision",
+                input_revision_id=revision.id,
+                rule_version="summary-v1",
+            )
+        )
+        db.commit()
+        source_public_id = source.public_id
+        internal_profile_id = profile.id
+        assert retrieve_revision_evidence(
+            db,
+            profile_id=profile.id,
+            query="Source-bound",
+        )
+
+    revoked = client.post(
+        f"/api/v1/lifemap/v2/sources/{source_public_id}/revoke",
+        headers=_idempotent(headers, f"revoke-{uuid4().hex}"),
+        json={"reason": "Owner withdrew this source"},
+    )
+    assert revoked.status_code == 200, revoked.text
+    assert revoked.json()["invalidated_projection_count"] == 1
+    with SessionLocal() as db:
+        assert db.execute(select(LifeMapSourceRevocation)).scalars().one()
+        dependency = db.execute(
+            select(LifeMapProjectionDependency).where(
+                LifeMapProjectionDependency.profile_id == internal_profile_id
+            )
+        ).scalar_one()
+        assert dependency.invalidated_at is not None
+        assert retrieve_revision_evidence(
+            db,
+            profile_id=internal_profile_id,
+            query="Source-bound",
+        ) == []
 
 
 def test_command_replay_is_stable_and_digest_conflicts_fail_closed() -> None:

@@ -27,8 +27,9 @@ from clara_api.compliance.service import ComplianceService
 from clara_api.core.config import Settings, get_settings
 from clara_api.core.rbac import get_current_token, require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import User
+from clara_api.db.models import PhrProfile, User
 from clara_api.db.session import get_db
+from clara_api.lifemap.projection_invalidation import invalidate_projection_graph
 
 router = APIRouter()
 
@@ -183,6 +184,16 @@ def withdraw_consent(
     ComplianceService(db, settings).withdraw_consent(
         user_id=user.id, purpose=payload.purpose, version=payload.policy_version
     )
+    profile_id = db.execute(
+        select(PhrProfile.id).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile_id is not None:
+        invalidate_projection_graph(
+            db,
+            profile_id=profile_id,
+            reason=f"consent_withdrawn:{payload.purpose}",
+            invalidate_all=True,
+        )
     db.commit()
     return {"enabled": True, "purpose": payload.purpose, "granted": False}
 

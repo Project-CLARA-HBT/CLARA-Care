@@ -24,10 +24,13 @@ from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    HealthSourceReference,
     LifeMapCaptureCandidate,
     LifeMapCaptureSession,
     LifeMapCareTask,
     LifeMapCommandRecord,
+    LifeMapDisputeAction,
+    LifeMapDisputeCase,
     LifeMapEpisode,
     LifeMapEpisodeEventLink,
     LifeMapEpisodeGoalRevision,
@@ -35,6 +38,7 @@ from clara_api.db.models import (
     LifeMapEventRevision,
     LifeMapOutboxEvent,
     LifeMapProjectionDependency,
+    LifeMapSourceRevocation,
     LifeMapTaskAction,
     MedicationCourse,
     VisitDocument,
@@ -49,6 +53,7 @@ from clara_api.lifemap.commands import (
     store_command,
 )
 from clara_api.lifemap.domain import (
+    TODAY_ELIGIBLE_TASK_STATES,
     InvalidTransition,
     canonical_truth_state,
     require_task_transition,
@@ -66,6 +71,7 @@ from clara_api.lifemap.fhir_r4 import (
     parse_import_bundle,
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
+from clara_api.lifemap.projection_invalidation import invalidate_projection_graph
 from clara_api.lifemap.visit_family_service import invalidate_visit_packs_for_source
 from clara_api.observability.admin_audit import record_admin_action
 from clara_api.phr.audit import write_audit
@@ -131,10 +137,26 @@ class DeadLetterReplayRequest(BaseModel):
     reason_code: str = Field(min_length=2, max_length=64)
 
 
+class SourceRevocationRequest(BaseModel):
+    reason: str = Field(min_length=2, max_length=255)
+
+
 FHIR_IMPORT_SESSION_LIFETIME = timedelta(days=7)
 FHIR_DEFAULT_INCLUDE = (
     "observations,allergies,conditions,medications,care_plan,answers,"
     "documents,consent,audit"
+)
+CLINICAL_REVIEW_EVENT_TYPES = frozenset(
+    {
+        "allergy",
+        "condition",
+        "diagnosis",
+        "lab",
+        "lab_result",
+        "medication",
+        "medication_course",
+        "clinician_instruction",
+    }
 )
 
 
@@ -338,20 +360,92 @@ def _current_revision(
     return revision
 
 
+def _dispute_case_for_revision(
+    db: Session,
+    *,
+    profile_id: int,
+    revision_id: int,
+) -> LifeMapDisputeCase | None:
+    return db.execute(
+        select(LifeMapDisputeCase).where(
+            LifeMapDisputeCase.profile_id == profile_id,
+            LifeMapDisputeCase.disputed_revision_id == revision_id,
+        )
+    ).scalar_one_or_none()
+
+
+def _dispute_resolution_allowed(
+    scope: ProfileScope,
+    case: LifeMapDisputeCase | None,
+) -> bool:
+    return (
+        case is None
+        or not case.requires_clinical_review
+        or scope.actor_role == "clinician"
+        or scope.actor.role == "doctor"
+    )
+
+
+def _record_dispute_transition(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    event: LifeMapEvent,
+    previous: LifeMapEventRevision,
+    replacement: LifeMapEventRevision,
+    action: str,
+    reason: str,
+) -> None:
+    if replacement.truth_state == "disputed":
+        db.add(
+            LifeMapDisputeCase(
+                profile_id=scope.profile.id,
+                event_id=event.id,
+                disputed_revision_id=replacement.id,
+                opened_by_user_id=scope.actor.id,
+                requires_clinical_review=(
+                    event.event_type in CLINICAL_REVIEW_EVENT_TYPES
+                ),
+                reason=reason or "user_dispute",
+            )
+        )
+        return
+    if previous.truth_state != "disputed":
+        return
+    case = _dispute_case_for_revision(
+        db,
+        profile_id=scope.profile.id,
+        revision_id=previous.id,
+    )
+    if case is None:
+        return
+    existing = db.execute(
+        select(LifeMapDisputeAction.id).where(
+            LifeMapDisputeAction.case_id == case.id
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        db.add(
+            LifeMapDisputeAction(
+                case_id=case.id,
+                profile_id=scope.profile.id,
+                actor_user_id=scope.actor.id,
+                resolution_revision_id=replacement.id,
+                action=action,
+                reason=reason,
+            )
+        )
+
+
 def _invalidate_dependencies(
     db: Session, scope: ProfileScope, revision: LifeMapEventRevision, reason: str
 ) -> None:
-    now = datetime.now(UTC)
-    dependencies = db.execute(
-        select(LifeMapProjectionDependency).where(
-            LifeMapProjectionDependency.profile_id == scope.profile.id,
-            LifeMapProjectionDependency.input_revision_id == revision.id,
-            LifeMapProjectionDependency.invalidated_at.is_(None),
-        )
-    ).scalars()
-    for dependency in dependencies:
-        dependency.invalidated_at = now
-        dependency.invalidation_reason = reason
+    invalidate_projection_graph(
+        db,
+        profile_id=scope.profile.id,
+        revision_ids=(revision.id,),
+        reason=reason,
+    )
 
 
 def _link_event_revision(
@@ -483,6 +577,16 @@ def create_event(
     db.add(revision)
     db.flush()
     _link_event_revision(db, scope, event=event, revision=revision, episode=episode)
+    occurred_at = payload.occurred_at
+    if occurred_at.tzinfo is None:
+        occurred_at = occurred_at.replace(tzinfo=UTC)
+    if occurred_at < datetime.now(UTC) - timedelta(minutes=5):
+        invalidate_projection_graph(
+            db,
+            profile_id=scope.profile.id,
+            reason="late_data",
+            invalidate_all=True,
+        )
     return _finish(
         db,
         scope,
@@ -518,6 +622,18 @@ def _truth_command(
         raise HTTPException(
             status_code=409, detail={"code": "invalid_transition", "transition": str(exc)}
         ) from exc
+    dispute_case = _dispute_case_for_revision(
+        db,
+        profile_id=scope.profile.id,
+        revision_id=current.id,
+    )
+    if current.truth_state == "disputed" and not _dispute_resolution_allowed(
+        scope, dispute_case
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "clinical_dispute_review_required"},
+        )
 
     operation = f"event.{action}:{event.public_id}"
     digest, replay = _begin(
@@ -546,6 +662,15 @@ def _truth_command(
     )
     db.add(next_revision)
     db.flush()
+    _record_dispute_transition(
+        db,
+        scope=scope,
+        event=event,
+        previous=current,
+        replacement=next_revision,
+        action=action,
+        reason=payload.reason or destination,
+    )
     _supersede_event_links(
         db,
         scope,
@@ -706,6 +831,18 @@ def correct_event(
         "entered_in_error",
     }:
         raise HTTPException(status_code=409, detail={"code": "invalid_transition"})
+    dispute_case = _dispute_case_for_revision(
+        db,
+        profile_id=scope.profile.id,
+        revision_id=current.id,
+    )
+    if current.truth_state == "disputed" and not _dispute_resolution_allowed(
+        scope, dispute_case
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "clinical_dispute_review_required"},
+        )
 
     operation = f"event.correct:{event.public_id}"
     digest, replay = _begin(
@@ -738,6 +875,15 @@ def correct_event(
     )
     db.add(next_revision)
     db.flush()
+    _record_dispute_transition(
+        db,
+        scope=scope,
+        event=event,
+        previous=current,
+        replacement=next_revision,
+        action="corrected",
+        reason=payload.reason,
+    )
     _supersede_event_links(
         db,
         scope,
@@ -1136,7 +1282,7 @@ def today(
             select(LifeMapCareTask)
             .where(
                 LifeMapCareTask.profile_id == scope.profile.id,
-                LifeMapCareTask.status.in_(("accepted", "in_progress")),
+                LifeMapCareTask.status.in_(tuple(TODAY_ELIGIBLE_TASK_STATES)),
             )
             .order_by(
                 LifeMapCareTask.due_at.is_(None),
@@ -1182,6 +1328,152 @@ def today(
     )
     _audit_read(db, scope, entity="today")
     return result
+
+
+@router.get("/v2/disputes")
+def list_dispute_cases(
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> list[dict]:
+    scope = _scope(db, token, x_profile, action="view")
+    rows = list(
+        db.execute(
+            select(LifeMapDisputeCase, LifeMapEvent, LifeMapEventRevision)
+            .join(LifeMapEvent, LifeMapEvent.id == LifeMapDisputeCase.event_id)
+            .join(
+                LifeMapEventRevision,
+                LifeMapEventRevision.id == LifeMapDisputeCase.disputed_revision_id,
+            )
+            .where(LifeMapDisputeCase.profile_id == scope.profile.id)
+            .order_by(LifeMapDisputeCase.created_at.desc())
+            .limit(200)
+        ).all()
+    )
+    actions = {
+        row.case_id: row
+        for row in db.execute(
+            select(LifeMapDisputeAction).where(
+                LifeMapDisputeAction.profile_id == scope.profile.id
+            )
+        ).scalars()
+    }
+    resolution_revision_ids = {
+        action.resolution_revision_id for action in actions.values()
+    }
+    resolution_public_ids = {
+        revision.id: revision.public_id
+        for revision in db.execute(
+            select(LifeMapEventRevision).where(
+                LifeMapEventRevision.id.in_(resolution_revision_ids)
+            )
+        ).scalars()
+    } if resolution_revision_ids else {}
+    result = [
+        {
+            "id": case.public_id,
+            "event_id": event.public_id,
+            "event_type": event.event_type,
+            "disputed_revision_id": revision.public_id,
+            "revision": revision.revision_no,
+            "requires_clinical_review": case.requires_clinical_review,
+            "status": "resolved" if case.id in actions else "open",
+            "resolution": (
+                {
+                    "action": actions[case.id].action,
+                    "resolution_revision_id": resolution_public_ids[
+                        actions[case.id].resolution_revision_id
+                    ],
+                    "created_at": actions[case.id].created_at,
+                }
+                if case.id in actions
+                else None
+            ),
+            "created_at": case.created_at,
+        }
+        for case, event, revision in rows
+    ]
+    _audit_read(db, scope, entity="dispute_queue")
+    return result
+
+
+@router.post("/v2/sources/{source_id}/revoke")
+def revoke_source(
+    source_id: str,
+    payload: SourceRevocationRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    scope = _scope(db, token, x_profile, action="invalidate")
+    if not scope.is_owner:
+        raise HTTPException(status_code=404, detail={"code": "source_not_found"})
+    source = db.execute(
+        select(HealthSourceReference).where(
+            _selector(HealthSourceReference, source_id),
+            HealthSourceReference.profile_id == scope.profile.id,
+        )
+    ).scalar_one_or_none()
+    if source is None:
+        raise HTTPException(status_code=404, detail={"code": "source_not_found"})
+    operation = f"source.revoke:{source.public_id}"
+    digest, replay = _begin(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        payload=payload.model_dump(mode="json"),
+    )
+    if replay is not None:
+        return replay
+    existing = db.execute(
+        select(LifeMapSourceRevocation.id).where(
+            LifeMapSourceRevocation.source_reference_id == source.id
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=409, detail={"code": "source_already_revoked"}
+        )
+    revocation = LifeMapSourceRevocation(
+        profile_id=scope.profile.id,
+        source_reference_id=source.id,
+        actor_user_id=scope.actor.id,
+        reason=payload.reason,
+    )
+    db.add(revocation)
+    db.flush()
+    revision_ids = tuple(
+        db.execute(
+            select(LifeMapEventRevision.id).where(
+                LifeMapEventRevision.profile_id == scope.profile.id,
+                LifeMapEventRevision.source_reference_id == source.id,
+            )
+        ).scalars()
+    )
+    invalidated = invalidate_projection_graph(
+        db,
+        profile_id=scope.profile.id,
+        revision_ids=revision_ids,
+        reason="source_revoked",
+    ) if revision_ids else ()
+    return _finish(
+        db,
+        scope,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        digest=digest,
+        response={
+            "id": revocation.public_id,
+            "source_id": source.public_id,
+            "invalidated_projection_count": len(invalidated),
+        },
+        status_code=200,
+        aggregate_type="source",
+        aggregate_public_id=source.public_id,
+        event_type="lifemap.source.revoked",
+    )
 
 
 @router.get("/health", response_model=LifeMapHealthResponse)

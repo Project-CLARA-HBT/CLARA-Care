@@ -33,6 +33,7 @@ TASK_TRANSITIONS: dict[str, dict[str, str]] = {
     "cancelled": {},
     "expired": {},
 }
+TODAY_ELIGIBLE_TASK_STATES = frozenset({"accepted", "in_progress"})
 
 
 def canonical_truth_state(state: str) -> str:
@@ -59,3 +60,7 @@ def require_task_transition(current: str, action: str) -> TaskTransition:
     if destination is None:
         raise InvalidTransition(f"task:{current}:{action}")
     return TaskTransition(action=action, from_state=current, to_state=destination)
+
+
+def task_is_today_eligible(state: str) -> bool:
+    return state.strip().lower().replace("-", "_") in TODAY_ELIGIBLE_TASK_STATES
