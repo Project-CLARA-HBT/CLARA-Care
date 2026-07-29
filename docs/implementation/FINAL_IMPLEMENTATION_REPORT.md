@@ -47,7 +47,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
 | PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today/shared loading-state literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
 | PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
-| PR-04 registry/contracts | implemented for default bounded tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis and default Research planning/reasoning use registry task contracts. Explicit internal runtime overrides remain a constrained compatibility seam. |
+| PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis and Research planning/reasoning—including the legacy internal runtime seam—use registry task contracts. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
 | PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. A reviewed human-usability score remains unmeasured. |
@@ -142,11 +142,10 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
 4. Full web/domain-page i18n and common mobile terminology are not yet fully
    catalog-backed. Continue catalog migration surface by surface with parity
    tests; do not label it complete before the scanner scope covers them.
-5. The default RAG synthesis, reranking, NLI verification and Research
-   planning/reasoning paths are registry-bound. Explicit internal runtime
-   overrides still construct a direct compatibility client; replace them only
-   with a reviewed registry overlay that cannot accept user-selected provider
-   configuration, retaining their existing verifier and fallback tests.
+5. RAG synthesis, reranking, NLI verification and Research planning/reasoning
+   are registry-bound. Research's legacy internal runtime seam now uses a
+   constrained DeepSeek settings overlay and cannot bypass task selection or
+   rollback; its API payload origin still merits separate authorization review.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
 7. GitHub reported 130 dependency advisories on the default branch at push time

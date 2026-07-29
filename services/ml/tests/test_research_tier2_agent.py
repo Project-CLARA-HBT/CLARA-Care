@@ -3061,3 +3061,26 @@ def test_default_research_clients_use_typed_model_registry(
         "research_reasoning",
         "research_reasoning",
     ]
+
+
+def test_runtime_override_still_constructs_through_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "configured-key")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://llm.example/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "medical-planner")
+
+    def direct_constructor_must_not_run(*_args, **_kwargs):
+        raise AssertionError("research must not instantiate DeepSeekClient directly")
+
+    monkeypatch.setattr(tier2, "DeepSeekClient", direct_constructor_must_not_run)
+    client = tier2._build_query_planner_client(
+        llm_runtime={
+            "api_key": "request-key",
+            "base_url": "https://runtime-llm.example/v1",
+            "model": "runtime-medical-planner",
+        }
+    )
+
+    assert client is not None
+    assert client._timeout_seconds == 25.0

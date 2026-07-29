@@ -2590,6 +2590,33 @@ def _has_request_runtime_override(llm_runtime: dict[str, Any] | None) -> bool:
     )
 
 
+class _RegistrySettingsOverlay:
+    """Read-only settings view for the legacy internal runtime seam.
+
+    Registry selection remains the only client-construction path. The overlay
+    preserves the already-resolved DeepSeek connection values and timeout
+    compatibility without mutating global settings or accepting a provider
+    selected by an end user.
+    """
+
+    def __init__(self, base: Any, **overrides: object) -> None:
+        self._base = base
+        self._overrides = overrides
+
+    def __getattr__(self, name: str) -> Any:
+        return self._overrides.get(name, getattr(self._base, name))
+
+
+def _registry_settings_for_runtime(llm_runtime: dict[str, Any] | None) -> _RegistrySettingsOverlay:
+    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
+    return _RegistrySettingsOverlay(
+        settings,
+        deepseek_api_key=api_key,
+        deepseek_base_url=base_url,
+        deepseek_model=model,
+    )
+
+
 def _resolve_runtime_retry_policy(
     llm_runtime: dict[str, Any] | None,
 ) -> tuple[int, float]:
@@ -2627,30 +2654,17 @@ def _build_query_planner_client(
     timeout_seconds = max(5.0, min(float(settings.deepseek_timeout_seconds), 30.0))
     if _has_request_runtime_override(llm_runtime):
         timeout_seconds = min(timeout_seconds, 25.0)
-    retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
-    if not _has_request_runtime_override(llm_runtime):
-        # Normal production selection must pass through the typed registry so
-        # prompt/version/rollback governance cannot be bypassed by a research
-        # helper. Explicit injected runtime clients remain a compatibility seam
-        # for existing internal test/recovery flows and are not user-selectable.
-        client, _ = build_task_client(
-            ModelTask.RESEARCH_QUERY_PLANNING,
-            settings,
-            timeout_seconds=timeout_seconds,
-            retries_per_base=retries_per_base,
-        )
-        return client
-    return DeepSeekClient(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
+    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
+    # Every path, including the legacy internal runtime seam, constructs the
+    # client through the registry so model rollback and prompt contracts cannot
+    # be bypassed. The overlay supplies only already-resolved DeepSeek values.
+    client, _ = build_task_client(
+        ModelTask.RESEARCH_QUERY_PLANNING,
+        _registry_settings_for_runtime(llm_runtime),
         timeout_seconds=timeout_seconds,
         retries_per_base=retries_per_base,
-        retry_backoff_seconds=retry_backoff_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
+    return client
 
 
 def _build_reasoning_client(
@@ -2665,26 +2679,14 @@ def _build_reasoning_client(
     resolved_timeout = max(2.0, min(resolved_timeout, 120.0))
     if _has_request_runtime_override(llm_runtime):
         resolved_timeout = min(resolved_timeout, 18.0)
-    retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
-    if not _has_request_runtime_override(llm_runtime):
-        client, _ = build_task_client(
-            ModelTask.RESEARCH_REASONING,
-            settings,
-            timeout_seconds=resolved_timeout,
-            retries_per_base=retries_per_base,
-        )
-        return client
-    return DeepSeekClient(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
+    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
+    client, _ = build_task_client(
+        ModelTask.RESEARCH_REASONING,
+        _registry_settings_for_runtime(llm_runtime),
         timeout_seconds=resolved_timeout,
         retries_per_base=retries_per_base,
-        retry_backoff_seconds=retry_backoff_seconds,
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
+    return client
 
 
 def _parse_json_from_llm(raw_text: str) -> dict[str, Any]:
@@ -9117,25 +9119,13 @@ def _build_deep_beta_reasoning_client(
     if not api_key or not base_url or not model:
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), timeout_cap_seconds))
-    if not _has_request_runtime_override(llm_runtime):
-        client, _ = build_task_client(
-            ModelTask.RESEARCH_REASONING,
-            settings,
-            timeout_seconds=timeout_seconds,
-            retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
-        )
-        return client
-    return DeepSeekClient(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
+    client, _ = build_task_client(
+        ModelTask.RESEARCH_REASONING,
+        _registry_settings_for_runtime(llm_runtime),
         timeout_seconds=timeout_seconds,
         retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
-        retry_backoff_seconds=max(0.0, float(settings.deepseek_retry_backoff_seconds)),
-        max_concurrency=settings.llm_global_max_concurrency,
-        min_interval_seconds=settings.llm_global_min_interval_seconds,
-        request_jitter_seconds=settings.llm_global_jitter_seconds,
     )
+    return client
 
 
 def _extract_reasoning_context_rows(
