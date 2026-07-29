@@ -489,6 +489,25 @@ failures by dimension and locale, records latency/cost inputs, and explicitly
 cannot grant promotion even when all cases pass. Four focused harness tests
 pass.
 
+The quality evaluator now aggregates citation precision/completeness,
+unsupported claims, temporal accuracy, cross-profile isolation, abstention,
+summary faithfulness, extraction precision/recall, entity top-k/exact
+precision, contradiction recall, prompt-injection resistance, safety,
+reviewed Vietnamese quality, latency, cost, and bilingual worst-slice signals.
+Impossible counts, missing denominators, incomplete locale coverage, and
+non-finite metrics fail closed. Passing still returns
+`eligible_for_promotion=false`. Seven focused tests pass with clean Ruff and
+mypy. Task 16.12 remains open until these measures are produced from approved
+frozen evaluation runs rather than synthetic contract rows.
+
+The first per-use-case evidence package now documents `lifemap.ask.v1` intended
+and forbidden use, synthetic datasheet, deterministic artifact card,
+human-review workflow, error and hazard analysis, rollback, TRIPOD+AI
+non-applicability, and the DECIDE-AI/SPIRIT-AI/CONSORT-AI escalation boundary.
+It explicitly recommends retaining the default-off deterministic fallback and
+leaves approvals blank. Task 19.3 remains open for the other use cases and for
+real subgroup, human-factors, and independent-review evidence.
+
 High-risk disease/deterioration prediction, individual treatment effects,
 digital twins, raw-waveform foundation models, federated/split learning, and
 continuous online learning now have a separate fail-closed research-authority
