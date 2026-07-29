@@ -30,11 +30,6 @@ type TranscriptRow = {
   text: string;
 };
 
-type ClinicalCode = {
-  code: string;
-  label: string;
-};
-
 type LiveInsight = {
   id: string;
   title: string;
@@ -128,35 +123,6 @@ function parseTranscriptRows(transcript: string): TranscriptRow[] {
   });
 }
 
-function deriveClinicalCodes(transcript: string): ClinicalCode[] {
-  const lowered = transcript.toLowerCase();
-  const rows: ClinicalCode[] = [];
-
-  const add = (code: string, label: string) => {
-    if (!rows.some((item) => item.code === code)) rows.push({ code, label });
-  };
-
-  if (/gallbladder|chole|sỏi mật|ruq/.test(lowered)) {
-    add("K80.20", "Sỏi túi mật");
-    add("47562", "Nội soi cắt túi mật");
-  }
-  if (/hypertension|tăng huyết áp|blood pressure|bp/.test(lowered)) {
-    add("I10", "Tăng huyết áp nguyên phát");
-  }
-  if (/diabetes|đái tháo đường|metformin|insulin/.test(lowered)) {
-    add("E11.9", "Đái tháo đường type 2");
-  }
-  if (/warfarin|bleeding|xuất huyết/.test(lowered)) {
-    add("Z79.01", "Dùng thuốc chống đông dài hạn");
-  }
-
-  if (rows.length === 0) {
-    add("R69", "Bệnh hoặc triệu chứng chưa xác định");
-  }
-
-  return rows.slice(0, 4);
-}
-
 function buildLiveInsights(session: ScribeSession | null, transcript: string): LiveInsight[] {
   if (!session) return [];
   const soap = normalizeSoapSections(asRecord(session.soap) ?? {});
@@ -200,21 +166,6 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
   }
 
   return insights.slice(0, 3);
-}
-
-function confidenceFromSoap(analytics: ScribeAnalyticsSummary | null, session: ScribeSession | null): number {
-  const soap = normalizeSoapSections(asRecord(session?.soap) ?? {});
-  const coverage = [soap.subjective, soap.objective, soap.assessment, soap.plan].filter(
-    (item) => safeText(item).length >= 12
-  ).length;
-  const soapScore = coverage * 20;
-
-  const completedRatio =
-    analytics && analytics.total_sessions > 0
-      ? (analytics.completed_sessions / analytics.total_sessions) * 100
-      : 0;
-
-  return Math.max(5, Math.min(99, Math.round(soapScore + completedRatio * 0.2 + 15)));
 }
 
 function scribeStatusLabel(status: string | undefined): string {
@@ -289,11 +240,6 @@ export default function ScribePage() {
     () => buildLiveInsights(selectedSession, transcriptDraft),
     [selectedSession, transcriptDraft]
   );
-  const confidenceScore = useMemo(
-    () => confidenceFromSoap(analytics, selectedSession),
-    [analytics, selectedSession]
-  );
-  const clinicalCodes = useMemo(() => deriveClinicalCodes(transcriptDraft), [transcriptDraft]);
 
   const pushNotice = useCallback((tone: NoticeTone, message: string) => {
     setNotice({ tone, message });
@@ -1063,27 +1009,11 @@ export default function ScribePage() {
               <article className="col-span-12 2xl:col-span-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className={`col-span-1 ${panelPaddedClass}`}>
-                    <p className={sectionTitleClass}>Độ tin cậy AI</p>
-                    <div className="mt-4 flex items-center justify-center">
-                      <div className="relative h-28 w-28">
-                        <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-                          <circle cx="60" cy="60" r="50" stroke="rgba(96, 165, 250,0.12)" strokeWidth="8" fill="none" />
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r="50"
-                            stroke="#60a5fa"
-                            strokeWidth="8"
-                            fill="none"
-                            strokeDasharray={314}
-                            strokeDashoffset={314 - (314 * confidenceScore) / 100}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-[color:var(--brand-700)] dark:text-sky-100">
-                          {confidenceScore}%
-                        </div>
-                      </div>
-                    </div>
+                    <p className={sectionTitleClass}>Trạng thái kiểm tra</p>
+                    <p className={`mt-4 text-xs leading-5 ${secondaryTextClass}`}>
+                      CLARA không hiển thị phần trăm tin cậy chưa được hiệu chuẩn.
+                      Hãy kiểm tra bản ghi gốc, cảnh báo và phần SOAP trước khi sử dụng.
+                    </p>
                   </div>
 
                   <div className={`col-span-2 ${panelPaddedClass}`}>
@@ -1130,18 +1060,11 @@ export default function ScribePage() {
 
               <aside className="col-span-12 2xl:col-span-3 space-y-4">
                 <div className={panelPaddedClass}>
-                  <h3 className={sectionTitleClass}>Mã hóa lâm sàng</h3>
-                  <div className="mt-3 space-y-2">
-                    {clinicalCodes.map((code) => (
-                      <article key={code.code} className={`flex items-center justify-between ${softPanelClass} p-3`}>
-                        <div>
-                          <p className="text-xs font-black text-[color:var(--brand-700)] dark:text-sky-100">{code.code}</p>
-                          <p className={`text-[10px] font-medium ${secondaryTextClass}`}>{code.label}</p>
-                        </div>
-                        <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-100">add_circle</span>
-                      </article>
-                    ))}
-                  </div>
+                  <h3 className={sectionTitleClass}>Mã hóa cần chuyên môn</h3>
+                  <p className={`mt-3 text-xs leading-5 ${secondaryTextClass}`}>
+                    CLARA không tự gán mã chẩn đoán hoặc thủ thuật từ bản ghi.
+                    Người có thẩm quyền cần chọn và xác nhận mã trong hệ thống nghiệp vụ phù hợp.
+                  </p>
                 </div>
 
                 <div className={panelPaddedClass}>
