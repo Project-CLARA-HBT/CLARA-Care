@@ -313,6 +313,14 @@ grant makes the next request indistinguishably 404. A focused caregiver test
 proves withheld event categories and next-request revocation; seven combined
 Ask/summary/digest tests pass.
 
+Ask retrieval now materializes only current revisions from the already
+authorized SQL scope into a physically separate per-profile temporal index.
+Hard data-class, episode, and time filters produce the candidate set before
+lexical, optional dense cosine, temporal, and graph scoring. A reranker may only
+reorder unique candidate IDs and fails closed if it introduces an ID. Three
+index isolation tests plus seven integrated Ask/summary/digest tests pass; the
+response records `profile-temporal-hybrid-current-revisions-v1`.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

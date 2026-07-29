@@ -274,7 +274,7 @@ def ask_lifemap_v2(
         "inference_manifest_id": inference_id,
         "model": "deterministic-grounded-fallback@1",
         "template": "ask-lifemap-v1",
-        "retrieval_index": "profile-sql-current-revisions-v1",
+        "retrieval_index": "profile-temporal-hybrid-current-revisions-v1",
         "policy": "lifemap-ai-safe-read-v1",
     }
 

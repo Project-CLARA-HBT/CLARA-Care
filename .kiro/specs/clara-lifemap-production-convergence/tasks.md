@@ -405,7 +405,7 @@ an unsigned artifact.
 - [x] 16.1 Implement `AIUseCaseDefinition` and private `AIContextManifest`;
   authorization, purpose, consent, data-class, and time/episode filters compile
   before ML context. _R2, R15, R23, R31_
-- [ ] 16.2 Build a profile-partitioned, revision-aware temporal retrieval index
+- [x] 16.2 Build a profile-partitioned, revision-aware temporal retrieval index
   with lexical/dense/time/graph search and hard filtered candidate sets. _R23,
   R26_
 - [x] 16.3 Implement Ask My LifeMap typed intents and answer schema with evidence

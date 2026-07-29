@@ -23,6 +23,7 @@ from clara_api.db.models import (
     LifeMapEvent,
     LifeMapEventRevision,
 )
+from clara_api.lifemap.temporal_index import RetrievalDocument, TemporalRetrievalIndex
 
 AskIntent = Literal[
     "timeline_lookup",
@@ -173,16 +174,50 @@ def retrieve_revision_evidence(
             statement.order_by(LifeMapEvent.occurred_at.desc(), LifeMapEvent.id.desc()).limit(200)
         ).all()
     ]
-    query_tokens = _tokens(query)
-
-    def score(item: tuple[LifeMapEvent, LifeMapEventRevision]) -> tuple[int, datetime, int]:
-        event, revision = item
-        searchable = f"{event.event_type} {revision.display_summary}"
-        overlap = len(query_tokens & _tokens(searchable))
-        return overlap, event.occurred_at, event.id
-
-    rows.sort(key=score, reverse=True)
-    selected = rows[: max(1, min(limit, 50))]
+    index = TemporalRetrievalIndex()
+    by_document: dict[str, tuple[LifeMapEvent, LifeMapEventRevision]] = {}
+    for event, revision in rows:
+        document_id = f"event-revision:{revision.public_id}"
+        by_document[document_id] = (event, revision)
+        index.upsert(
+            RetrievalDocument(
+                document_id=document_id,
+                profile_partition=str(profile_id),
+                revision_id=revision.public_id,
+                source_type=event.source_kind,
+                effective_start=event.occurred_at,
+                effective_end=None,
+                recorded_at=revision.recorded_at,
+                episode_ids=(
+                    frozenset(
+                        {
+                            str(episode_id)
+                            if episode_id is not None
+                            else str(event.episode_id)
+                        }
+                    )
+                    if episode_id is not None or event.episode_id is not None
+                    else frozenset()
+                ),
+                truth_state=revision.truth_state,
+                data_class="lifemap",
+                language="vi",
+                terms=frozenset(_tokens(f"{event.event_type} {revision.display_summary}")),
+                embedding=None,
+                graph_entities=frozenset({event.event_type}),
+            )
+        )
+    hits = index.search(
+        profile_partition=str(profile_id),
+        allowed_data_classes=frozenset({"lifemap"}),
+        query_terms=frozenset(_tokens(query)),
+        episode_id=str(episode_id) if episode_id is not None else None,
+        start_at=start_at,
+        end_at=end_at,
+        graph_entities=frozenset(_tokens(query)),
+        limit=limit,
+    )
+    selected = [by_document[hit.document.document_id] for hit in hits]
     return [
         EvidenceRow(
             evidence_id=f"ev:{revision.public_id}",
