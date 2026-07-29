@@ -24,6 +24,7 @@ from uuid import uuid4
 import clara_ml.rag.store  # noqa: E402,F401  (side-effect import; see note above)
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
 from clara_ml.rag.retriever import Document, InMemoryRetriever
@@ -354,22 +355,30 @@ class RagPipelineP1:
         )
         self._llm_client = llm_client
         if self._llm_client is None and self._deepseek_api_key:
-            self._llm_client = DeepSeekClient(
-                api_key=self._deepseek_api_key,
-                base_url=deepseek_base_url or settings.deepseek_base_url,
-                model=deepseek_model or settings.deepseek_model,
-                timeout_seconds=(
-                    settings.deepseek_timeout_seconds
-                    if deepseek_timeout_seconds is None
-                    else deepseek_timeout_seconds
-                ),
-                retries_per_base=settings.deepseek_retries_per_base,
-                retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-                max_concurrency=settings.llm_global_max_concurrency,
-                min_interval_seconds=settings.llm_global_min_interval_seconds,
-                request_jitter_seconds=settings.llm_global_jitter_seconds,
-                fallback_model=settings.deepseek_fallback_model,
-            )
+            if (
+                deepseek_api_key is None
+                and deepseek_base_url is None
+                and deepseek_model is None
+                and deepseek_timeout_seconds is None
+            ):
+                self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
+            else:
+                self._llm_client = DeepSeekClient(
+                    api_key=self._deepseek_api_key,
+                    base_url=deepseek_base_url or settings.deepseek_base_url,
+                    model=deepseek_model or settings.deepseek_model,
+                    timeout_seconds=(
+                        settings.deepseek_timeout_seconds
+                        if deepseek_timeout_seconds is None
+                        else deepseek_timeout_seconds
+                    ),
+                    retries_per_base=settings.deepseek_retries_per_base,
+                    retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
+                    max_concurrency=settings.llm_global_max_concurrency,
+                    min_interval_seconds=settings.llm_global_min_interval_seconds,
+                    request_jitter_seconds=settings.llm_global_jitter_seconds,
+                    fallback_model=settings.deepseek_fallback_model,
+                )
         self._graphrag = GraphRagSidecar()
         # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
         # When ``RAG_PERSISTENT_RETRIEVAL_ENABLED`` is effectively on, the

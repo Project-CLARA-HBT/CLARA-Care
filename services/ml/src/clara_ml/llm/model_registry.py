@@ -27,6 +27,7 @@ class ModelTask(StrEnum):
     COUNCIL_SHADOW = "council_shadow"
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"
+    RAG_SYNTHESIS = "rag_synthesis"
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,12 @@ TASK_CONTRACTS: dict[ModelTask, TaskContract] = {
         prompt_version="factcheck-nli.v1",
         output_contract="evidence_bound_claim_verdicts_json",
         safety_fallback="deterministic_overlap_verdicts_then_fides_gate",
+    ),
+    ModelTask.RAG_SYNTHESIS: TaskContract(
+        task=ModelTask.RAG_SYNTHESIS,
+        prompt_version="rag-synthesis.v1",
+        output_contract="evidence_cited_patient_safe_markdown",
+        safety_fallback="local_synthesis_with_safety_wording",
     ),
 }
 
