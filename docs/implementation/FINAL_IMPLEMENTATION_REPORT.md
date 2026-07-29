@@ -89,8 +89,10 @@ Executed in this workspace:
 `make` itself is unavailable in this workspace (`make: command not found`), so
 `make eval-judge-report` could not be invoked literally here. The exact Python
 command behind that target was executed successfully. CI runners invoke the
-same target/runner. API full-suite execution is recorded separately when it
-finishes; do not infer its status from focused tests.
+same target/runner. The API full suite has no confirmed terminal result: its
+first execution detached before a summary and a background log rerun was
+stopped by the environment before it wrote output. Do not infer its status from
+focused tests; run the direct command below before release.
 
 ## Evaluation results, critical errors and cost/latency
 
@@ -147,6 +149,7 @@ make eval-release
 make eval-judge-report
 
 # direct fallback when make is unavailable
+PYTHONPATH=services/api/src services/api/.venv/bin/pytest -q services/api/tests
 python -m evaluation.clara_eval.run \
   --config evaluation/configs/judge_demo.yaml \
   --output artifacts/judge-report
