@@ -14,7 +14,6 @@ import {
   askLifeMap,
   correctLifeMapEvent,
   disputeLifeMapEvent,
-  createLifeMapEpisode,
   createLifeMapTask,
   getLifeMapBaselines,
   getLifeMapCaptureArtifact,
@@ -56,8 +55,6 @@ const priorities = [
   ["urgent", "Cần ưu tiên"],
 ] as const;
 
-type PriorityKey = (typeof priorities)[number][0];
-
 function priorityTone(priority: string): "danger" | "warn" | "brand" {
   if (priority === "urgent") return "danger";
   if (priority === "soon") return "warn";
@@ -73,9 +70,6 @@ export default function LifeMapPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [episodeTitle, setEpisodeTitle] = useState("");
-  const [goal, setGoal] = useState("");
-  const [priority, setPriority] = useState<PriorityKey>("routine");
   const [taskTitle, setTaskTitle] = useState("");
   const [episodeId, setEpisodeId] = useState("");
   const [captureEnabled, setCaptureEnabled] = useState(false);
@@ -373,28 +367,6 @@ export default function LifeMapPage() {
       setCapturePreview({ artifact, url: URL.createObjectURL(blob) });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể mở nguồn.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const makeEpisode = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!episodeTitle.trim()) return;
-    setSaving(true);
-    setError("");
-    try {
-      const created = await createLifeMapEpisode({
-        title: episodeTitle.trim(),
-        goal: goal.trim(),
-        priority,
-      });
-      setEpisodeTitle("");
-      setGoal("");
-      setEpisodeId(created.id);
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo hành trình.");
     } finally {
       setSaving(false);
     }
@@ -1603,37 +1575,18 @@ export default function LifeMapPage() {
           <SurfaceCard className="p-5">
             <h2 className="font-semibold text-[var(--text-primary)]">Tạo hành trình</h2>
             <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              Dùng ngôn ngữ của bạn. Đây là kế hoạch cá nhân, không phải chẩn đoán.
+              Hoàn thành từng thông tin trên một trang riêng, sau đó kiểm tra trước khi tạo.
             </p>
-            <form className="mt-4 space-y-3.5" onSubmit={(event) => void makeEpisode(event)}>
-              <Field
-                label="Tên hành trình"
-                required
-                value={episodeTitle}
-                onChange={(event) => setEpisodeTitle(event.target.value)}
-                placeholder="Ví dụ: Theo dõi giấc ngủ"
-              />
-              <Textarea
-                label="Điều bạn muốn đạt được"
-                optional
-                value={goal}
-                onChange={(event) => setGoal(event.target.value)}
-              />
-              <Select
-                label="Mức ưu tiên"
-                value={priority}
-                onChange={(event) => setPriority(event.target.value as PriorityKey)}
-              >
-                {priorities.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <Button type="submit" block loading={saving} loadingLabel="Đang lưu…" icon="add">
-                Tạo hành trình
-              </Button>
-            </form>
+            <Button
+              as="link"
+              href="/lifemap/new"
+              block
+              icon="arrow_forward"
+              iconTrailing
+              className="mt-4"
+            >
+              Bắt đầu từng bước
+            </Button>
           </SurfaceCard>
 
           <SurfaceCard className="p-5">

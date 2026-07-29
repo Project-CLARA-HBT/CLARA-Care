@@ -22,6 +22,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:clara_mobile/core/device_capability.dart';
 import 'package:clara_mobile/theme/glass/glass_scope.dart';
 import 'package:clara_mobile/theme/glass/glass_surface.dart';
+import 'package:clara_mobile/theme/glass/glass_tokens.dart';
+import 'package:clara_mobile/theme/web_palette.dart';
 
 /// A fully-capable device snapshot (glass affordable on the capability axis).
 const _capable = DeviceCapabilitySnapshot(
@@ -30,6 +32,29 @@ const _capable = DeviceCapabilitySnapshot(
 );
 
 void main() {
+  group('GlassSurface semantic palette', () {
+    test('opaque fallback follows the light theme surface and border', () {
+      final scheme = webColorScheme(Brightness.light);
+      final colors = resolveGlassColors(scheme, enabled: false);
+
+      expect(colors.tint, scheme.surface);
+      expect(colors.edge, scheme.outlineVariant);
+      expect(colors.sheen, scheme.surface);
+    });
+
+    test('dark glass follows the dark theme instead of legacy slate', () {
+      final scheme = webColorScheme(Brightness.dark);
+      final colors = resolveGlassColors(scheme, enabled: true);
+
+      expect(colors.tint, scheme.surface);
+      expect(colors.edge.r, closeTo(scheme.onSurface.r, 0.001));
+      expect(colors.edge.g, closeTo(scheme.onSurface.g, 0.001));
+      expect(colors.edge.b, closeTo(scheme.onSurface.b, 0.001));
+      expect(colors.edge.a, closeTo(GlassTokens.borderHairline, 0.001));
+      expect(colors.sheen, scheme.onSurface);
+    });
+  });
+
   group('GlassScope.resolveEnabled — pure truth table (R1/R6, fail-closed)',
       () {
     test('build gate OFF ⇒ always false, even on a fully-capable device', () {

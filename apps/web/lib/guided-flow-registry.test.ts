@@ -7,6 +7,7 @@ import {
   guidedFlowPath,
   guidedFlowSteps,
   isGuidedFlowStep,
+  isGuidedFlowStepAhead,
   makeGuidedFlowAnalyticsEvent,
 } from "@/lib/guided-flow-registry";
 
@@ -16,8 +17,15 @@ describe("guided-flow registry", () => {
     expect(guidedFlowSteps("welcome", "vi")).toHaveLength(flow.stepIds.length);
     expect(guidedFlowSteps("welcome", "en")).toHaveLength(flow.stepIds.length);
     expect(guidedFlowPath("welcome", "review")).toBe("/welcome/review");
+    expect(guidedFlowPath("lifemapEpisode", "goal")).toBe(
+      "/lifemap/new/goal",
+    );
+    expect(guidedFlowSteps("lifemapEpisode", "vi")).toHaveLength(4);
+    expect(isGuidedFlowStep("lifemapEpisode", "priority")).toBe(true);
     expect(isGuidedFlowStep("welcome", "body")).toBe(true);
     expect(isGuidedFlowStep("welcome", "not-a-step")).toBe(false);
+    expect(isGuidedFlowStepAhead("lifemapEpisode", "review", "goal")).toBe(true);
+    expect(isGuidedFlowStepAhead("lifemapEpisode", "title", "goal")).toBe(false);
   });
 
   it("never moves outside the ordered flow", () => {

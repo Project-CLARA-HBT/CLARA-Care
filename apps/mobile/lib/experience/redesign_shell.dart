@@ -293,10 +293,10 @@ class _RedesignShellState extends State<RedesignShell> {
   /// The raised, circular, brand-filled Chat action floating above the nav pill
   /// (Requirement 2.1, 2.2). Always present; always routes to Chat.
   ///
-  /// As the app's primary action it stays high-contrast opaque brand fill — it
-  /// is NOT glass. A thin white specular rim and a soft top-left highlight give
-  /// it a subtle glass-adjacent sheen that echoes the surrounding chrome while
-  /// preserving its contrast, plus a soft brand-tinted glow shadow.
+  /// As the app's primary action it stays a high-contrast, opaque semantic
+  /// brand surface. Avoid glass highlights and colored glow here: they conflict
+  /// with the calm light-mode foundation and make the control render
+  /// differently across brightness modes.
   Widget _buildChatAction(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final selected = _isChatSelected;
@@ -311,28 +311,16 @@ class _RedesignShellState extends State<RedesignShell> {
           height: kRedesignChatActionDiameter,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.lerp(scheme.primary, Colors.white, 0.18)!,
-                scheme.primary,
-              ],
-            ),
+            color: scheme.primary,
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.45),
-              width: 1.5,
+              color: scheme.outlineVariant,
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.40),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: scheme.shadow.withValues(alpha: 0.14),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),

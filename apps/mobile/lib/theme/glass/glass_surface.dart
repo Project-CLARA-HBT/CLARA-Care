@@ -25,11 +25,25 @@ import 'package:flutter/material.dart';
 import 'glass_scope.dart';
 import 'glass_tokens.dart';
 
-/// The tint a glass surface fills with, per brightness. Light glass tints white;
-/// dark glass tints a deep slate so the material reads as tinted glass, not gray.
-Color _glassTint(Brightness brightness) => brightness == Brightness.dark
-    ? const Color(0xFF1D2840) // WebPalette.darkSurface
-    : const Color(0xFFFFFFFF);
+/// Resolve glass presentation from the active semantic theme.
+///
+/// Keeping this mapping here prevents the optional compatibility effect from
+/// re-introducing a second, hard-coded palette over the unified experience.
+@visibleForTesting
+({Color tint, Color edge, Color sheen}) resolveGlassColors(
+  ColorScheme scheme, {
+  required bool enabled,
+}) {
+  return (
+    tint: scheme.surface,
+    edge: enabled
+        ? scheme.onSurface.withValues(alpha: GlassTokens.borderHairline)
+        : scheme.outlineVariant,
+    sheen: scheme.brightness == Brightness.light
+        ? scheme.surface
+        : scheme.onSurface,
+  );
+}
 
 /// Fill "thickness" presets mapping to the token opacities (R1.1, R11.2).
 enum GlassFill { thin, regular, thick }
@@ -93,9 +107,9 @@ class GlassSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
     final glassEnabled = GlassScope.of(context) && !clinical;
-    final tint = _glassTint(brightness);
+    final colors = resolveGlassColors(scheme, enabled: glassEnabled);
 
     // Continuous (squircle) shape. `ContinuousRectangleBorder` under-curves, so
     // apply the squircle factor to match Apple's perceived roundness.
@@ -106,16 +120,11 @@ class GlassSurface extends StatelessWidget {
           )
         : ContinuousRectangleBorder(borderRadius: borderRadiusOverride!);
 
-    final borderColor = (brightness == Brightness.dark
-            ? const Color(0xFFFFFFFF)
-            : const Color(0xFFFFFFFF))
-        .withValues(alpha: glassEnabled ? GlassTokens.borderHairline : 0.0);
-
-    // The fill: translucent when glass is on, near-opaque otherwise so the same
-    // layout renders solid without a BackdropFilter (R6).
-    final fillAlpha =
-        glassEnabled ? _fillOpacity(fill) : GlassTokens.fillOpaque;
-    final fillColor = tint.withValues(alpha: fillAlpha);
+    // The fill is translucent when glass is on and uses the exact opaque
+    // semantic surface otherwise, without depending on the canvas beneath it.
+    final fillColor = glassEnabled
+        ? colors.tint.withValues(alpha: _fillOpacity(fill))
+        : colors.tint;
 
     final content = Container(
       padding: padding,
@@ -132,9 +141,9 @@ class GlassSurface extends StatelessWidget {
                 end: Alignment.bottomRight,
                 stops: const [0.0, 0.5, 1.0],
                 colors: [
-                  Colors.white.withValues(alpha: GlassTokens.sheenPeak),
-                  Colors.white.withValues(alpha: 0.0),
-                  Colors.white.withValues(alpha: GlassTokens.sheenPeak * 0.4),
+                  colors.sheen.withValues(alpha: GlassTokens.sheenPeak),
+                  colors.sheen.withValues(alpha: 0.0),
+                  colors.sheen.withValues(alpha: GlassTokens.sheenPeak * 0.4),
                 ],
               ),
             )
@@ -162,9 +171,10 @@ class GlassSurface extends StatelessWidget {
     return DecoratedBox(
       decoration: ShapeDecoration(
         shape: shape.copyWith(
-          side: borderColor.a > 0
-              ? BorderSide(color: borderColor, width: GlassTokens.borderWidth)
-              : BorderSide.none,
+          side: BorderSide(
+            color: colors.edge,
+            width: GlassTokens.borderWidth,
+          ),
         ),
         shadows: showShadow ? GlassTokens.cardShadow : null,
       ),

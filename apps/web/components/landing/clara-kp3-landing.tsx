@@ -103,25 +103,26 @@ export default function ClaraKp3Landing() {
         .glass-panel {
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
-          background: rgba(255, 255, 255, 0.62);
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          box-shadow: 0 8px 32px rgba(2, 6, 23, 0.08);
+          background: color-mix(in srgb, var(--surface-panel) 84%, transparent);
+          border: 1px solid color-mix(in srgb, var(--shell-border) 82%, transparent);
+          box-shadow: var(--shadow-soft);
         }
 
         .dark .glass-panel {
-          background: rgba(15, 23, 42, 0.45);
-          border: 1px solid rgba(96, 165, 250, 0.24);
+          background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
+          border-color: color-mix(in srgb, var(--shell-border-strong) 48%, transparent);
         }
 
         .cyber-grid {
-          background-image: linear-gradient(rgba(96, 165, 250, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(96, 165, 250, 0.05) 1px, transparent 1px);
+          background-color: var(--bg-canvas);
+          background-image: linear-gradient(color-mix(in srgb, var(--brand-500) 7%, transparent) 1px, transparent 1px),
+            linear-gradient(90deg, color-mix(in srgb, var(--brand-500) 7%, transparent) 1px, transparent 1px);
           background-size: 40px 40px;
         }
 
         .data-stream {
           position: absolute;
-          background: linear-gradient(to bottom, transparent, #60a5fa, transparent);
+          background: linear-gradient(to bottom, transparent, var(--brand-400), transparent);
           width: 1px;
           height: 100px;
           animation: flow 3s linear infinite;
@@ -146,7 +147,7 @@ export default function ClaraKp3Landing() {
         }
 
         .glow-cyan {
-          filter: drop-shadow(0 0 8px rgba(0, 218, 243, 0.42));
+          filter: drop-shadow(0 0 8px color-mix(in srgb, var(--brand-500) 38%, transparent));
         }
 
         .module-blade {
@@ -162,7 +163,7 @@ export default function ClaraKp3Landing() {
           left: 0;
           width: 2px;
           height: 100%;
-          background: #00daf3;
+          background: var(--brand-500);
           transform: scaleY(0);
           transition: transform 0.3s ease;
         }
@@ -184,31 +185,31 @@ export default function ClaraKp3Landing() {
         }
       `}</style>
 
-      <main className="cyber-grid overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <nav className="glass-panel fixed top-0 z-[100] flex w-full items-center justify-between border-b border-slate-200/45 px-4 py-4 min-[1024px]:px-8 dark:border-slate-700/45">
+      <main className="cyber-grid overflow-x-hidden text-[var(--text-primary)]">
+        <nav className="glass-panel fixed top-0 z-[100] flex w-full items-center justify-between border-b border-[color:var(--shell-border)] px-4 py-4 min-[1024px]:px-8">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-slate-900 text-lg font-bold text-white dark:bg-cyan-400 dark:text-slate-950">
+            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-600)] text-lg font-bold text-white">
               C
             </div>
-            <div className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              The <span className="text-cyan-600 dark:text-cyan-300">Clara Care</span>
+            <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              The <span className="text-[var(--text-brand)]">Clara Care</span>
             </div>
           </div>
 
           <div className="hidden items-center gap-8 min-[900px]:flex">
-            <a className="glow-cyan inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300" href="#engine">
+            <a className="glow-cyan inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-brand)]" href="#engine">
               <span className="material-symbols-outlined text-sm">play_circle</span>
               Cách hoạt động
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#modules">
+            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#modules">
               <span className="material-symbols-outlined text-sm">widgets</span>
               Tính năng
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#workflow">
+            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#workflow">
               <span className="material-symbols-outlined text-sm">account_tree</span>
               Quy trình
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="#faq">
+            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#faq">
               <span className="material-symbols-outlined text-sm">help</span>
               Hỏi đáp
             </a>
@@ -217,13 +218,13 @@ export default function ClaraKp3Landing() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-bold text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              className="focus-ring rounded-lg px-4 py-2 text-sm font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             >
               Đăng nhập
             </Link>
             <Link
               href="/register"
-              className="rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-slate-800 dark:border-cyan-500 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
+              className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-white transition-all hover:bg-[var(--brand-700)]"
             >
               Đăng ký
             </Link>
@@ -240,28 +241,28 @@ export default function ClaraKp3Landing() {
 
           <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-center min-[1120px]:gap-12">
             <div className="w-full space-y-6 min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-100/65 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-500)]" />
                 AI lâm sàng có trích dẫn nguồn
               </div>
 
               <h1
-                className="font-black leading-[1.08] tracking-tight text-slate-900 [text-wrap:balance] min-[640px]:leading-[0.98] dark:text-slate-100"
+                className="font-black leading-[1.08] tracking-tight text-[var(--text-primary)] [text-wrap:balance] min-[640px]:leading-[0.98]"
                 style={{ fontSize: "clamp(1.4rem, 6.4vw, 4.25rem)" }}
               >
                 Hỏi đúng trọng tâm.{" "}
-                <span className="text-cyan-600 dark:text-cyan-300">Có nguồn minh bạch.</span>{" "}
+                <span className="text-[var(--text-brand)]">Có nguồn minh bạch.</span>{" "}
                 Quyết định tự tin.
               </h1>
 
-              <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-slate-600 min-[640px]:text-base min-[1280px]:text-lg dark:text-slate-300">
-                CLARA là trợ lý y khoa cho <strong className="font-black text-slate-800 dark:text-slate-200">bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: tra cứu nhanh, mọi kết luận <strong className="font-black text-slate-800 dark:text-slate-200">truy ngược được nguồn</strong> và <strong className="font-black text-slate-800 dark:text-slate-200">kiểm chứng từng luận điểm</strong> — hỗ trợ quyết định an toàn hơn, không phải chatbot trả lời chung chung.
+              <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-[var(--text-secondary)] min-[640px]:text-base min-[1280px]:text-lg">
+                CLARA là trợ lý y khoa cho <strong className="font-black text-[var(--text-primary)]">bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: tra cứu nhanh, mọi kết luận <strong className="font-black text-[var(--text-primary)]">truy ngược được nguồn</strong> và <strong className="font-black text-[var(--text-primary)]">kiểm chứng từng luận điểm</strong> — hỗ trợ quyết định an toàn hơn, không phải chatbot trả lời chung chung.
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/chat"
-                  className="group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-4 text-base font-black text-white transition-all hover:bg-slate-800 min-[480px]:flex-none min-[480px]:px-8 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
+                  className="focus-ring group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-4 text-base font-black text-white transition-all hover:bg-[var(--brand-700)] min-[480px]:flex-none min-[480px]:px-8"
                 >
                   Dùng thử CLARA Chat
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>

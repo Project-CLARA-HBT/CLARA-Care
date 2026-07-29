@@ -34,12 +34,40 @@ const WELCOME_LABELS = {
   },
 } as const;
 
+export const LIFEMAP_EPISODE_STEP_IDS = [
+  "title",
+  "goal",
+  "priority",
+  "review",
+] as const;
+
+const LIFEMAP_EPISODE_LABELS = {
+  vi: {
+    title: "Tên hành trình",
+    goal: "Mục tiêu",
+    priority: "Ưu tiên",
+    review: "Kiểm tra",
+  },
+  en: {
+    title: "Journey name",
+    goal: "Goal",
+    priority: "Priority",
+    review: "Review",
+  },
+} as const;
+
 export const GUIDED_FLOW_REGISTRY = {
   welcome: {
     id: "welcome",
     routePrefix: "/welcome",
     stepIds: WELCOME_STEP_IDS,
     labels: WELCOME_LABELS,
+  },
+  lifemapEpisode: {
+    id: "lifemapEpisode",
+    routePrefix: "/lifemap/new",
+    stepIds: LIFEMAP_EPISODE_STEP_IDS,
+    labels: LIFEMAP_EPISODE_LABELS,
   },
 } as const;
 
@@ -74,15 +102,24 @@ export function adjacentGuidedFlowStep<F extends GuidedFlowId>(
   return (stepIds[target] as GuidedFlowStepId<F> | undefined) ?? null;
 }
 
+export function isGuidedFlowStepAhead<F extends GuidedFlowId>(
+  flowId: F,
+  requested: GuidedFlowStepId<F>,
+  current: GuidedFlowStepId<F>,
+): boolean {
+  const stepIds = GUIDED_FLOW_REGISTRY[flowId].stepIds as readonly string[];
+  return stepIds.indexOf(requested) > stepIds.indexOf(current);
+}
+
 export function guidedFlowSteps<F extends GuidedFlowId>(
   flowId: F,
   locale: GuidedFlowLocale,
 ) {
   const flow = GUIDED_FLOW_REGISTRY[flowId];
-  const labels = flow.labels[locale] as Record<GuidedFlowStepId<F>, string>;
-  return flow.stepIds.map((rawId) => {
+  const labels = flow.labels[locale] as Record<string, string>;
+  return (flow.stepIds as readonly string[]).map((rawId) => {
     const id = rawId as GuidedFlowStepId<F>;
-    return { id, label: labels[id] };
+    return { id, label: labels[rawId] };
   });
 }
 

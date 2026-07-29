@@ -37,6 +37,15 @@ const SURFACE_FILES = [
   "admin/knowledge-sources/page.tsx"
 ];
 
+const PUBLIC_SURFACE_FILES = [
+  resolve(here, "..", "components", "landing", "clara-kp3-landing.tsx"),
+  resolve(here, "..", "components", "landing", "landing-faq-accordion.tsx"),
+  resolve(appDir, "login/page.tsx"),
+  resolve(appDir, "register/page.tsx"),
+  resolve(appDir, "forgot-password/page.tsx"),
+  resolve(appDir, "reset-password/page.tsx")
+];
+
 // Deliberate, non-tokenizable hardcoded colors that are exempt from the audit.
 const ALLOWLIST = new Set<string>(["#001c38"]);
 
@@ -102,5 +111,16 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
     expect(combined).toMatch(/var\(--text-(primary|secondary|muted|brand)\)/);
     expect(combined).toMatch(/var\(--surface-(muted|brand-soft)\)/);
     expect(combined).toMatch(/var\(--shell-border\)/);
+  });
+
+  it("keeps public landing and authentication surfaces on semantic palette families", () => {
+    const combined = PUBLIC_SURFACE_FILES.map((path) => readFileSync(path, "utf8")).join("\n");
+    expect(combined).toMatch(/var\(--bg-canvas\)/);
+    expect(combined).toMatch(/var\(--surface-(panel|muted|brand-soft)\)/);
+    expect(combined).toMatch(/var\(--text-(primary|secondary|brand)\)/);
+    expect(combined).toMatch(/var\(--brand-(400|500|600|700)\)/);
+    expect(combined).toMatch(/var\(--shell-border\)/);
+    expect(combined).not.toContain("#00daf3");
+    expect(combined).not.toContain("#60a5fa");
   });
 });

@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../../core/a11y.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/tokens.dart';
+import '../../theme/web_palette.dart';
 
 /// A single completeness dimension with a filled flag and a friendly label.
 @immutable
@@ -123,12 +124,14 @@ class PhrCompletenessCard extends StatelessWidget {
     final textScaler = A11y.resolveTextScaler(context);
     final pct = completeness.percent;
     final missing = completeness.missing;
+    final status = theme.extension<ClaraStatusColors>() ??
+        ClaraStatusColors.of(theme.brightness);
 
     final tint = pct >= 80
-        ? Colors.green.shade700
+        ? status.success
         : pct >= 50
             ? scheme.primary
-            : Colors.orange.shade800;
+            : status.warning;
 
     return ClaraCard.static_(
       semanticLabel: '$title: hoàn thiện $pct phần trăm',
@@ -171,7 +174,7 @@ class PhrCompletenessCard extends StatelessWidget {
               children: [
                 ExcludeSemantics(
                   child: Icon(Icons.verified_outlined,
-                      size: 16, color: Colors.green.shade700),
+                      size: 16, color: status.success),
                 ),
                 const SizedBox(width: 6),
                 Expanded(

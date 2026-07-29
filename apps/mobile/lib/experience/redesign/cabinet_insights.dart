@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import '../../core/a11y.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/tokens.dart';
+import '../../theme/web_palette.dart';
 
 /// Number of days before expiry within which an item is "sắp hết hạn".
 const int kCabinetExpiringSoonDays = 30;
@@ -155,6 +156,8 @@ class CabinetHealthCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final textScaler = A11y.resolveTextScaler(context);
+    final status = theme.extension<ClaraStatusColors>() ??
+        ClaraStatusColors.of(theme.brightness);
 
     final headline = insights.hasAttentionItems
         ? 'Tủ thuốc cần bạn để ý một vài mục'
@@ -162,9 +165,8 @@ class CabinetHealthCard extends StatelessWidget {
     final headlineIcon = insights.hasAttentionItems
         ? Icons.notifications_active_outlined
         : Icons.verified_outlined;
-    final headlineColor = insights.hasAttentionItems
-        ? Colors.orange.shade800
-        : Colors.green.shade700;
+    final headlineColor =
+        insights.hasAttentionItems ? status.warning : status.success;
 
     return ClaraCard.static_(
       semanticLabel: 'Tổng quan sức khỏe tủ thuốc',
@@ -217,7 +219,7 @@ class CabinetHealthCard extends StatelessWidget {
                   icon: Icons.hourglass_bottom_outlined,
                   value: '${insights.expiringSoon}',
                   label: 'sắp hết hạn',
-                  tint: Colors.orange.shade800,
+                  tint: status.warning,
                   onTap: onTapExpiring,
                 ),
               if (insights.needsReview > 0)
@@ -225,7 +227,7 @@ class CabinetHealthCard extends StatelessWidget {
                   icon: Icons.help_outline,
                   value: '${insights.needsReview}',
                   label: 'cần xem lại',
-                  tint: Colors.orange.shade800,
+                  tint: status.warning,
                   onTap: onTapReview,
                 ),
               if (insights.lowStock > 0)
@@ -233,7 +235,7 @@ class CabinetHealthCard extends StatelessWidget {
                   icon: Icons.inventory_2_outlined,
                   value: '${insights.lowStock}',
                   label: 'sắp hết',
-                  tint: Colors.orange.shade800,
+                  tint: status.warning,
                 ),
             ],
           ),
