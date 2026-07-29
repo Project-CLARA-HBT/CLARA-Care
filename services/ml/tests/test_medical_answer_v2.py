@@ -98,6 +98,20 @@ def test_careguard_critical_finding_survives_verbatim() -> None:
     assert artifact["medication_safety"]["drugbank"]["state"] == "ready"
 
 
+def test_medical_answer_includes_verified_plain_language_rendering() -> None:
+    artifact = _build(
+        urgency_level="clinical_review",
+        evidence_ledger=[{"source": "guideline", "title": "Guideline", "excerpt": "Review."}],
+        factcheck={"verdict": "pass"},
+    )
+
+    rendered = artifact["rendered_explanation"]
+    assert rendered["verifier_passed"] is True
+    assert rendered["fallback_used"] is False
+    assert rendered["source_labels"] == ["guideline"]
+    assert "tư vấn" not in rendered["summary"].lower()
+
+
 def test_validator_rejects_dangling_claim_evidence() -> None:
     artifact = _build()
     artifact["claims"] = [

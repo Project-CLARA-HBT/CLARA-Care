@@ -7,14 +7,16 @@ and enforces the safety invariants at the boundary presented to clients.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import re
 import unicodedata
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, model_validator
 
+from clara_ml.language_renderer import RenderingInput, render_explanation
+from clara_ml.language_renderer.schemas import ActionCode, Audience
 
 ClaimStatus = Literal["supported", "uncertain", "contradicted", "suppressed"]
 UrgencyLevel = Literal["emergency", "urgent_review", "clinical_review", "routine"]
@@ -29,7 +31,7 @@ class MedicalClaim(BaseModel):
     decision_ready: bool = False
 
     @model_validator(mode="after")
-    def supported_before_decision_ready(self) -> "MedicalClaim":
+    def supported_before_decision_ready(self) -> MedicalClaim:
         if self.decision_ready and (self.status != "supported" or not self.evidence_ids):
             raise ValueError("decision-ready claims require supporting evidence")
         return self
@@ -54,10 +56,11 @@ class MedicalAnswerV2(BaseModel):
     missing_information: list[dict[str, str]] = Field(default_factory=list)
     uncertainty: dict[str, Any]
     follow_up: list[str] = Field(default_factory=list)
+    rendered_explanation: dict[str, Any] | None = None
     run_manifest: dict[str, Any]
 
     @model_validator(mode="after")
-    def enforce_release_gates(self) -> "MedicalAnswerV2":
+    def enforce_release_gates(self) -> MedicalAnswerV2:
         if self.urgency.get("level") == "emergency" and not self.actions_now:
             raise ValueError("emergency answers must lead with an immediate action")
         evidence_ids = {
@@ -242,8 +245,10 @@ def _medication_safety(careguard: dict[str, Any] | None, has_medications: bool) 
             "decision_ready": False,
             "warning": "Medication safety checks were not completed; absence of a finding is not an all-clear.",
         }
-    metadata = careguard.get("metadata") if isinstance(careguard.get("metadata"), dict) else {}
-    alerts = careguard.get("ddi_alerts") if isinstance(careguard.get("ddi_alerts"), list) else []
+    metadata_value = careguard.get("metadata")
+    metadata: dict[str, Any] = metadata_value if isinstance(metadata_value, dict) else {}
+    alerts_value = careguard.get("ddi_alerts")
+    alerts: list[Any] = alerts_value if isinstance(alerts_value, list) else []
     findings = [dict(item) for item in alerts if isinstance(item, dict)]
     unavailable = bool(metadata.get("rules_unavailable"))
     return {
@@ -255,6 +260,54 @@ def _medication_safety(careguard: dict[str, Any] | None, has_medications: bool) 
         "sources": metadata.get("source_used", []),
         "drugbank": metadata.get("drugbank", {}),
     }
+
+
+def _rendered_explanation(
+    *,
+    audience: str,
+    urgency_level: UrgencyLevel,
+    medication_safety: dict[str, Any],
+    evidence: list[dict[str, Any]],
+    unsupported: int,
+    emergency: bool,
+    answer_language: str,
+) -> dict[str, Any]:
+    """Create wording only from released semantic facts, never raw model prose."""
+
+    if answer_language == "en":
+        render_audience: Audience = "en"
+    elif audience in {"doctor", "admin"}:
+        render_audience = "clinician_vi"
+    elif audience == "researcher":
+        render_audience = "researcher_vi"
+    else:
+        render_audience = "lay_vi"
+    actions: list[ActionCode] = ["seek_emergency"] if emergency else []
+    if not emergency and urgency_level in {"urgent_review", "clinical_review"}:
+        actions.append("contact_clinician")
+    if urgency_level == "routine":
+        actions.append("monitor")
+    warnings: list[str] = []
+    if medication_safety["status"] in {"unavailable", "not_checked"}:
+        warnings.append(
+            "Chưa thể xác nhận an toàn thuốc; không có cảnh báo không đồng nghĩa là an toàn."
+            if answer_language != "en"
+            else "Medication safety could not be confirmed; no alert is not an all-clear."
+        )
+    source_labels = [str(item.get("source") or "Nguồn đã kiểm tra") for item in evidence[:5]]
+    source = RenderingInput(
+        audience=render_audience,
+        severity=urgency_level,
+        action_codes=actions,
+        mandatory_warnings=warnings,
+        uncertainty_level=(
+            "high"
+            if unsupported or medication_safety["status"] in {"unavailable", "not_checked"}
+            else "low"
+        ),
+        evidence_labels=source_labels,
+    )
+    return render_explanation(source).model_dump(mode="json")
 
 
 def build_medical_answer_v2(
@@ -283,8 +336,12 @@ def build_medical_answer_v2(
     medication_safety = _medication_safety(careguard, bool(context.get("medications")))
     unsupported = sum(claim.status != "supported" for claim in claims)
     emergency = urgency_level == "emergency"
+    output_audience = cast(
+        Literal["normal", "researcher", "doctor", "admin"],
+        audience if audience in {"normal", "researcher", "doctor", "admin"} else "normal",
+    )
     artifact = MedicalAnswerV2(
-        audience=audience if audience in {"normal", "researcher", "doctor", "admin"} else "normal",
+        audience=output_audience,
         intent=intent,
         urgency={
             "level": urgency_level,
@@ -319,8 +376,17 @@ def build_medical_answer_v2(
             "degraded": fallback,
         },
         follow_up=[] if emergency else [item["why_it_matters"] for item in missing_information[:3]],
+        rendered_explanation=_rendered_explanation(
+            audience=audience,
+            urgency_level=urgency_level,
+            medication_safety=medication_safety,
+            evidence=evidence,
+            unsupported=unsupported,
+            emergency=emergency,
+            answer_language=answer_language,
+        ),
         run_manifest={
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "model_used": model_used,
             "evidence_count": len(evidence),
             "factcheck_verdict": str((factcheck or {}).get("verdict") or "not_run"),

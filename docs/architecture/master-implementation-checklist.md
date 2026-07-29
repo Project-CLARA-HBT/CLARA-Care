@@ -10,7 +10,7 @@ This is a delivery ledger, not proof that a checkpoint is done.
 | 04 | Model registry/contracts | implemented for bounded safety tasks | typed contracts, DeepSeek-only resolution and explicit rollback config |
 | 05 | Vietnamese clinical NLP | implemented v1 | deterministic language cues and regression tests; no bundled encoder SLM |
 | 06 | Hybrid task/risk router | partial/pre-existing | semantic closed-schema primary with deterministic safety fallback; no evaluated SLM shadow |
-| 07 | Structured renderer/verifier | partial/pre-existing | evidence/uncertainty gate exists; semantic-fidelity scorer remains |
+| 07 | Structured renderer/verifier | implemented deterministic baseline | closed semantic input, independent fidelity verifier, Vietnamese fallback and `medical_answer_v2` integration; human usability metric remains unmeasured |
 | 08 | CareGuard VN normalization | partial/pre-existing | DrugBank readiness/fail-closed behavior exists; licensed full benchmark unavailable |
 | 09 | Scribe safety refactor | implemented UI correction | no automatic R69/code assignment or uncalibrated confidence display |
 | 10 | Council hybrid shadow | partial/pre-existing | structured intake and ablation path; heuristic remains correctly labeled |

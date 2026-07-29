@@ -46,7 +46,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-04 registry/contracts | implemented for bounded safety tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI and default RAG synthesis use registry task contracts. Research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
-| PR-07 renderer | partial/pre-existing | `medical_answer_v2` validates evidence, uncertainty and safety release gates. A dedicated semantic-fidelity scorer is not yet available. |
+| PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. A reviewed human-usability score remains unmeasured. |
 | PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
 | PR-09 Scribe | implemented UI safety correction | `eaa749c0` removes automatic code/R69 and uncalibrated percentage. Existing grounding/ASR tests remain. |
 | PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. |
@@ -68,6 +68,10 @@ closed JSON and is followed by deterministic safety policy.
   text; their fixture policy rejects PHI/secrets.
 - Scribe no longer assigns diagnosis/procedure codes from regex text and no
   longer renders an uncalibrated confidence percentage.
+- The renderer emits consumer wording only from released severity/action/
+  warning/uncertainty fields; its independent verifier rejects missing
+  warnings, softened uncertainty, added dose text and unapproved prescribing
+  language before a response is released.
 
 ## Tests and evaluation evidence
 
@@ -87,6 +91,7 @@ Executed in this workspace:
 | LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
 | CareGuard normalization/DrugBank focused suite | pass: 42 tests |
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
+| Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Static active-eval | executed, NO-GO; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so
