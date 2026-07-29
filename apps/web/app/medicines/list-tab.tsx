@@ -160,16 +160,21 @@ export default function MedicinesListTab() {
                     Chỉ dữ liệu bạn xác nhận mới có mặt ở đây.
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  disabled={activeCourses.length < 2}
-                  loading={checking}
-                  loadingLabel="Đang đối chiếu DrugBank…"
-                  onClick={() => void check()}
-                  icon="labs"
-                >
-                  Kiểm tra tương tác DrugBank
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button as="link" href="/medicines/add" size="sm" icon="add">
+                    Thêm thuốc theo từng bước
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={activeCourses.length < 2}
+                    loading={checking}
+                    loadingLabel="Đang đối chiếu DrugBank…"
+                    onClick={() => void check()}
+                    icon="labs"
+                  >
+                    Kiểm tra tương tác DrugBank
+                  </Button>
+                </div>
               </div>
               {courses.length ? (
                 <ul className="divide-y divide-[color:var(--shell-border)]">

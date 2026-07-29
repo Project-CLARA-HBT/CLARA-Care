@@ -9,7 +9,6 @@ import { SurfaceCard, InlineError } from "@/components/ui/surface";
 import {
   isDsarEnabled,
   listDsarRequests,
-  requestDsarDelete,
   requestDsarExport,
   submitDsarRequest,
   type DsarKind,
@@ -113,10 +112,6 @@ const COPY = {
     download: "Tải xuống",
     historyTitle: "Lịch sử yêu cầu",
     noHistory: "Bạn chưa gửi yêu cầu nào.",
-    confirmDelete:
-      "Yêu cầu này sẽ xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn và không thể hoàn tác. Bạn có chắc chắn?",
-    confirmYes: "Xác nhận xóa",
-    cancel: "Hủy",
     retentionNote:
       "Lưu ý: một số bản ghi audit/tuân thủ không chứa dữ liệu định danh sẽ được giữ lại theo nghĩa vụ pháp lý ngay cả sau khi xóa.",
     acknowledged: "Đã ghi nhận yêu cầu. Chúng tôi sẽ xử lý trong thời hạn luật định.",
@@ -136,10 +131,6 @@ const COPY = {
     download: "Download",
     historyTitle: "Request history",
     noHistory: "You have not submitted any requests yet.",
-    confirmDelete:
-      "This request will delete or anonymize your personal data and cannot be undone. Are you sure?",
-    confirmYes: "Confirm deletion",
-    cancel: "Cancel",
     retentionNote:
       "Note: certain audit/compliance records that contain no identifying data are retained under legal obligations even after deletion.",
     acknowledged:
@@ -156,7 +147,6 @@ export default function DataRightsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pendingKind, setPendingKind] = useState<DsarKind | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [requests, setRequests] = useState<DsarRequestRecord[]>([]);
 
   const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
@@ -226,22 +216,6 @@ export default function DataRightsPage() {
     [refresh, text.acknowledged, text.loadError],
   );
 
-  const onDelete = useCallback(async () => {
-    setPendingKind("delete");
-    setError("");
-    setNotice("");
-    try {
-      await requestDsarDelete();
-      setNotice(text.acknowledged);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : text.loadError);
-    } finally {
-      setPendingKind(null);
-      setConfirmingDelete(false);
-    }
-  }, [refresh, text.acknowledged, text.loadError]);
-
   const isEn = uiLanguage === "en";
   const showDisabled = !flagOn || (!loading && !enabled);
 
@@ -289,40 +263,16 @@ export default function DataRightsPage() {
                     ) : null}
 
                     {action.destructive && action.kind === "delete" ? (
-                      confirmingDelete ? (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-[12px] font-medium text-[var(--status-danger-text)]">
-                            {text.confirmDelete}
-                          </p>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              disabled={isPending}
-                              onClick={() => void onDelete()}
-                            >
-                              {isPending ? text.submitting : text.confirmYes}
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setConfirmingDelete(false)}
-                            >
-                              {text.cancel}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3">
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => setConfirmingDelete(true)}
-                          >
-                            {action.label[uiLanguage]}
-                          </Button>
-                        </div>
-                      )
+                      <div className="mt-3">
+                        <Button
+                          as="link"
+                          href="/account/data/delete/review"
+                          variant="danger"
+                          size="sm"
+                        >
+                          {action.label[uiLanguage]}
+                        </Button>
+                      </div>
                     ) : (
                       <div className="mt-3">
                         <Button
