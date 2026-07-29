@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -64,6 +65,7 @@ class TodaySurface extends StatefulWidget {
     required this.sessionStore,
     this.onNeedsOnboarding,
     this.onOpenLifeMap,
+    this.readCache,
   });
 
   final ApiClient apiClient;
@@ -75,6 +77,7 @@ class TodaySurface extends StatefulWidget {
 
   /// Invoked when the user chooses to open the full LifeMap surface.
   final VoidCallback? onOpenLifeMap;
+  final LifeMapReadCache? readCache;
 
   @override
   State<TodaySurface> createState() => _TodaySurfaceState();
@@ -90,6 +93,8 @@ class _TodaySurfaceState extends State<TodaySurface> {
   List<_TodayTask> _tasks = const [];
   List<_TodayEpisode> _episodes = const [];
   int _pendingConfirmationCount = 0;
+  DateTime? _offlineCachedAt;
+  DateTime? _offlineValidUntil;
 
   /// Ids of tasks whose "Hoàn tất" action is in flight.
   final Set<String> _completing = <String>{};
@@ -141,13 +146,15 @@ class _TodaySurfaceState extends State<TodaySurface> {
         }
       }
       final pending = data['pending_confirmation_count'];
+      await widget.readCache?.save(data);
       if (!mounted) return;
       setState(() {
         _tasks = tasks;
         _episodes = episodes;
-        _pendingConfirmationCount = pending is int
-            ? pending
-            : int.tryParse(_str(pending)) ?? 0;
+        _pendingConfirmationCount =
+            pending is int ? pending : int.tryParse(_str(pending)) ?? 0;
+        _offlineCachedAt = null;
+        _offlineValidUntil = null;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -157,9 +164,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
         setState(() => _needsOnboarding = true);
         return;
       }
+      if (await _restoreOfflineCache()) return;
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
+      if (await _restoreOfflineCache()) return;
       setState(() => _error = 'Không thể tải lịch hôm nay. Vui lòng thử lại.');
     } finally {
       if (mounted) {
@@ -168,7 +177,36 @@ class _TodaySurfaceState extends State<TodaySurface> {
     }
   }
 
+  Future<bool> _restoreOfflineCache() async {
+    final cached = await widget.readCache?.read();
+    if (cached == null || !mounted) return false;
+    final data = cached.data;
+    final tasks = (data['tasks'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => _TodayTask.fromJson(item.cast<String, dynamic>()))
+        .toList();
+    final episodes = (data['episodes'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => _TodayEpisode.fromJson(item.cast<String, dynamic>()))
+        .toList();
+    setState(() {
+      _tasks = tasks;
+      _episodes = episodes;
+      _pendingConfirmationCount = data['pending_confirmation_count'] is int
+          ? data['pending_confirmation_count'] as int
+          : 0;
+      _offlineCachedAt = cached.cachedAt;
+      _offlineValidUntil = cached.validUntil;
+      _error = null;
+    });
+    return true;
+  }
+
   Future<void> _completeTask(_TodayTask task) async {
+    if (_offlineCachedAt != null) {
+      _showSnack('Bạn đang ngoại tuyến. Kết nối mạng để hoàn tất việc này.');
+      return;
+    }
     final token = _token;
     if (token == null || _completing.contains(task.id)) return;
     setState(() => _completing.add(task.id));
@@ -281,6 +319,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
 
   Widget _buildLoaded(BuildContext context) {
     final children = <Widget>[
+      if (_offlineCachedAt != null) _buildOfflineNotice(context),
       Row(
         children: [
           const Expanded(
@@ -343,6 +382,40 @@ class _TodaySurfaceState extends State<TodaySurface> {
     );
   }
 
+  Widget _buildOfflineNotice(BuildContext context) {
+    final now = DateTime.now().toUtc();
+    final stale = _offlineValidUntil == null ||
+        !now.isBefore(_offlineValidUntil!.toUtc());
+    final cachedAt = _offlineCachedAt!.toLocal();
+    String two(int value) => value.toString().padLeft(2, '0');
+    final timestamp = '${two(cachedAt.hour)}:${two(cachedAt.minute)} '
+        '${two(cachedAt.day)}/${two(cachedAt.month)}/${cachedAt.year}';
+    return Semantics(
+      liveRegion: true,
+      label: stale
+          ? 'Ngoại tuyến. Dữ liệu đã cũ, chỉ để tham khảo.'
+          : 'Ngoại tuyến. Dữ liệu lưu lúc $timestamp, chỉ để tham khảo.',
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(
+          ClaraTokens.spaceMd,
+          0,
+          ClaraTokens.spaceMd,
+          ClaraTokens.spaceMd,
+        ),
+        padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+        ),
+        child: Text(
+          stale
+              ? 'Ngoại tuyến · dữ liệu đã cũ · không thể thực hiện thay đổi.'
+              : 'Ngoại tuyến · lưu lúc $timestamp · không thể thực hiện thay đổi.',
+        ),
+      ),
+    );
+  }
+
   Widget _buildStats(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
@@ -401,7 +474,8 @@ class _TodaySurfaceState extends State<TodaySurface> {
             label: 'Hoàn tất',
             icon: Icons.check,
             loading: busy,
-            onPressed: () => _completeTask(task),
+            onPressed:
+                _offlineCachedAt == null ? () => _completeTask(task) : null,
           ),
         ],
       ),

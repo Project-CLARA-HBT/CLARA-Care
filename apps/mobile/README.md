@@ -172,6 +172,11 @@ the authenticated role in `GET /api/v1/mobile/summary`; the compile-time
 defines exist for staged enablement and QA/dev builds. Enable a flag with
 `--dart-define=<FLAG>=true`.
 
+`LIFEMAP_OFFLINE_READ_CACHE_ENABLED` enables the default-off,
+`flutter_secure_storage`-backed least-necessary Today read cache. Cached data is
+always labeled offline/stale and all mutations remain disabled; see
+`docs/design/lifemap-client-convergence.md`.
+
 New mobile feature flags (define name → server `feature_flags` key → surface):
 
 | `--dart-define` flag                  | Server flag key                    | Surface |

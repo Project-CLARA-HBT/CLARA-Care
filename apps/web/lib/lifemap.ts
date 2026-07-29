@@ -1,5 +1,42 @@
 import api from "@/lib/http-client";
 
+export const LIFE_MAP_CLIENT_STATES = [
+  "draft",
+  "awaiting_review",
+  "confirmed",
+  "disputed",
+  "stale",
+  "unavailable",
+  "offline",
+] as const;
+
+export type LifeMapClientState = (typeof LIFE_MAP_CLIENT_STATES)[number];
+
+export type LifeMapClientContract = {
+  version: string;
+  states: Record<
+    LifeMapClientState,
+    {
+      truth_authority: boolean;
+      can_mutate: boolean;
+      vi: string;
+      en: string;
+    }
+  >;
+  capabilities: Record<
+    string,
+    { enabled: boolean; mutation_policy: "online_only" }
+  >;
+  offline_policy: {
+    mutations: "disabled";
+    queued_health_mutations_supported: false;
+    cached_safety_status_current: false;
+    requires_encrypted_cache: true;
+    requires_cached_at: true;
+    requires_valid_until: true;
+  };
+};
+
 export type LifeMapTask = {
   id: string;
   title: string;
@@ -106,6 +143,12 @@ function idempotencyKey(): string {
 
 export async function getLifeMapToday(): Promise<LifeMapToday> {
   return (await api.get<LifeMapToday>("/lifemap/today")).data;
+}
+
+export async function getLifeMapClientContract(): Promise<LifeMapClientContract> {
+  return (
+    await api.get<LifeMapClientContract>("/lifemap/v2/client-contract")
+  ).data;
 }
 
 export async function completeLifeMapTask(taskId: string): Promise<void> {

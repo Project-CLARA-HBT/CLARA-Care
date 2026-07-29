@@ -146,6 +146,29 @@ package and named clinical/interoperability/privacy/legal sign-offs. The
 `ips_conformance_not_approved`. This is an intentional release gate, not an
 implementation omission.
 
+## Phase 12 client contract and offline boundary — 2026-07-29
+
+The API, web, and Flutter clients now share
+`lifemap-client-contract-v1`: `draft`, `awaiting_review`, `confirmed`,
+`disputed`, `stale`, `unavailable`, and `offline`. Only `confirmed` has truth
+authority; Flutter maps an unknown future value to `unavailable`. The same
+content-free endpoint publishes server-authoritative feature availability and
+the online-only mutation policy.
+
+Flutter now has a default-off, platform-secure-storage LifeMap Today read
+cache. It projects only task/episode display fields and counts, has `cached_at`
+and a 15-minute `valid_until`, is always visibly offline, becomes visibly stale
+after expiry, disables completion, and is erased on logout/account switch.
+Tests prove excluded provenance, medication, safety, and arbitrary payload
+fields are not stored. Web deliberately has no persisted LifeMap health cache
+until an approved encrypted browser store exists; it therefore cannot leak a
+health projection into local/session storage. Queued health mutations remain
+unsupported on both clients.
+
+Tasks 12.2 and 12.3 remain open pending the final all-module accessibility and
+responsive evidence sweep. Task 12.6 remains a real bilingual usability study,
+not a repository test.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

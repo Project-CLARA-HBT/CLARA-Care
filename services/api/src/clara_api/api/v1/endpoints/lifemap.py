@@ -41,6 +41,7 @@ from clara_api.db.models import (
 )
 from clara_api.db.session import get_db
 from clara_api.lifemap.capture_domain import CAPTURE_SCHEMA_VERSION
+from clara_api.lifemap.client_contract import build_client_contract
 from clara_api.lifemap.commands import (
     add_outbox,
     replay_command,
@@ -1692,6 +1693,16 @@ def fhir_conformance_statement(
         },
         "general_fhir_server": False,
     }
+
+
+@router.get("/v2/client-contract")
+def lifemap_client_contract(
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    """Return the no-content state/capability contract shared by both clients."""
+
+    del token
+    return build_client_contract(get_settings())
 
 
 @router.get("/v2/export/ips")

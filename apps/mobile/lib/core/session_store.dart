@@ -53,6 +53,11 @@ class PersistentSessionStore extends ChangeNotifier {
   static const String accessTokenKey = 'clara.session.access_token';
   static const String refreshTokenKey = 'clara.session.refresh_token';
   static const String roleKey = 'clara.session.role';
+  // Account-scoped health read cache. Keep in sync with
+  // LifeMapReadCache.storageKey without importing the cache back into this
+  // storage abstraction.
+  static const String lifeMapReadCacheKey =
+      'clara.lifemap.today.read_projection';
 
   final SessionSecureStorage _storage;
 
@@ -119,6 +124,9 @@ class PersistentSessionStore extends ChangeNotifier {
     required String refreshToken,
     required String role,
   }) async {
+    if (_email != null && _email != email) {
+      await _storage.delete(lifeMapReadCacheKey);
+    }
     _email = email;
     _accessToken = accessToken;
     _refreshToken = refreshToken;
@@ -142,6 +150,7 @@ class PersistentSessionStore extends ChangeNotifier {
     await _storage.delete(accessTokenKey);
     await _storage.delete(refreshTokenKey);
     await _storage.delete(roleKey);
+    await _storage.delete(lifeMapReadCacheKey);
   }
 
   void _resetInMemory() {
@@ -178,7 +187,8 @@ class PersistentSessionStore extends ChangeNotifier {
     }
 
     try {
-      final payloadJson = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final payloadJson =
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
       final decoded = jsonDecode(payloadJson);
       if (decoded is! Map<String, dynamic>) {
         return null;

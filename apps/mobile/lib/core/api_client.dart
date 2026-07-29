@@ -1122,6 +1122,16 @@ class ApiClient {
     );
   }
 
+  /// Server-authoritative state vocabulary, capability and offline policy.
+  Future<Map<String, dynamic>> getLifeMapClientContract({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/lifemap/v2/client-contract',
+      accessToken: accessToken,
+    );
+  }
+
   /// Loads the owner's Personal Health Record (profile + allergies, conditions,
   /// medications). Backs the mobile PHR screen (personal-health-record
   /// Requirement 17.1). Uses the legacy `GET /record` contract so behavior is

@@ -305,14 +305,14 @@ imports cannot bypass confirmation or profile authorization.
 
 ## Phase 12 — Client convergence, accessibility, and offline policy
 
-- [ ] 12.1 Define one state vocabulary and API capability model for web/mobile:
+- [x] 12.1 Define one state vocabulary and API capability model for web/mobile:
   draft, awaiting review, confirmed, disputed, stale, unavailable, and offline.
   _R19_
 - [ ] 12.2 Complete responsive web flows for all V2 modules and add keyboard/
   focus/screen-reader/contrast/text-scale/reduced-motion tests. _R19_
 - [ ] 12.3 Complete Flutter flows and phone/tablet/text-scale/screen-reader/
   reduced-motion tests. _R19_
-- [ ] 12.4 Implement encrypted least-necessary read cache, freshness indicators,
+- [x] 12.4 Implement encrypted least-necessary read cache, freshness indicators,
   and online-only mutation guards; document that queued health mutations remain
   unsupported. _R19_
 - [x] 12.5 Resolve existing mobile analyzer/test debt touched by the unified

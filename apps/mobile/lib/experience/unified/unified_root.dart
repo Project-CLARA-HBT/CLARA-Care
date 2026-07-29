@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
 import '../../core/feature_flags.dart';
+import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
 import '../../theme/glass/glass_scope.dart';
 import '../redesign/chat_surface_v3.dart' show ChatSurfaceV3;
@@ -64,6 +65,7 @@ class UnifiedRoot extends StatefulWidget {
 }
 
 class _UnifiedRootState extends State<UnifiedRoot> {
+  late final LifeMapReadCache _lifeMapReadCache = LifeMapReadCache();
   bool _loading = true;
   Map<String, dynamic>? _summary;
 
@@ -152,6 +154,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             onNeedsOnboarding: () => setState(() => _needsOnboarding = true),
+            readCache: _lifeMapReadCache,
           ),
         ),
         RedesignDestination(
