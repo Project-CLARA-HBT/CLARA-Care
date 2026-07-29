@@ -149,6 +149,19 @@ export type LifeMapAskAnswer = {
   };
 };
 
+export type LifeMapReviewFinding = {
+  id: string;
+  kind: "duplicate" | "contradiction" | "missingness" | "model_proposal";
+  field_key: string;
+  reason_code: string;
+  proposal_source: "rule" | "nli" | "llm";
+  revision_ids: string[];
+  rule_version: string;
+  status: "pending" | "resolved" | "dismissed";
+  resolution_reason: string;
+  requires_human_resolution: boolean;
+};
+
 export type CaptureCandidate = {
   id: string;
   type: string;
@@ -295,6 +308,28 @@ export async function askLifeMap(
       episode_id: episodeId || null,
       locale,
     })
+  ).data;
+}
+
+export async function scanLifeMapReviewFindings(): Promise<
+  LifeMapReviewFinding[]
+> {
+  return (
+    await api.post<LifeMapReviewFinding[]>("/lifemap/v2/review-findings/scan")
+  ).data;
+}
+
+export async function actOnLifeMapReviewFinding(
+  findingId: string,
+  action: "resolved" | "dismissed",
+  reason: string,
+): Promise<LifeMapReviewFinding> {
+  return (
+    await api.post<LifeMapReviewFinding>(
+      `/lifemap/v2/review-findings/${encodeURIComponent(findingId)}/actions`,
+      { action, reason },
+      { headers: { "Idempotency-Key": idempotencyKey() } },
+    )
   ).data;
 }
 

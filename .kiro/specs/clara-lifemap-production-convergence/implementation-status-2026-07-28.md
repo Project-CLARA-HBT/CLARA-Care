@@ -285,6 +285,13 @@ the original result. Full SQLite upgrade, downgrade to `0040`, and re-upgrade
 to `0041` passed. Five focused API tests pass. The web/mobile conflict-review
 experience remains tracked under task 16.11.
 
+The capability-gated web LifeMap surface now makes scanning an explicit user
+action, labels duplicate/contradiction/missingness as possibilities rather than
+truth, and exposes explicit reviewed/dismissed actions. It never edits source
+facts. Eight focused web client contracts pass and web lint remains clean apart
+from the five documented pre-existing warnings. Flutter conflict review and
+the other Phase 16.11 experiences remain open.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

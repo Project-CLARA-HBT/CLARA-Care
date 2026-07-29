@@ -9,6 +9,7 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import {
   acceptLifeMapTask,
+  actOnLifeMapReviewFinding,
   askLifeMap,
   correctLifeMapEvent,
   createLifeMapEpisode,
@@ -19,6 +20,7 @@ import {
   getLifeMapToday,
   getLifeMapV2Capabilities,
   recordLifeMapQuestionInteraction,
+  scanLifeMapReviewFindings,
   reviewLifeMapCaptureCandidate,
   startLifeMapTextCapture,
   startLifeMapGuidedAnswer,
@@ -26,6 +28,7 @@ import {
   type LifeMapBaseline,
   type LifeMapAskAnswer,
   type LifeMapQuestion,
+  type LifeMapReviewFinding,
   type LifeMapToday,
   type LifeMapReplay,
 } from "@/lib/lifemap";
@@ -62,6 +65,7 @@ export default function LifeMapPage() {
   const [captureEnabled, setCaptureEnabled] = useState(false);
   const [questionEnabled, setQuestionEnabled] = useState(false);
   const [askEnabled, setAskEnabled] = useState(false);
+  const [reviewEnabled, setReviewEnabled] = useState(false);
   const [baselines, setBaselines] = useState<LifeMapBaseline[]>([]);
   const [nextQuestion, setNextQuestion] = useState<LifeMapQuestion | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
@@ -73,6 +77,9 @@ export default function LifeMapPage() {
   const [correctionText, setCorrectionText] = useState("");
   const [askQuery, setAskQuery] = useState("");
   const [askAnswer, setAskAnswer] = useState<LifeMapAskAnswer | null>(null);
+  const [reviewFindings, setReviewFindings] = useState<
+    LifeMapReviewFinding[]
+  >([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,6 +106,7 @@ export default function LifeMapPage() {
         setCaptureEnabled(Boolean(capabilities.lifemap_capture));
         setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
         setAskEnabled(Boolean(capabilities.lifemap_ask_ai));
+        setReviewEnabled(Boolean(capabilities.lifemap_ai_review_findings));
         if (capabilities.lifemap_baselines_v2) {
           setBaselines(await getLifeMapBaselines());
         }
@@ -107,6 +115,7 @@ export default function LifeMapPage() {
         setCaptureEnabled(false);
         setQuestionEnabled(false);
         setAskEnabled(false);
+        setReviewEnabled(false);
       });
   }, [load]);
 
@@ -307,6 +316,46 @@ export default function LifeMapPage() {
     }
   };
 
+  const scanReviewFindings = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      setReviewFindings(await scanLifeMapReviewFindings());
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Không thể kiểm tra thông tin.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reviewFinding = async (
+    finding: LifeMapReviewFinding,
+    action: "resolved" | "dismissed",
+  ) => {
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await actOnLifeMapReviewFinding(
+        finding.id,
+        action,
+        action === "resolved"
+          ? "Người dùng đã kiểm tra các bản ghi nguồn"
+          : "Người dùng xác nhận không cần xử lý",
+      );
+      setReviewFindings((current) =>
+        current.map((item) => (item.id === finding.id ? updated : item)),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Không thể lưu lựa chọn.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell
       variant="plain"
@@ -399,6 +448,88 @@ export default function LifeMapPage() {
                         Chế độ: {askAnswer.disclosure.mode}. Không phải tư vấn y tế.
                       </p>
                     </div>
+                  ) : null}
+                </SurfaceCard>
+              ) : null}
+
+              {reviewEnabled ? (
+                <SurfaceCard className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold text-[var(--text-primary)]">
+                        Thông tin cần bạn kiểm tra
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA
+                        không tự chọn bản nào đúng.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon="fact_check"
+                      loading={saving}
+                      onClick={() => void scanReviewFindings()}
+                    >
+                      Kiểm tra
+                    </Button>
+                  </div>
+                  {reviewFindings.length ? (
+                    <ul className="mt-4 space-y-3">
+                      {reviewFindings.map((finding) => (
+                        <li
+                          key={finding.id}
+                          className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-4"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              tone={
+                                finding.status === "pending" ? "warn" : "neutral"
+                              }
+                            >
+                              {finding.kind === "contradiction"
+                                ? "Có thể mâu thuẫn"
+                                : finding.kind === "duplicate"
+                                  ? "Có thể trùng"
+                                  : "Cần bổ sung"}
+                            </Badge>
+                            <span className="text-xs text-[var(--text-muted)]">
+                              {finding.field_key} · {finding.rule_version}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                            {finding.revision_ids.length
+                              ? `${finding.revision_ids.length} phiên bản nguồn`
+                              : "Chưa có bản ghi cho trường bắt buộc"}
+                          </p>
+                          {finding.status === "pending" ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  void reviewFinding(finding, "resolved")
+                                }
+                              >
+                                Tôi đã kiểm tra
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  void reviewFinding(finding, "dismissed")
+                                }
+                              >
+                                Không cần xử lý
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-[var(--text-muted)]">
+                              Đã ghi nhận lựa chọn của bạn.
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </SurfaceCard>
               ) : null}

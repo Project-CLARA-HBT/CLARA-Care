@@ -11,11 +11,13 @@ vi.mock("@/lib/http-client", () => ({
 
 import {
   askLifeMap,
+  actOnLifeMapReviewFinding,
   correctLifeMapEvent,
   getLifeMapCaptureCapability,
   getLifeMapReplay,
   getLifeMapNextQuestion,
   reviewLifeMapCaptureCandidate,
+  scanLifeMapReviewFindings,
   startLifeMapGuidedAnswer,
   startLifeMapTextCapture,
 } from "@/lib/lifemap";
@@ -55,6 +57,28 @@ describe("LifeMap Universal Capture client", () => {
       episode_id: "episode/id",
       locale: "vi",
     });
+  });
+
+  it("scans and resolves review findings through explicit actions", async () => {
+    post
+      .mockResolvedValueOnce({ data: [{ id: "finding-1", status: "pending" }] })
+      .mockResolvedValueOnce({ data: { id: "finding-1", status: "resolved" } });
+    await scanLifeMapReviewFindings();
+    await actOnLifeMapReviewFinding(
+      "finding/id",
+      "resolved",
+      "Đã kiểm tra nguồn",
+    );
+    expect(post).toHaveBeenNthCalledWith(
+      1,
+      "/lifemap/v2/review-findings/scan",
+    );
+    expect(post).toHaveBeenNthCalledWith(
+      2,
+      "/lifemap/v2/review-findings/finding%2Fid/actions",
+      { action: "resolved", reason: "Đã kiểm tra nguồn" },
+      { headers: { "Idempotency-Key": expect.any(String) } },
+    );
   });
 
   it("confirms a candidate with an idempotency key", async () => {
