@@ -1361,6 +1361,25 @@ class ApiClient {
     return _get('/api/v1/lifemap/v2/baselines', accessToken: accessToken);
   }
 
+  /// Read-only, revision-cited Ask My LifeMap query. The server owns intent,
+  /// model, retrieval, policy, and safety routing.
+  Future<Map<String, dynamic>> askLifeMap({
+    required String accessToken,
+    required String query,
+    String? episodeId,
+    String locale = 'vi',
+  }) {
+    return _post(
+      '/api/v1/lifemap/v2/ask',
+      body: <String, dynamic>{
+        'query': query,
+        'episode_id': episodeId,
+        'locale': locale,
+      },
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> getLifeMapNextQuestion({
     required String accessToken,
     required String episodeId,

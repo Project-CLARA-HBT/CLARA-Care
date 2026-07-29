@@ -203,6 +203,30 @@ void main() {
       );
     });
 
+    test('Ask LifeMap uses the governed read-only endpoint', () async {
+      late http.Request captured;
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return ok({'status': 'grounded', 'claims': [], 'evidence': []});
+        }),
+      );
+
+      await client.askLifeMap(
+        accessToken: token,
+        query: 'Các ghi nhận gần đây?',
+        episodeId: 'episode-1',
+      );
+
+      expect(captured.method, 'POST');
+      expect(captured.url.path, '/api/v1/lifemap/v2/ask');
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['query'], 'Các ghi nhận gần đây?');
+      expect(body['episode_id'], 'episode-1');
+      expect(body['locale'], 'vi');
+    });
+
     test('Universal Capture wrappers use draft and idempotent review routes',
         () async {
       final requests = <http.Request>[];

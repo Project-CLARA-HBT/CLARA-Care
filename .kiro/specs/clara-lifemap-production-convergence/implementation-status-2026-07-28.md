@@ -240,6 +240,14 @@ profile-partitioned lexical/temporal SQL, not yet the governed dense/graph
 index; verifier integration for future generated claims still needs bounded
 NLI/FIDES evaluation; and mobile Ask/review surfaces are not yet implemented.
 
+The Flutter unified LifeMap surface now also reads `lifemap_ask_ai` from the
+server summary, calls only the governed `/lifemap/v2/ask` contract, and renders
+the read-only disclosure plus exact citation attribution/revision. It remains
+hidden when the server flag is off. Focused Flutter analysis is clean and 22
+API-client/accessibility-responsive tests pass. Task 16.11 stays open because
+the broader summary, multimodal, normalization, and conflict-review experiences
+are not yet complete.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

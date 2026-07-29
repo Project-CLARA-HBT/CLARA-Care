@@ -28,6 +28,10 @@ import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
+String _shortRevision(Object? value) {
+  final text = _str(value);
+  return text.length <= 8 ? text : text.substring(0, 8);
+}
 
 /// Supported episode priorities and their Vietnamese labels.
 const Map<String, String> _kPriorityLabels = <String, String>{
@@ -94,10 +98,14 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
   List<_AcceptedTask> _tasks = const [];
   bool _captureEnabled = false;
   bool _questionEnabled = false;
+  bool _askEnabled = false;
   List<Map<String, dynamic>> _baselines = const [];
   bool _capturing = false;
   Map<String, dynamic>? _captureSession;
   final TextEditingController _captureController = TextEditingController();
+  final TextEditingController _askController = TextEditingController();
+  bool _asking = false;
+  Map<String, dynamic>? _askAnswer;
 
   // --- "Tạo hành trình" (create episode) form state ------------------------
   bool _episodeFormOpen = false;
@@ -124,6 +132,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     _episodeGoalController.dispose();
     _taskTitleController.dispose();
     _captureController.dispose();
+    _askController.dispose();
     super.dispose();
   }
 
@@ -154,6 +163,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       final captureEnabled = flags is Map && flags['lifemap_capture'] == true;
       final questionEnabled =
           flags is Map && flags['lifemap_next_question_v2'] == true;
+      final askEnabled = flags is Map && flags['lifemap_ask_ai'] == true;
       final baselineEnabled =
           flags is Map && flags['lifemap_baselines_v2'] == true;
       final baselinePayload = baselineEnabled
@@ -191,6 +201,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         _tasks = tasks;
         _captureEnabled = captureEnabled;
         _questionEnabled = questionEnabled;
+        _askEnabled = askEnabled;
         _baselines = baselines;
         // Keep the task-form selection valid against the freshly loaded set.
         if (_selectedEpisodeId != null &&
@@ -314,6 +325,28 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       _showSnack('Không thể tạo bản nháp. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  Future<void> _askLifeMap() async {
+    final token = _token;
+    final query = _askController.text.trim();
+    if (token == null || query.isEmpty || _asking) return;
+    setState(() => _asking = true);
+    try {
+      final result = await widget.apiClient.askLifeMap(
+        accessToken: token,
+        query: query,
+        episodeId: _selectedEpisodeId,
+      );
+      if (!mounted) return;
+      setState(() => _askAnswer = result);
+    } on ApiException catch (error) {
+      _showSnack(error.message);
+    } catch (_) {
+      _showSnack('Không thể tra cứu LifeMap. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _asking = false);
     }
   }
 
@@ -630,6 +663,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
 
+        if (_askEnabled) ...[
+          const SectionHeader(title: 'Hỏi LifeMap của tôi'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ClaraTokens.spaceMd,
+              0,
+              ClaraTokens.spaceMd,
+              ClaraTokens.spaceMd,
+            ),
+            child: _buildAskCard(context),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
+
         if (_captureEnabled) ...[
           const SectionHeader(title: 'Ghi nhận nhanh'),
           Padding(
@@ -869,6 +916,111 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               onPressed: _startCapture,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAskCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final answer = _askAnswer;
+    final rawClaims = answer?['claims'];
+    final claims = rawClaims is List ? rawClaims : const <dynamic>[];
+    final rawEvidence = answer?['evidence'];
+    final evidence = rawEvidence is List ? rawEvidence : const <dynamic>[];
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán, '
+            'kê đơn hay tự thay đổi LifeMap.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          TextField(
+            controller: _askController,
+            minLines: 2,
+            maxLines: 4,
+            enabled: !_asking,
+            decoration: const InputDecoration(
+              labelText: 'Bạn muốn tìm điều gì?',
+              hintText: 'Ví dụ: Các ghi nhận đau đầu gần đây?',
+              helperText:
+                  'Câu trả lời chỉ ra đúng bản ghi và phiên bản đã dùng.',
+            ),
+            onSubmitted: (_) => _askLifeMap(),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.primary(
+              label: 'Tra cứu',
+              icon: Icons.search,
+              loading: _asking,
+              onPressed: _askLifeMap,
+            ),
+          ),
+          if (answer != null) ...[
+            const Divider(height: ClaraTokens.spaceXl),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _str(answer['answer']),
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ...claims.map((claim) {
+              if (claim is! Map) return const SizedBox.shrink();
+              final citationIds = claim['citation_ids'];
+              Map<dynamic, dynamic>? source;
+              if (citationIds is List) {
+                for (final candidate in evidence) {
+                  if (candidate is Map &&
+                      citationIds.contains(candidate['evidence_id'])) {
+                    source = candidate;
+                    break;
+                  }
+                }
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_str(claim['text'])),
+                        if (source != null) ...[
+                          const SizedBox(height: ClaraTokens.spaceXs),
+                          Text(
+                            'Nguồn: ${_str(source['attribution'])} · '
+                            'phiên bản ${_shortRevision(source['revision_id'])}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Text(
+              'AI có dẫn nguồn · Chỉ đọc · Không phải tư vấn y tế.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
       ),
     );
