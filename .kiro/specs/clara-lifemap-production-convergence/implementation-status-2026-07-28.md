@@ -241,6 +241,21 @@ tests pass and `flutter analyze` is clean. Tasks 12.2 and 12.3 remain open
 because every other V2 module and real-device screen-reader workflow has not
 yet completed the same matrix.
 
+## Universal Capture evaluation foundation — 2026-07-29
+
+A versioned evaluator and frozen bilingual suite now exercise the actual
+`grounded-ocr-baseline-v1` extractor and API emergency detector. The runner
+reports field precision/recall, critical misses, wrong-medication rate, exact
+span validity, emergency sensitivity/specificity and p95 latency, extraction
+p95 latency, confirmation actions per case, and per-locale slices. Threshold
+schema drift and malformed/draft-unsafe output fail closed; passing can never
+grant promotion.
+
+The 12-case synthetic contract suite currently passes every declared gate and
+has a cross-service CI test. Task 4.9 remains open because this small synthetic
+suite is not evidence for real OCR degradation, end-to-end network/worker
+latency, observed confirmation burden, user comprehension, or clinical review.
+
 ## Phase 16 grounded Ask vertical slice — 2026-07-29
 
 `POST /api/v1/lifemap/v2/ask` now resolves a server-owned use-case definition,
