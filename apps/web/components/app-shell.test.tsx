@@ -2,14 +2,22 @@ import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  apiGet: vi.fn(),
-  routerReplace: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const routerReplace = vi.fn();
+  return {
+    apiGet: vi.fn(),
+    getOnboarding: vi.fn(),
+    getProfileContext: vi.fn(),
+    listFamilyNotifications: vi.fn(),
+    routerReplace,
+    router: { replace: routerReplace },
+    pathname: "/chat",
+  };
+});
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/chat",
-  useRouter: () => ({ replace: mocks.routerReplace }),
+  usePathname: () => mocks.pathname,
+  useRouter: () => mocks.router,
 }));
 
 vi.mock("next/link", () => ({
@@ -63,13 +71,34 @@ vi.mock("@/lib/logout", () => ({
   beginLogout: vi.fn(),
 }));
 
+vi.mock("@/lib/phr-onboarding", () => ({
+  getPhrOnboarding: mocks.getOnboarding,
+}));
+
+vi.mock("@/lib/profile-context-api", () => ({
+  activateOwnedProfile: vi.fn(),
+  getProfileContext: mocks.getProfileContext,
+}));
+
+vi.mock("@/lib/visit-family", () => ({
+  listFamilyNotifications: mocks.listFamilyNotifications,
+}));
+
 import AppShell from "@/components/app-shell";
 
 describe("AppShell authenticated Chat navigation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pathname = "/chat";
     window.localStorage.clear();
     mocks.apiGet.mockResolvedValue({ data: { role: "normal" } });
+    mocks.getOnboarding.mockResolvedValue({ needs_onboarding: false });
+    mocks.getProfileContext.mockResolvedValue({
+      active_profile_id: "",
+      reset_required: false,
+      profiles: [],
+    });
+    mocks.listFamilyNotifications.mockResolvedValue([]);
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockReturnValue({
@@ -106,5 +135,37 @@ describe("AppShell authenticated Chat navigation", () => {
       });
     });
     expect(mocks.routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("keeps nested welcome steps inside the focused authenticated utility shell", async () => {
+    mocks.pathname = "/welcome/body";
+    mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
+
+    const { container } = render(
+      <AppShell>
+        <div>Body measurements</div>
+      </AppShell>,
+    );
+
+    expect(screen.getByText("Body measurements")).toBeInTheDocument();
+    expect(screen.queryByTestId("shared-sidebar")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("main")).toHaveLength(1);
+    await waitFor(() => expect(mocks.getOnboarding).toHaveBeenCalled());
+    expect(mocks.routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("redirects an unfinished user to the canonical first welcome step", async () => {
+    mocks.pathname = "/today";
+    mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
+
+    render(
+      <AppShell>
+        <div>Today content</div>
+      </AppShell>,
+    );
+
+    await waitFor(() => {
+      expect(mocks.routerReplace).toHaveBeenCalledWith("/welcome/start");
+    });
   });
 });

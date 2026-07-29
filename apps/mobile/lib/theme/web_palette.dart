@@ -34,69 +34,72 @@ class WebPalette {
 
   // --- Light (from `:root`) --------------------------------------------------
 
-  /// `--bg-canvas` `#f7f9fb` — app background / scaffold.
-  static const Color lightCanvas = Color(0xFFF7F9FB);
+  /// `--bg-canvas` `#f4f6fb` — app background / scaffold.
+  static const Color lightCanvas = Color(0xFFF4F6FB);
 
   /// `--bg-elev-3` `#ffffff` — top elevated surface (cards, sheets).
   static const Color lightSurface = Color(0xFFFFFFFF);
 
-  /// Flattened `--surface-muted` `#EFF6FF` — muted container fill.
-  static const Color lightSurfaceMuted = Color(0xFFEFF6FF);
+  /// `--surface-muted` `#f6f8fc` — muted container fill.
+  static const Color lightSurfaceMuted = Color(0xFFF6F8FC);
 
-  /// `--surface-brand-soft` `#DBEAFE` — soft brand container.
-  static const Color lightBrandSoft = Color(0xFFDBEAFE);
+  /// `--surface-brand-soft` `#e8effe` — soft brand container.
+  static const Color lightBrandSoft = Color(0xFFE8EFFE);
 
-  /// `--text-primary` `#1f2937` — primary body text (≥14:1 on white).
-  static const Color lightTextPrimary = Color(0xFF1F2937);
+  /// `--text-primary` `#172033` — primary body text.
+  static const Color lightTextPrimary = Color(0xFF172033);
 
-  /// `--text-secondary` `#374151` — secondary text.
-  static const Color lightTextSecondary = Color(0xFF374151);
+  /// `--text-secondary` `#46556a` — secondary text.
+  static const Color lightTextSecondary = Color(0xFF46556A);
 
-  /// `--text-muted` `#4b5563` — muted text (≥7:1 on white/muted surface).
-  static const Color lightTextMuted = Color(0xFF4B5563);
+  /// `--text-muted` `#5b6a80` — muted text.
+  static const Color lightTextMuted = Color(0xFF5B6A80);
 
-  /// `--text-brand` `#1E40AF` — brand-toned text.
-  static const Color lightTextBrand = Color(0xFF1E40AF);
+  /// `--text-brand` `#1d4ed8` — brand-toned text.
+  static const Color lightTextBrand = Color(0xFF1D4ED8);
 
-  /// Flattened `--shell-border` (rgba(59,130,246,.14) over canvas) `#DDE8FA`.
-  static const Color lightOutline = Color(0xFFDDE8FA);
+  /// `--shell-border-strong` `#94a3bd` — interactive control outline.
+  static const Color lightOutline = Color(0xFF94A3BD);
+
+  /// `--shell-border` `#dfe5ef` — subtle structural separation.
+  static const Color lightOutlineVariant = Color(0xFFDFE5EF);
 
   // --- Dark (from `html.dark`) -----------------------------------------------
 
-  /// `--bg-canvas` `#111a2d` — app background / scaffold.
-  static const Color darkCanvas = Color(0xFF111A2D);
+  /// `--bg-canvas` `#1b1a19` — app background / scaffold.
+  static const Color darkCanvas = Color(0xFF1B1A19);
 
-  /// `--bg-elev-3` `#1d2840` — top elevated surface.
-  static const Color darkSurface = Color(0xFF1D2840);
+  /// `--surface-panel` `#292929` — elevated surface.
+  static const Color darkSurface = Color(0xFF292929);
 
-  /// Flattened `--surface-muted` (rgba(40,58,100,.76) over canvas) `#223257`.
-  static const Color darkSurfaceMuted = Color(0xFF223257);
+  /// `--surface-muted` `#333333`.
+  static const Color darkSurfaceMuted = Color(0xFF333333);
 
-  /// Flattened `--surface-brand-soft` (rgba(59,130,246,.18) over canvas)
-  /// `#192D51`.
-  static const Color darkBrandSoft = Color(0xFF192D51);
+  /// `--surface-brand-soft` `#0f3b5f`.
+  static const Color darkBrandSoft = Color(0xFF0F3B5F);
 
-  /// `--text-primary` `#dae2fd` — primary body text (≥11:1 on dark surface).
-  static const Color darkTextPrimary = Color(0xFFDAE2FD);
+  /// `--text-primary` `#ffffff`.
+  static const Color darkTextPrimary = Color(0xFFFFFFFF);
 
-  /// `--text-secondary` `#c3c6d0` — secondary text.
-  static const Color darkTextSecondary = Color(0xFFC3C6D0);
+  /// `--text-secondary` `#d6d6d6`.
+  static const Color darkTextSecondary = Color(0xFFD6D6D6);
 
-  /// `--text-muted` web `#8d919a`, lightened to `#9DA2AD` so muted text clears
-  /// WCAG AA (≥4.5:1) on the elevated `surfaceContainerHighest` we paint
-  /// (the raw web value lands at ~4.0:1). Documented AA-adjusted mobile token.
-  static const Color darkTextMuted = Color(0xFF9DA2AD);
+  /// `--text-muted` `#b3b3b3`.
+  static const Color darkTextMuted = Color(0xFFB3B3B3);
 
-  /// `--text-brand` `#93C5FD` — brand-toned text.
-  static const Color darkTextBrand = Color(0xFF93C5FD);
+  /// `--text-brand` `#75b6e7` — brand-toned text.
+  static const Color darkTextBrand = Color(0xFF75B6E7);
 
-  /// Flattened `--shell-border` (rgba(59,130,246,.22) over canvas) `#1A3159`.
-  static const Color darkOutline = Color(0xFF1A3159);
+  /// `--shell-border-strong` `#8a8886` — interactive control outline.
+  static const Color darkOutline = Color(0xFF8A8886);
+
+  /// `--shell-border` `#484848` — subtle structural separation.
+  static const Color darkOutlineVariant = Color(0xFF484848);
 
   // --- Brand + status (shared token values) ----------------------------------
 
-  /// `--brand-500` `#3B82F6`.
-  static const Color brand500 = Color(0xFF3B82F6);
+  /// `--brand-500` `#3b7bf0`.
+  static const Color brand500 = Color(0xFF3B7BF0);
 
   /// `--brand-600` `#2563EB` — the primary action color (white text ≥5.2:1).
   static const Color brand600 = Color(0xFF2563EB);
@@ -104,8 +107,8 @@ class WebPalette {
   /// `--brand-700` `#1D4ED8`.
   static const Color brand700 = Color(0xFF1D4ED8);
 
-  /// `--accent-500` `#b7c8e1`.
-  static const Color accent500 = Color(0xFFB7C8E1);
+  /// `--accent-500` `#6366f1`.
+  static const Color accent500 = Color(0xFF6366F1);
 
   /// `--success-500` `#16a34a` (light).
   static const Color success500 = Color(0xFF16A34A);
@@ -222,6 +225,7 @@ ColorScheme webColorScheme(Brightness brightness) {
       surfaceContainerHighest: WebPalette.darkSurfaceMuted,
       onSurfaceVariant: WebPalette.darkTextMuted,
       outline: WebPalette.darkOutline,
+      outlineVariant: WebPalette.darkOutlineVariant,
       error: WebPalette.dangerDark,
       onError: Color(0xFF4A0505),
     );
@@ -240,6 +244,7 @@ ColorScheme webColorScheme(Brightness brightness) {
     surfaceContainerHighest: WebPalette.lightSurfaceMuted,
     onSurfaceVariant: WebPalette.lightTextMuted,
     outline: WebPalette.lightOutline,
+    outlineVariant: WebPalette.lightOutlineVariant,
     error: WebPalette.danger500,
     onError: Color(0xFFFFFFFF),
   );

@@ -134,22 +134,28 @@ class _ClaraAppState extends State<ClaraApp> {
       );
     }
 
-    // Legacy / flag-off (and the defensive flag-on-without-controller) path:
-    // byte-for-byte the pre-feature `MaterialApp` — no locale, no
-    // supportedLocales.
+    // Defensive construction can omit controllers in tests, embeds, or an
+    // interrupted bootstrap. The shipped Unified/Redesign experience must
+    // still use the same polished light-first palette in that case; falling
+    // back to the legacy teal theme would make identical routes render as two
+    // different products. A fully flag-off legacy build remains unchanged.
+    final modernExperience = kMobileUnifiedEnabled || kMobileRedesignEnabled;
     return MaterialApp(
       title: 'CLARA Mobile',
-      // V2: Material 3 light/dark themes from the brand seed, system-driven
-      // (Req 2.1, 2.6). Legacy: the existing teal seed `ThemeData`, unchanged.
-      theme: kMobileExperienceV2Enabled
-          ? ClaraTheme.light(polished: kMobileUxPolishEnabled)
-          : ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-              useMaterial3: true,
-            ),
-      darkTheme: kMobileExperienceV2Enabled
-          ? ClaraTheme.dark(polished: kMobileUxPolishEnabled)
-          : null,
+      theme: modernExperience
+          ? ClaraTheme.light(polished: true)
+          : kMobileExperienceV2Enabled
+              ? ClaraTheme.light(polished: kMobileUxPolishEnabled)
+              : ThemeData(
+                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+                  useMaterial3: true,
+                ),
+      darkTheme: modernExperience
+          ? ClaraTheme.dark(polished: true)
+          : kMobileExperienceV2Enabled
+              ? ClaraTheme.dark(polished: kMobileUxPolishEnabled)
+              : null,
+      themeMode: modernExperience ? ThemeMode.system : null,
       home: _buildHome(),
     );
   }

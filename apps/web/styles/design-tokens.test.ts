@@ -56,6 +56,34 @@ function findHardcodedHex(source: string): string[] {
 }
 
 describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => {
+  it("freezes the approved semantic light palette", () => {
+    const globals = readFileSync(resolve(here, "globals.css"), "utf8");
+    const root = globals.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(root).toContain("--bg-canvas: #f4f6fb;");
+    expect(root).toContain("--surface-sidebar: #f8faff;");
+    expect(root).toContain("--surface-panel: #ffffff;");
+    expect(root).toContain("--surface-muted: #f6f8fc;");
+    expect(root).toContain("--text-primary: #172033;");
+    expect(root).toContain("--text-secondary: #46556a;");
+    expect(root).toContain("--shell-border: #dfe5ef;");
+    expect(root).toContain("--shell-border-strong: #94a3bd;");
+  });
+
+  it("freezes the approved semantic dark palette", () => {
+    const globals = readFileSync(resolve(here, "globals.css"), "utf8");
+    const dark =
+      globals.match(
+        /html\.dark,\s*html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/,
+      )?.[1] ?? "";
+    expect(dark).toContain("--bg-canvas: #1b1a19;");
+    expect(dark).toContain("--surface-panel: #292929;");
+    expect(dark).toContain("--surface-muted: #333333;");
+    expect(dark).toContain("--text-primary: #ffffff;");
+    expect(dark).toContain("--text-secondary: #d6d6d6;");
+    expect(dark).toContain("--shell-border: #484848;");
+    expect(dark).toContain("--shell-border-strong: #8a8886;");
+  });
+
   it.each(SURFACE_FILES)(
     "%s uses design tokens instead of hardcoded hex color utilities",
     (relativePath) => {

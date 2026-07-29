@@ -100,7 +100,7 @@ function AnswerRenderer({
             </div>
             {result.policyAction ? (
               <Badge
-                tone={result.policyAction === "allow" ? "success" : "warn"}
+                tone={result.policyAction === "allow" ? "ok" : "warn"}
               >
                 {result.policyAction}
               </Badge>

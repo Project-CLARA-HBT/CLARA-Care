@@ -23,6 +23,8 @@ import 'package:clara_mobile/experience/app_shell.dart';
 import 'package:clara_mobile/experience/home_screen.dart';
 import 'package:clara_mobile/experience/onboarding/onboarding_gate.dart';
 import 'package:clara_mobile/experience/unified/unified_root.dart';
+import 'package:clara_mobile/theme/web_palette.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fakes.dart';
@@ -98,6 +100,10 @@ void main() {
 
       // The unified authenticated root is present (default-on, Phase 7.3).
       expect(find.byType(UnifiedRoot), findsOneWidget);
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.theme?.colorScheme.primary, WebPalette.brand600);
+      expect(app.theme?.scaffoldBackgroundColor, WebPalette.lightCanvas);
+      expect(app.themeMode, ThemeMode.system);
 
       // NONE of the legacy Experience_V2 surfaces are constructed.
       expect(find.byType(AppShell), findsNothing);

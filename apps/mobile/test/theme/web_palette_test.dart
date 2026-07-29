@@ -43,34 +43,36 @@ double contrastRatio(Color a, Color b) {
 void main() {
   group('Palette parity (P6)', () {
     test('light values exactly preserve documented web tokens', () {
-      expect(WebPalette.lightCanvas, const Color(0xFFF7F9FB));
+      expect(WebPalette.lightCanvas, const Color(0xFFF4F6FB));
       expect(WebPalette.lightSurface, const Color(0xFFFFFFFF));
-      expect(WebPalette.lightSurfaceMuted, const Color(0xFFEFF6FF));
-      expect(WebPalette.lightBrandSoft, const Color(0xFFDBEAFE));
-      expect(WebPalette.lightTextPrimary, const Color(0xFF1F2937));
-      expect(WebPalette.lightTextSecondary, const Color(0xFF374151));
-      expect(WebPalette.lightTextMuted, const Color(0xFF4B5563));
-      expect(WebPalette.lightTextBrand, const Color(0xFF1E40AF));
-      expect(WebPalette.lightOutline, const Color(0xFFDDE8FA));
+      expect(WebPalette.lightSurfaceMuted, const Color(0xFFF6F8FC));
+      expect(WebPalette.lightBrandSoft, const Color(0xFFE8EFFE));
+      expect(WebPalette.lightTextPrimary, const Color(0xFF172033));
+      expect(WebPalette.lightTextSecondary, const Color(0xFF46556A));
+      expect(WebPalette.lightTextMuted, const Color(0xFF5B6A80));
+      expect(WebPalette.lightTextBrand, const Color(0xFF1D4ED8));
+      expect(WebPalette.lightOutline, const Color(0xFF94A3BD));
+      expect(WebPalette.lightOutlineVariant, const Color(0xFFDFE5EF));
     });
 
     test('dark values exactly preserve documented web tokens', () {
-      expect(WebPalette.darkCanvas, const Color(0xFF111A2D));
-      expect(WebPalette.darkSurface, const Color(0xFF1D2840));
-      expect(WebPalette.darkSurfaceMuted, const Color(0xFF223257));
-      expect(WebPalette.darkBrandSoft, const Color(0xFF192D51));
-      expect(WebPalette.darkTextPrimary, const Color(0xFFDAE2FD));
-      expect(WebPalette.darkTextSecondary, const Color(0xFFC3C6D0));
-      expect(WebPalette.darkTextMuted, const Color(0xFF9DA2AD));
-      expect(WebPalette.darkTextBrand, const Color(0xFF93C5FD));
-      expect(WebPalette.darkOutline, const Color(0xFF1A3159));
+      expect(WebPalette.darkCanvas, const Color(0xFF1B1A19));
+      expect(WebPalette.darkSurface, const Color(0xFF292929));
+      expect(WebPalette.darkSurfaceMuted, const Color(0xFF333333));
+      expect(WebPalette.darkBrandSoft, const Color(0xFF0F3B5F));
+      expect(WebPalette.darkTextPrimary, const Color(0xFFFFFFFF));
+      expect(WebPalette.darkTextSecondary, const Color(0xFFD6D6D6));
+      expect(WebPalette.darkTextMuted, const Color(0xFFB3B3B3));
+      expect(WebPalette.darkTextBrand, const Color(0xFF75B6E7));
+      expect(WebPalette.darkOutline, const Color(0xFF8A8886));
+      expect(WebPalette.darkOutlineVariant, const Color(0xFF484848));
     });
 
     test('brand + status values exactly preserve documented web tokens', () {
-      expect(WebPalette.brand500, const Color(0xFF3B82F6));
+      expect(WebPalette.brand500, const Color(0xFF3B7BF0));
       expect(WebPalette.brand600, const Color(0xFF2563EB));
       expect(WebPalette.brand700, const Color(0xFF1D4ED8));
-      expect(WebPalette.accent500, const Color(0xFFB7C8E1));
+      expect(WebPalette.accent500, const Color(0xFF6366F1));
       expect(WebPalette.success500, const Color(0xFF16A34A));
       expect(WebPalette.warn500, const Color(0xFFF59E0B));
       expect(WebPalette.danger500, const Color(0xFFDC2626));

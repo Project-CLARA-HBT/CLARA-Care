@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   ACTIVE_PROFILE_STORAGE_KEY,
   PROFILE_CACHE_PREFIX,

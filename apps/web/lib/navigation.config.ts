@@ -45,6 +45,7 @@ export const DEFAULT_POST_LOGIN_PATH = "/today";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
 const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
+const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/"];
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
   normal: "/today",
@@ -502,7 +503,10 @@ export function isPublicRoute(pathname: string): boolean {
  * user has completed or skipped it, the everyday sidebar stays uncluttered.
  */
 export function isAuthenticatedUtilityRoute(pathname: string): boolean {
-  return AUTHENTICATED_UTILITY_ROUTES.has(pathname);
+  return (
+    AUTHENTICATED_UTILITY_ROUTES.has(pathname) ||
+    AUTHENTICATED_UTILITY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
 }
 
 export function getRoleHomePath(role: UserRole = "normal"): string {

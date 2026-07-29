@@ -131,7 +131,9 @@ function stage(
 function canonicalSubsequence(stages: ResearchFlowStage[]): string[] {
   return stages
     .map((item) => item.id)
-    .filter((id) => CANONICAL_ORDER.includes(id));
+    .filter((id) =>
+      CANONICAL_ORDER.includes(id as (typeof CANONICAL_ORDER)[number]),
+    );
 }
 
 function isOrderedSubsequence(observed: string[], canonical: string[]): boolean {

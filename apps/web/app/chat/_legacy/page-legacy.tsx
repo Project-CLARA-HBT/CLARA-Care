@@ -1142,7 +1142,7 @@ export default function ChatWorkspacePage() {
     }
     setRole(getRole());
     setIsHydrated(true);
-  }, []);
+  }, [applyResearchMode]);
 
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
@@ -2702,6 +2702,7 @@ export default function ChatWorkspacePage() {
     ];
   }, [
     activeConversationId,
+    applyResearchMode,
     createNewConversation,
     focusById,
     isFastResearchMode,

@@ -11,7 +11,7 @@ export type PhrOnboardingStatus = "pending" | "completed" | "skipped";
 export type PhrOnboarding = {
   status: PhrOnboardingStatus;
   needs_onboarding: boolean;
-  version: number;
+  version: string;
   completed_at: string | null;
   personalization_consent: boolean;
   optional_fields: string[];

@@ -228,7 +228,7 @@ describe("useWorkspace search", () => {
       await result.current.saveNote({ title: "Blood pressure log" });
     });
 
-    let scan: { notes: WorkspaceNote[] } | null = null;
+    let scan!: { notes: WorkspaceNote[] };
     await act(async () => {
       scan = (await result.current.search("blood")) as {
         notes: WorkspaceNote[];
@@ -236,7 +236,7 @@ describe("useWorkspace search", () => {
     });
 
     expect(searchWorkspace).not.toHaveBeenCalled();
-    expect(scan?.notes.map((n) => n.id)).toEqual([3]);
+    expect(scan.notes.map((n) => n.id)).toEqual([3]);
     expect(result.current.searchResults?.notes.map((n) => n.id)).toEqual([3]);
   });
 
@@ -268,6 +268,9 @@ describe("useWorkspace export", () => {
     // download path in triggerBlobDownload is exercisable.
     const createObjectURL = vi.fn(() => "blob:stub");
     const revokeObjectURL = vi.fn();
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
     vi.stubGlobal("URL", {
       ...URL,
       createObjectURL,
@@ -286,6 +289,8 @@ describe("useWorkspace export", () => {
 
     expect(exportWorkspaceConversation).toHaveBeenCalledWith(7, "markdown");
     expect(createObjectURL).toHaveBeenCalled();
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
     vi.unstubAllGlobals();
   });
 });

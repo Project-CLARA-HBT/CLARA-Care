@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 /**
  * Feature: regulatory-compliance, Requirement 1.2 / Property P9 (no medical
@@ -78,7 +78,7 @@ describe("TransparencyNoticeGate", () => {
     const button = await screen.findByRole("button", {
       name: /understand and continue/i,
     });
-    button.click();
+    fireEvent.click(button);
     await waitFor(() => {
       expect(mockAck).toHaveBeenCalledWith("2026-01-v1");
     });

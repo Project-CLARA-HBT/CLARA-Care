@@ -92,7 +92,7 @@ describe("streamChatMessage", () => {
     expect(steps[0].stage).toBe("route");
     expect(tokens.join("")).toBe("Hello world");
     expect(done).not.toBeNull();
-    expect((done as Record<string, unknown>).model_used).toBe("m");
+    expect((done as unknown as Record<string, unknown>).model_used).toBe("m");
   });
 
   it("handles frames split across chunk boundaries", async () => {

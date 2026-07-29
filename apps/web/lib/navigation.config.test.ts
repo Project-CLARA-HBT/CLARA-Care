@@ -45,6 +45,7 @@ describe("authenticated navigation defaults", () => {
 
   it("allows onboarding without turning it into permanent navigation", () => {
     expect(isAuthenticatedUtilityRoute("/welcome")).toBe(true);
+    expect(isAuthenticatedUtilityRoute("/welcome/body")).toBe(true);
     expect(
       getNavItemsByRole("normal").some((item) => item.href === "/welcome"),
     ).toBe(false);

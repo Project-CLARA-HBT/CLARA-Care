@@ -120,6 +120,13 @@ Future<void> pumpExperience(
       ? MaterialApp(
           theme: theme,
           darkTheme: darkTheme,
+          // MaterialApp selects its theme above the child MediaQuery, so a
+          // MediaQuery.platformBrightness override alone cannot activate the
+          // supplied dark theme. Pin the requested mode in this test harness;
+          // production still follows its configured ThemeMode/controller.
+          themeMode: platformBrightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
           locale: locale,
           home: overridden,
         )

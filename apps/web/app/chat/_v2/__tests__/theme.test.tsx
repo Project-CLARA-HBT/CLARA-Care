@@ -74,19 +74,22 @@ describe("useResolvedTheme", () => {
   });
 
   it("re-renders when the app toggles the theme on <html>", async () => {
-    const { result } = renderHook(() => useResolvedTheme());
+    const { result, unmount } = renderHook(() => useResolvedTheme());
     expect(result.current).toBe("light");
 
-    act(() => {
+    await act(async () => {
       document.documentElement.classList.add("dark");
       document.documentElement.setAttribute("data-theme", "dark");
+      await Promise.resolve();
     });
     await waitFor(() => expect(result.current).toBe("dark"));
 
-    act(() => {
+    await act(async () => {
       document.documentElement.classList.remove("dark");
       document.documentElement.setAttribute("data-theme", "light");
+      await Promise.resolve();
     });
     await waitFor(() => expect(result.current).toBe("light"));
+    unmount();
   });
 });

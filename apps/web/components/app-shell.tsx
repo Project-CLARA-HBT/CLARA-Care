@@ -283,11 +283,13 @@ export default function AppShell({ children }: Props) {
       try {
         const onboarding = await getPhrOnboarding();
         if (!active) return;
-        if (onboarding.needs_onboarding && pathname !== "/welcome") {
-          router.replace("/welcome");
+        const inWelcomeFlow =
+          pathname === "/welcome" || pathname.startsWith("/welcome/");
+        if (onboarding.needs_onboarding && !inWelcomeFlow) {
+          router.replace("/welcome/start");
           return;
         }
-        if (!onboarding.needs_onboarding && pathname === "/welcome") {
+        if (!onboarding.needs_onboarding && inWelcomeFlow) {
           router.replace(getRoleHomePath(role));
         }
       } catch {

@@ -11,25 +11,25 @@
   --shell-nav-width: 17rem;
 
   /* Foundation */
-  --color-bg: #eceef6;
-  --bg-canvas: #eceef6;
+  --color-bg: #f4f6fb;
+  --bg-canvas: #f4f6fb;
   --bg-elev-1: #ffffff;
   --bg-elev-2: #fbfcfe;
-  --bg-elev-3: #f5f7fc;
+  --bg-elev-3: #f6f8fc;
 
   /* Text */
-  --text-primary: #18212f;
+  --text-primary: #172033;
   --text-secondary: #46556a;
   --text-muted: #5b6a80;
   --text-brand: #1d4ed8;
 
   /* Shell surfaces */
-  --surface-sidebar: #f7f9fd;
+  --surface-sidebar: #f8faff;
   --surface-header: rgba(255, 255, 255, 0.82);
   --surface-panel: #ffffff;
-  --surface-muted: #eff2f9;
+  --surface-muted: #f6f8fc;
   --surface-brand-soft: #e8effe;
-  --shell-border: #e0e5f0;
+  --shell-border: #dfe5ef;
   --shell-border-strong: #94a3bd;
 
   /* Brand + status — indigo-leaning blue for a warmer, more modern feel */

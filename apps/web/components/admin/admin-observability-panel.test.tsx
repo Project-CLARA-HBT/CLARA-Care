@@ -42,10 +42,10 @@ vi.mock("@/components/dashboard/futuristic-charts", () => ({
   SegmentRingGauge: () => <div data-testid="chart-gauge" />
 }));
 
-const getApiHealth = vi.fn<[], Promise<ApiHealthRawResponse>>();
-const getSystemMetrics = vi.fn<[], Promise<SystemMetricsRawResponse>>();
-const getSystemDependencies = vi.fn<[], Promise<SystemDependenciesRawResponse>>();
-const getControlTowerConfig = vi.fn<[], Promise<ControlTowerConfig>>();
+const getApiHealth = vi.fn<() => Promise<ApiHealthRawResponse>>();
+const getSystemMetrics = vi.fn<() => Promise<SystemMetricsRawResponse>>();
+const getSystemDependencies = vi.fn<() => Promise<SystemDependenciesRawResponse>>();
+const getControlTowerConfig = vi.fn<() => Promise<ControlTowerConfig>>();
 
 vi.mock("@/lib/system", async () => {
   const actual = await vi.importActual<typeof import("@/lib/system")>("@/lib/system");

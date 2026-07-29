@@ -260,8 +260,11 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
                   const SizedBox(height: ClaraTokens.spaceSm),
 
                   // --- Secondary actions -----------------------------------
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    runAlignment: WrapAlignment.center,
+                    spacing: ClaraTokens.spaceSm,
+                    runSpacing: ClaraTokens.spaceXs,
                     children: [
                       TextButton(
                         onPressed: _isLoading ? null : _openRegister,

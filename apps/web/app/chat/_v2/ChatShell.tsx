@@ -401,7 +401,6 @@ export default function ChatShell() {
       personalMode,
       query,
       retrievalStackMode,
-      role,
       stream,
       turns,
       uiLanguage,

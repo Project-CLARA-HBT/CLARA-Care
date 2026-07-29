@@ -69,7 +69,9 @@ describe("streamCouncilRun", () => {
     expect(stages[0].step).toBe("intake_normalized");
     expect(stages[1].metadata).toEqual({ count: 3 });
     expect(result).not.toBeNull();
-    expect((result as Record<string, unknown>).final_recommendation).toBe("done");
+    expect(
+      (result as unknown as Record<string, unknown>).final_recommendation,
+    ).toBe("done");
   });
 
   it("posts to the case stream URL with bearer + CSRF headers", async () => {
