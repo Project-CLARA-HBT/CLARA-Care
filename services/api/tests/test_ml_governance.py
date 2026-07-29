@@ -69,6 +69,13 @@ def test_catalog_truthfully_registers_the_deployed_ai_inventory() -> None:
         "lifemap-deterministic-baseline-v2",
         "lifemap-next-question-rules-v2",
         "lifemap-evidence-change-rules-v1",
+        "lifemap-ask-grounded-v1",
+        "lifemap-hierarchical-summary-v1",
+        "lifemap-multimodal-draft-v1",
+        "lifemap-entity-resolution-v1",
+        "lifemap-review-findings-v1",
+        "lifemap-question-ranker-shadow-v1",
+        "lifemap-evidence-matching-v1",
     } == ids
     shadow = next(item for item in entries if item["id"] == "council-fixed-weight-shadow")
     assert shadow["kind"] == "fixed_weight_heuristic"

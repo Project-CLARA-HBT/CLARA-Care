@@ -929,3 +929,19 @@ Task 19.8 remains operationally open because CLARA has no approved LifeMap AI
 pilot, predefined owner-approved production thresholds, real monitoring window,
 or exercised pause/recall action. The repository establishes the control and
 fail-closed contract; it cannot manufacture post-pilot evidence.
+
+The ML inventory now truthfully registers the new grounded Ask, hierarchical
+summary, multimodal draft, entity-resolution, review-finding, shadow ranker,
+and evidence-matching capabilities with stable IDs, implementation kind,
+owner, risk, release state, flag, fallback, data origin, and forbidden uses.
+The accompanying evidence-package collection provides a use-case-specific
+datasheet boundary, model/artifact description, human-AI workflow, error and
+hazard analysis, reporting-framework applicability, and rollback path for each
+capability. The governance suite passes 12 focused tests; JSON, Ruff, and docs
+validation are clean.
+
+Task 19.3 remains open because package completeness is not evidence
+completeness: no authorized real cohort supplies subgroup results, human-
+factors findings, independent reviewer signatures, approved monitoring
+thresholds, or exercised rollback evidence. Those sections are explicitly
+reported as absent rather than inferred from synthetic repository tests.
