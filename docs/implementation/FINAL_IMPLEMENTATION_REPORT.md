@@ -84,7 +84,7 @@ Executed in this workspace:
 | Check | Result |
 | --- | --- |
 | Web lint + TypeScript | pass for i18n and Scribe checkpoints |
-| Web full unit/property suite | pass: 75 files, 637 tests |
+| Web full unit/property suite | pass: 75 files, 638 tests |
 | Eval formatting/Ruff/mypy | pass: 12 files; mypy clean |
 | Eval unit suite | pass: 8 tests |
 | Eval manifest validator | pass: 9 required tracks, checksums/counts validated |
