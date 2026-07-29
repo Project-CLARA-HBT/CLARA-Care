@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   webServer: {
     // E2E validates the same optimized artifact shipped to production.
-    command: "npm run build && npm run start",
+    command: "npm run build && HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
