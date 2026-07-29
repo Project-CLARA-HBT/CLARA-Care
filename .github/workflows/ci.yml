@@ -69,10 +69,12 @@ jobs:
             python:
               - 'services/**/*.py'
               - 'scripts/**/*.py'
+              - 'evaluation/**/*.py'
               - 'services/**/pyproject.toml'
             python_changed:
               - 'services/**/*.py'
               - 'scripts/**/*.py'
+              - 'evaluation/**/*.py'
 
   quality:
     name: docs-check + ruff + mypy
@@ -257,6 +259,56 @@ jobs:
             docs/hackathon/data-manifest.json
             docs/hackathon/kpi-snapshot.md
           if-no-files-found: ignore
+
+  clara-eval-vn-smoke:
+    name: CLARA-Eval VN smoke
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 15
+    # This is deliberately unconditional for CI events: the compact fixture
+    # suite protects cross-service safety/routing contracts even in a UI-only
+    # pull request.  It never requires production credentials or patient data.
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate sanitized dataset manifest
+        run: |
+          set -euo pipefail
+          python -m evaluation.clara_eval.datasets.validate \
+            --manifest evaluation/clara_eval/datasets/manifest.json \
+            --repository-root .
+
+      - name: Run deterministic CLARA-Eval VN smoke
+        id: eval
+        run: |
+          set -euo pipefail
+          output="artifacts/clara-eval-vn/ci-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "output=${output}" >> "$GITHUB_OUTPUT"
+          python -m evaluation.clara_eval.run \
+            --config evaluation/configs/smoke.yaml \
+            --output "${output}"
+          test -f "${output}/summary.md"
+          test -f "${output}/metrics.json"
+          test -f "${output}/critical-errors.csv"
+          test -f "${output}/model-manifest.json"
+          test -f "${output}/dataset-manifest.json"
+          test -f "${output}/retrieval-snapshot.json"
+
+      - name: Upload sanitized CLARA-Eval VN smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clara-eval-vn-ci-smoke-${{ github.run_id }}
+          path: ${{ steps.eval.outputs.output }}
+          if-no-files-found: ignore
+          retention-days: 14
 
   api-tests:
     name: pytest api
@@ -666,6 +718,7 @@ jobs:
       - quality
       - scripts-syntax
       - hackathon-artifacts-smoke
+      - clara-eval-vn-smoke
       - api-tests
       - ml-tests
       - web-lint-build
@@ -682,6 +735,7 @@ jobs:
           QUALITY_RESULT: ${{ needs.quality.result }}
           SCRIPTS_SYNTAX_RESULT: ${{ needs.scripts-syntax.result }}
           HACKATHON_ARTIFACTS_RESULT: ${{ needs.hackathon-artifacts-smoke.result }}
+          CLARA_EVAL_SMOKE_RESULT: ${{ needs.clara-eval-vn-smoke.result }}
           API_TESTS_RESULT: ${{ needs.api-tests.result }}
           ML_TESTS_RESULT: ${{ needs.ml-tests.result }}
           WEB_RESULT: ${{ needs.web-lint-build.result }}
@@ -732,6 +786,7 @@ jobs:
           check_required_job "quality" "$QUALITY_RESULT" || status=1
           check_required_job "scripts-syntax" "$SCRIPTS_SYNTAX_RESULT" || status=1
           check_required_job "hackathon-artifacts-smoke" "$HACKATHON_ARTIFACTS_RESULT" || status=1
+          check_required_job "clara-eval-vn-smoke" "$CLARA_EVAL_SMOKE_RESULT" || status=1
           check_required_job "api-tests" "$API_TESTS_RESULT" || status=1
           check_required_job "ml-tests" "$ML_TESTS_RESULT" || status=1
           check_required_job "web-lint-build" "$WEB_RESULT" || status=1
@@ -777,6 +832,7 @@ jobs:
             echo "- quality: \`${QUALITY_RESULT}\`"
             echo "- scripts-syntax: \`${SCRIPTS_SYNTAX_RESULT}\`"
             echo "- hackathon-artifacts-smoke: \`${HACKATHON_ARTIFACTS_RESULT}\`"
+            echo "- clara-eval-vn-smoke: \`${CLARA_EVAL_SMOKE_RESULT}\`"
             echo "- api-tests: \`${API_TESTS_RESULT}\`"
             echo "- ml-tests: \`${ML_TESTS_RESULT}\`"
             echo "- web-lint-build: \`${WEB_RESULT}\`"

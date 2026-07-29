@@ -1,0 +1,1 @@
+{"case_id":"synthetic-routing-001","locale":"vi","input_class":"emergency","expected_route":"deterministic_emergency_fast_path","fixture_purpose":"routing guard contract only"}

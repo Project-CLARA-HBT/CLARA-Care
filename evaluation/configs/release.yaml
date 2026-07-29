@@ -1,0 +1,10 @@
+{
+  "schema_version": "clara-eval-vn.suite-config.v1",
+  "suite": "release",
+  "dataset_manifest": "evaluation/clara_eval/datasets/manifest.json",
+  "enabled_tracks": ["vietnamese_clinical_understanding", "medical_qa_patient_communication", "research_rag", "careguard_drugbank", "scribe_asr", "lifemap_invariants", "council_ablation", "wording_usability", "model_routing_latency_cost"],
+  "requires_live_dependencies": true,
+  "release_locked": true,
+  "allow_synthetic_metrics": false,
+  "output_dir": "artifacts/clara-eval-vn/release"
+}

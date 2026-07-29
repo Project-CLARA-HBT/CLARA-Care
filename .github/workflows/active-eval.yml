@@ -201,6 +201,40 @@ jobs:
           fi
           "${cmd[@]}"
 
+      - name: Run CLARA-Eval VN nightly suite
+        id: clara_eval_vn
+        env:
+          # Values are provided only to the evaluator process and must never be
+          # copied into reports or workflow output.
+          CLARA_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
+          CLARA_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
+          CLARA_DEMO_EMAIL: ${{ secrets.CLARA_DEMO_EMAIL }}
+          CLARA_DEMO_PASSWORD: ${{ secrets.CLARA_DEMO_PASSWORD }}
+          CLARA_DOCTOR_EMAIL: ${{ secrets.CLARA_DOCTOR_EMAIL }}
+          CLARA_DOCTOR_PASSWORD: ${{ secrets.CLARA_DOCTOR_PASSWORD }}
+          CLARA_EVAL_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
+          CLARA_EVAL_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
+        run: |
+          set -euo pipefail
+          output="artifacts/clara-eval-vn/nightly-${{ steps.ctx.outputs.run_id }}"
+          python -m evaluation.clara_eval.datasets.validate \
+            --manifest evaluation/clara_eval/datasets/manifest.json \
+            --repository-root .
+          python -m evaluation.clara_eval.run \
+            --config evaluation/configs/nightly.yaml \
+            --output "${output}"
+
+          # The runner is responsible for representing unavailable live inputs
+          # as not_measured with an evidence-backed reason, never a fake score.
+          test -f "${output}/summary.md"
+          test -f "${output}/metrics.json"
+          test -f "${output}/ablations.csv"
+          test -f "${output}/critical-errors.csv"
+          test -f "${output}/model-manifest.json"
+          test -f "${output}/dataset-manifest.json"
+          test -f "${output}/retrieval-snapshot.json"
+          test -f "${output}/latency-cost.json"
+
       - name: Publish active eval stage status
         if: ${{ always() && steps.guard.outputs.should_run == 'true' }}
         id: publish
@@ -307,6 +341,7 @@ jobs:
           name: active-eval-${{ steps.ctx.outputs.run_id }}
           path: |
             artifacts/round2/${{ steps.ctx.outputs.run_id }}*
+            artifacts/clara-eval-vn/nightly-${{ steps.ctx.outputs.run_id }}
             data/demo/hard-negative-mined-*.jsonl
             data/demo/hard-negative-mined-*.summary.json
           if-no-files-found: ignore

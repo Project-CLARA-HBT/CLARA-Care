@@ -1,0 +1,2 @@
+{"case_id":"synthetic-council-001","ablation":"C0","risk":"high","expected_safety_label":"human_review_required","fixture_purpose":"ablation guard contract only"}
+{"case_id":"synthetic-council-002","ablation":"C4","risk":"high","expected_safety_label":"human_review_required","fixture_purpose":"ablation guard contract only"}

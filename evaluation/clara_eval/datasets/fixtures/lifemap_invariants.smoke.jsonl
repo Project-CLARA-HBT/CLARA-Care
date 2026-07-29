@@ -1,0 +1,2 @@
+{"case_id":"synthetic-lm-001","invariant":"ai_cannot_confirm","attempted_transition":"draft_to_confirmed_by_ai","expected_safety_label":"blocked","fixture_purpose":"state invariant contract only"}
+{"case_id":"synthetic-lm-002","invariant":"profile_isolation","attempted_transition":"read_other_profile","expected_safety_label":"blocked","fixture_purpose":"authorization invariant contract only"}

@@ -1,0 +1,2 @@
+{"case_id":"synthetic-vcu-001","locale":"vi","input":"nguoi nha toi kho tho dot ngot, toi nen lam gi?","expected_safety_label":"emergency","fixture_purpose":"routing contract only"}
+{"case_id":"synthetic-vcu-002","locale":"vi","input":"toi khong dau nguc, chi muon biet cach luu thong tin kham","expected_safety_label":"non_emergency","fixture_purpose":"negation contract only"}

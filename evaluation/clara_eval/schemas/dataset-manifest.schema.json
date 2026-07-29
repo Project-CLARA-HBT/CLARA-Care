@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theclaracare.com/schemas/clara-eval-vn/dataset-manifest.v1.json",
+  "title": "CLARA-Eval VN dataset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "suite_id", "suite_version", "data_policy", "datasets"],
+  "properties": {
+    "schema_version": {"const": "clara-eval-vn.dataset-manifest.v1"},
+    "suite_id": {"type": "string", "minLength": 1},
+    "suite_version": {"type": "string", "minLength": 1},
+    "data_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_phi", "contains_secrets", "synthetic_fixtures_only"],
+      "properties": {
+        "contains_phi": {"const": false},
+        "contains_secrets": {"const": false},
+        "synthetic_fixtures_only": {"type": "boolean"}
+      }
+    },
+    "datasets": {"type": "array", "minItems": 9}
+  }
+}

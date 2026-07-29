@@ -1,0 +1,105 @@
+name: CLARA-Eval VN
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Offline suite to run"
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - judge_demo
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clara-eval-vn-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  smoke:
+    name: CLARA-Eval VN PR smoke
+    if: ${{ github.event.inputs.suite == 'smoke' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate sanitized dataset manifest
+        run: |
+          set -euo pipefail
+          python -m evaluation.clara_eval.datasets.validate \
+            --manifest evaluation/clara_eval/datasets/manifest.json \
+            --repository-root .
+
+      - name: Run deterministic CLARA-Eval VN smoke
+        run: |
+          set -euo pipefail
+          output="artifacts/clara-eval-vn/smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python -m evaluation.clara_eval.run \
+            --config evaluation/configs/smoke.yaml \
+            --output "${output}"
+          test -f "${output}/summary.md"
+          test -f "${output}/metrics.json"
+          test -f "${output}/critical-errors.csv"
+          test -f "${output}/model-manifest.json"
+          test -f "${output}/dataset-manifest.json"
+          test -f "${output}/retrieval-snapshot.json"
+
+      - name: Upload sanitized smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: clara-eval-vn-smoke-${{ github.run_id }}
+          path: artifacts/clara-eval-vn/smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+
+  judge-demo:
+    name: CLARA-Eval VN judge demo report
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'judge_demo' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Build judge report from measured evidence
+        run: |
+          set -euo pipefail
+          make eval-judge-report
+          test -f artifacts/judge-report/index.html
+          test -f artifacts/judge-report/summary.md
+          test -f artifacts/judge-report/metrics.json
+          test -f artifacts/judge-report/ablations.csv
+          test -f artifacts/judge-report/critical-errors.csv
+          test -f artifacts/judge-report/model-manifest.json
+          test -f artifacts/judge-report/dataset-manifest.json
+          test -d artifacts/judge-report/examples
+
+      - name: Upload sanitized judge report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: clara-eval-vn-judge-report-${{ github.run_id }}
+          path: artifacts/judge-report
+          if-no-files-found: ignore
+          retention-days: 30

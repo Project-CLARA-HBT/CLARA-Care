@@ -1,0 +1,1 @@
+{"case_id":"synthetic-wording-001","locale":"vi","structured_input":{"severity":"urgent","action":"seek_emergency_care"},"expected_safety_label":"meaning_severity_action_preserved","fixture_purpose":"wording fidelity contract only"}

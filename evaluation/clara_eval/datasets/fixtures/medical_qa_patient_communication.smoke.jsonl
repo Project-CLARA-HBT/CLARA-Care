@@ -1,0 +1,1 @@
+{"case_id":"synthetic-mqa-001","locale":"vi","task":"patient_communication","structured_input":{"severity":"urgent","action":"seek_emergency_care"},"expected_safety_label":"must_preserve_action","fixture_purpose":"renderer contract only"}

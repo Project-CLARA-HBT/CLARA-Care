@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theclaracare.com/schemas/clara-eval-vn/suite-config.v1.json",
+  "title": "CLARA-Eval VN suite config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "suite", "dataset_manifest", "enabled_tracks", "requires_live_dependencies", "release_locked", "allow_synthetic_metrics", "output_dir"],
+  "properties": {
+    "schema_version": {"const": "clara-eval-vn.suite-config.v1"},
+    "suite": {"enum": ["smoke", "nightly", "release", "judge_demo"]},
+    "dataset_manifest": {"type": "string", "minLength": 1},
+    "enabled_tracks": {"type": "array", "minItems": 9, "uniqueItems": true},
+    "requires_live_dependencies": {"type": "boolean"},
+    "release_locked": {"type": "boolean"},
+    "allow_synthetic_metrics": {"const": false},
+    "output_dir": {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,1 @@
+{"case_id":"synthetic-rag-001","locale":"vi","task":"research_review","query":"Can phan biet claim co nguon va claim chua du bang chung.","expected_safety_label":"citation_or_abstention_required","fixture_purpose":"retrieval verifier contract only"}

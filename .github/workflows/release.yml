@@ -117,10 +117,68 @@ jobs:
             echo "registry_repo=$registry_repo"
           } >> "$GITHUB_OUTPUT"
 
+  clara-eval-release-gate:
+    name: CLARA-Eval VN locked release gate
+    runs-on: ubuntu-latest
+    needs: [prepare-release-context]
+    timeout-minutes: 45
+    # A release cannot be built before the locked suite has emitted evidence.
+    # The runner records missing live/locked inputs as not_measured and this
+    # release config rejects them, rather than allowing a synthetic green gate.
+    env:
+      CLARA_EVAL_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
+      CLARA_EVAL_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
+      CLARA_EVAL_LOCKED_DATASET_REF: ${{ secrets.CLARA_EVAL_LOCKED_DATASET_REF }}
+      CLARA_EVAL_LOCKED_DATASET_TOKEN: ${{ secrets.CLARA_EVAL_LOCKED_DATASET_TOKEN }}
+      CLARA_EVAL_RELEASE_REF: ${{ needs.prepare-release-context.outputs.release_ref }}
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare-release-context.outputs.release_ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate locked dataset manifest
+        run: |
+          set -euo pipefail
+          python -m evaluation.clara_eval.datasets.validate \
+            --manifest evaluation/clara_eval/datasets/manifest.json \
+            --repository-root .
+
+      - name: Run locked CLARA-Eval VN release gate
+        run: |
+          set -euo pipefail
+          output="artifacts/clara-eval-vn/release-${{ needs.prepare-release-context.outputs.release_tag }}"
+          python -m evaluation.clara_eval.run \
+            --config evaluation/configs/release.yaml \
+            --output "${output}"
+          test -f "${output}/summary.md"
+          test -f "${output}/metrics.json"
+          test -f "${output}/ablations.csv"
+          test -f "${output}/critical-errors.csv"
+          test -f "${output}/model-manifest.json"
+          test -f "${output}/dataset-manifest.json"
+          test -f "${output}/retrieval-snapshot.json"
+          test -f "${output}/latency-cost.json"
+          test -f "${output}/confidence-intervals.json"
+
+      - name: Upload locked release evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clara-eval-vn-release-${{ needs.prepare-release-context.outputs.release_tag }}
+          path: artifacts/clara-eval-vn/release-${{ needs.prepare-release-context.outputs.release_tag }}
+          if-no-files-found: ignore
+          retention-days: 90
+
   build-push-images:
     name: build and push release images
     runs-on: ubuntu-latest
-    needs: [prepare-release-context]
+    needs: [prepare-release-context, clara-eval-release-gate]
     steps:
       - name: Checkout release ref
         uses: actions/checkout@v6

@@ -97,6 +97,12 @@ make type-check         # mypy --ignore-missing-imports
 make test               # pytest -q over services/*/tests
 make docs-check         # validate docs links and docs path references
 make precommit-install  # install git pre-commit hooks
+
+# CLARA-Eval VN (synthetic fixtures never become clinical scores)
+make eval-smoke
+make eval-nightly
+make eval-release       # fails closed until approved locked live evidence exists
+make eval-judge-report  # artifacts/judge-report/
 ```
 
 Web (`apps/web`) uses npm scripts directly:
@@ -172,7 +178,7 @@ These behaviors are regression-locked and must be preserved by every change:
 ## Deploy, CI/CD & Ops
 
 - **Compose stacks**: `deploy/docker/docker-compose.yml` (infra), `docker-compose.app.yml` (api/ml/web/searxng), `docker-compose.deploy.yml` (server deploy).
-- **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + docs smoke), `cd.yml` (preflight → staging → production), `release.yml` (semver tag, build/push images), `active-eval.yml`, `branch-protection-sync.yml`.
+- **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + CLARA-Eval VN smoke), `cd.yml` (preflight → staging → production), `release.yml` (semver tag, locked CLARA-Eval VN gate, build/push images), `active-eval.yml` (nightly evidence), `clara-eval-vn.yml` (manual smoke/judge report), `branch-protection-sync.yml`.
 - **Scripts** (`scripts/`): deploy (`deploy/redeploy_app_stack.sh`), ops (`ops/validate_runtime_env.sh`, backup/cleanup/cron installers, source-hub auto-crawl), release (semver + image push), and demo/eval loops.
 
 ## Onboarding Path for New Contributors

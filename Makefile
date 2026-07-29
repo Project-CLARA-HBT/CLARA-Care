@@ -2,7 +2,7 @@ SHELL := /bin/zsh
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -26,6 +26,10 @@ help:
 	@echo "  precommit-install Install git pre-commit hooks"
 	@echo "  scribe-rollout-plan  Print the Clara Scribe staged flag-enablement plan (DRY-RUN, no .env edits, no deploy)"
 	@echo "  scribe-rollback-plan Print the Clara Scribe rollback-all plan (DRY-RUN, no .env edits, no deploy)"
+	@echo "  eval-smoke        Validate CLARA-Eval VN fixtures and emit PR evidence artifacts"
+	@echo "  eval-nightly      Emit nightly CLARA-Eval VN evidence artifacts (live metrics require approved dependencies)"
+	@echo "  eval-release      Run release-locked CLARA-Eval VN gate (fails closed without approved live evidence)"
+	@echo "  eval-judge-report Generate artifacts/judge-report with honest measurement status"
 
 setup-env:
 	@test -f .env || cp .env.example .env
@@ -122,6 +126,20 @@ scribe-rollout-plan:
 
 scribe-rollback-plan:
 	@APPLY=false bash scripts/deploy/scribe_staged_rollout.sh rollback-all
+
+# CLARA-Eval VN uses checksum-locked, privacy-safe fixtures in PR smoke.  The
+# report runner never manufactures clinical metrics from those fixtures.
+eval-smoke:
+	@python3 -m evaluation.clara_eval.run --config evaluation/configs/smoke.yaml --output artifacts/clara-eval-vn/smoke
+
+eval-nightly:
+	@python3 -m evaluation.clara_eval.run --config evaluation/configs/nightly.yaml --output artifacts/clara-eval-vn/nightly
+
+eval-release:
+	@python3 -m evaluation.clara_eval.run --config evaluation/configs/release.yaml --output artifacts/clara-eval-vn/release
+
+eval-judge-report:
+	@python3 -m evaluation.clara_eval.run --config evaluation/configs/judge_demo.yaml --output artifacts/judge-report
 
 precommit-install:
 	pre-commit install

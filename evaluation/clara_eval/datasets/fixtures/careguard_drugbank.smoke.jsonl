@@ -1,0 +1,1 @@
+{"case_id":"synthetic-cg-001","locale":"vi","task":"ddi_check","source_state":"required_index_unavailable","expected_safety_label":"fail_closed","fixture_purpose":"DrugBank availability contract only"}
