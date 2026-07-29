@@ -38,7 +38,6 @@ def test_in_memory_metrics_collector_caps_high_cardinality_paths():
     assert snapshot["error_total"] == 2
 
 
-
 def test_metrics_endpoint_returns_prometheus_text_and_json_snapshot():
     response_prometheus = client.get("/metrics")
     assert response_prometheus.status_code == 200
@@ -54,9 +53,7 @@ def test_metrics_endpoint_returns_prometheus_text_and_json_snapshot():
     assert response_json.status_code == 200
     body_json = response_json.json()
 
-    assert set(["requests_total", "by_path", "error_total", "avg_latency_ms"]).issubset(
-        body_json.keys()
-    )
+    assert {"requests_total", "by_path", "error_total", "avg_latency_ms"}.issubset(body_json.keys())
     assert body_json["requests_total"] == 1
     assert body_json["by_path"] == {"/metrics": 1}
     assert body_json["error_total"] == 0
@@ -161,7 +158,7 @@ def test_routed_chat_infer_rule_verification_flag_overrides_legacy(monkeypatch: 
 
     original_run = rag_pipeline.run
 
-    def _fake_run(*args, **kwargs):  # noqa: ARG001
+    def _fake_run(*args, **kwargs):
         return RagResult(
             query="query",
             retrieved_ids=["doc-1"],
@@ -172,7 +169,7 @@ def test_routed_chat_infer_rule_verification_flag_overrides_legacy(monkeypatch: 
             flow_events=[],
         )
 
-    def _should_not_verify(**kwargs):  # noqa: ARG001
+    def _should_not_verify(**kwargs):
         raise AssertionError("run_fides_lite must be skipped when rule_verification_enabled=false")
 
     monkeypatch.setattr(rag_pipeline, "run", _fake_run)
@@ -196,6 +193,12 @@ def test_routed_chat_infer_rule_verification_flag_overrides_legacy(monkeypatch: 
     assert body.get("factcheck") is None
     assert body["flow_applied"]["verification_enabled"] is False
     assert body["flow_applied"]["rule_verification_enabled"] is False
+    shadow = body["flow_applied"]["model_router_shadow"]
+    assert shadow["task"] == "ddi_check"
+    assert shadow["risk_level"] == "high"
+    assert shadow["requires_tool"] is True
+    assert "confidence" not in shadow
+    assert "reasons" not in shadow
     assert not any(event.get("stage") == "verification" for event in body.get("flow_events", []))
 
 
@@ -209,7 +212,7 @@ def test_routed_chat_infer_propagates_rag_runtime_flags_to_pipeline_and_verifier
     original_run = rag_pipeline.run
     captured: dict[str, object] = {}
 
-    def _fake_run(*args, **kwargs):  # noqa: ARG001
+    def _fake_run(*args, **kwargs):
         captured["pipeline_kwargs"] = dict(kwargs)
         return RagResult(
             query="query",
@@ -221,7 +224,7 @@ def test_routed_chat_infer_propagates_rag_runtime_flags_to_pipeline_and_verifier
             flow_events=[],
         )
 
-    def _fake_verify(*, answer, retrieved_context, nli_enabled=None, mode="lite"):  # noqa: ARG001
+    def _fake_verify(*, answer, retrieved_context, nli_enabled=None, mode="lite"):
         captured["nli_enabled"] = nli_enabled
         return FactCheckResult(
             enabled=True,
@@ -280,7 +283,7 @@ def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
     original_run = rag_pipeline.run
     captured: dict[str, object] = {}
 
-    def _fake_run(*args, **kwargs):  # noqa: ARG001
+    def _fake_run(*args, **kwargs):
         captured["pipeline_kwargs"] = dict(kwargs)
         return RagResult(
             query="query",
@@ -332,7 +335,7 @@ def test_routed_chat_infer_deepseek_only_ignores_hitechcloud_runtime_override(
     original_run = rag_pipeline.run
     captured: dict[str, object] = {}
 
-    def _fake_run(*args, **kwargs):  # noqa: ARG001
+    def _fake_run(*args, **kwargs):
         captured["pipeline_kwargs"] = dict(kwargs)
         return RagResult(
             query="query",
@@ -514,8 +517,8 @@ def test_medical_semantic_router_uses_llm_context(
             pass
 
         def generate(self, *_args, **_kwargs):
-            from types import SimpleNamespace
             import json
+            from types import SimpleNamespace
 
             return SimpleNamespace(
                 content=json.dumps(model_payload),
@@ -930,25 +933,23 @@ def test_scribe_soap_returns_structured_soap():
     assert response.status_code == 200
     body = response.json()
 
-    assert set(["subjective", "objective", "assessment", "plan"]).issubset(body.keys())
+    assert {"subjective", "objective", "assessment", "plan"}.issubset(body.keys())
     assert isinstance(body["subjective"]["chief_complaint"], str)
     assert isinstance(body["objective"]["vitals"], dict)
     assert body["objective"]["vitals"]["blood_pressure"] == "120/80"
     assert isinstance(body["assessment"]["problems"], list)
     assert isinstance(body["plan"]["next_steps"], list)
     assert isinstance(body.get("medical_record_note"), dict)
-    assert set(
-        [
-            "chief_complaint",
-            "hpi",
-            "objective",
-            "assessment",
-            "plan",
-            "medications",
-            "follow_up",
-            "warnings",
-        ]
-    ).issubset(body["medical_record_note"].keys())
+    assert {
+        "chief_complaint",
+        "hpi",
+        "objective",
+        "assessment",
+        "plan",
+        "medications",
+        "follow_up",
+        "warnings",
+    }.issubset(body["medical_record_note"].keys())
     flow_nodes = body["metadata"].get("flow_nodes", [])
     assert isinstance(flow_nodes, list)
     assert any(item.get("stage") == "medical_record_note" for item in flow_nodes)
@@ -973,9 +974,9 @@ def test_council_run_returns_expected_schema():
     assert isinstance(body["per_specialist_reasoning_logs"], list)
     assert len(body["per_specialist_reasoning_logs"]) == 3
     for item in body["per_specialist_reasoning_logs"]:
-        assert set(
-            ["specialist", "reasoning_log", "key_findings", "triage", "recommendation"]
-        ).issubset(item.keys())
+        assert {"specialist", "reasoning_log", "key_findings", "triage", "recommendation"}.issubset(
+            item.keys()
+        )
         assert isinstance(item["reasoning_log"], list)
         assert isinstance(item["key_findings"], list)
         assert item["triage"] in {"routine_follow_up", "same_day_review", "emergency_escalation"}
@@ -1030,10 +1031,7 @@ def test_council_run_returns_expected_schema():
     assert "safety_gate" in steps
     assert isinstance(body["neural_risk"], dict)
     assert body["neural_risk"]["enabled"] is False
-    assert (
-        body["neural_risk"]["model_version"]
-        == "council-fixed-weight-heuristic-shadow-v2"
-    )
+    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
     assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
     assert body["neural_risk"]["trained"] is False
     assert isinstance(body["research"], dict)
@@ -1100,10 +1098,7 @@ def test_council_run_supports_neural_shadow_scoring():
     assert isinstance(body["neural_risk"], dict)
     assert body["neural_risk"]["enabled"] is True
     assert body["neural_risk"]["shadow_mode"] is True
-    assert (
-        body["neural_risk"]["model_version"]
-        == "council-fixed-weight-heuristic-shadow-v2"
-    )
+    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
     assert body["neural_risk"]["legacy_model_alias"] == "council-neural-shadow-v1"
     assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
     assert body["neural_risk"]["trained"] is False
@@ -1224,7 +1219,9 @@ def test_council_intake_transcript_only_success(monkeypatch: pytest.MonkeyPatch)
                 "confidence": {"score": 0.93, "level": "high"},
                 "data_quality": {"score": 0.84, "level": "high"},
             },
-            "details": {"section_counts": {"symptoms": 1, "labs": 0, "medications": 0, "history": 1}},
+            "details": {
+                "section_counts": {"symptoms": 1, "labs": 0, "medications": 0, "history": 1}
+            },
             "citations": [{"source_id": "intake-symptom-1"}],
             "research": {"mode": "intake_extraction_v2", "topics": []},
             "deepdive": {"extraction": {"model_used": "deepseek-v3.2"}},

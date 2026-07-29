@@ -6,7 +6,7 @@ import logging
 import re
 import secrets
 import unicodedata
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -34,6 +34,7 @@ from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
+from clara_ml.model_router import build_shadow_task_route, public_shadow_metadata
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.observability.tracing import init_tracing
@@ -67,7 +68,7 @@ def _rag_persistent_store_self_check() -> None:
 
     try:
         app.state.rag_persistent_flags = run_startup_self_check(settings)
-    except Exception:  # noqa: BLE001 - startup must never crash on the self-check
+    except Exception:
         logger.exception("RAG persistent store self-check failed; using legacy path")
 
 
@@ -85,10 +86,9 @@ def _init_tracing() -> None:
         return
     try:
         app.state.tracer = init_tracing(settings)
-    except Exception:  # noqa: BLE001 - tracing init must never crash startup
+    except Exception:
         logger.exception("Tracing initialization failed; tracing disabled")
         app.state.tracer = None
-
 
 
 @app.on_event("startup")
@@ -118,15 +118,14 @@ def _warm_ddi_index() -> None:
                     store.version,
                 )
             else:
-                logger.info(
-                    "CareGuard DrugBank SQLite index unavailable; curated-only path active"
-                )
-        except Exception:  # noqa: BLE001 - warm-up must never crash the worker
+                logger.info("CareGuard DrugBank SQLite index unavailable; curated-only path active")
+        except Exception:
             logger.exception("CareGuard DDI index warm-up failed; will build lazily")
 
     import threading
 
     threading.Thread(target=_warm, name="ddi-index-warm", daemon=True).start()
+
 
 _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
@@ -224,7 +223,7 @@ def _build_scribe_audio_client() -> DeepSeekClient:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _flow_event(*, stage: str, status: str, source_count: int, note: str) -> dict[str, object]:
@@ -407,8 +406,12 @@ def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str,
             or "gpt-5.3-codex-high"
         )
         if not api_key:
-            deepseek_api_key = settings.deepseek_api_key or _as_text(rag_flow.get("llm_api_key"), "")
-            deepseek_base_url = settings.deepseek_base_url or _as_text(rag_flow.get("llm_base_url"), "")
+            deepseek_api_key = settings.deepseek_api_key or _as_text(
+                rag_flow.get("llm_api_key"), ""
+            )
+            deepseek_base_url = settings.deepseek_base_url or _as_text(
+                rag_flow.get("llm_base_url"), ""
+            )
             deepseek_model = settings.deepseek_model or _as_text(rag_flow.get("llm_model"), "")
             if deepseek_api_key and deepseek_base_url and deepseek_model:
                 return {
@@ -502,7 +505,11 @@ def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str |
     )
     for pattern, reason in _LEGAL_GUARD_PATTERNS:
         if pattern.search(normalized) or pattern.search(folded):
-            if reason == "diagnosis_request" and educational_diagnosis and not personalized_diagnosis:
+            if (
+                reason == "diagnosis_request"
+                and educational_diagnosis
+                and not personalized_diagnosis
+            ):
                 continue
             return reason
     return None
@@ -557,7 +564,7 @@ def _classify_medical_request_with_llm(
         raise ValueError("Medical intent classifier did not return JSON")
     parsed, _ = json.JSONDecoder().raw_decode(raw[start:])
     if not isinstance(parsed, dict):
-        raise ValueError("Medical intent classifier returned a non-object")
+        raise TypeError("Medical intent classifier returned a non-object")
 
     action = str(parsed.get("action") or "").strip().lower()
     reason = str(parsed.get("reason") or "").strip().lower()
@@ -664,7 +671,9 @@ def _internal_key_is_valid(provided: str, expected: str) -> bool:
     return secrets.compare_digest(value, expected)
 
 
-def _ensure_policy_contract(payload: dict[str, object], *, default_action: str) -> dict[str, object]:
+def _ensure_policy_contract(
+    payload: dict[str, object], *, default_action: str
+) -> dict[str, object]:
     body = dict(payload)
     policy_action = _normalize_policy_action(body.get("policy_action"), default=default_action)
     body["policy_action"] = policy_action
@@ -676,11 +685,7 @@ def _ensure_policy_contract(payload: dict[str, object], *, default_action: str) 
 
 
 def _legal_guard_refusal(*, role_hint: str | None, reason: str) -> dict[str, object]:
-    safe_role = (
-        role_hint
-        if role_hint in {"normal", "researcher", "doctor", "admin"}
-        else "normal"
-    )
+    safe_role = role_hint if role_hint in {"normal", "researcher", "doctor", "admin"} else "normal"
     return _ensure_policy_contract(
         {
             "role": safe_role,
@@ -710,11 +715,7 @@ def _legal_guard_refusal(*, role_hint: str | None, reason: str) -> dict[str, obj
 
 
 def _research_emergency_escalation(*, role_hint: str | None) -> dict[str, object]:
-    safe_role = (
-        role_hint
-        if role_hint in {"normal", "researcher", "doctor", "admin"}
-        else "normal"
-    )
+    safe_role = role_hint if role_hint in {"normal", "researcher", "doctor", "admin"} else "normal"
     return _ensure_policy_contract(
         {
             "role": safe_role,
@@ -892,9 +893,7 @@ def routed_chat_infer(payload: dict) -> dict:
             role_hint=role_hint,
         )
         legal_guard_reason = (
-            str(semantic_route["reason"])
-            if semantic_route["action"] == "block"
-            else None
+            str(semantic_route["reason"]) if semantic_route["action"] == "block" else None
         )
     except Exception:  # noqa: BLE001 - deterministic guard is the safe outage path
         logger.warning("Medical semantic router unavailable; using safety fallback")
@@ -963,8 +962,7 @@ def routed_chat_infer(payload: dict) -> dict:
         router=router,
         semantic_emergency=(
             bool(semantic_route["emergency"])
-            if semantic_route is not None
-            and float(semantic_route.get("confidence") or 0.0) >= 0.7
+            if semantic_route is not None and float(semantic_route.get("confidence") or 0.0) >= 0.7
             else None
         ),
     )
@@ -990,6 +988,16 @@ def routed_chat_infer(payload: dict) -> dict:
             }
         )
 
+    # The hybrid router is currently shadow-only. It receives only redacted
+    # input and can never alter the deterministic emergency/legal outcome or
+    # the legacy RAG route. Its published metadata excludes uncalibrated
+    # confidence and free-text rationale.
+    task_route_shadow = build_shadow_task_route(
+        pii.redacted_text,
+        legacy_route=route,
+        semantic_route=semantic_route,
+    )
+
     if route.emergency:
         emergency_answer = (
             "Possible emergency detected. Call local emergency services immediately "
@@ -1003,9 +1011,7 @@ def routed_chat_infer(payload: dict) -> dict:
         medical_answer_v2 = build_medical_answer_v2(
             answer=emergency_answer,
             audience=(
-                role_hint
-                if role_hint in {"normal", "researcher", "doctor", "admin"}
-                else "normal"
+                role_hint if role_hint in {"normal", "researcher", "doctor", "admin"} else "normal"
             ),
             intent="emergency_triage",
             urgency_level="emergency",
@@ -1283,39 +1289,40 @@ def routed_chat_infer(payload: dict) -> dict:
         default_action = "warn"
 
     response_payload: dict[str, object] = {
-            "role": route.role,
-            "intent": route.intent,
-            "confidence": route.confidence,
-            "emergency": False,
-            "answer": answer,
-            "retrieved_ids": rag_result.retrieved_ids,
-            "model_used": rag_result.model_used,
-            "factcheck": factcheck.as_dict() if factcheck else None,
-            "context_debug": rag_result.context_debug,
-            "flow_events": flow_events,
-            "flow_applied": {
-                "role_router_enabled": role_router_enabled,
-                "intent_router_enabled": intent_router_enabled,
-                "verification_enabled": verification_enabled,
-                "rule_verification_enabled": rule_verification_enabled,
-                "deepseek_fallback_enabled": deepseek_fallback_enabled,
-                "low_context_threshold": low_context_threshold,
-                "scientific_retrieval_enabled": adjusted_scientific_retrieval_enabled,
-                "web_retrieval_enabled": adjusted_web_retrieval_enabled,
-                "file_retrieval_enabled": adjusted_file_retrieval_enabled,
-                "nli_model_enabled": nli_model_enabled,
-                "rag_reranker_enabled": rag_reranker_enabled,
-                "rag_nli_enabled": rag_nli_enabled,
-                "rag_graphrag_enabled": rag_graphrag_enabled,
-                "rag_sources_count": len(rag_sources),
-                "uploaded_documents_count": len(uploaded_documents),
-                "retrieval_profile": retrieval_profile,
-                "query_token_count": query_token_count,
-                "llm_provider": llm_runtime.get("provider", "deepseek"),
-                "llm_model": llm_runtime.get("model", ""),
-                "llm_base_url": llm_runtime.get("base_url", ""),
-            },
-        }
+        "role": route.role,
+        "intent": route.intent,
+        "confidence": route.confidence,
+        "emergency": False,
+        "answer": answer,
+        "retrieved_ids": rag_result.retrieved_ids,
+        "model_used": rag_result.model_used,
+        "factcheck": factcheck.as_dict() if factcheck else None,
+        "context_debug": rag_result.context_debug,
+        "flow_events": flow_events,
+        "flow_applied": {
+            "role_router_enabled": role_router_enabled,
+            "intent_router_enabled": intent_router_enabled,
+            "verification_enabled": verification_enabled,
+            "rule_verification_enabled": rule_verification_enabled,
+            "deepseek_fallback_enabled": deepseek_fallback_enabled,
+            "low_context_threshold": low_context_threshold,
+            "scientific_retrieval_enabled": adjusted_scientific_retrieval_enabled,
+            "web_retrieval_enabled": adjusted_web_retrieval_enabled,
+            "file_retrieval_enabled": adjusted_file_retrieval_enabled,
+            "nli_model_enabled": nli_model_enabled,
+            "rag_reranker_enabled": rag_reranker_enabled,
+            "rag_nli_enabled": rag_nli_enabled,
+            "rag_graphrag_enabled": rag_graphrag_enabled,
+            "rag_sources_count": len(rag_sources),
+            "uploaded_documents_count": len(uploaded_documents),
+            "retrieval_profile": retrieval_profile,
+            "query_token_count": query_token_count,
+            "llm_provider": llm_runtime.get("provider", "deepseek"),
+            "llm_model": llm_runtime.get("model", ""),
+            "llm_base_url": llm_runtime.get("base_url", ""),
+            "model_router_shadow": public_shadow_metadata(task_route_shadow),
+        },
+    }
     factcheck_payload = factcheck.as_dict() if factcheck else None
     answer_package = build_clinical_answer_package(
         answer=answer,
@@ -1400,8 +1407,10 @@ def research_tier2(payload: dict) -> dict:
                 retry_result = run_research_tier2(payload)
                 if isinstance(retry_result, dict):
                     return _ensure_policy_contract(retry_result, default_action="allow")
-                return _ensure_policy_contract({"answer": str(retry_result)}, default_action="allow")
-            except Exception as retry_exc:  # pragma: no cover - defensive retry guard
+                return _ensure_policy_contract(
+                    {"answer": str(retry_result)}, default_action="allow"
+                )
+            except Exception as retry_exc:  # noqa: BLE001 - defensive retry guard
                 exc = retry_exc
         detail = str(exc).strip()
         reason = exc.__class__.__name__
@@ -1757,7 +1766,7 @@ def scribe_passes(payload: dict) -> dict:
 
 @app.post("/v1/scribe/transcribe")
 async def scribe_transcribe(
-    audio_file: UploadFile = File(...),
+    audio_file: UploadFile = File(...),  # noqa: B008 - FastAPI dependency declaration
     language: str | None = Form(default=None),
     prompt: str | None = Form(default=None),
     chunk_index: int | None = Form(default=None),
@@ -1781,9 +1790,8 @@ async def scribe_transcribe(
 
     resolved_language = (language or settings.deepseek_audio_language).strip() or None
     resolved_prompt = (
-        (prompt or "").strip()
-        or "Medical consultation audio in Vietnamese. Return complete transcript text only."
-    )
+        prompt or ""
+    ).strip() or "Medical consultation audio in Vietnamese. Return complete transcript text only."
 
     no_speech_detected = False
     try:
@@ -1829,7 +1837,7 @@ async def scribe_transcribe(
 
 @app.post("/v1/scribe/stream")
 async def scribe_stream(
-    audio_file: UploadFile = File(...),
+    audio_file: UploadFile = File(...),  # noqa: B008 - FastAPI dependency declaration
     language: str | None = Form(default=None),
     template_id: str | None = Form(default=None),
     session_id: int | None = Form(default=None),
@@ -1851,18 +1859,16 @@ async def scribe_stream(
         raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 15MB.")
     audio_content_type = audio_file.content_type or "application/octet-stream"
     if audio_content_type not in _ALLOWED_AUDIO_TYPES:
-        raise HTTPException(status_code=415, detail=f"Unsupported audio content type: {audio_content_type}")
+        raise HTTPException(
+            status_code=415, detail=f"Unsupported audio content type: {audio_content_type}"
+        )
 
     from clara_ml.scribe.asr import build_asr_provider
     from clara_ml.streaming.scribe_stream import stream_scribe_sse
 
     resolved_language = (language or settings.scribe_asr_language).strip() or "vi"
     asr = build_asr_provider(settings)
-    generator = (
-        _build_scribe_note_generator()
-        if settings.rag_scribe_templates_enabled
-        else None
-    )
+    generator = _build_scribe_note_generator() if settings.rag_scribe_templates_enabled else None
     _ = session_id  # reserved for persistence wiring (API layer)
 
     return StreamingResponse(
@@ -1876,7 +1882,11 @@ async def scribe_stream(
             diarization_enabled=settings.rag_scribe_diarization_enabled,
         ),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )
 
 
@@ -2051,7 +2061,7 @@ async def ws_stream(websocket: WebSocket) -> None:
 @app.post("/v1/council/intake")
 async def council_intake(
     transcript: str = Form(default=""),
-    audio_file: UploadFile | None = File(default=None),
+    audio_file: UploadFile | None = File(default=None),  # noqa: B008 - FastAPI dependency declaration
 ) -> dict:
     transcript_text = transcript.strip()
     audio_bytes: bytes | None = None
@@ -2062,7 +2072,9 @@ async def council_intake(
         audio_bytes = await audio_file.read()
         if audio_bytes:
             if len(audio_bytes) > _MAX_AUDIO_BYTES:
-                raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 15MB.")
+                raise HTTPException(
+                    status_code=413, detail="Audio file too large. Maximum size is 15MB."
+                )
             audio_filename = audio_file.filename or audio_filename
             audio_content_type = audio_file.content_type or audio_content_type
             if audio_content_type not in _ALLOWED_AUDIO_TYPES:

@@ -45,7 +45,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-03 task-first UX | partial/pre-existing | Focused onboarding, Today, PHR and medicine flows were already delivered in prior commits; legacy dense surfaces remain. |
 | PR-04 registry/contracts | implemented for bounded safety tasks | `895c3e73` routes safety triage, LifeMap capture/visit, Scribe and Council shadow; the RAG reranker and NLI verifier now also use registry task contracts. RAG synthesis/research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |
-| PR-06 hybrid router | partial/pre-existing | Closed-schema semantic LLM router is primary with deterministic emergency/legal fallback. A separately evaluated encoder/SLM shadow router is not installed. |
+| PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
 | PR-07 renderer | partial/pre-existing | `medical_answer_v2` validates evidence, uncertainty and safety release gates. A dedicated semantic-fidelity scorer is not yet available. |
 | PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
 | PR-09 Scribe | implemented UI safety correction | `eaa749c0` removes automatic code/R69 and uncalibrated percentage. Existing grounding/ASR tests remain. |
