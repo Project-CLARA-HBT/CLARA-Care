@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
@@ -401,7 +402,219 @@ const phrColumnClass =
 const phrItemClass =
   "rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-sm)]";
 
+type PhrSection =
+  | "identity"
+  | "body"
+  | "contact"
+  | "allergies"
+  | "conditions"
+  | "medications"
+  | "status"
+  | "ocr"
+  | "export"
+  | "sharing"
+  | "emergency-card"
+  | "reminders";
+
+const PHR_SECTIONS = new Set<PhrSection>([
+  "identity",
+  "body",
+  "contact",
+  "allergies",
+  "conditions",
+  "medications",
+  "status",
+  "ocr",
+  "export",
+  "sharing",
+  "emergency-card",
+  "reminders",
+]);
+
+function sectionFromPath(pathname: string): PhrSection | null {
+  const candidate = pathname.replace(/^\/phr\/?/, "").split("/")[0];
+  return PHR_SECTIONS.has(candidate as PhrSection)
+    ? (candidate as PhrSection)
+    : null;
+}
+
+function PhrHub({
+  text,
+  uiLanguage,
+  capabilities,
+}: {
+  text: (typeof COPY)[UILanguage];
+  uiLanguage: UILanguage;
+  capabilities: PhrCapabilityFlags;
+}) {
+  const detail = uiLanguage === "vi";
+  const sections = [
+    {
+      href: "/phr/identity",
+      icon: "badge",
+      title: detail ? "Danh tính cơ bản" : "Identity",
+      description: detail
+        ? "Họ tên, ngày sinh, giới tính và nhóm máu."
+        : "Name, date of birth, gender, and blood type.",
+    },
+    {
+      href: "/phr/body",
+      icon: "accessibility_new",
+      title: detail ? "Chỉ số cơ thể" : "Body measurements",
+      description: detail
+        ? "Chiều cao và cân nặng, trong một bước ngắn."
+        : "Height and weight in one short step.",
+    },
+    {
+      href: "/phr/contact",
+      icon: "contact_phone",
+      title: detail ? "Liên hệ & bảo hiểm" : "Contact & insurance",
+      description: detail
+        ? "Thông tin liên lạc, người liên hệ khẩn cấp và bảo hiểm."
+        : "Contact details, emergency contact, and insurance.",
+    },
+    {
+      href: "/phr/allergies",
+      icon: "warning",
+      title: text.allergies,
+      description: detail
+        ? "Khai báo từng dị ứng và phản ứng tương ứng."
+        : "Add each allergy and its reaction.",
+    },
+    {
+      href: "/phr/conditions",
+      icon: "clinical_notes",
+      title: text.conditions,
+      description: detail
+        ? "Theo dõi từng bệnh nền riêng biệt."
+        : "Track each health condition separately.",
+    },
+    {
+      href: "/phr/medications",
+      icon: "medication",
+      title: text.medications,
+      description: detail
+        ? "Ghi nhận từng thuốc bạn đang hoặc đã dùng."
+        : "Record each medicine you currently use or used.",
+    },
+  ];
+
+  const tools = [
+    capabilities.completeness_meter
+      ? {
+          href: "/phr/status",
+          icon: "donut_large",
+          title: text.completenessTitle,
+          description: detail
+            ? "Xem nhóm thông tin còn thiếu trước khi bổ sung."
+            : "See what information is still missing.",
+        }
+      : null,
+    capabilities.ocr_import
+      ? {
+          href: "/phr/ocr",
+          icon: "document_scanner",
+          title: detail ? "Quét tài liệu" : "Scan a document",
+          description: detail
+            ? "Xem lại dữ liệu trước khi đưa vào hồ sơ."
+            : "Review imported data before it reaches your record.",
+        }
+      : null,
+    capabilities.export
+      ? {
+          href: "/phr/export",
+          icon: "download",
+          title: detail ? "Xuất dữ liệu" : "Export data",
+          description: detail
+            ? "Tạo bản sao hồ sơ do bạn kiểm soát."
+            : "Create a copy of the record you control.",
+        }
+      : null,
+    capabilities.sharing
+      ? {
+          href: "/phr/sharing",
+          icon: "share",
+          title: detail ? "Chia sẻ có kiểm soát" : "Controlled sharing",
+          description: detail
+            ? "Tạo hoặc thu hồi từng liên kết chia sẻ."
+            : "Create or revoke individual share links.",
+        }
+      : null,
+    capabilities.enhanced
+      ? {
+          href: "/phr/emergency-card",
+          icon: "emergency",
+          title: detail ? "Thẻ khẩn cấp" : "Emergency card",
+          description: detail
+            ? "Chọn thông tin tối thiểu dùng khi cần khẩn cấp."
+            : "Choose the minimum information for an emergency.",
+        }
+      : null,
+    capabilities.reminders
+      ? {
+          href: "/phr/reminders",
+          icon: "notifications_active",
+          title: detail ? "Nhắc nhở" : "Reminders",
+          description: detail
+            ? "Quản lý từng nhắc nhở thuốc."
+            : "Manage one medication reminder at a time.",
+        }
+      : null,
+  ].filter((tool): tool is NonNullable<typeof tool> => tool !== null);
+
+  return (
+    <PageShell variant="plain" title={text.title} description={text.description}>
+      <div className="space-y-5">
+        <p
+          role="note"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-[13px] leading-6 text-[var(--status-warn-text)]"
+        >
+          {text.disclaimer}
+        </p>
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[var(--text-primary)]">{text.consentTitle}</p>
+            <p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">{text.consentBody}</p>
+          </div>
+          <Button as="link" href="/account/consent" variant="secondary" size="sm">
+            {text.consentLink}
+          </Button>
+        </section>
+        <section aria-label={detail ? "Thông tin hồ sơ" : "Profile information"} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {sections.map((item) => (
+            <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-36 justify-start whitespace-normal p-4 text-left">
+              <span className="flex items-start gap-3">
+                <span aria-hidden="true" className="material-symbols-rounded mt-0.5 text-[22px] text-[var(--brand-600)]">{item.icon}</span>
+                <span>
+                  <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
+                  <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>
+                </span>
+              </span>
+            </Button>
+          ))}
+        </section>
+        {tools.length > 0 ? (
+          <section aria-label={detail ? "Công cụ hồ sơ" : "Record tools"} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {tools.map((item) => (
+              <Button key={item.href} as="link" href={item.href} variant="ghost" className="h-auto min-h-28 justify-start whitespace-normal p-4 text-left">
+                <span className="flex items-start gap-3">
+                  <span aria-hidden="true" className="material-symbols-rounded mt-0.5 text-[22px] text-[var(--text-secondary)]">{item.icon}</span>
+                  <span>
+                    <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
+                    <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>
+                  </span>
+                </span>
+              </Button>
+            ))}
+          </section>
+        ) : null}
+      </div>
+    </PageShell>
+  );
+}
+
 export default function PhrPage() {
+  const pathname = usePathname();
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [record, setRecord] = useState<PhrRecord>(EMPTY_RECORD);
   const [loading, setLoading] = useState(true);
@@ -416,6 +629,17 @@ export default function PhrPage() {
   const [completenessError, setCompletenessError] = useState<string>("");
 
   const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const isHub = pathname === "/phr" || pathname === "/phr/";
+  const section = isHub ? null : sectionFromPath(pathname);
+  const isRecordEditor = [
+    "identity",
+    "body",
+    "contact",
+    "allergies",
+    "conditions",
+    "medications",
+  ].includes(section ?? "");
+  const needsRecord = isRecordEditor || section === "reminders";
 
   useEffect(() => {
     setUiLanguage(getStoredUILanguage());
@@ -437,6 +661,10 @@ export default function PhrPage() {
   useEffect(() => {
     let mounted = true;
     async function run() {
+      if (!needsRecord) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError("");
       try {
@@ -454,7 +682,7 @@ export default function PhrPage() {
     return () => {
       mounted = false;
     };
-  }, [text.loadError]);
+  }, [needsRecord, text.loadError]);
 
   const setField = <K extends keyof PhrRecord>(key: K, value: PhrRecord[K]) => {
     setRecord((prev) => ({ ...prev, [key]: value }));
@@ -474,7 +702,7 @@ export default function PhrPage() {
   // Load the completeness score whenever the meter is enabled. Recomputed after
   // a save so adding data to a missing class updates the meter (Req 16.2/16.3).
   const refreshCompleteness = useCallback(async () => {
-    if (!capabilities.completeness_meter) return;
+    if (section !== "status" || !capabilities.completeness_meter) return;
     setCompletenessLoading(true);
     setCompletenessError("");
     try {
@@ -485,7 +713,7 @@ export default function PhrPage() {
     } finally {
       setCompletenessLoading(false);
     }
-  }, [capabilities.completeness_meter, text.completenessError]);
+  }, [capabilities.completeness_meter, section, text.completenessError]);
 
   useEffect(() => {
     refreshCompleteness();
@@ -599,13 +827,57 @@ export default function PhrPage() {
     }
   };
 
+  if (isHub) {
+    return <PhrHub text={text} uiLanguage={uiLanguage} capabilities={capabilities} />;
+  }
+
+  if (!section) {
+    return (
+      <PageShell
+        variant="plain"
+        title={uiLanguage === "vi" ? "Mục hồ sơ không tồn tại" : "Record section not found"}
+        description={uiLanguage === "vi" ? "Hãy trở về trung tâm hồ sơ để chọn một mục." : "Return to the record hub to choose a section."}
+      >
+        <Button as="link" href="/phr" variant="secondary">
+          {uiLanguage === "vi" ? "Về hồ sơ sức khỏe" : "Back to health record"}
+        </Button>
+      </PageShell>
+    );
+  }
+
+  const sectionCopy: Record<PhrSection, { title: string; description: string }> = {
+    identity: {
+      title: uiLanguage === "vi" ? "Danh tính cơ bản" : "Identity",
+      description: uiLanguage === "vi" ? "Chỉ thông tin nhận diện và nhóm máu." : "Only identity information and blood type.",
+    },
+    body: {
+      title: uiLanguage === "vi" ? "Chỉ số cơ thể" : "Body measurements",
+      description: uiLanguage === "vi" ? "Cập nhật chiều cao và cân nặng." : "Update height and weight.",
+    },
+    contact: {
+      title: uiLanguage === "vi" ? "Liên hệ & bảo hiểm" : "Contact & insurance",
+      description: uiLanguage === "vi" ? "Cập nhật liên hệ, liên hệ khẩn cấp và bảo hiểm." : "Update contact, emergency contact, and insurance.",
+    },
+    allergies: { title: text.allergies, description: uiLanguage === "vi" ? "Thêm và xem lại từng dị ứng." : "Add and review one allergy at a time." },
+    conditions: { title: text.conditions, description: uiLanguage === "vi" ? "Thêm và xem lại từng bệnh nền." : "Add and review one condition at a time." },
+    medications: { title: text.medications, description: uiLanguage === "vi" ? "Thêm và xem lại từng thuốc." : "Add and review one medication at a time." },
+    status: { title: text.completenessTitle, description: text.completenessDescription },
+    ocr: { title: uiLanguage === "vi" ? "Quét tài liệu" : "Scan a document", description: uiLanguage === "vi" ? "Xem lại trước khi xác nhận nhập hồ sơ." : "Review before confirming an import." },
+    export: { title: uiLanguage === "vi" ? "Xuất dữ liệu" : "Export data", description: uiLanguage === "vi" ? "Tạo bản sao hồ sơ do bạn kiểm soát." : "Create a copy of the record you control." },
+    sharing: { title: uiLanguage === "vi" ? "Chia sẻ có kiểm soát" : "Controlled sharing", description: uiLanguage === "vi" ? "Tạo hoặc thu hồi từng liên kết chia sẻ." : "Create or revoke each share link." },
+    "emergency-card": { title: uiLanguage === "vi" ? "Thẻ khẩn cấp" : "Emergency card", description: uiLanguage === "vi" ? "Chọn thông tin tối thiểu khi cần khẩn cấp." : "Choose the minimum information for an emergency." },
+    reminders: { title: uiLanguage === "vi" ? "Nhắc nhở" : "Reminders", description: uiLanguage === "vi" ? "Quản lý từng nhắc nhở thuốc." : "Manage one medication reminder at a time." },
+  };
   return (
     <PageShell
       variant="plain"
-      title={text.title}
-      description={text.description}
+      title={sectionCopy[section].title}
+      description={sectionCopy[section].description}
     >
       <div className="space-y-5">
+        <Button as="link" href="/phr" variant="ghost" size="sm" icon="arrow_back">
+          {uiLanguage === "vi" ? "Hồ sơ sức khỏe" : "Health record"}
+        </Button>
         {/* Persistent self-declared, decision-support-only disclaimer
             (personal-health-record Requirement 18.4; Req 13.5). */}
         <p
@@ -615,26 +887,10 @@ export default function PhrPage() {
           {text.disclaimer}
         </p>
 
-        {/* PHR consents are managed through the unified Consent Center, not a
-            PHR-only toggle (personal-health-record Requirement 19.5). */}
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-[var(--text-primary)]">
-              {text.consentTitle}
-            </p>
-            <p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">
-              {text.consentBody}
-            </p>
-          </div>
-          <Button as="link" href="/account/consent" variant="secondary" size="sm">
-            {text.consentLink}
-          </Button>
-        </section>
-
         {/* USCDI completeness meter — only when the capability is effective
             (personal-health-record Requirement 16.2; hidden flag-off per
             Requirement 18.1). */}
-        {capabilities.completeness_meter ? (
+        {section === "status" && capabilities.completeness_meter ? (
           <CompletenessMeter
             state={completenessState}
             text={text}
@@ -645,7 +901,7 @@ export default function PhrPage() {
         {/* Enhanced PHR tools — each surface is shown only when its effective
             capability flag is on, so with flags off the legacy view is preserved
             (personal-health-record Requirement 18.1). */}
-        {capabilities.ocr_import ? (
+        {section === "ocr" && capabilities.ocr_import ? (
           <section className={phrPanelClass}>
             <OcrReviewModal
               uiLanguage={uiLanguage}
@@ -657,24 +913,24 @@ export default function PhrPage() {
           </section>
         ) : null}
 
-        {capabilities.export ? (
+        {section === "export" && capabilities.export ? (
           <PhrExportButton uiLanguage={uiLanguage} />
         ) : null}
 
-        {capabilities.sharing ? <ShareManager uiLanguage={uiLanguage} /> : null}
+        {section === "sharing" && capabilities.sharing ? <ShareManager uiLanguage={uiLanguage} /> : null}
 
-        {capabilities.enhanced ? (
+        {section === "emergency-card" && capabilities.enhanced ? (
           <EmergencyCardEditor uiLanguage={uiLanguage} />
         ) : null}
 
-        {capabilities.reminders ? (
+        {section === "reminders" && capabilities.reminders ? (
           <RemindersPanel
             uiLanguage={uiLanguage}
             medications={record.medications}
           />
         ) : null}
 
-        <section className={phrPanelClass}>
+        {isRecordEditor ? <section className={phrPanelClass}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-[var(--text-secondary)]">
               {text.updatedAt}:{" "}
@@ -704,94 +960,94 @@ export default function PhrPage() {
           {error ? (
             <p className="mt-3 text-sm text-[var(--status-danger-text)]">{error}</p>
           ) : null}
-        </section>
+        </section> : null}
 
-        <section className={phrPanelClass}>
+        {["identity", "body", "contact"].includes(section) ? <section className={phrPanelClass}>
           <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-            {text.profile}
+            {sectionCopy[section].title}
           </p>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field
+            {section === "identity" ? <Field
               label={text.fullName}
               value={record.full_name}
               onChange={(e) => setField("full_name", e.target.value)}
-            />
-            <Field
+            /> : null}
+            {section === "identity" ? <Field
               label={text.dob}
               type="date"
               value={toInputDate(record.date_of_birth)}
               onChange={(e) =>
                 setField("date_of_birth", e.target.value || null)
               }
-            />
-            <Field
+            /> : null}
+            {section === "identity" ? <Field
               label={text.gender}
               value={record.gender}
               onChange={(e) => setField("gender", e.target.value)}
-            />
-            <Field
+            /> : null}
+            {section === "identity" ? <Field
               label={text.bloodType}
               value={record.blood_type}
               onChange={(e) => setField("blood_type", e.target.value)}
-            />
-            <Field
+            /> : null}
+            {section === "body" ? <Field
               label={text.height}
               inputMode="decimal"
               value={record.height_cm ?? ""}
               onChange={(e) =>
                 setField("height_cm", parseInputNumber(e.target.value))
               }
-            />
-            <Field
+            /> : null}
+            {section === "body" ? <Field
               label={text.weight}
               inputMode="decimal"
               value={record.weight_kg ?? ""}
               onChange={(e) =>
                 setField("weight_kg", parseInputNumber(e.target.value))
               }
-            />
-            <Field
+            /> : null}
+            {section === "contact" ? <Field
               label={text.phone}
               value={record.phone}
               onChange={(e) => setField("phone", e.target.value)}
-            />
-            <Field
+            /> : null}
+            {section === "contact" ? <Field
               label={text.insurance}
               value={record.insurance_id}
               onChange={(e) => setField("insurance_id", e.target.value)}
-            />
-            <Field
+            /> : null}
+            {section === "contact" ? <Field
               label={text.emergencyName}
               value={record.emergency_contact_name}
               onChange={(e) =>
                 setField("emergency_contact_name", e.target.value)
               }
-            />
-            <Field
+            /> : null}
+            {section === "contact" ? <Field
               label={text.emergencyPhone}
               value={record.emergency_contact_phone}
               onChange={(e) =>
                 setField("emergency_contact_phone", e.target.value)
               }
-            />
-            <Field
+            /> : null}
+            {section === "contact" ? <Field
               label={text.address}
               wrapperClassName="md:col-span-2"
               value={record.address}
               onChange={(e) => setField("address", e.target.value)}
-            />
-            <Textarea
+            /> : null}
+            {section === "contact" ? <Textarea
               label={text.notes}
               wrapperClassName="md:col-span-2"
               className="min-h-[84px]"
               value={record.notes}
               onChange={(e) => setField("notes", e.target.value)}
-            />
+            /> : null}
           </div>
-        </section>
+        </section> : null}
 
-        <section className="grid gap-4 xl:grid-cols-3">
-          <article className={phrColumnClass}>
+        {(["allergies", "conditions", "medications"] as const).includes(section as "allergies" | "conditions" | "medications") ? <section className="grid gap-4">
+          {section === "allergies" ? <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.allergies}
@@ -870,9 +1126,9 @@ export default function PhrPage() {
                 </div>
               ))}
             </div>
-          </article>
+          </article> : null}
 
-          <article className={phrColumnClass}>
+          {section === "conditions" ? <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.conditions}
@@ -954,9 +1210,9 @@ export default function PhrPage() {
                 </div>
               ))}
             </div>
-          </article>
+          </article> : null}
 
-          <article className={phrColumnClass}>
+          {section === "medications" ? <article className={phrColumnClass}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-base font-bold text-[var(--text-primary)]">
                 {text.medications}
@@ -1053,8 +1309,8 @@ export default function PhrPage() {
                 </div>
               ))}
             </div>
-          </article>
-        </section>
+          </article> : null}
+        </section> : null}
       </div>
     </PageShell>
   );
