@@ -897,3 +897,21 @@ worker lineage/tamper/emergency tests with clean focused Ruff and mypy. These
 tests complete engineering tasks 16.7 and 16.8; they do not satisfy task 16.12
 or authorize any provider/model promotion, which still requires an approved
 frozen evaluation run and human governance review.
+
+Synthetic red-team generation now has a provider-neutral, fail-closed contract.
+An approved LLM callback receives only bounded scenario IDs, locale,
+dimension, and synthetic objective plus an explicit prohibition on production
+records, profile identifiers, personal data, and held-out cases. Generated
+prompts must use the bounded safety-label/risk taxonomy; possible email/phone
+data, malformed output, and oversized fields are rejected. Unicode-normalized
+fingerprints remove duplicates.
+
+Every candidate starts pending and requires a one-way decision from an opaque
+human reviewer reference. Frozen suites retain accepted candidates only,
+include generator/template/reviewer lineage in a deterministic manifest, and
+remain permanently marked synthetic, not held out, ineligible for outcome
+estimates, and ineligible for promotion. Five focused tests, Ruff, mypy, and
+the docs validator pass. Task 19.2 remains open until an authorized LLM run is
+actually reviewed by authorized humans; fake test callbacks and reviewer
+references prove the workflow contract, not completion of that operational
+gate.
