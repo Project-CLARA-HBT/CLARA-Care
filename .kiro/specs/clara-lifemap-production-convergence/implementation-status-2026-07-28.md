@@ -248,6 +248,17 @@ API-client/accessibility-responsive tests pass. Task 16.11 stays open because
 the broader summary, multimodal, normalization, and conflict-review experiences
 are not yet complete.
 
+The ML service now has a model-neutral `LifeMapExtractor` protocol and one
+validated draft-only result contract shared by adapters for the current OCR,
+ASR, document-layout, DeepSeek structured-extraction, and optional VLM
+candidate paths. The boundary verifies the authorized artifact checksum,
+modality/schema/field allowlists, confidence, units, text offsets, audio
+timestamps, page regions, required-field missingness, and prompt-injection
+candidates. Diagnostic-image interpretation is rejected at schema validation.
+Four focused ML tests pass. Tasks 16.7 and 16.8 remain open until each production
+backend is wired through this boundary and field-level evaluation proves the
+degraded fallbacks.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.
