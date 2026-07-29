@@ -45,7 +45,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR | Status | Evidence / limitation |
 | --- | --- | --- |
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
-| PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
+| PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today/shared loading-state literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
 | PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
 | PR-04 registry/contracts | implemented for bounded safety tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI and default RAG synthesis use registry task contracts. Research-agent construction remains migration work. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. No encoder SLM is bundled. |

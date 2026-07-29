@@ -67,6 +67,9 @@ const VI_MESSAGES = {
   "today.visitTitle": "Chuẩn bị đi khám",
   "today.visitDescription": "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
   "today.openAction": "Mở",
+  "surface.loadFailed": "Chưa thể tải dữ liệu",
+  "surface.retry": "Thử lại",
+  "surface.loading": "Đang tải",
 } as const;
 
 type TranslationKey = keyof typeof VI_MESSAGES;
@@ -136,6 +139,9 @@ const EN_MESSAGES: MessageCatalog = {
   "today.visitTitle": "Prepare for a visit",
   "today.visitDescription": "Prepare your questions and important information for a visit.",
   "today.openAction": "Open",
+  "surface.loadFailed": "We couldn't load the data",
+  "surface.retry": "Try again",
+  "surface.loading": "Loading",
 };
 
 export const UI_MESSAGES: Record<UILanguage, MessageCatalog> = {

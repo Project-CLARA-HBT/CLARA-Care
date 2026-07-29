@@ -9,6 +9,8 @@ const PRIMARY_SHELL_SURFACES = [
   "components/sidebar-nav.tsx",
 ];
 
+const SHARED_STATE_SURFACE = "components/ui/surface.tsx";
+
 // This scanner deliberately starts with the authenticated shell, where a
 // locale switch is globally visible. Legacy/domain pages retain their existing
 // bilingual maps until migrated, and must not be mistaken for catalog coverage.
@@ -48,5 +50,15 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     for (const literal of ["Việc nên làm tiếp theo", "Hôm nay chưa có việc nào", "Mở LifeMap"]) {
       expect(source).not.toContain(`"${literal}"`);
     }
+  });
+
+  it("localizes reusable loading and retry states", () => {
+    const source = readFileSync(resolve(ROOT, SHARED_STATE_SURFACE), "utf8");
+    expect(source).toContain('from "@/lib/i18n/catalog"');
+    expect(source).toContain('t(language, "surface.loadFailed")');
+    expect(source).toContain('t(language, "surface.retry")');
+    expect(source).toContain('t(language, "surface.loading")');
+    expect(source).not.toContain('>Chưa thể tải dữ liệu<');
+    expect(source).not.toContain('>Thử lại<');
   });
 });

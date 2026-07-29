@@ -1,6 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n/catalog";
+import {
+  getStoredUILanguage,
+  onUILanguageChange,
+  type UILanguage,
+} from "@/lib/ui-language";
+
+function useSurfaceLanguage(): UILanguage {
+  const [language, setLanguage] = useState<UILanguage>("vi");
+  useEffect(() => {
+    setLanguage(getStoredUILanguage());
+    return onUILanguageChange(setLanguage);
+  }, []);
+  return language;
+}
 
 export function SurfaceCard({
   children,
@@ -68,6 +84,7 @@ export function StatCard({
 }
 
 export function InlineError({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const language = useSurfaceLanguage();
   return (
     <div
       role="alert"
@@ -78,7 +95,7 @@ export function InlineError({ message, onRetry }: { message: string; onRetry?: (
           error
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">Chưa thể tải dữ liệu</p>
+          <p className="font-semibold">{t(language, "surface.loadFailed")}</p>
           <p className="mt-1 leading-5">{message}</p>
         </div>
         {onRetry ? (
@@ -87,7 +104,7 @@ export function InlineError({ message, onRetry }: { message: string; onRetry?: (
             onClick={onRetry}
             className="rounded-[var(--radius-md)] border border-current px-3 py-1.5 font-medium transition hover:bg-[var(--status-danger-bg)]"
           >
-            Thử lại
+              {t(language, "surface.retry")}
           </button>
         ) : null}
       </div>
@@ -96,8 +113,9 @@ export function InlineError({ message, onRetry }: { message: string; onRetry?: (
 }
 
 export function LoadingCards({ count = 3 }: { count?: number }) {
+  const language = useSurfaceLanguage();
   return (
-    <div aria-label="Đang tải" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div aria-label={t(language, "surface.loading")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
