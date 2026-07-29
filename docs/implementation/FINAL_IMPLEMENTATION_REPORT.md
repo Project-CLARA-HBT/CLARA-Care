@@ -134,6 +134,10 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
    before each move. Reranking and NLI verification are already registry-bound.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
+7. GitHub reported 130 dependency advisories on the default branch at push time
+   (1 critical, 51 high, 63 moderate, 15 low). They were not remediated in this
+   safety/evaluation checkpoint and require a separately reviewed dependency
+   upgrade pass with service and web regression evidence.
 
 ## Exact local, CI and evaluation commands
 
