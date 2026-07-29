@@ -1430,6 +1430,142 @@ class ApiClient {
     );
   }
 
+  // --- Living Evidence ------------------------------------------------------
+
+  Future<Map<String, dynamic>> createEvidenceQuestion({
+    required String accessToken,
+    required String episodeId,
+    required String question,
+    String populationContext = '',
+    List<String> outcomes = const <String>[],
+    String timeHorizon = '',
+  }) {
+    return _post(
+      '/api/v1/episodes/$episodeId/evidence-questions',
+      body: <String, dynamic>{
+        'question': question,
+        'population_context': populationContext,
+        'outcomes': outcomes,
+        'time_horizon': timeHorizon,
+        'confirmed': false,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmEvidenceQuestion({
+    required String accessToken,
+    required String questionId,
+  }) {
+    return _patch(
+      '/api/v1/evidence-questions/$questionId',
+      body: const <String, dynamic>{'confirmed': true},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> runEvidenceQuestion({
+    required String accessToken,
+    required String questionId,
+  }) {
+    return _post(
+      '/api/v1/evidence-questions/$questionId/run',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  Future<Map<String, dynamic>> getEvidenceRun({
+    required String accessToken,
+    required String runId,
+  }) {
+    return _get('/api/v1/evidence-runs/$runId', accessToken: accessToken);
+  }
+
+  Future<Map<String, dynamic>> getEvidenceApplicability({
+    required String accessToken,
+    required String runId,
+  }) {
+    return _get(
+      '/api/v1/evidence-runs/$runId/applicability',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getEvidenceContradictions({
+    required String accessToken,
+    required String runId,
+  }) {
+    return _get(
+      '/api/v1/evidence-runs/$runId/contradictions',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> subscribeToEvidenceRun({
+    required String accessToken,
+    required String runId,
+    int intervalHours = 168,
+  }) {
+    return _post(
+      '/api/v1/evidence-runs/$runId/subscribe',
+      body: <String, dynamic>{
+        'delivery_channel': 'in_app',
+        'interval_hours': intervalHours,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getEvidenceSubscriptions({
+    required String accessToken,
+  }) {
+    return _get('/api/v1/evidence-subscriptions', accessToken: accessToken);
+  }
+
+  Future<Map<String, dynamic>> updateEvidenceSubscription({
+    required String accessToken,
+    required String subscriptionId,
+    required int intervalHours,
+  }) {
+    return _patch(
+      '/api/v1/evidence-subscriptions/$subscriptionId',
+      body: <String, dynamic>{'interval_hours': intervalHours},
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> revokeEvidenceSubscription({
+    required String accessToken,
+    required String subscriptionId,
+  }) {
+    return _delete(
+      '/api/v1/evidence-subscriptions/$subscriptionId',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getEvidenceChangeNotifications({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/evidence-change-notifications',
+      accessToken: accessToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> readEvidenceChangeNotification({
+    required String accessToken,
+    required String notificationId,
+  }) {
+    return _post(
+      '/api/v1/evidence-change-notifications/$notificationId/read',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
   // --- Medication courses (clara-mobile-unified) ----------------------------
 
   /// Lists confirmed medication courses. Requires an existing PHR profile.

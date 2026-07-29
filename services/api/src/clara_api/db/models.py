@@ -2716,6 +2716,9 @@ class ClinicalCase(Base):
     __tablename__ = "clinical_cases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     owner_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -2763,6 +2766,9 @@ class ClinicalWorkflowRun(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     case_id: Mapped[int] = mapped_column(
         ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
     )
@@ -2811,6 +2817,9 @@ class EvidenceRecord(Base):
     __tablename__ = "clinical_evidence_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     case_id: Mapped[int] = mapped_column(
         ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
     )
@@ -2839,6 +2848,9 @@ class EvidenceRunSubscription(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
@@ -2848,8 +2860,211 @@ class EvidenceRunSubscription(Base):
     )
     status: Mapped[str] = mapped_column(String(24), default="active", index=True)
     delivery_channel: Mapped[str] = mapped_column(String(32), default="in_app")
+    interval_hours: Mapped[int] = mapped_column(
+        Integer, default=168, server_default="168"
+    )
+    next_check_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    last_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EvidenceApplicabilityRule(Base):
+    """Governed executable rule; drafts cannot influence consumer output."""
+
+    __tablename__ = "evidence_applicability_rules"
+    __table_args__ = (
+        UniqueConstraint(
+            "question_class",
+            "version",
+            name="uq_evidence_applicability_rule_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    question_class: Mapped[str] = mapped_column(String(64), index=True)
+    version: Mapped[str] = mapped_column(String(64))
+    required_fact_types_json: Mapped[list[str]] = mapped_column(JSON)
+    rule_json: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(
+        String(24), default="draft", server_default="draft", index=True
+    )
+    approved_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class EvidenceSourceCheckpoint(Base):
+    """Stable per-source cursor for one subscription."""
+
+    __tablename__ = "evidence_source_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "subscription_id",
+            "source_class",
+            "provider",
+            name="uq_evidence_checkpoint_subscription_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_run_subscriptions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    source_class: Mapped[str] = mapped_column(String(48), index=True)
+    provider: Mapped[str] = mapped_column(String(64), index=True)
+    cursor: Mapped[str] = mapped_column(String(512), default="")
+    watermark_digest: Mapped[str] = mapped_column(String(128), default="")
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class EvidenceMonitorJob(Base):
+    """Leased, retryable execution intent containing references but no PHI."""
+
+    __tablename__ = "evidence_monitor_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_run_subscriptions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    dedupe_key: Mapped[str] = mapped_column(
+        String(128), unique=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="pending", server_default="pending", index=True
+    )
+    scheduled_for: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    lease_owner: Mapped[str] = mapped_column(String(96), default="")
+    lease_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    failure_code: Mapped[str] = mapped_column(String(64), default="")
+    result_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class EvidenceChangeAssessment(Base):
+    """Versioned material-change/contradiction result awaiting human review."""
+
+    __tablename__ = "evidence_change_assessments"
+    __table_args__ = (
+        UniqueConstraint(
+            "monitor_job_id", name="uq_evidence_change_assessment_job"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    monitor_job_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_monitor_jobs.id", ondelete="CASCADE"),
+        index=True,
+    )
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_run_subscriptions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    previous_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    current_run_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_workflow_runs.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    classification: Mapped[str] = mapped_column(String(40), index=True)
+    contradiction_status: Mapped[str] = mapped_column(String(40), index=True)
+    rule_version: Mapped[str] = mapped_column(String(64))
+    model_version: Mapped[str] = mapped_column(String(96), default="none")
+    review_status: Mapped[str] = mapped_column(
+        String(24), default="pending", server_default="pending", index=True
+    )
+    safe_projection_json: Mapped[dict] = mapped_column(JSON)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reason: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class EvidenceChangeNotification(Base):
+    """Minimum-data in-app card created only from an accepted assessment."""
+
+    __tablename__ = "evidence_change_notifications"
+    __table_args__ = (
+        UniqueConstraint(
+            "assessment_id", name="uq_evidence_change_notification_assessment"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_change_assessments.id", ondelete="CASCADE"),
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="unread", server_default="unread", index=True
+    )
+    payload_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class GuidelineArtifact(Base):
@@ -2858,6 +3073,9 @@ class GuidelineArtifact(Base):
     __tablename__ = "guideline_artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
     title: Mapped[str] = mapped_column(String(500))
     source_provider: Mapped[str] = mapped_column(String(64), index=True)
     source_url: Mapped[str] = mapped_column(String(2_000))

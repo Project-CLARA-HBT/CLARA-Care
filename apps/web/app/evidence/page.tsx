@@ -18,10 +18,15 @@ import {
   deleteEvidenceSubscription,
   getEvidenceDetails,
   isEvidenceRunTerminal,
+  listEvidenceChangeNotifications,
+  listEvidenceSubscriptions,
+  markEvidenceChangeNotificationRead,
   pollEvidenceRun,
   runEvidenceQuestion,
   subscribeToEvidenceRun,
+  updateEvidenceSubscription,
   type EvidenceApplicability,
+  type EvidenceChangeNotification,
   type EvidenceContradictions,
   type EvidenceMatrix,
   type EvidenceQuestion,
@@ -168,6 +173,9 @@ export default function LivingEvidencePage() {
   const [applicability, setApplicability] = useState<EvidenceApplicability | null>(null);
   const [contradictions, setContradictions] = useState<EvidenceContradictions | null>(null);
   const [subscription, setSubscription] = useState<EvidenceSubscription | null>(null);
+  const [subscriptions, setSubscriptions] = useState<EvidenceSubscription[]>([]);
+  const [notifications, setNotifications] = useState<EvidenceChangeNotification[]>([]);
+  const [intervalHours, setIntervalHours] = useState("168");
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
@@ -189,7 +197,26 @@ export default function LivingEvidencePage() {
   }, []);
 
   useEffect(() => { void loadEpisodes(); }, [loadEpisodes]);
+  useEffect(() => {
+    void Promise.all([
+      listEvidenceSubscriptions(),
+      listEvidenceChangeNotifications(),
+    ]).then(([activeSubscriptions, evidenceNotifications]) => {
+      setSubscriptions(activeSubscriptions);
+      setNotifications(evidenceNotifications);
+    }).catch(() => {
+      // The primary evidence flow remains usable if monitor metadata is unavailable.
+    });
+  }, []);
   useEffect(() => () => pollControllerRef.current?.abort(), []);
+  useEffect(() => {
+    if (!run) return;
+    const current = subscriptions.find(
+      (item) => item.evidence_run_id === run.id && item.status === "active",
+    ) ?? null;
+    setSubscription(current);
+    if (current) setIntervalHours(String(current.interval_hours));
+  }, [run, subscriptions]);
 
   const createQuestion = async (event: FormEvent) => {
     event.preventDefault();
@@ -282,13 +309,54 @@ export default function LivingEvidencePage() {
       if (subscription) {
         await deleteEvidenceSubscription(subscription.id);
         setSubscription(null);
+        setSubscriptions((items) => items.map((item) => (
+          item.id === subscription.id ? { ...item, status: "revoked" } : item
+        )));
       } else {
-        setSubscription(await subscribeToEvidenceRun(run.id));
+        const created = await subscribeToEvidenceRun(run.id, Number(intervalHours));
+        setSubscription(created);
+        setSubscriptions((items) => [
+          created,
+          ...items.filter((item) => item.id !== created.id),
+        ]);
       }
     } catch (cause) {
       setError(toMessage(cause, "Không thể cập nhật đăng ký theo dõi."));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const changeInterval = async (value: string) => {
+    setIntervalHours(value);
+    if (!subscription) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await updateEvidenceSubscription(
+        subscription.id,
+        Number(value),
+      );
+      setSubscription(updated);
+      setSubscriptions((items) => items.map((item) => (
+        item.id === updated.id ? updated : item
+      )));
+    } catch (cause) {
+      setError(toMessage(cause, "Không thể cập nhật tần suất theo dõi."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markNotificationRead = async (item: EvidenceChangeNotification) => {
+    if (item.status === "read") return;
+    try {
+      await markEvidenceChangeNotificationRead(item.id);
+      setNotifications((items) => items.map((current) => (
+        current.id === item.id ? { ...current, status: "read" } : current
+      )));
+    } catch (cause) {
+      setError(toMessage(cause, "Không thể đánh dấu thông báo đã đọc."));
     }
   };
 
@@ -375,6 +443,46 @@ export default function LivingEvidencePage() {
         </main>
 
         <aside className="space-y-5">
+          {notifications.length ? (
+            <SurfaceCard className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Thay đổi đã được rà soát
+              </p>
+              <ul className="mt-3 space-y-3">
+                {notifications.map((item) => (
+                  <li
+                    key={item.id}
+                    className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="material-symbols-outlined text-lg text-[var(--text-brand)]"
+                        aria-hidden="true"
+                      >
+                        verified
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                          {item.payload.message}
+                        </p>
+                        {item.status === "unread" ? (
+                          <button
+                            type="button"
+                            className="focus-ring mt-2 rounded-[var(--radius-md)] text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                            onClick={() => void markNotificationRead(item)}
+                          >
+                            Đánh dấu đã đọc
+                          </button>
+                        ) : (
+                          <p className="mt-2 text-xs text-[var(--text-muted)]">Đã đọc</p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </SurfaceCard>
+          ) : null}
           <SurfaceCard className="p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 1 · Câu hỏi của bạn</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Đặt câu hỏi theo hành trình</h2>
@@ -391,7 +499,7 @@ export default function LivingEvidencePage() {
 
           {question ? <SurfaceCard className="p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 2 · Xác nhận</p><h2 className="mt-1 font-semibold text-[var(--text-primary)]">{question.question}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{question.confirmed ? "Bạn đã xác nhận câu hỏi này." : "Hãy kiểm tra câu hỏi và bối cảnh trước khi CLARA tìm nguồn."}</p>{question.compiled.missing_dimensions?.length ? <p className="mt-3 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">Có thể sẽ cần thêm: {question.compiled.missing_dimensions.map(labelForUnknown).join(", ")}.</p> : null}{!question.confirmed ? <Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void confirmQuestion()}>Tôi đã kiểm tra câu hỏi</Button> : <Button type="button" block className="mt-4" loading={running} loadingLabel="Đang tìm nguồn đã xác minh…" onClick={() => void runResearch()}>Tìm bằng chứng</Button>}</SurfaceCard> : null}
 
-          {run ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">Theo dõi thay đổi quan trọng</h2><p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">Chỉ thay đổi đã được xem xét là có thể làm đổi độ chắc chắn hoặc bước tiếp theo mới đủ điều kiện thông báo.</p><Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void toggleSubscription()}>{subscription ? "Dừng theo dõi cập nhật" : "Theo dõi cập nhật quan trọng"}</Button>{selectedEpisode ? <p className="mt-3 text-xs text-[var(--text-muted)]">Gắn với: {selectedEpisode.title}</p> : null}</SurfaceCard> : null}
+          {run ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">Theo dõi thay đổi quan trọng</h2><p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">Kết quả tìm kiếm mới không tự tạo thông báo. Chỉ thay đổi quan trọng đã được chuyên gia chấp nhận mới xuất hiện ở đây.</p><div className="mt-4"><Select label="Tần suất kiểm tra" value={intervalHours} disabled={saving} onChange={(event) => void changeInterval(event.target.value)}><option value="24">Mỗi ngày</option><option value="168">Mỗi tuần</option><option value="720">Mỗi 30 ngày</option></Select></div><Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void toggleSubscription()}>{subscription ? "Dừng theo dõi cập nhật" : "Theo dõi cập nhật quan trọng"}</Button>{subscription && !subscription.monitor_enabled ? <p className="mt-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-xs leading-5 text-[var(--text-secondary)]">Bạn đã lưu lựa chọn theo dõi. Tác vụ kiểm tra định kỳ hiện chưa được quản trị viên bật.</p> : null}{selectedEpisode ? <p className="mt-3 text-xs text-[var(--text-muted)]">Gắn với: {selectedEpisode.title}</p> : null}</SurfaceCard> : null}
         </aside>
       </div>
     </PageShell>

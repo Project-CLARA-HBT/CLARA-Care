@@ -14,8 +14,13 @@ import {
   createEvidenceQuestion,
   getEvidenceDetails,
   getEvidenceRun,
+  listEvidenceChangeNotifications,
+  listEvidenceSubscriptions,
+  markEvidenceChangeNotificationRead,
   pollEvidenceRun,
   runEvidenceQuestion,
+  subscribeToEvidenceRun,
+  updateEvidenceSubscription,
 } from "@/lib/living-evidence";
 
 describe("living evidence API client", () => {
@@ -124,5 +129,36 @@ describe("living evidence API client", () => {
     await getEvidenceRun("run/4");
 
     expect(api.get).toHaveBeenCalledWith("/evidence-runs/run%2F4");
+  });
+
+  it("manages durable subscriptions and reviewed notifications", async () => {
+    api.post.mockResolvedValue({ data: { id: "sub-1", interval_hours: 168 } });
+    api.patch.mockResolvedValue({ data: { id: "sub-1", interval_hours: 720 } });
+    api.get
+      .mockResolvedValueOnce({ data: [{ id: "sub-1" }] })
+      .mockResolvedValueOnce({ data: [{ id: "notification-1", status: "unread" }] });
+
+    await subscribeToEvidenceRun("run/1", 168);
+    await updateEvidenceSubscription("sub/1", 720);
+    await listEvidenceSubscriptions();
+    await listEvidenceChangeNotifications();
+    await markEvidenceChangeNotificationRead("notification/1");
+
+    expect(api.post).toHaveBeenNthCalledWith(
+      1,
+      "/evidence-runs/run%2F1/subscribe",
+      { delivery_channel: "in_app", interval_hours: 168 },
+    );
+    expect(api.patch).toHaveBeenCalledWith(
+      "/evidence-subscriptions/sub%2F1",
+      { interval_hours: 720 },
+    );
+    expect(api.get).toHaveBeenNthCalledWith(1, "/evidence-subscriptions");
+    expect(api.get).toHaveBeenNthCalledWith(2, "/evidence-change-notifications");
+    expect(api.post).toHaveBeenNthCalledWith(
+      2,
+      "/evidence-change-notifications/notification%2F1/read",
+      {},
+    );
   });
 });

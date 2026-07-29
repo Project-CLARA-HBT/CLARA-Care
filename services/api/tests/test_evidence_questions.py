@@ -48,6 +48,20 @@ def _episode(headers: dict[str, str], suffix: str) -> str:
     return str(response.json()["id"])
 
 
+def _accept_consent(headers: dict[str, str]) -> None:
+    status = client.get("/api/v1/auth/consent-status", headers=headers)
+    assert status.status_code == 200
+    response = client.post(
+        "/api/v1/auth/consent",
+        headers=headers,
+        json={
+            "consent_version": status.json()["required_version"],
+            "accepted": True,
+        },
+    )
+    assert response.status_code == 200
+
+
 def _verified_result() -> dict:
     return {
         "quality_gate": {"passed": True},
@@ -155,6 +169,7 @@ def test_evidence_question_requires_confirmation_then_releases_provenance_only(m
     ] == "reported"
     assert client.get(f"/api/v1/evidence-runs/{run_id}", headers=stranger).status_code == 404
 
+    _accept_consent(owner)
     subscription = client.post(
         f"/api/v1/evidence-runs/{run_id}/subscribe", headers=owner, json={}
     )
@@ -253,9 +268,10 @@ def test_evidence_run_enqueues_once_and_worker_uses_durable_run(monkeypatch) -> 
     assert started.json()["status"] == "running"
     assert started.json()["release_status"] == "pending"
     assert len(enqueued) == 1
-    run_id = int(started.json()["id"])
+    run_ref = str(started.json()["id"])
+    run_id = enqueued[0][0]
 
-    observed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    observed = client.get(f"/api/v1/evidence-runs/{run_ref}", headers=headers)
     assert observed.status_code == 200
     assert observed.json()["status"] == "running"
 
@@ -274,7 +290,7 @@ def test_evidence_run_enqueues_once_and_worker_uses_durable_run(monkeypatch) -> 
     # Simulate the post-response worker using only durable ID + copied auth context.
     worker(run_id, enqueued[0][1])
 
-    completed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    completed = client.get(f"/api/v1/evidence-runs/{run_ref}", headers=headers)
     assert completed.status_code == 200
     assert completed.json()["status"] == "completed"
     assert completed.json()["release_status"] == "evidence_available"
@@ -309,7 +325,8 @@ def test_evidence_background_failure_is_observable(monkeypatch) -> None:
         headers={**headers, "Idempotency-Key": f"worker-failure-{suffix}"},
     )
     assert started.status_code == 202
-    run_id = int(started.json()["id"])
+    run_ref = str(started.json()["id"])
+    run_id = captured[0][0]
     token_data = captured[0][1]
 
     def _fail(*_args, **_kwargs):
@@ -320,7 +337,7 @@ def test_evidence_background_failure_is_observable(monkeypatch) -> None:
         _fail,
     )
     worker(run_id, token_data)
-    failed = client.get(f"/api/v1/evidence-runs/{run_id}", headers=headers)
+    failed = client.get(f"/api/v1/evidence-runs/{run_ref}", headers=headers)
     assert failed.status_code == 200
     assert failed.json()["status"] == "failed"
     assert failed.json()["release_status"] == "evidence_unavailable"
@@ -364,3 +381,63 @@ def test_guideline_artifact_only_exposes_curator_published_rows() -> None:
     assert response.status_code == 200
     assert response.json()["provenance"]["source_provider"] == "nice"
     assert response.json()["eligibility_logic"]["status"] == "validated"
+
+
+def test_applicability_rules_require_reviewer_and_explicit_approval() -> None:
+    suffix = uuid4().hex
+    consumer = _headers(f"rule-consumer-{suffix}@normal.clara")
+    reviewer = _headers(f"rule-reviewer-{suffix}@doctor.clara")
+    payload = {
+        "question_class": f"hypertension_{suffix[:8]}",
+        "version": "1.0",
+        "required_fact_types": ["age_years"],
+        "rule": {
+            "all": [
+                {"fact_type": "age_years", "operator": "gte", "value": 18}
+            ]
+        },
+    }
+    assert client.post(
+        "/api/v1/admin/evidence-applicability-rules",
+        headers=consumer,
+        json=payload,
+    ).status_code == 403
+    created = client.post(
+        "/api/v1/admin/evidence-applicability-rules",
+        headers=reviewer,
+        json=payload,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["status"] == "draft"
+    rule_id = created.json()["id"]
+    approved = client.post(
+        f"/api/v1/admin/evidence-applicability-rules/{rule_id}/review",
+        headers=reviewer,
+        json={"action": "approve"},
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "approved"
+    listed = client.get(
+        "/api/v1/admin/evidence-applicability-rules", headers=reviewer
+    )
+    assert listed.status_code == 200
+    assert any(item["id"] == rule_id for item in listed.json())
+
+    invalid = client.post(
+        "/api/v1/admin/evidence-applicability-rules",
+        headers=reviewer,
+        json={
+            **payload,
+            "version": "2.0",
+            "rule": {
+                "all": [
+                    {
+                        "fact_type": "age_years",
+                        "operator": "gte",
+                        "value": "18",
+                    }
+                ]
+            },
+        },
+    )
+    assert invalid.status_code == 422

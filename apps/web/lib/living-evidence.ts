@@ -73,6 +73,22 @@ export type EvidenceSubscription = {
   evidence_run_id: string;
   status: string;
   delivery_channel: string;
+  interval_hours: number;
+  next_check_at: string;
+  last_checked_at: string | null;
+  monitor_enabled?: boolean;
+};
+
+export type EvidenceChangeNotification = {
+  id: string;
+  status: "unread" | "read" | string;
+  payload: {
+    kind: string;
+    assessment_id: string;
+    message: string;
+  };
+  created_at: string;
+  read_at: string | null;
 };
 
 export type EvidenceRunPollingOptions = {
@@ -198,10 +214,47 @@ export async function getEvidenceDetails(runId: string): Promise<{
   };
 }
 
-export async function subscribeToEvidenceRun(runId: string): Promise<EvidenceSubscription> {
-  return (await api.post<EvidenceSubscription>(`/evidence-runs/${encodeURIComponent(runId)}/subscribe`, {})).data;
+export async function subscribeToEvidenceRun(
+  runId: string,
+  intervalHours = 168,
+): Promise<EvidenceSubscription> {
+  return (
+    await api.post<EvidenceSubscription>(
+      `/evidence-runs/${encodeURIComponent(runId)}/subscribe`,
+      { delivery_channel: "in_app", interval_hours: intervalHours },
+    )
+  ).data;
+}
+
+export async function listEvidenceSubscriptions(): Promise<EvidenceSubscription[]> {
+  return (await api.get<EvidenceSubscription[]>("/evidence-subscriptions")).data;
+}
+
+export async function updateEvidenceSubscription(
+  subscriptionId: string,
+  intervalHours: number,
+): Promise<EvidenceSubscription> {
+  return (
+    await api.patch<EvidenceSubscription>(
+      `/evidence-subscriptions/${encodeURIComponent(subscriptionId)}`,
+      { interval_hours: intervalHours },
+    )
+  ).data;
 }
 
 export async function deleteEvidenceSubscription(subscriptionId: string): Promise<void> {
   await api.delete(`/evidence-subscriptions/${encodeURIComponent(subscriptionId)}`);
+}
+
+export async function listEvidenceChangeNotifications(): Promise<EvidenceChangeNotification[]> {
+  return (await api.get<EvidenceChangeNotification[]>("/evidence-change-notifications")).data;
+}
+
+export async function markEvidenceChangeNotificationRead(
+  notificationId: string,
+): Promise<void> {
+  await api.post(
+    `/evidence-change-notifications/${encodeURIComponent(notificationId)}/read`,
+    {},
+  );
 }

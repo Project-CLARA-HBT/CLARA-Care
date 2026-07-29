@@ -19,10 +19,12 @@ import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
-import '../../screens/council_case_screen.dart' show kCouncilMobileParityEnabled;
+import '../../screens/council_case_screen.dart'
+    show kCouncilMobileParityEnabled;
 import '../connected_health/connected_health_screen.dart';
 import '../language_controller.dart';
 import 'family_surface.dart';
+import 'living_evidence_surface.dart';
 import 'visits_surface.dart';
 import '../redesign/council_surface_v3.dart' show CouncilSurfaceV3;
 import '../redesign/scribe_surface_v3.dart' show ScribeSurfaceV3;
@@ -101,6 +103,18 @@ class ProfileHub extends StatelessWidget {
         title: 'Người thân & chia sẻ',
         subtitle: 'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
         builder: (_) => FamilySurface(
+          apiClient: apiClient,
+          sessionStore: sessionStore,
+        ),
+      ),
+    );
+
+    entries.add(
+      _ProfileEntry(
+        icon: Icons.fact_check_outlined,
+        title: 'Bằng chứng đang cập nhật',
+        subtitle: 'Theo dõi thay đổi đã được chuyên gia rà soát',
+        builder: (_) => LivingEvidenceSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
         ),

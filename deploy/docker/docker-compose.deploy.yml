@@ -45,6 +45,7 @@ services:
       RESEARCH_EXPORT_ENABLED: ${RESEARCH_EXPORT_ENABLED:-true}
       RESEARCH_SHARE_ENABLED: ${RESEARCH_SHARE_ENABLED:-true}
       RESEARCH_QUALITY_GATE_ENABLED: ${RESEARCH_QUALITY_GATE_ENABLED:-true}
+      LIFEMAP_EVIDENCE_MONITOR_ENABLED: ${LIFEMAP_EVIDENCE_MONITOR_ENABLED:-false}
       METRICS_ACCESS_TOKEN: ${METRICS_ACCESS_TOKEN:-}
       DEEPSEEK_STRICT_MODE: ${DEEPSEEK_STRICT_MODE:-false}
       TGC_OCR_BASE_URL: ${TGC_OCR_BASE_URL:-http://host.docker.internal:8080}
@@ -119,6 +120,32 @@ services:
       timeout: 15s
       retries: 3
       start_period: 10s
+
+  evidence-monitor:
+    image: ${API_IMAGE}
+    command: ["python", "-m", "clara_api.lifemap.evidence_worker"]
+    restart: unless-stopped
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_FALLBACK_ENABLED: ${DATABASE_FALLBACK_ENABLED:-false}
+      DATABASE_FALLBACK_URL: ${DATABASE_FALLBACK_URL:-sqlite+pysqlite:////data/clara.db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8010}
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
+      ML_RESEARCH_TIMEOUT_SECONDS: ${ML_RESEARCH_TIMEOUT_SECONDS:-300}
+      DEEPSEEK_STRICT_MODE: ${DEEPSEEK_STRICT_MODE:-false}
+      LIFEMAP_EVIDENCE_MONITOR_ENABLED: ${LIFEMAP_EVIDENCE_MONITOR_ENABLED:-false}
+    depends_on:
+      api:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    volumes:
+      - clara_api_data:/data
+    networks:
+      - default
+      - clara_local
 
   ml:
     image: ${ML_IMAGE}

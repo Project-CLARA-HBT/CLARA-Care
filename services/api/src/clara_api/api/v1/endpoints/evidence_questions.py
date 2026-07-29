@@ -25,23 +25,37 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
+from clara_api.core.config import get_settings
+from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     ClinicalCase,
     ClinicalStageRun,
     ClinicalWorkflowRun,
+    EvidenceApplicabilityRule,
+    EvidenceChangeAssessment,
+    EvidenceChangeNotification,
+    EvidenceMonitorJob,
     EvidenceRecord,
     EvidenceRunSubscription,
     GuidelineArtifact,
     LifeMapEpisode,
+    LifeMapEvent,
     PhrProfile,
     User,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.lifemap.evidence_monitor import (
+    EvidenceMonitorError,
+    evaluate_applicability,
+    review_change_assessment,
+    validate_applicability_rule,
+)
 
 router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
+REVIEWER = Depends(require_roles("doctor", "admin"))
 
 _QUESTION_CASE_TYPE = "lifemap_evidence_question"
 _PROTOCOL = "evidence_brief"
@@ -104,6 +118,7 @@ class EvidenceQuestionCreate(BaseModel):
     guideline_jurisdiction: str = Field(default="", max_length=120)
     exclusions: list[str] = Field(default_factory=list, max_length=20)
     confirmed: bool = False
+    question_class: str = Field(default="general", min_length=1, max_length=64)
 
 
 class EvidenceQuestionUpdate(BaseModel):
@@ -120,6 +135,27 @@ class EvidenceQuestionUpdate(BaseModel):
 
 class EvidenceSubscriptionCreate(BaseModel):
     delivery_channel: Literal["in_app"] = "in_app"
+    interval_hours: int = Field(default=168, ge=24, le=720)
+
+
+class EvidenceSubscriptionUpdate(BaseModel):
+    interval_hours: int = Field(ge=24, le=720)
+
+
+class EvidenceAssessmentReview(BaseModel):
+    action: Literal["accept", "reject"]
+    reason: str = Field(default="", max_length=255)
+
+
+class EvidenceApplicabilityRuleCreate(BaseModel):
+    question_class: str = Field(min_length=1, max_length=64)
+    version: str = Field(min_length=1, max_length=64)
+    required_fact_types: list[str] = Field(min_length=1, max_length=32)
+    rule: dict[str, Any]
+
+
+class EvidenceApplicabilityRuleReview(BaseModel):
+    action: Literal["approve", "retire"]
 
 
 def _user_profile(db: Session, token: TokenPayload) -> tuple[User, PhrProfile]:
@@ -147,10 +183,14 @@ def _episode(db: Session, profile_id: int, episode_id: str | int) -> LifeMapEpis
     return episode
 
 
-def _question_case(db: Session, user_id: int, question_id: int) -> ClinicalCase:
+def _question_case(db: Session, user_id: int, question_id: str | int) -> ClinicalCase:
+    reference = str(question_id)
+    selector = ClinicalCase.public_id == reference
+    if reference.isdecimal():
+        selector = selector | (ClinicalCase.id == int(reference))
     item = db.execute(
         select(ClinicalCase).where(
-            ClinicalCase.id == question_id,
+            selector,
             ClinicalCase.owner_user_id == user_id,
             ClinicalCase.case_type == _QUESTION_CASE_TYPE,
         )
@@ -208,7 +248,7 @@ def _compile_question(
 def _serialize_question(item: ClinicalCase) -> dict[str, Any]:
     data = _question_data(item)
     return {
-        "id": str(item.id),
+        "id": item.public_id,
         "episode_id": str(data.get("episode_id")),
         "question": data.get("question", ""),
         "compiled": data,
@@ -336,14 +376,17 @@ def _uncertainty(
 
 
 def _run_summary(
-    run: ClinicalWorkflowRun, evidence: list[EvidenceRecord] | None = None
+    run: ClinicalWorkflowRun,
+    evidence: list[EvidenceRecord] | None = None,
+    *,
+    case_public_id: str = "",
 ) -> dict[str, Any]:
     summary = run.result_summary_json if isinstance(run.result_summary_json, dict) else {}
     rows = evidence or []
     pending = run.status in {"queued", "running"}
     return {
-        "id": str(run.id),
-        "evidence_question_id": str(run.case_id),
+        "id": run.public_id,
+        "evidence_question_id": case_public_id,
         "status": run.status,
         "release_status": summary.get(
             "release_status", "pending" if pending else "evidence_unavailable"
@@ -366,12 +409,18 @@ def _run_summary(
     }
 
 
-def _owned_run(db: Session, user_id: int, run_id: int) -> ClinicalWorkflowRun:
+def _owned_run(
+    db: Session, user_id: int, run_id: str | int
+) -> ClinicalWorkflowRun:
+    reference = str(run_id)
+    selector = ClinicalWorkflowRun.public_id == reference
+    if reference.isdecimal():
+        selector = selector | (ClinicalWorkflowRun.id == int(reference))
     run = db.execute(
         select(ClinicalWorkflowRun)
         .join(ClinicalCase, ClinicalCase.id == ClinicalWorkflowRun.case_id)
         .where(
-            ClinicalWorkflowRun.id == run_id,
+            selector,
             ClinicalWorkflowRun.owner_user_id == user_id,
             ClinicalWorkflowRun.protocol == _PROTOCOL,
             ClinicalCase.case_type == _QUESTION_CASE_TYPE,
@@ -382,15 +431,37 @@ def _owned_run(db: Session, user_id: int, run_id: int) -> ClinicalWorkflowRun:
     return run
 
 
-def _subscription_view(item: EvidenceRunSubscription) -> dict[str, Any]:
+def _subscription_view(
+    item: EvidenceRunSubscription, *, run_public_id: str
+) -> dict[str, Any]:
     return {
-        "id": str(item.id),
-        "evidence_run_id": str(item.workflow_run_id),
+        "id": item.public_id,
+        "evidence_run_id": run_public_id,
         "status": item.status,
         "delivery_channel": item.delivery_channel,
+        "interval_hours": item.interval_hours,
+        "next_check_at": item.next_check_at,
+        "last_checked_at": item.last_checked_at,
         "created_at": item.created_at,
         "revoked_at": item.revoked_at,
     }
+
+
+def _owned_subscription(
+    db: Session, *, user_id: int, reference: str
+) -> EvidenceRunSubscription:
+    selector = EvidenceRunSubscription.public_id == reference
+    if reference.isdecimal():
+        selector = selector | (EvidenceRunSubscription.id == int(reference))
+    item = db.execute(
+        select(EvidenceRunSubscription).where(
+            selector,
+            EvidenceRunSubscription.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Evidence subscription not found")
+    return item
 
 
 def _structured_contradictions(
@@ -540,7 +611,7 @@ def _execute_evidence_run(run_id: int, token_data: dict[str, Any]) -> None:
             run = db.get(ClinicalWorkflowRun, run_id)
             if run is None or run.status != "running":
                 return
-            stage = db.execute(
+            failed_stage = db.execute(
                 select(ClinicalStageRun).where(
                     ClinicalStageRun.workflow_run_id == run.id,
                     ClinicalStageRun.stage_key == "research_retrieval",
@@ -559,10 +630,10 @@ def _execute_evidence_run(run_id: int, token_data: dict[str, Any]) -> None:
                     "failed."
                 ),
             }
-            if stage is not None:
-                stage.status = "failed"
-                stage.error_code = "research_unavailable"
-                stage.completed_at = run.completed_at
+            if failed_stage is not None:
+                failed_stage.status = "failed"
+                failed_stage.error_code = "research_unavailable"
+                failed_stage.completed_at = run.completed_at
             db.commit()
 
 
@@ -591,7 +662,7 @@ def create_evidence_question(
 
 @router.get("/evidence-questions/{question_id}")
 def get_evidence_question(
-    question_id: int,
+    question_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
@@ -603,7 +674,7 @@ def get_evidence_question(
 
 @router.patch("/evidence-questions/{question_id}")
 def update_evidence_question(
-    question_id: int,
+    question_id: str,
     payload: EvidenceQuestionUpdate,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
@@ -624,7 +695,7 @@ def update_evidence_question(
 
 @router.post("/evidence-questions/{question_id}/run", status_code=status.HTTP_202_ACCEPTED)
 def run_evidence_question(
-    question_id: int,
+    question_id: str,
     background_tasks: BackgroundTasks,
     idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
     db: Session = Depends(get_db),
@@ -652,7 +723,12 @@ def run_evidence_question(
             raise HTTPException(
                 status_code=409, detail="Idempotency-Key was used for another request"
             )
-        return {**_run_summary(existing), "idempotent_replay": True}
+        return {
+            **_run_summary(
+                existing, case_public_id=question_case.public_id
+            ),
+            "idempotent_replay": True,
+        }
 
     now = datetime.now(UTC)
     run = ClinicalWorkflowRun(
@@ -700,7 +776,12 @@ def run_evidence_question(
             and existing.case_id == question_case.id
             and existing.protocol == _PROTOCOL
         ):
-            return {**_run_summary(existing), "idempotent_replay": True}
+            return {
+                **_run_summary(
+                    existing, case_public_id=question_case.public_id
+                ),
+                "idempotent_replay": True,
+            }
         raise HTTPException(
             status_code=409, detail="Idempotency-Key was used for another request"
         ) from None
@@ -712,12 +793,15 @@ def run_evidence_question(
         run.id,
         {"sub": token.sub, "role": token.role},
     )
-    return {**_run_summary(run), "idempotent_replay": False}
+    return {
+        **_run_summary(run, case_public_id=question_case.public_id),
+        "idempotent_replay": False,
+    }
 
 
 @router.get("/evidence-runs/{run_id}")
 def get_evidence_run(
-    run_id: int,
+    run_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
@@ -730,12 +814,15 @@ def get_evidence_run(
             .order_by(EvidenceRecord.id)
         ).scalars()
     )
-    return _run_summary(run, evidence)
+    question_case = _question_case(db, user.id, run.case_id)
+    return _run_summary(
+        run, evidence, case_public_id=question_case.public_id
+    )
 
 
 @router.get("/evidence-runs/{run_id}/matrix")
 def get_evidence_matrix(
-    run_id: int,
+    run_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
@@ -753,7 +840,7 @@ def get_evidence_matrix(
         citation = row.citation_json if isinstance(row.citation_json, dict) else {}
         grouped[row.source_type].append(
             {
-                "evidence_id": str(row.id),
+                "evidence_id": row.public_id,
                 "title": row.title,
                 "source_class": row.source_type,
                 "study_design": citation.get("study_design"),
@@ -766,7 +853,7 @@ def get_evidence_matrix(
             }
         )
     return {
-        "run_id": str(run.id),
+        "run_id": run.public_id,
         "release_status": _run_summary(run, rows)["release_status"],
         "source_classes": {key: value for key, value in sorted(grouped.items())},
         "unavailable_reason": (
@@ -779,28 +866,67 @@ def get_evidence_matrix(
 
 @router.get("/evidence-runs/{run_id}/applicability")
 def get_applicability(
-    run_id: int,
+    run_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
     user = current_user(db, token)
     run = _owned_run(db, user.id, run_id)
     question = _question_data(_question_case(db, user.id, run.case_id))
-    missing = list(question.get("missing_dimensions") or [])
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        raise HTTPException(status_code=409, detail="Create your health profile first")
+    episode = _episode(
+        db, profile.id, str(question.get("episode_id") or "")
+    )
+    question_class = str(question.get("question_class") or "general")
+    rule = (
+        db.execute(
+            select(EvidenceApplicabilityRule)
+            .where(
+                EvidenceApplicabilityRule.question_class == question_class,
+                EvidenceApplicabilityRule.status == "approved",
+                EvidenceApplicabilityRule.approved_at.is_not(None),
+                EvidenceApplicabilityRule.approved_by_user_id.is_not(None),
+            )
+            .order_by(EvidenceApplicabilityRule.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    facts: dict[str, Any] = {}
+    for event in db.execute(
+        select(LifeMapEvent).where(
+            LifeMapEvent.profile_id == profile.id,
+            LifeMapEvent.episode_id == episode.id,
+            LifeMapEvent.truth_state == "confirmed",
+        )
+    ).scalars():
+        payload = event.payload_json if isinstance(event.payload_json, dict) else {}
+        if "value" in payload:
+            facts[event.event_type] = payload["value"]
+    result = evaluate_applicability(rule=rule, confirmed_facts=facts)
     return {
-        "run_id": str(run.id),
-        "status": "not_assessed",
-        "matches": [],
-        "unknowns": missing + ["validated_study_eligibility_rules_unavailable"],
-        "mismatches": [],
+        "run_id": run.public_id,
+        **result,
         "critical_exclusions": [],
-        "safe_message": "This run does not claim that study effects apply to an individual.",
+        "safe_message": (
+            "Applicability was compared only with confirmed facts; this is not "
+            "diagnosis, eligibility confirmation, or treatment advice."
+            if result["status"] in {"match", "mismatch"}
+            else (
+                "Applicability was not assessed because an approved rule or "
+                "required confirmed facts were unavailable."
+            )
+        ),
     }
 
 
 @router.get("/evidence-runs/{run_id}/contradictions")
 def get_contradictions(
-    run_id: int,
+    run_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
@@ -809,7 +935,7 @@ def get_contradictions(
     summary = run.result_summary_json if isinstance(run.result_summary_json, dict) else {}
     items = summary.get("contradictions") if isinstance(summary.get("contradictions"), list) else []
     return {
-        "run_id": str(run.id),
+        "run_id": run.public_id,
         "status": "reported" if items else "not_assessed",
         "items": items,
         "safe_message": (
@@ -826,7 +952,7 @@ def get_contradictions(
 
 @router.post("/evidence-runs/{run_id}/subscribe", status_code=status.HTTP_201_CREATED)
 def subscribe_to_evidence_run(
-    run_id: int,
+    run_id: str,
     payload: EvidenceSubscriptionCreate,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
@@ -834,6 +960,7 @@ def subscribe_to_evidence_run(
     """Persist an opt-in only; a scheduler still needs material-change adjudication."""
 
     user, profile = _user_profile(db, token)
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
     run = _owned_run(db, user.id, run_id)
     question = _question_data(_question_case(db, user.id, run.case_id))
     _episode(db, profile.id, str(question.get("episode_id") or ""))
@@ -848,16 +975,27 @@ def subscribe_to_evidence_run(
             existing.status = "active"
             existing.revoked_at = None
             existing.delivery_channel = payload.delivery_channel
+            existing.interval_hours = payload.interval_hours
+            existing.next_check_at = datetime.now(UTC)
             db.commit()
             db.refresh(existing)
-            return {**_subscription_view(existing), "reactivated": True}
-        return {**_subscription_view(existing), "idempotent_replay": True}
+            return {
+                **_subscription_view(
+                    existing, run_public_id=run.public_id
+                ),
+                "reactivated": True,
+            }
+        return {
+            **_subscription_view(existing, run_public_id=run.public_id),
+            "idempotent_replay": True,
+        }
 
     item = EvidenceRunSubscription(
         user_id=user.id,
         profile_id=profile.id,
         workflow_run_id=run.id,
         delivery_channel=payload.delivery_channel,
+        interval_hours=payload.interval_hours,
     )
     db.add(item)
     try:
@@ -870,53 +1008,349 @@ def subscribe_to_evidence_run(
                 EvidenceRunSubscription.workflow_run_id == run.id,
             )
         ).scalar_one()
-        return {**_subscription_view(item), "idempotent_replay": True}
+        return {
+            **_subscription_view(item, run_public_id=run.public_id),
+            "idempotent_replay": True,
+        }
     db.refresh(item)
-    return {**_subscription_view(item), "idempotent_replay": False}
+    return {
+        **_subscription_view(item, run_public_id=run.public_id),
+        "idempotent_replay": False,
+        "monitor_enabled": get_settings().lifemap_evidence_monitor_enabled,
+    }
 
 
-@router.delete("/evidence-subscriptions/{subscription_id}")
-def delete_evidence_subscription(
-    subscription_id: int,
+@router.get("/evidence-subscriptions")
+def list_evidence_subscriptions(
+    db: Session = Depends(get_db), token: TokenPayload = USER
+) -> list[dict[str, Any]]:
+    user, _ = _user_profile(db, token)
+    rows = list(
+        db.execute(
+            select(EvidenceRunSubscription)
+            .where(EvidenceRunSubscription.user_id == user.id)
+            .order_by(EvidenceRunSubscription.id.desc())
+        ).scalars()
+    )
+    runs = {
+        run.id: run.public_id
+        for run in db.execute(
+            select(ClinicalWorkflowRun).where(
+                ClinicalWorkflowRun.id.in_(
+                    {row.workflow_run_id for row in rows} or {-1}
+                )
+            )
+        ).scalars()
+    }
+    return [
+        {
+            **_subscription_view(
+                row, run_public_id=runs.get(row.workflow_run_id, "")
+            ),
+            "monitor_enabled": get_settings().lifemap_evidence_monitor_enabled,
+        }
+        for row in rows
+    ]
+
+
+@router.patch("/evidence-subscriptions/{subscription_id}")
+def update_evidence_subscription(
+    subscription_id: str,
+    payload: EvidenceSubscriptionUpdate,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
     user = current_user(db, token)
-    item = db.execute(
-        select(EvidenceRunSubscription).where(
-            EvidenceRunSubscription.id == subscription_id,
-            EvidenceRunSubscription.user_id == user.id,
-        )
-    ).scalar_one_or_none()
-    if item is None:
-        raise HTTPException(status_code=404, detail="Evidence subscription not found")
+    item = _owned_subscription(
+        db, user_id=user.id, reference=subscription_id
+    )
+    if item.status != "active" or item.revoked_at is not None:
+        raise HTTPException(status_code=409, detail="Subscription is not active")
+    item.interval_hours = payload.interval_hours
+    item.next_check_at = datetime.now(UTC)
+    db.commit()
+    run = db.get(ClinicalWorkflowRun, item.workflow_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Evidence run not found")
+    return _subscription_view(item, run_public_id=run.public_id)
+
+
+@router.delete("/evidence-subscriptions/{subscription_id}")
+def delete_evidence_subscription(
+    subscription_id: str,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    user = current_user(db, token)
+    item = _owned_subscription(db, user_id=user.id, reference=subscription_id)
     if item.status != "revoked":
         item.status = "revoked"
         item.revoked_at = datetime.now(UTC)
+        for job in db.execute(
+            select(EvidenceMonitorJob).where(
+                EvidenceMonitorJob.subscription_id == item.id,
+                EvidenceMonitorJob.status.in_(
+                    {"pending", "retry", "processing"}
+                ),
+            )
+        ).scalars():
+            job.status = "cancelled"
+            job.failure_code = "subscription_revoked"
+            job.completed_at = item.revoked_at
+            job.lease_until = None
         db.commit()
         db.refresh(item)
-    return _subscription_view(item)
+    run = db.get(ClinicalWorkflowRun, item.workflow_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Evidence run not found")
+    return _subscription_view(item, run_public_id=run.public_id)
+
+
+@router.get("/evidence-change-notifications")
+def list_evidence_change_notifications(
+    db: Session = Depends(get_db), token: TokenPayload = USER
+) -> list[dict[str, Any]]:
+    user, profile = _user_profile(db, token)
+    return [
+        {
+            "id": row.public_id,
+            "status": row.status,
+            "payload": row.payload_json,
+            "created_at": row.created_at,
+            "read_at": row.read_at,
+        }
+        for row in db.execute(
+            select(EvidenceChangeNotification)
+            .where(
+                EvidenceChangeNotification.user_id == user.id,
+                EvidenceChangeNotification.profile_id == profile.id,
+            )
+            .order_by(EvidenceChangeNotification.id.desc())
+        ).scalars()
+    ]
+
+
+@router.post("/evidence-change-notifications/{notification_id}/read")
+def read_evidence_change_notification(
+    notification_id: str,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    user, profile = _user_profile(db, token)
+    selector = EvidenceChangeNotification.public_id == notification_id
+    if notification_id.isdecimal():
+        selector = selector | (
+            EvidenceChangeNotification.id == int(notification_id)
+        )
+    row = db.execute(
+        select(EvidenceChangeNotification).where(
+            selector,
+            EvidenceChangeNotification.user_id == user.id,
+            EvidenceChangeNotification.profile_id == profile.id,
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Evidence notification not found")
+    if row.status == "unread":
+        row.status = "read"
+        row.read_at = datetime.now(UTC)
+        db.commit()
+    return {"id": row.public_id, "status": row.status, "read_at": row.read_at}
+
+
+@router.get("/admin/evidence-change-assessments")
+def list_evidence_change_assessments(
+    db: Session = Depends(get_db), _token: TokenPayload = REVIEWER
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": row.public_id,
+            "classification": row.classification,
+            "contradiction_status": row.contradiction_status,
+            "rule_version": row.rule_version,
+            "model_version": row.model_version,
+            "review_status": row.review_status,
+            "safe_projection": row.safe_projection_json,
+            "created_at": row.created_at,
+        }
+        for row in db.execute(
+            select(EvidenceChangeAssessment)
+            .where(EvidenceChangeAssessment.review_status == "pending")
+            .order_by(EvidenceChangeAssessment.id)
+        ).scalars()
+    ]
+
+
+@router.post("/admin/evidence-change-assessments/{assessment_id}/review")
+def review_evidence_change(
+    assessment_id: str,
+    payload: EvidenceAssessmentReview,
+    db: Session = Depends(get_db),
+    token: TokenPayload = REVIEWER,
+) -> dict[str, Any]:
+    reviewer = current_user(db, token)
+    selector = EvidenceChangeAssessment.public_id == assessment_id
+    if assessment_id.isdecimal():
+        selector = selector | (EvidenceChangeAssessment.id == int(assessment_id))
+    row = db.execute(
+        select(EvidenceChangeAssessment).where(selector)
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Evidence assessment not found")
+    try:
+        review_change_assessment(
+            db,
+            assessment=row,
+            reviewer_user_id=reviewer.id,
+            action=payload.action,
+            reason=payload.reason,
+        )
+        db.commit()
+    except EvidenceMonitorError as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {"id": row.public_id, "review_status": row.review_status}
+
+
+@router.post(
+    "/admin/evidence-applicability-rules",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_evidence_applicability_rule(
+    payload: EvidenceApplicabilityRuleCreate,
+    db: Session = Depends(get_db),
+    _token: TokenPayload = REVIEWER,
+) -> dict[str, Any]:
+    try:
+        required, definition = validate_applicability_rule(
+            required_fact_types=payload.required_fact_types,
+            rule=payload.rule,
+        )
+    except EvidenceMonitorError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    question_class = payload.question_class.strip()
+    version = payload.version.strip()
+    if (
+        not question_class.replace("_", "").isalnum()
+        or not version.replace(".", "").replace("-", "").isalnum()
+    ):
+        raise HTTPException(status_code=422, detail="Rule identity is invalid")
+    row = EvidenceApplicabilityRule(
+        question_class=question_class,
+        version=version,
+        required_fact_types_json=required,
+        rule_json=definition,
+    )
+    db.add(row)
+    try:
+        db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="Rule version already exists"
+        ) from error
+    db.refresh(row)
+    return {
+        "id": row.public_id,
+        "question_class": row.question_class,
+        "version": row.version,
+        "required_fact_types": row.required_fact_types_json,
+        "rule": row.rule_json,
+        "status": row.status,
+    }
+
+
+@router.get("/admin/evidence-applicability-rules")
+def list_evidence_applicability_rules(
+    db: Session = Depends(get_db),
+    _token: TokenPayload = REVIEWER,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": row.public_id,
+            "question_class": row.question_class,
+            "version": row.version,
+            "required_fact_types": row.required_fact_types_json,
+            "rule": row.rule_json,
+            "status": row.status,
+            "approved_at": row.approved_at,
+        }
+        for row in db.execute(
+            select(EvidenceApplicabilityRule).order_by(
+                EvidenceApplicabilityRule.id.desc()
+            )
+        ).scalars()
+    ]
+
+
+@router.post("/admin/evidence-applicability-rules/{rule_id}/review")
+def review_evidence_applicability_rule(
+    rule_id: str,
+    payload: EvidenceApplicabilityRuleReview,
+    db: Session = Depends(get_db),
+    token: TokenPayload = REVIEWER,
+) -> dict[str, Any]:
+    reviewer = current_user(db, token)
+    selector = EvidenceApplicabilityRule.public_id == rule_id
+    if rule_id.isdecimal():
+        selector = selector | (EvidenceApplicabilityRule.id == int(rule_id))
+    row = db.execute(
+        select(EvidenceApplicabilityRule).where(selector)
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Applicability rule not found")
+    if payload.action == "approve":
+        validate_applicability_rule(
+            required_fact_types=row.required_fact_types_json,
+            rule=row.rule_json,
+        )
+        for active in db.execute(
+            select(EvidenceApplicabilityRule).where(
+                EvidenceApplicabilityRule.question_class == row.question_class,
+                EvidenceApplicabilityRule.status == "approved",
+                EvidenceApplicabilityRule.id != row.id,
+            )
+        ).scalars():
+            active.status = "retired"
+        row.status = "approved"
+        row.approved_by_user_id = reviewer.id
+        row.approved_at = datetime.now(UTC)
+    else:
+        row.status = "retired"
+        row.approved_by_user_id = None
+        row.approved_at = None
+    db.commit()
+    return {
+        "id": row.public_id,
+        "question_class": row.question_class,
+        "version": row.version,
+        "status": row.status,
+        "approved_at": row.approved_at,
+    }
 
 
 @router.get("/guideline-artifacts/{artifact_id}")
 def get_guideline_artifact(
-    artifact_id: int,
+    artifact_id: str,
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
 ) -> dict[str, Any]:
     """Read a curator-published artifact. Drafts are deliberately invisible."""
 
     current_user(db, token)
+    selector = GuidelineArtifact.public_id == artifact_id
+    if artifact_id.isdecimal():
+        selector = selector | (GuidelineArtifact.id == int(artifact_id))
     item = db.execute(
         select(GuidelineArtifact).where(
-            GuidelineArtifact.id == artifact_id,
+            selector,
             GuidelineArtifact.status == "published",
         )
     ).scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Published guideline artifact not found")
     return {
-        "id": str(item.id),
+        "id": item.public_id,
         "title": item.title,
         "version": item.version,
         "status": item.status,
@@ -927,9 +1361,7 @@ def get_guideline_artifact(
             "jurisdiction": item.jurisdiction,
             "publication_date": item.publication_date,
             "review_date": item.review_date,
-            "approved_by_user_id": str(item.approved_by_user_id)
-            if item.approved_by_user_id is not None
-            else None,
+            "approval_status": "approved",
         },
         "intended_population": item.intended_population_json,
         "eligibility_logic": item.eligibility_logic_json,

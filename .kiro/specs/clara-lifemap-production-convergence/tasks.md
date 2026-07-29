@@ -262,19 +262,19 @@ comprehension pass.
 
 ## Phase 10 — Living Evidence completion
 
-- [ ] 10.1 Define validated applicability-rule format and required confirmed
+- [x] 10.1 Define validated applicability-rule format and required confirmed
   profile inputs per supported question class. _R13_
-- [ ] 10.2 Separate retrieval source classes and preserve stable citation/source
+- [x] 10.2 Separate retrieval source classes and preserve stable citation/source
   identities and checkpoints. _R13_
-- [ ] 10.3 Implement contradiction and material-change assessment with
+- [x] 10.3 Implement contradiction and material-change assessment with
   rule/model versions and review status. _R13, R18_
-- [ ] 10.4 Implement leased subscription scheduler, retry/dead-letter, dedupe,
+- [x] 10.4 Implement leased subscription scheduler, retry/dead-letter, dedupe,
   checkpoint, consent/grant re-check, and cancellation. _R13, R17_
-- [ ] 10.5 Gate consumer notification on accepted material change and a safe
+- [x] 10.5 Gate consumer notification on accepted material change and a safe
   answer projection. _R13_
-- [ ] 10.6 Show `not_assessed` honestly when eligibility rules or confirmed facts
+- [x] 10.6 Show `not_assessed` honestly when eligibility rules or confirmed facts
   are unavailable; never infer private facts to force applicability. _R13_
-- [ ] 10.7 Add web/mobile subscription, evidence-change, contradiction, and
+- [x] 10.7 Add web/mobile subscription, evidence-change, contradiction, and
   notification-preference flows. _R13, R19_
 - [ ] 10.8 Evaluate citation validity, contradiction sensitivity, applicability
   precision, notification usefulness, and stale-evidence failure modes. _R22_

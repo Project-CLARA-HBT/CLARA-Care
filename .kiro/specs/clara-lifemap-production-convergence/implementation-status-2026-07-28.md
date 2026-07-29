@@ -351,5 +351,42 @@ legal-representative relationship from ordinary Family Circle data; that use
 case remains unsupported until privacy/legal policy approval and a separate
 identity/authority proofing design exist.
 
+Phase 10 Living Evidence engineering completion is implemented through
+migration `20260729_0039`. Evidence questions, runs, records, subscriptions,
+and guideline artifacts now expose opaque identifiers. Source identity is
+stable across retrievals through normalized source class, provider, source ID,
+and identifier digests; per-subscription checkpoints retain only bounded
+cursors and watermarks.
+
+Applicability is governed by versioned draft/approved/retired rules. Doctor or
+admin approval is explicit, only one approved version remains active per
+question class, and evaluation reads only confirmed LifeMap facts. A missing
+approved rule, missing required fact, or invalid typed value returns
+`not_assessed` or mismatch; CLARA does not infer a private fact to manufacture
+eligibility.
+
+The standalone `evidence-monitor` uses hour-bucket dedupe, leased
+`SKIP LOCKED` claims, consent checks at schedule/claim/notification time,
+bounded exponential retry, dead-letter, cancellation, and durable source
+checkpoints. New or removed search results alone are not a material-change
+notification. A versioned contradiction/material-change assessment remains
+pending until a doctor or admin accepts it, at which point a minimum-data
+in-app notification may be created if the subscription and consent remain
+active.
+
+Web and Flutter now support question confirmation and retrieval, durable
+subscriptions, daily/weekly/monthly preferences, revocation, honest
+applicability, contradiction visibility, and reviewed-change notifications.
+Focused evidence includes nine API behavior/migration tests, eight web client
+tests, and three Flutter wire-contract tests, plus clean focused Ruff, mypy,
+web lint, and Flutter analysis. The worker and API flag remain default OFF and
+the dark rollout/recovery procedure is documented in
+`docs/runbooks/lifemap-evidence-monitor.md`.
+
+Task 10.8 remains open. Citation validity, contradiction sensitivity,
+applicability precision, notification usefulness, and stale-evidence failure
+evaluation require a governed frozen dataset and Clinical Safety approval;
+until those external gates pass, periodic execution must stay disabled.
+
 This deployment does not enable approval-gated V2/AI capabilities and is not a
 general-availability approval.
