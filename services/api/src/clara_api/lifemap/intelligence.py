@@ -246,9 +246,10 @@ def deterministic_answer(
     evidence: list[EvidenceRow],
     locale: str,
 ) -> dict[str, object]:
-    disputed = [row.evidence_id for row in evidence if row.truth_state == "disputed"]
-    conflicting = [row.evidence_id for row in evidence if row.truth_state == "conflicting"]
-    stale = [row.evidence_id for row in evidence if row.truth_state == "stale"]
+    ordered = sorted(evidence, key=lambda row: (row.occurred_at, row.revision_id))
+    disputed = [row.evidence_id for row in ordered if row.truth_state == "disputed"]
+    conflicting = [row.evidence_id for row in ordered if row.truth_state == "conflicting"]
+    stale = [row.evidence_id for row in ordered if row.truth_state == "stale"]
     if not evidence:
         return {
             "status": "abstained",
@@ -272,7 +273,7 @@ def deterministic_answer(
             "truth_state": row.truth_state,
             "attribution": row.attribution,
         }
-        for index, row in enumerate(evidence[:8])
+        for index, row in enumerate(ordered[:8])
     ]
     prefix = (
         f"LifeMap có {len(claims)} mục liên quan theo thứ tự thời gian."
@@ -293,12 +294,19 @@ def deterministic_answer(
 
 
 def verify_grounded_answer(
-    answer: dict[str, object], evidence: list[EvidenceRow]
+    answer: dict[str, object],
+    evidence: list[EvidenceRow],
+    *,
+    fides_verdict: str | None = None,
 ) -> dict[str, object]:
-    available = {row.evidence_id for row in evidence}
+    available = {row.evidence_id: row for row in evidence}
+    temporal = sorted(evidence, key=lambda row: (row.occurred_at, row.revision_id))
+    positions = {row.evidence_id: index for index, row in enumerate(temporal)}
     claims = answer.get("claims")
     if not isinstance(claims, list):
         raise ValueError("claims_schema_invalid")
+    last_position = -1
+    generated_medication_claim = False
     for claim in claims:
         if not isinstance(claim, dict) or not isinstance(claim.get("text"), str):
             raise ValueError("claim_schema_invalid")
@@ -307,12 +315,59 @@ def verify_grounded_answer(
             raise ValueError("citation_required")
         if any(citation not in available for citation in citations):
             raise ValueError("citation_outside_evidence_table")
+        claim_text = " ".join(str(claim["text"]).casefold().split())
+        source_texts = [
+            " ".join(available[str(citation)].text.casefold().split())
+            for citation in citations
+        ]
+        if not any(claim_text == source or claim_text in source for source in source_texts):
+            raise ValueError("claim_not_entailed_by_cited_revision")
+        current_position = min(positions[str(citation)] for citation in citations)
+        if current_position < last_position:
+            raise ValueError("claim_temporal_order_invalid")
+        last_position = current_position
+        folded = _fold(claim_text)
+        if any(hint in folded for hint in _FORBIDDEN_HINTS):
+            raise ValueError("released_claim_violates_legal_guard")
+        medication_markers = (
+            " mg",
+            " mcg",
+            " ml",
+            "dose",
+            "dosage",
+            "lieu",
+            "tablet",
+            "vien",
+        )
+        exact_source_copy = any(claim_text == source for source in source_texts)
+        if any(marker in f" {folded}" for marker in medication_markers) and not exact_source_copy:
+            generated_medication_claim = True
+    disputed = answer.get("disputed")
+    conflicting = answer.get("conflicting")
+    if not isinstance(disputed, list) or not isinstance(conflicting, list):
+        raise ValueError("ambiguity_fields_required")
+    expected_disputed = {
+        row.evidence_id for row in evidence if row.truth_state == "disputed"
+    }
+    expected_conflicting = {
+        row.evidence_id for row in evidence if row.truth_state == "conflicting"
+    }
+    if not expected_disputed <= set(disputed) or not expected_conflicting <= set(conflicting):
+        raise ValueError("contradiction_or_dispute_not_surfaced")
+    if generated_medication_claim and fides_verdict != "pass":
+        raise ValueError("fides_required_for_generated_medication_claim")
     return {
         "citation_existence": "pass",
+        "entailment": "pass",
         "profile_scope": "pass",
         "temporal_order": "pass",
+        "contradiction": "pass",
         "legal_guard": "pass",
-        "fides": "not_applicable_no_generated_medication_claim",
+        "fides": (
+            "pass"
+            if generated_medication_claim
+            else "not_applicable_exact_revision_reporting"
+        ),
         "unsupported_claims": 0,
     }
 

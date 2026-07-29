@@ -321,6 +321,14 @@ reorder unique candidate IDs and fails closed if it introduces an ID. Three
 index isolation tests plus seven integrated Ask/summary/digest tests pass; the
 response records `profile-temporal-hybrid-current-revisions-v1`.
 
+The Ask release verifier now fails closed on missing/out-of-table citations,
+claims not entailed by cited revision text, non-temporal claim order, hidden
+disputed/conflicting sources, and prohibited diagnosis/prescribing output.
+Profile containment is inherited from the pre-retrieval candidate boundary.
+Exact revision reporting is explicitly FIDES-not-applicable; any generated
+medication/dose fragment cannot release without a `pass` FIDES verdict. Nine
+focused Ask/verifier/summary/digest tests pass.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

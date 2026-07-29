@@ -411,7 +411,7 @@ an unsigned artifact.
 - [x] 16.3 Implement Ask My LifeMap typed intents and answer schema with evidence
   table, exact citations, unknown/conflict/stale fields, disclosure, and
   abstention. _R23_
-- [ ] 16.4 Add citation existence, entailment, temporal-order, contradiction,
+- [x] 16.4 Add citation existence, entailment, temporal-order, contradiction,
   profile-scope, legal-guard, and FIDES verification before answer release.
   _R18, R23_
 - [x] 16.5 Build hierarchical event/day/episode/week/visit summaries from

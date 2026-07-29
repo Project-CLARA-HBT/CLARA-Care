@@ -66,11 +66,63 @@ def test_verifier_rejects_citation_outside_evidence_table() -> None:
         verify_grounded_answer(answer, [])
 
 
+def test_verifier_rejects_unsupported_or_hidden_ambiguity() -> None:
+    row = EvidenceRow(
+        evidence_id="ev:r1",
+        revision_id="r1",
+        event_id="e1",
+        event_type="symptom",
+        occurred_at=datetime(2026, 7, 29, tzinfo=UTC),
+        recorded_at=datetime(2026, 7, 29, 1, tzinfo=UTC),
+        truth_state="disputed",
+        source_kind="reported",
+        attribution="user_report",
+        text="Đau đầu nhẹ",
+    )
+    unsupported = {
+        "claims": [{"text": "Chẩn đoán migraine", "citation_ids": ["ev:r1"]}],
+        "disputed": ["ev:r1"],
+        "conflicting": [],
+    }
+    with pytest.raises(ValueError, match="claim_not_entailed"):
+        verify_grounded_answer(unsupported, [row])
+    hidden = {
+        "claims": [{"text": "Đau đầu nhẹ", "citation_ids": ["ev:r1"]}],
+        "disputed": [],
+        "conflicting": [],
+    }
+    with pytest.raises(ValueError, match="not_surfaced"):
+        verify_grounded_answer(hidden, [row])
+
+
 def test_empty_evidence_abstains_instead_of_inventing() -> None:
     result = deterministic_answer(intent="timeline_lookup", evidence=[], locale="vi")
     assert result["status"] == "abstained"
     assert result["claims"] == []
     assert result["abstention_code"] == "insufficient_information"
+
+
+def test_generated_medication_fragment_requires_fides_pass() -> None:
+    row = EvidenceRow(
+        evidence_id="ev:med",
+        revision_id="med",
+        event_id="event-med",
+        event_type="medication_report",
+        occurred_at=datetime(2026, 7, 29, tzinfo=UTC),
+        recorded_at=datetime(2026, 7, 29, tzinfo=UTC),
+        truth_state="confirmed",
+        source_kind="document",
+        attribution="source_document",
+        text="Nhãn nguồn ghi 5 mg",
+    )
+    answer = {
+        "claims": [{"text": "5 mg", "citation_ids": ["ev:med"]}],
+        "disputed": [],
+        "conflicting": [],
+    }
+    with pytest.raises(ValueError, match="fides_required"):
+        verify_grounded_answer(answer, [row])
+    assert verify_grounded_answer(answer, [row], fides_verdict="pass")["fides"] == "pass"
 
 
 def test_hierarchical_summary_preserves_order_truth_and_exact_citations() -> None:
