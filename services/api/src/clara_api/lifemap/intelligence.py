@@ -131,6 +131,7 @@ def retrieve_revision_evidence(
     episode_id: int | None = None,
     start_at: datetime | None = None,
     end_at: datetime | None = None,
+    event_types: frozenset[str] | None = None,
     limit: int = 20,
 ) -> list[EvidenceRow]:
     """Retrieve only current revisions from one pre-authorized profile."""
@@ -161,6 +162,10 @@ def retrieve_revision_evidence(
         statement = statement.where(LifeMapEvent.occurred_at >= start_at)
     if end_at is not None:
         statement = statement.where(LifeMapEvent.occurred_at <= end_at)
+    if event_types is not None:
+        if not event_types:
+            return []
+        statement = statement.where(LifeMapEvent.event_type.in_(event_types))
 
     rows: list[tuple[LifeMapEvent, LifeMapEventRevision]] = [
         (event, revision)

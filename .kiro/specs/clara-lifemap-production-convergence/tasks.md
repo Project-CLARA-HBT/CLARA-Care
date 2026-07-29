@@ -417,7 +417,7 @@ an unsigned artifact.
 - [x] 16.5 Build hierarchical event/day/episode/week/visit summaries from
   structured child claims, dependency links, and deterministic fallback. _R10,
   R24_
-- [ ] 16.6 Implement consent-filtered caregiver/clinician digest generation;
+- [x] 16.6 Implement consent-filtered caregiver/clinician digest generation;
   test withheld categories and revocation invalidation. _R12, R24_
 - [ ] 16.7 Create the model-neutral multimodal extractor interface and adapters
   for current OCR, ASR, document layout, DeepSeek extraction, and optional VLM

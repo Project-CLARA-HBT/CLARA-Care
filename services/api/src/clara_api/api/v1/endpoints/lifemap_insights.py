@@ -354,6 +354,59 @@ def lifemap_summary_v2(
     }
 
 
+@router.get("/lifemap/v2/digests/{level}")
+def delegated_lifemap_digest_v2(
+    level: str,
+    purpose: str = Query(default="care_coordination"),
+    event_types: list[str] = Query(default=[]),
+    locale: str = Query(default="vi", pattern=r"^(vi|en)(-[A-Za-z]{2})?$"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    if not get_settings().lifemap_ai_summaries_enabled:
+        raise HTTPException(status_code=404, detail={"code": "feature_not_enabled"})
+    if level not in {"day", "episode", "week", "visit"}:
+        raise HTTPException(status_code=422, detail={"code": "digest_level_invalid"})
+    if purpose not in {"care_coordination", "visit_support"}:
+        raise HTTPException(status_code=422, detail={"code": "purpose_invalid"})
+    requested_types = frozenset(item.strip() for item in event_types if item.strip())
+    if len(requested_types) > 20 or any(len(item) > 64 for item in requested_types):
+        raise HTTPException(status_code=422, detail={"code": "event_types_invalid"})
+    scope = resolve_profile_scope(
+        db,
+        token,
+        requested_profile=x_profile,
+        action="view",
+        data_class="lifemap",
+        purpose=purpose,
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    evidence = retrieve_revision_evidence(
+        db,
+        profile_id=scope.profile.id,
+        query="",
+        event_types=requested_types or None,
+        limit=50,
+    )
+    digest = hierarchical_summary(
+        evidence,
+        level=level,  # type: ignore[arg-type]
+        locale=locale,
+    )
+    return {
+        **digest,
+        "audience": scope.actor_role,
+        "purpose": scope.purpose,
+        "grant_id": scope.grant_id,
+        "visible_data_classes": sorted(scope.allowed_data_classes & {"lifemap"}),
+        "withheld_event_types": sorted(
+            set(event_types) - {row.event_type for row in evidence}
+        ),
+        "authorization_rechecked": True,
+    }
+
+
 def _aggregate_value(row: WearableDailyAggregate) -> float | None:
     value = row.value_json if isinstance(row.value_json, dict) else {}
     scalar = value.get("scalar")

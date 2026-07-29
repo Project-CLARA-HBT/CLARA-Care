@@ -305,6 +305,14 @@ Each summary has a content-derived opaque ID and deduplicated
 traversal marks every affected ancestor stale. Six focused Ask/summary API tests
 pass with clean Ruff and mypy.
 
+The delegated digest endpoint resolves a live purpose-bound Family grant before
+any revision query, requires the `lifemap` data class and `view` action, applies
+optional event-type withholding before summary construction, and returns only
+citations visible in that scope. It never caches authorization: revoking the
+grant makes the next request indistinguishably 404. A focused caregiver test
+proves withheld event categories and next-request revocation; seven combined
+Ask/summary/digest tests pass.
+
 ## Production deployment evidence
 
 The foundation was deployed to `https://theclaracare.com` on 2026-07-28.

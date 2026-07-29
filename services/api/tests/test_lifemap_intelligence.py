@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -8,7 +8,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from clara_api.core.config import get_settings
-from clara_api.db.models import AIContextManifest, MLInferenceManifest
+from clara_api.db.models import (
+    AIContextManifest,
+    FamilyAccessGrant,
+    MLInferenceManifest,
+    PhrProfile,
+)
 from clara_api.db.session import SessionLocal
 from clara_api.lifemap.intelligence import (
     EvidenceRow,
@@ -176,3 +181,82 @@ def test_emergency_fast_path_does_not_require_a_profile(monkeypatch) -> None:
     )
     assert response.status_code == 200
     assert response.json()["verification"] == {"retrieval_bypassed": True}
+
+
+def test_delegated_digest_rechecks_grant_and_withholds_unrequested_types(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(get_settings(), "lifemap_ai_summaries_enabled", True)
+    owner_headers = _account()
+    with SessionLocal() as db:
+        owner_profile = db.execute(
+            select(PhrProfile).order_by(PhrProfile.id.desc())
+        ).scalars().first()
+        assert owner_profile is not None
+        owner_profile_id = owner_profile.public_id
+    created = client.post(
+        "/api/v1/lifemap/events",
+        headers={**owner_headers, "Idempotency-Key": uuid4().hex},
+        json={
+            "event_type": "sleep_report",
+            "occurred_at": "2026-07-29T08:00:00Z",
+            "payload": {"hours": 7},
+            "truth_state": "confirmed",
+        },
+    )
+    assert created.status_code == 201
+    caregiver_headers = _account()
+    now = datetime.now(UTC)
+    with SessionLocal() as db:
+        caregiver_profile = db.execute(
+            select(PhrProfile).order_by(PhrProfile.id.desc())
+        ).scalars().first()
+        owner_profile = db.execute(
+            select(PhrProfile).where(PhrProfile.public_id == owner_profile_id)
+        ).scalar_one()
+        assert caregiver_profile is not None
+        grant = FamilyAccessGrant(
+            profile_id=owner_profile.id,
+            grantor_user_id=owner_profile.user_id,
+            grantee_user_id=caregiver_profile.user_id,
+            object_type="lifemap",
+            object_id=owner_profile.public_id,
+            allowed_actions_json=["view"],
+            data_classes_json=["lifemap"],
+            purpose="care_coordination",
+            status="active",
+            starts_at=now - timedelta(minutes=1),
+            expires_at=now + timedelta(days=1),
+        )
+        db.add(grant)
+        db.commit()
+        grant_id = grant.id
+    digest = client.get(
+        "/api/v1/lifemap/v2/digests/day",
+        headers={
+            **caregiver_headers,
+            "X-CLARA-Profile-Context": owner_profile_id,
+        },
+        params={
+            "purpose": "care_coordination",
+            "event_types": "symptom_report",
+        },
+    )
+    assert digest.status_code == 200, digest.text
+    assert digest.json()["input_revision_ids"] == []
+    assert digest.json()["withheld_event_types"] == ["symptom_report"]
+    with SessionLocal() as db:
+        grant = db.get(FamilyAccessGrant, grant_id)
+        assert grant is not None
+        grant.status = "revoked"
+        grant.revoked_at = datetime.now(UTC)
+        db.commit()
+    denied = client.get(
+        "/api/v1/lifemap/v2/digests/day",
+        headers={
+            **caregiver_headers,
+            "X-CLARA-Profile-Context": owner_profile_id,
+        },
+        params={"purpose": "care_coordination"},
+    )
+    assert denied.status_code == 404
