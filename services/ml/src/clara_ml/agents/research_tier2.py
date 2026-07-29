@@ -18,6 +18,7 @@ from clara_ml.config import settings
 from clara_ml.factcheck import FactCheckResult, run_fides_lite
 from clara_ml.factcheck.nli_verifier import classify_claim
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.source_router import (
     SourceRouterDecision,
@@ -712,10 +713,24 @@ def _build_personal_context_suffix(
     *,
     answer_language: str,
 ) -> str:
-    profile = personal_context.get("profile") if isinstance(personal_context.get("profile"), dict) else {}
-    allergies = personal_context.get("allergies") if isinstance(personal_context.get("allergies"), list) else []
-    conditions = personal_context.get("conditions") if isinstance(personal_context.get("conditions"), list) else []
-    medications = personal_context.get("medications") if isinstance(personal_context.get("medications"), list) else []
+    profile = (
+        personal_context.get("profile") if isinstance(personal_context.get("profile"), dict) else {}
+    )
+    allergies = (
+        personal_context.get("allergies")
+        if isinstance(personal_context.get("allergies"), list)
+        else []
+    )
+    conditions = (
+        personal_context.get("conditions")
+        if isinstance(personal_context.get("conditions"), list)
+        else []
+    )
+    medications = (
+        personal_context.get("medications")
+        if isinstance(personal_context.get("medications"), list)
+        else []
+    )
     cabinet = (
         personal_context.get("medicine_cabinet")
         if isinstance(personal_context.get("medicine_cabinet"), dict)
@@ -1124,9 +1139,7 @@ def _extract_pico_frame(text: str) -> PicoFrame:
         raise PicoIncompleteError("comparison")
 
     # Outcome.
-    outcome = ", ".join(
-        dict.fromkeys(_pico_detect_markers(folded, _PICO_OUTCOME_MARKERS))
-    ).strip()
+    outcome = ", ".join(dict.fromkeys(_pico_detect_markers(folded, _PICO_OUTCOME_MARKERS))).strip()
     if not outcome:
         raise PicoIncompleteError("outcome")
 
@@ -1291,7 +1304,11 @@ def _grade_corpus_profile(
             best_tier = tier if best_tier is None else min(best_tier, tier)
         rank = _evidence_hierarchy_rank(_row_source_type(row))
         best_rank = rank if best_rank is None else min(best_rank, rank)
-    return best_tier, (best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT), has_rows
+    return (
+        best_tier,
+        (best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT),
+        has_rows,
+    )
 
 
 def _assign_grade_labels(
@@ -1595,10 +1612,8 @@ def _build_claim_trace(
             continue
         valid_ids.add(citation_id)
         row = context_by_id.get(_ascii_fold(citation_id).strip())
-        source_type = (
-            (_row_source_type(row) if row else None) or citation.source_type or "unknown"
-        )
-        trust_tier = (_row_trust_tier(row) if row else None)
+        source_type = (_row_source_type(row) if row else None) or citation.source_type or "unknown"
+        trust_tier = _row_trust_tier(row) if row else None
         if trust_tier is None:
             trust_tier = citation.trust_tier
         if trust_tier is None:
@@ -1768,14 +1783,17 @@ def _apply_keyword_filter_to_query_plan(
             existing_queries = [fallback_query]
         source_query_updates[bucket] = existing_queries
 
-    merged_keywords = _dedupe_query_list(
-        [
-            *(keywords_by_source.get("internal") or []),
-            *(keywords_by_source.get("scientific") or []),
-            *(keywords_by_source.get("web") or []),
-        ],
-        limit=12,
-    ) or fallback_seed
+    merged_keywords = (
+        _dedupe_query_list(
+            [
+                *(keywords_by_source.get("internal") or []),
+                *(keywords_by_source.get("scientific") or []),
+                *(keywords_by_source.get("web") or []),
+            ],
+            limit=12,
+        )
+        or fallback_seed
+    )
 
     safe_plan["source_queries"] = source_query_updates
     safe_plan["query_terms"] = merged_keywords[:10]
@@ -1901,7 +1919,9 @@ def _build_provider_query_overrides(
         ).strip()
     web_query = web_query[:320]
 
-    regulatory_query = vi_focus if language_hint in {"vi", "mixed"} else cleaned_original or web_query
+    regulatory_query = (
+        vi_focus if language_hint in {"vi", "mixed"} else cleaned_original or web_query
+    )
     regulatory_query = regulatory_query[:320]
 
     scientific_providers: dict[str, str] = {
@@ -2105,9 +2125,7 @@ def _build_source_aware_query_plan(
     is_nutrition_query = _is_nutrition_diet_query(original_query)
     is_ddi_query = bool(profile.get("is_ddi_query"))
     keyword_terms = [
-        item.strip().lower()
-        for item in keywords
-        if isinstance(item, str) and item.strip()
+        item.strip().lower() for item in keywords if isinstance(item, str) and item.strip()
     ]
     if not keyword_terms:
         keyword_terms = query_terms(original_query)
@@ -2222,7 +2240,9 @@ def _build_source_aware_query_plan(
         ],
         limit=24,
     )
-    fast_queries = _dedupe_query_list([canonical_query, original_query, " ".join(keyword_terms[:6])], limit=4)
+    fast_queries = _dedupe_query_list(
+        [canonical_query, original_query, " ".join(keyword_terms[:6])], limit=4
+    )
     provider_queries = _build_provider_query_overrides(
         topic=original_query,
         original_query=original_query,
@@ -2498,9 +2518,17 @@ def _resolve_runtime_llm_config(
 ) -> tuple[str, str, str, str]:
     runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
     if settings.llm_deepseek_only:
-        api_key = str(settings.deepseek_api_key or "").strip() or str(runtime.get("api_key") or "").strip()
-        base_url = str(settings.deepseek_base_url or "").strip() or str(runtime.get("base_url") or "").strip()
-        model = str(settings.deepseek_model or "").strip() or str(runtime.get("model") or "").strip()
+        api_key = (
+            str(settings.deepseek_api_key or "").strip()
+            or str(runtime.get("api_key") or "").strip()
+        )
+        base_url = (
+            str(settings.deepseek_base_url or "").strip()
+            or str(runtime.get("base_url") or "").strip()
+        )
+        model = (
+            str(settings.deepseek_model or "").strip() or str(runtime.get("model") or "").strip()
+        )
         return "deepseek", api_key, base_url, model
     raw_provider = str(runtime.get("provider") or "").strip().lower()
     if raw_provider:
@@ -2543,8 +2571,12 @@ def _resolve_runtime_llm_config(
                 return "deepseek", deepseek_api_key, deepseek_base_url, deepseek_model
         return provider, api_key, base_url, model
 
-    api_key = str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
-    base_url = str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
+    api_key = (
+        str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
+    )
+    base_url = (
+        str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
+    )
     model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
     return "deepseek", api_key, base_url, model
 
@@ -2596,6 +2628,18 @@ def _build_query_planner_client(
     if _has_request_runtime_override(llm_runtime):
         timeout_seconds = min(timeout_seconds, 25.0)
     retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
+    if not _has_request_runtime_override(llm_runtime):
+        # Normal production selection must pass through the typed registry so
+        # prompt/version/rollback governance cannot be bypassed by a research
+        # helper. Explicit injected runtime clients remain a compatibility seam
+        # for existing internal test/recovery flows and are not user-selectable.
+        client, _ = build_task_client(
+            ModelTask.RESEARCH_QUERY_PLANNING,
+            settings,
+            timeout_seconds=timeout_seconds,
+            retries_per_base=retries_per_base,
+        )
+        return client
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
@@ -2622,6 +2666,14 @@ def _build_reasoning_client(
     if _has_request_runtime_override(llm_runtime):
         resolved_timeout = min(resolved_timeout, 18.0)
     retries_per_base, retry_backoff_seconds = _resolve_runtime_retry_policy(llm_runtime)
+    if not _has_request_runtime_override(llm_runtime):
+        client, _ = build_task_client(
+            ModelTask.RESEARCH_REASONING,
+            settings,
+            timeout_seconds=resolved_timeout,
+            retries_per_base=retries_per_base,
+        )
+        return client
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
@@ -2839,10 +2891,14 @@ def _run_deep_beta_parallel_reasoning_nodes(
         return []
 
     reasoning_rounds = max(1, int(settings.deep_beta_reasoning_rounds))
-    max_workers = max(1, min(int(settings.deep_beta_reasoning_parallel_workers), len(selected_nodes)))
+    max_workers = max(
+        1, min(int(settings.deep_beta_reasoning_parallel_workers), len(selected_nodes))
+    )
     outputs: list[dict[str, Any]] = []
     for round_index in range(1, reasoning_rounds + 1):
-        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="deep-beta-llm") as executor:
+        with ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="deep-beta-llm"
+        ) as executor:
             futures = {
                 executor.submit(
                     _run_deep_beta_llm_reasoning_node,
@@ -2984,8 +3040,12 @@ def _run_deep_beta_evidence_verification_node(
             "node": item.get("node"),
             "status": item.get("status"),
             "confidence": item.get("confidence"),
-            "insights": item.get("insights", [])[:3] if isinstance(item.get("insights"), list) else [],
-            "watchouts": item.get("watchouts", [])[:3] if isinstance(item.get("watchouts"), list) else [],
+            "insights": item.get("insights", [])[:3]
+            if isinstance(item.get("insights"), list)
+            else [],
+            "watchouts": item.get("watchouts", [])[:3]
+            if isinstance(item.get("watchouts"), list)
+            else [],
             "reasoning_chain": (
                 item.get("reasoning_chain", [])[
                     : handoff_profile["verification_reasoning_chain_per_node"]
@@ -3020,7 +3080,9 @@ def _run_deep_beta_evidence_verification_node(
     )
     try:
         client = _build_reasoning_client(
-            timeout_seconds=max(float(settings.deep_beta_evidence_verification_timeout_seconds), 2.0),
+            timeout_seconds=max(
+                float(settings.deep_beta_evidence_verification_timeout_seconds), 2.0
+            ),
             llm_runtime=llm_runtime,
         )
         if client is None:
@@ -3540,9 +3602,7 @@ def _markdown_word_count(text: str) -> int:
     kept_lines = [
         line
         for line in cleaned.splitlines()
-        if not (
-            line.strip().startswith("|") and _MARKDOWN_TABLE_LAYOUT_RE.match(line.strip())
-        )
+        if not (line.strip().startswith("|") and _MARKDOWN_TABLE_LAYOUT_RE.match(line.strip()))
     ]
     cleaned = "\n".join(kept_lines)
 
@@ -3586,7 +3646,9 @@ def _build_reasoning_chain_cards(
                     continue
                 claim = _compact_snippet(_first_nonempty_text(row.get("claim")), max_len=220)
                 evidence = _compact_snippet(_first_nonempty_text(row.get("evidence")), max_len=260)
-                inference = _compact_snippet(_first_nonempty_text(row.get("inference")), max_len=240)
+                inference = _compact_snippet(
+                    _first_nonempty_text(row.get("inference")), max_len=240
+                )
                 action = _compact_snippet(
                     _first_nonempty_text(row.get("clinical_action"), row.get("action")),
                     max_len=180,
@@ -3859,9 +3921,7 @@ def _deep_beta_clean_body_active() -> bool:
     do the clean-body branches take effect.
     """
 
-    return bool(
-        settings.deep_beta_clean_body_enabled and not settings.synthesis_v2_enabled
-    )
+    return bool(settings.deep_beta_clean_body_enabled and not settings.synthesis_v2_enabled)
 
 
 def _resolve_adaptive_report_word_budget(
@@ -3880,12 +3940,8 @@ def _resolve_adaptive_report_word_budget(
     # hidden telemetry panel, so the prose body itself stays readable.
     if mode == "deep_beta" and _deep_beta_clean_body_active():
         clean_min = int(settings.deep_beta_clean_body_min_words)
-        clean_target = max(
-            clean_min, int(settings.deep_beta_clean_body_target_words)
-        )
-        clean_max = max(
-            clean_target, int(settings.deep_beta_clean_body_max_words)
-        )
+        clean_target = max(clean_min, int(settings.deep_beta_clean_body_target_words))
+        clean_max = max(clean_target, int(settings.deep_beta_clean_body_max_words))
         return clean_min, clean_target, clean_max
 
     # Synthesis v2 (flag-gated): scope-aware band math for deep_beta only.
@@ -3928,8 +3984,10 @@ def _resolve_adaptive_report_word_budget(
     if mode != "deep_beta":
         return min_words, target_words, max_words
 
-    evidence_density = max(0, int(citation_count)) + max(0, int(deep_pass_count)) + max(
-        0, int(reasoning_node_count)
+    evidence_density = (
+        max(0, int(citation_count))
+        + max(0, int(deep_pass_count))
+        + max(0, int(reasoning_node_count))
     )
 
     # Never downscale Deep Beta into short answers.
@@ -4255,7 +4313,9 @@ def _ensure_deep_beta_report_artifacts(
     )
 
     require_reasoning_chain = mode == "deep_beta"
-    if require_reasoning_chain and not _has_markdown_heading(output, "## Chuỗi lập luận bằng chứng"):
+    if require_reasoning_chain and not _has_markdown_heading(
+        output, "## Chuỗi lập luận bằng chứng"
+    ):
         if reasoning_cards:
             rows = [
                 "| Node | Claim | Evidence | Inference | Clinical action | Confidence |",
@@ -4281,15 +4341,21 @@ def _ensure_deep_beta_report_artifacts(
     if not _has_markdown_heading(output, "## Bảng tổng hợp bằng chứng"):
         verification = evidence_verification if isinstance(evidence_verification, dict) else {}
         summary = verification_summary if isinstance(verification_summary, dict) else {}
-        supported_count = len(verification.get("supported_claims", [])) if isinstance(
-            verification.get("supported_claims"), list
-        ) else _safe_int(summary.get("supported_claims"), 0)
-        unsupported_count = len(verification.get("unsupported_claims", [])) if isinstance(
-            verification.get("unsupported_claims"), list
-        ) else _safe_int(summary.get("unsupported_claims"), 0)
-        contradicted_count = len(verification.get("contradicted_claims", [])) if isinstance(
-            verification.get("contradicted_claims"), list
-        ) else _safe_int(summary.get("contradicted_claims"), 0)
+        supported_count = (
+            len(verification.get("supported_claims", []))
+            if isinstance(verification.get("supported_claims"), list)
+            else _safe_int(summary.get("supported_claims"), 0)
+        )
+        unsupported_count = (
+            len(verification.get("unsupported_claims", []))
+            if isinstance(verification.get("unsupported_claims"), list)
+            else _safe_int(summary.get("unsupported_claims"), 0)
+        )
+        contradicted_count = (
+            len(verification.get("contradicted_claims", []))
+            if isinstance(verification.get("contradicted_claims"), list)
+            else _safe_int(summary.get("contradicted_claims"), 0)
+        )
         support_ratio = _safe_float(summary.get("support_ratio"), 0.0)
         appendix_sections.append(
             "## Bảng tổng hợp bằng chứng\n"
@@ -4590,9 +4656,7 @@ def _synthesize_deep_beta_long_report(
 
         configured_rounds = max(1, int(settings.deep_beta_report_expansion_rounds))
         expansion_rounds = (
-            configured_rounds
-            if mode == "deep_beta"
-            else max(min(configured_rounds, 2), 1)
+            configured_rounds if mode == "deep_beta" else max(min(configured_rounds, 2), 1)
         )
         if mode == "deep_beta":
             if target_words >= 12000:
@@ -4621,9 +4685,7 @@ def _synthesize_deep_beta_long_report(
                     break
 
                 missing_words = max(target_words - current_words, 0)
-                focus_line = _EXPANSION_DIRECTIVES[
-                    directive_index % len(_EXPANSION_DIRECTIVES)
-                ]
+                focus_line = _EXPANSION_DIRECTIVES[directive_index % len(_EXPANSION_DIRECTIVES)]
                 directive_index += 1
                 continuation_prompt = _build_continuation_prompt(focus_line, missing_words)
                 continuation_response = client.generate(
@@ -4727,10 +4789,7 @@ def _synthesize_deep_beta_long_report(
         # (multi-pass logs, reasoning-node/claim matrices, source-profile tables).
         # That material stays in the response envelope for the hidden telemetry
         # panel, so the prose body remains a natural, single-language explanation.
-        if (
-            not _deep_beta_clean_body_active()
-            and _markdown_word_count(content) < target_words
-        ):
+        if not _deep_beta_clean_body_active() and _markdown_word_count(content) < target_words:
             pass_rows = [
                 "| Pass | Subquery | Retrieved | Duration (ms) |",
                 "| --- | --- | ---: | ---: |",
@@ -4823,7 +4882,9 @@ def _synthesize_deep_beta_long_report(
             ]
 
             appendix_title = (
-                "## Phụ lục mở rộng Deep Beta (chuyên sâu)" if mode == "deep_beta" else "## Phụ lục mở rộng Deep"
+                "## Phụ lục mở rộng Deep Beta (chuyên sâu)"
+                if mode == "deep_beta"
+                else "## Phụ lục mở rộng Deep"
             )
             appendix_blocks = [f"\n\n{appendix_title}\n"]
             if mode == "deep_beta":
@@ -5087,8 +5148,7 @@ def _build_plan_steps(
             PlanStep(
                 step="iterative_gap_fill",
                 objective=(
-                    "Run iterative passes to fill unresolved evidence gaps and "
-                    "edge-case caveats."
+                    "Run iterative passes to fill unresolved evidence gaps and edge-case caveats."
                 ),
                 output="Gap-closure notes and augmented pass summaries.",
             ),
@@ -5110,9 +5170,7 @@ def _build_plan_steps(
             ),
             PlanStep(
                 step="reasoning_chain_audit",
-                objective=(
-                    "Audit the reasoning chain for unsupported links before synthesis."
-                ),
+                objective=("Audit the reasoning chain for unsupported links before synthesis."),
                 output="Reasoning-chain status with mitigation notes.",
             ),
             base_steps[2],
@@ -5152,7 +5210,7 @@ def _build_plan_steps(
         PlanStep(
             step="cross_source_verification",
             objective=(
-                "Cross-check consistency across internal docs, " "scientific connectors and web."
+                "Cross-check consistency across internal docs, scientific connectors and web."
             ),
             output="Agreement/disagreement matrix by source.",
         ),
@@ -5224,9 +5282,7 @@ def _build_planner_hints(
         reason_codes.append("comparison_query_detected")
     if is_nutrition_query:
         reason_codes.append("nutrition_query_detected")
-    requested_stack_mode = (
-        "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
-    )
+    requested_stack_mode = "full" if str(retrieval_stack_mode).strip().lower() == "full" else "auto"
     stack_mode = requested_stack_mode
     if research_mode == "fast" and requested_stack_mode == "full":
         stack_mode = "auto"
@@ -5335,13 +5391,11 @@ def _build_planner_hints(
         "deep_pass_count": max(1, min(pass_cap, target_pass_count)),
         "force_multi_source": force_multi_source,
         "reasoning_style": (
-            (
-                "agentic_deep_research_beta_v1"
-                if deep_beta_mode
-                else "agentic_deep_research_v2"
-                if deep_mode
-                else "targeted_fast_research_v1"
-            )
+            "agentic_deep_research_beta_v1"
+            if deep_beta_mode
+            else "agentic_deep_research_v2"
+            if deep_mode
+            else "targeted_fast_research_v1"
         ),
         "ddi_critical_query": is_ddi_critical_query,
         "retrieval_budget": retrieval_budget,
@@ -5430,8 +5484,7 @@ def _shrink_payload(value: Any, *, max_list: int = 12, max_str: int = 300) -> An
         return output
     if isinstance(value, list):
         return [
-            _shrink_payload(item, max_list=max_list, max_str=max_str)
-            for item in value[:max_list]
+            _shrink_payload(item, max_list=max_list, max_str=max_str) for item in value[:max_list]
         ]
     if isinstance(value, str):
         return _compact_snippet(value, max_len=max_str)
@@ -5489,9 +5542,7 @@ def _build_evidence_review_summary(
     total_evidence_rows = len(effective_context)
     unique_source_count = len(source_counts)
     average_relevance_score = (
-        round(sum(score_values) / len(score_values), 4)
-        if score_values
-        else 0.0
+        round(sum(score_values) / len(score_values), 4) if score_values else 0.0
     )
 
     contradicted_claims_raw = evidence_verification.get("contradicted_claims")
@@ -5514,9 +5565,7 @@ def _build_evidence_review_summary(
         source_errors = summary.get("source_errors")
         if not isinstance(source_errors, dict):
             continue
-        source_error_count += sum(
-            1 for value in source_errors.values() if str(value or "").strip()
-        )
+        source_error_count += sum(1 for value in source_errors.values() if str(value or "").strip())
 
     missing_evidence_signals: list[str] = []
     if total_evidence_rows < 3:
@@ -5685,9 +5734,7 @@ def _build_contradiction_summary(
         ),
         "contradiction_count": contradiction_count,
         "claims": (
-            [str(item) for item in claims[:5]]
-            if isinstance(claims, list)
-            else defaults["claims"]
+            [str(item) for item in claims[:5]] if isinstance(claims, list) else defaults["claims"]
         ),
         "details": details if isinstance(details, list) else defaults["details"],
         "note": str(raw_summary.get("note") or defaults["note"]),
@@ -5896,8 +5943,7 @@ def _build_citations(
     provenance_enabled = (
         rank_enabled
         if isinstance(rank_enabled, bool)
-        else str(research_mode or "fast").strip().lower()
-        in {"deep", "deep_beta"}
+        else str(research_mode or "fast").strip().lower() in {"deep", "deep_beta"}
     )
 
     # R6.1: order surfaced sources by the composite recency/trust-tier key before slicing the
@@ -5950,14 +5996,10 @@ def _build_citations(
                 source_type=_row_source_type(item) if provenance_enabled else None,
                 published_at=_row_effective_date(item) if provenance_enabled else None,
                 pmid=(
-                    (_first_nonempty_text(item.get("pmid")) or None)
-                    if provenance_enabled
-                    else None
+                    (_first_nonempty_text(item.get("pmid")) or None) if provenance_enabled else None
                 ),
                 doi=(
-                    (_first_nonempty_text(item.get("doi")) or None)
-                    if provenance_enabled
-                    else None
+                    (_first_nonempty_text(item.get("doi")) or None) if provenance_enabled else None
                 ),
                 nct_ids=(
                     [str(value) for value in item.get("nct_ids", []) if str(value).strip()]
@@ -6108,7 +6150,11 @@ def _build_retrieval_trace(
         "stack_mode_requested": str(retrieval_debug.get("stack_mode_requested") or "auto"),
         "stack_mode_effective": str(retrieval_debug.get("stack_mode_effective") or "auto"),
         "stack_mode_reason_codes": (
-            [str(item).strip() for item in retrieval_debug.get("stack_mode_reason_codes", []) if str(item).strip()]
+            [
+                str(item).strip()
+                for item in retrieval_debug.get("stack_mode_reason_codes", [])
+                if str(item).strip()
+            ]
             if isinstance(retrieval_debug.get("stack_mode_reason_codes"), list)
             else []
         ),
@@ -6539,9 +6585,7 @@ def _decompose_into_subquestions(
     # 4. Evidence-facet expansions to broaden retrieval coverage.
     _, _, language_hint = _detect_language_hint(topic)
     facets = (
-        _QUERY_DECOMPOSITION_FACETS_EN
-        if language_hint == "en"
-        else _QUERY_DECOMPOSITION_FACETS_VI
+        _QUERY_DECOMPOSITION_FACETS_EN if language_hint == "en" else _QUERY_DECOMPOSITION_FACETS_VI
     )
     for facet in facets:
         _add(facet.format(topic=topic))
@@ -6734,6 +6778,7 @@ def _build_deep_beta_reasoning_steps(*, topic: str, subqueries: list[str]) -> li
             }
         )
     return steps
+
 
 def _resolve_deep_pass_count(
     payload: dict[str, Any],
@@ -6930,9 +6975,7 @@ def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[di
     if primary:
         primary_aliases.add(primary)
     co_drugs = {
-        str(item).strip().lower()
-        for item in profile.get("co_drugs", [])
-        if str(item).strip()
+        str(item).strip().lower() for item in profile.get("co_drugs", []) if str(item).strip()
     }
     co_drug_aliases = set(co_drugs)
     co_drug_aliases_raw = profile.get("co_drug_aliases")
@@ -7002,7 +7045,13 @@ def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[di
             continue
 
         # Drop noisy lifestyle rows for DDI tasks unless they carry interaction signals.
-        if scientific_source and has_primary and has_noise_topic and not has_codrug and not has_interaction:
+        if (
+            scientific_source
+            and has_primary
+            and has_noise_topic
+            and not has_codrug
+            and not has_interaction
+        ):
             continue
 
         # Keep authoritative drug-label rows mentioning primary drug,
@@ -7075,7 +7124,9 @@ def _citation_markdown_lines(citations: list[Citation]) -> list[str]:
 
     rows: list[str] = []
     for index, citation in enumerate(citations[:12], start=1):
-        title = _first_nonempty_text(citation.title, citation.source, citation.source_id, f"Nguồn {index}")
+        title = _first_nonempty_text(
+            citation.title, citation.source, citation.source_id, f"Nguồn {index}"
+        )
         url = _safe_url(citation.url)
         if url:
             rows.append(f"- [{index}] {title} ({url})")
@@ -7262,7 +7313,9 @@ def _build_reasoning_digest(
 
     llm_status = "disabled"
     reason_codes = (
-        planner_hints.get("reason_codes") if isinstance(planner_hints.get("reason_codes"), list) else []
+        planner_hints.get("reason_codes")
+        if isinstance(planner_hints.get("reason_codes"), list)
+        else []
     )
     if "llm_query_planner_enabled" in reason_codes:
         llm_status = "enabled"
@@ -7427,8 +7480,7 @@ def _strip_leading_overlap(body: str, already_shown: str) -> str:
     """
 
     shown = {
-        re.sub(r"\s+", " ", s).strip().lower()
-        for s in _sentence_split_for_overlap(already_shown)
+        re.sub(r"\s+", " ", s).strip().lower() for s in _sentence_split_for_overlap(already_shown)
     }
     if not shown:
         return body.strip()
@@ -7471,7 +7523,9 @@ def _ensure_markdown_structure(
                 continue
             if normalized and normalized == prev_key:
                 continue
-            if normalized.startswith("- phạm vi nghiên cứu: ##") or normalized.startswith("phạm vi nghiên cứu: ##"):
+            if normalized.startswith("- phạm vi nghiên cứu: ##") or normalized.startswith(
+                "phạm vi nghiên cứu: ##"
+            ):
                 line = f"- Phạm vi nghiên cứu: {_compact_snippet(topic, max_len=150)} và bằng chứng truy xuất đa nguồn."
                 normalized = re.sub(r"\s+", " ", line).strip().lower()
             # Global de-duplication of substantial prose paragraphs: a long,
@@ -7550,14 +7604,26 @@ def _ensure_markdown_structure(
         )
         if any(term in normalized for term in high_terms):
             if language == "en":
-                return ("High", "Red", "Prompt action and in-person medical evaluation are warranted.")
+                return (
+                    "High",
+                    "Red",
+                    "Prompt action and in-person medical evaluation are warranted.",
+                )
             return ("Cao", "Đỏ", "Cần xử trí sớm và đánh giá y tế trực tiếp.")
         if any(term in normalized for term in moderate_terms):
             if language == "en":
-                return ("Moderate", "Orange", "Close monitoring and clinician or pharmacist confirmation are warranted.")
+                return (
+                    "Moderate",
+                    "Orange",
+                    "Close monitoring and clinician or pharmacist confirmation are warranted.",
+                )
             return ("Trung bình", "Cam", "Cần theo dõi sát và xác minh với bác sĩ/dược sĩ.")
         if language == "en":
-            return ("Low", "Yellow", "Routine follow-up is reasonable while continuing to verify primary sources.")
+            return (
+                "Low",
+                "Yellow",
+                "Routine follow-up is reasonable while continuing to verify primary sources.",
+            )
         return ("Thấp", "Vàng", "Theo dõi định kỳ, tiếp tục kiểm chứng nguồn chính thống.")
 
     def _build_decision_matrix_markdown(*, risk_level: str, risk_signal: str) -> str:
@@ -8132,14 +8198,22 @@ def _stabilize_fast_answer_layout(markdown_text: str, *, answer_language: str = 
     caveat_heading = _resolve_section_title("safety_notes", answer_language)
     followup_heading = _resolve_section_title("monitoring_red_flags", answer_language)
 
-    conclusion = _extract_h2_body_any(text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"])
+    conclusion = _extract_h2_body_any(
+        text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"]
+    )
     analysis = _extract_h2_body_any(
         text,
         [key_points_heading, "Điểm chính", "Key points", "Phân tích chi tiết", "Detailed analysis"],
     )
     practical = _extract_h2_body_any(
         text,
-        [practical_heading, "Ứng dụng thực tế", "Practical application", "Khuyến nghị an toàn", "Safety recommendations"],
+        [
+            practical_heading,
+            "Ứng dụng thực tế",
+            "Practical application",
+            "Khuyến nghị an toàn",
+            "Safety recommendations",
+        ],
     )
     safety = _extract_h2_body_any(
         text,
@@ -8401,7 +8475,9 @@ def _stabilize_long_answer_layout(
     practical_heading = _resolve_section_title("practical_application", answer_language)
     caveat_heading = _resolve_section_title("safety_notes", answer_language)
 
-    conclusion = _extract_h2_body_any(text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"])
+    conclusion = _extract_h2_body_any(
+        text, [conclusion_heading, "Kết luận nhanh", "Quick conclusion"]
+    )
 
     main_sections = "\n\n".join(
         filter(
@@ -8419,7 +8495,9 @@ def _stabilize_long_answer_layout(
         filter(
             None,
             [
-                _extract_h2_body_any(text, [practical_heading, "Ứng dụng thực tế", "Practical application"]),
+                _extract_h2_body_any(
+                    text, [practical_heading, "Ứng dụng thực tế", "Practical application"]
+                ),
                 _extract_h2_body(text, _canonical_h2_key("Khuyến nghị ứng dụng thực hành")),
                 _extract_h2_body(text, _canonical_h2_key("Ứng dụng lâm sàng theo nhóm bệnh nhân")),
                 _extract_h2_body(text, _canonical_h2_key("Bối cảnh lâm sàng áp dụng")),
@@ -8557,13 +8635,26 @@ def _stabilize_deep_beta_fallback_dossier_layout(
     plan_heading = _resolve_section_title("research_plan", language)
     executive_heading = _resolve_section_title("executive_summary", language)
 
-    quick_conclusion = _extract_h2_body_any(text, [quick_heading, "Kết luận nhanh", "Quick conclusion"])
-    research_plan = _extract_h2_body_any(text, [plan_heading, "Kế hoạch nghiên cứu", "Research plan"])
+    quick_conclusion = _extract_h2_body_any(
+        text, [quick_heading, "Kết luận nhanh", "Quick conclusion"]
+    )
+    research_plan = _extract_h2_body_any(
+        text, [plan_heading, "Kế hoạch nghiên cứu", "Research plan"]
+    )
     executive_summary = _extract_h2_body_any(
         text,
-        [executive_heading, "Tóm tắt điều hành", "Executive summary", key_points_heading, "Điểm chính", "Key points"],
+        [
+            executive_heading,
+            "Tóm tắt điều hành",
+            "Executive summary",
+            key_points_heading,
+            "Điểm chính",
+            "Key points",
+        ],
     )
-    pico_question = _extract_h2_body_any(text, ["Câu hỏi nghiên cứu (PICO)", "Research question (PICO)"])
+    pico_question = _extract_h2_body_any(
+        text, ["Câu hỏi nghiên cứu (PICO)", "Research question (PICO)"]
+    )
     retrieval_method = _extract_h2_body_any(
         text,
         ["Phương pháp truy xuất & tiêu chí chọn lọc", "Retrieval method & selection criteria"],
@@ -8592,7 +8683,13 @@ def _stabilize_deep_beta_fallback_dossier_layout(
     )
     reasoning_chain = _extract_h2_body_any(
         text,
-        [detailed_heading, "Phân tích chi tiết", "Detailed analysis", "Chuỗi lập luận bằng chứng", "Evidence reasoning chain"],
+        [
+            detailed_heading,
+            "Phân tích chi tiết",
+            "Detailed analysis",
+            "Chuỗi lập luận bằng chứng",
+            "Evidence reasoning chain",
+        ],
     )
     counter_evidence = _extract_h2_body_any(
         text,
@@ -8616,7 +8713,9 @@ def _stabilize_deep_beta_fallback_dossier_layout(
             "Practical application",
         ],
     )
-    safety_matrix = _extract_h2_body_any(text, ["Ma trận quyết định an toàn", "Safety decision matrix"])
+    safety_matrix = _extract_h2_body_any(
+        text, ["Ma trận quyết định an toàn", "Safety decision matrix"]
+    )
     follow_up_plan = _extract_h2_body_any(
         text,
         [
@@ -8636,9 +8735,7 @@ def _stabilize_deep_beta_fallback_dossier_layout(
     detail_excerpt = _curate_markdown_excerpt(text, max_len=1800, max_lines=12)
 
     if language == "en":
-        quick_default = (
-            "Current output is in local fallback mode; keep conclusions conservative and verify any treatment changes with primary sources."
-        )
+        quick_default = "Current output is in local fallback mode; keep conclusions conservative and verify any treatment changes with primary sources."
         plan_default = (
             "- Lock the question scope and patient safety boundaries before acting.\n"
             "- Prioritize guideline-level sources, systematic reviews, and high-quality clinical studies.\n"
@@ -8682,9 +8779,7 @@ def _stabilize_deep_beta_fallback_dossier_layout(
             "- Residual uncertainty remains because fallback synthesis may miss newly emerged evidence."
         )
     else:
-        quick_default = (
-            "Đầu ra hiện ở chế độ fallback local; cần giữ kết luận thận trọng và xác minh lại trước khi đổi điều trị."
-        )
+        quick_default = "Đầu ra hiện ở chế độ fallback local; cần giữ kết luận thận trọng và xác minh lại trước khi đổi điều trị."
         plan_default = (
             "- Khóa phạm vi câu hỏi và ranh giới an toàn trước khi áp dụng.\n"
             "- Ưu tiên guideline, tổng quan hệ thống và nghiên cứu lâm sàng chất lượng cao.\n"
@@ -8729,14 +8824,18 @@ def _stabilize_deep_beta_fallback_dossier_layout(
         )
 
     quick_block = quick_conclusion or summary_excerpt or quick_default
-    plan_block = _ensure_scannable_markdown_block(research_plan or plan_default, max_items=4, max_len=620)
+    plan_block = _ensure_scannable_markdown_block(
+        research_plan or plan_default, max_items=4, max_len=620
+    )
     executive_block = _normalize_reader_facing_block(
         executive_summary or main_findings or detail_excerpt or summary_excerpt,
         max_items=6,
         max_len=1800,
         prefer_paragraphs=True,
     )
-    pico_block = _ensure_scannable_markdown_block(pico_question or pico_default, max_items=4, max_len=620)
+    pico_block = _ensure_scannable_markdown_block(
+        pico_question or pico_default, max_items=4, max_len=620
+    )
     retrieval_block = _ensure_scannable_markdown_block(
         retrieval_method or retrieval_default,
         max_items=4,
@@ -8960,7 +9059,9 @@ def _sanitize_user_facing_answer_markdown(
             should_stabilize_long = False
         if mode == "deep_beta":
             # Preserve long deep-research body when it is already substantial.
-            deep_beta_guardrail = max(2500, int(max(int(settings.deep_beta_report_min_words), 7000) * 0.5))
+            deep_beta_guardrail = max(
+                2500, int(max(int(settings.deep_beta_report_min_words), 7000) * 0.5)
+            )
             if _markdown_word_count(sanitized) >= deep_beta_guardrail:
                 should_stabilize_long = False
         sanitized = (
@@ -8983,11 +9084,7 @@ def _sanitize_user_facing_answer_markdown(
                 _canonical_h2_key("Full execution plan"),
             },
         )
-    if (
-        mode == "deep_beta"
-        and fallback_used
-        and not _deep_beta_clean_body_active()
-    ):
+    if mode == "deep_beta" and fallback_used and not _deep_beta_clean_body_active():
         # On the clean-body path we intentionally keep the natural, reader-first
         # layout even on fallback rather than re-imposing the rigid dossier.
         sanitized = _stabilize_deep_beta_fallback_dossier_layout(
@@ -9020,6 +9117,14 @@ def _build_deep_beta_reasoning_client(
     if not api_key or not base_url or not model:
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), timeout_cap_seconds))
+    if not _has_request_runtime_override(llm_runtime):
+        client, _ = build_task_client(
+            ModelTask.RESEARCH_REASONING,
+            settings,
+            timeout_seconds=timeout_seconds,
+            retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
+        )
+        return client
     return DeepSeekClient(
         api_key=api_key,
         base_url=base_url,
@@ -9045,7 +9150,9 @@ def _extract_reasoning_context_rows(
             continue
         compact.append(
             {
-                "id": _first_nonempty_text(item.get("id"), item.get("source"), f"ctx-{len(compact)+1}"),
+                "id": _first_nonempty_text(
+                    item.get("id"), item.get("source"), f"ctx-{len(compact) + 1}"
+                ),
                 "source": _first_nonempty_text(item.get("source"), "unknown"),
                 "title": _compact_snippet(_first_nonempty_text(item.get("title")), max_len=96),
                 "text": _compact_snippet(item.get("text"), max_len=max_text_len),
@@ -9374,7 +9481,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         reason_codes = []
     reason_codes.extend(f"source_route:{code}" for code in source_route.reason_codes if code)
     reason_codes.append(f"retrieval_route_{source_route.retrieval_route}")
-    planner_hints["reason_codes"] = list(dict.fromkeys([str(item) for item in reason_codes if str(item)]))
+    planner_hints["reason_codes"] = list(
+        dict.fromkeys([str(item) for item in reason_codes if str(item)])
+    )
     planner_hints["retrieval_route"] = _normalize_retrieval_route(source_route.retrieval_route)
     planner_hints["router_confidence"] = _normalize_router_confidence(source_route.confidence)
     planner_hints["router_reason_codes"] = list(source_route.reason_codes)
@@ -9556,22 +9665,22 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             else {}
         ),
         planner_keywords=(
-            planner_hints.get("keywords")
-            if isinstance(planner_hints.get("keywords"), list)
-            else []
+            planner_hints.get("keywords") if isinstance(planner_hints.get("keywords"), list) else []
         ),
         source_mode=source_mode,
     )
-    planner_hints["query_plan"] = keyword_filter_report.get("query_plan", planner_hints.get("query_plan"))
-    planner_hints["keywords"] = keyword_filter_report.get("keywords", planner_hints.get("keywords", []))
+    planner_hints["query_plan"] = keyword_filter_report.get(
+        "query_plan", planner_hints.get("query_plan")
+    )
+    planner_hints["keywords"] = keyword_filter_report.get(
+        "keywords", planner_hints.get("keywords", [])
+    )
     planner_hints["keywords_by_source"] = keyword_filter_report.get("keywords_by_source", {})
     planner_hints["target_language_by_source"] = keyword_filter_report.get(
         "target_language_by_source", {}
     )
     keyword_filter_status = (
-        "warning"
-        if keyword_filter_report.get("fallback_buckets")
-        else "completed"
+        "warning" if keyword_filter_report.get("fallback_buckets") else "completed"
     )
     pipeline_node_steps.append(
         {
@@ -9675,7 +9784,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 item["payload"] = payload
             break
 
-    def _refresh_beta_chain_status(*, current_stage: str | None = None, status: str | None = None) -> None:
+    def _refresh_beta_chain_status(
+        *, current_stage: str | None = None, status: str | None = None
+    ) -> None:
         if not deep_beta_reasoning_steps:
             return
         total_steps = len(deep_beta_reasoning_steps)
@@ -9777,7 +9888,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             else {}
         )
         decomposition = (
-            query_plan.get("decomposition") if isinstance(query_plan.get("decomposition"), dict) else {}
+            query_plan.get("decomposition")
+            if isinstance(query_plan.get("decomposition"), dict)
+            else {}
         )
         deep_seed_queries = (
             decomposition.get("deep_pass_queries")
@@ -9996,7 +10109,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     subquery,
                     low_context_threshold=float(planner_hints["low_context_threshold"]),
                     deepseek_fallback_enabled=deepseek_fallback_enabled,
-                    scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
+                    scientific_retrieval_enabled=bool(
+                        planner_hints["scientific_retrieval_enabled"]
+                    ),
                     web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
                     file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
                     rag_sources=rag_sources,
@@ -10083,7 +10198,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             else {}
         )
         decomposition = (
-            query_plan.get("decomposition") if isinstance(query_plan.get("decomposition"), dict) else {}
+            query_plan.get("decomposition")
+            if isinstance(query_plan.get("decomposition"), dict)
+            else {}
         )
         deep_seed_queries = (
             decomposition.get("deep_beta_pass_queries")
@@ -10167,7 +10284,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "subquery": subqueries[6] if len(subqueries) > 6 else topic,
             },
         ]
-        deep_beta_reasoning_steps = _build_deep_beta_reasoning_steps(topic=topic, subqueries=subqueries)
+        deep_beta_reasoning_steps = _build_deep_beta_reasoning_steps(
+            topic=topic, subqueries=subqueries
+        )
         deep_beta_chain_status = {
             "mode": "deep_beta",
             "status": "running",
@@ -10462,7 +10581,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         )
         selected_parallel_nodes = list(
             _DEEP_BETA_PARALLEL_REASONING_NODES[
-                : max(1, min(int(settings.deep_beta_reasoning_llm_nodes), len(_DEEP_BETA_PARALLEL_REASONING_NODES)))
+                : max(
+                    1,
+                    min(
+                        int(settings.deep_beta_reasoning_llm_nodes),
+                        len(_DEEP_BETA_PARALLEL_REASONING_NODES),
+                    ),
+                )
             ]
         )
         for node_name, node_objective in selected_parallel_nodes:
@@ -10564,7 +10689,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 )
             )
             executed_gap_fill_passes = 0
-            for query_index, gap_query in enumerate(deep_beta_gap_fill_queries[:gap_fill_pass_cap], start=1):
+            for query_index, gap_query in enumerate(
+                deep_beta_gap_fill_queries[:gap_fill_pass_cap], start=1
+            ):
                 pass_started = perf_counter()
                 flow_events.append(
                     _event(
@@ -10581,7 +10708,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     gap_query,
                     low_context_threshold=float(planner_hints["low_context_threshold"]),
                     deepseek_fallback_enabled=deepseek_fallback_enabled,
-                    scientific_retrieval_enabled=bool(planner_hints["scientific_retrieval_enabled"]),
+                    scientific_retrieval_enabled=bool(
+                        planner_hints["scientific_retrieval_enabled"]
+                    ),
                     web_retrieval_enabled=bool(planner_hints["web_retrieval_enabled"]),
                     file_retrieval_enabled=bool(planner_hints["file_retrieval_enabled"]),
                     rag_sources=rag_sources,
@@ -10616,7 +10745,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                         "index_summary": {},
                         "crawl_summary": {},
                         "reasoning_focus": f"deep_beta_gap_fill_{query_index}",
-                        "budget_target_docs": deep_beta_retrieval_budgets.get("per_pass_doc_target"),
+                        "budget_target_docs": deep_beta_retrieval_budgets.get(
+                            "per_pass_doc_target"
+                        ),
                     }
                 )
                 flow_events.extend(
@@ -10695,7 +10826,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 )
             )
 
-        _refresh_beta_chain_status(current_stage="deep_beta_evidence_verification", status="running")
+        _refresh_beta_chain_status(
+            current_stage="deep_beta_evidence_verification", status="running"
+        )
         evidence_verify_started = perf_counter()
         flow_events.append(
             _event(
@@ -10717,9 +10850,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             reasoning_nodes=deep_beta_parallel_reasoning_nodes,
             llm_runtime=llm_runtime,
         )
-        evidence_verification_status = str(
-            deep_beta_evidence_verification.get("status") or "degraded"
-        ).strip().lower()
+        evidence_verification_status = (
+            str(deep_beta_evidence_verification.get("status") or "degraded").strip().lower()
+        )
         mapped_evidence_status = (
             "completed" if evidence_verification_status == "completed" else "warning"
         )
@@ -10878,7 +11011,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     # legacy citation ordering and shape (R20.2).
     recency_trust_ranking_enabled = settings.research_recency_trust_ranking_enabled
     citation_context = effective_context
-    if research_mode == "deep_beta" and len(citation_context) < citation_handoff["citation_context_rows"]:
+    if (
+        research_mode == "deep_beta"
+        and len(citation_context) < citation_handoff["citation_context_rows"]
+    ):
         citation_context = _merge_retrieved_context(citation_context, [merged_context])
 
     citations = _build_citations(
@@ -10952,7 +11088,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         answer_language=answer_language,
     )
     if research_mode in {"deep", "deep_beta"}:
-        report_stage = "deep_beta_report_synthesis" if research_mode == "deep_beta" else "deep_report_synthesis"
+        report_stage = (
+            "deep_beta_report_synthesis"
+            if research_mode == "deep_beta"
+            else "deep_report_synthesis"
+        )
         report_mode_label = "Deep Beta" if research_mode == "deep_beta" else "Deep"
         report_started = perf_counter()
         flow_events.append(
@@ -11001,7 +11141,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     note="Deep beta report synthesis completed with LLM long-form output.",
                     payload={"answer_chars": len(answer_markdown)},
                 )
-                _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="running")
+                _refresh_beta_chain_status(
+                    current_stage="deep_beta_chain_verification", status="running"
+                )
         else:
             if research_mode == "deep_beta":
                 _update_beta_reasoning_step(
@@ -11010,7 +11152,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     note="Deep beta report synthesis fell back to baseline answer.",
                     payload={"answer_chars": len(answer_markdown)},
                 )
-                _refresh_beta_chain_status(current_stage="deep_beta_chain_verification", status="warning")
+                _refresh_beta_chain_status(
+                    current_stage="deep_beta_chain_verification", status="warning"
+                )
         flow_events.append(
             _event(
                 stage=report_stage,
@@ -11486,14 +11630,28 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             if research_mode == "deep"
             else [
                 {"name": "deep_beta_scope", "status": _beta_stage_status("deep_beta_scope")},
-                {"name": "deep_beta_hypothesis_map", "status": _beta_stage_status("deep_beta_hypothesis_map")},
-                {"name": "deep_beta_retrieval_budget", "status": _beta_stage_status("deep_beta_retrieval_budget")},
+                {
+                    "name": "deep_beta_hypothesis_map",
+                    "status": _beta_stage_status("deep_beta_hypothesis_map"),
+                },
+                {
+                    "name": "deep_beta_retrieval_budget",
+                    "status": _beta_stage_status("deep_beta_retrieval_budget"),
+                },
                 {
                     "name": "deep_beta_multi_pass_retrieval",
-                    "status": _beta_stage_status("deep_beta_multi_pass_retrieval", retrieval_status),
+                    "status": _beta_stage_status(
+                        "deep_beta_multi_pass_retrieval", retrieval_status
+                    ),
                 },
-                {"name": "deep_beta_evidence_audit", "status": _beta_stage_status("deep_beta_evidence_audit")},
-                {"name": "deep_beta_claim_graph", "status": _beta_stage_status("deep_beta_claim_graph")},
+                {
+                    "name": "deep_beta_evidence_audit",
+                    "status": _beta_stage_status("deep_beta_evidence_audit"),
+                },
+                {
+                    "name": "deep_beta_claim_graph",
+                    "status": _beta_stage_status("deep_beta_claim_graph"),
+                },
                 {
                     "name": "deep_beta_counter_evidence_scan",
                     "status": _beta_stage_status("deep_beta_counter_evidence_scan"),
@@ -11526,9 +11684,18 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     "name": "deep_beta_evidence_verification",
                     "status": _beta_stage_status("deep_beta_evidence_verification"),
                 },
-                {"name": "deep_beta_chain_synthesis", "status": _beta_stage_status("deep_beta_chain_synthesis")},
-                {"name": "deep_beta_report_synthesis", "status": _beta_stage_status("deep_beta_report_synthesis")},
-                {"name": "deep_beta_quality_gate", "status": _beta_stage_status("deep_beta_quality_gate")},
+                {
+                    "name": "deep_beta_chain_synthesis",
+                    "status": _beta_stage_status("deep_beta_chain_synthesis"),
+                },
+                {
+                    "name": "deep_beta_report_synthesis",
+                    "status": _beta_stage_status("deep_beta_report_synthesis"),
+                },
+                {
+                    "name": "deep_beta_quality_gate",
+                    "status": _beta_stage_status("deep_beta_quality_gate"),
+                },
                 {
                     "name": "deep_beta_chain_verification",
                     "status": (
@@ -11702,8 +11869,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
     index_summary = {
         **index_summary,
-        "retrieved_count": index_summary.get("retrieved_count", retrieval_trace.get("retrieved_count")),
-        "source_counts": index_summary.get("source_counts", retrieval_trace.get("source_counts", {})),
+        "retrieved_count": index_summary.get(
+            "retrieved_count", retrieval_trace.get("retrieved_count")
+        ),
+        "source_counts": index_summary.get(
+            "source_counts", retrieval_trace.get("source_counts", {})
+        ),
         "before_dedupe_count": index_summary.get(
             "before_dedupe_count",
             index_summary.get("before_dedupe", retrieval_trace.get("retrieved_count")),
@@ -11748,7 +11919,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         for attempt in source_attempts:
             if not isinstance(attempt, dict):
                 continue
-            provider_key = _first_nonempty_text(attempt.get("provider"), attempt.get("source")).lower()
+            provider_key = _first_nonempty_text(
+                attempt.get("provider"), attempt.get("source")
+            ).lower()
             if provider_key:
                 provider_keys.add(provider_key)
         scientific_provider_keys = {
@@ -11792,13 +11965,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         if not used
     ]
 
-    stack_mode_effective_from_trace = str(retrieval_trace.get("stack_mode_effective") or "").strip().lower()
+    stack_mode_effective_from_trace = (
+        str(retrieval_trace.get("stack_mode_effective") or "").strip().lower()
+    )
     if stack_mode_effective_from_trace not in {"auto", "full"}:
         stack_mode_effective_from_trace = ""
     computed_stack_mode_effective = (
-        "full"
-        if stack_mode_requested == "full" and not missing_stack_components
-        else "auto"
+        "full" if stack_mode_requested == "full" and not missing_stack_components else "auto"
     )
     # requested=full must degrade to auto if any stack is missing.
     if stack_mode_requested == "full":
@@ -11807,7 +11980,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         stack_mode_effective = stack_mode_effective_from_trace or computed_stack_mode_effective
 
     stack_mode_reason_codes = (
-        [str(item).strip() for item in retrieval_trace.get("stack_mode_reason_codes", []) if str(item).strip()]
+        [
+            str(item).strip()
+            for item in retrieval_trace.get("stack_mode_reason_codes", [])
+            if str(item).strip()
+        ]
         if isinstance(retrieval_trace.get("stack_mode_reason_codes"), list)
         else []
     )
@@ -12149,9 +12326,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             conflicting_evidence=(conflicting_evidence or None),
             citation_registry=citation_registry,
             traced_claims=traced_claims,
-            gap_fill_passes=(
-                deep_gap_fill_passes if settings.research_gap_fill_enabled else None
-            ),
+            gap_fill_passes=(deep_gap_fill_passes if settings.research_gap_fill_enabled else None),
             output_profile=output_profile,
             disclaimer_present=disclaimer_present,
         ),

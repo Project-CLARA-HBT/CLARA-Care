@@ -44,6 +44,13 @@ def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -
         assert contract.safety_fallback
 
 
+def test_research_tasks_have_closed_json_contracts() -> None:
+    for task in (ModelTask.RESEARCH_QUERY_PLANNING, ModelTask.RESEARCH_REASONING):
+        contract = TASK_CONTRACTS[task]
+        assert "json" in contract.output_contract
+        assert contract.safety_fallback
+
+
 def test_default_selection_preserves_configured_deepseek_model() -> None:
     selection = resolve_model_selection(
         ModelTask.LIFEMAP_CAPTURE_TRIAGE,

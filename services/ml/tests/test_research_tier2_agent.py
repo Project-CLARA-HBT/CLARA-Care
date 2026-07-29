@@ -246,7 +246,9 @@ def test_emit_otel_trace_best_effort_does_not_expose_endpoint_or_error_details(
     monkeypatch: pytest.MonkeyPatch,
 ):
     monkeypatch.setattr(tier2.settings, "otel_export_enabled", True)
-    monkeypatch.setattr(tier2.settings, "otel_export_endpoint", "http://internal-collector.local:4318/v1/traces")
+    monkeypatch.setattr(
+        tier2.settings, "otel_export_endpoint", "http://internal-collector.local:4318/v1/traces"
+    )
 
     def _raise_http_error(*args, **kwargs):
         raise urllib.error.HTTPError(
@@ -324,7 +326,9 @@ def test_apply_keyword_filter_to_query_plan_aligns_keywords_by_source_language()
     assert isinstance(source_queries.get("scientific"), list)
     assert isinstance(source_queries.get("web"), list)
     assert source_queries.get("scientific")
-    assert query_plan.get("keyword_filter", {}).get("target_language_by_source", {}).get("web") == "vi"
+    assert (
+        query_plan.get("keyword_filter", {}).get("target_language_by_source", {}).get("web") == "vi"
+    )
 
 
 def test_filter_keywords_by_language_marks_fallback_only_when_bucket_becomes_empty():
@@ -408,7 +412,9 @@ def test_run_research_tier2_emits_retrieval_route_metadata(monkeypatch: pytest.M
                 "relevance": 0.72,
                 "low_context_threshold": 0.2,
                 "retrieval_trace": {
-                    "source_attempts": [{"provider": "pubmed", "status": "completed", "documents": 1}],
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 1}
+                    ],
                     "source_errors": {},
                     "index_summary": {"selected_count": 1},
                     "search_plan": {"query": query},
@@ -483,7 +489,9 @@ def test_run_research_tier2_emits_keyword_filter_and_evidence_review_nodes(
                 "relevance": 0.72,
                 "low_context_threshold": 0.2,
                 "retrieval_trace": {
-                    "source_attempts": [{"provider": "pubmed", "status": "completed", "documents": 2}],
+                    "source_attempts": [
+                        {"provider": "pubmed", "status": "completed", "documents": 2}
+                    ],
                     "source_errors": {},
                     "index_summary": {"selected_count": 2},
                     "search_plan": {"query": query},
@@ -502,7 +510,9 @@ def test_run_research_tier2_emits_keyword_filter_and_evidence_review_nodes(
         }
     )
 
-    flow_stages = [str(item.get("stage")) for item in result.get("flow_events", []) if isinstance(item, dict)]
+    flow_stages = [
+        str(item.get("stage")) for item in result.get("flow_events", []) if isinstance(item, dict)
+    ]
     assert "keyword_filter" in flow_stages
     assert "evidence_review" in flow_stages
 
@@ -511,8 +521,16 @@ def test_run_research_tier2_emits_keyword_filter_and_evidence_review_nodes(
     assert isinstance(telemetry.get("evidence_review"), dict)
 
     reasoning_steps = result.get("reasoning_steps", [])
-    assert any(str(item.get("stage")) == "keyword_filter" for item in reasoning_steps if isinstance(item, dict))
-    assert any(str(item.get("stage")) == "evidence_review" for item in reasoning_steps if isinstance(item, dict))
+    assert any(
+        str(item.get("stage")) == "keyword_filter"
+        for item in reasoning_steps
+        if isinstance(item, dict)
+    )
+    assert any(
+        str(item.get("stage")) == "evidence_review"
+        for item in reasoning_steps
+        if isinstance(item, dict)
+    )
 
 
 def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
@@ -559,7 +577,11 @@ def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
                 Document(
                     id="internal-1",
                     text="warfarin ibuprofen interaction warning",
-                    metadata={"source": "internal", "url": "https://internal.example/1", "score": 0.9},
+                    metadata={
+                        "source": "internal",
+                        "url": "https://internal.example/1",
+                        "score": 0.9,
+                    },
                 )
             ]
 
@@ -570,7 +592,9 @@ def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
         def __init__(self) -> None:
             self.expand_calls = 0
 
-        def expand(self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int):
+        def expand(
+            self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int
+        ):
             self.expand_calls += 1
             return SimpleNamespace(
                 summary={
@@ -585,7 +609,11 @@ def test_rag_pipeline_honors_graphrag_enabled_override_runtime(monkeypatch):
                     Document(
                         id="graph-1",
                         text="Graph-sidecar linked evidence",
-                        metadata={"source": "graphrag", "url": "https://graph.example/1", "score": 0.7},
+                        metadata={
+                            "source": "graphrag",
+                            "url": "https://graph.example/1",
+                            "score": 0.7,
+                        },
                     )
                 ],
             )
@@ -644,7 +672,11 @@ def test_rag_pipeline_full_stack_does_not_override_disabled_runtime_toggles(monk
                 Document(
                     id="internal-1",
                     text="warfarin ibuprofen interaction warning",
-                    metadata={"source": "internal", "url": "https://internal.example/1", "score": 0.9},
+                    metadata={
+                        "source": "internal",
+                        "url": "https://internal.example/1",
+                        "score": 0.9,
+                    },
                 )
             ]
 
@@ -655,7 +687,9 @@ def test_rag_pipeline_full_stack_does_not_override_disabled_runtime_toggles(monk
         def __init__(self) -> None:
             self.expand_calls = 0
 
-        def expand(self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int):
+        def expand(
+            self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int
+        ):
             self.expand_calls += 1
             return SimpleNamespace(summary={"enabled": True}, expansion_docs=[])
 
@@ -706,7 +740,11 @@ def test_rag_pipeline_full_stack_mode_degrades_when_web_provider_missing(monkeyp
                 Document(
                     id="internal-1",
                     text="internal evidence",
-                    metadata={"source": "internal", "url": "https://internal.example/1", "score": 0.9},
+                    metadata={
+                        "source": "internal",
+                        "url": "https://internal.example/1",
+                        "score": 0.9,
+                    },
                 )
             ]
 
@@ -731,12 +769,18 @@ def test_rag_pipeline_full_stack_mode_degrades_when_web_provider_missing(monkeyp
                 Document(
                     id="pubmed-1",
                     text="scientific evidence",
-                    metadata={"source": "pubmed", "url": "https://pubmed.ncbi.nlm.nih.gov/123/", "score": 0.88},
+                    metadata={
+                        "source": "pubmed",
+                        "url": "https://pubmed.ncbi.nlm.nih.gov/123/",
+                        "score": 0.88,
+                    },
                 )
             ]
 
     class _FakeGraphSidecar:
-        def expand(self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int):
+        def expand(
+            self, query: str, documents: list[Document], max_neighbors: int, expansion_docs: int
+        ):
             return SimpleNamespace(
                 summary={
                     "enabled": True,
@@ -852,10 +896,7 @@ def test_build_source_aware_query_plan_handles_vi_en_ddi():
 
 def test_llm_query_plan_preserves_original_trial_and_drug_entities():
     base = tier2._build_source_aware_query_plan(
-        topic=(
-            "Hiệu quả SGLT2 trong CKD không đái tháo đường: "
-            "so sánh DAPA-CKD và EMPA-KIDNEY"
-        ),
+        topic=("Hiệu quả SGLT2 trong CKD không đái tháo đường: so sánh DAPA-CKD và EMPA-KIDNEY"),
         research_mode="deep",
         keywords=["kidney", "cardiovascular", "evidence"],
     )
@@ -890,10 +931,7 @@ def test_llm_query_plan_preserves_original_trial_and_drug_entities():
 def test_llm_query_plan_builds_concise_trial_preserving_scientific_provider_queries(
     include_provider_queries: bool,
 ):
-    topic = (
-        "Hiệu quả SGLT2 trong CKD không đái tháo đường: "
-        "so sánh DAPA-CKD và EMPA-KIDNEY"
-    )
+    topic = "Hiệu quả SGLT2 trong CKD không đái tháo đường: so sánh DAPA-CKD và EMPA-KIDNEY"
     base = tier2._build_source_aware_query_plan(
         topic=topic,
         research_mode="deep",
@@ -923,9 +961,7 @@ def test_llm_query_plan_builds_concise_trial_preserving_scientific_provider_quer
             "consideration and safety outcome relevant to non-diabetic chronic kidney disease "
             "with DAPA-CKD and EMPA-KIDNEY"
         )
-        payload["provider_queries"] = {
-            "scientific": {"pubmed": noisy, "europepmc": noisy}
-        }
+        payload["provider_queries"] = {"scientific": {"pubmed": noisy, "europepmc": noisy}}
 
     refined = tier2._sanitize_llm_query_plan_payload(
         payload,
@@ -986,9 +1022,7 @@ def test_llm_query_plan_preserves_valid_provider_boolean_syntax():
 
 
 def test_llm_query_plan_keeps_original_question_at_length_boundary():
-    original = (
-        "So sánh SGLT2 trong DAPA-CKD và EMPA-KIDNEY cho bệnh thận mạn CKD"
-    )
+    original = "So sánh SGLT2 trong DAPA-CKD và EMPA-KIDNEY cho bệnh thận mạn CKD"
     base = tier2._build_source_aware_query_plan(
         topic=original,
         research_mode="deep",
@@ -1126,14 +1160,17 @@ def test_run_research_tier2_llm_query_planner_success_path(monkeypatch):
         }
     )
 
-    assert "llm_query_planner_enabled" in result["metadata"]["planner_trace"]["planner_hints"][
-        "reason_codes"
-    ]
+    assert (
+        "llm_query_planner_enabled"
+        in result["metadata"]["planner_trace"]["planner_hints"]["reason_codes"]
+    )
     canonical_query = result["query_plan"]["canonical_query"]
     assert canonical_query.startswith("Tương tác warfarin với ibuprofen")
     assert "warfarin interaction with ibuprofen bleeding risk guidance" in canonical_query
     assert len(result["query_plan"]["source_queries"]["internal"]) >= 1
-    llm_events = [event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"]
+    llm_events = [
+        event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"
+    ]
     assert any(event.get("status") == "completed" for event in llm_events)
 
 
@@ -1281,9 +1318,10 @@ def test_run_research_tier2_fast_mode_full_stack_request_downgrades_to_auto(monk
     assert call["planner_hints"]["retrieval_stack_mode"] == "auto"
     assert call["planner_hints"]["graphrag_enabled_override"] is None
 
-    assert "stack_mode_full_downgraded_for_fast_mode" in result["metadata"]["planner_trace"]["planner_hints"][
-        "reason_codes"
-    ]
+    assert (
+        "stack_mode_full_downgraded_for_fast_mode"
+        in result["metadata"]["planner_trace"]["planner_hints"]["reason_codes"]
+    )
     assert result["telemetry"]["stack_mode"]["requested"] == "auto"
     assert result["telemetry"]["stack_mode"]["effective"] == "auto"
     assert result["telemetry"]["stack_coverage"]["vector_internal_used"] is True
@@ -1292,8 +1330,7 @@ def test_run_research_tier2_fast_mode_full_stack_request_downgrades_to_auto(monk
     assert result["telemetry"]["stack_coverage"]["graph_used"] is True
     assert result["telemetry"]["stack_coverage"]["graph_expansion_count"] == 1
     assert any(
-        event.get("stage") == "external_scientific_retrieval"
-        and event.get("status") == "completed"
+        event.get("stage") == "external_scientific_retrieval" and event.get("status") == "completed"
         for event in result.get("flow_events", [])
     )
     assert any(
@@ -1507,14 +1544,18 @@ def test_run_research_tier2_llm_query_planner_fallback_path(monkeypatch):
         }
     )
 
-    assert "llm_query_planner_fallback" in result["metadata"]["planner_trace"]["planner_hints"][
-        "reason_codes"
-    ]
-    assert "llm_query_planner_enabled" not in result["metadata"]["planner_trace"]["planner_hints"][
-        "reason_codes"
-    ]
+    assert (
+        "llm_query_planner_fallback"
+        in result["metadata"]["planner_trace"]["planner_hints"]["reason_codes"]
+    )
+    assert (
+        "llm_query_planner_enabled"
+        not in result["metadata"]["planner_trace"]["planner_hints"]["reason_codes"]
+    )
     assert result["query_plan"]["canonical_query"] == expected_base["canonical_query"]
-    llm_events = [event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"]
+    llm_events = [
+        event for event in result["flow_events"] if event.get("stage") == "llm_query_planner"
+    ]
     assert any(event.get("status") == "degraded" for event in llm_events)
 
 
@@ -1719,7 +1760,10 @@ def test_run_research_tier2_applies_safety_override_warn_for_insufficient(monkey
                     "score": 0.8,
                 }
             ],
-            context_debug={"relevance": 0.6, "retrieval_trace": {"index_summary": {"selected_count": 1}}},
+            context_debug={
+                "relevance": 0.6,
+                "retrieval_trace": {"index_summary": {"selected_count": 1}},
+            },
             flow_events=[],
             trace={"retrieval": {"source_attempts": [{"provider": "pubmed"}]}},
         )
@@ -1748,7 +1792,11 @@ def test_run_research_tier2_applies_safety_override_warn_for_insufficient(monkey
                     "rationale": "Thieu evidence cho dosage claim",
                 }
             ],
-            contradiction_summary={"version": "claim-v2-nli", "has_contradiction": False, "contradiction_count": 0},
+            contradiction_summary={
+                "version": "claim-v2-nli",
+                "has_contradiction": False,
+                "contradiction_count": 0,
+            },
         )
 
     monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
@@ -1792,7 +1840,10 @@ def test_run_research_tier2_applies_safety_override_block_for_contradicted(monke
                     "score": 0.82,
                 }
             ],
-            context_debug={"relevance": 0.66, "retrieval_trace": {"index_summary": {"selected_count": 1}}},
+            context_debug={
+                "relevance": 0.66,
+                "retrieval_trace": {"index_summary": {"selected_count": 1}},
+            },
             flow_events=[],
             trace={"retrieval": {"source_attempts": [{"provider": "pubmed"}]}},
         )
@@ -1821,7 +1872,11 @@ def test_run_research_tier2_applies_safety_override_block_for_contradicted(monke
                     "rationale": "Claim mâu thuẫn với evidence",
                 }
             ],
-            contradiction_summary={"version": "claim-v2-nli", "has_contradiction": True, "contradiction_count": 1},
+            contradiction_summary={
+                "version": "claim-v2-nli",
+                "has_contradiction": True,
+                "contradiction_count": 1,
+            },
         )
 
     monkeypatch.setattr(tier2.RagPipelineP1, "run", _fake_pipeline_run)
@@ -2010,9 +2065,7 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
     assert len(stage_spans) >= 1
     assert result["telemetry"].get("stage_spans") == stage_spans
     deep_beta_span = next(
-        item
-        for item in stage_spans
-        if str(item.get("stage")) == "deep_beta_multi_pass_retrieval"
+        item for item in stage_spans if str(item.get("stage")) == "deep_beta_multi_pass_retrieval"
     )
     assert isinstance(deep_beta_span.get("start_at"), str)
     assert isinstance(deep_beta_span.get("end_at"), str)
@@ -2031,17 +2084,18 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         "deep_beta_chain_synthesis",
         "deep_beta_chain_verification",
     }.issubset(stages)
-    assert sum(
-        1
-        for event in flow_events
-        if event.get("stage") == "deep_beta_retrieval_pass"
-        and event.get("status") == "completed"
-    ) == 4
+    assert (
+        sum(
+            1
+            for event in flow_events
+            if event.get("stage") == "deep_beta_retrieval_pass"
+            and event.get("status") == "completed"
+        )
+        == 4
+    )
     assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
     evidence_audit_span = next(
-        item
-        for item in stage_spans
-        if str(item.get("stage")) == "deep_beta_evidence_audit"
+        item for item in stage_spans if str(item.get("stage")) == "deep_beta_evidence_audit"
     )
     assert isinstance(evidence_audit_span.get("start_at"), str)
     assert isinstance(evidence_audit_span.get("end_at"), str)
@@ -2146,12 +2200,7 @@ def test_run_research_tier2_deep_mode_does_not_emit_beta_stages(monkeypatch):
 
 
 def test_strip_html_from_mermaid_blocks_removes_html_tags() -> None:
-    markdown = (
-        "```mermaid\n"
-        "flowchart TD\n"
-        "A[Start]<br/> --> B<p>Done</p>\n"
-        "```\n"
-    )
+    markdown = "```mermaid\nflowchart TD\nA[Start]<br/> --> B<p>Done</p>\n```\n"
     cleaned = tier2._strip_html_from_mermaid_blocks(markdown)
     assert "<br" not in cleaned.lower()
     assert "<p>" not in cleaned.lower()
@@ -2159,12 +2208,7 @@ def test_strip_html_from_mermaid_blocks_removes_html_tags() -> None:
 
 
 def test_strip_html_from_mermaid_blocks_normalizes_inline_citations() -> None:
-    markdown = (
-        "```mermaid\n"
-        "flowchart TD\n"
-        "A[Claim] --> B[Khuyến nghị [pubmed-30879339] [1]]\n"
-        "```\n"
-    )
+    markdown = "```mermaid\nflowchart TD\nA[Claim] --> B[Khuyến nghị [pubmed-30879339] [1]]\n```\n"
     cleaned = tier2._strip_html_from_mermaid_blocks(markdown)
     assert "[pubmed-30879339]" not in cleaned
     assert "[1]" not in cleaned
@@ -2173,14 +2217,7 @@ def test_strip_html_from_mermaid_blocks_normalizes_inline_citations() -> None:
 
 
 def test_dedupe_duplicate_h2_headings_removes_repeated_conclusion() -> None:
-    markdown = (
-        "## Kết luận nhanh\n"
-        "A.\n\n"
-        "## Kết luận nhanh\n"
-        "B.\n\n"
-        "## Tóm tắt điều hành\n"
-        "C.\n"
-    )
+    markdown = "## Kết luận nhanh\nA.\n\n## Kết luận nhanh\nB.\n\n## Tóm tắt điều hành\nC.\n"
     cleaned = tier2._dedupe_duplicate_h2_headings(markdown)
     assert cleaned.count("## Kết luận nhanh") == 1
     assert cleaned.count("## Tóm tắt điều hành") == 1
@@ -2206,7 +2243,9 @@ def test_ensure_deep_beta_report_artifacts_appends_missing_blocks() -> None:
     report = "## Kết luận nhanh\nNo table no mermaid no chart."
     fixed = tier2._ensure_deep_beta_report_artifacts(
         markdown_text=report,
-        deep_pass_summaries=[{"pass_index": 1, "subquery": "warfarin interaction", "retrieved_count": 3}],
+        deep_pass_summaries=[
+            {"pass_index": 1, "subquery": "warfarin interaction", "retrieved_count": 3}
+        ],
         evidence_verification={
             "supported_claims": ["c1"],
             "unsupported_claims": [],
@@ -2997,3 +3036,28 @@ def test_query_planner_runtime_override_has_clinically_usable_timeout(
 
     assert client is not None
     assert client._timeout_seconds == 25.0
+
+
+def test_default_research_clients_use_typed_model_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[tuple[object, float | None]] = []
+    sentinel = object()
+
+    def fake_build(task, _settings, *, timeout_seconds=None, retries_per_base=None, **_kwargs):
+        captured.append((task, timeout_seconds))
+        return sentinel, object()
+
+    monkeypatch.setattr(tier2.settings, "deepseek_api_key", "configured-key")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://llm.example/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "medical-research")
+    monkeypatch.setattr(tier2, "build_task_client", fake_build)
+
+    assert tier2._build_query_planner_client() is sentinel
+    assert tier2._build_reasoning_client(timeout_seconds=42) is sentinel
+    assert tier2._build_deep_beta_reasoning_client() is sentinel
+    assert [task.value for task, _ in captured] == [
+        "research_query_planning",
+        "research_reasoning",
+        "research_reasoning",
+    ]

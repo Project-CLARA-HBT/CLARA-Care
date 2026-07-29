@@ -28,6 +28,8 @@ class ModelTask(StrEnum):
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"
     RAG_SYNTHESIS = "rag_synthesis"
+    RESEARCH_QUERY_PLANNING = "research_query_planning"
+    RESEARCH_REASONING = "research_reasoning"
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,18 @@ TASK_CONTRACTS: dict[ModelTask, TaskContract] = {
         prompt_version="rag-synthesis.v1",
         output_contract="evidence_cited_patient_safe_markdown",
         safety_fallback="local_synthesis_with_safety_wording",
+    ),
+    ModelTask.RESEARCH_QUERY_PLANNING: TaskContract(
+        task=ModelTask.RESEARCH_QUERY_PLANNING,
+        prompt_version="research-query-planning.v1",
+        output_contract="pico_bound_retrieval_plan_json",
+        safety_fallback="deterministic_query_plan_without_personal_data",
+    ),
+    ModelTask.RESEARCH_REASONING: TaskContract(
+        task=ModelTask.RESEARCH_REASONING,
+        prompt_version="research-reasoning.v1",
+        output_contract="retrieved_context_bound_structured_reasoning_json",
+        safety_fallback="abstain_or_evidence_bound_template_without_claim_escalation",
     ),
 }
 

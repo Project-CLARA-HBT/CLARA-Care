@@ -7,7 +7,8 @@ closed output contract, and deterministic/unavailable fallback.
 
 The current registry covers the medical safety router, LifeMap Capture triage
 and visit extraction, Scribe note/transcription, Council shadow assessment,
-LLM-assisted RAG reranking, and evidence-bound NLI claim verification. Those
+LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
+query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,
 FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
 
