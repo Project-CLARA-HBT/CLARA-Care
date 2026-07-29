@@ -7,8 +7,14 @@ from typing import Any
 
 from clara_ml.routing import RouteResult
 
-from .contracts import TaskRoute
-from .policy import language_for_text, model_tier_for, persona_for_role, safety_policy
+from .contracts import ClinicalLanguageSignals, TaskRoute
+from .policy import (
+    clinical_language_signals,
+    language_for_text,
+    model_tier_for,
+    persona_for_role,
+    safety_policy,
+)
 
 
 def build_shadow_task_route(
@@ -60,6 +66,7 @@ def build_shadow_task_route(
         confidence=max(0.0, min(1.0, confidence)),
         reasons=reasons,
         abstain_reason=abstain_reason,
+        clinical_language=ClinicalLanguageSignals.model_validate(clinical_language_signals(query)),
     )
 
 
@@ -81,4 +88,5 @@ def public_shadow_metadata(route: TaskRoute) -> dict[str, object]:
         "allowed_model_tier": route.allowed_model_tier,
         "human_review_required": route.human_review_required,
         "abstain_reason": route.abstain_reason,
+        "clinical_language": route.clinical_language.model_dump(mode="json"),
     }

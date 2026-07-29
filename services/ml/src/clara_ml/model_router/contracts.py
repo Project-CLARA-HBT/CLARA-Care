@@ -29,6 +29,21 @@ Persona = Literal["personal", "clinical", "evidence"]
 Language = Literal["vi", "en", "mixed", "unknown"]
 
 
+class ClinicalLanguageSignals(BaseModel):
+    """Non-identifying language cues retained for routing/audit only.
+
+    This contract intentionally stores categories and counts rather than source
+    text, medication names, units, or any free-text clinical content.
+    """
+
+    negated: bool = False
+    experiencer: Literal["self_or_unspecified", "other"] = "self_or_unspecified"
+    temporality: Literal["current", "historical", "planned", "unspecified"] = "unspecified"
+    severity_cue: Literal["moderate", "high", "critical"] | None = None
+    unit_count: int = Field(default=0, ge=0)
+    medication_candidate_count: int = Field(default=0, ge=0)
+
+
 class TaskRoute(BaseModel):
     """Validated route proposal; deterministic policy remains authoritative."""
 
@@ -44,3 +59,4 @@ class TaskRoute(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     reasons: list[str] = Field(default_factory=list, max_length=8)
     abstain_reason: str | None = None
+    clinical_language: ClinicalLanguageSignals

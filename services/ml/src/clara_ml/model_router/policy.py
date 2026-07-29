@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from clara_ml.nlp.vietnamese_clinical import analyze_vietnamese_clinical_text
 from clara_ml.routing import RouteResult
 
 from .contracts import Language, Persona, RiskLevel, TaskName
@@ -42,7 +43,37 @@ def language_for_text(text: str) -> Language:
         return "mixed" if ascii_letters > non_ascii_letters * 4 else "vi"
     english_tokens = {"the", "and", "with", "dose", "research", "please", "what"}
     tokens = {part.lower().strip(".,!?;:") for part in value.split()}
-    return "en" if tokens.intersection(english_tokens) else "unknown"
+    if tokens.intersection(english_tokens):
+        return "en"
+    # Accent-free Vietnamese is common in health messages. This is only a
+    # deterministic locale cue, never an intent/risk decision or an SLM claim.
+    vietnamese_cues = {
+        "toi",
+        "minh",
+        "bi",
+        "dau",
+        "thuoc",
+        "uong",
+        "khong",
+        "me",
+        "hom",
+        "nay",
+    }
+    return "vi" if tokens.intersection(vietnamese_cues) else "unknown"
+
+
+def clinical_language_signals(text: str) -> dict[str, object]:
+    """Return only no-PII clinical-language categories for route metadata."""
+
+    analysis = analyze_vietnamese_clinical_text(text)
+    return {
+        "negated": analysis.negated,
+        "experiencer": analysis.experiencer,
+        "temporality": analysis.temporality,
+        "severity_cue": analysis.severity,
+        "unit_count": len(analysis.units),
+        "medication_candidate_count": len(analysis.medication_mentions),
+    }
 
 
 def task_for_legacy_route(route: RouteResult) -> TaskName:

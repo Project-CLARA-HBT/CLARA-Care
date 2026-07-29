@@ -69,3 +69,26 @@ def test_semantic_safety_block_can_only_raise_route_risk() -> None:
     assert route.risk_level == "high"
     assert route.human_review_required is True
     assert route.abstain_reason == "safety_policy_requires_refusal_or_human_review"
+
+
+def test_shadow_router_exposes_only_categorical_vietnamese_language_signals() -> None:
+    route = build_shadow_task_route(
+        "Mẹ tôi ko khó thở, định uống Panadol 500mg ngày mai.",
+        legacy_route=RouteResult(
+            role="normal",
+            intent="general_guidance",
+            confidence=0.5,
+            emergency=False,
+        ),
+        semantic_route=None,
+    )
+
+    assert route.language == "vi"
+    assert route.clinical_language.negated is True
+    assert route.clinical_language.experiencer == "other"
+    assert route.clinical_language.temporality == "planned"
+    assert route.clinical_language.unit_count == 1
+    assert route.clinical_language.medication_candidate_count == 1
+    public = public_shadow_metadata(route)
+    assert "Panadol" not in str(public)
+    assert public["clinical_language"]["medication_candidate_count"] == 1

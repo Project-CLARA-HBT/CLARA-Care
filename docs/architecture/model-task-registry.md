@@ -17,6 +17,12 @@ heuristic, embedding scorer or fixed-weight Council rule into a neural model,
 and it never permits LLM output to confirm a LifeMap record, prescribe, change
 a dose, authorize access or replace DrugBank authority.
 
+The shadow router may receive deterministic Vietnamese clinical-language cues,
+but publishes only bounded categories/counts (negation, experiencer,
+temporality, severity cue, unit count and medication-candidate count). It does
+not publish source text, a medication name, a dose, confidence or free-text
+rationale in telemetry.
+
 Configuration is intentionally operational rather than user-facing:
 
 ```text
