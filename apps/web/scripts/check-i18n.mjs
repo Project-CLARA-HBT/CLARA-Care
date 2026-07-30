@@ -339,7 +339,17 @@ function source(path) {
 }
 
 function catalogKeys(catalogSource, name) {
-  const match = catalogSource.match(new RegExp(`const ${name} = \\{([\\s\\S]*?)\\} as const;`));
+  // Vietnamese keeps literal message values (`as const`) so it can define the
+  // translation-key union. English is intentionally annotated as
+  // `MessageCatalog`, which makes TypeScript reject missing or unexpected
+  // keys. Accept both declarations here: this CI gate must not silently stop
+  // checking parity just because the implementation uses that safer typing.
+  const match = catalogSource.match(
+    new RegExp(
+      `const ${name}\\s*(?::[^=]+)?=\\s*\\{([\\s\\S]*?)^\\}\\s*(?:as const)?;$`,
+      "m",
+    ),
+  );
   if (!match) {
     fail(`could not locate ${name} in lib/i18n/catalog.ts`);
     return [];

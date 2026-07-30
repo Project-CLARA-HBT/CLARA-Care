@@ -80,27 +80,21 @@ expect(
     mobileResolver.includes("kConsumerTerminologyContractVersion"),
   "mobile resolver must consume the shared terminology projection",
 );
-const mobileSharedTerms = {
-  actionAskClara: "action.askClara",
-  actionComplete: "action.complete",
-  actionOpen: "action.open",
-  actionRetry: "action.retry",
-  navigationToday: "navigation.today",
-  navigationLifeMap: "navigation.lifeMap",
-  navigationMedicines: "navigation.medicines",
-  navigationProfile: "navigation.profile",
-  todayTitle: "today.title",
-  todayOpenLifeMap: "today.openLifeMap",
-  todayPending: "today.pending",
-  todayAccepted: "today.accepted",
-  todayEpisodes: "today.episodes",
-  todayConfirmation: "today.confirmation",
-  todayNoDueDate: "today.noDueDate",
-  todayDueDate: "today.dueDate",
-  todayEmptyTitle: "today.emptyTitle",
-  todayEmptyDescription: "today.emptyDescription",
-};
-for (const [term, key] of Object.entries(mobileSharedTerms)) {
+// Every shared source key must be exposed by exactly one Flutter enum mapping.
+// Keeping this derived from the source avoids a hand-maintained subset silently
+// missing a new shared term (for example a shell destination) in CI.
+const mobileSharedTerms = new Map();
+const mobileContractMapping = /ConsumerTerm\.([A-Za-z0-9_]+) => '([^']+)'/g;
+for (const match of mobileResolver.matchAll(mobileContractMapping)) {
+  const [, term, key] = match;
+  expect(!mobileSharedTerms.has(key), `mobile resolver maps ${key} more than once`);
+  mobileSharedTerms.set(key, term);
+}
+for (const key of Object.keys(source.messages ?? {})) {
+  const term = mobileSharedTerms.get(key);
+  expect(term != null, `mobile resolver does not map shared source key ${key}`);
+}
+for (const [key, term] of mobileSharedTerms) {
   expect(source.messages[key] != null, `source omits mapped mobile term ${key}`);
   expect(
     mobileResolver.includes(`ConsumerTerm.${term} => '${key}'`),
