@@ -165,7 +165,7 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 
 ## Models & Runtime (as-built)
 
-The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint (`DEEPSEEK_BASE_URL`, model `deepseek-v4-pro` by default per `.env.example`) with a configurable timeout and retry policy. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
+The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint. The typed task registry routes governed V4 tasks to `DEEPSEEK_PRO_MODEL=deepseek-v4-pro` for safety/reasoning and `DEEPSEEK_FLASH_MODEL=deepseek-v4-flash` for bounded low-latency work; `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single `DEEPSEEK_MODEL` path. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
 All model-backed bounded tasks resolve through the versioned task-contract
 registry. The optional Vietnamese Encoder-SLM adapter is strictly shadow-only

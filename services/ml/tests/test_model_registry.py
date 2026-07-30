@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from clara_ml.llm.model_registry import (
+    FLASH_MODEL_VERSION,
     PRIMARY_MODEL_VERSION,
     ROLLBACK_MODEL_VERSION,
     TASK_CONTRACTS,
@@ -21,8 +22,11 @@ def _settings(**overrides: object) -> SimpleNamespace:
         "deepseek_api_key": "test-key",
         "deepseek_base_url": "https://example.invalid/v1",
         "deepseek_model": "deepseek-primary",
+        "deepseek_pro_model": "deepseek-v4-pro",
+        "deepseek_flash_model": "deepseek-v4-flash",
         "deepseek_fallback_model": "",
         "model_registry_enabled": True,
+        "model_registry_task_model_routing_enabled": True,
         "model_registry_force_rollback": False,
         "model_registry_rollback_model": "",
         "deepseek_timeout_seconds": 45.0,
@@ -38,7 +42,7 @@ def _settings(**overrides: object) -> SimpleNamespace:
 
 
 def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -> None:
-    assert TASK_CONTRACT_SCHEMA_VERSION == "clara.task-contracts.v1"
+    assert TASK_CONTRACT_SCHEMA_VERSION == "clara.task-contracts.v2"
     assert set(TASK_CONTRACTS) == set(ModelTask)
     for task, contract in TASK_CONTRACTS.items():
         assert contract.task is task
@@ -47,6 +51,7 @@ def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -
         assert contract.safety_fallback
         assert contract.risk_level in {"low", "medium", "high", "critical"}
         assert contract.allowed_model_tiers
+        assert contract.model_profile in {"pro", "flash"}
         assert 0 <= contract.temperature <= 1
         assert contract.max_tokens >= 0
         assert 0 <= contract.human_review_below <= 1
@@ -66,19 +71,40 @@ def test_research_tasks_have_closed_json_contracts() -> None:
         assert contract.safety_fallback
 
 
-def test_default_selection_preserves_configured_deepseek_model() -> None:
+def test_default_selection_routes_critical_tasks_to_deepseek_v4_pro() -> None:
     selection = resolve_model_selection(
         ModelTask.LIFEMAP_CAPTURE_TRIAGE,
         _settings(),
     )
 
     assert selection.provider == "deepseek"
-    assert selection.model == "deepseek-primary"
+    assert selection.model == "deepseek-v4-pro"
     assert selection.model_version == PRIMARY_MODEL_VERSION
     assert selection.prompt_version == "lifemap-capture-triage.v1"
-    assert selection.contract_schema_version == "clara.task-contracts.v1"
+    assert selection.contract_schema_version == "clara.task-contracts.v2"
     assert selection.risk_level == "critical"
     assert selection.rollback_applied is False
+    assert selection.model_profile == "pro"
+    assert selection.fallback_model == "deepseek-v4-flash"
+
+
+def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
+    selection = resolve_model_selection(ModelTask.RAG_RERANKING, _settings())
+
+    assert selection.model == "deepseek-v4-flash"
+    assert selection.model_version == FLASH_MODEL_VERSION
+    assert selection.model_profile == "flash"
+    assert selection.fallback_model == "deepseek-v4-pro"
+
+
+def test_task_routing_kill_switch_restores_configured_legacy_model() -> None:
+    selection = resolve_model_selection(
+        ModelTask.RAG_RERANKING,
+        _settings(model_registry_task_model_routing_enabled=False),
+    )
+
+    assert selection.model == "deepseek-primary"
+    assert selection.model_profile == "legacy"
 
 
 def test_rollback_needs_an_explicit_prior_model_and_never_fakes_it() -> None:
@@ -86,7 +112,7 @@ def test_rollback_needs_an_explicit_prior_model_and_never_fakes_it() -> None:
         ModelTask.MEDICAL_SAFETY_ROUTER,
         _settings(model_registry_force_rollback=True),
     )
-    assert unavailable.model == "deepseek-primary"
+    assert unavailable.model == "deepseek-v4-pro"
     assert unavailable.rollback_applied is False
     assert unavailable.model_version == PRIMARY_MODEL_VERSION
 

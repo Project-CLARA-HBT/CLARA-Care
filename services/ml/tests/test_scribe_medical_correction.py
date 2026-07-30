@@ -27,7 +27,7 @@ def test_correction_returns_source_spanned_review_proposal_without_mutating_text
     selection = SimpleNamespace(
         task=SimpleNamespace(value="scribe_asr_correction"),
         prompt_version="scribe-asr-correction.v1",
-        contract_schema_version="clara.task-contracts.v1",
+        contract_schema_version="clara.task-contracts.v2",
         rollback_applied=False,
     )
     monkeypatch.setattr(correction.settings, "scribe_medical_correction_enabled", True)
@@ -68,7 +68,7 @@ def test_correction_rejects_new_dose_and_unbound_source(monkeypatch) -> None:
     selection = SimpleNamespace(
         task=SimpleNamespace(value="scribe_asr_correction"),
         prompt_version="scribe-asr-correction.v1",
-        contract_schema_version="clara.task-contracts.v1",
+        contract_schema_version="clara.task-contracts.v2",
         rollback_applied=False,
     )
     monkeypatch.setattr(correction.settings, "scribe_medical_correction_enabled", True)

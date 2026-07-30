@@ -48,6 +48,7 @@ class TaskContract:
     max_tokens: int
     required_tools: tuple[str, ...]
     human_review_below: float
+    model_profile: str
     shadow_only: bool = False
 
 
@@ -60,6 +61,8 @@ class ModelSelection:
     prompt_version: str
     contract_schema_version: str
     risk_level: str
+    model_profile: str
+    fallback_model: str
     rollback_applied: bool
     registry_enabled: bool
 
@@ -71,6 +74,7 @@ _RISK_LEVELS = frozenset({"low", "medium", "high", "critical"})
 _MODEL_TIERS = frozenset(
     {"deterministic", "encoder_slm", "generative_slm", "medium_llm", "large_llm"}
 )
+_MODEL_PROFILES = frozenset({"pro", "flash"})
 
 
 def _contract_string(raw: dict[str, Any], key: str) -> str:
@@ -139,6 +143,9 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
         shadow_only = raw.get("shadow_only")
         if not isinstance(shadow_only, bool):
             raise ValueError("model_task_contract_shadow_only_invalid")
+        model_profile = _contract_string(raw, "model_profile")
+        if model_profile not in _MODEL_PROFILES:
+            raise ValueError("model_task_contract_model_profile_invalid")
         contracts[task] = TaskContract(
             task=task,
             risk_level=risk_level,
@@ -152,6 +159,7 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
             human_review_below=_contract_number(
                 raw, "human_review_below", minimum=0, maximum=1
             ),
+            model_profile=model_profile,
             shadow_only=shadow_only,
         )
     return schema_version, contracts
@@ -159,7 +167,8 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
 
 TASK_CONTRACT_SCHEMA_VERSION, TASK_CONTRACTS = load_task_contracts()
 
-PRIMARY_MODEL_VERSION = "deepseek-primary.v1"
+PRIMARY_MODEL_VERSION = "deepseek-v4-pro.task-route.v1"
+FLASH_MODEL_VERSION = "deepseek-v4-flash.task-route.v1"
 ROLLBACK_MODEL_VERSION = "deepseek-rollback.v1"
 
 
@@ -194,9 +203,26 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     rollback_requested = registry_enabled and _bool(
         settings, "model_registry_force_rollback", False
     )
-    primary_model = _text(settings, "deepseek_model")
-    if not primary_model:
+    legacy_model = _text(settings, "deepseek_model")
+    if not legacy_model:
         raise ValueError("deepseek_model_required")
+    task_routing_enabled = registry_enabled and _bool(
+        settings, "model_registry_task_model_routing_enabled", True
+    )
+    pro_model = _text(settings, "deepseek_pro_model") or legacy_model
+    flash_model = _text(settings, "deepseek_flash_model")
+    if task_routing_enabled and contract.model_profile == "flash" and flash_model:
+        primary_model = flash_model
+        model_version = FLASH_MODEL_VERSION
+        fallback_model = pro_model if pro_model != primary_model else ""
+    elif task_routing_enabled:
+        primary_model = pro_model
+        model_version = PRIMARY_MODEL_VERSION
+        fallback_model = flash_model if flash_model != primary_model else ""
+    else:
+        primary_model = legacy_model
+        model_version = PRIMARY_MODEL_VERSION
+        fallback_model = _text(settings, "deepseek_fallback_model")
     rollback_model = _text(settings, "model_registry_rollback_model")
     if not rollback_model:
         rollback_model = _text(settings, "deepseek_fallback_model")
@@ -207,10 +233,16 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
         task=task,
         provider="deepseek",
         model=model,
-        model_version=ROLLBACK_MODEL_VERSION if rollback_applied else PRIMARY_MODEL_VERSION,
+        model_version=ROLLBACK_MODEL_VERSION if rollback_applied else model_version,
         prompt_version=contract.prompt_version,
         contract_schema_version=TASK_CONTRACT_SCHEMA_VERSION,
         risk_level=contract.risk_level,
+        model_profile=(
+            "rollback"
+            if rollback_applied
+            else (contract.model_profile if task_routing_enabled else "legacy")
+        ),
+        fallback_model="" if rollback_applied else fallback_model,
         rollback_applied=rollback_applied,
         registry_enabled=registry_enabled,
     )
@@ -236,9 +268,7 @@ def build_task_client(
         api_key=_text(settings, "deepseek_api_key"),
         base_url=_text(settings, "deepseek_base_url"),
         model=selection.model,
-        fallback_model=(
-            _text(settings, "deepseek_fallback_model") if not selection.rollback_applied else ""
-        ),
+        fallback_model=selection.fallback_model,
         timeout_seconds=(
             float(timeout_seconds)
             if timeout_seconds is not None

@@ -102,7 +102,18 @@ class Settings(BaseSettings):
         default="https://api.deepseek.com",
         validation_alias="DEEPSEEK_BASE_URL",
     )
-    deepseek_model: str = Field(default="deepseek-v3.2", validation_alias="DEEPSEEK_MODEL")
+    # Legacy/global DeepSeek model used when task routing is explicitly disabled.
+    # New deployments route registered tasks between the two governed V4 models
+    # below; neither value is ever sourced from an end-user request.
+    deepseek_model: str = Field(default="deepseek-v4-pro", validation_alias="DEEPSEEK_MODEL")
+    deepseek_pro_model: str = Field(
+        default="deepseek-v4-pro",
+        validation_alias="DEEPSEEK_PRO_MODEL",
+    )
+    deepseek_flash_model: str = Field(
+        default="deepseek-v4-flash",
+        validation_alias="DEEPSEEK_FLASH_MODEL",
+    )
     deepseek_fallback_model: str = Field(
         # Secondary model tried when the primary model fails across all bases
         # (e.g. upstream 5xx / "temporarily unavailable"). Empty disables the
@@ -121,6 +132,10 @@ class Settings(BaseSettings):
     model_registry_enabled: bool = Field(
         default=True,
         validation_alias="MODEL_REGISTRY_ENABLED",
+    )
+    model_registry_task_model_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED",
     )
     model_registry_force_rollback: bool = Field(
         default=False,

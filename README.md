@@ -168,7 +168,10 @@ RAG_RERANKER_TIMEOUT_MS=10000     # default 250ms quá ngắn cho ollama
 Và cho LLM qua yescale:
 ```bash
 DEEPSEEK_BASE_URL=https://api.yescale.io/v1   # host .vip trả 401
-DEEPSEEK_MODEL=deepseek-v4-flash              # v4-pro chậm 30-137s/câu; flash ~8-20s
+DEEPSEEK_MODEL=deepseek-v4-pro                # legacy single-model rollback path
+DEEPSEEK_PRO_MODEL=deepseek-v4-pro            # safety/reasoning contracts
+DEEPSEEK_FLASH_MODEL=deepseek-v4-flash        # bounded extraction/reranking/planning
+MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true
 DEEPSEEK_TIMEOUT_SECONDS=120
 LLM_DEEPSEEK_ONLY=true   # BẮT BUỘC: nếu thiếu, pipeline tạo runtime client
                          # với timeout bị kẹp 18s (pipeline.py) -> chat fail
