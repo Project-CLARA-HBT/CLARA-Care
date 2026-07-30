@@ -189,7 +189,7 @@ export default function MedicinesCabinetTab() {
             </div>
             <div className="flex flex-col items-start gap-2">
               <div className="flex flex-wrap gap-2">
-                <Button as="link" href="/selfmed/add" icon="add">
+                <Button as="link" href="/medicines/cabinet/add" icon="add">
                   {t(language, "medicines.cabinet.add")}
                 </Button>
                 {canCheckInteractions ? (

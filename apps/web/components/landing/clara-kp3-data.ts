@@ -259,8 +259,8 @@ export const MODULE_CARDS = [
       "Nhắc liều theo hồ sơ cá nhân.",
       "Giảm nhầm lẫn khi dùng đa thuốc.",
     ],
-    cta: "Mở CLARA Self-Med",
-    href: "/selfmed",
+    cta: "Mở tủ thuốc",
+    href: "/medicines?tab=cabinet",
   },
   {
     tag: "CLARA CAREGUARD",
@@ -271,8 +271,8 @@ export const MODULE_CARDS = [
       "Hỗ trợ review trong bối cảnh ngoại trú.",
       "Dễ gắn vào checklist an toàn.",
     ],
-    cta: "Mở CareGuard",
-    href: "/careguard",
+    cta: "Kiểm tra an toàn thuốc",
+    href: "/medicines?tab=safety",
   },
   {
     tag: "CLARA SCRIBE",

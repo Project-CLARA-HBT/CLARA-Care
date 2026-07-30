@@ -42,8 +42,8 @@ describe("primary-action label vocabulary (Req 5.5)", () => {
   it("routes each Surface action to its expected destination", () => {
     expect(PRIMARY_ACTIONS.chat.href).toBe("/chat");
     expect(PRIMARY_ACTIONS.chat_thinking.href).toBe("/chat");
-    expect(PRIMARY_ACTIONS.selfmed.href).toBe("/selfmed");
-    expect(PRIMARY_ACTIONS.ddi.href).toBe("/selfmed/ddi");
+    expect(PRIMARY_ACTIONS.selfmed.href).toBe("/medicines?tab=cabinet");
+    expect(PRIMARY_ACTIONS.ddi.href).toBe("/medicines?tab=safety");
     expect(PRIMARY_ACTIONS.council.href).toBe("/council");
     expect(PRIMARY_ACTIONS.scribe.href).toBe("/scribe");
   });

@@ -44,8 +44,11 @@ export const PRIMARY_ACTIONS: Record<PrimarySurface, PrimaryAction> = {
     href: "/chat",
     label: "Mở chế độ Tư duy"
   },
-  selfmed: { surface: "selfmed", href: "/selfmed", label: "Mở tủ thuốc" },
-  ddi: { surface: "ddi", href: "/selfmed/ddi", label: "Kiểm tra tương tác" },
+  // These stable surface keys remain for guide/test compatibility. Their
+  // destinations are the consolidated Medicines hub; the old routes are
+  // bookmark-only redirect aliases.
+  selfmed: { surface: "selfmed", href: "/medicines?tab=cabinet", label: "Mở tủ thuốc" },
+  ddi: { surface: "ddi", href: "/medicines?tab=safety", label: "Kiểm tra tương tác" },
   council: { surface: "council", href: "/council", label: "Mở hội chẩn AI" },
   scribe: { surface: "scribe", href: "/scribe", label: "Mở ghi chép y khoa" }
 };

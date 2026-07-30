@@ -76,7 +76,7 @@ export type LandingCopy = {
 };
 
 const ICONS = ["groups", "medication", "shield", "fa fa-pencil-square-o"] as const;
-const HREFS = ["/council/new", "/selfmed", "/careguard", "/scribe"] as const;
+const HREFS = ["/council/new", "/medicines?tab=cabinet", "/medicines?tab=safety", "/scribe"] as const;
 
 export const LANDING_COPY: Record<UILanguage, LandingCopy> = {
   vi: {

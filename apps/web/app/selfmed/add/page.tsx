@@ -327,10 +327,10 @@ export default function SelfMedAddPage() {
                 <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button as="link" href="/selfmed" variant="secondary">
+                <Button as="link" href="/medicines?tab=cabinet" variant="secondary">
                   Quay lại tủ thuốc
                 </Button>
-                <Button as="link" href="/selfmed/ddi" variant="secondary">
+                <Button as="link" href="/medicines?tab=safety" variant="secondary">
                   Sang kiểm tra tương tác
                 </Button>
               </div>

@@ -175,7 +175,7 @@ export default function MedicinesSafetyTab() {
               <Button as="link" href="/medicines?tab=cabinet" variant="secondary">
                 {t(language, "medicines.safety.back")}
               </Button>
-              <Button as="link" href="/selfmed/add">
+              <Button as="link" href="/medicines/cabinet/add">
                 {t(language, "medicines.cabinet.add")}
               </Button>
             </div>
