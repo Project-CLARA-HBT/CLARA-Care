@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -28,6 +29,7 @@ import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../../theme/web_palette.dart';
 import '../../widgets/error_retry_view.dart';
+import '../language_controller.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 
@@ -36,13 +38,6 @@ String _shortRevision(Object? value) {
   final text = _str(value);
   return text.length <= 8 ? text : text.substring(0, 8);
 }
-
-/// Supported episode priorities and their Vietnamese labels.
-const Map<String, String> _kPriorityLabels = <String, String>{
-  'routine': 'Khi thuận tiện',
-  'soon': 'Sớm',
-  'urgent': 'Cần ưu tiên',
-};
 
 /// An open care episode with its priority.
 class _Episode {
@@ -85,11 +80,16 @@ class LifeMapSurface extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     @visibleForTesting ImagePicker? imagePicker,
+    this.languageController,
   }) : _imagePicker = imagePicker;
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final ImagePicker? _imagePicker;
+
+  /// Optional app-level language state. Direct/legacy embedding keeps the
+  /// Vietnamese-first terminology fallback.
+  final LanguageController? languageController;
 
   @override
   State<LifeMapSurface> createState() => _LifeMapSurfaceState();
@@ -168,12 +168,22 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     return token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
+  Map<String, String> get _priorityLabels => <String, String>{
+        'routine': _copy[ConsumerTerm.lifeMapPriorityRoutine],
+        'soon': _copy[ConsumerTerm.lifeMapPrioritySoon],
+        'urgent': _copy[ConsumerTerm.lifeMapPriorityUrgent],
+      };
+
   Future<void> _load() async {
     final token = _token;
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -254,7 +264,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Không thể tải LifeMap. Vui lòng thử lại.');
+      setState(() => _error = _copy[ConsumerTerm.lifeMapLoadFailed]);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -267,7 +277,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     if (token == null || _creatingEpisode) return;
     final title = _episodeTitleController.text.trim();
     if (title.isEmpty) {
-      _showSnack('Vui lòng nhập tên hành trình.');
+      _showSnack(_copy[ConsumerTerm.lifeMapJourneyRequired]);
       return;
     }
     setState(() => _creatingEpisode = true);
@@ -290,7 +300,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tạo hành trình. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.lifeMapCreateJourneyFailed]);
     } finally {
       if (mounted) {
         setState(() => _creatingEpisode = false);
@@ -303,12 +313,12 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     if (token == null || _creatingTask) return;
     final episodeId = _selectedEpisodeId;
     if (episodeId == null || episodeId.isEmpty) {
-      _showSnack('Vui lòng chọn một hành trình.');
+      _showSnack(_copy[ConsumerTerm.lifeMapJourneyRequiredForTask]);
       return;
     }
     final title = _taskTitleController.text.trim();
     if (title.isEmpty) {
-      _showSnack('Vui lòng nhập tên việc.');
+      _showSnack(_copy[ConsumerTerm.lifeMapTaskNameRequired]);
       return;
     }
     setState(() => _creatingTask = true);
@@ -331,7 +341,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể thêm việc. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.lifeMapAddTaskFailed]);
     } finally {
       if (mounted) {
         setState(() => _creatingTask = false);
@@ -1102,6 +1112,17 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildRefreshableBody(context),
+      );
+    }
+    return _buildRefreshableBody(context);
+  }
+
+  Widget _buildRefreshableBody(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _load,
       child: _buildBody(context),
@@ -1147,14 +1168,13 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               ),
               const SizedBox(height: ClaraTokens.spaceMd),
               Text(
-                'Hãy tạo hồ sơ sức khỏe trước',
+                _copy[ConsumerTerm.lifeMapProfileRequiredTitle],
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Bạn cần tạo hồ sơ sức khỏe trước khi lập kế hoạch chăm sóc '
-                'trong LifeMap. Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+                _copy[ConsumerTerm.lifeMapProfileRequiredDescription],
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -1177,7 +1197,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
           child: Text(
-            'Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+            _copy[ConsumerTerm.lifeMapPersonalPlanNotice],
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -1362,14 +1382,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         // --- Journeys (episodes) -------------------------------------------
         Row(
           children: [
-            const Expanded(
-              child: SectionHeader(title: 'Hành trình chăm sóc'),
+            Expanded(
+              child: SectionHeader(
+                title: _copy[ConsumerTerm.lifeMapCareJourneys],
+              ),
             ),
             TextButton.icon(
               onPressed: () =>
                   setState(() => _episodeFormOpen = !_episodeFormOpen),
               icon: Icon(_episodeFormOpen ? Icons.close : Icons.add, size: 18),
-              label: Text(_episodeFormOpen ? 'Đóng' : 'Tạo hành trình'),
+              label: Text(
+                _episodeFormOpen
+                    ? _copy[ConsumerTerm.lifeMapCloseForm]
+                    : _copy[ConsumerTerm.lifeMapCreateJourney],
+              ),
             ),
           ],
         ),
@@ -1384,12 +1410,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             child: _buildEpisodeForm(context),
           ),
         if (_episodes.isEmpty)
-          const ClaraEmptyState(
+          ClaraEmptyState(
             icon: Icons.route_outlined,
-            title: 'Chưa có hành trình nào',
-            message:
-                'Tạo một hành trình chăm sóc để nhóm các việc bạn muốn theo '
-                'dõi. Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+            title: _copy[ConsumerTerm.lifeMapEmptyJourneysTitle],
+            message: _copy[ConsumerTerm.lifeMapEmptyJourneysDescription],
           )
         else
           ..._episodes.map(
@@ -1409,15 +1433,21 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         // --- Tasks ----------------------------------------------------------
         Row(
           children: [
-            const Expanded(
-              child: SectionHeader(title: 'Việc đã chấp nhận'),
+            Expanded(
+              child: SectionHeader(
+                title: _copy[ConsumerTerm.lifeMapAcceptedTasks],
+              ),
             ),
             TextButton.icon(
               onPressed: _episodes.isEmpty
                   ? null
                   : () => setState(() => _taskFormOpen = !_taskFormOpen),
               icon: Icon(_taskFormOpen ? Icons.close : Icons.add, size: 18),
-              label: Text(_taskFormOpen ? 'Đóng' : 'Thêm việc'),
+              label: Text(
+                _taskFormOpen
+                    ? _copy[ConsumerTerm.lifeMapCloseForm]
+                    : _copy[ConsumerTerm.lifeMapAddTask],
+              ),
             ),
           ],
         ),
@@ -1432,12 +1462,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             child: _buildTaskForm(context),
           ),
         if (_tasks.isEmpty)
-          const ClaraEmptyState(
+          ClaraEmptyState(
             icon: Icons.task_alt_outlined,
-            title: 'Chưa có việc nào',
-            message:
-                'Thêm một việc dưới một hành trình. Sau khi chấp nhận, việc sẽ '
-                'xuất hiện trong mục Hôm nay để bạn hoàn tất.',
+            title: _copy[ConsumerTerm.lifeMapEmptyTasksTitle],
+            message: _copy[ConsumerTerm.lifeMapEmptyTasksDescription],
           )
         else
           ..._tasks.map(
@@ -2237,9 +2265,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           TextField(
             controller: _episodeTitleController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Tên hành trình',
-              hintText: 'Ví dụ: Theo dõi huyết áp',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapJourneyName],
+              hintText: _copy[ConsumerTerm.lifeMapJourneyNameHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
@@ -2247,16 +2275,18 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             controller: _episodeGoalController,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Mục tiêu (không bắt buộc)',
-              hintText: 'Điều bạn mong muốn đạt được',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapGoal],
+              hintText: _copy[ConsumerTerm.lifeMapGoalHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           DropdownButtonFormField<String>(
             initialValue: _episodePriority,
-            decoration: const InputDecoration(labelText: 'Mức ưu tiên'),
-            items: _kPriorityLabels.entries
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapPriority],
+            ),
+            items: _priorityLabels.entries
                 .map(
                   (entry) => DropdownMenuItem<String>(
                     value: entry.key,
@@ -2276,7 +2306,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Tạo hành trình',
+              label: _copy[ConsumerTerm.lifeMapCreateJourney],
               icon: Icons.check,
               loading: _creatingEpisode,
               onPressed: _createEpisode,
@@ -2295,14 +2325,16 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           DropdownButtonFormField<String>(
             initialValue: _selectedEpisodeId,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Thuộc hành trình'),
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapTaskJourney],
+            ),
             items: _episodes
                 .map(
                   (episode) => DropdownMenuItem<String>(
                     value: episode.id,
                     child: Text(
                       episode.title.isEmpty
-                          ? 'Hành trình chưa đặt tên'
+                          ? _copy[ConsumerTerm.lifeMapUnnamedJourney]
                           : episode.title,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2317,16 +2349,16 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           TextField(
             controller: _taskTitleController,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              labelText: 'Tên việc',
-              hintText: 'Ví dụ: Đo huyết áp buổi sáng',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapTaskName],
+              hintText: _copy[ConsumerTerm.lifeMapTaskNameHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceLg),
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Thêm việc',
+              label: _copy[ConsumerTerm.lifeMapAddTask],
               icon: Icons.check,
               loading: _creatingTask,
               onPressed: _createTask,
@@ -2349,14 +2381,17 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               Expanded(
                 child: Text(
                   episode.title.isEmpty
-                      ? 'Hành trình chưa đặt tên'
+                      ? _copy[ConsumerTerm.lifeMapUnnamedJourney]
                       : episode.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: ClaraTokens.spaceSm),
-              _PriorityChip(priority: episode.priority),
+              _PriorityChip(
+                priority: episode.priority,
+                labels: _priorityLabels,
+              ),
             ],
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
@@ -2369,12 +2404,12 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                   TextButton.icon(
                     onPressed: () => _askOneQuestion(episode),
                     icon: const Icon(Icons.help_outline, size: 18),
-                    label: const Text('Một câu hỏi'),
+                    label: Text(_copy[ConsumerTerm.lifeMapOneQuestion]),
                   ),
                 TextButton.icon(
                   onPressed: () => _openReplay(episode),
                   icon: const Icon(Icons.history, size: 18),
-                  label: const Text('Xem lịch sử'),
+                  label: Text(_copy[ConsumerTerm.lifeMapViewHistory]),
                 ),
               ],
             ),
@@ -2397,7 +2432,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           const SizedBox(width: ClaraTokens.spaceSm),
           Expanded(
             child: Text(
-              task.title.isEmpty ? 'Việc chưa đặt tên' : task.title,
+              task.title.isEmpty
+                  ? _copy[ConsumerTerm.lifeMapUnnamedTask]
+                  : task.title,
               style: theme.textTheme.bodyLarge,
             ),
           ),
@@ -2546,9 +2583,10 @@ class _ReplaySheet extends StatelessWidget {
 /// A colored chip conveying an episode's priority, paired with a text label so
 /// meaning is never carried by color alone.
 class _PriorityChip extends StatelessWidget {
-  const _PriorityChip({required this.priority});
+  const _PriorityChip({required this.priority, required this.labels});
 
   final String priority;
+  final Map<String, String> labels;
 
   @override
   Widget build(BuildContext context) {
@@ -2574,7 +2612,7 @@ class _PriorityChip extends StatelessWidget {
         break;
     }
 
-    final label = _kPriorityLabels[priority] ?? _kPriorityLabels['routine']!;
+    final label = labels[priority] ?? labels['routine']!;
 
     return Container(
       decoration: BoxDecoration(

@@ -77,6 +77,39 @@ enum ConsumerTerm {
   onboardingPersonalizationAllowDescription,
   onboardingSelfDeclaredNotice,
   onboardingSaveFailed,
+  lifeMapProfileRequiredTitle,
+  lifeMapProfileRequiredDescription,
+  lifeMapPersonalPlanNotice,
+  lifeMapCareJourneys,
+  lifeMapCreateJourney,
+  lifeMapCloseForm,
+  lifeMapEmptyJourneysTitle,
+  lifeMapEmptyJourneysDescription,
+  lifeMapAcceptedTasks,
+  lifeMapAddTask,
+  lifeMapEmptyTasksTitle,
+  lifeMapEmptyTasksDescription,
+  lifeMapJourneyName,
+  lifeMapJourneyNameHint,
+  lifeMapGoal,
+  lifeMapGoalHint,
+  lifeMapPriority,
+  lifeMapPriorityRoutine,
+  lifeMapPrioritySoon,
+  lifeMapPriorityUrgent,
+  lifeMapJourneyRequired,
+  lifeMapCreateJourneyFailed,
+  lifeMapJourneyRequiredForTask,
+  lifeMapTaskNameRequired,
+  lifeMapAddTaskFailed,
+  lifeMapTaskJourney,
+  lifeMapUnnamedJourney,
+  lifeMapTaskName,
+  lifeMapTaskNameHint,
+  lifeMapUnnamedTask,
+  lifeMapOneQuestion,
+  lifeMapViewHistory,
+  lifeMapLoadFailed,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -206,6 +239,47 @@ class ConsumerTerminology {
         'Thông tin bạn nhập là tự khai báo, không phải chẩn đoán y tế. CLARA '
             'hỗ trợ tham khảo và không thay thế tư vấn của bác sĩ.',
     ConsumerTerm.onboardingSaveFailed: 'Không thể lưu. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
+    ConsumerTerm.lifeMapProfileRequiredDescription:
+        'Bạn cần tạo hồ sơ sức khỏe trước khi lập kế hoạch chăm sóc trong '
+            'LifeMap. Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+    ConsumerTerm.lifeMapPersonalPlanNotice:
+        'Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+    ConsumerTerm.lifeMapCareJourneys: 'Hành trình chăm sóc',
+    ConsumerTerm.lifeMapCreateJourney: 'Tạo hành trình',
+    ConsumerTerm.lifeMapCloseForm: 'Đóng',
+    ConsumerTerm.lifeMapEmptyJourneysTitle: 'Chưa có hành trình nào',
+    ConsumerTerm.lifeMapEmptyJourneysDescription:
+        'Tạo một hành trình chăm sóc để nhóm các việc bạn muốn theo dõi. '
+            'Đây là kế hoạch cá nhân, không phải chẩn đoán.',
+    ConsumerTerm.lifeMapAcceptedTasks: 'Việc đã chấp nhận',
+    ConsumerTerm.lifeMapAddTask: 'Thêm việc',
+    ConsumerTerm.lifeMapEmptyTasksTitle: 'Chưa có việc nào',
+    ConsumerTerm.lifeMapEmptyTasksDescription:
+        'Thêm một việc dưới một hành trình. Sau khi chấp nhận, việc sẽ xuất '
+            'hiện trong mục Hôm nay để bạn hoàn tất.',
+    ConsumerTerm.lifeMapJourneyName: 'Tên hành trình',
+    ConsumerTerm.lifeMapJourneyNameHint: 'Ví dụ: Theo dõi huyết áp',
+    ConsumerTerm.lifeMapGoal: 'Mục tiêu (không bắt buộc)',
+    ConsumerTerm.lifeMapGoalHint: 'Điều bạn mong muốn đạt được',
+    ConsumerTerm.lifeMapPriority: 'Mức ưu tiên',
+    ConsumerTerm.lifeMapPriorityRoutine: 'Khi thuận tiện',
+    ConsumerTerm.lifeMapPrioritySoon: 'Sớm',
+    ConsumerTerm.lifeMapPriorityUrgent: 'Cần ưu tiên',
+    ConsumerTerm.lifeMapJourneyRequired: 'Vui lòng nhập tên hành trình.',
+    ConsumerTerm.lifeMapCreateJourneyFailed:
+        'Không thể tạo hành trình. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapJourneyRequiredForTask: 'Vui lòng chọn một hành trình.',
+    ConsumerTerm.lifeMapTaskNameRequired: 'Vui lòng nhập tên việc.',
+    ConsumerTerm.lifeMapAddTaskFailed: 'Không thể thêm việc. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapTaskJourney: 'Thuộc hành trình',
+    ConsumerTerm.lifeMapUnnamedJourney: 'Hành trình chưa đặt tên',
+    ConsumerTerm.lifeMapTaskName: 'Tên việc',
+    ConsumerTerm.lifeMapTaskNameHint: 'Ví dụ: Đo huyết áp buổi sáng',
+    ConsumerTerm.lifeMapUnnamedTask: 'Việc chưa đặt tên',
+    ConsumerTerm.lifeMapOneQuestion: 'Một câu hỏi',
+    ConsumerTerm.lifeMapViewHistory: 'Xem lịch sử',
+    ConsumerTerm.lifeMapLoadFailed: 'Không thể tải LifeMap. Vui lòng thử lại.',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -265,5 +339,47 @@ class ConsumerTerminology {
             'diagnosis. CLARA offers general support and does not replace your doctor.',
     ConsumerTerm.onboardingSaveFailed:
         'We could not save this. Please try again.',
+    ConsumerTerm.lifeMapProfileRequiredTitle: 'Create your health profile first',
+    ConsumerTerm.lifeMapProfileRequiredDescription:
+        'Create your health profile before making a care plan in LifeMap. '
+            'This is a personal plan, not a diagnosis.',
+    ConsumerTerm.lifeMapPersonalPlanNotice:
+        'This is a personal plan, not a diagnosis.',
+    ConsumerTerm.lifeMapCareJourneys: 'Care journeys',
+    ConsumerTerm.lifeMapCreateJourney: 'Create journey',
+    ConsumerTerm.lifeMapCloseForm: 'Close',
+    ConsumerTerm.lifeMapEmptyJourneysTitle: 'No care journeys yet',
+    ConsumerTerm.lifeMapEmptyJourneysDescription:
+        'Create a care journey to group the things you want to track. This is '
+            'a personal plan, not a diagnosis.',
+    ConsumerTerm.lifeMapAcceptedTasks: 'Accepted tasks',
+    ConsumerTerm.lifeMapAddTask: 'Add task',
+    ConsumerTerm.lifeMapEmptyTasksTitle: 'No tasks yet',
+    ConsumerTerm.lifeMapEmptyTasksDescription:
+        'Add a task to a care journey. Once accepted, it appears in Today for '
+            'you to complete.',
+    ConsumerTerm.lifeMapJourneyName: 'Journey name',
+    ConsumerTerm.lifeMapJourneyNameHint: 'For example: Track blood pressure',
+    ConsumerTerm.lifeMapGoal: 'Goal (optional)',
+    ConsumerTerm.lifeMapGoalHint: 'What would you like to achieve?',
+    ConsumerTerm.lifeMapPriority: 'Priority',
+    ConsumerTerm.lifeMapPriorityRoutine: 'When convenient',
+    ConsumerTerm.lifeMapPrioritySoon: 'Soon',
+    ConsumerTerm.lifeMapPriorityUrgent: 'Needs priority',
+    ConsumerTerm.lifeMapJourneyRequired: 'Enter a journey name.',
+    ConsumerTerm.lifeMapCreateJourneyFailed:
+        'We could not create the journey. Try again.',
+    ConsumerTerm.lifeMapJourneyRequiredForTask: 'Choose a care journey.',
+    ConsumerTerm.lifeMapTaskNameRequired: 'Enter a task name.',
+    ConsumerTerm.lifeMapAddTaskFailed: 'We could not add the task. Try again.',
+    ConsumerTerm.lifeMapTaskJourney: 'Care journey',
+    ConsumerTerm.lifeMapUnnamedJourney: 'Unnamed care journey',
+    ConsumerTerm.lifeMapTaskName: 'Task name',
+    ConsumerTerm.lifeMapTaskNameHint: 'For example: Measure blood pressure in the morning',
+    ConsumerTerm.lifeMapUnnamedTask: 'Unnamed task',
+    ConsumerTerm.lifeMapOneQuestion: 'One question',
+    ConsumerTerm.lifeMapViewHistory: 'View history',
+    ConsumerTerm.lifeMapLoadFailed:
+        'We could not load LifeMap. Try again.',
   };
 }

@@ -183,6 +183,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
           body: LifeMapSurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
