@@ -404,11 +404,7 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
 
 type TelemetryCopy = {
   systemTelemetry: string;
-  confidence: string;
-  confidenceSignalPending: string;
-  confidenceHighReliability: string;
-  confidenceNeedsReview: string;
-  neuralLoad: string;
+  noSignals: string;
   logicFlow: string;
   sourceIntel: string;
   globalMedicalDatabases: string;
@@ -425,11 +421,7 @@ type TelemetryCopy = {
 const TELEMETRY_COPY_BY_LANGUAGE: Record<UILanguage, TelemetryCopy> = {
   vi: {
     systemTelemetry: "Theo dõi",
-    confidence: "Độ tin cậy",
-    confidenceSignalPending: "Chờ tín hiệu",
-    confidenceHighReliability: "Tin cậy cao",
-    confidenceNeedsReview: "Cần rà soát",
-    neuralLoad: "Tải suy luận",
+    noSignals: "Chưa có tín hiệu kỹ thuật từ phiên này.",
     logicFlow: "Luồng xử lý",
     sourceIntel: "Nguồn",
     globalMedicalDatabases: "Nguồn y khoa toàn cầu",
@@ -444,11 +436,7 @@ const TELEMETRY_COPY_BY_LANGUAGE: Record<UILanguage, TelemetryCopy> = {
   },
   en: {
     systemTelemetry: "Telemetry",
-    confidence: "Confidence",
-    confidenceSignalPending: "Signal Pending",
-    confidenceHighReliability: "High Reliability",
-    confidenceNeedsReview: "Needs Review",
-    neuralLoad: "Neural Load",
+    noSignals: "No technical signal is available for this session yet.",
     logicFlow: "Logic Flow",
     sourceIntel: "Source Intel",
     globalMedicalDatabases: "Global Medical Databases",
@@ -750,90 +738,6 @@ function buildLogicFlowNodes(result: ResearchTier2Result | null): LogicFlowNode[
       detail,
     };
   });
-}
-
-function normalizeConfidenceRatio(value: number | undefined): number | undefined {
-  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
-  if (value <= 1) return value;
-  if (value <= 100) return value / 100;
-  return undefined;
-}
-
-function extractConfidenceFromScores(
-  scores: ResearchTier2Result["telemetry"]["scores"],
-  preferredKeywords: string[]
-): number | undefined {
-  for (const score of scores) {
-    if (typeof score.value !== "number") continue;
-    const label = score.label.trim().toLowerCase();
-    if (!preferredKeywords.some((keyword) => label.includes(keyword))) continue;
-    const normalized = normalizeConfidenceRatio(score.value);
-    if (normalized !== undefined) return normalized;
-  }
-  return undefined;
-}
-
-function resolveTelemetryConfidence(result: ResearchTier2Result | null): number | undefined {
-  if (!result) return undefined;
-
-  const explicit = normalizeConfidenceRatio(result.verificationStatus?.confidence);
-  if (explicit !== undefined) return explicit;
-
-  const matrixConfidences = result.telemetry.verificationMatrix
-    .map((item) => normalizeConfidenceRatio(item.confidence))
-    .filter((value): value is number => value !== undefined);
-  if (matrixConfidences.length) {
-    const avg = matrixConfidences.reduce((sum, value) => sum + value, 0) / matrixConfidences.length;
-    return Math.max(0, Math.min(1, avg));
-  }
-
-  const scoreConfidence = extractConfidenceFromScores(result.telemetry.scores, [
-    "verification confidence",
-    "confidence",
-  ]);
-  if (scoreConfidence !== undefined) return scoreConfidence;
-
-  const relevanceConfidenceRaw = extractConfidenceFromScores(result.telemetry.scores, [
-    "relevance",
-    "retrieval score",
-    "score",
-  ]);
-  if (relevanceConfidenceRaw !== undefined && relevanceConfidenceRaw > 0) return relevanceConfidenceRaw;
-
-  const routing = normalizeConfidenceRatio(result.debug.routing?.confidence);
-  if (routing !== undefined) return routing;
-
-  const hasAnswer = Boolean(result.answer?.trim());
-  const citationCount = result.citations.length;
-  const docCount = result.telemetry.docs.length;
-  const sourceAttemptCount = result.telemetry.sourceAttempts.length;
-  const flowStageCount = result.flowStages.length;
-  const verificationCount = result.telemetry.verificationMatrix.length;
-  const errorCount = result.telemetry.errors.length;
-
-  const hasSignal =
-    hasAnswer ||
-    citationCount > 0 ||
-    docCount > 0 ||
-    sourceAttemptCount > 0 ||
-    flowStageCount > 0 ||
-    verificationCount > 0;
-
-  if (!hasSignal) return undefined;
-
-  let heuristic = 0.5;
-  heuristic += Math.min(6, citationCount) * 0.03;
-  heuristic += Math.min(10, docCount) * 0.015;
-  heuristic += Math.min(6, sourceAttemptCount) * 0.01;
-  heuristic += Math.min(4, flowStageCount) * 0.02;
-  heuristic += Math.min(3, verificationCount) * 0.025;
-  if (hasAnswer) heuristic += 0.08;
-  if (errorCount > 0) heuristic -= Math.min(0.18, errorCount * 0.06);
-  if (relevanceConfidenceRaw === 0 && (citationCount > 0 || docCount > 0)) {
-    heuristic = Math.max(heuristic, 0.58);
-  }
-
-  return Math.max(0.18, Math.min(0.92, heuristic));
 }
 
 function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
@@ -2765,18 +2669,6 @@ export default function ChatWorkspacePage() {
     () => buildLogicFlowNodes(latestTier2Result),
     [latestTier2Result]
   );
-  const confidenceRatio = resolveTelemetryConfidence(latestTier2Result);
-  const confidencePercent = Math.max(
-    0,
-    Math.min(100, Math.round((confidenceRatio ?? 0) * 100))
-  );
-  const confidenceDisplay = confidenceRatio === undefined ? "--" : confidenceRatio.toFixed(2);
-  const confidenceLabel =
-    confidenceRatio === undefined
-      ? telemetryCopy.confidenceSignalPending
-      : confidencePercent >= 70
-        ? telemetryCopy.confidenceHighReliability
-        : telemetryCopy.confidenceNeedsReview;
   const sourceIntel = useMemo(() => {
     const merged = new Map<
       string,
@@ -2844,9 +2736,7 @@ export default function ChatWorkspacePage() {
   const telemetryFlowPreviewNodes = visibleLogicFlowNodes.slice(0, 3);
   const compactSourceIntel = sourceIntel.all.slice(0, 2);
   const telemetryHasSignal =
-    confidenceRatio !== undefined ||
-    visibleLogicFlowNodes.length > 0 ||
-    compactSourceIntel.length > 0;
+    visibleLogicFlowNodes.length > 0 || compactSourceIntel.length > 0;
   const activeConversationTimestamp = activeConversationMeta
     ? toConversationTimestamp(activeConversationMeta)
     : 0;
@@ -4016,7 +3906,7 @@ export default function ChatWorkspacePage() {
             >
               <span className="material-symbols-outlined text-[14px] text-[var(--text-secondary)]">monitoring</span>
               <span className="text-[9px] font-semibold text-[var(--text-primary)]">
-                {telemetryHasSignal ? confidenceDisplay : "--"}
+                {telemetryCopy.systemTelemetry}
               </span>
               {telemetryHasSignal ? (
                 <span className="text-[8px] text-[var(--text-muted)]">
@@ -4035,7 +3925,7 @@ export default function ChatWorkspacePage() {
                       {telemetryCopy.systemTelemetry}
                     </p>
                     <h3 className="mt-0.5 text-[10px] font-semibold text-[var(--text-primary)]">
-                      {telemetryHasSignal ? confidenceLabel : telemetryCopy.confidenceSignalPending}
+                      {telemetryHasSignal ? telemetryCopy.sourceIntel : telemetryCopy.noSignals}
                     </h3>
                   </div>
                   <button
@@ -4051,20 +3941,6 @@ export default function ChatWorkspacePage() {
 
                 {telemetryHasSignal ? (
                   <>
-                    <div className="mt-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5">
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <p className="text-[7px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                            {telemetryCopy.confidence}
-                          </p>
-                          <p className="mt-0.5 text-[0.98rem] font-semibold text-[var(--text-primary)]">{confidenceDisplay}</p>
-                        </div>
-                        <span className="text-[8px] font-medium text-[var(--text-muted)]">
-                          {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
-                        </span>
-                      </div>
-                    </div>
-
                     <div className="mt-2 space-y-1">
                       <p className="text-[7px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
                         {telemetryCopy.logicFlow}
@@ -4100,7 +3976,7 @@ export default function ChatWorkspacePage() {
                           })
                         ) : (
                           <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2 text-[10px] text-[var(--text-muted)]">
-                            {telemetryCopy.confidenceSignalPending}
+                            {telemetryCopy.noSignals}
                           </p>
                         )}
                       </div>
