@@ -3454,7 +3454,7 @@ export default function ChatWorkspacePage() {
             {(workspaceLeftView === "all" || workspaceLeftView === "discover") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                {isEnglishUI ? "Suggestions" : "Gợi ý"}
+                {t(uiLanguage, "chat.legacyWorkspace.suggestions.title")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {displayedSuggestions.length ? (
@@ -3469,7 +3469,9 @@ export default function ChatWorkspacePage() {
                     </button>
                   ))
                 ) : (
-                  <p className="text-xs text-[var(--text-muted)]">Chưa có suggestion.</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.suggestions.empty")}
+                  </p>
                 )}
               </div>
             </section>
@@ -3479,18 +3481,18 @@ export default function ChatWorkspacePage() {
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  {isEnglishUI ? "Shares" : "Chia sẻ"}
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.title")}
                 </p>
                 <Link
                   href="/chat/shares"
                   className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                 >
-                  {isEnglishUI ? "Manage" : "Quản lý"}
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.manage")}
                 </Link>
               </div>
               {workspaceApiUnavailable ? (
                 <p className="text-xs text-[var(--text-muted)]">
-                  Workspace API chưa sẵn sàng, share/public link đang tạm khóa.
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.unavailable")}
                 </p>
               ) : null}
               {!workspaceApiUnavailable && shares.length ? (
@@ -3504,7 +3506,12 @@ export default function ChatWorkspacePage() {
                         #{item.conversation_id} · {item.conversation_title}
                       </p>
                       <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                        {item.is_active ? "Active" : "Revoked"} · {item.message_count} messages
+                        {t(uiLanguage, "chat.legacyWorkspace.shares.metadata", {
+                          status: item.is_active
+                            ? t(uiLanguage, "chat.legacyWorkspace.shares.active")
+                            : t(uiLanguage, "chat.legacyWorkspace.shares.revoked"),
+                          count: item.message_count,
+                        })}
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         <button
@@ -3512,14 +3519,19 @@ export default function ChatWorkspacePage() {
                           onClick={() => void onOpenConversationFromShare(item)}
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Open
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.open")}
                         </button>
                         <button
                           type="button"
-                          onClick={() => void copyText(item.public_url, "Đã copy public URL.")}
+                          onClick={() =>
+                            void copyText(
+                              item.public_url,
+                              t(uiLanguage, "chat.legacyWorkspace.shares.copySuccess")
+                            )
+                          }
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Copy
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.copy")}
                         </button>
                         <a
                           href={item.public_url}
@@ -3527,14 +3539,16 @@ export default function ChatWorkspacePage() {
                           rel="noreferrer"
                           className="rounded border border-cyan-300/70 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
                         >
-                          Visit
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.visit")}
                         </a>
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : !workspaceApiUnavailable ? (
-                <p className="text-xs text-[var(--text-muted)]">Chưa có public share.</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.empty")}
+                </p>
               ) : null}
             </section>
             ) : null}
@@ -3546,17 +3560,13 @@ export default function ChatWorkspacePage() {
             onDoubleClick={() => setWorkspacePanelWidth(CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH)}
             onKeyDown={handleWorkspacePanelResizeKeyDown}
             className="absolute inset-y-0 -right-2 hidden w-4 cursor-col-resize items-center justify-center border-0 bg-transparent p-0 lg:flex"
-            aria-label={isEnglishUI ? "Resize workspace panel" : "Điều chỉnh độ rộng panel hội thoại"}
+            aria-label={t(uiLanguage, "chat.legacyWorkspace.resize.aria")}
             aria-orientation="vertical"
             aria-valuemin={CHAT_WORKSPACE_PANEL_MIN_WIDTH}
             aria-valuemax={CHAT_WORKSPACE_PANEL_MAX_WIDTH}
             aria-valuenow={workspacePanelWidth}
             role="separator"
-            title={
-              isEnglishUI
-                ? "Drag to resize. Double-click to reset."
-                : "Kéo để đổi độ rộng. Double-click để về mặc định."
-            }
+            title={t(uiLanguage, "chat.legacyWorkspace.resize.title")}
           >
             <span
               className={[
