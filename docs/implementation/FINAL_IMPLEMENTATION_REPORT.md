@@ -57,7 +57,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist; reviewed RAG gold set is absent. |
 | PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist; broader NL-query/visit-summary evaluation needs approved cases. |
 | PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. `59722a20` adds metric-specific evidence gaps and exact measurement commands for all six judge headlines. Product quality metrics remain `not_measured` until approved data/execution exists. |
-| PR-14 security/ops | partial | Release gate now fails closed on missing locked evidence. Checkpoint `security-web-axios-lock` upgrades Axios and its HTTP/form transitive closure; the local production-dependency audit decreased from 11 (7 high, 4 moderate) to 8 (5 high, 3 moderate). Restore/security certification evidence and the remaining dependency remediation remain external/ongoing work. |
+| PR-14 security/ops | partial | Release gate now fails closed on missing locked evidence. Security checkpoints upgrade Axios and its HTTP/form transitive closure, Next 15.5.22, Mermaid 10.9.6, DOMPurify 3.4.12, UUID 14.0.1 and Playwright 1.62.0. The local production-dependency audit decreased from 11 (7 high, 4 moderate) to 3 high, all in the Next/PostCSS/Sharp chain without a compatible audit-proposed fix. Restore/security certification evidence and the remaining dependency remediation remain external/ongoing work. |
 | PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. Checkpoint `mobile-unified-locale-nav` makes the shipped Unified shell rebuild its four task destinations and primary Ask action when the persisted locale changes; `flutter test test/unified_root_test.dart` and targeted `flutter analyze` passed. A shared web/mobile catalog and device E2E execution remain outstanding. |
 
 ## Features and safety invariants preserved
@@ -100,7 +100,7 @@ Executed in this workspace:
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |
 | Guided-flow locale bridge | pass: Prettier, targeted ESLint, TypeScript, catalog tests and 13 guided-flow tests; test switches the global locale and observes English progress/save wording. |
-| Web dependency security checkpoint | pass: full web lint, TypeScript, production build and 75 test files / 639 tests after Axios lock update; `npm audit --omit=dev --json` recorded 11→8 vulnerabilities (7 high/4 moderate → 5 high/3 moderate). |
+| Web dependency security checkpoint | pass: full web lint, TypeScript, production build and 75 test files / 639 tests after targeted Axios/Next/Mermaid/DOMPurify/UUID/Playwright updates; `npm audit --omit=dev --json` recorded 11→3 vulnerabilities (7 high/4 moderate → 3 high). |
 | Mobile Unified locale navigation | pass: `flutter test test/unified_root_test.dart` (5 tests) and targeted `flutter analyze` (no issues) |
 | Mobile debug APK build | environment-blocked: Snap Flutter reported missing `cap_dac_override`; no APK result is claimed |
 | Static active-eval | executed after portable previous-run selector fix, NO-GO as expected; it recorded zero runtime measurements and no latency samples |
@@ -167,12 +167,13 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
 7. GitHub reported 130 dependency advisories on the default branch at push time
-   (1 critical, 51 high, 63 moderate, 15 low). The Axios closure was upgraded
-   locally and reduced the web production-dependency audit from 11 to 8, but
-   this does not establish that GitHub's cross-ecosystem advisory total is
-   resolved. Remaining direct dependencies include the fixed-major Next 15 and
-   Mermaid constraints; address them in separately reviewed upgrades with
-   service and web regression evidence.
+   (1 critical, 51 high, 63 moderate, 15 low). Targeted web lock upgrades
+   reduced the local production-dependency audit from 11 to 3, but this does
+   not establish that GitHub's cross-ecosystem advisory total is resolved. The
+   three remaining web findings are in the Next/PostCSS/Sharp chain; the audit
+   metadata offers no compatible Next 15 fix. Assess a Next 16/React migration
+   separately with service and web regression evidence rather than forcing a
+   misleading downgrade.
 
 ## Exact local, CI and evaluation commands
 

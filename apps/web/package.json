@@ -16,15 +16,15 @@
     "docx": "^9.1.1",
     "html-to-image": "^1.11.11",
     "material-symbols": "^0.44.2",
-    "mermaid": "10.9.5",
-    "next": "15.5.14",
+    "mermaid": "10.9.6",
+    "next": "15.5.22",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.1",
+    "@playwright/test": "1.62.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/node": "20.16.5",
