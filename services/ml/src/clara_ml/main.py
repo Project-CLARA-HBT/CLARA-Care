@@ -2188,7 +2188,9 @@ def council_consult(payload: dict) -> dict:
             "model_used": intake_summary.get("model_used"),
             "warnings": intake_summary.get("warnings", []),
             "missing_fields": intake_summary.get("missing_fields", []),
-            "field_confidence": intake_summary.get("field_confidence", {}),
+            # Intake is reviewable extraction, not a calibrated predictor. Do
+            # not propagate a confidence percentage into the Council result.
+            "review_required": True,
         }
     return result
 

@@ -33,7 +33,6 @@ export type CouncilIntakeResult = {
   historyInput: string;
   modelUsed: string;
   warnings: string[];
-  fieldConfidence?: Record<string, number>;
   missingFields?: string[];
   councilPayload?: {
     symptoms: string[];
@@ -541,7 +540,6 @@ export async function extractCouncilIntake(payload: CouncilIntakeRequest): Promi
     historyInput,
     modelUsed: asText(root.model_used) ?? "deepseek-v4-pro",
     warnings: parseStringArray(root.warnings),
-    fieldConfidence: asRecord(root.field_confidence) as Record<string, number> | undefined,
     missingFields: parseStringArray(root.missing_fields),
     councilPayload: asRecord(root.council_payload) as CouncilIntakeResult["councilPayload"] | undefined
   };
