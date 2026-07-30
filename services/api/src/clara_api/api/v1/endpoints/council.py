@@ -700,6 +700,16 @@ def run_council_case(
     service = CouncilOrchestrationService(proxy=proxy_ml_post)
     _run_started = perf_counter()
     raw_result = service.run_with_policy(current_payload)
+    # Preserve a valid ML-side disclosure when available. If the Council run
+    # does not carry one, only the intake's operational model id is considered;
+    # transcript and other clinical fields are deliberately never inspected.
+    _intake = _as_dict(case_item.intake_json)
+    _intake_details = _as_dict(_intake.get("details"))
+    _intake_model_used = _intake_details.get("model_used")
+    raw_result = service.with_disclosure(
+        raw_result,
+        model_used=_intake_model_used if isinstance(_intake_model_used, str) else None,
+    )
     _run_latency_ms = (perf_counter() - _run_started) * 1000.0
     now = datetime.now(tz=UTC)
 

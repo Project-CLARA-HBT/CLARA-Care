@@ -1,4 +1,4 @@
-"""Council orchestration service skeleton (Requirements 5, 6, 7).
+"""Council orchestration service (Requirements 5, 6, 7).
 
 This module introduces ``CouncilOrchestrationService``: a thin, reusable wrapper
 around the single-attempt ML proxy call that the Council ``/run`` endpoint makes
@@ -9,13 +9,11 @@ It exists so later tasks can adopt a single seam for the resilience policy
 (task 6.x), and the per-stage/observability hooks (task 7.x), without having to
 re-thread those concerns through ``council.py``.
 
-**This is a skeleton.** Every flag-gated seam below is a deliberate NO-OP while
-the corresponding ``COUNCIL_*`` flag is off: it simply delegates to the existing
-single-attempt ML proxy and returns the result envelope untouched. With every
-flag off (the default), the behavior is byte-for-byte identical to calling
-``proxy_ml_post`` directly the way ``run_council_case`` does today
-(Requirements 9.1, 9.2). The real policy/disclosure/observability bodies land in
-their own tasks; until then the seams preserve current behavior exactly.
+Every flag-gated seam below is a deliberate NO-OP while the corresponding
+``COUNCIL_*`` flag is off: it simply delegates to the existing single-attempt
+ML proxy and returns the result envelope untouched. With every flag off (the
+default), the behavior is byte-for-byte identical to calling ``proxy_ml_post``
+directly the way ``run_council_case`` does today (Requirements 9.1, 9.2).
 
 Design references:
 - design.md §D "Resilience wrapper" — ``run_with_policy`` wraps the ML proxy with
@@ -31,6 +29,7 @@ Design references:
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -39,6 +38,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.compliance.notice import model_disclosure
 from clara_api.core.config import Settings, get_settings
 from clara_api.core.council_metrics import (
     CouncilMetricsStore,
@@ -85,14 +85,18 @@ _TRANSIENT_HTTPX_ERRORS = (
     httpx.NetworkError,
 )
 
+# Model identifiers are operational metadata, never user or clinical content.
+# Keep a tight allowlist before putting an upstream value into a response so a
+# malformed ML envelope cannot become a reflection channel for free text/PII.
+_MODEL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
 
 class CouncilOrchestrationService:
     """Flag-aware wrapper around the Council ML proxy.
 
     The service centralizes the ML call the Council ``/run`` path makes so that
-    resilience, disclosure, and observability concerns can be layered in behind
-    their flags by later tasks. In this skeleton every seam is a no-op delegate
-    that preserves today's behavior.
+    resilience, disclosure, and observability concerns use one governed seam.
+    Every optional behavior stays disabled until its dedicated flag is enabled.
 
     Parameters
     ----------
@@ -240,18 +244,76 @@ class CouncilOrchestrationService:
 
     # -- Disclosure seam (task 6.x, Requirement 6.1, 6.5) -------------------
 
-    def with_disclosure(self, result: dict[str, Any]) -> dict[str, Any]:
+    def with_disclosure(
+        self,
+        result: dict[str, Any],
+        *,
+        model_used: str | None = None,
+    ) -> dict[str, Any]:
         """Attach ``ai_disclosure`` to a run result when disclosure is enabled.
 
-        SKELETON NO-OP: when ``COUNCIL_MODEL_DISCLOSURE_ENABLED`` is off (the
-        default), the result is returned untouched so the envelope equals today's
-        shape (Requirement 6.5). Task 6.x will attach the
-        ``{model_family, model_version, is_fallback}`` block on the enabled path.
+        When ``COUNCIL_MODEL_DISCLOSURE_ENABLED`` is off (the default), the
+        original object is returned untouched so the envelope equals today's
+        shape (Requirement 6.5). When it is on, this creates a shallow envelope
+        copy and attaches exactly the stable
+        ``{model_family, model_version, is_fallback}`` metadata block.
+
+        An ML-produced disclosure is retained only after schema/identifier
+        validation. Otherwise the block is derived from a safe model identifier
+        supplied by the caller or top-level result metadata. Missing or malformed
+        provenance is explicitly ``unknown`` rather than guessed. The method
+        never exposes a prompt, response, reasoning trace, confidence value or
+        arbitrary upstream field.
         """
         if not self._settings.council_model_disclosure_enabled:
             return result
-        # Flag-on body is implemented in task 6.x. Until then, no decoration.
-        return result
+
+        decorated = dict(result)
+        existing = self._normalise_disclosure(result.get("ai_disclosure"))
+        if existing is not None:
+            decorated["ai_disclosure"] = existing
+            return decorated
+
+        source = self._safe_model_identifier(model_used)
+        if source is None:
+            source = self._safe_model_identifier(result.get("model_used"))
+        disclosure = model_disclosure(source)
+        # Council intake's explicit degraded path uses this sentinel. It is not
+        # the local synthesiser's sentinel used by the generic notice helper,
+        # but it must remain visibly degraded if it is the only provenance.
+        if source is not None and source.lower().startswith("heuristic-fallback"):
+            disclosure["is_fallback"] = True
+        decorated["ai_disclosure"] = disclosure
+        return decorated
+
+    @staticmethod
+    def _safe_model_identifier(value: object) -> str | None:
+        """Return a bounded operational model identifier, never arbitrary text."""
+        if not isinstance(value, str):
+            return None
+        candidate = value.strip()
+        return candidate if _MODEL_IDENTIFIER_RE.fullmatch(candidate) else None
+
+    @classmethod
+    def _normalise_disclosure(cls, value: object) -> dict[str, object] | None:
+        """Accept only the three documented, safe disclosure fields.
+
+        Existing ML disclosures are authoritative for a run (for example the
+        deterministic Council rule engine). Dropping unknown keys ensures no
+        upstream diagnostics, prompts or confidence scores are reflected.
+        """
+        if not isinstance(value, dict):
+            return None
+        family = cls._safe_model_identifier(value.get("model_family"))
+        version = cls._safe_model_identifier(value.get("model_version"))
+        fallback = value.get("is_fallback")
+        if family is None or version is None or not isinstance(fallback, bool):
+            return None
+        return {
+            "model_family": family,
+            "model_version": version,
+            "is_fallback": fallback,
+        }
 
     # -- Observability seam (task 7.x, Requirement 7.1, 7.5) ----------------
 
