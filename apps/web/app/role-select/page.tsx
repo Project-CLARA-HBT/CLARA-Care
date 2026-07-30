@@ -8,6 +8,8 @@ import {
   getRoleHomePath,
   type UserRole,
 } from "@/lib/navigation.config";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 /**
  * Compatibility redirect for old bookmarks.
@@ -17,6 +19,7 @@ import {
  * links while removing the misleading privilege-like UI.
  */
 export default function LegacyRoleSelectionRedirect() {
+  const language = useUILanguage();
   const router = useRouter();
 
   useEffect(() => {
@@ -49,10 +52,10 @@ export default function LegacyRoleSelectionRedirect() {
             shield_person
           </span>
           <h1 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
-            Đang mở không gian của bạn
+            {t(language, "roleRedirect.title")}
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Vai trò được xác nhận từ tài khoản để bảo vệ đúng quyền truy cập.
+            {t(language, "roleRedirect.description")}
           </p>
         </div>
       </SurfaceCard>

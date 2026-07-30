@@ -42,6 +42,43 @@ const MIGRATED_SURFACES = [
     forbidden: ["Việc nên làm tiếp theo", "Hôm nay chưa có việc nào", "Mở LifeMap"],
   },
   {
+    path: "app/today/tasks/[taskId]/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "@/lib/use-ui-language",
+      "today.taskDetail.pageTitle",
+      "today.taskDetail.completeAction",
+      "formatLocaleDate(language",
+    ],
+    forbidden: [
+      "Chi tiết việc hôm nay",
+      "Xác nhận hoàn tất",
+      "Việc này không còn trong danh sách hôm nay",
+      'toLocaleString("vi-VN")',
+    ],
+  },
+  {
+    path: "app/role-select/page.tsx",
+    required: ["@/lib/i18n/catalog", "@/lib/use-ui-language", "roleRedirect.title"],
+    forbidden: ["Đang mở không gian của bạn", "Vai trò được xác nhận từ tài khoản"],
+  },
+  {
+    path: "app/chat/shares/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "@/lib/use-ui-language",
+      "chatShares.title",
+      "chatShares.revoke",
+      "formatLocaleDate(language",
+    ],
+    forbidden: [
+      "Share Management",
+      "Quản lý toàn bộ public links",
+      "Đã copy public URL.",
+      'toLocaleString("vi-VN")',
+    ],
+  },
+  {
     path: "app/medicines/page.tsx",
     required: [
       "@/lib/i18n/catalog",
