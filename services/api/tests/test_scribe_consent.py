@@ -149,6 +149,47 @@ def test_flag_on_rejects_transcription_without_consent(monkeypatch) -> None:
     assert r.status_code == 403
 
 
+def test_flag_on_never_auto_generates_or_regenerates_before_session_consent(monkeypatch) -> None:
+    """Consent must precede every session-bound model call, not only ASR."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
+    _mock_soap(monkeypatch)
+    token = _login("dr.note-consent@doctor.clara")
+
+    created = client.post(
+        "/api/v1/scribe/sessions",
+        headers=_auth(token),
+        json={"title": "t", "transcript": "patient has cough", "auto_generate_soap": True},
+    )
+    assert created.status_code == 200, created.text
+    sid = created.json()["id"]
+    # The draft exists, but no pre-consent transcript was sent to ML and no SOAP
+    # draft was fabricated/persisted.
+    assert created.json()["status"] == "draft"
+    assert created.json()["soap"] is None
+
+    regenerate = client.post(
+        f"/api/v1/scribe/sessions/{sid}/regenerate",
+        headers=_auth(token),
+        json={"transcript": "patient has cough"},
+    )
+    assert regenerate.status_code == 403
+
+
+def test_flag_on_rejects_unscoped_soap_proxy(monkeypatch) -> None:
+    """The legacy endpoint lacks a session consent audit record and fails closed."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
+    _mock_soap(monkeypatch)
+    token = _login("dr.raw-soap-consent@doctor.clara")
+    response = client.post(
+        "/api/v1/scribe/soap", headers=_auth(token), json={"transcript": "patient has cough"}
+    )
+    assert response.status_code == 403
+
+
 def test_capture_then_transcription_allowed(monkeypatch) -> None:
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)

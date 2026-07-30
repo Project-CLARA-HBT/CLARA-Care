@@ -65,6 +65,17 @@ _ALLOWED_AUDIO_TYPES = {
 
 DOCTOR_ROLE_DEP = Depends(require_roles("doctor"))
 
+# The original batch Scribe surface used these presentation states before the
+# versioned signing workflow existed. They are intentionally distinct from the
+# legally meaningful lifecycle states in ``scribe_lifecycle.py``: a client must
+# never self-assign ``signed``, ``amended`` or ``exported`` through PATCH.
+_LEGACY_MUTABLE_STATUSES = frozenset({"draft", "ready", "finalized"})
+_IMMUTABLE_NOTE_STATUSES = frozenset({"signed", "exported", "amended"})
+_MAX_NOTE_SECTION_COUNT = 30
+_MAX_NOTE_SECTION_KEY_CHARS = 120
+_MAX_NOTE_SECTION_VALUE_CHARS = 20_000
+_MAX_NOTE_SECTION_TOTAL_CHARS = 100_000
+
 
 class ScribeSessionCreateRequest(BaseModel):
     title: str = Field(default="", max_length=255)
@@ -85,6 +96,18 @@ class ScribeSessionUpdateRequest(BaseModel):
 class ScribeSessionRegenerateRequest(BaseModel):
     transcript: str | None = Field(default=None, max_length=100000)
     status: str | None = Field(default=None, max_length=32)
+
+
+class ScribeNoteDraftEditRequest(BaseModel):
+    """Clinician-authored draft sections for the versioned sign workflow.
+
+    This deliberately accepts no model metadata, code selections, status, or
+    confidence. A save is a clinician edit that becomes a new note version; it
+    cannot overwrite a signed version.
+    """
+
+    template_id: str = Field(default="soap", max_length=64)
+    sections: dict[str, Any] = Field(default_factory=dict)
 
 
 class ScribeSessionResponse(BaseModel):
@@ -178,6 +201,44 @@ def _normalize_soap_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "P": normalized["plan"],
         }
     )
+    return normalized
+
+
+def _validate_clinician_note_sections(raw_sections: dict[str, Any]) -> dict[str, str]:
+    """Bound and normalize clinician-entered sections before versioning them.
+
+    This is intentionally deterministic. It accepts only plain string values
+    from the editing UI and never derives diagnoses, coding, confidence, or any
+    clinical statement from the input.
+    """
+
+    if not raw_sections or len(raw_sections) > _MAX_NOTE_SECTION_COUNT:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Số lượng mục ghi chú không hợp lệ.",
+        )
+    normalized: dict[str, str] = {}
+    total_chars = 0
+    for raw_key, raw_value in raw_sections.items():
+        key = str(raw_key or "").strip()
+        if not key or len(key) > _MAX_NOTE_SECTION_KEY_CHARS or not isinstance(raw_value, str):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Mục ghi chú không hợp lệ.",
+            )
+        value = raw_value.strip()
+        if len(value) > _MAX_NOTE_SECTION_VALUE_CHARS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Nội dung mục ghi chú quá dài.",
+            )
+        total_chars += len(value)
+        if total_chars > _MAX_NOTE_SECTION_TOTAL_CHARS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tổng nội dung ghi chú quá dài.",
+            )
+        normalized[key] = value
     return normalized
 
 
@@ -480,6 +541,15 @@ def scribe_soap(
     payload: dict[str, Any],
     _token: TokenPayload = DOCTOR_ROLE_DEP,
 ) -> dict[str, Any]:
+    # A request without a session cannot be tied to the encounter-level consent
+    # audit record. When that guard is enabled, fail closed and direct callers
+    # to the versioned session flow instead of sending transcript text to ML
+    # before consent is captured.
+    if get_settings().rag_scribe_consent_required:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cần ghi nhận consent trong phiên Scribe trước khi tạo ghi chú.",
+        )
     return proxy_ml_post("/v1/scribe/soap", payload)
 
 
@@ -590,7 +660,11 @@ def create_scribe_session(
         updated_at=now,
     )
 
-    if transcript and request.auto_generate_soap:
+    settings = get_settings()
+    # A new session has no encounter-level consent record yet. Preserve the
+    # legacy automatic draft only while the consent guard is off; with it on,
+    # store the draft session and require explicit consent before any ML call.
+    if transcript and request.auto_generate_soap and not settings.rag_scribe_consent_required:
         session_item.soap_json = _generate_soap(transcript)
         session_item.status = "ready"
         session_item.last_processed_at = now
@@ -622,6 +696,36 @@ def update_scribe_session(
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     _require_live_visit_consent_for_session(db, user=user, item=item)
+    settings = get_settings()
+
+    has_mutation = any(
+        value is not None
+        for value in (
+            request.title,
+            request.transcript,
+            request.status,
+            request.soap,
+            request.insights,
+            request.metadata,
+        )
+    )
+    if has_mutation and item.status in _IMMUTABLE_NOTE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ghi chú đã ký hoặc amended không thể sửa trực tiếp; dùng amend/addendum.",
+        )
+    if request.status is not None and request.status.strip():
+        requested_status = request.status.strip().lower()[:32]
+        if requested_status not in _LEGACY_MUTABLE_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Không thể tự đặt trạng thái ký/xuất; dùng quy trình Scribe có audit.",
+            )
+    if request.soap is not None and settings.rag_scribe_sign_workflow_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dùng lưu bản nháp có version để chỉnh ghi chú trong quy trình ký.",
+        )
 
     if request.title is not None:
         item.title = request.title.strip() or item.title
@@ -653,6 +757,13 @@ def regenerate_scribe_session(
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     _require_live_visit_consent_for_session(db, user=user, item=item)
+    settings = get_settings()
+    _require_consent(db, settings, item.id)
+    if item.status in _IMMUTABLE_NOTE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ghi chú đã ký hoặc amended không thể regenerate trực tiếp; dùng amend.",
+        )
 
     transcript = (request.transcript or item.transcript).strip()
     if not transcript:
@@ -664,7 +775,13 @@ def regenerate_scribe_session(
     soap_payload = _generate_soap(transcript)
     item.transcript = transcript
     item.soap_json = soap_payload
-    item.status = (request.status or "ready").strip().lower()[:32]
+    requested_status = (request.status or "ready").strip().lower()[:32]
+    if requested_status not in _LEGACY_MUTABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Không thể tự đặt trạng thái ký/xuất; dùng quy trình Scribe có audit.",
+        )
+    item.status = requested_status
     item.last_processed_at = datetime.now(tz=UTC)
     db.add(item)
     db.commit()
@@ -1020,6 +1137,7 @@ _AUDIT_FLOW_STAGE: dict[str, tuple[str, str]] = {
     "segments_persisted": ("transcribe", "completed"),
     "segment_relabeled": ("diarize", "completed"),
     "note_generated": ("generate", "completed"),
+    "note_edited": ("generate", "completed"),
     "note_coded": ("code", "completed"),
     "note_amended": ("generate", "amended"),
     "note_signed": ("sign", "completed"),
@@ -1206,7 +1324,7 @@ def generate_note_version(
     # signed/exported/amended, further changes flow through the amend workflow
     # (new version) rather than an in-place note regenerate that would silently
     # supersede the signed content.
-    if item.status not in ("draft", "in_review"):
+    if item.status not in ("draft", "ready", "in_review"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Không thể tạo note version từ trạng thái '{item.status}'; dùng amend.",
@@ -1257,7 +1375,7 @@ def generate_note_version(
         version.wer_json = wer_json
     item.soap_json = soap
     prev_status = item.status
-    if item.status == "draft" and can_transition(item.status, "in_review"):
+    if item.status in ("draft", "ready"):
         item.status = "in_review"
     # Append-only audit for every note-generation edit event (Requirement 8.3).
     # On the first draft note this entry doubles as the draft -> in_review status
@@ -1273,6 +1391,89 @@ def generate_note_version(
         detail={"version_no": int(next_version), "template_id": template_id[:64]},
     )
     item.last_processed_at = datetime.now(tz=UTC)
+    db.commit()
+    db.refresh(item)
+    return _serialize_session(item)
+
+
+@router.post("/sessions/{session_id}/notes/draft", response_model=ScribeSessionResponse)
+def save_clinician_note_draft(
+    session_id: int,
+    request: ScribeNoteDraftEditRequest,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeSessionResponse:
+    """Version an explicit clinician edit without overwriting signed content.
+
+    This route has no generative model invocation: the entered text is the
+    clinician's draft. It is consent-gated, owner-scoped, append-only, and uses
+    the same audit/lifecycle boundary as generated notes. Optional read-only
+    grounding/coding passes remain flag-gated; their metadata is not accepted
+    from the caller and cannot alter the saved text.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_sign_workflow_enabled:
+        raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
+    _require_consent(db, settings, item.id)
+    if item.status not in ("draft", "ready", "in_review", "amended"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Không thể lưu bản nháp từ trạng thái '{item.status}'.",
+        )
+
+    sections = _validate_clinician_note_sections(request.sections)
+    next_version = (
+        db.execute(
+            select(func.count(ScribeNoteVersion.id)).where(ScribeNoteVersion.session_id == item.id)
+        ).scalar_one()
+        or 0
+    ) + 1
+    template_id = request.template_id.strip() or "soap"
+    version = ScribeNoteVersion(
+        session_id=item.id,
+        version_no=int(next_version),
+        template_id=template_id[:64],
+        sections_json=sections,
+        created_by=user.id,
+    )
+    # Preserve the same additive safety metadata as model-generated drafts.
+    # Each pass is read-only over the clinician's text and runs only behind its
+    # existing flag; none can rewrite the saved draft or auto-select a code.
+    grounding_json, extraction_json, coding_json, wer_json = _run_scribe_additive_passes(
+        settings=settings,
+        transcript=item.transcript or "",
+        segment_texts=_session_segment_texts(item),
+        sections=sections,
+        segments_meta=_session_segments_meta(item),
+        language=_session_asr_language(item),
+    )
+    if grounding_json is not None:
+        version.grounding_json = grounding_json
+    if extraction_json is not None:
+        version.extraction_json = extraction_json
+    if coding_json is not None:
+        version.coding_json = coding_json
+    if wer_json is not None:
+        version.wer_json = wer_json
+    db.add(version)
+    previous_status = item.status
+    item.soap_json = sections
+    if item.status in ("draft", "ready"):
+        item.status = "in_review"
+    item.last_processed_at = datetime.now(tz=UTC)
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="note_edited",
+        from_status=previous_status,
+        to_status=item.status,
+        detail={"version_no": int(next_version), "template_id": template_id[:64]},
+    )
     db.commit()
     db.refresh(item)
     return _serialize_session(item)

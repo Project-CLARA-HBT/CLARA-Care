@@ -26,6 +26,7 @@ import {
   getScribeGrounding,
   listScribeAddenda,
   regenerateScribeSession,
+  saveScribeNoteDraft,
   signScribeNote,
   streamScribe,
   transcribeScribeAudio,
@@ -698,18 +699,19 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     if (!sessionId) return;
     setSavingNote(true);
     try {
-      const updated = await updateScribeSession(sessionId, {
-        soap: sectionsToRecord(noteSections),
-        status: "in_review",
+      const updated = await saveScribeNoteDraft(sessionId, {
+        template_id: noteTemplateId,
+        sections: sectionsToRecord(noteSections),
       });
       onSessionChange(updated);
+      setNoteVersionNo((current) => (current ?? 0) + 1);
       pushNotice("success", "Đã lưu chỉnh sửa ghi chú.");
     } catch (error) {
       pushNotice("error", error instanceof Error ? error.message : "Không thể lưu ghi chú.");
     } finally {
       setSavingNote(false);
     }
-  }, [noteSections, onSessionChange, pushNotice, sessionId]);
+  }, [noteSections, noteTemplateId, onSessionChange, pushNotice, sessionId]);
 
   // --- sign ----------------------------------------------------------------
   const onSign = useCallback(async () => {

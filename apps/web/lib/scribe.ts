@@ -259,6 +259,18 @@ export async function generateScribeNote(
   return response.data;
 }
 
+/**
+ * Persist an explicit clinician edit as a new versioned draft. This route never
+ * accepts an AI confidence value, code selection, or status transition.
+ */
+export async function saveScribeNoteDraft(
+  sessionId: number,
+  payload: { template_id?: string; sections: Record<string, string> }
+): Promise<ScribeSession> {
+  const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/notes/draft`, payload);
+  return response.data;
+}
+
 export async function signScribeNote(sessionId: number): Promise<ScribeSession> {
   const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/sign`, {});
   return response.data;

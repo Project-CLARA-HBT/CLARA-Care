@@ -123,6 +123,53 @@ def test_consent_required_blocks_note_when_flag_on(monkeypatch) -> None:
     assert g.status_code == 403
 
 
+def test_clinician_edit_is_versioned_and_patch_cannot_self_sign(monkeypatch) -> None:
+    """Draft edits append a new note version; PATCH cannot bypass lifecycle/audit."""
+
+    _mock_soap(monkeypatch)
+    _enable_sign_workflow(monkeypatch)
+    token = _login("dr.versioned-edit@doctor.clara")
+    sid = _create_session(token)
+    client.post(f"/api/v1/scribe/sessions/{sid}/consent", headers=_auth(token), json={})
+    generated = client.post(
+        f"/api/v1/scribe/sessions/{sid}/notes",
+        headers=_auth(token),
+        json={"template_id": "soap"},
+    )
+    assert generated.status_code == 200
+
+    # Generic PATCH may no longer assign a protected lifecycle status or replace
+    # versioned note content when the signing workflow is enabled.
+    bypass = client.patch(
+        f"/api/v1/scribe/sessions/{sid}",
+        headers=_auth(token),
+        json={"status": "signed", "soap": {"subjective": "tampered"}},
+    )
+    assert bypass.status_code == 409
+
+    saved = client.post(
+        f"/api/v1/scribe/sessions/{sid}/notes/draft",
+        headers=_auth(token),
+        json={
+            "template_id": "soap",
+            "sections": {
+                "subjective": "clinician edit",
+                "objective": "",
+                "assessment": "",
+                "plan": "",
+            },
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["soap"]["subjective"] == "clinician edit"
+    versions = _versions_for(sid)
+    assert [version.version_no for version in versions] == [1, 2]
+    assert versions[0].sections_json["subjective"] == "s"
+    assert versions[1].sections_json["subjective"] == "clinician edit"
+    audit = client.get(f"/api/v1/scribe/sessions/{sid}/audit", headers=_auth(token)).json()
+    assert audit["entries"][-1]["action"] == "note_edited"
+
+
 def test_export_requires_signed_and_flag(monkeypatch) -> None:
     _mock_soap(monkeypatch)
     _enable_sign_workflow(monkeypatch)
