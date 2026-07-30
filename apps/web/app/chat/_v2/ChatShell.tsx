@@ -162,7 +162,10 @@ export default function ChatShell() {
   }, []);
 
   const isEn = uiLanguage === "en";
-  const appNavItems = useMemo(() => getNavItemsByRole(role), [role]);
+  const appNavItems = useMemo(
+    () => getNavItemsByRole(role, uiLanguage),
+    [role, uiLanguage],
+  );
   // User-facing mode label (Req 4.4): never expose the internal mode string,
   // always present the Vietnamese End_User label via the shared mapping.
   const activeModeLabel = useMemo(() => toModeLabel(mode), [mode]);

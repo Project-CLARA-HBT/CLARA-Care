@@ -1,6 +1,7 @@
 "use client";
 
 import type { UserRole } from "@/lib/auth-store";
+import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 
 type WelcomeContent = {
@@ -11,72 +12,9 @@ type WelcomeContent = {
 };
 
 const CONTENT: Record<
-  "normal" | "researcher" | "doctor",
+  "researcher" | "doctor",
   Record<UILanguage, WelcomeContent>
 > = {
-  normal: {
-    vi: {
-      eyebrow: "Hỏi theo cách của bạn",
-      title: "Bạn muốn tìm hiểu điều gì?",
-      description:
-        "Mô tả triệu chứng, thuốc đang dùng hoặc kết quả xét nghiệm. CLARA sẽ trả lời rõ ràng và chỉ ra khi nào bạn nên gặp bác sĩ.",
-      prompts: [
-        {
-          icon: "symptoms",
-          label: "Hiểu triệu chứng",
-          prompt: "Tôi nên theo dõi những dấu hiệu nào khi bị đau đầu kéo dài?",
-        },
-        {
-          icon: "pill",
-          label: "Hỏi về thuốc",
-          prompt:
-            "Giải thích cách dùng thuốc này và những tác dụng phụ cần lưu ý.",
-        },
-        {
-          icon: "experiment",
-          label: "Đọc xét nghiệm",
-          prompt:
-            "Giúp tôi hiểu kết quả xét nghiệm này bằng ngôn ngữ đơn giản.",
-        },
-        {
-          icon: "health_and_safety",
-          label: "Kiểm tra an toàn",
-          prompt:
-            "Các thuốc và thực phẩm bổ sung tôi đang dùng có tương tác không?",
-        },
-      ],
-    },
-    en: {
-      eyebrow: "Ask in your own words",
-      title: "What would you like to understand?",
-      description:
-        "Describe a symptom, medicine, or lab result. CLARA gives a clear answer and tells you when professional care may be needed.",
-      prompts: [
-        {
-          icon: "symptoms",
-          label: "Understand symptoms",
-          prompt:
-            "What warning signs should I watch for with a persistent headache?",
-        },
-        {
-          icon: "pill",
-          label: "Ask about medicine",
-          prompt:
-            "Explain how to take this medicine and which side effects matter.",
-        },
-        {
-          icon: "experiment",
-          label: "Read lab results",
-          prompt: "Help me understand these lab results in plain language.",
-        },
-        {
-          icon: "health_and_safety",
-          label: "Check safety",
-          prompt: "Could my medicines and supplements interact?",
-        },
-      ],
-    },
-  },
   researcher: {
     vi: {
       eyebrow: "Tìm hiểu có dẫn nguồn",
@@ -209,6 +147,36 @@ const CONTENT: Record<
   },
 };
 
+function normalWelcomeContent(locale: UILanguage): WelcomeContent {
+  return {
+    eyebrow: t(locale, "chat.welcome.normal.eyebrow"),
+    title: t(locale, "chat.welcome.normal.title"),
+    description: t(locale, "chat.welcome.normal.description"),
+    prompts: [
+      {
+        icon: "symptoms",
+        label: t(locale, "chat.welcome.normal.symptoms.label"),
+        prompt: t(locale, "chat.welcome.normal.symptoms.prompt"),
+      },
+      {
+        icon: "pill",
+        label: t(locale, "chat.welcome.normal.medicine.label"),
+        prompt: t(locale, "chat.welcome.normal.medicine.prompt"),
+      },
+      {
+        icon: "experiment",
+        label: t(locale, "chat.welcome.normal.lab.label"),
+        prompt: t(locale, "chat.welcome.normal.lab.prompt"),
+      },
+      {
+        icon: "health_and_safety",
+        label: t(locale, "chat.welcome.normal.safety.label"),
+        prompt: t(locale, "chat.welcome.normal.safety.prompt"),
+      },
+    ],
+  };
+}
+
 export default function ChatWelcome({
   role,
   uiLanguage,
@@ -224,7 +192,10 @@ export default function ChatWelcome({
       : role === "doctor" || role === "admin"
         ? "doctor"
         : "normal";
-  const content = CONTENT[experience][uiLanguage];
+  const content =
+    experience === "normal"
+      ? normalWelcomeContent(uiLanguage)
+      : CONTENT[experience][uiLanguage];
 
   return (
     <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-7 sm:py-12">
