@@ -50,6 +50,33 @@ enum ConsumerTerm {
   todayCompleteFailed,
   todayLoadFailed,
   sessionExpired,
+  onboardingStepWelcome,
+  onboardingStepBasics,
+  onboardingStepPersonalization,
+  onboardingWelcomeTitle,
+  onboardingWelcomeDescription,
+  onboardingStart,
+  onboardingSkip,
+  onboardingBasicsTitle,
+  onboardingBasicsDescription,
+  onboardingDisplayName,
+  onboardingGender,
+  onboardingPreferNotToSay,
+  onboardingGenderFemale,
+  onboardingGenderMale,
+  onboardingGenderOther,
+  onboardingBloodType,
+  onboardingBloodTypeUnknown,
+  onboardingHeight,
+  onboardingWeight,
+  onboardingContinue,
+  onboardingBack,
+  onboardingPersonalizationTitle,
+  onboardingPersonalizationDescription,
+  onboardingPersonalizationAllow,
+  onboardingPersonalizationAllowDescription,
+  onboardingSelfDeclaredNotice,
+  onboardingSaveFailed,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -139,6 +166,46 @@ class ConsumerTerminology {
         'Không thể tải lịch hôm nay. Vui lòng thử lại.',
     ConsumerTerm.sessionExpired:
         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    // Onboarding copy is deliberately mobile-local rather than shared through
+    // the cross-client navigation contract: it describes optional profile
+    // fields and consent, not a reusable product-navigation term.
+    ConsumerTerm.onboardingStepWelcome: 'Chào mừng',
+    ConsumerTerm.onboardingStepBasics: 'Thông tin cơ bản',
+    ConsumerTerm.onboardingStepPersonalization: 'Cá nhân hoá',
+    ConsumerTerm.onboardingWelcomeTitle: 'Chào mừng bạn đến với CLARA',
+    ConsumerTerm.onboardingWelcomeDescription:
+        'CLARA là trợ lý sức khoẻ đồng hành cùng bạn theo thời gian — ghi nhớ, '
+            'nhắc nhở và giúp bạn chuẩn bị tốt hơn cho mỗi lần khám. CLARA không '
+            'thay thế bác sĩ và luôn để bạn nắm quyền kiểm soát dữ liệu của mình.',
+    ConsumerTerm.onboardingStart: 'Bắt đầu',
+    ConsumerTerm.onboardingSkip: 'Bỏ qua, để sau',
+    ConsumerTerm.onboardingBasicsTitle: 'Một vài thông tin cơ bản',
+    ConsumerTerm.onboardingBasicsDescription:
+        'Tất cả đều không bắt buộc. Bạn có thể bỏ trống và cập nhật bất cứ lúc '
+            'nào trong Hồ sơ.',
+    ConsumerTerm.onboardingDisplayName: 'Tên hiển thị (không bắt buộc)',
+    ConsumerTerm.onboardingGender: 'Giới tính',
+    ConsumerTerm.onboardingPreferNotToSay: 'Không muốn nói',
+    ConsumerTerm.onboardingGenderFemale: 'Nữ',
+    ConsumerTerm.onboardingGenderMale: 'Nam',
+    ConsumerTerm.onboardingGenderOther: 'Khác',
+    ConsumerTerm.onboardingBloodType: 'Nhóm máu',
+    ConsumerTerm.onboardingBloodTypeUnknown: 'Chưa rõ',
+    ConsumerTerm.onboardingHeight: 'Chiều cao (cm)',
+    ConsumerTerm.onboardingWeight: 'Cân nặng (kg)',
+    ConsumerTerm.onboardingContinue: 'Tiếp tục',
+    ConsumerTerm.onboardingBack: 'Quay lại',
+    ConsumerTerm.onboardingPersonalizationTitle: 'Cá nhân hoá gợi ý cho bạn',
+    ConsumerTerm.onboardingPersonalizationDescription:
+        'Bạn có thể cho phép CLARA dùng hồ sơ của bạn để cá nhân hoá câu trả '
+            'lời và cảnh báo an toàn. Bạn có thể thay đổi lựa chọn này bất cứ lúc nào.',
+    ConsumerTerm.onboardingPersonalizationAllow: 'Cho phép cá nhân hoá',
+    ConsumerTerm.onboardingPersonalizationAllowDescription:
+        'Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc.',
+    ConsumerTerm.onboardingSelfDeclaredNotice:
+        'Thông tin bạn nhập là tự khai báo, không phải chẩn đoán y tế. CLARA '
+            'hỗ trợ tham khảo và không thay thế tư vấn của bác sĩ.',
+    ConsumerTerm.onboardingSaveFailed: 'Không thể lưu. Vui lòng thử lại.',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -160,5 +227,43 @@ class ConsumerTerminology {
         'We could not load today\'s agenda. Try again.',
     ConsumerTerm.sessionExpired:
         'Your session has expired. Please sign in again.',
+    ConsumerTerm.onboardingStepWelcome: 'Welcome',
+    ConsumerTerm.onboardingStepBasics: 'Basic details',
+    ConsumerTerm.onboardingStepPersonalization: 'Personalization',
+    ConsumerTerm.onboardingWelcomeTitle: 'Welcome to CLARA',
+    ConsumerTerm.onboardingWelcomeDescription:
+        'CLARA is a health assistant that stays with you over time — helping '
+            'you remember, prepare, and make the most of each visit. CLARA does '
+            'not replace a doctor, and you remain in control of your data.',
+    ConsumerTerm.onboardingStart: 'Get started',
+    ConsumerTerm.onboardingSkip: 'Skip for now',
+    ConsumerTerm.onboardingBasicsTitle: 'A few basic details',
+    ConsumerTerm.onboardingBasicsDescription:
+        'Everything is optional. You can leave it blank and update it anytime '
+            'in Profile.',
+    ConsumerTerm.onboardingDisplayName: 'Display name (optional)',
+    ConsumerTerm.onboardingGender: 'Gender',
+    ConsumerTerm.onboardingPreferNotToSay: 'Prefer not to say',
+    ConsumerTerm.onboardingGenderFemale: 'Female',
+    ConsumerTerm.onboardingGenderMale: 'Male',
+    ConsumerTerm.onboardingGenderOther: 'Other',
+    ConsumerTerm.onboardingBloodType: 'Blood type',
+    ConsumerTerm.onboardingBloodTypeUnknown: 'Unknown',
+    ConsumerTerm.onboardingHeight: 'Height (cm)',
+    ConsumerTerm.onboardingWeight: 'Weight (kg)',
+    ConsumerTerm.onboardingContinue: 'Continue',
+    ConsumerTerm.onboardingBack: 'Back',
+    ConsumerTerm.onboardingPersonalizationTitle: 'Personalize your guidance',
+    ConsumerTerm.onboardingPersonalizationDescription:
+        'You can let CLARA use your profile to tailor answers and safety '
+            'warnings. You can change this choice at any time.',
+    ConsumerTerm.onboardingPersonalizationAllow: 'Allow personalization',
+    ConsumerTerm.onboardingPersonalizationAllowDescription:
+        'Use your health profile for more relevant guidance. This is optional.',
+    ConsumerTerm.onboardingSelfDeclaredNotice:
+        'The information you enter is self-declared and is not a medical '
+            'diagnosis. CLARA offers general support and does not replace your doctor.',
+    ConsumerTerm.onboardingSaveFailed:
+        'We could not save this. Please try again.',
   };
 }

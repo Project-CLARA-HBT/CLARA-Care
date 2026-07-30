@@ -130,6 +130,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         apiClient: widget.apiClient,
         sessionStore: widget.sessionStore,
         onDone: _onOnboardingDone,
+        languageController: widget.languageController,
       );
     }
 
