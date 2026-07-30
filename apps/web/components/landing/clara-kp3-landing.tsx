@@ -44,7 +44,7 @@ const USE_CASES = [
     icon: "stethoscope",
     scenario:
       "Trước khi kê đơn cho bệnh nhân đa thuốc, bác sĩ tra DDI giữa Amlodipine và Simvastatin ngay trong CLARA Chat.",
-    benefit: "Kết quả có trích dẫn PubMed & openFDA trong < 20 giây — không cần rời workflow.",
+    benefit: "Kết quả nêu rõ nguồn đã dùng và phần còn chưa chắc chắn để bác sĩ tự đối chiếu trong workflow.",
     tag: "Kiểm tra DDI",
   },
   {
@@ -243,20 +243,20 @@ export default function ClaraKp3Landing() {
             <div className="w-full space-y-6 min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
               <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-500)]" />
-                AI lâm sàng có trích dẫn nguồn
+                AI y tế có kiểm soát an toàn
               </div>
 
               <h1
                 className="font-black leading-[1.08] tracking-tight text-[var(--text-primary)] [text-wrap:balance] min-[640px]:leading-[0.98]"
                 style={{ fontSize: "clamp(1.4rem, 6.4vw, 4.25rem)" }}
               >
-                Hỏi đúng trọng tâm.{" "}
-                <span className="text-[var(--text-brand)]">Có nguồn minh bạch.</span>{" "}
-                Quyết định tự tin.
+                Hỏi điều bạn cần.{" "}
+                <span className="text-[var(--text-brand)]">Xem rõ nguồn và giới hạn.</span>{" "}
+                Tự quyết định cùng chuyên môn.
               </h1>
 
               <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-[var(--text-secondary)] min-[640px]:text-base min-[1280px]:text-lg">
-                CLARA là trợ lý y khoa cho <strong className="font-black text-[var(--text-primary)]">bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: tra cứu nhanh, mọi kết luận <strong className="font-black text-[var(--text-primary)]">truy ngược được nguồn</strong> và <strong className="font-black text-[var(--text-primary)]">kiểm chứng từng luận điểm</strong> — hỗ trợ quyết định an toàn hơn, không phải chatbot trả lời chung chung.
+                CLARA là trợ lý y tế cho <strong className="font-black text-[var(--text-primary)]">người dùng, bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: giúp tra cứu, nêu nguồn khi có và tách bạch điều đã kiểm chứng với phần còn chưa chắc chắn. CLARA không thay thế đánh giá chuyên môn.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -279,15 +279,15 @@ export default function ClaraKp3Landing() {
               <div className="grid grid-cols-3 gap-3 border-t border-slate-300/45 pt-8 dark:border-slate-700/45">
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">verified</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Có trích dẫn nguồn</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Hiển thị nguồn khi có</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">timer</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">&lt;20s phản hồi</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Nêu rõ phần chưa chắc chắn</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">fact_check</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Kiểm chứng từng luận điểm</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Có chặn an toàn cho tình huống rủi ro</span>
                 </div>
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function ClaraKp3Landing() {
                             <span className="material-symbols-outlined text-4xl">neurology</span>
                           </div>
                           <p className="relative z-10 text-base leading-relaxed">
-                            Kết hợp có thể làm tăng nồng độ Simvastatin trong máu, dẫn đến nguy cơ tiêu cơ vân.
+                            Đây là ví dụ minh họa: CLARA cần kiểm tra nguồn thuốc phù hợp trước khi đưa ra cảnh báo tương tác.
                           </p>
                           <div className="relative z-10 mt-3 flex flex-wrap gap-2 border-t border-white/15 pt-3">
                             <span className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold">PubMed #28442</span>
@@ -358,11 +358,8 @@ export default function ClaraKp3Landing() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-300/40 dark:bg-slate-700/60">
-                            <div className="h-full w-[98%] bg-cyan-500 dark:bg-cyan-300" />
-                          </div>
                           <span className="text-[10px] font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
-                            Độ tin cậy 98%
+                            Cần đối chiếu nguồn thuốc
                           </span>
                         </div>
                       </div>
@@ -385,7 +382,7 @@ export default function ClaraKp3Landing() {
 
               <div className="glass-panel absolute -right-6 -top-6 hidden w-36 flex-col items-center justify-center rounded-2xl border border-cyan-300/35 p-4 shadow-2xl shadow-cyan-900/20 min-[1200px]:flex">
                 <span className="material-symbols-outlined mb-2 text-3xl text-cyan-600 dark:text-cyan-400">verified</span>
-                <div className="text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">Có trích dẫn nguồn</div>
+                <div className="text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">Nguồn khi có</div>
               </div>
             </div>
           </div>
@@ -434,7 +431,7 @@ export default function ClaraKp3Landing() {
               CLARA xử lý một câu hỏi y khoa như thế nào?
             </h2>
             <p className="mx-auto max-w-3xl text-base font-medium text-slate-600 dark:text-slate-300">
-              Bốn bước rõ ràng — từ câu hỏi của bạn đến câu trả lời có nguồn kiểm chứng.
+              Bốn bước rõ ràng — từ câu hỏi đến câu trả lời có rào chắn an toàn và nguồn khi phù hợp.
             </p>
           </div>
 
@@ -452,7 +449,7 @@ export default function ClaraKp3Landing() {
                 {
                   layer: "Bước 02",
                   title: "Tìm nguồn liên quan",
-                  desc: "CLARA tìm nguồn y khoa liên quan (PubMed, openFDA, nội bộ) — không chỉ khớp từ khóa.",
+                  desc: "CLARA tìm nguồn y khoa liên quan theo quyền truy cập và cấu hình hiện có.",
                   icon: "neurology",
                   tone: "text-cyan-200",
                   solid: true,
@@ -468,7 +465,7 @@ export default function ClaraKp3Landing() {
                 {
                   layer: "Bước 04",
                   title: "Kết quả",
-                  desc: "Trả lời có nguồn, kèm độ tin cậy và gợi ý bước tiếp theo.",
+                  desc: "Trình bày điều quan trọng, nguồn đã dùng, giới hạn và bước tiếp theo phù hợp.",
                   icon: "task_alt",
                   tone: "text-cyan-700 dark:text-cyan-300",
                   solid: false,
@@ -514,19 +511,19 @@ export default function ClaraKp3Landing() {
                 <span className="text-cyan-600 dark:text-cyan-300">Core Engine</span>
               </h2>
               <p className="text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                Công cụ cốt lõi cho bác sĩ và sinh viên y khoa. Truy tìm bằng chứng lâm sàng chính xác trong vài giây.
+                Công cụ hỗ trợ tra cứu và diễn giải thông tin y tế có rào chắn cho bác sĩ, sinh viên y khoa và người dùng.
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">95%+</p>
+                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">Nguồn</p>
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
-                    Độ bao phủ citation
+                    Hiển thị khi có và truy được
                   </p>
                 </div>
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">&lt;20s</p>
+                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">Giới hạn</p>
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
-                    Tốc độ phản hồi
+                    Nêu rõ thay vì suy đoán
                   </p>
                 </div>
               </div>
@@ -644,7 +641,7 @@ export default function ClaraKp3Landing() {
                 {
                   title: "Trích dẫn trước tiên",
                   icon: "fact_check",
-                  desc: "Mỗi câu trả lời đều gắn nguồn PubMed, WHO, openFDA hoặc tài liệu nội bộ.",
+                  desc: "CLARA chỉ hiển thị nguồn đã được pipeline trả về; không có nguồn không đồng nghĩa với thông tin đã được xác minh.",
                   outcome: "Bạn kiểm chứng được trước khi ra quyết định.",
                 },
                 {
@@ -724,7 +721,7 @@ export default function ClaraKp3Landing() {
               Sẵn sàng thử CLARA với câu hỏi y khoa của bạn?
             </h2>
             <p className="mb-8 text-base font-medium leading-relaxed text-slate-300">
-              Không cần cài đặt. Mở trình duyệt, đặt câu hỏi, nhận kết quả có trích dẫn nguồn.
+              Mở trình duyệt, đặt câu hỏi và xem rõ điều quan trọng, nguồn có sẵn cùng các giới hạn của câu trả lời.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
