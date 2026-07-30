@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `01ae02a4`. Per the current user direction, this
+including `8bd27232` through `8ca4f4c7`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -72,6 +72,14 @@ This implementation pass strengthened CLARA's safety and evidence boundaries:
 - corrected the mobile Settings transparency row so it describes governed
   DeepSeek V4 Pro/Flash task routing instead of falsely implying that every
   task used Pro. Per-response disclosures remain sourced from the API envelope.
+- added an owner-scoped, source-version-bound DrugBank clarification path across
+  ML, API, web and mobile. A terminal ambiguity has no DDI conclusion, cache
+  projection or local identity inference; and
+- exposed the capability-gated, read-only LifeMap visit-preparation draft in
+  web with revision citations, uncertainty and a no-write disclosure. The
+  guided prescription/OCR flow, Research workspace, Chat shell and a bounded
+  legacy Chat workspace region are now catalog-backed in both supported UI
+  languages.
 
 The repository already contained significant LifeMap, CareGuard, Council,
 Research and mobile work. The work above integrates with those safety
@@ -117,6 +125,27 @@ safety policy.
 | PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. `59722a20` adds metric-specific evidence gaps and exact measurement commands for all six judge headlines. Product quality metrics remain `not_measured` until approved data/execution exists. |
 | PR-14 security/ops | partial | The locked release workflow now materializes a separately approved release manifest only under `RUNNER_TEMP` and requires it to match the locked dataset reference, resolved immutable release SHA and retrieval snapshot before any live request; artifacts retain only a dataset-reference hash and release SHA. Release remains fail-closed on missing/mismatched evidence. Security checkpoints upgrade Axios and its HTTP/form transitive closure, Next 15.5.22, Mermaid 10.9.6, DOMPurify 3.4.12, UUID 14.0.1 and Playwright 1.62.0. `012e0b5b` wires Scribe stage flags, ASR controls, Encoder-SLM shadow controls and CareGuard wording controls into both application compose variants instead of relying on `--env-file` substitution alone; its environment guard also rejects an unprovisioned strict DrugBank mount. The existing guard rejects a deployment environment that lacks governed V4 Pro/Flash configuration, DeepSeek-only mode or enabled task routing. A separate `MODEL_ROUTING_OBSERVABILITY_ENABLED` switch defaults off and makes the registry expose only bounded aggregate task/profile/version/risk/rollback selection evidence to protected metrics; it retains no raw model name, prompt, input, output, URL, identifier or credential and is not evidence of invocation success, cost or clinical quality. `f612e2b5` prevents raw Family Circle mutation/load errors from becoming end-user copy. CI now requires web Vitest and production-artifact Playwright E2E gates when web/CI changes; the local production-dependency audit historical record decreased from 11 (7 high, 4 moderate) to 3 high, all in the Next/PostCSS/Sharp chain without a compatible audit-proposed fix. Restore/security certification evidence, current scan results and the remaining dependency remediation remain external/ongoing work. |
 | PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. In addition to the shell/Profile hub locale checkpoints, catalog work covers onboarding, chat, LifeMap planning/capture/replay/review/questions/baselines and static dispute-queue chrome, Medicines hub/cabinet, fixed CareGuard DDI result chrome, Visits, Family/visit detail and access-log rendering from backward-compatible stable API codes, PHR, living evidence, connected health, community, Settings and More. The redesign shell resolves navigation labels and its primary Chat action from `LanguageController` plus the shared consumer terminology. Its first screen now localizes the already-existing Chat, medicine-safety and profile task cards plus Tools/Recent/error chrome; it deliberately adds no Visit callback/card and does not claim downstream screen migration. The LifeMap dispute queue leaves server-provided event type, revision, status and the clinical-review boundary unchanged; localization covers only the static consumer UI around it. Unified-mobile Today now has real task-first routes to Chat, Medicines, PHR and Visits. The server-authoritative `lifemap_vietnamese_drafts` capability now switches the latter to a localized, read-only/copy-only preparation draft; an unavailable capability leaves the established Visit lifecycle unchanged. The draft only calls the consent-gated, profile-scoped endpoint and never creates a Visit, event, task, revision or confirmation. Its focused callback/widget coverage is added but not run. `01ae02a4` adds focused API contract assertions for the Family codes, but they were not run. `fca5fba9` provides a generated shared consumer-terminology contract rather than claiming a fully shared UI catalog. Device E2E execution and fresh verification of these commits remain outstanding. |
+
+## Latest implementation checkpoints
+
+- `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
+  DrugBank clarification contract from ML through web/mobile; no result can be
+  inferred before the API revalidates the owner-scoped source choice.
+- `00993943`: the mobile terminal clarification wording follows the app locale
+  without changing that safety boundary.
+- `1f06dab6`: a Scribe batch request carrying `session_id` is owner-scoped and
+  rechecks live visit-recording consent before any audio is sent to ASR; the
+  legacy unscoped route remains compatible while the global rollout is off.
+- `8ca4f4c7`: web uses the existing consent/profile-scoped visit-preparation
+  endpoint only as a read-only, source-cited draft. It neither creates nor
+  confirms LifeMap state. The same checkpoint removes an uncalibrated OCR
+  percentage from the guided medicine-entry presentation.
+- `4bf1a47f`, `524b9b02` and `ec306759`: typed vi/en migration now includes
+  Chat V2 shell chrome, a bounded legacy workspace sidebar and the Research
+  workspace. This is still not a claim of all-page i18n completion.
+
+All of these checkpoints have static whitespace evidence only in this pass;
+their tests, builds, evaluation and deployment remain deferred by instruction.
 
 ## Features and safety invariants preserved
 
@@ -167,6 +196,11 @@ review, E2E run or deployment was run after the following newer commits:
 `d6a5abc5`, `fba3e639`, `f24ee6f4`, `b0ac6e40`, `d6a9371c` and `b7327001`.
 Tests added in those commits are therefore **not run**, rather than pass or
 fail.
+
+The same no-run status applies to the subsequent implementation checkpoints
+`d53af25a`, `a4b9458c`, `99a69fbe`, `4bf1a47f`, `eda8b7d6`, `00993943`,
+`524b9b02`, `ec306759`, `1f06dab6` and `8ca4f4c7`. Their pull-request notes
+record only static whitespace checks; they are not evidence of runtime health.
 
 Historical executions:
 

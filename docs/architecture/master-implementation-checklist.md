@@ -23,6 +23,27 @@ recorded as implementation evidence, not release evidence.
 | 14 | Security/ops hardening | partial | The locked release gate fails closed on missing evidence and now materializes a release-only approved manifest under `RUNNER_TEMP`; before it can send a request, it requires an exact binding to the locked dataset reference, immutable release SHA and retrieval snapshot. Artifacts expose only the dataset-reference hash and release SHA. Compose variants explicitly receive governed Scribe, ASR, Encoder-SLM-shadow and CareGuard-wording controls; deployment validation rejects missing DeepSeek V4 Pro/Flash, DeepSeek-only, task-routing or strict-DrugBank prerequisites. A separate default-off registry-bound aggregate records only governed task/profile/version/risk/rollback selection categories and never patient/model-request data; it is not a cost or clinical metric. Family Circle now uses localized generic mutation/load errors rather than raw errors. Docker/image build, provider availability and production operational proof remain unverified. |
 | 15 | Mobile parity | partial | Unified mobile/locale/consent paths exist; catalog-backed onboarding, chat, LifeMap capture/replay/review/questions/baselines and the dispute-queue chrome, Medicines/cabinet, fixed CareGuard DDI result chrome, visits, Family/visit detail and access-log rendering from compatible stable codes, profile/PHR, living evidence, connected health, community, Settings and More flows were added. Redesign shell navigation and its primary Chat action now resolve through the existing app-wide `LanguageController` and shared consumer terminology. Its first screen also localizes the existing Chat, medicine-safety and profile task cards plus Tools/Recent/error chrome; no Visit card or navigation callback was added, and downstream screen migrations remain separately scoped. The dispute queue keeps its server-provided event type, revision, status and clinical-review boundary unchanged; only static UI labels are localized. Today also routes four task-first cards to existing consent-gated surfaces. When the server grants `lifemap_vietnamese_drafts`, the visit card opens a localized, read-only/copy-only draft UI; otherwise it keeps the existing Visit lifecycle. A focused Family API contract test and a Today callback/widget test are present but not run. A generated consumer-terminology contract exists; device E2E and broader parity remain. |
 
+## Recent additive checkpoints
+
+- `d53af25a` / `99a69fbe` add the source-version-bound, owner-scoped DrugBank
+  clarification path to web/mobile. It blocks all DDI conclusion and cache
+  projection while identity is ambiguous; the mobile state is locale-aware in
+  `00993943`.
+- `1f06dab6` closes the Scribe batch-ASR visit-consent bypass for any supplied
+  session id, without changing the legacy unscoped batch behavior while the
+  global rollout is off.
+- `8ca4f4c7` connects web LifeMap to the already capability-gated
+  visit-preparation draft endpoint. The UI is read-only and source-cited; it
+  has no confirmation/write action. It also removes the uncalibrated OCR
+  percentage from guided medicine capture.
+- `4bf1a47f`, `524b9b02`, and `ec306759` extend catalog-backed UI to Chat V2
+  shell, a bounded legacy workspace sidebar, and Research workspace. These
+  are incremental i18n improvements, not a claim that every domain page has
+  completed migration.
+
+No format/lint/type/test/build/eval/deploy command was run for these additions.
+Only static whitespace checks were recorded before their commits.
+
 ## Required exit evidence
 
 - Format, lint and type check relevant code.
