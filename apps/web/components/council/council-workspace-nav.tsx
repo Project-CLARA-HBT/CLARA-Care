@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 export type CouncilWorkspaceLink = {
   href: string;
-  label: string;
-  hint: string;
+  labelKey: UITranslationKey;
+  hintKey: UITranslationKey;
 };
 
 export const COUNCIL_WORKSPACE_LINKS: CouncilWorkspaceLink[] = [
-  { href: "/council", label: "Tổng quan hội chẩn", hint: "Bức tranh ca hiện tại" },
-  { href: "/council/new", label: "Nhập ca bệnh", hint: "Tạo ca hội chẩn mới" },
-  { href: "/council/result", label: "Kết luận", hint: "Kết quả hội chẩn" },
+  { href: "/council", labelKey: "council.nav.overview.label", hintKey: "council.nav.overview.hint" },
+  { href: "/council/new", labelKey: "council.nav.new.label", hintKey: "council.nav.new.hint" },
+  { href: "/council/result", labelKey: "council.nav.result.label", hintKey: "council.nav.result.hint" },
 ];
 
 function isActiveLink(pathname: string, href: string): boolean {
@@ -24,10 +26,11 @@ function isActiveLink(pathname: string, href: string): boolean {
 
 export default function CouncilWorkspaceNav({ className = "" }: { className?: string }) {
   const pathname = usePathname();
+  const language = useUILanguage();
 
   return (
     <nav className={`rounded-[1.3rem] border border-[#B6D4FE] bg-white p-2.5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90 ${className}`.trim()}>
-      <p className="px-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#4B5563] dark:text-slate-200">Không gian hội chẩn</p>
+      <p className="px-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#4B5563] dark:text-slate-200">{t(language, "council.nav.title")}</p>
       <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
         {COUNCIL_WORKSPACE_LINKS.map((item) => {
           const active = isActiveLink(pathname, item.href);
@@ -41,8 +44,8 @@ export default function CouncilWorkspaceNav({ className = "" }: { className?: st
                   : "border-[#B6D4FE] bg-white text-[#1F2937] hover:border-[#2563EB] hover:bg-[#F8FBFF] dark:border-sky-800 dark:bg-slate-900/90 dark:text-slate-100 dark:hover:border-sky-500"
               }`}
             >
-              <p className="text-sm font-bold">{item.label}</p>
-              <p className="mt-0.5 text-xs font-medium text-[#4B5563] dark:text-slate-300">{item.hint}</p>
+              <p className="text-sm font-bold">{t(language, item.labelKey)}</p>
+              <p className="mt-0.5 text-xs font-medium text-[#4B5563] dark:text-slate-300">{t(language, item.hintKey)}</p>
             </Link>
           );
         })}
