@@ -57,6 +57,21 @@ Widget _harness({
 
 void main() {
   group('needsAcknowledgement (versioning logic)', () {
+    test('localized current notices share one acknowledgement version', () {
+      final vi = currentAiTransparencyNoticeForLocale('vi');
+      final en = currentAiTransparencyNoticeForLocale('en-US');
+
+      expect(en.title, 'AI transparency notice');
+      expect(en.version, vi.version);
+      expect(
+        AiTransparencyNoticeStore.needsAcknowledgement(
+          currentVersion: en.version,
+          acknowledgedVersion: vi.version,
+        ),
+        isFalse,
+      );
+    });
+
     test('null acknowledgement requires acknowledgement', () {
       expect(
         AiTransparencyNoticeStore.needsAcknowledgement(
@@ -157,7 +172,8 @@ void main() {
     expect(find.text('Thông báo minh bạch về AI'), findsNothing);
   });
 
-  testWidgets('acknowledged OLD version re-prompts when a NEW version is current',
+  testWidgets(
+      'acknowledged OLD version re-prompts when a NEW version is current',
       (tester) async {
     final storage = InMemorySessionSecureStorage();
     await storage.write(

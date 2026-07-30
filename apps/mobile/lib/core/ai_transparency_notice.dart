@@ -30,7 +30,8 @@
 /// `lib/widgets/ai_transparency_notice_gate.dart`.
 library;
 
-import 'session_store.dart' show SessionSecureStorage, FlutterSecureSessionStorage;
+import 'session_store.dart'
+    show SessionSecureStorage, FlutterSecureSessionStorage;
 
 /// The content of a single, versioned AI transparency notice.
 ///
@@ -76,6 +77,38 @@ const AiTransparencyNotice kCurrentAiTransparencyNotice = AiTransparencyNotice(
     'Trong trường hợp khẩn cấp, hãy gọi ngay dịch vụ cấp cứu tại địa phương.',
   ],
 );
+
+/// English rendering of the same versioned disclosure. It carries the exact
+/// same acknowledgement version and safety meaning as the Vietnamese-first
+/// default; only presentation changes. This lets a consumer who switches the
+/// app language review the disclosure in their selected language without
+/// weakening the versioned consent gate.
+const AiTransparencyNotice kCurrentAiTransparencyNoticeEn =
+    AiTransparencyNotice(
+  version: '2026-04-v1',
+  title: 'AI transparency notice',
+  body: <String>[
+    'You are interacting with CLARA\'s AI health assistant. It is '
+        'decision-support software based on information you provide — not '
+        'a medical device and not a replacement for a doctor.',
+    'Answers are for general information only. Always consult a qualified '
+        'health professional before making decisions about your health.',
+    'In an emergency, call your local emergency service immediately.',
+  ],
+  acknowledgeLabel: 'I understand and want to continue',
+);
+
+/// Resolves the current disclosure in the selected presentation language.
+///
+/// Acknowledgement remains keyed solely by the shared [AiTransparencyNotice.version],
+/// so changing language cannot bypass, reset, or silently alter consent.
+AiTransparencyNotice currentAiTransparencyNoticeForLocale(String? locale) {
+  final normalized = locale?.trim().toLowerCase();
+  if (normalized == 'en' || normalized?.startsWith('en-') == true) {
+    return kCurrentAiTransparencyNoticeEn;
+  }
+  return kCurrentAiTransparencyNotice;
+}
 
 /// Persistence seam + versioning logic for AI transparency-notice
 /// acknowledgement (Requirement 7.1, 7.2).
