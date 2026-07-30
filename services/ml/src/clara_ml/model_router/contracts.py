@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 TaskName = Literal[
     "general_health_qa",
@@ -60,3 +60,47 @@ class TaskRoute(BaseModel):
     reasons: list[str] = Field(default_factory=list, max_length=8)
     abstain_reason: str | None = None
     clinical_language: ClinicalLanguageSignals
+
+
+class EncoderShadowPrediction(BaseModel):
+    """Closed, non-identifying response contract for an external Encoder-SLM.
+
+    This record is intentionally incapable of carrying spans, source text,
+    probabilities, prescriptions, or an authorization decision.  It is used
+    only to compare a separately deployed encoder against the deterministic
+    router while the feature remains in shadow mode.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    schema_version: Literal["clara.encoder-slm-shadow.v1"]
+    intent: TaskName
+    risk_level: RiskLevel
+    entity_categories: list[
+        Literal[
+            "symptom",
+            "medication",
+            "allergy",
+            "adverse_effect",
+            "lab",
+            "condition",
+            "procedure",
+        ]
+    ] = Field(default_factory=list, max_length=12)
+    negated: bool = False
+    temporality: Literal["current", "historical", "planned", "unspecified"] = "unspecified"
+    experiencer: Literal["self_or_unspecified", "other"] = "self_or_unspecified"
+    language: Language = "unknown"
+
+    @model_validator(mode="after")
+    def _categories_are_unique(self) -> "EncoderShadowPrediction":
+        """Reject duplicate categories as malformed model output.
+
+        A duplicate category does not add signal and often indicates a loosely
+        constrained endpoint.  Treating it as unavailable keeps shadow data
+        comparable rather than silently normalizing an invalid payload.
+        """
+
+        if len(self.entity_categories) != len(set(self.entity_categories)):
+            raise ValueError("encoder_shadow_duplicate_entity_category")
+        return self

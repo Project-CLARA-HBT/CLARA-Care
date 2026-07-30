@@ -34,7 +34,12 @@ from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
-from clara_ml.model_router import build_shadow_task_route, public_shadow_metadata
+from clara_ml.model_router import (
+    build_shadow_task_route,
+    public_encoder_shadow_metadata,
+    public_shadow_metadata,
+    run_encoder_slm_shadow,
+)
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
 from clara_ml.observability.tracing import init_tracing
@@ -1068,6 +1073,16 @@ def routed_chat_infer(payload: dict) -> dict:
             default_action="escalate",
         )
 
+    # The optional Encoder-SLM is intentionally invoked only after the
+    # deterministic emergency and legal guards have decided it is safe to
+    # continue.  Its categorical result remains shadow metadata; it cannot
+    # alter the selected route, any prohibited-action refusal, retrieval, or
+    # downstream answer generation.
+    encoder_slm_shadow = run_encoder_slm_shadow(
+        pii.redacted_text,
+        settings=settings,
+    )
+
     if not role_router_enabled:
         route.role = (
             role_hint if role_hint in {"normal", "researcher", "doctor", "admin"} else "normal"
@@ -1320,7 +1335,10 @@ def routed_chat_infer(payload: dict) -> dict:
             "llm_provider": llm_runtime.get("provider", "deepseek"),
             "llm_model": llm_runtime.get("model", ""),
             "llm_base_url": llm_runtime.get("base_url", ""),
-            "model_router_shadow": public_shadow_metadata(task_route_shadow),
+            "model_router_shadow": {
+                **public_shadow_metadata(task_route_shadow),
+                "encoder_slm_shadow": public_encoder_shadow_metadata(encoder_slm_shadow),
+            },
         },
     }
     factcheck_payload = factcheck.as_dict() if factcheck else None

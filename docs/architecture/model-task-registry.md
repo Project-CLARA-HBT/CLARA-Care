@@ -39,6 +39,23 @@ temporality, severity cue, unit count and medication-candidate count). It does
 not publish source text, a medication name, a dose, confidence or free-text
 rationale in telemetry.
 
+## Optional Encoder-SLM shadow
+
+The separate Encoder-SLM seam is deliberately **shadow-only**, off by default,
+and invoked only after deterministic emergency and legal hard guards return.
+Its sole adapter is `model_router/encoder_shadow.py`; it redacts the already
+redacted input again, bounds request/response size and time, rejects redirects,
+and accepts only `clara.encoder-slm-shadow.v1`. That contract contains closed
+categorical intent/risk/entity/negation/temporality/experiencer/language fields
+and explicitly rejects free text, spans, confidence and extra fields.
+
+The shadow signal cannot alter a route, response, retrieval, authorization,
+DrugBank lookup, FIDES verdict, consent decision, LifeMap truth state or audit
+event. Operations may enable it only with an internal endpoint and deployment
+secret. Set `ENCODER_SLM_SHADOW_ENABLED=false` and restart ML for an immediate
+rollback; an unavailable or malformed endpoint degrades to typed shadow
+metadata without changing chat behaviour.
+
 Configuration is intentionally operational rather than user-facing:
 
 ```text

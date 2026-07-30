@@ -130,6 +130,37 @@ class Settings(BaseSettings):
         default="",
         validation_alias="MODEL_REGISTRY_ROLLBACK_MODEL",
     )
+    # Optional external Encoder-SLM router.  This is strictly a shadow signal:
+    # it is disabled by default and must never replace deterministic emergency,
+    # legal, authorization, DrugBank, or state-transition decisions.
+    encoder_slm_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="ENCODER_SLM_SHADOW_ENABLED",
+    )
+    encoder_slm_shadow_url: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_URL",
+    )
+    encoder_slm_shadow_api_key: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_API_KEY",
+    )
+    encoder_slm_shadow_model_id: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_MODEL_ID",
+    )
+    encoder_slm_shadow_timeout_ms: int = Field(
+        default=750,
+        validation_alias="ENCODER_SLM_SHADOW_TIMEOUT_MS",
+        ge=100,
+        le=5000,
+    )
+    encoder_slm_shadow_max_input_chars: int = Field(
+        default=1200,
+        validation_alias="ENCODER_SLM_SHADOW_MAX_INPUT_CHARS",
+        ge=64,
+        le=4000,
+    )
     chat_llm_query_planner_enabled: bool = Field(
         # When true, plain chat (routed_chat_infer) runs the same LLM query
         # planner used by research tier2 to refine the raw query into a smaller
