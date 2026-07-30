@@ -110,6 +110,29 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   fi
 fi
 
+# A strict CareGuard deployment has no safe curated/LLM substitute for DrugBank
+# DDI conclusions. Catch contradictory or unprovisioned bind-mount settings
+# before compose starts a container that must fail closed at request time.
+drugbank_required_normalized="$(printf '%s' "${ENV_VALUES[CAREGUARD_DRUGBANK_REQUIRED]:-false}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${drugbank_required_normalized}" == "true" ]] || [[ "${drugbank_required_normalized}" == "1" ]]; then
+  if [[ "${ENV_VALUES[CAREGUARD_DRUGBANK_SQLITE_ENABLED]:-}" != "true" ]]; then
+    echo "[env-guard] CAREGUARD_DRUGBANK_REQUIRED=true requires CAREGUARD_DRUGBANK_SQLITE_ENABLED=true" >&2
+    errors=$((errors + 1))
+  fi
+  if [[ "${ENV_VALUES[CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED]:-}" != "true" ]]; then
+    echo "[env-guard] CAREGUARD_DRUGBANK_REQUIRED=true requires CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED=true" >&2
+    errors=$((errors + 1))
+  fi
+  must_set_non_empty "CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR"
+  must_set_non_empty "CAREGUARD_DRUGBANK_MANIFEST_PATH"
+  must_set_non_empty "CAREGUARD_DRUGBANK_SQLITE_PATH"
+  drugbank_artifact_host_dir="${ENV_VALUES[CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR]:-}"
+  if [[ -n "${drugbank_artifact_host_dir}" && ! -d "${drugbank_artifact_host_dir}" ]]; then
+    echo "[env-guard] CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR is not a readable directory" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
 if (( errors > 0 )); then
   echo "[env-guard] failed with ${errors} error(s)" >&2
   exit 1
