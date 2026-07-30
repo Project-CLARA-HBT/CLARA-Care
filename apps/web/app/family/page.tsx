@@ -8,9 +8,10 @@ import {
   LoadingCards,
   SurfaceCard,
 } from "@/components/ui/surface";
-import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   acceptFamilyInvitation,
   createFamilyInvitation,
@@ -25,6 +26,30 @@ import {
 } from "@/lib/visit-family";
 
 export default function FamilyPage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) =>
+      t(language, key, values ?? {}),
+    [language],
+  );
+  const objectLabel = (objectType: string) => {
+    if (objectType === "episode") return copy("familyCircle.object.episode");
+    if (objectType === "visit") return copy("familyCircle.object.visit");
+    if (objectType === "care_task") return copy("familyCircle.object.careTask");
+    return copy("familyCircle.label.sharedScope");
+  };
+  const actionLabel = (action: string) => {
+    if (action === "view") return copy("familyCircle.permission.view");
+    if (action === "add_observation") return copy("familyCircle.permission.addObservation");
+    if (action === "complete_task") return copy("familyCircle.permission.completeTask");
+    return copy("familyCircle.permission.other");
+  };
+  const outcomeLabel = (outcome: string) => {
+    if (outcome === "allowed") return copy("familyCircle.outcome.allowed");
+    if (outcome === "denied") return copy("familyCircle.outcome.denied");
+    if (outcome === "unknown") return copy("familyCircle.outcome.unknown");
+    return copy("familyCircle.outcome.other");
+  };
   const [grants, setGrants] = useState<FamilyGrant[]>([]);
   const [relationships, setRelationships] = useState<FamilyGrant[]>([]);
   const [logs, setLogs] = useState<FamilyAccessLog[]>([]);
@@ -64,11 +89,11 @@ export default function FamilyPage() {
       setShareable(nextShareable);
       setObjectId((current) => current || nextShareable.episode[0]?.id || "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải Family Circle.");
+      setError(cause instanceof Error ? cause.message : copy("familyCircle.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [copy]);
   useEffect(() => void load(), [load]);
 
   const invite = async (event: FormEvent) => {
@@ -88,7 +113,7 @@ export default function FamilyPage() {
       setEmail("");
       setObjectId("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo lời mời.");
+      setError(cause instanceof Error ? cause.message : copy("familyCircle.createError"));
     } finally {
       setSaving(false);
     }
@@ -103,7 +128,7 @@ export default function FamilyPage() {
       setInviteToken("");
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Lời mời không hợp lệ hoặc đã hết hạn.");
+      setError(cause instanceof Error ? cause.message : copy("familyCircle.acceptError"));
     } finally {
       setSaving(false);
     }
@@ -116,7 +141,7 @@ export default function FamilyPage() {
       await revokeFamilyGrant(grantId);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể thu hồi quyền.");
+      setError(cause instanceof Error ? cause.message : copy("familyCircle.revokeError"));
     } finally {
       setSaving(false);
     }
@@ -133,7 +158,7 @@ export default function FamilyPage() {
       );
       setCreatedToken(result.token);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo lời mời gia hạn.");
+      setError(cause instanceof Error ? cause.message : copy("familyCircle.renewError"));
     } finally {
       setSaving(false);
     }
@@ -142,8 +167,8 @@ export default function FamilyPage() {
   return (
     <PageShell
       variant="plain"
-      title="Family Circle"
-      description="Chia sẻ đúng một hành trình hoặc buổi khám cho đúng người, đúng mục đích — không mở toàn bộ hồ sơ."
+      title={copy("familyCircle.title")}
+      description={copy("familyCircle.description")}
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
@@ -154,9 +179,9 @@ export default function FamilyPage() {
             <>
               <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <h2 className="font-semibold text-[var(--text-primary)]">Quyền bạn đã cấp</h2>
+                  <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.grants.title")}</h2>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Thu hồi có hiệu lực ở lần truy cập tiếp theo.
+                    {copy("familyCircle.grants.description")}
                   </p>
                 </div>
                 {grants.length ? (
@@ -165,19 +190,19 @@ export default function FamilyPage() {
                       <li key={grant.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-[var(--text-primary)]">
-                            {grant.supporter_label || "Người hỗ trợ"} · {grant.object_type}
+                            {grant.supporter_label || copy("familyCircle.label.supporter")} · {objectLabel(grant.object_type)}
                           </p>
                           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            {grant.allowed_actions.join(", ")} · {grant.purpose}
+                            {grant.allowed_actions.map(actionLabel).join(", ")} · {grant.purpose === "care_coordination" ? copy("familyCircle.purpose.careCoordination") : copy("familyCircle.purpose.visitSupport")}
                           </p>
                           <p className="mt-1 text-xs text-[var(--text-muted)]">
-                            Hết hạn {new Date(grant.expires_at).toLocaleString("vi-VN")}
+                            {copy("familyCircle.label.expires", { date: formatLocaleDate(language, grant.expires_at, { dateStyle: "medium", timeStyle: "short" }) })}
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          {grant.status !== "revoked" ? <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => void renew(grant.id)}>Gia hạn</Button> : null}
+                          {grant.status !== "revoked" ? <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => void renew(grant.id)}>{copy("familyCircle.action.renew")}</Button> : null}
                           <Button type="button" variant="danger" size="sm" disabled={saving || grant.status === "revoked"} onClick={() => void revoke(grant.id)}>
-                            {grant.status === "revoked" ? "Đã thu hồi" : "Thu hồi"}
+                            {grant.status === "revoked" ? copy("familyCircle.action.revoked") : copy("familyCircle.action.revoke")}
                           </Button>
                         </div>
                       </li>
@@ -186,25 +211,25 @@ export default function FamilyPage() {
                 ) : (
                   <EmptyState
                     icon="family_restroom"
-                    title="Bạn chưa chia sẻ dữ liệu nào"
-                    description="Khi cần, hãy cấp quyền tối thiểu cho một người có tài khoản CLARA."
+                    title={copy("familyCircle.grants.emptyTitle")}
+                    description={copy("familyCircle.grants.emptyDescription")}
                   />
                 )}
               </SurfaceCard>
 
               <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <h2 className="font-semibold text-[var(--text-primary)]">Bạn đang hỗ trợ</h2>
+                  <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.relationships.title")}</h2>
                 </div>
                 {relationships.length ? (
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
                     {relationships.map((relationship) => (
                       <div key={relationship.id} className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
                         <p className="font-medium text-[var(--text-primary)]">
-                          {relationship.supporter_label || "Phạm vi được chia sẻ"} · {relationship.object_type}
+                          {relationship.supporter_label || copy("familyCircle.label.sharedScope")} · {objectLabel(relationship.object_type)}
                         </p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          {relationship.allowed_actions.join(", ")}
+                          {relationship.allowed_actions.map(actionLabel).join(", ")}
                         </p>
                       </div>
                     ))}
@@ -212,14 +237,14 @@ export default function FamilyPage() {
                 ) : (
                   <EmptyState
                     icon="diversity_1"
-                    title="Chưa nhận lời mời nào"
-                    description="Dán mã mời ở cột bên phải để chấp nhận đúng phạm vi được chia sẻ."
+                    title={copy("familyCircle.relationships.emptyTitle")}
+                    description={copy("familyCircle.relationships.emptyDescription")}
                   />
                 )}
               </SurfaceCard>
 
               <SurfaceCard className="p-5">
-                <h2 className="font-semibold text-[var(--text-primary)]">Nhật ký truy cập</h2>
+                <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accessLog.title")}</h2>
                 <div className="mt-4 space-y-2">
                   {logs.slice(0, 20).map((log) => (
                     <div key={log.id} className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
@@ -234,17 +259,17 @@ export default function FamilyPage() {
                       </span>
                       <div>
                         <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {log.actor_label} · {log.action} · {log.outcome}
+                          {log.actor_label} · {actionLabel(log.action)} · {outcomeLabel(log.outcome)}
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
-                          {log.object_type} ·{" "}
-                          {new Date(log.created_at).toLocaleString("vi-VN")}
+                          {objectLabel(log.object_type)} ·{" "}
+                          {formatLocaleDate(language, log.created_at, { dateStyle: "medium", timeStyle: "short" })}
                         </p>
                       </div>
                     </div>
                   ))}
                   {!logs.length ? (
-                    <p className="text-sm text-[var(--text-secondary)]">Chưa có lượt truy cập.</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{copy("familyCircle.accessLog.empty")}</p>
                   ) : null}
                 </div>
               </SurfaceCard>
@@ -254,20 +279,20 @@ export default function FamilyPage() {
 
         <aside className="space-y-5">
           <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">Mời người hỗ trợ</h2>
+            <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.invite.title")}</h2>
             <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              Người nhận phải dùng đúng email tài khoản CLARA. Mã hết hạn sau 7 ngày.
+              {copy("familyCircle.invite.description")}
             </p>
             <form className="mt-4 space-y-3" onSubmit={(event) => void invite(event)}>
               <Field
-                label="Email người nhận"
+                label={copy("familyCircle.invite.email")}
                 type="email"
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
               <Select
-                label="Chỉ chia sẻ"
+                label={copy("familyCircle.invite.scope")}
                 value={objectType}
                 onChange={(event) => {
                   const nextType = event.target.value as "episode" | "visit";
@@ -275,38 +300,38 @@ export default function FamilyPage() {
                   setObjectId(shareable[nextType][0]?.id || "");
                 }}
               >
-                <option value="episode">Một hành trình</option>
-                <option value="visit">Một buổi khám</option>
+                <option value="episode">{copy("familyCircle.object.episode")}</option>
+                <option value="visit">{copy("familyCircle.object.visit")}</option>
               </Select>
               <Select
-                label="Mục được chia sẻ"
+                label={copy("familyCircle.invite.sharedItem")}
                 required
                 value={objectId}
                 onChange={(event) => setObjectId(event.target.value)}
               >
-                <option value="">Chọn {objectType === "episode" ? "hành trình" : "buổi khám"}</option>
+                <option value="">{copy("familyCircle.invite.chooseItem", { item: objectLabel(objectType) })}</option>
                 {shareable[objectType].map((item) => (
                   <option key={item.id} value={item.id}>{item.label}</option>
                 ))}
               </Select>
               <Select
-                label="Mục đích"
+                label={copy("familyCircle.invite.purpose")}
                 value={purpose}
                 onChange={(event) =>
                   setPurpose(event.target.value as "care_coordination" | "visit_support")
                 }
               >
-                <option value="care_coordination">Phối hợp chăm sóc</option>
-                <option value="visit_support">Hỗ trợ đi khám</option>
+                <option value="care_coordination">{copy("familyCircle.purpose.careCoordination")}</option>
+                <option value="visit_support">{copy("familyCircle.purpose.visitSupport")}</option>
               </Select>
               <Button type="submit" block disabled={saving}>
-                Tạo mã mời
+                {copy("familyCircle.invite.create")}
               </Button>
             </form>
             {createdToken ? (
               <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3">
                 <p className="text-xs text-[var(--status-warn-text)]">
-                  Mã chỉ hiển thị lần này; CLARA chưa tự gửi email.
+                  {copy("familyCircle.invite.createdNotice")}
                 </p>
                 <code className="mt-2 block break-all text-xs text-[var(--status-warn-text)]">
                   {createdToken}
@@ -316,16 +341,16 @@ export default function FamilyPage() {
           </SurfaceCard>
 
           <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">Chấp nhận lời mời</h2>
+            <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accept.title")}</h2>
             <form className="mt-4 space-y-3" onSubmit={(event) => void accept(event)}>
               <Field
-                label="Mã mời"
+                label={copy("familyCircle.accept.token")}
                 required
                 value={inviteToken}
                 onChange={(event) => setInviteToken(event.target.value)}
               />
               <Button type="submit" variant="secondary" block disabled={saving}>
-                Xem phạm vi và chấp nhận
+                {copy("familyCircle.accept.submit")}
               </Button>
             </form>
           </SurfaceCard>
