@@ -45,6 +45,22 @@ existing `X-ML-Internal-Key` guard.  None of these values is serialized or
 printed.  The report's `live-execution.json` contains opaque case references,
 endpoint class, path, status class, duration and verdict only.
 
+## GitHub Actions nightly integration
+
+`active-eval.yml` keeps live execution off unless repository variable
+`CLARA_EVAL_LIVE_EXECUTION_ENABLED` is exactly `true`. When governance approves
+a de-identified manifest, store its JSON only in the Actions secret
+`CLARA_EVAL_LIVE_MANIFEST_JSON`; the workflow writes it with mode `0600` under
+`RUNNER_TEMP`, passes that external path to the runner, and removes it on exit.
+Optional endpoint credentials remain separate Actions secrets:
+`CLARA_EVAL_API_BEARER_TOKEN`, `CLARA_EVAL_ML_BEARER_TOKEN`, and
+`CLARA_EVAL_ML_INTERNAL_KEY`.
+
+Do not put the manifest in a repository variable, artifact, pull request,
+issue, or workflow output. The live flag should remain false until the
+manifest approval, endpoint allowlist, dataset license, de-identification and
+retrieval snapshot have been reviewed.
+
 ## Release behaviour and rollback
 
 The locked release suite remains fail-closed until every configured product
