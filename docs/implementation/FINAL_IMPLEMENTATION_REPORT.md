@@ -166,9 +166,10 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
    rollback; their API payload origins still merit separate authorization review.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
-7. GitHub reported 100 dependency advisories on the default branch after the
-   latest push (1 critical, 40 high, 45 moderate, 14 low), reduced from the
-   prior 130. Targeted web lock upgrades reduced the local
+7. GitHub's push response was observed moving from 130 to 100 and then to 59
+   dependency advisories on the default branch after this dependency refresh
+   (latest observed: 1 critical, 28 high, 22 moderate, 8 low). Targeted web
+   lock upgrades reduced the local
    production-dependency audit from 11 to 3, but this does not establish that
    GitHub's cross-ecosystem advisory total is resolved. The three remaining
    web findings are in the Next/PostCSS/Sharp chain; the audit metadata offers
