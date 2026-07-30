@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
+import '../language_controller.dart';
 
 List<Map<String, dynamic>> _maps(Object? value) {
   if (value is! List) return const <Map<String, dynamic>>[];
@@ -29,12 +31,14 @@ class VisitDetailSurface extends StatefulWidget {
     required this.sessionStore,
     required this.visitId,
     required this.title,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final String visitId;
   final String title;
+  final LanguageController? languageController;
 
   @override
   State<VisitDetailSurface> createState() => _VisitDetailSurfaceState();
@@ -61,6 +65,10 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
     return token == null || token.isEmpty ? null : token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -80,7 +88,7 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -109,7 +117,7 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Không thể tải dữ liệu buổi khám.');
+        setState(() => _error = _copy[ConsumerTerm.visitDetailLoadFailed]);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -130,7 +138,8 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
     } catch (_) {
       if (mounted) {
         setState(
-            () => _error = 'Không thể hoàn tất thao tác. Vui lòng thử lại.');
+          () => _error = _copy[ConsumerTerm.visitDetailActionFailed],
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -140,7 +149,9 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
   Future<void> _addConcern() => _run((token) async {
         final value = _concernController.text.trim();
         if (value.length < 2) {
-          throw ApiException(message: 'Hãy nhập điều bạn muốn hỏi bác sĩ.');
+          throw ApiException(
+            message: _copy[ConsumerTerm.visitDetailConcernRequired],
+          );
         }
         await widget.apiClient.addVisitConcern(
           accessToken: token,
@@ -156,7 +167,7 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
         final body = _documentTextController.text.trim();
         if (title.isEmpty || body.isEmpty) {
           throw ApiException(
-            message: 'Hãy đặt tên và dán nội dung tài liệu bạn đã chọn.',
+            message: _copy[ConsumerTerm.visitDetailDocumentRequired],
           );
         }
         await widget.apiClient.createVisitDocument(
@@ -310,8 +321,25 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildSurface(context),
+      );
+    }
+    return _buildSurface(context);
+  }
+
+  Widget _buildSurface(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(
+          widget.title.isEmpty
+              ? _copy[ConsumerTerm.visitsPreparationTitle]
+              : widget.title,
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading && _documents.isEmpty
@@ -350,8 +378,7 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
 
   Widget _notice(BuildContext context) => ClaraCard.static_(
         child: Text(
-          'CLARA giúp chuẩn bị cho cuộc trao đổi với bác sĩ, không chẩn đoán '
-          'hay kê đơn. Chỉ nội dung bạn tự chọn và duyệt mới được sử dụng.',
+          _copy[ConsumerTerm.visitDetailPreparationNotice],
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
@@ -360,20 +387,20 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('1. Điều cần hỏi',
+            Text(_copy[ConsumerTerm.visitDetailConcernsTitle],
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: ClaraTokens.spaceSm),
             TextField(
               controller: _concernController,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Điều bạn muốn trao đổi với bác sĩ',
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.visitDetailConcernLabel],
               ),
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             ClaraButton.secondary(
-              label: 'Lưu điều cần hỏi',
+              label: _copy[ConsumerTerm.visitDetailSaveConcern],
               icon: Icons.add_comment_outlined,
               loading: _saving,
               onPressed: _addConcern,
@@ -386,29 +413,32 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('2. Tài liệu bạn chọn',
+            Text(_copy[ConsumerTerm.visitDetailDocumentsTitle],
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
-              'Dán nội dung đã chọn. CLARA không tự mở liên kết hay tự nhập hồ sơ.',
+              _copy[ConsumerTerm.visitDetailDocumentsDescription],
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             TextField(
               controller: _documentTitleController,
-              decoration: const InputDecoration(labelText: 'Tên tài liệu'),
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.visitDetailDocumentTitle],
+              ),
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             TextField(
               controller: _documentTextController,
               minLines: 3,
               maxLines: 8,
-              decoration:
-                  const InputDecoration(labelText: 'Nội dung văn bản đã chọn'),
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.visitDetailDocumentContent],
+              ),
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             ClaraButton.secondary(
-              label: 'Lưu tài liệu',
+              label: _copy[ConsumerTerm.visitDetailSaveDocument],
               icon: Icons.note_add_outlined,
               loading: _saving,
               onPressed: _addDocument,
@@ -441,8 +471,8 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
                   style: Theme.of(context).textTheme.titleSmall),
               Text(
                 inactive
-                    ? 'Đã rút hoặc xoá khỏi xử lý'
-                    : 'Đang do bạn kiểm soát',
+                    ? _copy[ConsumerTerm.visitDetailInactiveDocument]
+                    : _copy[ConsumerTerm.visitDetailControlledDocument],
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (!inactive)
@@ -451,17 +481,19 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
                   children: <Widget>[
                     TextButton(
                       onPressed: _saving ? null : () => _extract(document),
-                      child: const Text('Kiểm tra kế hoạch'),
+                      child: Text(_copy[ConsumerTerm.visitDetailCheckPlan]),
                     ),
                     TextButton(
                       onPressed:
                           _saving ? null : () => _withdrawDocument(document),
-                      child: const Text('Rút khỏi xử lý'),
+                      child: Text(
+                        _copy[ConsumerTerm.visitDetailWithdrawDocument],
+                      ),
                     ),
                     TextButton(
                       onPressed:
                           _saving ? null : () => _deleteDocument(document),
-                      child: const Text('Xoá nội dung'),
+                      child: Text(_copy[ConsumerTerm.visitDetailDeleteDocument]),
                     ),
                   ],
                 ),
@@ -480,13 +512,13 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('3. Rà soát có căn cứ',
+          Text(_copy[ConsumerTerm.visitDetailReviewTitle],
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: ClaraTokens.spaceXs),
           Text(
             unavailable
-                ? 'Không có mục đủ căn cứ để đề xuất. Hãy kiểm tra lại với bác sĩ.'
-                : 'Chỉ xác nhận chỉ dẫn của bác sĩ có đoạn nguồn nguyên văn.',
+                ? _copy[ConsumerTerm.visitDetailNoEvidence]
+                : _copy[ConsumerTerm.visitDetailReviewGuidance],
             style: Theme.of(context).textTheme.bodySmall,
           ),
           ...candidates.map((candidate) {
@@ -510,9 +542,14 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
                       })
                   : null,
               title: Text(_text(candidate['title'] ?? candidate['text'])),
-              subtitle: Text(confirmable
-                  ? 'Nguồn: “$source”'
-                  : 'Diễn giải AI hoặc thiếu nguồn — không thể xác nhận.'),
+              subtitle: Text(
+                confirmable
+                    ? _copy.format(
+                        ConsumerTerm.visitDetailSource,
+                        <String, Object?>{'source': source},
+                      )
+                    : _copy[ConsumerTerm.visitDetailUnconfirmableCandidate],
+              ),
             );
           }),
           if (!unavailable)
@@ -520,14 +557,14 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
               spacing: ClaraTokens.spaceSm,
               children: <Widget>[
                 ClaraButton.primary(
-                  label: 'Xác nhận mục đã chọn',
+                  label: _copy[ConsumerTerm.visitDetailConfirmSelected],
                   icon: Icons.verified_outlined,
                   loading: _saving,
                   onPressed: _candidateIds.isEmpty ? null : _confirmPlan,
                 ),
                 TextButton(
                   onPressed: _saving ? null : _withdrawPlan,
-                  child: const Text('Rút bản nháp'),
+                  child: Text(_copy[ConsumerTerm.visitDetailWithdrawDraft]),
                 ),
               ],
             ),
@@ -537,29 +574,32 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
   }
 
   Widget _packSection(BuildContext context) {
-    const groups = <(String, String)>[
-      ('concerns', 'Điều cần hỏi'),
-      ('medications', 'Thuốc đã xác nhận'),
-      ('episodes', 'Hành trình liên quan'),
-      ('events', 'Diễn biến đã xác nhận'),
-      ('instructions', 'Chỉ dẫn bác sĩ bạn đã xác nhận'),
+    final groups = <(String, ConsumerTerm)>[
+      ('concerns', ConsumerTerm.visitDetailPackConcerns),
+      ('medications', ConsumerTerm.visitDetailPackMedications),
+      ('episodes', ConsumerTerm.visitDetailPackEpisodes),
+      ('events', ConsumerTerm.visitDetailPackEvents),
+      ('instructions', ConsumerTerm.visitDetailPackInstructions),
     ];
     return ClaraCard.static_(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('4. Chọn và duyệt Visit Pack',
+          Text(_copy[ConsumerTerm.visitDetailPackTitle],
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: ClaraTokens.spaceXs),
           Text(
-            'Không có mục nào được tự động thêm hoặc chia sẻ.',
+            _copy[ConsumerTerm.visitDetailPackNotice],
             style: Theme.of(context).textTheme.bodySmall,
           ),
           for (final group in groups) ...<Widget>[
             const SizedBox(height: ClaraTokens.spaceSm),
-            Text(group.$2, style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              _copy[group.$2],
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             if (_maps(_options[group.$1]).isEmpty)
-              Text('Chưa có mục phù hợp.',
+              Text(_copy[ConsumerTerm.visitDetailNoMatchingItems],
                   style: Theme.of(context).textTheme.bodySmall)
             else
               ..._maps(_options[group.$1]).map((item) {
@@ -580,7 +620,9 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
               }),
           ],
           ClaraButton.primary(
-            label: _pack == null ? 'Tạo và duyệt gói' : 'Tạo phiên bản mới',
+            label: _pack == null
+                ? _copy[ConsumerTerm.visitDetailCreatePack]
+                : _copy[ConsumerTerm.visitDetailCreateNewPackVersion],
             icon: Icons.inventory_2_outlined,
             loading: _saving,
             onPressed: _packIds.isEmpty ? null : _createAndApprovePack,
@@ -588,13 +630,16 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
           if (_pack != null) ...<Widget>[
             const SizedBox(height: ClaraTokens.spaceSm),
             Text(
-              'Phiên bản ${_text(_pack!['version_no'])} đã được bạn duyệt.',
+              _copy.format(
+                ConsumerTerm.visitDetailApprovedPackVersion,
+                <String, Object?>{'version': _text(_pack!['version_no'])},
+              ),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (_share == null)
               TextButton(
                 onPressed: _saving ? null : _createShare,
-                child: const Text('Tạo liên kết 7 ngày'),
+                child: Text(_copy[ConsumerTerm.visitDetailCreateShare]),
               )
             else ...<Widget>[
               SelectableText(
@@ -602,7 +647,7 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
               ),
               TextButton(
                 onPressed: _saving ? null : _revokeShare,
-                child: const Text('Thu hồi liên kết'),
+                child: Text(_copy[ConsumerTerm.visitDetailRevokeShare]),
               ),
             ],
           ],
@@ -615,11 +660,11 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Đồng ý ghi âm riêng cho buổi này',
+            Text(_copy[ConsumerTerm.visitDetailScribeConsentTitle],
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
-              'Bạn có thể rút lại ngay. Chưa có đồng ý thì Scribe không được xử lý.',
+              _copy[ConsumerTerm.visitDetailScribeConsentDescription],
               style: Theme.of(context).textTheme.bodySmall,
             ),
             SwitchListTile(
@@ -627,8 +672,8 @@ class _VisitDetailSurfaceState extends State<VisitDetailSurface> {
               value: _scribeConsented,
               onChanged: _saving ? null : (_) => _toggleScribeConsent(),
               title: Text(_scribeConsented
-                  ? 'Đã đồng ý cho buổi này'
-                  : 'Chưa đồng ý ghi âm'),
+                  ? _copy[ConsumerTerm.visitDetailScribeConsentGranted]
+                  : _copy[ConsumerTerm.visitDetailScribeConsentNotGranted]),
             ),
           ],
         ),

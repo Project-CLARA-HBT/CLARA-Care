@@ -179,6 +179,48 @@ enum ConsumerTerm {
   visitsNameRequired,
   visitsLoadFailed,
   visitsCreateFailed,
+  visitDetailPreparationNotice,
+  visitDetailConcernsTitle,
+  visitDetailConcernLabel,
+  visitDetailSaveConcern,
+  visitDetailDocumentsTitle,
+  visitDetailDocumentsDescription,
+  visitDetailDocumentTitle,
+  visitDetailDocumentContent,
+  visitDetailSaveDocument,
+  visitDetailInactiveDocument,
+  visitDetailControlledDocument,
+  visitDetailCheckPlan,
+  visitDetailWithdrawDocument,
+  visitDetailDeleteDocument,
+  visitDetailReviewTitle,
+  visitDetailNoEvidence,
+  visitDetailReviewGuidance,
+  visitDetailSource,
+  visitDetailUnconfirmableCandidate,
+  visitDetailConfirmSelected,
+  visitDetailWithdrawDraft,
+  visitDetailPackTitle,
+  visitDetailPackNotice,
+  visitDetailNoMatchingItems,
+  visitDetailPackConcerns,
+  visitDetailPackMedications,
+  visitDetailPackEpisodes,
+  visitDetailPackEvents,
+  visitDetailPackInstructions,
+  visitDetailCreatePack,
+  visitDetailCreateNewPackVersion,
+  visitDetailApprovedPackVersion,
+  visitDetailCreateShare,
+  visitDetailRevokeShare,
+  visitDetailScribeConsentTitle,
+  visitDetailScribeConsentDescription,
+  visitDetailScribeConsentGranted,
+  visitDetailScribeConsentNotGranted,
+  visitDetailLoadFailed,
+  visitDetailActionFailed,
+  visitDetailConcernRequired,
+  visitDetailDocumentRequired,
   familyTitle,
   familySupporter,
   familyNewNotification,
@@ -441,6 +483,106 @@ class ConsumerTerminology {
     ConsumerTerm.medicinesRouteLabel: 'Đường dùng',
     ConsumerTerm.medicinesRouteHint: 'Ví dụ: Uống',
     ConsumerTerm.medicinesFormLabel: 'Dạng thuốc',
+    ConsumerTerm.medicinesFormHint: 'Ví dụ: Viên nén',
+    ConsumerTerm.medicinesEditReasonLabel: 'Lý do chỉnh sửa *',
+    ConsumerTerm.medicinesEditReasonHint: 'Ví dụ: Sửa thông tin đã nhập nhầm',
+    ConsumerTerm.medicinesSave: 'Lưu thuốc',
+    ConsumerTerm.medicinesSaveNewVersion: 'Lưu phiên bản mới',
+    ConsumerTerm.medicinesSafetyTitle: 'Kiểm tra tương tác thuốc',
+    ConsumerTerm.medicinesSafetyDescription:
+        'Việc kiểm tra tương tác thuốc được thực hiện trong Tủ thuốc. Khi bạn '
+            'thêm từ hai loại thuốc trở lên, CLARA sẽ rà soát các tương tác có '
+            'thể xảy ra dựa trên danh sách đó.',
+    ConsumerTerm.medicinesOpenCabinet: 'Mở Tủ thuốc',
+    ConsumerTerm.medicinesSafetyNotice:
+        'CLARA là trợ lý hỗ trợ quyết định, không thay thế bác sĩ. Kết quả kiểm '
+            'tra chỉ mang tính tham khảo — hãy trao đổi với dược sĩ hoặc bác sĩ '
+            'trước khi thay đổi cách dùng thuốc.',
+    ConsumerTerm.visitsTitle: 'Chuẩn bị đi khám',
+    ConsumerTerm.visitsCreate: 'Tạo buổi khám',
+    ConsumerTerm.visitsClose: 'Đóng',
+    ConsumerTerm.visitsProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
+    ConsumerTerm.visitsProfileRequiredDescription:
+        'Để chuẩn bị cho buổi khám, bạn cần tạo hồ sơ sức khỏe trước. Đây là '
+            'bước giúp bạn trao đổi với bác sĩ hiệu quả hơn, không phải chẩn đoán.',
+    ConsumerTerm.visitsEmptyTitle: 'Chưa có buổi khám nào',
+    ConsumerTerm.visitsEmptyDescription:
+        'Tạo một buổi khám để chuẩn bị nội dung cần trao đổi với bác sĩ. CLARA '
+            'giúp bạn sắp xếp mối quan tâm, không phải chẩn đoán.',
+    ConsumerTerm.visitsSafetyLabel: 'Lưu ý về buổi khám',
+    ConsumerTerm.visitsSafetyNotice:
+        'Buổi khám giúp bạn chuẩn bị trước khi gặp bác sĩ. Đây không phải là tư '
+            'vấn hay chẩn đoán y tế.',
+    ConsumerTerm.visitsNameLabel: 'Tên buổi khám',
+    ConsumerTerm.visitsNameHint: 'Ví dụ: Khám tim mạch định kỳ',
+    ConsumerTerm.visitsReasonLabel: 'Lý do khám (không bắt buộc)',
+    ConsumerTerm.visitsReasonHint: 'Điều bạn muốn trao đổi với bác sĩ',
+    ConsumerTerm.visitsUnnamed: 'Buổi khám chưa đặt tên',
+    ConsumerTerm.visitsPreparationTitle: 'Chuẩn bị buổi khám',
+    ConsumerTerm.visitsOpenPreparation: 'Mở chuẩn bị',
+    ConsumerTerm.visitsNoSchedule: 'Chưa đặt lịch',
+    ConsumerTerm.visitsScheduledDate: 'Lịch: {date}',
+    ConsumerTerm.visitsNameRequired: 'Vui lòng nhập tên buổi khám.',
+    ConsumerTerm.visitsLoadFailed:
+        'Không thể tải danh sách buổi khám. Vui lòng thử lại.',
+    ConsumerTerm.visitsCreateFailed:
+        'Không thể tạo buổi khám. Vui lòng thử lại.',
+    ConsumerTerm.visitDetailPreparationNotice:
+        'CLARA giúp chuẩn bị cho cuộc trao đổi với bác sĩ, không chẩn đoán hay '
+            'kê đơn. Chỉ nội dung bạn tự chọn và duyệt mới được sử dụng.',
+    ConsumerTerm.visitDetailConcernsTitle: '1. Điều cần hỏi',
+    ConsumerTerm.visitDetailConcernLabel:
+        'Điều bạn muốn trao đổi với bác sĩ',
+    ConsumerTerm.visitDetailSaveConcern: 'Lưu điều cần hỏi',
+    ConsumerTerm.visitDetailDocumentsTitle: '2. Tài liệu bạn chọn',
+    ConsumerTerm.visitDetailDocumentsDescription:
+        'Dán nội dung đã chọn. CLARA không tự mở liên kết hay tự nhập hồ sơ.',
+    ConsumerTerm.visitDetailDocumentTitle: 'Tên tài liệu',
+    ConsumerTerm.visitDetailDocumentContent: 'Nội dung văn bản đã chọn',
+    ConsumerTerm.visitDetailSaveDocument: 'Lưu tài liệu',
+    ConsumerTerm.visitDetailInactiveDocument: 'Đã rút hoặc xoá khỏi xử lý',
+    ConsumerTerm.visitDetailControlledDocument: 'Đang do bạn kiểm soát',
+    ConsumerTerm.visitDetailCheckPlan: 'Kiểm tra kế hoạch',
+    ConsumerTerm.visitDetailWithdrawDocument: 'Rút khỏi xử lý',
+    ConsumerTerm.visitDetailDeleteDocument: 'Xoá nội dung',
+    ConsumerTerm.visitDetailReviewTitle: '3. Rà soát có căn cứ',
+    ConsumerTerm.visitDetailNoEvidence:
+        'Không có mục đủ căn cứ để đề xuất. Hãy kiểm tra lại với bác sĩ.',
+    ConsumerTerm.visitDetailReviewGuidance:
+        'Chỉ xác nhận chỉ dẫn của bác sĩ có đoạn nguồn nguyên văn.',
+    ConsumerTerm.visitDetailSource: 'Nguồn: “{source}”',
+    ConsumerTerm.visitDetailUnconfirmableCandidate:
+        'Diễn giải AI hoặc thiếu nguồn — không thể xác nhận.',
+    ConsumerTerm.visitDetailConfirmSelected: 'Xác nhận mục đã chọn',
+    ConsumerTerm.visitDetailWithdrawDraft: 'Rút bản nháp',
+    ConsumerTerm.visitDetailPackTitle: '4. Chọn và duyệt Visit Pack',
+    ConsumerTerm.visitDetailPackNotice:
+        'Không có mục nào được tự động thêm hoặc chia sẻ.',
+    ConsumerTerm.visitDetailNoMatchingItems: 'Chưa có mục phù hợp.',
+    ConsumerTerm.visitDetailPackConcerns: 'Điều cần hỏi',
+    ConsumerTerm.visitDetailPackMedications: 'Thuốc đã xác nhận',
+    ConsumerTerm.visitDetailPackEpisodes: 'Hành trình liên quan',
+    ConsumerTerm.visitDetailPackEvents: 'Diễn biến đã xác nhận',
+    ConsumerTerm.visitDetailPackInstructions:
+        'Chỉ dẫn bác sĩ bạn đã xác nhận',
+    ConsumerTerm.visitDetailCreatePack: 'Tạo và duyệt gói',
+    ConsumerTerm.visitDetailCreateNewPackVersion: 'Tạo phiên bản mới',
+    ConsumerTerm.visitDetailApprovedPackVersion:
+        'Phiên bản {version} đã được bạn duyệt.',
+    ConsumerTerm.visitDetailCreateShare: 'Tạo liên kết 7 ngày',
+    ConsumerTerm.visitDetailRevokeShare: 'Thu hồi liên kết',
+    ConsumerTerm.visitDetailScribeConsentTitle: 'Đồng ý ghi âm riêng cho buổi này',
+    ConsumerTerm.visitDetailScribeConsentDescription:
+        'Bạn có thể rút lại ngay. Chưa có đồng ý thì Scribe không được xử lý.',
+    ConsumerTerm.visitDetailScribeConsentGranted: 'Đã đồng ý cho buổi này',
+    ConsumerTerm.visitDetailScribeConsentNotGranted: 'Chưa đồng ý ghi âm',
+    ConsumerTerm.visitDetailLoadFailed:
+        'Không thể tải dữ liệu buổi khám. Vui lòng thử lại.',
+    ConsumerTerm.visitDetailActionFailed:
+        'Không thể hoàn tất thao tác. Vui lòng thử lại.',
+    ConsumerTerm.visitDetailConcernRequired: 'Hãy nhập điều bạn muốn hỏi bác sĩ.',
+    ConsumerTerm.visitDetailDocumentRequired:
+        'Hãy đặt tên và dán nội dung tài liệu bạn đã chọn.',
     ConsumerTerm.familyTitle: 'Người thân & chia sẻ',
     ConsumerTerm.familySupporter: 'Người hỗ trợ',
     ConsumerTerm.familyNewNotification: 'Thông báo mới',
@@ -502,50 +644,6 @@ class ConsumerTerminology {
     ConsumerTerm.familyRenewFailed: 'Không thể tạo lời mời gia hạn.',
     ConsumerTerm.familyLoadFailed:
         'Không thể tải thông tin chia sẻ. Vui lòng thử lại.',
-    ConsumerTerm.medicinesFormHint: 'Ví dụ: Viên nén',
-    ConsumerTerm.medicinesEditReasonLabel: 'Lý do chỉnh sửa *',
-    ConsumerTerm.medicinesEditReasonHint: 'Ví dụ: Sửa thông tin đã nhập nhầm',
-    ConsumerTerm.medicinesSave: 'Lưu thuốc',
-    ConsumerTerm.medicinesSaveNewVersion: 'Lưu phiên bản mới',
-    ConsumerTerm.medicinesSafetyTitle: 'Kiểm tra tương tác thuốc',
-    ConsumerTerm.medicinesSafetyDescription:
-        'Việc kiểm tra tương tác thuốc được thực hiện trong Tủ thuốc. Khi bạn '
-            'thêm từ hai loại thuốc trở lên, CLARA sẽ rà soát các tương tác có '
-            'thể xảy ra dựa trên danh sách đó.',
-    ConsumerTerm.medicinesOpenCabinet: 'Mở Tủ thuốc',
-    ConsumerTerm.medicinesSafetyNotice:
-        'CLARA là trợ lý hỗ trợ quyết định, không thay thế bác sĩ. Kết quả kiểm '
-            'tra chỉ mang tính tham khảo — hãy trao đổi với dược sĩ hoặc bác sĩ '
-            'trước khi thay đổi cách dùng thuốc.',
-    ConsumerTerm.visitsTitle: 'Chuẩn bị đi khám',
-    ConsumerTerm.visitsCreate: 'Tạo buổi khám',
-    ConsumerTerm.visitsClose: 'Đóng',
-    ConsumerTerm.visitsProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
-    ConsumerTerm.visitsProfileRequiredDescription:
-        'Để chuẩn bị cho buổi khám, bạn cần tạo hồ sơ sức khỏe trước. Đây là '
-            'bước giúp bạn trao đổi với bác sĩ hiệu quả hơn, không phải chẩn đoán.',
-    ConsumerTerm.visitsEmptyTitle: 'Chưa có buổi khám nào',
-    ConsumerTerm.visitsEmptyDescription:
-        'Tạo một buổi khám để chuẩn bị nội dung cần trao đổi với bác sĩ. CLARA '
-            'giúp bạn sắp xếp mối quan tâm, không phải chẩn đoán.',
-    ConsumerTerm.visitsSafetyLabel: 'Lưu ý về buổi khám',
-    ConsumerTerm.visitsSafetyNotice:
-        'Buổi khám giúp bạn chuẩn bị trước khi gặp bác sĩ. Đây không phải là tư '
-            'vấn hay chẩn đoán y tế.',
-    ConsumerTerm.visitsNameLabel: 'Tên buổi khám',
-    ConsumerTerm.visitsNameHint: 'Ví dụ: Khám tim mạch định kỳ',
-    ConsumerTerm.visitsReasonLabel: 'Lý do khám (không bắt buộc)',
-    ConsumerTerm.visitsReasonHint: 'Điều bạn muốn trao đổi với bác sĩ',
-    ConsumerTerm.visitsUnnamed: 'Buổi khám chưa đặt tên',
-    ConsumerTerm.visitsPreparationTitle: 'Chuẩn bị buổi khám',
-    ConsumerTerm.visitsOpenPreparation: 'Mở chuẩn bị',
-    ConsumerTerm.visitsNoSchedule: 'Chưa đặt lịch',
-    ConsumerTerm.visitsScheduledDate: 'Lịch: {date}',
-    ConsumerTerm.visitsNameRequired: 'Vui lòng nhập tên buổi khám.',
-    ConsumerTerm.visitsLoadFailed:
-        'Không thể tải danh sách buổi khám. Vui lòng thử lại.',
-    ConsumerTerm.visitsCreateFailed:
-        'Không thể tạo buổi khám. Vui lòng thử lại.',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -697,6 +795,108 @@ class ConsumerTerminology {
     ConsumerTerm.medicinesRouteLabel: 'Route',
     ConsumerTerm.medicinesRouteHint: 'For example: by mouth',
     ConsumerTerm.medicinesFormLabel: 'Form',
+    ConsumerTerm.medicinesFormHint: 'For example: tablet',
+    ConsumerTerm.medicinesEditReasonLabel: 'Reason for edit *',
+    ConsumerTerm.medicinesEditReasonHint:
+        'For example: correct an entry mistake',
+    ConsumerTerm.medicinesSave: 'Save medicine',
+    ConsumerTerm.medicinesSaveNewVersion: 'Save new version',
+    ConsumerTerm.medicinesSafetyTitle: 'Check medicine interactions',
+    ConsumerTerm.medicinesSafetyDescription:
+        'Medicine-interaction checks happen in Medicine cabinet. When you add '
+            'two or more medicines there, CLARA reviews potential interactions '
+            'against that list.',
+    ConsumerTerm.medicinesOpenCabinet: 'Open medicine cabinet',
+    ConsumerTerm.medicinesSafetyNotice:
+        'CLARA is a decision-support assistant, not a substitute for a doctor. '
+            'Check results are for reference only — speak with a pharmacist or '
+            'doctor before changing how you use a medicine.',
+    ConsumerTerm.visitsTitle: 'Prepare for a visit',
+    ConsumerTerm.visitsCreate: 'Create visit',
+    ConsumerTerm.visitsClose: 'Close',
+    ConsumerTerm.visitsProfileRequiredTitle: 'Create your health profile first',
+    ConsumerTerm.visitsProfileRequiredDescription:
+        'Create your health profile before preparing for a visit. This helps '
+            'you have a more useful conversation with your doctor; it is not a diagnosis.',
+    ConsumerTerm.visitsEmptyTitle: 'No visits yet',
+    ConsumerTerm.visitsEmptyDescription:
+        'Create a visit to prepare what you want to discuss with your doctor. '
+            'CLARA helps you organize concerns; it does not diagnose.',
+    ConsumerTerm.visitsSafetyLabel: 'Visit preparation note',
+    ConsumerTerm.visitsSafetyNotice:
+        'A visit helps you prepare before you see a doctor. It is not medical '
+            'advice or a diagnosis.',
+    ConsumerTerm.visitsNameLabel: 'Visit name',
+    ConsumerTerm.visitsNameHint: 'For example: Routine cardiology visit',
+    ConsumerTerm.visitsReasonLabel: 'Reason for visit (optional)',
+    ConsumerTerm.visitsReasonHint: 'What you want to discuss with your doctor',
+    ConsumerTerm.visitsUnnamed: 'Unnamed visit',
+    ConsumerTerm.visitsPreparationTitle: 'Visit preparation',
+    ConsumerTerm.visitsOpenPreparation: 'Open preparation',
+    ConsumerTerm.visitsNoSchedule: 'Not scheduled',
+    ConsumerTerm.visitsScheduledDate: 'Scheduled: {date}',
+    ConsumerTerm.visitsNameRequired: 'Enter a visit name.',
+    ConsumerTerm.visitsLoadFailed: 'We could not load your visits. Try again.',
+    ConsumerTerm.visitsCreateFailed:
+        'We could not create the visit. Try again.',
+    ConsumerTerm.visitDetailPreparationNotice:
+        'CLARA helps you prepare for a conversation with your doctor; it does '
+            'not diagnose or prescribe. Only content you choose and approve is used.',
+    ConsumerTerm.visitDetailConcernsTitle: '1. What you want to ask',
+    ConsumerTerm.visitDetailConcernLabel:
+        'What you want to discuss with your doctor',
+    ConsumerTerm.visitDetailSaveConcern: 'Save question',
+    ConsumerTerm.visitDetailDocumentsTitle: '2. Documents you choose',
+    ConsumerTerm.visitDetailDocumentsDescription:
+        'Paste content you selected. CLARA does not open links or import records on its own.',
+    ConsumerTerm.visitDetailDocumentTitle: 'Document title',
+    ConsumerTerm.visitDetailDocumentContent: 'Selected text content',
+    ConsumerTerm.visitDetailSaveDocument: 'Save document',
+    ConsumerTerm.visitDetailInactiveDocument: 'Removed from processing',
+    ConsumerTerm.visitDetailControlledDocument: 'Under your control',
+    ConsumerTerm.visitDetailCheckPlan: 'Review plan',
+    ConsumerTerm.visitDetailWithdrawDocument: 'Remove from processing',
+    ConsumerTerm.visitDetailDeleteDocument: 'Delete content',
+    ConsumerTerm.visitDetailReviewTitle: '3. Evidence-based review',
+    ConsumerTerm.visitDetailNoEvidence:
+        'There are no sufficiently supported items to suggest. Check with your doctor.',
+    ConsumerTerm.visitDetailReviewGuidance:
+        'Only confirm clinician instructions that have an exact source quote.',
+    ConsumerTerm.visitDetailSource: 'Source: “{source}”',
+    ConsumerTerm.visitDetailUnconfirmableCandidate:
+        'AI interpretation or missing source — cannot be confirmed.',
+    ConsumerTerm.visitDetailConfirmSelected: 'Confirm selected items',
+    ConsumerTerm.visitDetailWithdrawDraft: 'Withdraw draft',
+    ConsumerTerm.visitDetailPackTitle: '4. Select and approve Visit Pack',
+    ConsumerTerm.visitDetailPackNotice:
+        'No item is added or shared automatically.',
+    ConsumerTerm.visitDetailNoMatchingItems: 'No matching items yet.',
+    ConsumerTerm.visitDetailPackConcerns: 'Questions to ask',
+    ConsumerTerm.visitDetailPackMedications: 'Confirmed medicines',
+    ConsumerTerm.visitDetailPackEpisodes: 'Related care journeys',
+    ConsumerTerm.visitDetailPackEvents: 'Confirmed events',
+    ConsumerTerm.visitDetailPackInstructions:
+        'Clinician instructions you confirmed',
+    ConsumerTerm.visitDetailCreatePack: 'Create and approve pack',
+    ConsumerTerm.visitDetailCreateNewPackVersion: 'Create a new version',
+    ConsumerTerm.visitDetailApprovedPackVersion:
+        'You approved version {version}.',
+    ConsumerTerm.visitDetailCreateShare: 'Create 7-day link',
+    ConsumerTerm.visitDetailRevokeShare: 'Revoke link',
+    ConsumerTerm.visitDetailScribeConsentTitle:
+        'Consent to recording for this visit',
+    ConsumerTerm.visitDetailScribeConsentDescription:
+        'You can withdraw it immediately. Without consent, Scribe cannot process recording.',
+    ConsumerTerm.visitDetailScribeConsentGranted: 'Consent granted for this visit',
+    ConsumerTerm.visitDetailScribeConsentNotGranted: 'Recording not consented',
+    ConsumerTerm.visitDetailLoadFailed:
+        'We could not load this visit. Try again.',
+    ConsumerTerm.visitDetailActionFailed:
+        'We could not complete that action. Try again.',
+    ConsumerTerm.visitDetailConcernRequired:
+        'Enter what you want to ask your doctor.',
+    ConsumerTerm.visitDetailDocumentRequired:
+        'Give the document a title and paste the content you chose.',
     ConsumerTerm.familyTitle: 'Family & sharing',
     ConsumerTerm.familySupporter: 'Supporter',
     ConsumerTerm.familyNewNotification: 'New notification',
@@ -757,49 +957,6 @@ class ConsumerTerminology {
     ConsumerTerm.familyRenewFailed:
         'We could not create a renewal invitation.',
     ConsumerTerm.familyLoadFailed:
-    ConsumerTerm.medicinesFormHint: 'For example: tablet',
-    ConsumerTerm.medicinesEditReasonLabel: 'Reason for edit *',
-    ConsumerTerm.medicinesEditReasonHint:
-        'For example: correct an entry mistake',
-    ConsumerTerm.medicinesSave: 'Save medicine',
-    ConsumerTerm.medicinesSaveNewVersion: 'Save new version',
-    ConsumerTerm.medicinesSafetyTitle: 'Check medicine interactions',
-    ConsumerTerm.medicinesSafetyDescription:
-        'Medicine-interaction checks happen in Medicine cabinet. When you add '
-            'two or more medicines there, CLARA reviews potential interactions '
-            'against that list.',
-    ConsumerTerm.medicinesOpenCabinet: 'Open medicine cabinet',
-    ConsumerTerm.medicinesSafetyNotice:
-        'CLARA is a decision-support assistant, not a substitute for a doctor. '
-            'Check results are for reference only — speak with a pharmacist or '
-            'doctor before changing how you use a medicine.',
-    ConsumerTerm.visitsTitle: 'Prepare for a visit',
-    ConsumerTerm.visitsCreate: 'Create visit',
-    ConsumerTerm.visitsClose: 'Close',
-    ConsumerTerm.visitsProfileRequiredTitle: 'Create your health profile first',
-    ConsumerTerm.visitsProfileRequiredDescription:
-        'Create your health profile before preparing for a visit. This helps '
-            'you have a more useful conversation with your doctor; it is not a diagnosis.',
-    ConsumerTerm.visitsEmptyTitle: 'No visits yet',
-    ConsumerTerm.visitsEmptyDescription:
-        'Create a visit to prepare what you want to discuss with your doctor. '
-            'CLARA helps you organize concerns; it does not diagnose.',
-    ConsumerTerm.visitsSafetyLabel: 'Visit preparation note',
-    ConsumerTerm.visitsSafetyNotice:
-        'A visit helps you prepare before you see a doctor. It is not medical '
-            'advice or a diagnosis.',
-    ConsumerTerm.visitsNameLabel: 'Visit name',
-    ConsumerTerm.visitsNameHint: 'For example: Routine cardiology visit',
-    ConsumerTerm.visitsReasonLabel: 'Reason for visit (optional)',
-    ConsumerTerm.visitsReasonHint: 'What you want to discuss with your doctor',
-    ConsumerTerm.visitsUnnamed: 'Unnamed visit',
-    ConsumerTerm.visitsPreparationTitle: 'Visit preparation',
-    ConsumerTerm.visitsOpenPreparation: 'Open preparation',
-    ConsumerTerm.visitsNoSchedule: 'Not scheduled',
-    ConsumerTerm.visitsScheduledDate: 'Scheduled: {date}',
-    ConsumerTerm.visitsNameRequired: 'Enter a visit name.',
-    ConsumerTerm.visitsLoadFailed: 'We could not load your visits. Try again.',
-    ConsumerTerm.visitsCreateFailed:
-        'We could not create the visit. Try again.',
+        'We could not load sharing details. Try again.',
   };
 }

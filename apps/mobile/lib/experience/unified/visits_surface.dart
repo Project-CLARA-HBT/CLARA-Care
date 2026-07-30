@@ -543,9 +543,8 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
                     apiClient: widget.apiClient,
                     sessionStore: widget.sessionStore,
                     visitId: visit.id,
-                    title: visit.title.isEmpty
-                        ? _copy[ConsumerTerm.visitsPreparationTitle]
-                        : visit.title,
+                    title: visit.title,
+                    languageController: widget.languageController,
                   ),
                 ),
               ),
