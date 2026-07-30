@@ -3,6 +3,8 @@
 import type { MouseEventHandler } from "react";
 
 import Button from "@/components/ui/button";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type SecondaryAction = {
   label: string;
@@ -12,12 +14,12 @@ type SecondaryAction = {
 };
 
 export function StepActions({
-  nextLabel = "Tiếp tục",
+  nextLabel,
   nextType = "submit",
   onNext,
   nextDisabled = false,
   saving = false,
-  savingLabel = "Đang lưu…",
+  savingLabel,
   back,
   skip,
 }: {
@@ -30,6 +32,8 @@ export function StepActions({
   back?: SecondaryAction;
   skip?: SecondaryAction;
 }) {
+  const language = useUILanguage();
+
   return (
     <div className="border-t border-[color:var(--shell-border)] pt-5">
       <div className="flex flex-col gap-3 sm:flex-row-reverse sm:items-center">
@@ -38,12 +42,12 @@ export function StepActions({
           onClick={onNext}
           disabled={nextDisabled}
           loading={saving}
-          loadingLabel={savingLabel}
+          loadingLabel={savingLabel ?? t(language, "flow.saving")}
           icon="arrow_forward"
           iconTrailing
           className="sm:min-w-36"
         >
-          {nextLabel}
+          {nextLabel ?? t(language, "flow.continue")}
         </Button>
 
         {back?.href && !saving ? (
