@@ -25,6 +25,11 @@ void main() {
     test('retains the web-aligned LifeMap agency wording', () {
       final vi = ConsumerTerminology.forLocale('vi');
       expect(kConsumerTerminologyVersion, '2026-07-30.v1');
+      expect(vi[ConsumerTerm.navigationLifeMap], 'Hành trình sức khỏe');
+      expect(
+        ConsumerTerminology.forLocale('en')[ConsumerTerm.navigationProfile],
+        'Profile',
+      );
       expect(vi[ConsumerTerm.todayOpenLifeMap], 'Mở hành trình sức khỏe');
       expect(
         vi[ConsumerTerm.todayEmptyDescription],

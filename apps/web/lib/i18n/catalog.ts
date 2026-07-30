@@ -1,9 +1,11 @@
 import type { UILanguage } from "@/lib/ui-language";
+import { CONSUMER_TERMINOLOGY_MESSAGES } from "./consumer-terminology.generated";
 
 // Keep end-user shell language in one typed source. Product pages that still
 // own domain-specific bilingual copy can migrate incrementally without
 // changing persisted locale semantics.
 const VI_MESSAGES = {
+  ...CONSUMER_TERMINOLOGY_MESSAGES.vi,
   "theme.light": "Sáng",
   "theme.dark": "Tối",
   "theme.system": "Theo hệ thống",
@@ -20,7 +22,6 @@ const VI_MESSAGES = {
   "navigation.clinical": "Lâm sàng",
   "navigation.admin": "Vận hành",
   "navigation.support": "Hỗ trợ",
-  "action.askClara": "Hỏi CLARA",
   "action.signOut": "Đăng xuất",
   "action.signingOut": "Đang đăng xuất…",
   "action.collapse": "Thu gọn",
@@ -39,23 +40,13 @@ const VI_MESSAGES = {
   "role.doctor": "Bác sĩ",
   "role.admin": "Quản trị viên",
   "family.pendingTasks": "{count} nhiệm vụ chăm sóc được chia sẻ đang chờ",
-  "today.title": "Hôm nay",
   "today.description":
     "Một nhịp chăm sóc rõ ràng: chỉ những việc bạn đã chấp nhận mới xuất hiện ở đây.",
-  "today.pending": "Việc đang chờ",
-  "today.accepted": "Đã đồng ý thực hiện",
-  "today.episodes": "Hành trình đang mở",
   "today.following": "Theo dõi cùng bạn",
-  "today.confirmation": "Cần xác nhận",
   "today.notConclusion": "Chưa dùng làm kết luận",
   "today.next": "Việc nên làm tiếp theo",
   "today.control": "Bạn luôn có quyền bỏ qua hoặc điều chỉnh kế hoạch.",
-  "today.openLifeMap": "Mở hành trình sức khỏe",
-  "today.noDueDate": "Không có hạn cụ thể",
   "today.viewTask": "Xem việc",
-  "today.emptyTitle": "Hôm nay chưa có việc nào",
-  "today.emptyDescription":
-    "Khi bạn chấp nhận một việc trong hành trình sức khỏe, nó sẽ xuất hiện ở đây. CLARA không tự thêm việc thay bạn.",
   "today.createEpisode": "Tạo hành trình",
   "today.connectionError": "Kiểm tra kết nối rồi thử lại.",
   "today.startHere": "Bạn muốn làm gì?",
@@ -101,6 +92,7 @@ type TranslationKey = keyof typeof VI_MESSAGES;
 type MessageCatalog = Record<TranslationKey, string>;
 
 const EN_MESSAGES: MessageCatalog = {
+  ...CONSUMER_TERMINOLOGY_MESSAGES.en,
   "theme.light": "Light",
   "theme.dark": "Dark",
   "theme.system": "System",
@@ -117,7 +109,6 @@ const EN_MESSAGES: MessageCatalog = {
   "navigation.clinical": "Clinical",
   "navigation.admin": "Operations",
   "navigation.support": "Support",
-  "action.askClara": "Ask CLARA",
   "action.signOut": "Sign out",
   "action.signingOut": "Signing out…",
   "action.collapse": "Collapse",
@@ -136,23 +127,13 @@ const EN_MESSAGES: MessageCatalog = {
   "role.doctor": "Doctor",
   "role.admin": "Administrator",
   "family.pendingTasks": "{count} shared care task(s) pending",
-  "today.title": "Today",
   "today.description":
     "A clear care rhythm: only tasks you accepted appear here.",
-  "today.pending": "Pending tasks",
-  "today.accepted": "Accepted by you",
-  "today.episodes": "Open journeys",
   "today.following": "Tracking with you",
-  "today.confirmation": "Needs confirmation",
   "today.notConclusion": "Not used as a conclusion",
   "today.next": "Your next care step",
   "today.control": "You can always skip or adjust your plan.",
-  "today.openLifeMap": "Open health journey",
-  "today.noDueDate": "No specific due date",
   "today.viewTask": "View task",
-  "today.emptyTitle": "No tasks for today",
-  "today.emptyDescription":
-    "A task appears here after you accept it in your health journey. CLARA never adds one for you.",
   "today.createEpisode": "Create journey",
   "today.connectionError": "Check your connection and try again.",
   "today.startHere": "What would you like to do?",

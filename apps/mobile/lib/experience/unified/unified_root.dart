@@ -27,6 +27,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
@@ -152,9 +153,9 @@ class _UnifiedRootState extends State<UnifiedRoot> {
     MobileFeatureFlagResolver resolver,
     String languageCode,
   ) {
-    final english = languageCode == 'en';
+    final copy = ConsumerTerminology.forLocale(languageCode);
     return RedesignShell(
-      chatLabel: english ? 'Ask CLARA' : 'Hỏi CLARA',
+      chatLabel: copy[ConsumerTerm.actionAskClara],
       chatIcon: Icons.forum_rounded,
       chatBody: ChatSurfaceV3(
         apiClient: widget.apiClient,
@@ -165,7 +166,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.today_outlined,
           selectedIcon: Icons.today,
-          label: english ? 'Today' : 'Hôm nay',
+          label: copy[ConsumerTerm.navigationToday],
           body: TodaySurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -177,7 +178,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.route_outlined,
           selectedIcon: Icons.route,
-          label: english ? 'Health journey' : 'Hành trình sức khỏe',
+          label: copy[ConsumerTerm.navigationLifeMap],
           body: LifeMapSurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -186,7 +187,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.medication_outlined,
           selectedIcon: Icons.medication,
-          label: english ? 'Medicines' : 'Thuốc',
+          label: copy[ConsumerTerm.navigationMedicines],
           body: MedicinesHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -196,7 +197,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         RedesignDestination(
           icon: Icons.folder_shared_outlined,
           selectedIcon: Icons.folder_shared,
-          label: english ? 'Profile' : 'Hồ sơ',
+          label: copy[ConsumerTerm.navigationProfile],
           body: ProfileHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,

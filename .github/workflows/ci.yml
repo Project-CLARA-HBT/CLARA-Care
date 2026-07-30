@@ -49,6 +49,9 @@ jobs:
               - 'services/ml/**'
             web:
               - 'apps/web/**'
+              - 'apps/mobile/lib/core/consumer_terminology*.dart'
+              - 'apps/mobile/lib/experience/unified/unified_root.dart'
+              - 'contracts/consumer-terminology/**'
             docs:
               - 'docs/**'
             scripts:
@@ -452,6 +455,7 @@ jobs:
           CI: "true"
         run: |
           cd apps/web
+          npm run consumer-terminology:check
           npm run i18n:check
           npm run lint
 

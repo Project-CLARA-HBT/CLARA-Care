@@ -11,8 +11,10 @@
 /// See `docs/architecture/mobile-consumer-terminology-contract-v1.md`.
 library;
 
+import 'consumer_terminology.generated.dart';
+
 /// Version of the cross-client terminology contract.
-const String kConsumerTerminologyVersion = '2026-07-30.v1';
+const String kConsumerTerminologyVersion = kConsumerTerminologyContractVersion;
 
 /// Stable terms shared across task-first consumer surfaces.
 ///
@@ -24,6 +26,10 @@ enum ConsumerTerm {
   actionComplete,
   actionOpen,
   actionRetry,
+  navigationToday,
+  navigationLifeMap,
+  navigationMedicines,
+  navigationProfile,
   todayTitle,
   todayOpenLifeMap,
   todayPending,
@@ -44,6 +50,32 @@ enum ConsumerTerm {
   todayCompleteFailed,
   todayLoadFailed,
   sessionExpired,
+}
+
+extension ConsumerTermContractKey on ConsumerTerm {
+  /// Key in the cross-client static terminology contract, when this is a
+  /// shared product term. Terms not listed here remain mobile-only wording.
+  String? get contractKey => switch (this) {
+        ConsumerTerm.actionAskClara => 'action.askClara',
+        ConsumerTerm.actionComplete => 'action.complete',
+        ConsumerTerm.actionOpen => 'action.open',
+        ConsumerTerm.actionRetry => 'action.retry',
+        ConsumerTerm.navigationToday => 'navigation.today',
+        ConsumerTerm.navigationLifeMap => 'navigation.lifeMap',
+        ConsumerTerm.navigationMedicines => 'navigation.medicines',
+        ConsumerTerm.navigationProfile => 'navigation.profile',
+        ConsumerTerm.todayTitle => 'today.title',
+        ConsumerTerm.todayOpenLifeMap => 'today.openLifeMap',
+        ConsumerTerm.todayPending => 'today.pending',
+        ConsumerTerm.todayAccepted => 'today.accepted',
+        ConsumerTerm.todayEpisodes => 'today.episodes',
+        ConsumerTerm.todayConfirmation => 'today.confirmation',
+        ConsumerTerm.todayNoDueDate => 'today.noDueDate',
+        ConsumerTerm.todayDueDate => 'today.dueDate',
+        ConsumerTerm.todayEmptyTitle => 'today.emptyTitle',
+        ConsumerTerm.todayEmptyDescription => 'today.emptyDescription',
+        _ => null,
+      };
 }
 
 /// Resolves static consumer copy for a single locale.
@@ -68,7 +100,13 @@ class ConsumerTerminology {
   final Map<ConsumerTerm, String> _messages;
 
   /// Returns a complete static message for [term].
-  String operator [](ConsumerTerm term) => _messages[term]!;
+  String operator [](ConsumerTerm term) {
+    final sharedKey = term.contractKey;
+    final shared = sharedKey == null
+        ? null
+        : kConsumerTerminologyMessages[locale]?[sharedKey];
+    return shared ?? _messages[term]!;
+  }
 
   /// Applies simple named placeholders to a static product message.
   ///
@@ -83,22 +121,6 @@ class ConsumerTerminology {
   }
 
   static const Map<ConsumerTerm, String> _viMessages = {
-    ConsumerTerm.actionAskClara: 'Hỏi CLARA',
-    ConsumerTerm.actionComplete: 'Hoàn tất',
-    ConsumerTerm.actionOpen: 'Mở',
-    ConsumerTerm.actionRetry: 'Thử lại',
-    ConsumerTerm.todayTitle: 'Hôm nay',
-    ConsumerTerm.todayOpenLifeMap: 'Mở hành trình sức khỏe',
-    ConsumerTerm.todayPending: 'Việc đang chờ',
-    ConsumerTerm.todayAccepted: 'Đã đồng ý thực hiện',
-    ConsumerTerm.todayEpisodes: 'Hành trình đang mở',
-    ConsumerTerm.todayConfirmation: 'Cần xác nhận',
-    ConsumerTerm.todayNoDueDate: 'Không có hạn cụ thể',
-    ConsumerTerm.todayDueDate: 'Hạn: {date}',
-    ConsumerTerm.todayEmptyTitle: 'Hôm nay chưa có việc nào',
-    ConsumerTerm.todayEmptyDescription:
-        'Khi bạn chấp nhận một việc trong hành trình sức khỏe, nó sẽ xuất hiện '
-            'ở đây. CLARA không tự thêm việc thay bạn.',
     ConsumerTerm.todayUnnamedTask: 'Việc chưa đặt tên',
     ConsumerTerm.todayProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
     ConsumerTerm.todayProfileRequiredDescription:
@@ -120,22 +142,6 @@ class ConsumerTerminology {
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
-    ConsumerTerm.actionAskClara: 'Ask CLARA',
-    ConsumerTerm.actionComplete: 'Complete',
-    ConsumerTerm.actionOpen: 'Open',
-    ConsumerTerm.actionRetry: 'Try again',
-    ConsumerTerm.todayTitle: 'Today',
-    ConsumerTerm.todayOpenLifeMap: 'Open health journey',
-    ConsumerTerm.todayPending: 'Pending tasks',
-    ConsumerTerm.todayAccepted: 'Accepted by you',
-    ConsumerTerm.todayEpisodes: 'Open journeys',
-    ConsumerTerm.todayConfirmation: 'Needs confirmation',
-    ConsumerTerm.todayNoDueDate: 'No specific due date',
-    ConsumerTerm.todayDueDate: 'Due: {date}',
-    ConsumerTerm.todayEmptyTitle: 'No tasks for today',
-    ConsumerTerm.todayEmptyDescription:
-        'A task appears here after you accept it in your health journey. '
-            'CLARA never adds one for you.',
     ConsumerTerm.todayUnnamedTask: 'Unnamed task',
     ConsumerTerm.todayProfileRequiredTitle: 'Create your health profile first',
     ConsumerTerm.todayProfileRequiredDescription:
