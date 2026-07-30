@@ -135,6 +135,29 @@ function sourceSpanLabel(sourceSpan: unknown): string {
   return "";
 }
 
+function captureDraftFieldLabel(
+  field: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  if (field === "text") return copy("lifemap.capture.field.text");
+  if (field === "category") return copy("lifemap.capture.field.category");
+  return field.replaceAll("_", " ");
+}
+
+function captureDraftCategoryLabel(
+  category: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  const keys: Record<string, UITranslationKey> = {
+    symptom: "lifemap.capture.category.symptom",
+    medication: "lifemap.capture.category.medication",
+    measurement: "lifemap.capture.category.measurement",
+    sleep: "lifemap.capture.category.sleep",
+    care_note: "lifemap.capture.category.careNote",
+  };
+  return keys[category] ? copy(keys[category]) : category;
+}
+
 export default function LifeMapPage() {
   const language = useUILanguage();
   const copy = useCallback(
@@ -1530,36 +1553,49 @@ export default function LifeMapPage() {
                       </div>
                       {candidate.status === "draft" ? (
                         <div className="mt-3 space-y-3">
-                          {Object.entries(candidate.value).map(([field, rawValue]) => (
-                            <Field
-                              key={field}
-                              label={field.replaceAll("_", " ")}
-                              value={
-                                typeof rawValue === "object"
-                                  ? JSON.stringify(rawValue)
-                                  : String(rawValue ?? "")
-                              }
-                              onChange={(event) =>
-                                updateCaptureValue(
-                                  candidate.id,
-                                  field,
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          ))}
+                          {Object.entries(candidate.value).map(([field, rawValue]) =>
+                            field === "category" ? (
+                              <div key={field} className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] px-3 py-2">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                  {captureDraftFieldLabel(field, copy)}
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--text-primary)]">
+                                  {captureDraftCategoryLabel(String(rawValue ?? ""), copy)}
+                                </p>
+                              </div>
+                            ) : (
+                              <Field
+                                key={field}
+                                label={captureDraftFieldLabel(field, copy)}
+                                value={
+                                  typeof rawValue === "object"
+                                    ? JSON.stringify(rawValue)
+                                    : String(rawValue ?? "")
+                                }
+                                onChange={(event) =>
+                                  updateCaptureValue(
+                                    candidate.id,
+                                    field,
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            ),
+                          )}
                         </div>
                       ) : (
                         <dl className="mt-3 space-y-1 text-sm">
                           {Object.entries(candidate.value).map(([field, rawValue]) => (
                             <div key={field} className="flex gap-2">
                               <dt className="font-medium text-[var(--text-secondary)]">
-                                {field.replaceAll("_", " ")}:
+                                {captureDraftFieldLabel(field, copy)}:
                               </dt>
                               <dd className="text-[var(--text-primary)]">
-                                {typeof rawValue === "object"
-                                  ? JSON.stringify(rawValue)
-                                  : String(rawValue ?? "")}
+                                {field === "category"
+                                  ? captureDraftCategoryLabel(String(rawValue ?? ""), copy)
+                                  : typeof rawValue === "object"
+                                    ? JSON.stringify(rawValue)
+                                    : String(rawValue ?? "")}
                               </dd>
                             </div>
                           ))}
