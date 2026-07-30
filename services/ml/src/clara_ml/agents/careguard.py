@@ -10,6 +10,8 @@ from typing import Any
 from clara_ml.agents.careguard_ddi_store import DrugBankDdiStore
 from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
+from clara_ml.language_renderer import RenderingInput, render_explanation
+from clara_ml.language_renderer.schemas import ActionCode, Audience, Severity
 
 
 @dataclass(frozen=True)
@@ -884,9 +886,7 @@ def _merge_drug_alerts(
             return
 
         # Severity floor (max-severity-per-pair) + openFDA message protection.
-        _apply_severity_floor(
-            existing, incoming_severity, incoming_message, incoming_sources
-        )
+        _apply_severity_floor(existing, incoming_severity, incoming_message, incoming_sources)
 
         existing_sources = existing.setdefault("_sources", set())
         if isinstance(existing_sources, set):
@@ -1107,16 +1107,103 @@ def _recommendation_for(
 # is NOT an "all-clear", so a degraded read never reassures the user falsely.
 _RULES_UNAVAILABLE_RECOMMENDATION = (
     "Hiện chưa thể hoàn tất kiểm tra tương tác thuốc vì không đọc được dữ liệu "
-    "tra cứu. Đây KHÔNG phải là kết luận \"không có tương tác\". Vui lòng thử lại "
+    'tra cứu. Đây KHÔNG phải là kết luận "không có tương tác". Vui lòng thử lại '
     "sau và hỏi bác sĩ hoặc dược sĩ trước khi dùng nhiều thuốc cùng lúc."
 )
 
 _DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION = (
     "Hiện chưa thể hoàn tất kiểm tra tương tác thuốc vì dữ liệu DrugBank bắt buộc "
     "không sẵn sàng hoặc chưa vượt qua kiểm tra toàn vẹn. Đây KHÔNG phải là kết "
-    "luận \"không có tương tác\". Không tự bắt đầu, ngừng hoặc thay đổi thuốc dựa "
+    'luận "không có tương tác". Không tự bắt đầu, ngừng hoặc thay đổi thuốc dựa '
     "trên kết quả này; vui lòng thử lại và hỏi bác sĩ hoặc dược sĩ."
 )
+
+
+def _consumer_wording_from_final_result(
+    result: dict[str, Any],
+    *,
+    locale: str,
+) -> dict[str, Any]:
+    """Render an additive consumer projection from final deterministic facts.
+
+    This boundary deliberately receives *only* the final CareGuard result.  It
+    cannot invoke DrugBank, inspect a raw medication string, alter a severity,
+    or alter the legacy recommendation.  The output is therefore suitable as a
+    feature-flagged presentation aid while the existing DDI object remains the
+    authoritative API contract.
+    """
+
+    risk = result.get("risk")
+    metadata = result.get("metadata")
+    if not isinstance(risk, dict) or not isinstance(metadata, dict):
+        return {}
+
+    level = str(risk.get("level") or "unknown").strip().lower()
+    severity_by_level: dict[str, Severity] = {
+        "critical": "emergency",
+        "high": "urgent_review",
+        "medium": "clinical_review",
+        "low": "routine",
+        # An unavailable DDI conclusion must never look like an all-clear.
+        "unknown": "clinical_review",
+    }
+    severity = severity_by_level.get(level, "clinical_review")
+    action_by_severity: dict[Severity, list[ActionCode]] = {
+        "emergency": ["seek_emergency"],
+        "urgent_review": ["contact_clinician"],
+        "clinical_review": ["contact_clinician"],
+        "routine": ["monitor"],
+    }
+
+    warnings: list[str] = []
+    ddi_status = result.get("ddi_status")
+    conclusion_available = not (
+        isinstance(ddi_status, dict) and ddi_status.get("conclusion_available") is False
+    )
+    if metadata.get("rules_unavailable") or not conclusion_available:
+        warnings.append(
+            "Chưa thể xác nhận đầy đủ tương tác thuốc từ nguồn bắt buộc; "
+            "không có cảnh báo không đồng nghĩa là an toàn."
+        )
+    if metadata.get("normalization_pair_coverage_low"):
+        warnings.append("Có thể chưa nhận diện đủ thuốc để kiểm tra toàn bộ các cặp thuốc.")
+
+    evidence_labels: list[str] = []
+    drugbank = metadata.get("drugbank")
+    if isinstance(drugbank, dict) and drugbank.get("state") == "ready":
+        version = str(drugbank.get("version") or "").strip()
+        evidence_labels.append(f"DrugBank{f' ({version})' if version else ''}")
+    elif "local_rules" in metadata.get("source_used", []):
+        evidence_labels.append("Quy tắc kiểm tra thuốc nội bộ")
+    elif isinstance(ddi_status, dict) and ddi_status.get("required_source") == "drugbank":
+        evidence_labels.append("DrugBank chưa sẵn sàng")
+
+    audience: Audience = "en" if locale.lower().startswith("en") else "lay_vi"
+    rendered = render_explanation(
+        RenderingInput(
+            audience=audience,
+            severity=severity,
+            action_codes=action_by_severity[severity],
+            mandatory_warnings=warnings,
+            uncertainty_level=(
+                "high" if warnings or bool(metadata.get("fallback_used")) else "low"
+            ),
+            evidence_labels=evidence_labels,
+        )
+    )
+    return rendered.model_dump(mode="json")
+
+
+def _with_consumer_wording(result: dict[str, Any], *, locale: str) -> dict[str, Any]:
+    """Keep the legacy result byte-compatible unless the release flag is on."""
+
+    if not settings.careguard_wording_renderer_enabled:
+        return result
+    result["consumer_explanation"] = _consumer_wording_from_final_result(
+        result,
+        locale=locale,
+    )
+    return result
 
 
 def _drugbank_required_unavailable_result(
@@ -1173,8 +1260,7 @@ def _drugbank_required_unavailable_result(
             critical_symptoms,
         )
         recommendation = (
-            f"{independent_recommendation} "
-            f"{_DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION}"
+            f"{independent_recommendation} {_DRUGBANK_REQUIRED_UNAVAILABLE_RECOMMENDATION}"
         )
     elif allergy_alerts:
         recommendation = (
@@ -1217,9 +1303,7 @@ def _drugbank_required_unavailable_result(
             "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
             "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
             "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
-            "normalization_confidence": vn_dictionary_metadata.get(
-                "normalization_confidence", 0.0
-            ),
+            "normalization_confidence": vn_dictionary_metadata.get("normalization_confidence", 0.0),
             "normalization_pair_coverage_low": False,
             "normalized_medication_count": len(medications),
             "raw_medication_count": len(raw_medications),
@@ -1232,9 +1316,7 @@ def _drugbank_required_unavailable_result(
                 "state": readiness_state,
                 "version": str(readiness.get("version") or ""),
                 "pair_count": int(readiness.get("pair_count") or 0),
-                "manifest_matches_index": bool(
-                    readiness.get("manifest_matches_index")
-                ),
+                "manifest_matches_index": bool(readiness.get("manifest_matches_index")),
                 "matched_alert_count": 0,
             },
             "openfda_pairs_checked": 0,
@@ -1300,6 +1382,7 @@ def _rules_unavailable_result(
 
 
 def run_careguard_analyze(payload: dict) -> dict:
+    locale = str(payload.get("locale") or "vi").strip() or "vi"
     symptoms = _normalize_text_list(payload.get("symptoms"))
     raw_medications = _normalize_text_list(payload.get("medications"))
     medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(raw_medications)
@@ -1346,26 +1429,32 @@ def run_careguard_analyze(payload: dict) -> dict:
             # or override licensed results with local rules.
             local_ddi_alerts = drugbank_alerts
     if settings.careguard_drugbank_required and not drugbank_layer_version:
-        return _drugbank_required_unavailable_result(
-            raw_medications=raw_medications,
-            medications=medications,
-            allergies=allergies,
-            symptoms=symptoms,
-            labs=labs,
-            vn_dictionary_metadata=vn_dictionary_metadata,
-            external_ddi_enabled=external_ddi_enabled,
-            external_ddi_flag_source=external_ddi_flag_source,
-            local_ddi_rules_version=local_ddi_rules_version,
-            readiness=get_drugbank_readiness(),
+        return _with_consumer_wording(
+            _drugbank_required_unavailable_result(
+                raw_medications=raw_medications,
+                medications=medications,
+                allergies=allergies,
+                symptoms=symptoms,
+                labs=labs,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                external_ddi_enabled=external_ddi_enabled,
+                external_ddi_flag_source=external_ddi_flag_source,
+                local_ddi_rules_version=local_ddi_rules_version,
+                readiness=get_drugbank_readiness(),
+            ),
+            locale=locale,
         )
     if not drugbank_layer_version and not curated_rules:
-        return _rules_unavailable_result(
-            raw_medications=raw_medications,
-            medications=medications,
-            vn_dictionary_metadata=vn_dictionary_metadata,
-            external_ddi_enabled=external_ddi_enabled,
-            external_ddi_flag_source=external_ddi_flag_source,
-            local_ddi_rules_version=local_ddi_rules_version,
+        return _with_consumer_wording(
+            _rules_unavailable_result(
+                raw_medications=raw_medications,
+                medications=medications,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                external_ddi_enabled=external_ddi_enabled,
+                external_ddi_flag_source=external_ddi_flag_source,
+                local_ddi_rules_version=local_ddi_rules_version,
+            ),
+            locale=locale,
         )
     source_used = ["drugbank"] if drugbank_layer_version else ["local_rules"]
     source_errors: dict[str, list[str]] = {}
@@ -1450,45 +1539,48 @@ def run_careguard_analyze(payload: dict) -> dict:
         or normalization_pair_coverage_low
     )
 
-    return {
-        "risk": {
-            "level": level,
-            "score": score,
-            "factors": factors,
-        },
-        "ddi_alerts": all_alerts,
-        "recommendation": _recommendation_for(level, all_alerts, critical_symptoms),
-        "metadata": {
-            "pipeline": "p2-careguard-ddi-standard-v2",
-            "fallback_used": fallback_used,
-            "external_ddi_enabled": external_ddi_enabled,
-            "external_ddi_flag_source": external_ddi_flag_source,
-            "local_ddi_rules_version": local_ddi_rules_version,
-            "vn_dictionary_version": vn_dictionary_metadata["version"],
-            "vn_dictionary_record_count": vn_dictionary_metadata["record_count"],
-            "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
-            "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
-            "vn_dictionary_input_count": vn_dictionary_metadata["input_count"],
-            "normalization_confidence": vn_dictionary_metadata["normalization_confidence"],
-            "normalization_pair_coverage_low": normalization_pair_coverage_low,
-            "normalized_medication_count": len(medications),
-            "raw_medication_count": len(raw_medications),
-            "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
-            "source_used": source_used,
-            "source_errors": source_errors,
-            "drugbank": {
-                "state": "ready"
-                if drugbank_layer_version
-                else (
-                    "disabled"
-                    if not settings.careguard_drugbank_sqlite_enabled
-                    else "unavailable"
-                ),
-                "version": drugbank_layer_version,
-                "matched_alert_count": len(drugbank_alerts),
+    return _with_consumer_wording(
+        {
+            "risk": {
+                "level": level,
+                "score": score,
+                "factors": factors,
             },
-            "openfda_pairs_checked": openfda_pairs_checked,
-            "openfda_alert_count": len(openfda_alerts),
-            "rxnav_status": rxnav_status,
+            "ddi_alerts": all_alerts,
+            "recommendation": _recommendation_for(level, all_alerts, critical_symptoms),
+            "metadata": {
+                "pipeline": "p2-careguard-ddi-standard-v2",
+                "fallback_used": fallback_used,
+                "external_ddi_enabled": external_ddi_enabled,
+                "external_ddi_flag_source": external_ddi_flag_source,
+                "local_ddi_rules_version": local_ddi_rules_version,
+                "vn_dictionary_version": vn_dictionary_metadata["version"],
+                "vn_dictionary_record_count": vn_dictionary_metadata["record_count"],
+                "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
+                "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
+                "vn_dictionary_input_count": vn_dictionary_metadata["input_count"],
+                "normalization_confidence": vn_dictionary_metadata["normalization_confidence"],
+                "normalization_pair_coverage_low": normalization_pair_coverage_low,
+                "normalized_medication_count": len(medications),
+                "raw_medication_count": len(raw_medications),
+                "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
+                "source_used": source_used,
+                "source_errors": source_errors,
+                "drugbank": {
+                    "state": "ready"
+                    if drugbank_layer_version
+                    else (
+                        "disabled"
+                        if not settings.careguard_drugbank_sqlite_enabled
+                        else "unavailable"
+                    ),
+                    "version": drugbank_layer_version,
+                    "matched_alert_count": len(drugbank_alerts),
+                },
+                "openfda_pairs_checked": openfda_pairs_checked,
+                "openfda_alert_count": len(openfda_alerts),
+                "rxnav_status": rxnav_status,
+            },
         },
-    }
+        locale=locale,
+    )

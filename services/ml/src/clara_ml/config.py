@@ -436,6 +436,13 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_REQUIRED"),
     )
+    # Additive consumer wording projection of an already-final CareGuard result.
+    # It is intentionally OFF by default: the renderer never queries, changes,
+    # or substitutes for the authoritative DrugBank decision path.
+    careguard_wording_renderer_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_WORDING_RENDERER_ENABLED"),
+    )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
         validation_alias=AliasChoices(
@@ -877,27 +884,15 @@ class Settings(BaseSettings):
     )
     # ASR provider selection seam. "whisper" = existing DeepSeek/Whisper audio
     # client (the only fully-wired provider today); other names degrade to it.
-    scribe_asr_primary: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_PRIMARY"
-    )
-    scribe_asr_fallback: str = Field(
-        default="whisper", validation_alias="SCRIBE_ASR_FALLBACK"
-    )
-    scribe_asr_language: str = Field(
-        default="vi", validation_alias="SCRIBE_ASR_LANGUAGE"
-    )
+    scribe_asr_primary: str = Field(default="whisper", validation_alias="SCRIBE_ASR_PRIMARY")
+    scribe_asr_fallback: str = Field(default="whisper", validation_alias="SCRIBE_ASR_FALLBACK")
+    scribe_asr_language: str = Field(default="vi", validation_alias="SCRIBE_ASR_LANGUAGE")
     scribe_asr_timeout_seconds: float = Field(
         default=150.0, validation_alias="SCRIBE_ASR_TIMEOUT_SECONDS"
     )
-    scribe_google_project_id: str = Field(
-        default="", validation_alias="SCRIBE_GOOGLE_PROJECT_ID"
-    )
-    scribe_google_location: str = Field(
-        default="us", validation_alias="SCRIBE_GOOGLE_LOCATION"
-    )
-    scribe_google_recognizer: str = Field(
-        default="_", validation_alias="SCRIBE_GOOGLE_RECOGNIZER"
-    )
+    scribe_google_project_id: str = Field(default="", validation_alias="SCRIBE_GOOGLE_PROJECT_ID")
+    scribe_google_location: str = Field(default="us", validation_alias="SCRIBE_GOOGLE_LOCATION")
+    scribe_google_recognizer: str = Field(default="_", validation_alias="SCRIBE_GOOGLE_RECOGNIZER")
     # Code-switching: when true (default) the Vietnamese ASR provider is asked to keep
     # embedded English drug/procedure tokens verbatim rather than transliterating them
     # (Requirement 2.2).
@@ -910,18 +905,14 @@ class Settings(BaseSettings):
     scribe_phowhisper_base_url: str = Field(
         default="", validation_alias="SCRIBE_PHOWHISPER_BASE_URL"
     )
-    scribe_phowhisper_api_key: str = Field(
-        default="", validation_alias="SCRIBE_PHOWHISPER_API_KEY"
-    )
+    scribe_phowhisper_api_key: str = Field(default="", validation_alias="SCRIBE_PHOWHISPER_API_KEY")
     scribe_phowhisper_model: str = Field(
         default="phowhisper-large", validation_alias="SCRIBE_PHOWHISPER_MODEL"
     )
     scribe_phowhisper_timeout_seconds: float = Field(
         default=30.0, validation_alias="SCRIBE_PHOWHISPER_TIMEOUT_SECONDS"
     )
-    scribe_phowhisper_retries: int = Field(
-        default=1, validation_alias="SCRIBE_PHOWHISPER_RETRIES"
-    )
+    scribe_phowhisper_retries: int = Field(default=1, validation_alias="SCRIBE_PHOWHISPER_RETRIES")
     scribe_phowhisper_retry_backoff_seconds: float = Field(
         default=0.25, validation_alias="SCRIBE_PHOWHISPER_RETRY_BACKOFF_SECONDS"
     )
@@ -1091,8 +1082,7 @@ class Settings(BaseSettings):
         # the invariant holds even if the bound is later relaxed.
         if self.deep_beta_report_max_words_cap > hard_max:
             logger.warning(
-                "deep_beta_report_max_words_cap=%d exceeds hard ceiling %d; "
-                "clamping to %d",
+                "deep_beta_report_max_words_cap=%d exceeds hard ceiling %d; clamping to %d",
                 self.deep_beta_report_max_words_cap,
                 hard_max,
                 hard_max,

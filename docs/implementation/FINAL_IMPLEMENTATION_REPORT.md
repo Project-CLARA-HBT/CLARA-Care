@@ -51,7 +51,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. The hybrid-router shadow contract now carries only categorical/count language signals (never source text). No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
 | PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. A reviewed human-usability score remains unmeasured. |
-| PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
+| PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. Feature-flagged `CAREGUARD_WORDING_RENDERER_ENABLED` adds an optional consumer explanation only after final deterministic facts, through the fidelity verifier; it neither reads raw medication names nor changes DrugBank/risk/alerts/recommendation. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
 | PR-09 Scribe | implemented UI safety correction | `eaa749c0` removes automatic code/R69 and uncalibrated percentage. Existing grounding/ASR tests remain. |
 | PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. |
 | PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist; reviewed RAG gold set is absent. |
@@ -65,6 +65,9 @@ closed JSON and is followed by deterministic safety policy.
 - RBAC/profile isolation, consent and cookie CSRF remain API-owned.
 - Emergency fast-path remains deterministic and does not wait for model output.
 - FIDES/claim verification and DrugBank authority are unchanged.
+- The optional CareGuard wording projection is OFF by default, is derived only
+  from final risk/readiness/provenance categories, and cannot make a required
+  DrugBank source failure look like an all-clear.
 - Registry task contracts retain DeepSeek-only behavior and a controlled rollback:
   `MODEL_REGISTRY_ENABLED`, `MODEL_REGISTRY_FORCE_ROLLBACK` and
   `MODEL_REGISTRY_ROLLBACK_MODEL`.
@@ -96,6 +99,7 @@ Executed in this workspace:
 | Vietnamese language/router focused suite | pass: 14 tests |
 | LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
 | CareGuard normalization/DrugBank focused suite | pass: 42 tests |
+| CareGuard structured wording adapter | pass: 35 focused renderer/guardrail/DrugBank tests; default flag preserves the old response, enabled flag adds only a verified consumer projection. |
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |

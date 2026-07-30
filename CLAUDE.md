@@ -141,7 +141,7 @@ Database migrations run via Alembic from `services/api` (`alembic upgrade head`)
 - **Router** (`routing.py`): heuristic role classification (`normal`/`researcher`/`doctor`) + intent + confidence, with a dedicated emergency keyword set.
 - **RAG pipeline** (`rag/pipeline.py`): retrieve → synthesize (LLM) → deterministic local fallback; supports `auto`/`full` retrieval stacks, planner hints, hybrid internal + external retrieval, optional reranker and GraphRAG sidecar, and detailed trace/telemetry. The local fallback always carries safety wording and minimum references.
 - **Research Tier2** (`agents/research_tier2.py`): `fast` / `deep` / `deep_beta` modes; deep modes add multi-pass retrieval, verification matrices, and (deep_beta) parallel reasoning nodes, quality gates, and long-form report synthesis.
-- **Agents**: CareGuard DDI (`agents/careguard.py`) merges local rules with external sources, applies VN drug-dictionary normalization + active-ingredient expansion, and ranks severity; Council (`agents/council.py`) runs multi-specialist assessment with consensus/divergence; Scribe (`agents/scribe_soap.py`) produces SOAP output.
+- **Agents**: CareGuard DDI (`agents/careguard.py`) merges local rules with external sources, applies VN drug-dictionary normalization + active-ingredient expansion, and ranks severity. Its optional `CAREGUARD_WORDING_RENDERER_ENABLED` projection renders only already-final semantic facts and never replaces DrugBank authority or the legacy DDI result; Council (`agents/council.py`) runs multi-specialist assessment with consensus/divergence; Scribe (`agents/scribe_soap.py`) produces SOAP output.
 
 ### CLARA_Web (`apps/web`)
 
