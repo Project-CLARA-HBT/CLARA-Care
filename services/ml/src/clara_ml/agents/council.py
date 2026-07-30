@@ -766,7 +766,7 @@ def _should_request_more_info(
     return score < 0.55 or non_empty_sections < 2 or total_observations < 3
 
 
-def _compute_confidence(
+def _compute_assessment_completeness(
     *,
     data_quality_score: float,
     assessments: list[SpecialistAssessment],
@@ -774,42 +774,47 @@ def _compute_confidence(
     red_flags: list[str],
     needs_more_info: bool,
 ) -> dict[str, Any]:
+    """Describe whether the Council has enough supported input to be useful.
+
+    This deliberately replaces the former uncalibrated confidence score.  The
+    deterministic Council is not a calibrated probabilistic model, so a number
+    or percentage would imply a clinical guarantee we cannot support.  Callers
+    get operational evidence and completeness states instead.
+    """
+
     triage_counts = {triage: 0 for triage in _TRIAGE_SCORE}
     for item in assessments:
         triage_counts[item.triage] += 1
 
-    consensus_support = max(triage_counts.values()) / max(1, len(assessments))
-    finding_density = min(
-        1.0,
-        sum(len(item.key_findings) for item in assessments) / max(1, len(assessments) * 4),
-    )
-
-    possible_conflicts = max(1, (len(assessments) * (len(assessments) - 1)) // 2)
-    conflict_ratio = len(conflicts) / possible_conflicts
-
-    score = (
-        0.40 * data_quality_score
-        + 0.30 * consensus_support
-        + 0.20 * finding_density
-        + 0.10 * (1.0 - min(1.0, conflict_ratio))
-    )
-
     if red_flags:
-        score = max(score, 0.82)
-    if needs_more_info:
-        score = min(score, 0.45)
+        status = "safety_escalated"
+        evidence_status = "deterministic_red_flag_match"
+    elif needs_more_info:
+        status = "insufficient"
+        evidence_status = "insufficient_case_information"
+    elif conflicts:
+        status = "requires_adjudication"
+        evidence_status = "case_facts_with_unresolved_specialist_divergence"
+    elif data_quality_score >= 0.75:
+        status = "sufficient_for_clinician_review"
+        evidence_status = "case_facts_and_deterministic_rules"
+    else:
+        status = "limited"
+        evidence_status = "case_facts_with_material_gaps"
 
-    score = max(0.0, min(1.0, score))
+    agreement_status = "unanimous"
+    if len([count for count in triage_counts.values() if count]) > 1:
+        agreement_status = "mixed"
 
     return {
-        "score": round(score, 3),
-        "level": _score_level(score),
-        "components": {
-            "data_quality": round(data_quality_score, 3),
-            "consensus_support": round(consensus_support, 3),
-            "finding_density": round(finding_density, 3),
-            "conflict_ratio": round(conflict_ratio, 3),
-        },
+        "status": status,
+        "evidence_status": evidence_status,
+        "agreement_status": agreement_status,
+        "triage_votes": triage_counts,
+        "conflict_detected": bool(conflicts),
+        "emergency_floor_triggered": bool(red_flags),
+        "followup_required": needs_more_info,
+        "calibration": "not_measured_no_probability_presented",
     }
 
 
@@ -1116,7 +1121,7 @@ def _build_neural_feature_map(
     conflicts: list[dict[str, object]],
     consensus_metadata: dict[str, Any],
     data_quality: dict[str, Any],
-    confidence: dict[str, Any],
+    assessment_completeness: dict[str, Any],
     followup_questions: list[str],
     assessments: list[SpecialistAssessment],
     medications: list[str],
@@ -1128,14 +1133,20 @@ def _build_neural_feature_map(
     support_ratio = float(consensus_metadata.get("support_ratio", 0.0) or 0.0)
     disagreement_index = float(consensus_metadata.get("disagreement_index", 0.0) or 0.0)
     data_quality_score = float(data_quality.get("score", 0.0) or 0.0)
-    confidence_score = float(confidence.get("score", 0.0) or 0.0)
+    completeness_penalty = {
+        "safety_escalated": 1.0,
+        "insufficient": 1.0,
+        "requires_adjudication": 0.7,
+        "limited": 0.45,
+        "sufficient_for_clinician_review": 0.0,
+    }.get(str(assessment_completeness.get("status") or ""), 0.5)
 
     return {
         "red_flag_rate": min(1.0, len(red_flags) / 3.0),
         "conflict_rate": min(1.0, len(conflicts) / specialist_count),
         "disagreement_index": max(disagreement_index, 1.0 - support_ratio),
         "inverse_data_quality": max(0.0, 1.0 - data_quality_score),
-        "inverse_confidence": max(0.0, 1.0 - confidence_score),
+        "incomplete_assessment": completeness_penalty,
         "followup_density": min(1.0, len(followup_questions) / 8.0),
         "high_triage_pressure": min(1.0, high_triage_votes / specialist_count),
         "medication_burden": min(1.0, len(medications) / 8.0),
@@ -1149,7 +1160,7 @@ def _build_neural_risk_payload(
     conflicts: list[dict[str, object]],
     consensus_metadata: dict[str, Any],
     data_quality: dict[str, Any],
-    confidence: dict[str, Any],
+    assessment_completeness: dict[str, Any],
     followup_questions: list[str],
     assessments: list[SpecialistAssessment],
     medications: list[str],
@@ -1172,7 +1183,7 @@ def _build_neural_risk_payload(
         conflicts=conflicts,
         consensus_metadata=consensus_metadata,
         data_quality=data_quality,
-        confidence=confidence,
+        assessment_completeness=assessment_completeness,
         followup_questions=followup_questions,
         assessments=assessments,
         medications=medications,
@@ -1196,9 +1207,9 @@ def _build_neural_risk_payload(
         "legacy_model_alias": "council-neural-shadow-v1",
         "model_class": "fixed_weight_heuristic",
         "trained": False,
-        "risk_probability": score.probability,
         "risk_band": score.band,
         "recommended_triage": recommended_triage,
+        "score_visibility": "not_calibrated_not_user_facing",
         "feature_map": {key: round(value, 4) for key, value in feature_map.items()},
         "top_contributors": score.top_contributors,
     }
@@ -1299,7 +1310,7 @@ def run_council(payload: dict) -> dict:
     followup_questions = _build_followup_questions(symptoms, labs, medications, history)
     needs_more_info = _should_request_more_info(data_quality, red_flags)
 
-    confidence = _compute_confidence(
+    assessment_completeness = _compute_assessment_completeness(
         data_quality_score=float(data_quality["score"]),
         assessments=assessments,
         conflicts=conflicts,
@@ -1355,7 +1366,7 @@ def run_council(payload: dict) -> dict:
         conflicts=conflicts,
         consensus_metadata=consensus_metadata,
         data_quality=data_quality,
-        confidence=confidence,
+        assessment_completeness=assessment_completeness,
         followup_questions=followup_questions,
         assessments=assessments,
         medications=medications,
@@ -1383,17 +1394,20 @@ def run_council(payload: dict) -> dict:
         },
         "needs_more_info": needs_more_info,
         "followup_questions": followup_questions,
-        "confidence_score": confidence["score"],
-        "confidence_level": confidence["level"],
-        "data_quality_score": data_quality["score"],
-        "data_quality_level": data_quality["level"],
+        "assessment_completeness": assessment_completeness,
+        "evidence_status": assessment_completeness["evidence_status"],
+        "uncertainty_notes": followup_questions if needs_more_info else [],
         "analyze": {
             "consensus_triage": consensus_triage,
             "emergency_triggered": bool(red_flags),
             "needs_more_info": needs_more_info,
             "followup_questions": followup_questions,
-            "confidence": confidence,
-            "data_quality": data_quality,
+            "assessment_completeness": assessment_completeness,
+            "input_completeness": {
+                "level": data_quality["level"],
+                "missing_sections": data_quality["missing_sections"],
+                "section_counts": data_quality["section_counts"],
+            },
             "final_recommendation": final_recommendation,
         },
         "details": {
@@ -1414,7 +1428,7 @@ def run_council(payload: dict) -> dict:
             "mode": "rule_based_council_v2",
             "topics": research_topics,
             "followup_questions": followup_questions,
-            "confidence_components": confidence["components"],
+            "assessment_completeness": assessment_completeness,
             "data_gaps": data_quality["missing_sections"],
         },
         "deepdive": {

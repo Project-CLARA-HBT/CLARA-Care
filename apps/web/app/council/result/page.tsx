@@ -67,10 +67,6 @@ export default function CouncilResultPage() {
 
   const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);
-  const fmtPercent = (value: number | null): string => {
-    if (value == null || Number.isNaN(value)) return "-";
-    return `${Math.round(value * 100)}%`;
-  };
   const fmtStrength = (value: number | null): string => {
     if (value == null || Number.isNaN(value)) return "-";
     return value.toFixed(2);
@@ -98,8 +94,15 @@ export default function CouncilResultPage() {
                 <CouncilMetricCard label="Độ khẩn" value={view.urgencyLabel} />
                 <CouncilMetricCard label="Chuyên khoa" value={String(view.requestSummary.specialists.length)} hint={view.requestSummary.specialists.join(", ")} />
                 <CouncilMetricCard label="Conflict" value={String(view.summary.conflicts.length)} />
-                <CouncilMetricCard label="Support Ratio" value={fmtPercent(view.quality.supportRatio)} />
-                <CouncilMetricCard label="Disagreement" value={fmtPercent(view.quality.disagreementIndex)} />
+                <CouncilMetricCard
+                  label="Đồng thuận chuyên khoa"
+                  value={view.summary.conflicts.length ? "Cần rà soát" : "Chưa thấy bất đồng trọng yếu"}
+                  hint="Không phải xác suất hoặc độ tin cậy lâm sàng"
+                />
+                <CouncilMetricCard
+                  label="Rà soát chuyên môn"
+                  value={view.quality.requiresHumanHandoff ? "Bắt buộc" : "Cần trước khi dùng"}
+                />
               </div>
 
               <div className="mt-3 grid gap-3 md:grid-cols-3">

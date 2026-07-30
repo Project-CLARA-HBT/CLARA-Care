@@ -93,7 +93,6 @@ export default function AdminAnswerFlowPanel() {
       config?.rag_flow.web_retrieval_enabled ||
       config?.rag_flow.file_retrieval_enabled
     );
-  const councilConfidenceScore = Number(Math.max(0.12, Math.min(0.98, 1 - debugLowContextScore * 0.7)).toFixed(2));
   const llmProvider = config?.rag_flow.llm_provider ?? "hitechcloud_gpt53_codex_high";
   const llmBaseUrl = config?.rag_flow.llm_base_url ?? "https://platform.hitechcloud.one/v1";
   const llmModel = config?.rag_flow.llm_model ?? "gpt-5.3-codex-high";
@@ -391,7 +390,6 @@ export default function AdminAnswerFlowPanel() {
             isEmergency={false}
             needsMoreInfo={councilNeedsMoreInfo}
             hasCitations={councilHasCitations}
-            confidenceScore={councilConfidenceScore}
           />
         </div>
       </section>

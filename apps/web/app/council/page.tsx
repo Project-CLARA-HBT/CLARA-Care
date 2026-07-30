@@ -519,29 +519,6 @@ export default function CouncilPage() {
     : null;
   const isAdmin = role === "admin";
 
-  const supportRatioPct =
-    view?.quality.supportRatio != null
-      ? Math.round((view.quality.supportRatio * 100 + Number.EPSILON) * 10) / 10
-      : null;
-  const disagreementPct =
-    view?.quality.disagreementIndex != null
-      ? Math.round(
-          (view.quality.disagreementIndex * 100 + Number.EPSILON) * 10,
-        ) / 10
-      : null;
-  const confidencePct =
-    view?.quality.neuralProbability != null
-      ? Math.max(
-          1,
-          Math.min(100, Math.round(view.quality.neuralProbability * 100)),
-        )
-      : view?.quality.supportRatio != null
-        ? Math.max(
-            1,
-            Math.min(100, Math.round(view.quality.supportRatio * 100)),
-          )
-        : null;
-
   const mapLab = useMemo(() => {
     const found = view?.requestSummary.labs.find((lab) => {
       const key = normalizeSearch(lab.name);
@@ -616,17 +593,18 @@ export default function CouncilPage() {
       : creatinineLab != null
         ? `${creatinineLab.toFixed(1)} mg/dL`
         : "Chưa có dữ liệu";
-  const confidenceLabel = missingCriticalData
+  const assessmentLabel = missingCriticalData
     ? "Chưa đủ dữ liệu"
-    : confidencePct != null
-      ? `${confidencePct}%`
-      : "--";
-  const confidenceStateLabel = missingCriticalData
-    ? "Thấp"
+    : requiresSafetyConfirm
+      ? "Cần bác sĩ kiểm tra"
+      : hasConflictSignals
+        ? "Cần rà soát khác biệt"
+        : "Có thể trao đổi tiếp";
+  const assessmentStateLabel = missingCriticalData
+    ? "Thiếu thông tin"
     : bannerState === "stable"
-      ? "Ổn định"
+      ? "Bản nháp, chưa là kết luận"
       : "Cần xác nhận";
-  const confidenceBarWidth = missingCriticalData ? 28 : (confidencePct ?? 0);
 
   const specialistLogs = view?.details.specialistLogs ?? [];
   const cardiologyIndex = specialistLogs.findIndex((log) =>
@@ -956,7 +934,7 @@ export default function CouncilPage() {
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
-                    Độ tin cậy AI
+                    Trạng thái đánh giá
                   </p>
                   <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
                     bolt
@@ -966,20 +944,18 @@ export default function CouncilPage() {
                   <span
                     className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
                   >
-                    {confidenceLabel}
+                    {assessmentLabel}
                   </span>
                   <span
                     className={`mb-1 text-xs font-bold ${MUTED_TEXT_CLASS}`}
                   >
-                    {confidenceStateLabel}
+                    {assessmentStateLabel}
                   </span>
                 </div>
-                <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[color:var(--surface-brand-soft)] dark:bg-slate-700">
-                  <div
-                    className="h-full bg-[color:var(--brand-600)]"
-                    style={{ width: `${confidenceBarWidth}%` }}
-                  />
-                </div>
+                <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
+                  Đây là trạng thái kiểm tra thông tin, không phải xác suất hay
+                  độ tin cậy lâm sàng.
+                </p>
                 {missingCriticalData ? (
                   <p className="mt-3 text-xs font-semibold text-amber-800 dark:text-amber-200">
                     Lý do: Thiếu {missingDataLabels.join(" và ")}.
@@ -1325,18 +1301,14 @@ export default function CouncilPage() {
                 <div
                   className={`mt-4 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Tỷ lệ đồng thuận</span>
-                  <span>
-                    {supportRatioPct != null ? `${supportRatioPct}%` : "--"}
-                  </span>
+                  <span>Đồng thuận chuyên khoa</span>
+                  <span>{hasConflictSignals ? "Cần rà soát" : "Chưa thấy bất đồng trọng yếu"}</span>
                 </div>
                 <div
                   className={`mt-1 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Mức bất đồng</span>
-                  <span>
-                    {disagreementPct != null ? `${disagreementPct}%` : "--"}
-                  </span>
+                  <span>Quyết định cuối</span>
+                  <span>{finalDecisionBlocked ? "Chờ người có chuyên môn" : "Cần kiểm tra trước khi dùng"}</span>
                 </div>
                 {disclosure ? (
                   <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3 dark:border-sky-700/60">

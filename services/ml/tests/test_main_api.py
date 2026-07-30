@@ -1004,12 +1004,13 @@ def test_council_run_returns_expected_schema():
     assert body["emergency_escalation"]["action"] == "standard_multidisciplinary_pathway"
     assert body["needs_more_info"] is False
     assert isinstance(body["followup_questions"], list)
-    assert isinstance(body["confidence_score"], float)
-    assert 0.0 <= body["confidence_score"] <= 1.0
-    assert body["confidence_level"] in {"low", "medium", "high"}
-    assert isinstance(body["data_quality_score"], float)
-    assert 0.0 <= body["data_quality_score"] <= 1.0
-    assert body["data_quality_level"] in {"low", "medium", "high"}
+    assert "confidence_score" not in body
+    assert "confidence_level" not in body
+    assert "data_quality_score" not in body
+    assert "data_quality_level" not in body
+    assert body["assessment_completeness"]["status"] == "limited"
+    assert body["assessment_completeness"]["evidence_status"] == "case_facts_with_material_gaps"
+    assert body["assessment_completeness"]["calibration"] == "not_measured_no_probability_presented"
     assert isinstance(body["analyze"], dict)
     assert isinstance(body["details"], dict)
     assert isinstance(body["citations"], list)
@@ -1077,7 +1078,8 @@ def test_council_run_emergency_escalation_on_red_flags():
     assert body["needs_more_info"] is False
     assert isinstance(body["emergency_escalation"]["negated_red_flags"], list)
     assert body["analyze"]["emergency_triggered"] is True
-    assert body["confidence_level"] in {"medium", "high"}
+    assert body["assessment_completeness"]["status"] == "safety_escalated"
+    assert body["assessment_completeness"]["emergency_floor_triggered"] is True
 
 
 def test_council_run_supports_neural_shadow_scoring():
@@ -1103,7 +1105,8 @@ def test_council_run_supports_neural_shadow_scoring():
     assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
     assert body["neural_risk"]["trained"] is False
     assert body["neural_risk"]["risk_band"] in {"low", "medium", "high"}
-    assert 0.0 <= body["neural_risk"]["risk_probability"] <= 1.0
+    assert "risk_probability" not in body["neural_risk"]
+    assert body["neural_risk"]["score_visibility"] == "not_calibrated_not_user_facing"
     assert body["neural_risk"]["recommended_triage"] in {
         "routine_follow_up",
         "same_day_review",
@@ -1136,7 +1139,8 @@ def test_council_run_negation_aware_and_insufficient_data_gate():
     assert isinstance(body["followup_questions"], list)
     assert len(body["followup_questions"]) >= 1
     assert body["analyze"]["needs_more_info"] is True
-    assert body["confidence_level"] == "low"
+    assert body["assessment_completeness"]["status"] == "insufficient"
+    assert body["assessment_completeness"]["followup_required"] is True
     assert "insufficient" in body["final_recommendation"].lower()
     assert isinstance(body["citations"], list)
     assert any(item.get("evidence_type") == "negated_symptom" for item in body["citations"])
