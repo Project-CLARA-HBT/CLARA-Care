@@ -47,7 +47,7 @@ from clara_ml.model_router import (
 )
 from clara_ml.nlp.pii_filter import redact_pii
 from clara_ml.observability import format_metrics_prometheus, metrics_collector
-from clara_ml.observability.tracing import init_tracing
+from clara_ml.observability.tracing import init_tracing, request_span
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.text_utils import query_terms
@@ -1003,8 +1003,28 @@ async def instrument_requests(request: Request, call_next):
     started_at = perf_counter()
     path = request.url.path
     try:
-        response = await call_next(request)
+        with request_span(
+            getattr(app.state, "tracer", None),
+            "ml.http_request",
+            {"stage": "http_request"},
+        ) as span:
+            response = await call_next(request)
+            span.set_attribute("status", response.status_code)
+            span.set_attribute("latency_ms", (perf_counter() - started_at) * 1000.0)
     except Exception:
+        # No URL, query, request body or exception message enters telemetry.
+        # The tracer allowlist retains only this coarse failure class.
+        with request_span(
+            getattr(app.state, "tracer", None),
+            "ml.http_request",
+            {
+                "stage": "http_request",
+                "status": 500,
+                "latency_ms": (perf_counter() - started_at) * 1000.0,
+                "error_type": "unhandled",
+            },
+        ):
+            pass
         metrics_collector.record(
             path=path,
             latency_ms=(perf_counter() - started_at) * 1000.0,
