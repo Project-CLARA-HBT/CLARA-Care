@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
   getActiveCouncilCaseId,
@@ -17,6 +19,14 @@ import { clamp, SPECIALIST_OPTIONS } from "@/lib/council-wizard";
 type SpecialistDraft = {
   specialistCount: number;
   selectedSpecialists: string[];
+};
+
+const SPECIALIST_LABEL_KEYS: Record<string, UITranslationKey> = {
+  cardiology: "council.specialist.cardiology",
+  neurology: "council.specialist.neurology",
+  endocrinology: "council.specialist.endocrinology",
+  pharmacology: "council.specialist.pharmacology",
+  nephrology: "council.specialist.nephrology",
 };
 
 function hydrateFromCase(caseItem: CouncilCaseRecord): SpecialistDraft {
@@ -36,6 +46,7 @@ function hydrateFromCase(caseItem: CouncilCaseRecord): SpecialistDraft {
 
 export default function CouncilNewSpecialistsPage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [draft, setDraft] = useState<SpecialistDraft>({
@@ -69,13 +80,13 @@ export default function CouncilNewSpecialistsPage() {
         setCaseItem(loaded);
         setDraft(hydrateFromCase(loaded));
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải case.");
+        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCase"));
       }
     };
     if (queryCaseId !== null) {
       void bootstrap();
     }
-  }, [queryCaseId, router]);
+  }, [language, queryCaseId, router]);
 
   const onSpecialistCountChange = (value: string) => {
     const parsed = Number(value);
@@ -108,7 +119,7 @@ export default function CouncilNewSpecialistsPage() {
   const onSaveAndNext = async () => {
     if (!caseItem) return;
     if (draft.selectedSpecialists.length < 2) {
-      setError("Vui lòng chọn tối thiểu 2 chuyên khoa.");
+      setError(t(language, "council.specialists.minimum"));
       return;
     }
     setIsSaving(true);
@@ -127,7 +138,7 @@ export default function CouncilNewSpecialistsPage() {
       setActiveCouncilCaseId(caseItem.id);
       router.push(`/council/new/review?caseId=${caseItem.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu specialist.");
+      setError(cause instanceof Error ? cause.message : t(language, "council.error.saveSpecialists"));
     } finally {
       setIsSaving(false);
     }
@@ -135,8 +146,8 @@ export default function CouncilNewSpecialistsPage() {
 
   return (
     <PageShell
-      title="Council Wizard - Specialists"
-      description="Bước 2/3: chọn chuyên khoa cho case thật."
+      title={t(language, "council.specialists.title")}
+      description={t(language, "council.specialists.description")}
       variant="plain"
     >
       <div className="space-y-5">
@@ -144,12 +155,12 @@ export default function CouncilNewSpecialistsPage() {
 
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            Step 2/3 · Case #{caseItem?.id ?? "--"}
+            {t(language, "council.step", { step: 2, id: caseItem?.id ?? "--" })}
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">Chọn chuyên khoa</h2>
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{t(language, "council.specialists.heading")}</h2>
 
           <label className="mt-4 block max-w-xs space-y-1">
-            <span className="text-sm font-medium">Số chuyên khoa (2-5)</span>
+            <span className="text-sm font-medium">{t(language, "council.specialists.count")}</span>
             <input
               type="number"
               min={2}
@@ -180,14 +191,17 @@ export default function CouncilNewSpecialistsPage() {
                     disabled={disableUnchecked}
                     className="h-4 w-4"
                   />
-                  {option.label}
+                  {t(language, SPECIALIST_LABEL_KEYS[option.id] ?? "council.specialist.cardiology")}
                 </label>
               );
             })}
           </div>
 
           <p className="mt-3 text-xs text-[var(--text-muted)]">
-            Đã chọn {draft.selectedSpecialists.length}/{draft.specialistCount} chuyên khoa.
+            {t(language, "council.specialists.selected", {
+              selected: draft.selectedSpecialists.length,
+              total: draft.specialistCount,
+            })}
           </p>
         </section>
 
@@ -198,7 +212,7 @@ export default function CouncilNewSpecialistsPage() {
             href={caseItem ? `/council/new/intake?caseId=${caseItem.id}` : "/council/new/intake"}
             className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold"
           >
-            Quay lại bước 1
+            {t(language, "council.action.backStep", { step: 1 })}
           </Link>
           <button
             type="button"
@@ -206,7 +220,7 @@ export default function CouncilNewSpecialistsPage() {
             disabled={isSaving || !caseItem}
             className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isSaving ? "Đang lưu..." : "Sang bước 3"}
+            {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 3 })}
           </button>
         </div>
       </div>
