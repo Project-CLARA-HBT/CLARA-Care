@@ -435,6 +435,7 @@ jobs:
           CI: "true"
         run: |
           cd apps/web
+          npm run i18n:check
           npm run lint
 
       - name: Run web build

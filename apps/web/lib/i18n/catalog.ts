@@ -74,6 +74,13 @@ const VI_MESSAGES = {
   "today.visitDescription":
     "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
   "today.openAction": "Mở",
+  "medicines.title": "Thuốc & an toàn tương tác",
+  "medicines.description":
+    "Quản lý thuốc đã xác nhận, tủ thuốc cá nhân và kiểm tra tương tác an toàn trong một nơi.",
+  "medicines.tabs": "Khu vực thuốc và an toàn tương tác",
+  "medicines.tab.list": "Thuốc của tôi",
+  "medicines.tab.cabinet": "Tủ thuốc",
+  "medicines.tab.safety": "An toàn tương tác",
   "surface.loadFailed": "Chưa thể tải dữ liệu",
   "surface.retry": "Thử lại",
   "surface.loading": "Đang tải",
@@ -164,6 +171,13 @@ const EN_MESSAGES: MessageCatalog = {
   "today.visitDescription":
     "Prepare your questions and important information for a visit.",
   "today.openAction": "Open",
+  "medicines.title": "Medication & interaction safety",
+  "medicines.description":
+    "Manage confirmed medication, your personal medicine cabinet and safe interaction checks in one place.",
+  "medicines.tabs": "Medication and interaction safety area",
+  "medicines.tab.list": "My medication",
+  "medicines.tab.cabinet": "Medicine cabinet",
+  "medicines.tab.safety": "Interaction safety",
   "surface.loadFailed": "We couldn't load the data",
   "surface.retry": "Try again",
   "surface.loading": "Loading",
