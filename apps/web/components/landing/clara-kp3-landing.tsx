@@ -1,98 +1,27 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  LANDING_COPY,
+  LANDING_MODULE_HREFS,
+  LANDING_MODULE_ICONS,
+} from "@/components/landing/clara-kp3-copy";
 import { SPONSORS } from "@/components/landing/clara-kp3-data";
-
-const MODULES = [
-  {
-    title: "Council",
-    description: "Hỗ trợ hội chẩn đa chuyên khoa bằng AI theo thời gian thực.",
-    icon: "groups",
-    href: "/council/new",
-    cta: "Vào Council",
-    audience: "Dành cho bác sĩ",
-  },
-  {
-    title: "Self-Med",
-    description: "Quản lý lộ trình thuốc và phân tích tương tác phức hợp.",
-    icon: "medication",
-    href: "/selfmed",
-    cta: "Vào Self-Med",
-    audience: "Dành cho người dùng cá nhân",
-  },
-  {
-    title: "CareGuard",
-    description: "Giám sát an toàn bệnh nhân và cảnh báo theo mức độ rủi ro.",
-    icon: "shield",
-    href: "/careguard",
-    cta: "Vào CareGuard",
-    audience: "Dành cho an toàn lâm sàng",
-  },
-  {
-    title: "Scribe",
-    description: "Tự động hóa ghi chép và chuẩn hóa bàn giao sau ca.",
-    icon: "fa fa-pencil-square-o",
-    href: "/scribe",
-    cta: "Vào Scribe",
-    audience: "Dành cho ghi chú y khoa",
-  },
-] as const;
-
-const USE_CASES = [
-  {
-    role: "Bác sĩ lâm sàng",
-    icon: "stethoscope",
-    scenario:
-      "Trước khi kê đơn cho bệnh nhân đa thuốc, bác sĩ tra DDI giữa Amlodipine và Simvastatin ngay trong CLARA Chat.",
-    benefit: "Kết quả nêu rõ nguồn đã dùng và phần còn chưa chắc chắn để bác sĩ tự đối chiếu trong workflow.",
-    tag: "Kiểm tra DDI",
-  },
-  {
-    role: "Sinh viên y khoa",
-    icon: "school",
-    scenario:
-      "Ôn thi lâm sàng bằng cách hỏi CLARA về phác đồ điều trị, mỗi luận điểm đều được truy ngược về guideline chuẩn.",
-    benefit: "Học theo bằng chứng thay vì ghi nhớ máy móc — mỗi câu trả lời đều kiểm chứng được.",
-    tag: "Ôn theo bằng chứng",
-  },
-  {
-    role: "Nhà nghiên cứu",
-    icon: "biotech",
-    scenario:
-      "Tổng hợp y văn từ PubMed, ClinicalTrials và WHO ICD-11 về một chủ đề trong vài phút thay vì vài giờ.",
-    benefit: "Có danh sách citation có thể kiểm toán — sẵn sàng đưa vào báo cáo ngay.",
-    tag: "Tổng hợp đa nguồn",
-  },
-] as const;
-
-const FAQS = [
-  {
-    q: "CLARA có thay thế quyết định bác sĩ không?",
-    a: "Không. CLARA là hệ thống hỗ trợ tham khảo lâm sàng; quyết định điều trị cuối cùng luôn thuộc đội ngũ chuyên môn.",
-  },
-  {
-    q: "Dữ liệu bệnh nhân có được bảo mật không?",
-    a: "Có. Hệ thống áp dụng guardrail vận hành, kiểm soát truy cập theo vai trò và theo dõi audit để đảm bảo an toàn dữ liệu.",
-  },
-  {
-    q: "Làm sao để kiểm chứng thông tin AI đưa ra?",
-    a: "Mỗi luận điểm đều đi kèm citation từ nguồn y khoa phù hợp để bạn đối chiếu nhanh trước khi áp dụng.",
-  },
-  {
-    q: "Nguồn y khoa của CLARA đến từ đâu?",
-    a: "CLARA tích hợp PubMed, ClinicalTrials.gov, WHO ICD-11, openFDA, RxNorm và Dược thư Việt Nam — tất cả đều được trích dẫn rõ ràng trong từng câu trả lời.",
-  },
-  {
-    q: "CLARA có hỗ trợ tiếng Việt không?",
-    a: "Có. CLARA hỗ trợ cả tiếng Việt và tiếng Anh. Bạn có thể đặt câu hỏi bằng tiếng Việt và nhận câu trả lời theo ngôn ngữ bạn chọn.",
-  },
-  {
-    q: "Có thể triển khai cho phòng khám hoặc bệnh viện không?",
-    a: "Có. CLARA được thiết kế để triển khai theo pilot — bắt đầu từ 1 use-case nhỏ có KPI rõ, mở rộng theo dữ liệu thật. Liên hệ để được tư vấn cụ thể.",
-  },
-] as const;
+import { saveUILanguage, type UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function ClaraKp3Landing() {
+  const language = useUILanguage();
+  const copy = LANDING_COPY[language];
+  const modules = copy.modules.map((module, index) => ({
+    ...module,
+    icon: LANDING_MODULE_ICONS[index],
+    href: LANDING_MODULE_HREFS[index],
+  }));
+  const useCaseIcons = ["stethoscope", "school", "biotech"] as const;
+
   return (
     <>
       <style>{`
@@ -199,34 +128,46 @@ export default function ClaraKp3Landing() {
           <div className="hidden items-center gap-8 min-[900px]:flex">
             <a className="glow-cyan inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-brand)]" href="#engine">
               <span className="material-symbols-outlined text-sm">play_circle</span>
-              Cách hoạt động
+              {copy.nav.engine}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#modules">
               <span className="material-symbols-outlined text-sm">widgets</span>
-              Tính năng
+              {copy.nav.modules}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#workflow">
               <span className="material-symbols-outlined text-sm">account_tree</span>
-              Quy trình
+              {copy.nav.workflow}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#faq">
               <span className="material-symbols-outlined text-sm">help</span>
-              Hỏi đáp
+              {copy.nav.faq}
             </a>
           </div>
 
           <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="landing-language">
+              {copy.languageLabel}
+            </label>
+            <select
+              id="landing-language"
+              value={language}
+              onChange={(event) => saveUILanguage(event.target.value as UILanguage)}
+              className="focus-ring rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-2 text-sm font-bold text-[var(--text-primary)]"
+            >
+              <option value="vi">{copy.languageNames.vi}</option>
+              <option value="en">{copy.languageNames.en}</option>
+            </select>
             <Link
               href="/login"
               className="focus-ring rounded-lg px-4 py-2 text-sm font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             >
-              Đăng nhập
+              {copy.nav.login}
             </Link>
             <Link
               href="/register"
               className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-white transition-all hover:bg-[var(--brand-700)]"
             >
-              Đăng ký
+              {copy.nav.register}
             </Link>
           </div>
         </nav>
@@ -243,20 +184,20 @@ export default function ClaraKp3Landing() {
             <div className="w-full space-y-6 min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
               <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-500)]" />
-                AI y tế có kiểm soát an toàn
+                {copy.hero.eyebrow}
               </div>
 
               <h1
                 className="font-black leading-[1.08] tracking-tight text-[var(--text-primary)] [text-wrap:balance] min-[640px]:leading-[0.98]"
                 style={{ fontSize: "clamp(1.4rem, 6.4vw, 4.25rem)" }}
               >
-                Hỏi điều bạn cần.{" "}
-                <span className="text-[var(--text-brand)]">Xem rõ nguồn và giới hạn.</span>{" "}
-                Tự quyết định cùng chuyên môn.
+                {copy.hero.headingStart}{" "}
+                <span className="text-[var(--text-brand)]">{copy.hero.headingAccent}</span>{" "}
+                {copy.hero.headingEnd}
               </h1>
 
               <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-[var(--text-secondary)] min-[640px]:text-base min-[1280px]:text-lg">
-                CLARA là trợ lý y tế cho <strong className="font-black text-[var(--text-primary)]">người dùng, bác sĩ, sinh viên y khoa và nhà nghiên cứu</strong>: giúp tra cứu, nêu nguồn khi có và tách bạch điều đã kiểm chứng với phần còn chưa chắc chắn. CLARA không thay thế đánh giá chuyên môn.
+                {copy.hero.descriptionBefore}<strong className="font-black text-[var(--text-primary)]">{copy.hero.audience}</strong>{copy.hero.descriptionAfter}
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -264,7 +205,7 @@ export default function ClaraKp3Landing() {
                   href="/chat"
                   className="focus-ring group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-4 text-base font-black text-white transition-all hover:bg-[var(--brand-700)] min-[480px]:flex-none min-[480px]:px-8"
                 >
-                  Dùng thử CLARA Chat
+                  {copy.hero.primaryCta}
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
                 </Link>
                 <a
@@ -272,22 +213,22 @@ export default function ClaraKp3Landing() {
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-4 text-base font-black text-slate-900 transition-colors hover:bg-slate-100 min-[480px]:flex-none min-[480px]:px-8 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
                   <span className="material-symbols-outlined text-base">play_circle</span>
-                  Xem cách hoạt động
+                  {copy.hero.secondaryCta}
                 </a>
               </div>
 
               <div className="grid grid-cols-3 gap-3 border-t border-slate-300/45 pt-8 dark:border-slate-700/45">
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">verified</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Hiển thị nguồn khi có</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.sourceWhenAvailable}</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">timer</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Nêu rõ phần chưa chắc chắn</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.uncertainty}</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">fact_check</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">Có chặn an toàn cho tình huống rủi ro</span>
+                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.safetyGuard}</span>
                 </div>
               </div>
             </div>
@@ -305,11 +246,11 @@ export default function ClaraKp3Landing() {
                     </div>
                     <div className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
                     <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                      System Core v4.2
+                      {copy.hero.preview.systemCore}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300">Phiên đang hoạt động</span>
+                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300">{copy.hero.preview.activeSession}</span>
                     <span className="h-2 w-2 rounded-full bg-cyan-500 dark:bg-cyan-300" />
                   </div>
                 </div>
@@ -317,10 +258,10 @@ export default function ClaraKp3Landing() {
                 <div className="space-y-5">
                   <div className="flex justify-between">
                     <div>
-                      <div className="text-sm font-black text-slate-900 dark:text-slate-100">CLARA Chat Engine</div>
+                      <div className="text-sm font-black text-slate-900 dark:text-slate-100">{copy.hero.preview.engineTitle}</div>
                       <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
-                        Ngữ cảnh lâm sàng đang bật
+                        {copy.hero.preview.clinicalContext}
                       </div>
                     </div>
                     <div className="flex h-8 items-end gap-1">
@@ -333,7 +274,7 @@ export default function ClaraKp3Landing() {
                   <div className="space-y-4">
                     <div className="flex justify-end">
                       <div className="max-w-[82%] rounded-xl rounded-tr-none border border-slate-300/45 bg-slate-100 px-4 py-3 text-base font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        Tương tác thuốc giữa Amlodipine và Simvastatin?
+                        {copy.hero.preview.question}
                       </div>
                     </div>
 
@@ -349,17 +290,16 @@ export default function ClaraKp3Landing() {
                             <span className="material-symbols-outlined text-4xl">neurology</span>
                           </div>
                           <p className="relative z-10 text-base leading-relaxed">
-                            Đây là ví dụ minh họa: CLARA cần kiểm tra nguồn thuốc phù hợp trước khi đưa ra cảnh báo tương tác.
+                            {copy.hero.preview.answer}
                           </p>
                           <div className="relative z-10 mt-3 flex flex-wrap gap-2 border-t border-white/15 pt-3">
-                            <span className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold">PubMed #28442</span>
-                            <span className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold">openFDA Alert</span>
+                            <span className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold">{copy.hero.preview.sourceWhenAvailable}</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
-                            Cần đối chiếu nguồn thuốc
+                            {copy.hero.preview.reviewSource}
                           </span>
                         </div>
                       </div>
@@ -369,7 +309,7 @@ export default function ClaraKp3Landing() {
                   <div className="flex items-center gap-3 rounded-xl border border-slate-300/45 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900">
                     <span className="material-symbols-outlined text-cyan-700 dark:text-cyan-300">barcode_scanner</span>
                     <div className="flex-1 text-xs font-bold italic text-slate-500 dark:text-slate-400">
-                      Đang phân tích dữ liệu lâm sàng...
+                      {copy.hero.preview.analysing}
                     </div>
                     <div className="flex gap-1">
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-500 dark:bg-cyan-300" />
@@ -382,7 +322,7 @@ export default function ClaraKp3Landing() {
 
               <div className="glass-panel absolute -right-6 -top-6 hidden w-36 flex-col items-center justify-center rounded-2xl border border-cyan-300/35 p-4 shadow-2xl shadow-cyan-900/20 min-[1200px]:flex">
                 <span className="material-symbols-outlined mb-2 text-3xl text-cyan-600 dark:text-cyan-400">verified</span>
-                <div className="text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">Nguồn khi có</div>
+                <div className="text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">{copy.hero.preview.sourceWhenAvailable}</div>
               </div>
             </div>
           </div>
@@ -392,10 +332,10 @@ export default function ClaraKp3Landing() {
           <div className="mx-auto max-w-7xl px-4 min-[1024px]:px-8">
             <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.28em] text-slate-600 dark:text-slate-400">
               <span className="material-symbols-outlined mr-1 align-[-3px] text-sm">handshake</span>
-              Các đối tác và nhà tài trợ
+              {copy.sponsors.heading}
             </div>
             <div className="mb-8 text-center text-sm font-medium text-slate-600 dark:text-slate-300">
-              Hạ tầng và hệ sinh thái đồng hành cùng The Clara Care.
+              {copy.sponsors.description}
             </div>
             <div className="flex flex-wrap justify-center gap-4">
               {SPONSORS.map((sponsor) => (
@@ -417,7 +357,7 @@ export default function ClaraKp3Landing() {
               ))}
             </div>
             <p className="mt-6 text-center text-base font-medium text-slate-500 dark:text-slate-400">
-              Đối tác hạ tầng & triển khai thử nghiệm — đang mở rộng mạng lưới y khoa.
+              {copy.sponsors.network}
             </p>
           </div>
         </section>
@@ -428,50 +368,15 @@ export default function ClaraKp3Landing() {
               className="mb-4 font-black tracking-tight text-slate-900 dark:text-slate-100"
               style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
             >
-              CLARA xử lý một câu hỏi y khoa như thế nào?
+              {copy.engine.title}
             </h2>
             <p className="mx-auto max-w-3xl text-base font-medium text-slate-600 dark:text-slate-300">
-              Bốn bước rõ ràng — từ câu hỏi đến câu trả lời có rào chắn an toàn và nguồn khi phù hợp.
+              {copy.engine.description}
             </p>
           </div>
 
           <div className="flex flex-col gap-3 min-[900px]:flex-row min-[900px]:items-stretch">
-            {(
-              [
-                {
-                  layer: "Bước 01",
-                  title: "Đầu vào",
-                  desc: "Người dùng nhập triệu chứng, thuốc hoặc câu hỏi lâm sàng.",
-                  icon: "edit_note",
-                  tone: "text-cyan-700 dark:text-cyan-300",
-                  solid: false,
-                },
-                {
-                  layer: "Bước 02",
-                  title: "Tìm nguồn liên quan",
-                  desc: "CLARA tìm nguồn y khoa liên quan theo quyền truy cập và cấu hình hiện có.",
-                  icon: "neurology",
-                  tone: "text-cyan-200",
-                  solid: true,
-                },
-                {
-                  layer: "Bước 03",
-                  title: "Kiểm tra an toàn",
-                  desc: "Lọc cảnh báo, chống trả lời quá mức và yêu cầu kiểm chứng trước khi hiển thị.",
-                  icon: "security",
-                  tone: "text-red-400",
-                  solid: false,
-                },
-                {
-                  layer: "Bước 04",
-                  title: "Kết quả",
-                  desc: "Trình bày điều quan trọng, nguồn đã dùng, giới hạn và bước tiếp theo phù hợp.",
-                  icon: "task_alt",
-                  tone: "text-cyan-700 dark:text-cyan-300",
-                  solid: false,
-                },
-              ] satisfies { layer: string; title: string; desc: string; icon: string; tone: string; solid: boolean }[]
-            ).flatMap((step, idx, arr) => [
+            {copy.engine.steps.flatMap((step, idx, arr) => [
               <article
                 key={step.title}
                 className={
@@ -485,7 +390,7 @@ export default function ClaraKp3Landing() {
                 </div>
                 <p className={`mb-1 text-xs font-black uppercase tracking-[0.15em] ${step.tone}`}>{step.layer}</p>
                 <h3 className="mb-3 text-xl font-black">{step.title}</h3>
-                <p className={`text-base leading-relaxed ${step.solid ? "text-slate-200" : "text-slate-600 dark:text-slate-300"}`}>{step.desc}</p>
+                <p className={`text-base leading-relaxed ${step.solid ? "text-slate-200" : "text-slate-600 dark:text-slate-300"}`}>{step.description}</p>
               </article>,
               idx < arr.length - 1 ? (
                 <div key={`arrow-${idx}`} className="hidden shrink-0 items-center justify-center text-cyan-400/50 min-[900px]:flex">
@@ -500,30 +405,30 @@ export default function ClaraKp3Landing() {
           <div className="mx-auto grid max-w-7xl gap-12 px-4 min-[1120px]:grid-cols-12 min-[1024px]:px-8">
             <div className="space-y-8 min-[1120px]:col-span-5">
               <div className="inline-flex rounded-full bg-slate-900 px-4 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white dark:bg-cyan-400 dark:text-slate-950">
-                Phân hệ hệ thống
+                {copy.moduleSection.eyebrow}
               </div>
               <h2
                 className="font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
                 style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
               >
-                CLARA Chat
+                {copy.moduleSection.title}
                 <br />
-                <span className="text-cyan-600 dark:text-cyan-300">Core Engine</span>
+                <span className="text-cyan-600 dark:text-cyan-300">{copy.moduleSection.coreEngine}</span>
               </h2>
               <p className="text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                Công cụ hỗ trợ tra cứu và diễn giải thông tin y tế có rào chắn cho bác sĩ, sinh viên y khoa và người dùng.
+                {copy.moduleSection.description}
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">Nguồn</p>
+                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">{copy.moduleSection.source}</p>
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
-                    Hiển thị khi có và truy được
+                    {copy.moduleSection.sourceDetail}
                   </p>
                 </div>
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">Giới hạn</p>
+                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">{copy.moduleSection.limits}</p>
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
-                    Nêu rõ thay vì suy đoán
+                    {copy.moduleSection.limitsDetail}
                   </p>
                 </div>
               </div>
@@ -531,12 +436,12 @@ export default function ClaraKp3Landing() {
                 href="/chat"
                 className="inline-flex rounded-xl bg-slate-900 px-8 py-4 text-base font-black text-white transition-colors hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
               >
-                Dùng thử CLARA Chat
+                {copy.moduleSection.cta}
               </Link>
             </div>
 
             <div className="grid grid-cols-1 gap-4 min-[760px]:grid-cols-2 min-[1120px]:col-span-7">
-              {MODULES.map((module) => (
+              {modules.map((module) => (
                 <article
                   key={module.title}
                   className="glass-panel module-blade rounded-2xl p-7 transition-all hover:-translate-y-1 hover:shadow-2xl"
@@ -575,42 +480,20 @@ export default function ClaraKp3Landing() {
             className="mb-16 text-center font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
-            Quy trình 3 bước từ
+            {copy.workflow.titleStart}
             <br />
-            <span className="text-cyan-600 dark:text-cyan-300">câu hỏi đến quyết định có căn cứ</span>
+            <span className="text-cyan-600 dark:text-cyan-300">{copy.workflow.titleAccent}</span>
           </h2>
 
           <div className="grid grid-cols-1 gap-12 min-[900px]:grid-cols-3">
-            {[
-              {
-                no: "01",
-                title: "Nhập yêu cầu lâm sàng",
-                desc: "Dùng ngôn ngữ tự nhiên để hỏi về DDI, phác đồ, triệu chứng hay tổng hợp y văn.",
-                icon: "clinical_notes",
-                outcome: "CLARA tiếp nhận và phân tích ý định",
-              },
-              {
-                no: "02",
-                title: "CLARA truy xuất & kiểm chứng",
-                desc: "Hệ thống tra PubMed, openFDA, RxNorm và kiểm chứng từng luận điểm theo fact-check matrix.",
-                icon: "fact_check",
-                outcome: "Kết quả có citation rõ nguồn",
-              },
-              {
-                no: "03",
-                title: "Bạn duyệt nguồn & quyết định",
-                desc: "Review citation, chuyển sang Council / CareGuard / Scribe hoặc xuất báo cáo — bạn quyết định cuối cùng.",
-                icon: "monitoring",
-                outcome: "Quyết định có kiểm toán, an toàn hơn",
-              },
-            ].map((step) => (
-              <article key={step.no} className="space-y-4">
-                <div className="text-7xl font-black text-cyan-600/60 dark:text-cyan-400/50">{step.no}</div>
+            {copy.workflow.steps.map((step) => (
+              <article key={step.number} className="space-y-4">
+                <div className="text-7xl font-black text-cyan-600/60 dark:text-cyan-400/50">{step.number}</div>
                 <h3 className="flex items-center gap-2 text-2xl font-black text-slate-900 dark:text-slate-100">
                   <span className="material-symbols-outlined text-cyan-700 dark:text-cyan-300">{step.icon}</span>
                   {step.title}
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">{step.desc}</p>
+                <p className="text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">{step.description}</p>
                 <p className="text-xs font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-400">
                   → {step.outcome}
                 </p>
@@ -627,45 +510,26 @@ export default function ClaraKp3Landing() {
                 className="font-black leading-tight tracking-tight"
                 style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
               >
-                Nguyên tắc thiết kế hệ thống
+                {copy.principles.title}
                 <br />
-                <span className="text-cyan-300">y tế chuẩn mực</span>
+                <span className="text-cyan-300">{copy.principles.titleAccent}</span>
               </h2>
               <p className="max-w-sm text-base font-bold text-slate-200">
-                Không chỉ là AI, đây là workflow có kiểm soát để đội ngũ dùng được mỗi ngày.
+                {copy.principles.description}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-5 min-[900px]:grid-cols-3">
-              {[
-                {
-                  title: "Trích dẫn trước tiên",
-                  icon: "fact_check",
-                  desc: "CLARA chỉ hiển thị nguồn đã được pipeline trả về; không có nguồn không đồng nghĩa với thông tin đã được xác minh.",
-                  outcome: "Bạn kiểm chứng được trước khi ra quyết định.",
-                },
-                {
-                  title: "An toàn trước tiên",
-                  icon: "health_and_safety",
-                  desc: "CLARA không thay thế bác sĩ, luôn giới hạn ở vai trò hỗ trợ; chặn không trả lời các trường hợp rủi ro cao.",
-                  outcome: "Giảm rủi ro trả lời quá mức.",
-                },
-                {
-                  title: "Triển khai thí điểm",
-                  icon: "flight_takeoff",
-                  desc: "Bắt đầu nhỏ với KPI rõ, đo hiệu quả rồi mở rộng có kiểm soát.",
-                  outcome: "Đưa vào vận hành an toàn theo dữ liệu thật.",
-                },
-              ].map((item) => (
+            {copy.principles.items.map((item) => (
                 <article key={item.title} className="rounded-2xl border border-white/25 bg-white/10 p-8">
                   <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-cyan-400/15">
                     <span className="material-symbols-outlined text-3xl text-cyan-300">{item.icon}</span>
                   </div>
                   <h3 className="mb-3 text-2xl font-black text-white">{item.title}</h3>
-                  <p className="mb-4 text-base font-medium leading-relaxed text-slate-200">{item.desc}</p>
+                  <p className="mb-4 text-base font-medium leading-relaxed text-slate-200">{item.description}</p>
                   <div className="flex items-start gap-2 border-t border-white/15 pt-3">
                     <span className="material-symbols-outlined mt-0.5 text-sm text-cyan-400">check_circle</span>
-                    <p className="text-sm font-bold leading-snug text-slate-300">Kết quả: {item.outcome}</p>
+                    <p className="text-sm font-bold leading-snug text-slate-300">{copy.principles.outcomeLabel}: {item.outcome}</p>
                   </div>
                 </article>
               ))}
@@ -678,17 +542,17 @@ export default function ClaraKp3Landing() {
             className="mb-4 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
-            Kịch bản sử dụng thực tế
+            {copy.useCaseSection.title}
           </h2>
           <p className="mb-14 text-center text-base font-medium text-slate-600 dark:text-slate-300">
-            CLARA phục vụ các vai trò khác nhau trong hệ sinh thái y tế.
+            {copy.useCaseSection.description}
           </p>
           <div className="grid grid-cols-1 gap-6 min-[1000px]:grid-cols-3">
-            {USE_CASES.map((item) => (
+            {copy.useCases.map((item, index) => (
               <article key={item.role} className="glass-panel rounded-2xl border-l-4 border-cyan-500 p-8">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100/60 dark:bg-cyan-900/35">
-                    <span className="material-symbols-outlined text-xl text-cyan-700 dark:text-cyan-300">{item.icon}</span>
+                    <span className="material-symbols-outlined text-xl text-cyan-700 dark:text-cyan-300">{useCaseIcons[index]}</span>
                   </div>
                   <span className="rounded-full border border-cyan-300/40 bg-cyan-100/50 px-2.5 py-0.5 text-xs font-black text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
                     {item.tag}
@@ -713,22 +577,22 @@ export default function ClaraKp3Landing() {
             <div className="absolute right-1/4 bottom-0 h-64 w-64 translate-y-1/2 rounded-full bg-cyan-400/8 blur-3xl" />
           </div>
           <div className="relative z-10 mx-auto max-w-3xl px-4 text-center min-[1024px]:px-8">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-400">Thử ngay</p>
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-400">{copy.primaryCta.eyebrow}</p>
             <h2
               className="mb-4 font-black leading-tight tracking-tight text-white"
               style={{ fontSize: "clamp(1.7rem, 5vw, 2.6rem)" }}
             >
-              Sẵn sàng thử CLARA với câu hỏi y khoa của bạn?
+              {copy.primaryCta.title}
             </h2>
             <p className="mb-8 text-base font-medium leading-relaxed text-slate-300">
-              Mở trình duyệt, đặt câu hỏi và xem rõ điều quan trọng, nguồn có sẵn cùng các giới hạn của câu trả lời.
+              {copy.primaryCta.description}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/chat"
                 className="group inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-8 py-4 text-base font-black text-slate-950 transition-all hover:bg-cyan-300"
               >
-                Dùng thử CLARA Chat
+                {copy.primaryCta.chat}
                 <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
               </Link>
               <a
@@ -736,7 +600,7 @@ export default function ClaraKp3Landing() {
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-white/5 px-8 py-4 text-base font-black text-slate-200 transition-all hover:border-slate-400 hover:bg-white/10"
               >
                 <span className="material-symbols-outlined text-base">fact_check</span>
-                Xem quy trình kiểm chứng
+                {copy.primaryCta.workflow}
               </a>
             </div>
           </div>
@@ -747,10 +611,10 @@ export default function ClaraKp3Landing() {
             className="mb-10 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
-            Hỏi đáp
+            {copy.faqTitle}
           </h2>
           <div className="space-y-4">
-            {FAQS.map((faq) => (
+            {copy.faqs.map((faq) => (
               <details key={faq.q} className="glass-panel overflow-hidden rounded-2xl border border-slate-300/35 dark:border-slate-700/45">
                 <summary className="flex cursor-pointer list-none items-center justify-between p-5 text-left">
                   <span className="font-black text-slate-900 dark:text-slate-100">{faq.q}</span>
@@ -769,15 +633,15 @@ export default function ClaraKp3Landing() {
             {/* CTA đầu footer */}
             <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-cyan-500/20 bg-slate-800/80 px-8 py-8 shadow-2xl shadow-cyan-900/20 min-[900px]:flex-row">
               <div>
-                <p className="mb-1 text-lg font-black text-white">Bắt đầu dùng CLARA cho học tập, tra cứu và kiểm chứng lâm sàng.</p>
-                <p className="text-sm font-medium text-slate-400">Miễn phí — không cần thẻ tín dụng.</p>
+                <p className="mb-1 text-lg font-black text-white">{copy.footer.ctaTitle}</p>
+                <p className="text-sm font-medium text-slate-400">{copy.footer.ctaDetail}</p>
               </div>
               <Link
                 href="/register"
                 className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 transition-all hover:bg-cyan-300"
               >
                 <span className="material-symbols-outlined text-base">person_add</span>
-                Đăng ký dùng thử
+                {copy.footer.register}
               </Link>
             </div>
 
@@ -787,7 +651,7 @@ export default function ClaraKp3Landing() {
                   The <span className="text-cyan-300">Clara Care</span>
                 </p>
                 <p className="max-w-md text-base font-medium leading-relaxed text-slate-300">
-                  Hệ thống AI lâm sàng có trích dẫn nguồn cho bác sĩ, sinh viên y khoa và nhà nghiên cứu.
+                  {copy.footer.description}
                 </p>
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 The Clara Care</p>
               </div>
@@ -796,39 +660,39 @@ export default function ClaraKp3Landing() {
                 <div className="space-y-3">
                   <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                     <span className="material-symbols-outlined text-sm">category</span>
-                    Sản phẩm
+                    {copy.footer.product}
                   </p>
                   <a className="block text-sm font-bold hover:text-cyan-300" href="#engine">
-                    Cách hoạt động
+                    {copy.nav.engine}
                   </a>
                   <a className="block text-sm font-bold hover:text-cyan-300" href="#modules">
-                    Tính năng
+                    {copy.nav.modules}
                   </a>
                   <a className="block text-sm font-bold hover:text-cyan-300" href="#workflow">
-                    Quy trình
+                    {copy.nav.workflow}
                   </a>
                 </div>
 
                 <div className="space-y-3">
                   <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                     <span className="material-symbols-outlined text-sm">gavel</span>
-                    Pháp lý
+                    {copy.footer.legal}
                   </p>
                   <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/privacy">
-                    Privacy Policy
+                    {copy.footer.privacy}
                   </Link>
                   <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/terms">
-                    Terms of Service
+                    {copy.footer.terms}
                   </Link>
                   <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/consent">
-                    Medical Consent
+                    {copy.footer.consent}
                   </Link>
                 </div>
 
                 <div className="space-y-3">
                   <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                     <span className="material-symbols-outlined text-sm">contact_support</span>
-                    Liên hệ
+                    {copy.footer.contact}
                   </p>
                   <a className="block text-sm font-bold hover:text-cyan-300" href="mailto:clara@thiennn.icu">
                     clara@thiennn.icu
@@ -841,8 +705,8 @@ export default function ClaraKp3Landing() {
             </div>
 
             <div className="flex flex-col items-start justify-between gap-2 pt-4 text-xs text-slate-300 sm:flex-row sm:items-center">
-              <p>Xây dựng cho quy trình lâm sàng Việt Nam.</p>
-              <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Chat • Council • Safety • Scribe • Quản trị</p>
+              <p>{copy.footer.madeFor}</p>
+              <p className="text-xs uppercase tracking-[0.12em] text-slate-400">{copy.footer.productLine}</p>
             </div>
           </div>
         </footer>

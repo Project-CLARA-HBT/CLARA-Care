@@ -21,6 +21,14 @@ accessible tab name). A contributor cannot skip this by omitting a Vitest
 pattern: the `web-lint-build` CI job calls `npm run i18n:check` on every web or
 CI change.
 
+The public landing page now uses its own typed `LANDING_COPY` contract because
+it must render before the authenticated shell is mounted. It shares the same
+persisted `vi`/`en` preference and offers a labelled language selector. The
+contract includes page navigation, hero, source/uncertainty boundary, modules,
+workflow, safety principles, FAQ, calls to action and footer. Decorative brand
+names and Material icon identifiers are intentionally outside the catalog; no
+synthetic source citation is rendered as product evidence.
+
 `apps/web/lib/i18n/primary-surfaces.test.ts` remains a focused unit-level
 regression test. Domain pages retain existing bilingual maps while they are
 migrated incrementally; this document does not claim those pages are already
