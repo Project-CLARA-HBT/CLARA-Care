@@ -139,6 +139,21 @@ const MIGRATED_SURFACES = [
       "Priority helps order your plan",
     ],
   },
+  {
+    path: "app/chat/_v2/components/ChatWelcome.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.welcome.researcher.eyebrow",
+      "chat.welcome.doctor.eyebrow",
+      "specialistWelcomeContent",
+    ],
+    forbidden: [
+      "Tìm hiểu có dẫn nguồn",
+      "Evidence with traceable sources",
+      "Hỗ trợ quyết định lâm sàng",
+      "Clinical decision support",
+    ],
+  },
 ];
 
 function fail(message) {
