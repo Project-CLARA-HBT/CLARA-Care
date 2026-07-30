@@ -270,6 +270,29 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    path: "app/chat/_v2/ChatShell.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.shell.notice.researchReady",
+      "chat.shell.command.newChat",
+      "chat.shell.mode.fast",
+      "chat.shell.skipToConversation",
+      "chat.shell.disclaimer",
+    ],
+    forbidden: [
+      '"Research mode is ready. Refine the question or run it now."',
+      '"Đã sẵn sàng chế độ Nghiên cứu. Bạn có thể chỉnh câu hỏi hoặc chạy ngay."',
+      '"Answer saved locally; backend sync will recover later."',
+      '"Đã lưu local; backend sync sẽ khôi phục sau."',
+      '"New chat"',
+      '"Chat mới"',
+      '"Skip to conversation"',
+      '"Tới khung trò chuyện"',
+      '"CLARA is an AI health information assistant, not a replacement for a clinician."',
+      '"CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."',
+    ],
+  },
+  {
     path: "app/medicines/safety-tab.tsx",
     required: [
       "@/lib/i18n/catalog",
