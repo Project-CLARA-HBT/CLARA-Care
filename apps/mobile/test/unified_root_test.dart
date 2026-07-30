@@ -15,6 +15,7 @@ import 'package:clara_mobile/core/session_store.dart';
 import 'package:clara_mobile/experience/language_controller.dart';
 import 'package:clara_mobile/experience/language_store.dart';
 import 'package:clara_mobile/experience/unified/onboarding_flow.dart';
+import 'package:clara_mobile/experience/unified/profile_hub.dart';
 import 'package:clara_mobile/experience/unified/unified_root.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +145,37 @@ void main() {
       expect(find.text('Profile'), findsOneWidget);
       expect(find.text('Ask CLARA'), findsOneWidget);
       expect(find.text('Hôm nay'), findsNothing);
+    });
+
+    testWidgets('rebuilds the Profile hub chrome and entry labels by locale',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProfileHub(
+            apiClient: api,
+            sessionStore: session,
+            resolver: MobileFeatureFlagResolver(summary: const {}),
+            role: 'normal',
+            languageController: language,
+            phrBody: const SizedBox(child: Text('PHR_BODY')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hồ sơ'), findsOneWidget);
+      expect(find.text('Công cụ & quyền riêng tư'), findsOneWidget);
+      expect(find.text('Chuẩn bị đi khám'), findsOneWidget);
+      expect(find.text('Cài đặt'), findsOneWidget);
+
+      await language.setLanguage('en');
+      await tester.pump();
+
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Tools & privacy'), findsOneWidget);
+      expect(find.text('Prepare for a visit'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Chuẩn bị đi khám'), findsNothing);
     });
   });
 }

@@ -81,15 +81,17 @@ class ProfileHub extends StatelessWidget {
   bool get _canCouncil =>
       kCouncilMobileParityEnabled && (role == 'doctor' || role == 'admin');
 
-  List<_ProfileEntry> _entries() {
+  List<_ProfileEntry> _entries({required bool english}) {
     final entries = <_ProfileEntry>[];
 
     // Visit preparation — collecting concerns/intake for an appointment.
     entries.add(
       _ProfileEntry(
         icon: Icons.event_note_outlined,
-        title: 'Chuẩn bị đi khám',
-        subtitle: 'Gom câu hỏi và thông tin cho buổi khám',
+        title: english ? 'Prepare for a visit' : 'Chuẩn bị đi khám',
+        subtitle: english
+            ? 'Gather questions and details for your appointment'
+            : 'Gom câu hỏi và thông tin cho buổi khám',
         builder: (_) => VisitsSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -101,8 +103,10 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.family_restroom_outlined,
-        title: 'Người thân & chia sẻ',
-        subtitle: 'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
+        title: english ? 'Family & sharing' : 'Người thân & chia sẻ',
+        subtitle: english
+            ? 'Share the minimum with a supporter; revoke anytime'
+            : 'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
         builder: (_) => FamilySurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -113,8 +117,10 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.fact_check_outlined,
-        title: 'Bằng chứng đang cập nhật',
-        subtitle: 'Theo dõi thay đổi đã được chuyên gia rà soát',
+        title: english ? 'Living evidence' : 'Bằng chứng đang cập nhật',
+        subtitle: english
+            ? 'Follow changes reviewed by experts'
+            : 'Theo dõi thay đổi đã được chuyên gia rà soát',
         builder: (_) => LivingEvidenceSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -126,8 +132,10 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.forum_outlined,
-          title: 'Cộng đồng',
-          subtitle: 'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
+          title: english ? 'Community' : 'Cộng đồng',
+          subtitle: english
+              ? 'Share and ask questions with the health community'
+              : 'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
           builder: (_) => SocialSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -139,8 +147,10 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.monitor_heart_outlined,
-        title: 'Dữ liệu sức khỏe',
-        subtitle: 'Quản lý các nguồn bạn đã cho phép kết nối',
+        title: english ? 'Health data' : 'Dữ liệu sức khỏe',
+        subtitle: english
+            ? 'Manage the sources you allowed to connect'
+            : 'Quản lý các nguồn bạn đã cho phép kết nối',
         builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -152,8 +162,10 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.mic_none_outlined,
-          title: 'Ghi chú lâm sàng',
-          subtitle: 'Ghi âm và tạo ghi chú SOAP',
+          title: english ? 'Clinical notes' : 'Ghi chú lâm sàng',
+          subtitle: english
+              ? 'Record and create a SOAP note'
+              : 'Ghi âm và tạo ghi chú SOAP',
           builder: (_) => ScribeSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -168,8 +180,10 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.groups_outlined,
-          title: 'Hội chẩn ca bệnh',
-          subtitle: 'Tập hợp góc nhìn đa chuyên khoa cho ca khó',
+          title: english ? 'Case consultation' : 'Hội chẩn ca bệnh',
+          subtitle: english
+              ? 'Bring together specialist perspectives for complex cases'
+              : 'Tập hợp góc nhìn đa chuyên khoa cho ca khó',
           builder: (_) => CouncilSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -182,8 +196,10 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.privacy_tip_outlined,
-          title: 'Quyền riêng tư & đồng ý',
-          subtitle: 'Quản lý đồng ý theo mục đích',
+          title: english ? 'Privacy & consent' : 'Quyền riêng tư & đồng ý',
+          subtitle: english
+              ? 'Manage consent by purpose'
+              : 'Quản lý đồng ý theo mục đích',
           builder: (_) => ConsentCenterScreen(
             resolver: resolver,
             sessionStore: sessionStore,
@@ -193,8 +209,10 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.manage_search_outlined,
-          title: 'Quyền dữ liệu cá nhân',
-          subtitle: 'Xuất, chỉnh sửa, hạn chế hoặc xoá dữ liệu của bạn',
+          title: english ? 'Personal data rights' : 'Quyền dữ liệu cá nhân',
+          subtitle: english
+              ? 'Export, correct, restrict, or delete your data'
+              : 'Xuất, chỉnh sửa, hạn chế hoặc xoá dữ liệu của bạn',
           builder: (_) => DsarScreen(
             resolver: resolver,
             // The DSAR surface sends only the chosen coarse request kind.
@@ -213,8 +231,10 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.settings_outlined,
-        title: 'Cài đặt',
-        subtitle: 'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
+        title: english ? 'Settings' : 'Cài đặt',
+        subtitle: english
+            ? 'Appearance, language, account, and privacy'
+            : 'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
         builder: (_) => SettingsScreenV3(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -233,9 +253,23 @@ class ProfileHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = _entries();
+    final languageController = this.languageController;
+    if (languageController == null) {
+      return _buildLocalized(context, english: false);
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildLocalized(
+        context,
+        english: languageController.languageCode == 'en',
+      ),
+    );
+  }
+
+  Widget _buildLocalized(BuildContext context, {required bool english}) {
+    final entries = _entries(english: english);
     return Scaffold(
-      appBar: AppBar(title: const Text('Hồ sơ')),
+      appBar: AppBar(title: Text(english ? 'Profile' : 'Hồ sơ')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceSm),
@@ -247,7 +281,9 @@ class ProfileHub extends StatelessWidget {
               child: phrBody,
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
-            const SectionHeader(title: 'Công cụ & quyền riêng tư'),
+            SectionHeader(
+              title: english ? 'Tools & privacy' : 'Công cụ & quyền riêng tư',
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: ClaraTokens.spaceMd,
