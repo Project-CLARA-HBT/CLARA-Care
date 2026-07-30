@@ -11,4 +11,17 @@ describe("Council heuristic-risk presentation", () => {
     expect(source).not.toContain('label="Neural Risk (Shadow)"');
     expect(source).not.toContain("fmtPercent(view.quality.ruleShadowProbability)");
   });
+
+  it("does not render raw snapshots, free-text reasoning, or confidence scores", () => {
+    const workspace = readFileSync(
+      resolve(__dirname, "../components/council/council-workspace-screen.tsx"),
+      "utf8",
+    );
+    const councilClient = readFileSync(resolve(__dirname, "council.ts"), "utf8");
+
+    expect(workspace).not.toContain("Raw Preview");
+    expect(workspace).not.toContain("item.reasoning");
+    expect(councilClient).toContain("Only render stable, structured findings.");
+    expect(councilClient).not.toContain("confidenceScore:");
+  });
 });

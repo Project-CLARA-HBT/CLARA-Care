@@ -1,4 +1,4 @@
-import { CouncilReasoningLog, CouncilRunSnapshot } from "@/lib/council";
+import { CouncilRunSnapshot, CouncilSpecialistSummary } from "@/lib/council";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -55,7 +55,7 @@ export type CouncilViewModel = {
     actionItems: string[];
   };
   details: {
-    specialistLogs: CouncilReasoningLog[];
+    specialistLogs: CouncilSpecialistSummary[];
   };
   citations: CouncilCitation[];
   research: {
@@ -65,7 +65,6 @@ export type CouncilViewModel = {
   };
   deepDive: {
     sections: CouncilDeepDiveSection[];
-    rawPreview: string;
   };
   timeline: {
     steps: Array<{
@@ -334,19 +333,8 @@ function buildDeepDiveSections(candidates: Array<UnknownRecord | null>, snapshot
 
   return snapshot.result.specialistReasoningLogs.slice(0, 5).map((log) => ({
     title: log.specialist,
-    items: uniqueStrings([log.reasoning, log.recommendation ?? ""].filter(Boolean), 6),
+    items: uniqueStrings([...log.findings, log.recommendation ?? ""].filter(Boolean), 6),
   }));
-}
-
-function stringifyRawPreview(raw: unknown): string {
-  try {
-    const json = JSON.stringify(raw, null, 2);
-    if (!json) return "{}";
-    if (json.length <= 8000) return json;
-    return `${json.slice(0, 8000)}\n... (truncated)`;
-  } catch {
-    return "{}";
-  }
 }
 
 function formatLabs(labs: Record<string, number | string>): Array<{ name: string; value: string }> {
@@ -495,13 +483,11 @@ export function buildCouncilView(snapshot: CouncilRunSnapshot): CouncilViewModel
     },
     deepDive: {
       sections: buildDeepDiveSections(candidates, snapshot),
-      rawPreview: stringifyRawPreview(snapshot.raw),
     },
     timeline: {
       steps: snapshot.result.reasoningTimeline.map((item) => ({
         sequence: item.sequence,
         step: item.step,
-        detail: item.detail,
       })),
     },
   };

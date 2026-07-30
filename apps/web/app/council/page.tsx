@@ -627,11 +627,11 @@ export default function CouncilPage() {
     renalEndoLog?.specialist ?? "Nội tiết/Thận",
   );
   const cardiologyDetail = summarizeClinicalText(
-    cardiologyLog?.recommendation ?? cardiologyLog?.reasoning,
+    cardiologyLog?.recommendation ?? cardiologyLog?.findings.join(", "),
     "Cân nhắc hỗ trợ huyết động hoặc tăng vận mạch nếu có dấu hiệu tụt huyết áp.",
   );
   const renalEndoDetail = summarizeClinicalText(
-    renalEndoLog?.recommendation ?? renalEndoLog?.reasoning,
+    renalEndoLog?.recommendation ?? renalEndoLog?.findings.join(", "),
     "Cảnh báo nguy cơ độc thận hoặc cần chỉnh liều theo creatinine/eGFR.",
   );
   const conflictDetail = missingRenal
@@ -646,7 +646,6 @@ export default function CouncilPage() {
       id: `${step.sequence}-${step.step}`,
       time: `Bước ${step.sequence}`,
       title: getTimelineTitle(step.step),
-      detail: stripTelemetryLabels(step.detail),
       status: getTimelineStatus(
         getTimelineTitle(step.step),
         missingCriticalData,
@@ -1024,11 +1023,6 @@ export default function CouncilPage() {
                         <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
                           {step.title}
                         </p>
-                        <p
-                          className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                        >
-                          {step.detail}
-                        </p>
                       </div>
                     );
                   })}
@@ -1059,13 +1053,6 @@ export default function CouncilPage() {
                           >
                             {getTimelineTitle(stage.step)}
                           </p>
-                          {stage.detail ? (
-                            <p
-                              className={`text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                            >
-                              {stripTelemetryLabels(stage.detail)}
-                            </p>
-                          ) : null}
                         </div>
                       </li>
                     ))}

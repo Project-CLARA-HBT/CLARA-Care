@@ -7,8 +7,6 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilMetricCard, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
-import TelemetryPanel from "@/components/telemetry/telemetry-panel";
-import { getRole, type UserRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
@@ -26,10 +24,7 @@ export default function CouncilResultPage() {
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [error, setError] = useState("");
-  const [role, setRole] = useState<UserRole>("normal");
-
   useEffect(() => {
-    setRole(getRole());
     // The Council surface was viewed (Req 9.1). No PII — coarse view label only.
     trackCouncilViewed({ view: "result" });
   }, []);
@@ -163,8 +158,7 @@ export default function CouncilResultPage() {
               </div>
             </CouncilSection>
 
-            <TelemetryPanel role={role}>
-              <CouncilSection eyebrow="Reasoning Timeline" title="Luồng suy luận hội chẩn">
+            <CouncilSection eyebrow="Processing status" title="Các bước hệ thống đã thực hiện">
                 {view.timeline.steps.length ? (
                   <ol className="space-y-2">
                     {view.timeline.steps.map((step) => (
@@ -175,15 +169,13 @@ export default function CouncilResultPage() {
                         <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
                           Step {step.sequence}: {step.step}
                         </p>
-                        <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(step.detail)}</p>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="text-sm text-[var(--text-secondary)]">Chưa có reasoning timeline trong snapshot này.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Chưa có trạng thái xử lý trong snapshot này.</p>
                 )}
-              </CouncilSection>
-            </TelemetryPanel>
+            </CouncilSection>
 
             <CouncilSection eyebrow="Risk Notes" title="Điểm cần lưu ý">
               <div className="grid gap-3 md:grid-cols-2">

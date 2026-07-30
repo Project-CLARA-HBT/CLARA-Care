@@ -5,8 +5,6 @@ import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
-import TelemetryPanel from "@/components/telemetry/telemetry-panel";
-import { getRole, type UserRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
@@ -29,7 +27,7 @@ const TAB_META: Record<WorkspaceTab, { title: string; description: string; eyebr
   },
   details: {
     title: "Council Details",
-    description: "Chi tiết reasoning theo chuyên khoa và dữ liệu đầu vào hội chẩn.",
+    description: "Tín hiệu và khuyến nghị có cấu trúc theo từng chuyên khoa.",
     eyebrow: "Details",
   },
   citations: {
@@ -44,7 +42,7 @@ const TAB_META: Record<WorkspaceTab, { title: string; description: string; eyebr
   },
   deepdive: {
     title: "Council Deepdive",
-    description: "Tổng hợp sâu theo section kỹ thuật và bản raw preview.",
+    description: "Tổng hợp sâu theo các phần chuyên môn có thể rà soát.",
     eyebrow: "Deepdive",
   },
 };
@@ -53,9 +51,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [role, setRole] = useState<UserRole>("normal");
   useEffect(() => {
-    setRole(getRole());
     // The Council surface was viewed (Req 9.1). No PII — coarse tab label only.
     trackCouncilViewed({ view: tab });
   }, [tab]);
@@ -140,7 +136,12 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                   className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">{item.specialist}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(item.reasoning)}</p>
+                  <div className="mt-2">
+                    <CouncilList
+                      items={item.findings.map(stripTelemetryLabels)}
+                      emptyText="Chưa có tín hiệu có cấu trúc để hiển thị."
+                    />
+                  </div>
                   {item.recommendation ? (
                     <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{stripTelemetryLabels(item.recommendation)}</p>
                   ) : null}
@@ -222,15 +223,6 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                   </div>
                 </article>
               ))}
-              {/* Raw snapshot preview is internal/engineering telemetry — Admin_Users only (Req 4.1). */}
-              <TelemetryPanel role={role}>
-                <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Raw Preview</p>
-                  <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-black/5 p-3 text-xs text-[var(--text-secondary)] dark:bg-white/5">
-                    {view.deepDive.rawPreview}
-                  </pre>
-                </article>
-              </TelemetryPanel>
             </div>
           </CouncilSection>
         ) : null}

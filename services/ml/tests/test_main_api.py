@@ -993,10 +993,10 @@ def test_council_run_returns_expected_schema():
     assert isinstance(body["per_specialist_reasoning_logs"], list)
     assert len(body["per_specialist_reasoning_logs"]) == 3
     for item in body["per_specialist_reasoning_logs"]:
-        assert {"specialist", "reasoning_log", "key_findings", "triage", "recommendation"}.issubset(
+        assert {"specialist", "key_findings", "triage", "recommendation"}.issubset(
             item.keys()
         )
-        assert isinstance(item["reasoning_log"], list)
+        assert "reasoning_log" not in item
         assert isinstance(item["key_findings"], list)
         assert item["triage"] in {"routine_follow_up", "same_day_review", "emergency_escalation"}
         assert isinstance(item["recommendation"], str)
@@ -1046,6 +1046,7 @@ def test_council_run_returns_expected_schema():
         }
     assert isinstance(body["reasoning_timeline"], list)
     assert len(body["reasoning_timeline"]) >= 6
+    assert all(set(item).issubset({"sequence", "step", "status"}) for item in body["reasoning_timeline"])
     steps = [item["step"] for item in body["reasoning_timeline"]]
     assert "consensus_decision" in steps
     assert "safety_gate" in steps

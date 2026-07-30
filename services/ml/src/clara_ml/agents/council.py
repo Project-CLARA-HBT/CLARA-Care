@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import combinations
 from typing import Any
@@ -1011,64 +1011,51 @@ def _build_reasoning_timeline(
     needs_more_info: bool,
     final_recommendation: str,
 ) -> list[dict[str, Any]]:
+    """Return progress states, never a reasoning trace.
+
+    The Council result used to carry free-text ``detail`` fields and rich
+    metadata under a "reasoning timeline" label.  They were deterministic,
+    but still exposed implementation-level deliberation and could be mistaken
+    for a model chain of thought.  Consumers only need to know that each
+    safety-relevant processing step occurred.  Keep the stable ``step`` and
+    ``sequence`` contract for existing stream consumers, while deliberately
+    omitting source text, vote ratios, rule matches, and final prose.
+    """
+
+    _ = (
+        data_quality,
+        assessments,
+        conflicts,
+        consensus_metadata,
+        red_flags,
+        followup_questions,
+        needs_more_info,
+        final_recommendation,
+    )
     return [
-        {
-            "sequence": 1,
-            "step": "intake_normalized",
-            "detail": "Input payload normalized into symptoms, labs, medications, and history.",
-            "metadata": {
-                "section_counts": data_quality.get("section_counts", {}),
-                "data_quality_score": data_quality.get("score"),
-            },
-        },
-        {
-            "sequence": 2,
-            "step": "specialist_assessment",
-            "detail": "Rule-based specialist assessments completed.",
-            "metadata": {
-                "specialists": [item.specialist for item in assessments],
-                "triage_votes": [item.triage for item in assessments],
-            },
-        },
-        {
-            "sequence": 3,
-            "step": "conflict_review",
-            "detail": "Cross-specialty triage conflicts evaluated.",
-            "metadata": {
-                "conflict_count": len(conflicts),
-                "conflict_detected": bool(conflicts),
-            },
-        },
-        {
-            "sequence": 4,
-            "step": "consensus_decision",
-            "detail": "Council consensus score and dissent profile computed.",
-            "metadata": {
-                "winning_triage": consensus_metadata.get("winning_triage"),
-                "support_ratio": consensus_metadata.get("support_ratio"),
-                "disagreement_index": consensus_metadata.get("disagreement_index"),
-            },
-        },
-        {
-            "sequence": 5,
-            "step": "safety_gate",
-            "detail": "Red-flag safety gate applied before final recommendation.",
-            "metadata": {
-                "red_flags": red_flags,
-                "triggered": bool(red_flags),
-                "needs_more_info": needs_more_info,
-                "followup_questions_count": len(followup_questions),
-            },
-        },
-        {
-            "sequence": 6,
-            "step": "final_recommendation",
-            "detail": final_recommendation,
-            "metadata": {
-                "needs_more_info": needs_more_info,
-            },
-        },
+        {"sequence": 1, "step": "intake_normalized", "status": "completed"},
+        {"sequence": 2, "step": "specialist_assessment", "status": "completed"},
+        {"sequence": 3, "step": "conflict_review", "status": "completed"},
+        {"sequence": 4, "step": "consensus_decision", "status": "completed"},
+        {"sequence": 5, "step": "safety_gate", "status": "completed"},
+        {"sequence": 6, "step": "final_recommendation", "status": "completed"},
     ]
+
+
+def _public_specialist_assessment(item: SpecialistAssessment) -> dict[str, Any]:
+    """Return the clinician-facing structured conclusion, not hidden reasoning.
+
+    ``reasoning_log`` remains an internal rule-engine implementation detail.
+    A Council response may show the attributable rule signals, triage category,
+    and recommendation, but must never expose a chain-of-thought-like trace.
+    """
+
+    return {
+        "specialist": item.specialist,
+        "key_findings": item.key_findings,
+        "triage": item.triage,
+        "recommendation": item.recommendation,
+    }
 
 
 def _build_escalation_metadata(
@@ -1308,7 +1295,9 @@ def run_council(payload: dict) -> dict:
         _SPECIALIST_EVALUATORS[specialist](symptoms, labs, medications, history)
         for specialist in specialists
     ]
-    assessments_payload = [asdict(item) for item in assessments]
+    # Do not serialize the internal rule trace.  The response carries only
+    # structured clinician-facing findings and recommendation fields.
+    assessments_payload = [_public_specialist_assessment(item) for item in assessments]
 
     red_flags, red_flag_matches, negated_red_flag_matches = _detect_red_flags(symptoms)
     conflicts = _build_conflicts(assessments)
@@ -1385,7 +1374,10 @@ def run_council(payload: dict) -> dict:
 
     result = {
         "requested_specialists": specialists,
+        # Retain the legacy key so existing API consumers do not break, but its
+        # entries are structured assessments rather than reasoning logs.
         "per_specialist_reasoning_logs": assessments_payload,
+        "per_specialist_assessments": assessments_payload,
         "conflict_list": conflicts,
         "council_consensus": consensus_metadata,
         "consensus_summary": consensus_summary,
@@ -1449,16 +1441,7 @@ def run_council(payload: dict) -> dict:
                 "red_flag_count": len(red_flags),
                 "highest_triage_score": max(_TRIAGE_SCORE[item.triage] for item in assessments),
             },
-            "specialist_sections": [
-                {
-                    "specialist": item.specialist,
-                    "triage": item.triage,
-                    "key_findings": item.key_findings,
-                    "reasoning_log": item.reasoning_log,
-                    "recommendation": item.recommendation,
-                }
-                for item in assessments
-            ],
+            "specialist_sections": assessments_payload,
         },
     }
 
