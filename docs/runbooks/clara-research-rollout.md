@@ -23,6 +23,27 @@ Property 35 — flags-off legacy equivalence). Flags are read from config/env at
 service start, so flipping one means updating the environment config and
 restarting/redeploying the affected service — there is no in-request toggle.
 
+### Offline corpus backfill (separate high-impact operation)
+
+The existing administrative ingestion trigger is deliberately bounded to one
+source and retains its API RBAC boundary. A corpus-wide watermark backfill is
+not that trigger: it lazy-composes the source registry and ingestion
+orchestrator only when all of the following are explicitly true:
+
+- `RAG_PERSISTENT_STORE_ENABLED=true`
+- `RAG_INGESTION_ENABLED=true`
+- `RAG_BACKFILL_ENABLED=true`
+
+`RAG_BACKFILL_ENABLED` is a separate default-off kill switch because a run can
+contact every enabled upstream source. Before enabling it, verify source
+licenses/robots policy, registry enablement, storage capacity and approved
+network egress. The runtime guard rejects backfill without ingestion and the
+persistent store. Per-source failures are reported as sanitized reason codes;
+independent sources continue, so operators must inspect the report before any
+subsequent release decision. Roll back immediately by setting
+`RAG_BACKFILL_ENABLED=false` and restarting ML; no stored corpus data is
+deleted by that rollback.
+
 ML flags (`services/ml/src/clara_ml/config.py`):
 
 | Env var                                       | Default | Behavior when on                                  |

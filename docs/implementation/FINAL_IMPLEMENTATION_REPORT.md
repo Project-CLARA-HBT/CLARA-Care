@@ -169,6 +169,14 @@ safety policy.
 - `cb2eb1e0` fixes judge-report evidence state: observed confidence intervals,
   critical errors and ablations replace their unavailable placeholders rather
   than appearing alongside them. It does not add a clinical benchmark result.
+- `366f199a` moves the no-longer-imported ResearchRightRail cluster and its
+  exclusively-owned panels into an explicit legacy artifact; active routes do
+  not import it. `b117e534` localizes the Council clinician oversight dialog
+  without changing its RBAC, payload or mutation mechanics.
+- `743c6dea` replaces the former RAG watermark-backfill skeleton with a
+  default-off, dual-gated lazy composition of the existing source registry and
+  ingestion orchestrator. The same checkpoint adds deployment/runtime guards;
+  it has no new execution or external-ingestion evidence.
 
 All of these checkpoints have static whitespace evidence only in this pass;
 their tests, builds, evaluation and deployment remain deferred by instruction.
