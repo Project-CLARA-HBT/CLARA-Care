@@ -70,33 +70,9 @@ class Settings(BaseSettings):
             "EMBEDDING_API_KEY",
         ),
     )
-    primary_llm_api_key: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_API_KEY",
-            "HITECHCLOUD_API_KEY",
-        ),
-    )
-    primary_llm_base_url: str = Field(
-        default="https://platform.hitechcloud.one/v1",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_BASE_URL",
-            "HITECHCLOUD_BASE_URL",
-        ),
-    )
-    primary_llm_model: str = Field(
-        default="gpt-5.3-codex-high",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_MODEL",
-            "HITECHCLOUD_MODEL",
-        ),
-    )
     llm_deepseek_only: bool = Field(
         default=True,
-        validation_alias=AliasChoices(
-            "LLM_DEEPSEEK_ONLY",
-            "DISABLE_PRIMARY_LLM",
-        ),
+        validation_alias="LLM_DEEPSEEK_ONLY",
     )
     deepseek_base_url: str = Field(
         default="https://api.deepseek.com",

@@ -75,7 +75,6 @@ export async function executeResearchTier2Job(
     uiLanguage: options?.uiLanguage,
     deepPassCount: options?.deepPassCount,
     clarifyingAnswers: options?.clarifyingAnswers,
-    llmRuntime: options?.llmRuntime,
   };
 
   const job = await createResearchTier2Job(query, createOptions);

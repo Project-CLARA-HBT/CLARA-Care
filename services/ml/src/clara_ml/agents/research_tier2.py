@@ -2385,87 +2385,35 @@ def _sanitize_llm_query_plan_payload(
 def _resolve_runtime_llm_config(
     llm_runtime: dict[str, Any] | None,
 ) -> tuple[str, str, str, str]:
-    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-    if settings.llm_deepseek_only:
-        api_key = (
-            str(settings.deepseek_api_key or "").strip()
-            or str(runtime.get("api_key") or "").strip()
-        )
-        base_url = (
-            str(settings.deepseek_base_url or "").strip()
-            or str(runtime.get("base_url") or "").strip()
-        )
-        model = (
-            str(settings.deepseek_model or "").strip() or str(runtime.get("model") or "").strip()
-        )
-        return "deepseek", api_key, base_url, model
-    raw_provider = str(runtime.get("provider") or "").strip().lower()
-    if raw_provider:
-        provider = raw_provider
-    else:
-        provider = (
-            "hitechcloud_gpt53_codex_high"
-            if str(settings.primary_llm_api_key or "").strip()
-            else "deepseek"
-        )
-    if provider == "hitechcloud_gpt53_codex_high":
-        api_key = (
-            str(runtime.get("api_key") or "").strip()
-            or str(settings.primary_llm_api_key or "").strip()
-        )
-        base_url = (
-            str(runtime.get("base_url") or "").strip()
-            or str(settings.primary_llm_base_url or "").strip()
-            or "https://platform.hitechcloud.one/v1"
-        )
-        model = (
-            str(runtime.get("model") or "").strip()
-            or str(settings.primary_llm_model or "").strip()
-            or "gpt-5.3-codex-high"
-        )
-        if not api_key:
-            deepseek_api_key = (
-                str(settings.deepseek_api_key or "").strip()
-                or str(runtime.get("api_key") or "").strip()
-            )
-            deepseek_base_url = (
-                str(settings.deepseek_base_url or "").strip()
-                or str(runtime.get("base_url") or "").strip()
-            )
-            deepseek_model = (
-                str(settings.deepseek_model or "").strip()
-                or str(runtime.get("model") or "").strip()
-            )
-            if deepseek_api_key and deepseek_base_url and deepseek_model:
-                return "deepseek", deepseek_api_key, deepseek_base_url, deepseek_model
-        return provider, api_key, base_url, model
+    """Resolve deployment-owned DeepSeek settings, never request runtime data.
 
-    api_key = (
-        str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
+    The argument is retained only while internal callers migrate.  It is
+    intentionally ignored: Research requests, Control Tower records and old
+    queued jobs must not select a provider, endpoint, model, or credential.
+    Per-task Pro/Flash routing is resolved by ``build_task_client``.
+    """
+
+    del llm_runtime
+    return (
+        "deepseek",
+        str(settings.deepseek_api_key or "").strip(),
+        str(settings.deepseek_base_url or "").strip(),
+        str(settings.deepseek_model or "").strip(),
     )
-    base_url = (
-        str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
-    )
-    model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
-    return "deepseek", api_key, base_url, model
 
 
 def _has_request_runtime_override(llm_runtime: dict[str, Any] | None) -> bool:
-    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-    return bool(
-        str(runtime.get("api_key") or "").strip()
-        and str(runtime.get("base_url") or "").strip()
-        and str(runtime.get("model") or "").strip()
-    )
+    # Kept as a compatibility seam for internal callers. Runtime overrides are
+    # no longer accepted anywhere in production.
+    del llm_runtime
+    return False
 
 
 class _RegistrySettingsOverlay:
-    """Read-only settings view for the legacy internal runtime seam.
+    """Read-only settings view retained for legacy internal call signatures.
 
-    Registry selection remains the only client-construction path. The overlay
-    preserves the already-resolved DeepSeek connection values and timeout
-    compatibility without mutating global settings or accepting a provider
-    selected by an end user.
+    Its callers now receive the deployment-resolved DeepSeek values only. It
+    must not be populated from request, control-plane, or queued-job payloads.
     """
 
     def __init__(self, base: Any, **overrides: object) -> None:
@@ -9248,19 +9196,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_sources = payload.get("rag_sources")
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
-    top_level_llm_runtime = payload.get("llm_runtime")
-    top_level_llm_runtime_dict = (
-        top_level_llm_runtime if isinstance(top_level_llm_runtime, dict) else {}
-    )
-    requested_llm_runtime = {
-        "provider": top_level_llm_runtime_dict.get("provider") or rag_flow.get("llm_provider"),
-        "api_key": top_level_llm_runtime_dict.get("api_key") or rag_flow.get("llm_api_key"),
-        "base_url": top_level_llm_runtime_dict.get("base_url") or rag_flow.get("llm_base_url"),
-        "model": top_level_llm_runtime_dict.get("model") or rag_flow.get("llm_model"),
-    }
-    llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(
-        requested_llm_runtime
-    )
+    # Runtime selection is deployment-owned.  Ignore legacy queue/config
+    # fields instead of allowing them to alter a governed task client.
+    llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(None)
     llm_runtime = {
         "provider": llm_provider,
         "api_key": resolved_llm_api_key,
@@ -9434,12 +9372,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 source_count=0,
                 note="LLM query planner refinement started.",
                 component="planner",
-                payload={
-                    "base_canonical_query": base_query_plan.get("canonical_query"),
-                    "model": llm_model or settings.deepseek_model,
-                    "provider": llm_provider,
-                    "base_url": llm_base_url,
-                },
+                payload={"model_profile": "governed_deepseek_v4"},
             )
         )
 
@@ -9457,9 +9390,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 note="LLM query planner refinement completed.",
                 component="planner",
                 payload={
-                    "model_used": llm_plan_status.get("model_used"),
-                    "reason": llm_reason,
-                    "canonical_query": llm_plan.get("canonical_query"),
+                    "model_profile": "governed_deepseek_v4",
+                    "reason_code": llm_reason,
                 },
             )
         )

@@ -381,65 +381,20 @@ def _as_text(value: object, default: str = "") -> str:
 
 
 def _resolve_llm_runtime_from_rag_flow(rag_flow: dict[str, object]) -> dict[str, str]:
-    if settings.llm_deepseek_only:
-        # In deepseek-only mode, always prioritize DEEPSEEK_* environment config.
-        # Runtime rag_flow overrides are fallback-only when env values are absent.
-        api_key = settings.deepseek_api_key or _as_text(rag_flow.get("llm_api_key"), "")
-        base_url = settings.deepseek_base_url or _as_text(rag_flow.get("llm_base_url"), "")
-        model = settings.deepseek_model or _as_text(rag_flow.get("llm_model"), "")
-        return {
-            "provider": "deepseek",
-            "api_key": api_key.strip(),
-            "base_url": base_url.strip(),
-            "model": model.strip(),
-        }
+    """Return deployment-controlled DeepSeek metadata only.
 
-    default_provider = (
-        "hitechcloud_gpt53_codex_high" if settings.primary_llm_api_key else "deepseek"
-    )
-    provider = _as_text(rag_flow.get("llm_provider"), default_provider).lower()
-    if provider == "hitechcloud_gpt53_codex_high":
-        api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.primary_llm_api_key
-        base_url = (
-            _as_text(rag_flow.get("llm_base_url"), "")
-            or settings.primary_llm_base_url
-            or "https://platform.hitechcloud.one/v1"
-        )
-        model = (
-            _as_text(rag_flow.get("llm_model"), "")
-            or settings.primary_llm_model
-            or "gpt-5.3-codex-high"
-        )
-        if not api_key:
-            deepseek_api_key = settings.deepseek_api_key or _as_text(
-                rag_flow.get("llm_api_key"), ""
-            )
-            deepseek_base_url = settings.deepseek_base_url or _as_text(
-                rag_flow.get("llm_base_url"), ""
-            )
-            deepseek_model = settings.deepseek_model or _as_text(rag_flow.get("llm_model"), "")
-            if deepseek_api_key and deepseek_base_url and deepseek_model:
-                return {
-                    "provider": "deepseek",
-                    "api_key": deepseek_api_key.strip(),
-                    "base_url": deepseek_base_url.strip(),
-                    "model": deepseek_model.strip(),
-                }
-        return {
-            "provider": "hitechcloud_gpt53_codex_high",
-            "api_key": api_key.strip(),
-            "base_url": base_url.strip(),
-            "model": model.strip(),
-        }
+    ``rag_flow`` intentionally remains an argument for call-site compatibility,
+    but provider, endpoint, credentials and model are no longer an operator or
+    request setting.  Actual Pro/Flash selection happens per task in the model
+    registry, never through this diagnostic metadata.
+    """
 
-    api_key = _as_text(rag_flow.get("llm_api_key"), "") or settings.deepseek_api_key
-    base_url = _as_text(rag_flow.get("llm_base_url"), "") or settings.deepseek_base_url
-    model = _as_text(rag_flow.get("llm_model"), "") or settings.deepseek_model
+    del rag_flow
     return {
         "provider": "deepseek",
-        "api_key": api_key.strip(),
-        "base_url": base_url.strip(),
-        "model": model.strip(),
+        "api_key": str(settings.deepseek_api_key or "").strip(),
+        "base_url": str(settings.deepseek_base_url or "").strip(),
+        "model": str(settings.deepseek_model or "").strip(),
     }
 
 
@@ -1503,9 +1458,10 @@ def routed_chat_infer(payload: dict) -> dict:
             "uploaded_documents_count": len(uploaded_documents),
             "retrieval_profile": retrieval_profile,
             "query_token_count": query_token_count,
-            "llm_provider": llm_runtime.get("provider", "deepseek"),
-            "llm_model": llm_runtime.get("model", ""),
-            "llm_base_url": llm_runtime.get("base_url", ""),
+            # The actual V4 Pro/Flash selection is task-scoped registry
+            # telemetry.  Do not expose deployment endpoint/model details in
+            # a chat response.
+            "model_routing": "governed_deepseek_v4",
             "model_router_shadow": {
                 **public_shadow_metadata(task_route_shadow),
                 "encoder_slm_shadow": public_encoder_shadow_metadata(encoder_slm_shadow),
@@ -1601,11 +1557,11 @@ def research_tier2(payload: dict) -> dict:
                 )
             except Exception as retry_exc:  # noqa: BLE001 - defensive retry guard
                 exc = retry_exc
-        detail = str(exc).strip()
+        # Provider exceptions can embed a prompt, request body, endpoint, or
+        # credential fragment.  Keep operational logs and the public failure
+        # contract to a stable exception class only.
         reason = exc.__class__.__name__
-        if detail:
-            reason = f"{reason}:{detail[:180]}"
-        logger.exception("research_tier2 upstream failure: %s", reason)
+        logger.error("research_tier2 upstream failure: %s", reason)
         # Do not return local fallback for research tier2.
         # Caller should receive explicit upstream failure and retry.
         raise HTTPException(

@@ -305,14 +305,7 @@ class LlmGenerator(Protocol):
 
 
 class _RegistrySettingsOverlay:
-    """Read-only settings view for an already-authorized runtime override.
-
-    ``llm_runtime`` is an internal, pre-resolved seam.  It must not become a
-    second construction path that skips task contracts, model rollback or the
-    configured provider policy.  This overlay supplies only its existing
-    connection values to :func:`build_task_client`, without changing global
-    process settings.
-    """
+    """Compatibility helper for tests; not used by production model routing."""
 
     def __init__(self, base: Any, **overrides: object) -> None:
         self._base = base
@@ -368,34 +361,16 @@ class RagPipelineP1:
             seed_by_id[item.id] = item
 
         self.retriever = retriever or InMemoryRetriever(documents=list(seed_by_id.values()))
-        self._deepseek_api_key = (
-            settings.deepseek_api_key if deepseek_api_key is None else deepseek_api_key
-        )
+        # Connection/model constructor arguments once supported an internal
+        # runtime-override seam.  Production has one deployment-owned DeepSeek
+        # configuration and the registry selects V4 Pro/Flash per task, so
+        # ignore those legacy arguments rather than creating a second model
+        # selection boundary.  ``llm_client`` remains injectable for tests.
+        del deepseek_api_key, deepseek_base_url, deepseek_model, deepseek_timeout_seconds
+        self._deepseek_api_key = settings.deepseek_api_key
         self._llm_client = llm_client
         if self._llm_client is None and self._deepseek_api_key:
-            if (
-                deepseek_api_key is None
-                and deepseek_base_url is None
-                and deepseek_model is None
-                and deepseek_timeout_seconds is None
-            ):
-                self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
-            else:
-                self._llm_client, _ = build_task_client(
-                    ModelTask.RAG_SYNTHESIS,
-                    self._registry_settings_for_values(
-                        settings,
-                        api_key=self._deepseek_api_key,
-                        base_url=deepseek_base_url or settings.deepseek_base_url,
-                        model=deepseek_model or settings.deepseek_model,
-                    ),
-                    timeout_seconds=(
-                        settings.deepseek_timeout_seconds
-                        if deepseek_timeout_seconds is None
-                        else deepseek_timeout_seconds
-                    ),
-                    retries_per_base=settings.deepseek_retries_per_base,
-                )
+            self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
         self._graphrag = GraphRagSidecar()
         # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
         # When ``RAG_PERSISTENT_RETRIEVAL_ENABLED`` is effectively on, the
@@ -1673,45 +1648,15 @@ class RagPipelineP1:
         )
 
     def resolve_llm_client(self, llm_runtime: Any, settings: Any = None) -> LlmGenerator | None:
-        """Resolve the LLM client a request should use (Requirement 2.3, Property 2).
+        """Return the registry-built default client, never a runtime override.
 
-        - When ``LLM_DEEPSEEK_ONLY`` is enabled and ``llm_runtime`` matches the
-          configured DeepSeek env, the default client is reused as-is so its
-          longer timeout is never silently capped to ``min(deepseek_timeout, 18s)``.
-        - For a non-matching, fully-specified runtime override (api_key +
-          base_url + model), a short-timeout client is built through the
-          registered ``RAG_SYNTHESIS`` task contract.
-        - When only an api key is supplied (no base_url/model), no client can be
-          built and ``None`` is returned.
-        - Otherwise (no override) the default client is returned unchanged.
+        ``llm_runtime`` is retained in the method signature for old internal
+        callers only.  A request/config supplied provider, endpoint, model, or
+        credential must never create a synthesis client; provider and model
+        selection is deployment-owned and task-contract governed.
         """
-        if settings is None:
-            settings = _module_settings
 
-        if self._matches_configured_deepseek_env(llm_runtime, settings):
-            # Reuse the default client (preserve its longer timeout).
-            return self._llm_client
-
-        if isinstance(llm_runtime, dict):
-            api_key = str(llm_runtime.get("api_key") or "").strip()
-            base_url = str(llm_runtime.get("base_url") or "").strip()
-            model = str(llm_runtime.get("model") or "").strip()
-            if api_key and base_url and model:
-                client, _ = build_task_client(
-                    ModelTask.RAG_SYNTHESIS,
-                    self._registry_settings_for_values(
-                        settings,
-                        api_key=api_key,
-                        base_url=base_url,
-                        model=model,
-                    ),
-                    timeout_seconds=self._runtime_client_timeout_seconds(settings),
-                    retries_per_base=0,
-                )
-                return client
-            if api_key:
-                # api key supplied without base_url/model: cannot build a client.
-                return None
+        del llm_runtime, settings
         return self._llm_client
 
     def _resolve_runtime_llm_client(self, llm_runtime: Any) -> tuple[LlmGenerator | None, str]:
@@ -1720,12 +1665,9 @@ class RagPipelineP1:
         Thin integration seam over :meth:`resolve_llm_client` that also resolves
         the api key ``run`` uses for its presence/strict-mode checks.
         """
+        del llm_runtime
         runtime_llm_api_key = (self._deepseek_api_key or "").strip()
-        if isinstance(llm_runtime, dict):
-            override_api_key = str(llm_runtime.get("api_key") or "").strip()
-            if override_api_key:
-                runtime_llm_api_key = override_api_key
-        runtime_llm_client = self.resolve_llm_client(llm_runtime, settings)
+        runtime_llm_client = self.resolve_llm_client(None, settings)
         return runtime_llm_client, runtime_llm_api_key
 
     @staticmethod

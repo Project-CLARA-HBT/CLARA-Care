@@ -22,12 +22,12 @@ query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,
 FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
 
-RAG's explicit internal runtime connection seam is also registry-bound: it
-passes its already-authorized DeepSeek connection values through a read-only
-settings overlay to the `RAG_SYNTHESIS` contract. It therefore keeps the
-legacy short override timeout while applying the same prompt version and
-rollback selection as the default RAG client. It does not construct a provider
-client directly. `DeepSeekClient` intentionally has no public
+RAG always reuses its registry-built `RAG_SYNTHESIS` client. Request payloads,
+queued jobs and Control Tower configuration cannot provide a provider, endpoint,
+model or API key. Historical `llm_runtime` and Control Tower `llm_*` JSON keys
+are ignored on read and omitted on write; this is a backward-compatible JSON
+configuration cleanup with no database migration or credential transfer.
+`DeepSeekClient` intentionally has no public
 ``from_runtime`` helper: every production construction must enter through
 `build_task_client`, so a future caller cannot select a model or provider
 outside a typed task contract.

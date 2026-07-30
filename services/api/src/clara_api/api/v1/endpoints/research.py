@@ -2028,9 +2028,8 @@ def _build_personal_context_payload(
 # Gap-fill pass-count keys an upstream caller may supply to request additional bounded
 # gap-fill retrieval passes. The Research_API independently clamps any such request to
 # ``RESEARCH_API_GAP_FILL_HARD_MAX`` before forwarding to ML (clara-research R5.5,
-# defense in depth). Both the top-level payload and the opaque ``llm_runtime`` override
-# block are inspected. Absent any request, the payload is left untouched so legacy
-# (flag-off) requests keep their exact shape (clara-research R20.2).
+# defense in depth). Runtime LLM overrides are deliberately not supported; only
+# bounded top-level request keys are inspected.
 _GAP_FILL_PASS_REQUEST_KEYS: tuple[str, ...] = (
     "gap_fill_max_passes",
     "research_gap_fill_max_passes",
@@ -2064,9 +2063,6 @@ def _enforce_api_gap_fill_ceiling(
 
     ceiling = max(0, int(hard_max))
     _clamp_gap_fill_request_keys(payload, ceiling=ceiling)
-    runtime = payload.get("llm_runtime")
-    if isinstance(runtime, dict):
-        _clamp_gap_fill_request_keys(runtime, ceiling=ceiling)
     return payload
 
 
@@ -2079,6 +2075,12 @@ def _build_tier2_upstream_payload(
 ) -> dict[str, Any]:
     settings = get_settings()
     upstream_payload = dict(payload)
+    # Provider, endpoint, model and credentials are deployment-only settings.
+    # Never relay a request-supplied runtime block to ML: even an admin-facing
+    # web control can be compromised, and this boundary must not become an
+    # SSRF, credential-forwarding, or model-governance bypass.  Registered
+    # DeepSeek V4 task contracts resolve the actual model server-side.
+    upstream_payload.pop("llm_runtime", None)
     requested_language = (
         str(upstream_payload.get("ui_language") or upstream_payload.get("answer_language") or "vi")
         .strip()
@@ -2408,26 +2410,24 @@ def _append_job_event(
     db.commit()
 
     try:
+        # The global observability stream is explicitly no-PII.  Job query,
+        # notes, raw upstream errors, retrieval traces and verification rows
+        # can contain patient/research text, so they stay in the owner-scoped
+        # result only and are never mirrored here.
         store_event: dict[str, Any] = {
             "job_id": str(job.job_id),
-            "query": str(job.query_text or ""),
             "stage": stage,
             "status": status_text,
-            "note": note,
             "timestamp": event_item["timestamp"],
         }
         if isinstance(payload, dict):
-            for key in (
-                "source_errors",
-                "fallback_reason",
-                "fallback_used",
-                "unsupported_claims",
-                "verification_matrix",
-                "retrieval_trace",
-                "metadata",
-            ):
-                if key in payload:
-                    store_event[key] = payload.get(key)
+            store_event["fallback_used"] = bool(payload.get("fallback_used"))
+            unsupported_claims = payload.get("unsupported_claims")
+            if isinstance(unsupported_claims, list):
+                store_event["unsupported_claim_count"] = len(unsupported_claims)
+            verification_matrix = payload.get("verification_matrix")
+            if isinstance(verification_matrix, list):
+                store_event["verification_claim_count"] = len(verification_matrix)
         get_flow_event_store().append(
             source="research",
             user_id=str(job.user_id),
@@ -2978,7 +2978,9 @@ def _run_research_job(job_id: str) -> None:
             ).scalar_one_or_none()
             if job is not None:
                 job.status = "failed"
-                job.error_text = str(exc)
+                # Do not persist a provider exception verbatim: SDKs and
+                # upstream gateways may echo prompt content or request details.
+                job.error_text = f"research_job_failed:{exc.__class__.__name__}"
                 job.completed_at = datetime.now(tz=UTC)
                 job.worker_id = None
                 job.lease_heartbeat_at = None
@@ -2989,7 +2991,7 @@ def _run_research_job(job_id: str) -> None:
                     job=job,
                     stage="final_response",
                     status_text="failed",
-                    note=f"Lỗi khi chạy research job: {exc}",
+                    note="Research job không thể hoàn tất do lỗi upstream.",
                 )
         except Exception:
             pass

@@ -509,14 +509,6 @@ class RagFlowConfig(BaseModel):
     scientific_retrieval_enabled: bool = True
     web_retrieval_enabled: bool = True
     file_retrieval_enabled: bool = True
-    llm_provider: Literal[
-        "deepseek",
-        "hitechcloud_gpt53_codex_high",
-    ] = "hitechcloud_gpt53_codex_high"
-    llm_base_url: str = Field(default="https://platform.hitechcloud.one/v1", max_length=512)
-    llm_model: str = Field(default="gpt-5.3-codex-high", max_length=255)
-    llm_api_key: str = Field(default="", max_length=2048)
-
     @model_validator(mode="before")
     @classmethod
     def _normalize_legacy_verification_enabled(cls, value: Any) -> Any:
@@ -752,8 +744,6 @@ class ResearchTier2JobCreateRequest(BaseModel):
     uploaded_file_ids: list[str] = Field(default_factory=list, max_length=200)
     source_ids: list[int] = Field(default_factory=list, max_length=200)
     source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list, max_length=50)
-    # llm_runtime declared EXACTLY ONCE with a single type (clara-research R1.5).
-    llm_runtime: dict[str, Any] = Field(default_factory=dict)
     # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
     clarifying_answers: dict[str, str] = Field(default_factory=dict)
 

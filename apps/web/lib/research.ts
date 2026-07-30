@@ -430,12 +430,6 @@ export type ResearchTier2JobCreateOptions = {
    * starts keep their existing shape.
    */
   clarifyingAnswers?: Record<string, string>;
-  llmRuntime?: {
-    provider?: string;
-    apiKey?: string;
-    baseUrl?: string;
-    model?: string;
-  };
 };
 
 /**
@@ -3034,25 +3028,6 @@ export async function createResearchTier2Job(
   if (typeof options?.deepPassCount === "number" && Number.isFinite(options.deepPassCount)) {
     payload.deep_pass_count = Math.max(1, Math.trunc(options.deepPassCount));
   }
-  if (options?.llmRuntime) {
-    const runtimePayload: Record<string, string> = {};
-    if (typeof options.llmRuntime.provider === "string" && options.llmRuntime.provider.trim()) {
-      runtimePayload.provider = options.llmRuntime.provider.trim();
-    }
-    if (typeof options.llmRuntime.apiKey === "string" && options.llmRuntime.apiKey.trim()) {
-      runtimePayload.api_key = options.llmRuntime.apiKey.trim();
-    }
-    if (typeof options.llmRuntime.baseUrl === "string" && options.llmRuntime.baseUrl.trim()) {
-      runtimePayload.base_url = options.llmRuntime.baseUrl.trim();
-    }
-    if (typeof options.llmRuntime.model === "string" && options.llmRuntime.model.trim()) {
-      runtimePayload.model = options.llmRuntime.model.trim();
-    }
-    if (Object.keys(runtimePayload).length) {
-      payload.llm_runtime = runtimePayload;
-    }
-  }
-
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
