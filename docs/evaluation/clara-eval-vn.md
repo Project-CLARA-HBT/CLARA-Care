@@ -35,6 +35,11 @@ prohibited from containing PHI or secrets. A metric with unavailable data,
 model trace, retrieval snapshot, licensed DrugBank index, or clinician review
 must be `not_measured`, with a reason and exact follow-up command. An empty
 critical-error count is never reported as proof that there were zero errors.
+Conversely, a `0` in `critical-errors.csv` is emitted only after one or more
+approved binary safety cases for that exact error category ran successfully;
+the artifact never emits both an unavailable and measured row for the same
+category. Confidence intervals use the same observed/not-measured split as
+`metrics.json`.
 
 The release suite requires an approved locked dataset reference, immutable
 retrieval snapshot, runtime model/prompt resolution, and approved live

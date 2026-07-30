@@ -387,32 +387,52 @@ def _critical_error_rows(
         ("lifemap_invariants", "truth_state_or_provenance_violation"),
         ("council_ablation", "missed_red_flag"),
     )
-    rows = [
-        {
-            "track_id": track,
-            "critical_error_type": category,
-            "state": "not_measured",
-            "count": "",
-            "reason": "No clinician-adjudicated or live execution evidence is installed; blank count is not a claim of zero errors.",
-            "measurement_command": command,
-        }
-        for track, category in categories
-    ]
-    observed: dict[tuple[str, str], int] = {}
+    # A category is observable only when an approved live manifest actually
+    # exercised it.  Do not output both an unavailable placeholder and a
+    # measured row for the same category: that ambiguity is especially harmful
+    # in a safety report where a real zero needs to remain distinguishable from
+    # "we did not measure this".
+    observed: dict[tuple[str, str], list[bool]] = {}
     for trace in traces:
-        if trace.get("passed") is False:
-            track = trace.get("track_id")
-            category = trace.get("critical_error_type")
-            if isinstance(track, str) and isinstance(category, str):
-                observed[(track, category)] = observed.get((track, category), 0) + 1
-    for (track, category), count in sorted(observed.items()):
+        track = trace.get("track_id")
+        category = trace.get("critical_error_type")
+        passed = trace.get("passed")
+        if (
+            isinstance(track, str)
+            and isinstance(category, str)
+            and isinstance(passed, bool)
+        ):
+            observed.setdefault((track, category), []).append(passed)
+
+    all_categories = (*categories, *sorted(observed))
+    rows: list[dict[str, str]] = []
+    emitted: set[tuple[str, str]] = set()
+    for track, category in all_categories:
+        key = (track, category)
+        if key in emitted:
+            continue
+        emitted.add(key)
+        verdicts = observed.get(key)
+        if verdicts is None:
+            rows.append(
+                {
+                    "track_id": track,
+                    "critical_error_type": category,
+                    "state": "not_measured",
+                    "count": "",
+                    "reason": "No clinician-adjudicated or live execution evidence is installed; blank count is not a claim of zero errors.",
+                    "measurement_command": command,
+                }
+            )
+            continue
+        failures = sum(not passed for passed in verdicts)
         rows.append(
             {
                 "track_id": track,
                 "critical_error_type": category,
                 "state": "measured",
-                "count": str(count),
-                "reason": "Count of failed binary safety expectations declared in the approved live manifest; no output text is retained.",
+                "count": str(failures),
+                "reason": f"{len(verdicts)} approved binary safety case(s) were observed; no output text is retained.",
                 "measurement_command": command,
             }
         )
@@ -430,18 +450,7 @@ def _ablation_rows(
         ("C3", "C2 plus independent verifier"),
         ("C4", "C3 plus adjudicator and clinician review gate"),
     )
-    rows = [
-        {
-            "variant": variant,
-            "description": description,
-            "metric_id": "red_flag_recall",
-            "state": "not_measured",
-            "value": "",
-            "reason": "No clinician-adjudicated Council ablation corpus or execution trace is installed.",
-            "measurement_command": command,
-        }
-        for variant, description in variants
-    ]
+    descriptions = dict(variants)
     grouped: dict[tuple[str, str], list[bool]] = {}
     for trace in traces:
         variant = trace.get("ablation_variant")
@@ -449,12 +458,40 @@ def _ablation_rows(
         passed = trace.get("passed")
         if isinstance(variant, str) and isinstance(metric_id, str) and isinstance(passed, bool):
             grouped.setdefault((variant, metric_id), []).append(passed)
-    for (variant, metric_id), verdicts in sorted(grouped.items()):
+    rows: list[dict[str, str]] = []
+    emitted: set[tuple[str, str]] = set()
+    default_keys = [(variant, "red_flag_recall") for variant, _ in variants]
+    for variant, metric_id in (*default_keys, *sorted(grouped)):
+        key = (variant, metric_id)
+        # The default C0–C4 rows establish the declared ablation shape.  When
+        # the exact key is observed, replace that placeholder rather than
+        # writing contradictory not-measured and measured rows.
+        if key in emitted:
+            continue
+        emitted.add(key)
+        verdicts = grouped.get(key)
+        if verdicts is None:
+            rows.append(
+                {
+                    "variant": variant,
+                    "description": descriptions.get(
+                        variant, "Observed approved live ablation case(s)."
+                    ),
+                    "metric_id": metric_id,
+                    "state": "not_measured",
+                    "value": "",
+                    "reason": "No clinician-adjudicated Council ablation corpus or execution trace is installed.",
+                    "measurement_command": command,
+                }
+            )
+            continue
         successes = sum(verdicts)
         rows.append(
             {
                 "variant": variant,
-                "description": "Observed approved live ablation case(s).",
+                "description": descriptions.get(
+                    variant, "Observed approved live ablation case(s)."
+                ),
                 "metric_id": metric_id,
                 "state": "measured",
                 "value": f"{successes / len(verdicts):.6f}",
@@ -735,8 +772,19 @@ def build_report(
         target / "confidence-intervals.json",
         {
             "schema_version": "clara-eval-vn.confidence-intervals.v1",
-            "measured": [metric_rows[0]],
-            "not_measured": [metric for metric in metric_rows[1:]],
+            # Preserve actual observation state.  A previous implementation
+            # incorrectly classified newly observed live metrics as unavailable
+            # even when metrics.json carried their Wilson interval.
+            "measured": [
+                metric
+                for metric in metric_rows
+                if metric["state"] == "measured"
+            ],
+            "not_measured": [
+                metric
+                for metric in metric_rows
+                if metric["state"] != "measured"
+            ],
         },
     )
     _write_csv(

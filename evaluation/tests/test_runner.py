@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 from evaluation.clara_eval.config import load_suite_config
 from evaluation.clara_eval.live import LiveEvaluationError, maybe_execute_live
-from evaluation.clara_eval.run import build_report, main
+from evaluation.clara_eval.run import _ablation_rows, build_report, main
 from evaluation.clara_eval.tracks import REQUIRED_TRACK_IDS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -88,6 +88,27 @@ class EvalRunnerTests(unittest.TestCase):
             self.assertEqual(trace["outcome"], "pass")
             self.assertTrue(trace["case_ref"])
 
+            intervals = json.loads(
+                (output / "confidence-intervals.json").read_text(encoding="utf-8")
+            )
+            measured_ids = {row["metric_id"] for row in intervals["measured"]}
+            unavailable_ids = {
+                row["metric_id"] for row in intervals["not_measured"]
+            }
+            self.assertIn("emergency_recall", measured_ids)
+            self.assertNotIn("emergency_recall", unavailable_ids)
+
+            with (output / "critical-errors.csv").open(encoding="utf-8") as handle:
+                critical_rows = list(csv.DictReader(handle))
+            observed_critical = [
+                row
+                for row in critical_rows
+                if row["critical_error_type"] == "missed_emergency"
+            ]
+            self.assertEqual(len(observed_critical), 1)
+            self.assertEqual(observed_critical[0]["state"], "measured")
+            self.assertEqual(observed_critical[0]["count"], "0")
+
     def test_live_manifest_with_sensitive_request_key_is_rejected_before_http(self) -> None:
         manifest = {
             "schema_version": "clara-eval-vn.live-execution-manifest.v1",
@@ -130,6 +151,26 @@ class EvalRunnerTests(unittest.TestCase):
                     output=Path(temporary_directory) / "nightly",
                     repository_root=ROOT,
                 )
+
+    def test_observed_ablation_replaces_its_not_measured_placeholder(self) -> None:
+        rows = _ablation_rows(
+            load_suite_config(ROOT / "evaluation/configs/nightly.yaml"),
+            [
+                {
+                    "ablation_variant": "C2",
+                    "metric_id": "red_flag_recall",
+                    "passed": True,
+                }
+            ],
+        )
+        c2_rows = [
+            row
+            for row in rows
+            if row["variant"] == "C2" and row["metric_id"] == "red_flag_recall"
+        ]
+        self.assertEqual(len(c2_rows), 1)
+        self.assertEqual(c2_rows[0]["state"], "measured")
+        self.assertEqual(c2_rows[0]["value"], "1.000000")
 
     def test_release_live_manifest_binds_dataset_snapshot_and_release_sha(
         self,
