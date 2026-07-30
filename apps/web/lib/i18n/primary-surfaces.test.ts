@@ -52,6 +52,20 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     }
   });
 
+  it("keeps the Visit preparation flow catalog-backed and locale-formatted", () => {
+    const source = readFileSync(resolve(ROOT, "app/visits/page.tsx"), "utf8");
+    expect(source).toContain('from "@/lib/use-ui-language"');
+    expect(source).toContain('from "@/lib/i18n/catalog"');
+    expect(source).toContain("const language = useUILanguage()");
+    expect(source).toContain("formatLocaleDate(language, visit.scheduled_at");
+    expect(source).toContain('copy("visits.title")');
+    expect(source).toContain('copy("visits.scribeDescription")');
+    expect(source).not.toContain('toLocaleString("vi-VN")');
+    for (const literal of ["Chuẩn bị buổi khám", "Tạo buổi khám", "Ghi âm Scribe"]) {
+      expect(source).not.toContain(`"${literal}"`);
+    }
+  });
+
   it("localizes reusable loading and retry states", () => {
     const source = readFileSync(resolve(ROOT, SHARED_STATE_SURFACE), "utf8");
     expect(source).toContain('from "@/lib/i18n/catalog"');
