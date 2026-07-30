@@ -1,7 +1,63 @@
 import 'package:flutter/material.dart';
 
-import '../core/careguard_offline_cache.dart';
 import '../core/ddi_user_view.dart';
+
+/// Locale-aware presentation copy for the fixed CareGuard result chrome.
+/// Clinical alert content remains authoritative API-provided text and is never
+/// rewritten here. This component does not decide risk or alter DrugBank data.
+class _DdiResultCopy {
+  const _DdiResultCopy._(this._english);
+
+  factory _DdiResultCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _DdiResultCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get offlineLabel =>
+      _english ? 'offline / not real-time' : 'ngoại tuyến / không phải thời gian thực';
+  String cachedResult(String timestamp) => _english
+      ? 'Showing the most recently saved result ($timestamp). It may be out of date.'
+      : 'Đang hiển thị kết quả lưu gần nhất ($timestamp). Kết quả có thể đã cũ.';
+  String get overview => _english ? 'Overview' : 'Kết quả tổng quan';
+  String risk(String value) =>
+      _english ? 'Risk level: $value' : 'Mức rủi ro: $value';
+  String get noClearAlert => _english
+      ? 'No clear interaction alert was identified.'
+      : 'Chưa ghi nhận cảnh báo tương tác rõ ràng.';
+  String get recommendations => _english ? 'Recommendations' : 'Khuyến nghị';
+  String get sources => _english ? 'Reference sources' : 'Nguồn tham khảo';
+
+  String riskLabel(String risk) {
+    switch (risk) {
+      case 'critical':
+      case 'high':
+        return _english ? 'High' : 'Cao';
+      case 'medium':
+        return _english ? 'Medium' : 'Trung bình';
+      case 'low':
+        return _english ? 'Low' : 'Thấp';
+      default:
+        return _english ? 'Unknown' : 'Chưa xác định';
+    }
+  }
+
+  String severityLabel(String severity) {
+    switch (severity) {
+      case 'critical':
+        return _english ? 'Critical' : 'Nghiêm trọng';
+      case 'high':
+        return _english ? 'High' : 'Cao';
+      case 'medium':
+        return _english ? 'Medium' : 'Trung bình';
+      case 'low':
+        return _english ? 'Low' : 'Thấp';
+      default:
+        return _english ? 'Unknown' : 'Chưa xác định';
+    }
+  }
+}
 
 /// Renders the End_User DDI projection ([DdiUserView]) — risk level, alerts,
 /// recommendations, and reference sources only. Runtime mode, fallback flags,
@@ -39,6 +95,7 @@ class DdiResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _DdiResultCopy.forContext(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,7 +114,7 @@ class DdiResultView extends StatelessWidget {
                           size: 18, color: Colors.amber.shade900),
                       const SizedBox(width: 6),
                       Text(
-                        careguardOfflineLabel,
+                        copy.offlineLabel,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.amber.shade900,
@@ -67,8 +124,7 @@ class DdiResultView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Đang hiển thị kết quả lưu gần nhất '
-                    '(${_formatCachedAt(offlineCachedAt!)}). Kết quả có thể đã cũ.',
+                    copy.cachedResult(_formatCachedAt(offlineCachedAt!)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -83,11 +139,11 @@ class DdiResultView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text('Kết quả tổng quan',
+                    Text(copy.overview,
                         style: Theme.of(context).textTheme.titleSmall),
                     const Spacer(),
                     Chip(
-                      label: Text('Mức rủi ro: ${view.riskLabel}'),
+                      label: Text(copy.risk(copy.riskLabel(view.riskLevel))),
                       backgroundColor:
                           _riskColor(context).withValues(alpha: 0.15),
                       side: BorderSide(color: _riskColor(context)),
@@ -96,10 +152,10 @@ class DdiResultView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (view.alerts.isEmpty)
-                  const Text('Chưa ghi nhận cảnh báo tương tác rõ ràng.')
+                  Text(copy.noClearAlert)
                 else
                   ...view.alerts.map(
-                    (alert) => _AlertTile(alert: alert),
+                    (alert) => _AlertTile(alert: alert, copy: copy),
                   ),
               ],
             ),
@@ -112,7 +168,7 @@ class DdiResultView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Khuyến nghị',
+                  Text(copy.recommendations,
                       style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 6),
                   ...view.recommendations.map(
@@ -132,7 +188,7 @@ class DdiResultView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Nguồn tham khảo',
+                  Text(copy.sources,
                       style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 6),
                   Text(view.sources.join(', ')),
@@ -149,9 +205,10 @@ class DdiResultView extends StatelessWidget {
 /// (color + icon + Vietnamese text so meaning is never color-only), the two
 /// interacting medications as chips, and the message + optional detail line.
 class _AlertTile extends StatelessWidget {
-  const _AlertTile({required this.alert});
+  const _AlertTile({required this.alert, required this.copy});
 
   final DdiAlert alert;
+  final _DdiResultCopy copy;
 
   Color _severityColor(BuildContext context) {
     switch (alert.severity) {
@@ -209,7 +266,7 @@ class _AlertTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  alert.severityLabel,
+                  copy.severityLabel(alert.severity),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w800,
