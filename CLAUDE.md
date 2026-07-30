@@ -105,6 +105,12 @@ make eval-release       # fails closed until approved locked live evidence exist
 make eval-judge-report  # artifacts/judge-report/
 ```
 
+The checked-in evaluator is evidence-first: fixture integrity is measurable,
+but clinical/model metrics remain `not_measured` until an externally governed,
+de-identified live manifest is explicitly enabled. See
+`evaluation/clara_eval/LIVE_EXECUTION.md`; never commit its manifest, patient
+content or credentials.
+
 Web (`apps/web`) uses npm scripts directly:
 
 ```bash
@@ -161,6 +167,13 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 
 The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint (`DEEPSEEK_BASE_URL`, model `deepseek-v4-pro` by default per `.env.example`) with a configurable timeout and retry policy. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
+All model-backed bounded tasks resolve through the versioned task-contract
+registry. The optional Vietnamese Encoder-SLM adapter is strictly shadow-only
+(`ENCODER_SLM_SHADOW_ENABLED=false` by default): it receives a bounded,
+redacted copy only after emergency/legal guards and cannot alter an answer,
+route, authorization, DrugBank/FIDES verdict or LifeMap truth state. Disable
+the flag and restart ML to roll it back immediately.
+
 > Note: when `LLM_DEEPSEEK_ONLY` is enabled and a supplied runtime matches the configured DeepSeek env, the pipeline must reuse the default DeepSeek client (preserving its longer timeout) rather than constructing a short-timeout runtime client — and the API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 
 ## Safety-First Guardrails (invariants)
@@ -179,6 +192,7 @@ These behaviors are regression-locked and must be preserved by every change:
 
 - **Compose stacks**: `deploy/docker/docker-compose.yml` (infra), `docker-compose.app.yml` (api/ml/web/searxng), `docker-compose.deploy.yml` (server deploy).
 - **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + CLARA-Eval VN smoke), `cd.yml` (preflight → staging → production), `release.yml` (semver tag, locked CLARA-Eval VN gate, build/push images), `active-eval.yml` (nightly evidence), `clara-eval-vn.yml` (manual smoke/judge report), `branch-protection-sync.yml`.
+- **Cross-client product wording**: `contracts/consumer-terminology/consumer-terminology.v1.json` is the canonical static VI/EN source for shared task-first labels. Its checked-in web/Dart projections are verified by `cd apps/web && npm run consumer-terminology:check`; never use it for medical free text or safety state.
 - **Scripts** (`scripts/`): deploy (`deploy/redeploy_app_stack.sh`), ops (`ops/validate_runtime_env.sh`, backup/cleanup/cron installers, source-hub auto-crawl), release (semver + image push), and demo/eval loops.
 
 ## Onboarding Path for New Contributors

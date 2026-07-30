@@ -11,6 +11,12 @@ catalog parity/scanner checks, secret/PII-log review, `make eval-smoke`, and
 `make eval-judge-report`. `make eval-release` must fail closed if its locked
 inputs are unmeasured.
 
+For shared task-first consumer wording, run
+`cd apps/web && npm run consumer-terminology:check`. It compares the canonical
+VI/EN JSON contract with both checked-in web and Flutter projections and their
+actual shell wiring; it does not accept clinical free text or runtime medical
+state as translation input.
+
 On pull requests and main-branch changes that affect `apps/web` (or CI), the
 required CI gate runs Vitest and Playwright's `core-experience` suite. The E2E
 job installs Chromium plus its system dependencies and uses the Playwright
