@@ -8,6 +8,7 @@
  */
 
 import type { UILanguage } from "@/lib/ui-language";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type {
   ConversationItem,
   ResearchResult,
@@ -24,6 +25,17 @@ export type ConversationDayBucket =
   | "week"
   | "older"
   | "unknown";
+
+const CONVERSATION_DAY_LABEL_KEYS: Record<
+  ConversationDayBucket,
+  UITranslationKey
+> = {
+  today: "chat.legacyWorkspace.conversation.day.today",
+  yesterday: "chat.legacyWorkspace.conversation.day.yesterday",
+  week: "chat.legacyWorkspace.conversation.day.week",
+  older: "chat.legacyWorkspace.conversation.day.older",
+  unknown: "chat.legacyWorkspace.conversation.day.unknown",
+};
 
 /** Maximum number of locally-cached fallback conversations to retain. */
 export const LOCAL_WORKSPACE_MAX_ITEMS = 80;
@@ -98,13 +110,7 @@ export function formatConversationDayLabel(
   bucket: ConversationDayBucket,
   language: UILanguage,
 ): string {
-  if (bucket === "today") return language === "en" ? "Today" : "Hôm nay";
-  if (bucket === "yesterday")
-    return language === "en" ? "Yesterday" : "Hôm qua";
-  if (bucket === "week")
-    return language === "en" ? "Last 7 days" : "7 ngày qua";
-  if (bucket === "older") return language === "en" ? "Older" : "Cũ hơn";
-  return language === "en" ? "Unknown" : "Không rõ";
+  return t(language, CONVERSATION_DAY_LABEL_KEYS[bucket]);
 }
 
 /** Extracts the answer text from a turn, if any. */
