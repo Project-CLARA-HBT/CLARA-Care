@@ -6,7 +6,10 @@ import EnterpriseReview from "@/components/scribe/enterprise-review";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import { trackScribeGenerated, trackScribeViewed } from "@/lib/analytics/events";
+import { formatLocaleDate, formatLocaleNumber, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
@@ -36,6 +39,11 @@ type LiveInsight = {
   detail: string;
 };
 
+type ScribeCopy = (
+  key: UITranslationKey,
+  values?: Record<string, string | number>,
+) => string;
+
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
 const panelClass = "rounded-xl border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
 const panelPaddedClass = `${panelClass} p-4`;
@@ -55,10 +63,10 @@ const dangerButtonClass =
 const transcriptInputClass =
   "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
 
-function formatDate(value: string): string {
+function formatDate(language: UILanguage, value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--";
-  return date.toLocaleString("vi-VN", {
+  return formatLocaleDate(language, date, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -66,8 +74,8 @@ function formatDate(value: string): string {
   });
 }
 
-function formatClock(value: Date = new Date()): string {
-  return value.toLocaleTimeString("vi-VN", { hour12: false });
+function formatClock(language: UILanguage, value: Date = new Date()): string {
+  return value.toLocaleTimeString(language === "vi" ? "vi-VN" : "en-US", { hour12: false });
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -87,7 +95,7 @@ function safeText(value: string | undefined): string {
   return (value ?? "").trim();
 }
 
-function parseTranscriptRows(transcript: string): TranscriptRow[] {
+function parseTranscriptRows(copy: ScribeCopy, transcript: string): TranscriptRow[] {
   const lines = transcript
     .split("\n")
     .map((line) => line.trim())
@@ -103,14 +111,14 @@ function parseTranscriptRows(transcript: string): TranscriptRow[] {
     const doctorMatch = /^(dr\.?|doctor|bác sĩ)\s*[:|-]\s*/i;
     const patientMatch = /^(patient|bệnh nhân)\s*[:|-]\s*/i;
 
-    let speaker = "Âm thanh";
+    let speaker = copy("scribe.speaker.audio");
     let text = payload;
 
     if (doctorMatch.test(payload)) {
-      speaker = "Bác sĩ";
+      speaker = copy("scribe.speaker.clinician");
       text = payload.replace(doctorMatch, "").trim();
     } else if (patientMatch.test(payload)) {
-      speaker = "Người bệnh";
+      speaker = copy("scribe.speaker.patient");
       text = payload.replace(patientMatch, "").trim();
     }
 
@@ -123,7 +131,7 @@ function parseTranscriptRows(transcript: string): TranscriptRow[] {
   });
 }
 
-function buildLiveInsights(session: ScribeSession | null, transcript: string): LiveInsight[] {
+function buildLiveInsights(session: ScribeSession | null, transcript: string, copy: ScribeCopy): LiveInsight[] {
   if (!session) return [];
   const soap = normalizeSoapSections(asRecord(session.soap) ?? {});
   const soapRecord = asRecord(session.soap);
@@ -138,21 +146,21 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
   if (safeText(soap.assessment)) {
     insights.push({
       id: "assessment",
-      title: "Tín hiệu đánh giá",
+      title: copy("scribe.insight.assessment"),
       detail: stripTelemetryLabels(safeText(soap.assessment)).slice(0, 220),
     });
   }
   if (safeText(soap.plan)) {
     insights.push({
       id: "plan",
-      title: "Kế hoạch nháp",
+      title: copy("scribe.insight.plan"),
       detail: stripTelemetryLabels(safeText(soap.plan)).slice(0, 220),
     });
   }
   warnings.slice(0, 2).forEach((warning, index) => {
     insights.push({
       id: `warning-${index}`,
-      title: "Cảnh báo an toàn",
+      title: copy("scribe.insight.warning"),
       detail: stripTelemetryLabels(warning),
     });
   });
@@ -160,31 +168,35 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string): L
   if (insights.length === 0 && transcript.trim()) {
     insights.push({
       id: "transcript",
-      title: "Đã ghi nhận bản ghi",
-      detail: `Đã ghi nhận ${transcript.trim().split(/\s+/).length} từ để phân tích tiếp.`,
+      title: copy("scribe.insight.transcript"),
+      detail: copy("scribe.insight.transcriptDetail", { count: transcript.trim().split(/\s+/).length }),
     });
   }
 
   return insights.slice(0, 3);
 }
 
-function scribeStatusLabel(status: string | undefined): string {
+function scribeStatusLabel(status: string | undefined, copy: ScribeCopy): string {
   const normalized = (status ?? "").trim().toLowerCase();
-  if (normalized === "finalized" || normalized === "completed") return "Hoàn tất";
-  if (normalized === "ready") return "Sẵn sàng";
-  if (normalized === "processing") return "Đang xử lý";
-  if (normalized === "error" || normalized === "failed") return "Lỗi";
-  return "Bản nháp";
+  if (normalized === "finalized" || normalized === "completed") return copy("scribe.status.finalized");
+  if (normalized === "ready") return copy("scribe.status.ready");
+  if (normalized === "processing") return copy("scribe.status.processing");
+  if (normalized === "error" || normalized === "failed") return copy("scribe.status.error");
+  return copy("scribe.status.draft");
 }
 
-const SOAP_SECTION_LABELS = [
-  { key: "subjective", title: "Chủ quan", valueKey: "subjective" },
-  { key: "objective", title: "Khách quan", valueKey: "objective" },
-  { key: "assessment", title: "Đánh giá", valueKey: "assessment" },
-  { key: "plan", title: "Kế hoạch", valueKey: "plan" },
-] as const;
-
 export default function ScribePage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values: Record<string, string | number> = {}) => t(language, key, values),
+    [language],
+  );
+  const soapSectionLabels = useMemo(() => [
+    { key: "subjective", title: copy("scribe.soap.subjective"), valueKey: "subjective" },
+    { key: "objective", title: copy("scribe.soap.objective"), valueKey: "objective" },
+    { key: "assessment", title: copy("scribe.soap.assessment"), valueKey: "assessment" },
+    { key: "plan", title: copy("scribe.soap.plan"), valueKey: "plan" },
+  ] as const, [copy]);
   const [mode, setMode] = useState<WorkspaceMode>("workspace");
   const [sessions, setSessions] = useState<ScribeSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
@@ -234,11 +246,11 @@ export default function ScribePage() {
     return normalizeSoapSections(raw);
   }, [selectedSession]);
 
-  const transcriptRows = useMemo(() => parseTranscriptRows(transcriptDraft), [transcriptDraft]);
+  const transcriptRows = useMemo(() => parseTranscriptRows(copy, transcriptDraft), [copy, transcriptDraft]);
   const transcriptPreviewRows = useMemo(() => transcriptRows.slice(-40), [transcriptRows]);
   const liveInsights = useMemo(
-    () => buildLiveInsights(selectedSession, transcriptDraft),
-    [selectedSession, transcriptDraft]
+    () => buildLiveInsights(selectedSession, transcriptDraft, copy),
+    [copy, selectedSession, transcriptDraft]
   );
 
   const pushNotice = useCallback((tone: NoticeTone, message: string) => {
@@ -334,11 +346,11 @@ export default function ScribePage() {
         setTranscriptDraft("");
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu Scribe.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.load"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [copy]);
 
   useEffect(() => {
     void refreshData();
@@ -374,10 +386,10 @@ export default function ScribePage() {
         setSelectedSession(updated);
         upsertSession(updated);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể lưu bản ghi.");
+        setError(cause instanceof Error ? cause.message : copy("scribe.error.saveTranscript"));
       }
     },
-    [selectedSession, upsertSession]
+    [copy, selectedSession, upsertSession]
   );
 
   const schedulePersistTranscript = useCallback(
@@ -408,13 +420,13 @@ export default function ScribePage() {
         const summary = await getScribeAnalyticsSummary();
         setAnalytics(summary);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Phân tích trực tiếp thất bại.");
+        setError(cause instanceof Error ? cause.message : copy("scribe.error.liveAnalysis"));
       } finally {
         analyzingInFlightRef.current = false;
         setIsLiveAnalyzing(false);
       }
     },
-    [upsertSession]
+    [copy, upsertSession]
   );
 
   const scheduleLiveAnalyze = useCallback(
@@ -456,7 +468,7 @@ export default function ScribePage() {
         const text = String(response.text ?? "").trim();
         if (!text) continue;
 
-        const stamped = `${formatClock()} | ${text}`;
+        const stamped = `${formatClock(language)} | ${text}`;
         setTranscriptDraft((prev) => {
           const merged = prev.trim() ? `${prev.trimEnd()}\n${stamped}` : stamped;
           schedulePersistTranscript(merged);
@@ -465,19 +477,19 @@ export default function ScribePage() {
         });
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chuyển âm thanh trực tiếp thành chữ.");
-      pushNotice("error", "Chuyển âm thanh thành chữ thất bại.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.transcribe"));
+      pushNotice("error", copy("scribe.error.transcribeNotice"));
     } finally {
       processingChunksRef.current = false;
       setIsTranscribing(false);
     }
-  }, [pushNotice, scheduleLiveAnalyze, schedulePersistTranscript]);
+  }, [copy, language, pushNotice, scheduleLiveAnalyze, schedulePersistTranscript]);
 
   const ensureSessionReady = useCallback(async (): Promise<number | null> => {
     if (selectedSessionIdRef.current) return selectedSessionIdRef.current;
 
     const created = await createScribeSession({
-      title: `Phiên ghi âm ${new Date().toLocaleString("vi-VN")}`,
+      title: copy("scribe.sessionTitle.recording", { date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }) }),
       transcript: "",
       auto_generate_soap: false,
     });
@@ -486,7 +498,7 @@ export default function ScribePage() {
     setSelectedSession(created);
     upsertSession(created);
     return created.id;
-  }, [upsertSession]);
+  }, [copy, language, upsertSession]);
 
   const startWaveformLoop = useCallback(() => {
     const analyser = analyserRef.current;
@@ -513,14 +525,14 @@ export default function ScribePage() {
     setMode("workspace");
 
     if (typeof window === "undefined" || !window.navigator?.mediaDevices?.getUserMedia) {
-      setError("Trình duyệt không hỗ trợ ghi âm realtime.");
+      setError(copy("scribe.error.browserRecording"));
       return;
     }
 
     try {
       const sessionId = await ensureSessionReady();
       if (!sessionId) {
-        setError("Không thể tạo phiên để ghi âm.");
+        setError(copy("scribe.error.createSession"));
         return;
       }
 
@@ -581,13 +593,13 @@ export default function ScribePage() {
       }, 1000);
 
       setIsRecording(true);
-      pushNotice("success", "Đã bắt đầu ghi âm trực tiếp.");
+      pushNotice("success", copy("scribe.notice.started"));
     } catch (cause) {
       teardownAudioPipeline();
       setIsRecording(false);
-      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi âm trực tiếp.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.startRecording"));
     }
-  }, [ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
+  }, [copy, ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
 
   const onStopRecording = useCallback(() => {
     setIsRecording(false);
@@ -600,8 +612,8 @@ export default function ScribePage() {
     schedulePersistTranscript(transcriptDraftRef.current, true);
     clearLiveAnalyzeTimer();
     scheduleLiveAnalyze(transcriptDraftRef.current);
-    pushNotice("success", "Đã dừng ghi âm.");
-  }, [clearLiveAnalyzeTimer, clearPersistTimer, pushNotice, scheduleLiveAnalyze, schedulePersistTranscript, teardownAudioPipeline]);
+    pushNotice("success", copy("scribe.notice.stopped"));
+  }, [clearLiveAnalyzeTimer, clearPersistTimer, copy, pushNotice, scheduleLiveAnalyze, schedulePersistTranscript, teardownAudioPipeline]);
 
   const onSelectSession = useCallback(async (sessionId: number) => {
     setError("");
@@ -612,16 +624,16 @@ export default function ScribePage() {
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể mở phiên.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.openSession"));
     }
-  }, []);
+  }, [copy]);
 
   const onCreateSession = useCallback(async () => {
     setIsCreating(true);
     setError("");
     try {
       const created = await createScribeSession({
-        title: `Phiên ${new Date().toLocaleString("vi-VN")}`,
+        title: copy("scribe.sessionTitle.default", { date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }) }),
         transcript: "",
         auto_generate_soap: false,
       });
@@ -630,15 +642,15 @@ export default function ScribePage() {
       setSelectedSession(created);
       setTranscriptDraft(created.transcript ?? "");
       upsertSession(created);
-      pushNotice("success", "Đã tạo phiên mới.");
+      pushNotice("success", copy("scribe.notice.created"));
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo phiên.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.create"));
     } finally {
       setIsCreating(false);
     }
-  }, [pushNotice, upsertSession]);
+  }, [copy, language, pushNotice, upsertSession]);
 
   const onSaveTranscript = useCallback(async () => {
     if (!selectedSession) return;
@@ -653,18 +665,18 @@ export default function ScribePage() {
       });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", "Đã lưu bản ghi.");
+      pushNotice("success", copy("scribe.notice.saved"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu bản ghi.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.saveTranscript"));
     } finally {
       setIsSaving(false);
     }
-  }, [pushNotice, selectedSession, transcriptDraft, upsertSession]);
+  }, [copy, pushNotice, selectedSession, transcriptDraft, upsertSession]);
 
   const onRegenerateSoap = useCallback(async () => {
     if (!selectedSession) return;
     if (!transcriptDraft.trim()) {
-      pushNotice("error", "Bản ghi đang trống.");
+      pushNotice("error", copy("scribe.error.emptyTranscript"));
       return;
     }
 
@@ -679,15 +691,15 @@ export default function ScribePage() {
       upsertSession(updated);
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
-      pushNotice("success", "Đã tạo lại ghi chú SOAP.");
+      pushNotice("success", copy("scribe.notice.regenerated"));
       // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
       trackScribeGenerated({ action: "regenerate" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo lại ghi chú SOAP.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.regenerate"));
     } finally {
       setIsRegenerating(false);
     }
-  }, [pushNotice, selectedSession, transcriptDraft, upsertSession]);
+  }, [copy, pushNotice, selectedSession, transcriptDraft, upsertSession]);
 
   const onFinalize = useCallback(async () => {
     if (!selectedSession) return;
@@ -697,17 +709,17 @@ export default function ScribePage() {
       const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", "Đã hoàn tất ghi chú.");
+      pushNotice("success", copy("scribe.notice.finalized"));
       // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
       trackScribeGenerated({ action: "finalize" });
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hoàn tất ghi chú.");
+      setError(cause instanceof Error ? cause.message : copy("scribe.error.finalize"));
     } finally {
       setIsSaving(false);
     }
-  }, [pushNotice, selectedSession, upsertSession]);
+  }, [copy, pushNotice, selectedSession, upsertSession]);
 
   useEffect(() => {
     return () => {
@@ -736,7 +748,7 @@ export default function ScribePage() {
                     : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                Ghi âm trực tiếp
+                {copy("scribe.tab.workspace")}
               </button>
               <button
                 type="button"
@@ -745,7 +757,7 @@ export default function ScribePage() {
                   mode === "review" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                Rà soát
+                {copy("scribe.tab.review")}
               </button>
               <button
                 type="button"
@@ -754,7 +766,7 @@ export default function ScribePage() {
                   mode === "enterprise" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                Ký &amp; xuất bản
+                {copy("scribe.tab.enterprise")}
               </button>
             </nav>
           </div>
@@ -766,7 +778,7 @@ export default function ScribePage() {
                 onClick={onStopRecording}
                 className={dangerButtonClass}
               >
-                Dừng ghi âm
+                {copy("scribe.action.stopRecording")}
               </button>
             ) : (
               <button
@@ -774,7 +786,7 @@ export default function ScribePage() {
                 onClick={() => void onStartRecording()}
                 className={primaryButtonClass}
               >
-                Bắt đầu ghi âm
+                {copy("scribe.action.startRecording")}
               </button>
             )}
 
@@ -784,7 +796,7 @@ export default function ScribePage() {
               disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
               className={secondaryButtonClass}
             >
-              {isRegenerating || isLiveAnalyzing ? "Đang phân tích..." : "Tạo lại ghi chú"}
+              {isRegenerating || isLiveAnalyzing ? copy("scribe.status.analyzing") : copy("scribe.action.regenerate")}
             </button>
 
             <button
@@ -793,7 +805,7 @@ export default function ScribePage() {
               disabled={!selectedSession || isSaving}
               className={primaryButtonClass}
             >
-              Hoàn tất
+              {copy("scribe.action.complete")}
             </button>
           </div>
         </header>
@@ -802,9 +814,9 @@ export default function ScribePage() {
           <aside className="col-span-12 xl:col-span-3 space-y-3">
             <div className={panelPaddedClass}>
               <div className="flex items-center justify-between">
-                <h2 className={sectionTitleClass}>Danh sách phiên</h2>
+                <h2 className={sectionTitleClass}>{copy("scribe.sessions.title")}</h2>
                 <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
-                  {sessions.length} bản nháp
+                  {copy("scribe.sessions.count", { count: formatLocaleNumber(language, sessions.length) })}
                 </span>
               </div>
               <button
@@ -813,7 +825,7 @@ export default function ScribePage() {
                 disabled={isCreating}
                 className={`mt-3 inline-flex min-h-[42px] w-full items-center justify-center ${secondaryButtonClass}`}
               >
-                {isCreating ? "Đang tạo..." : "Tạo phiên khám mới"}
+                {isCreating ? copy("scribe.action.creating") : copy("scribe.action.createSession")}
               </button>
             </div>
 
@@ -833,21 +845,21 @@ export default function ScribePage() {
                   >
                     <div className="flex items-center justify-between">
                       <p className={`line-clamp-1 text-sm font-bold ${bodyTextClass}`}>
-                        {item.title || `Phiên #${item.id}`}
+                        {item.title || copy("scribe.sessions.untitled", { id: item.id })}
                       </p>
-                      <span className={`text-[10px] font-bold uppercase ${mutedTextClass}`}>{scribeStatusLabel(item.status)}</span>
+                      <span className={`text-[10px] font-bold uppercase ${mutedTextClass}`}>{scribeStatusLabel(item.status, copy)}</span>
                     </div>
                     <p className={`mt-1 line-clamp-2 text-xs ${secondaryTextClass}`}>
-                      {item.transcript?.trim() || "Chưa có bản ghi."}
+                      {item.transcript?.trim() || copy("scribe.transcript.empty")}
                     </p>
-                    <p className={`mt-2 text-[10px] font-semibold ${mutedTextClass}`}>{formatDate(item.updated_at)}</p>
+                    <p className={`mt-2 text-[10px] font-semibold ${mutedTextClass}`}>{formatDate(language, item.updated_at)}</p>
                   </button>
                 );
               })}
 
               {!isLoading && sessions.length === 0 ? (
                 <p className={`rounded-xl border border-[color:var(--shell-border)] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
-                  Chưa có phiên nào.
+                  {copy("scribe.sessions.empty")}
                 </p>
               ) : null}
             </div>
@@ -869,15 +881,15 @@ export default function ScribePage() {
                 <div className={panelPaddedLgClass}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <h3 className={accentTitleClass}>Tín hiệu âm thanh</h3>
+                      <h3 className={accentTitleClass}>{copy("scribe.audio.title")}</h3>
                       <p className={`mt-1 text-[11px] font-medium ${secondaryTextClass}`}>
-                        {isRecording ? "Micro đang ghi" : "Bộ ghi đang chờ"} · {formatDuration(elapsedSeconds)}
+                        {isRecording ? copy("scribe.audio.microphoneRecording") : copy("scribe.audio.recorderWaiting")} · {formatDuration(elapsedSeconds)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>Thời gian thực</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.audio.realtime")}</p>
                       <p className={`text-sm font-bold ${bodyTextClass}`}>
-                        {isTranscribing ? "Đang chuyển thành chữ" : "Chờ xử lý"}
+                        {isTranscribing ? copy("scribe.status.transcribing") : copy("scribe.status.waiting")}
                       </p>
                     </div>
                   </div>
@@ -894,23 +906,23 @@ export default function ScribePage() {
 
                   <p className={`mt-3 text-[10px] font-bold uppercase tracking-[0.18em] ${mutedTextClass}`}>
                     {selectedSession?.last_processed_at
-                      ? `Xử lý lần cuối ${formatDate(selectedSession.last_processed_at)}`
-                      : "Chờ xử lý"}
+                      ? copy("scribe.audio.lastProcessed", { date: formatDate(language, selectedSession.last_processed_at) })
+                      : copy("scribe.status.waiting")}
                   </p>
                 </div>
 
                 <div className={panelClass}>
                   <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3 dark:border-sky-800">
-                    <h3 className={sectionTitleClass}>Bản ghi thời gian thực</h3>
+                    <h3 className={sectionTitleClass}>{copy("scribe.transcript.liveTitle")}</h3>
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--brand-700)] dark:text-sky-100">
                       <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[color:var(--brand-600)] animate-pulse" : "bg-slate-500"}`} />
-                      {isRecording ? "Đang ghi" : "Đã dừng"}
+                      {isRecording ? copy("scribe.status.recording") : copy("scribe.status.stopped")}
                     </div>
                   </div>
 
                   <div className="max-h-[420px] space-y-4 overflow-y-auto p-5 clara-scrollbar">
                     {transcriptPreviewRows.length === 0 ? (
-                      <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có bản ghi thời gian thực.</p>
+                      <p className={`text-sm font-medium ${secondaryTextClass}`}>{copy("scribe.transcript.liveEmpty")}</p>
                     ) : (
                       transcriptPreviewRows.map((row) => (
                         <div key={row.id} className="flex gap-3">
@@ -930,12 +942,12 @@ export default function ScribePage() {
                     <textarea
                       value={transcriptDraft}
                       onChange={(event) => setTranscriptDraft(event.target.value)}
-                      placeholder="Nhập hoặc chỉnh sửa nội dung đã ghi..."
+                      placeholder={copy("scribe.transcript.placeholder")}
                       className={transcriptInputClass}
                     />
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-                        {(transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0)} từ đã ghi nhận
+                        {copy("scribe.transcript.wordCount", { count: formatLocaleNumber(language, transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0) })}
                       </p>
                       <button
                         type="button"
@@ -943,7 +955,7 @@ export default function ScribePage() {
                         disabled={!selectedSession || isSaving}
                         className={secondaryButtonClass}
                       >
-                        {isSaving ? "Đang lưu..." : "Lưu bản nháp"}
+                        {isSaving ? copy("scribe.action.saving") : copy("scribe.action.saveDraft")}
                       </button>
                     </div>
                   </div>
@@ -953,23 +965,23 @@ export default function ScribePage() {
               <aside className="col-span-12 2xl:col-span-3 space-y-4">
                 <div className={panelPaddedLgClass}>
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className={sectionTitleClass}>Bản nháp SOAP</h3>
+                    <h3 className={sectionTitleClass}>{copy("scribe.soap.title")}</h3>
                     <button
                       type="button"
                       onClick={() => void onRegenerateSoap()}
                       disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
                       className={secondaryButtonClass}
                     >
-                      {isRegenerating || isLiveAnalyzing ? "Đang chạy..." : "Tạo lại"}
+                      {isRegenerating || isLiveAnalyzing ? copy("scribe.status.analyzing") : copy("scribe.action.regenerate")}
                     </button>
                   </div>
 
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
-                    {SOAP_SECTION_LABELS.map((item) => (
+                    {soapSectionLabels.map((item) => (
                       <article key={item.key} className={`${softPanelClass} p-3`}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
                         <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                          {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || "Chưa có dữ liệu."}
+                          {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                         </p>
                       </article>
                     ))}
@@ -977,21 +989,21 @@ export default function ScribePage() {
                 </div>
 
                 <div className={panelPaddedLgClass}>
-                  <h3 className={sectionTitleClass}>Phân tích trực tiếp</h3>
+                  <h3 className={sectionTitleClass}>{copy("scribe.liveAnalysis.title")}</h3>
                   <div className="mt-3 space-y-2">
                     <p className={`text-sm font-medium ${secondaryTextClass}`}>
-                      {isLiveAnalyzing ? "Đang phân tích trực tiếp..." : "Sẵn sàng phân tích trực tiếp."}
+                      {isLiveAnalyzing ? copy("scribe.status.liveAnalyzing") : copy("scribe.status.liveReady")}
                     </p>
                     {/* Raw pipeline timing is internal telemetry — admin only (Req 4.3). */}
                     <TelemetryPanel role={role}>
                       <p className={`text-[11px] font-medium ${mutedTextClass}`}>
-                        Tốc độ xử lý: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms/đoạn` : "--"}
+                        {copy("scribe.processingSpeed")}: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms${copy("scribe.processingPerSegment")}` : "--"}
                       </p>
                     </TelemetryPanel>
                   </div>
                   <div className="mt-4 space-y-2">
                     {liveInsights.length === 0 ? (
-                      <p className={`text-xs font-medium ${secondaryTextClass}`}>Chưa có gợi ý.</p>
+                      <p className={`text-xs font-medium ${secondaryTextClass}`}>{copy("scribe.liveAnalysis.empty")}</p>
                     ) : (
                       liveInsights.map((item) => (
                         <article key={item.id} className={`${softPanelClass} p-3`}>
@@ -1009,15 +1021,14 @@ export default function ScribePage() {
               <article className="col-span-12 2xl:col-span-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className={`col-span-1 ${panelPaddedClass}`}>
-                    <p className={sectionTitleClass}>Trạng thái kiểm tra</p>
+                    <p className={sectionTitleClass}>{copy("scribe.review.statusTitle")}</p>
                     <p className={`mt-4 text-xs leading-5 ${secondaryTextClass}`}>
-                      CLARA không hiển thị phần trăm tin cậy chưa được hiệu chuẩn.
-                      Hãy kiểm tra bản ghi gốc, cảnh báo và phần SOAP trước khi sử dụng.
+                      {copy("scribe.review.statusDescription")}
                     </p>
                   </div>
 
                   <div className={`col-span-2 ${panelPaddedClass}`}>
-                    <p className={sectionTitleClass}>Độ ổn định tín hiệu</p>
+                    <p className={sectionTitleClass}>{copy("scribe.review.signalStability")}</p>
                     <div className="mt-4 flex h-28 items-end gap-1">
                       {waveBars.slice(0, 16).map((value, index) => (
                         <div
@@ -1033,23 +1044,23 @@ export default function ScribePage() {
                 <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
                   <div className="mb-5 flex items-center justify-between">
                     <div>
-                      <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>Tổng hợp ghi chú lâm sàng</h2>
+                      <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>{copy("scribe.review.summaryTitle")}</h2>
                       <p className={`text-sm font-medium ${secondaryTextClass}`}>
-                        Mã phiên: {selectedSession ? `#PHIEN-${selectedSession.id}` : "--"}
+                        {copy("scribe.review.sessionCode", { code: selectedSession ? `#${selectedSession.id}` : "--" })}
                       </p>
                     </div>
                     <span className="rounded-full border border-[color:var(--shell-border)] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
-                      {scribeStatusLabel(selectedSession?.status)}
+                      {scribeStatusLabel(selectedSession?.status, copy)}
                     </span>
                   </div>
 
                   <div className="space-y-5">
-                    {SOAP_SECTION_LABELS.map((item) => (
+                    {soapSectionLabels.map((item) => (
                       <section key={item.key}>
                         <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</h5>
                         <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
                           <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                            {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || "Chưa có dữ liệu."}
+                            {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                           </p>
                         </div>
                       </section>
@@ -1060,36 +1071,35 @@ export default function ScribePage() {
 
               <aside className="col-span-12 2xl:col-span-3 space-y-4">
                 <div className={panelPaddedClass}>
-                  <h3 className={sectionTitleClass}>Mã hóa cần chuyên môn</h3>
+                  <h3 className={sectionTitleClass}>{copy("scribe.review.specialistCoding")}</h3>
                   <p className={`mt-3 text-xs leading-5 ${secondaryTextClass}`}>
-                    CLARA không tự gán mã chẩn đoán hoặc thủ thuật từ bản ghi.
-                    Người có thẩm quyền cần chọn và xác nhận mã trong hệ thống nghiệp vụ phù hợp.
+                    {copy("scribe.review.codingDescription")}
                   </p>
                 </div>
 
                 <div className={panelPaddedClass}>
-                  <h3 className={accentTitleClass}>Chuyển hội chẩn AI</h3>
+                  <h3 className={accentTitleClass}>{copy("scribe.review.council")}</h3>
                   <div className={`mt-3 ${softPanelClass} p-3`}>
-                    <p className="text-[10px] font-black uppercase text-[color:var(--brand-600)] dark:text-sky-100">Tóm tắt chính</p>
+                    <p className="text-[10px] font-black uppercase text-[color:var(--brand-600)] dark:text-sky-100">{copy("scribe.review.keySummary")}</p>
                     <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
-                      {liveInsights[0]?.detail || "Chưa có dữ liệu tổng hợp để chuyển hội chẩn."}
+                      {liveInsights[0]?.detail || copy("scribe.review.noSummary")}
                     </p>
                     <p className={`mt-3 text-[10px] font-medium ${mutedTextClass}`}>
-                      Số từ bản ghi: {transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0}
+                      {copy("scribe.review.wordCount", { count: formatLocaleNumber(language, transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0) })}
                     </p>
                   </div>
                   <button
                     type="button"
                     className={`mt-3 w-full ${secondaryButtonClass}`}
                   >
-                    Lưu vào hồ sơ
+                    {copy("scribe.action.saveToRecord")}
                   </button>
                 </div>
 
                 <div className={panelPaddedClass}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>Tốc độ xử lý</p>
+                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.processingSpeed")}</p>
                       <div className="text-sm font-black text-[color:var(--brand-700)] dark:text-sky-100">
                         {/* Raw per-segment pipeline latency is internal telemetry — admin only (Req 4.3). */}
                         <TelemetryPanel role={role} summaryText="--" className="inline">
@@ -1097,12 +1107,12 @@ export default function ScribePage() {
                             {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
                           </span>
                         </TelemetryPanel>
-                        <span className={`text-[10px] ${secondaryTextClass}`}> / đoạn</span>
+                        <span className={`text-[10px] ${secondaryTextClass}`}> {copy("scribe.processingPerSegment")}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-                      <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? "Đang ghi" : "Chờ"}</span>
+                      <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
                     </div>
                   </div>
                 </div>
@@ -1113,19 +1123,19 @@ export default function ScribePage() {
 
         <section className={`grid grid-cols-2 gap-3 md:grid-cols-4 ${panelPaddedClass}`}>
           <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Tổng số phiên</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.totalSessions")}</p>
             <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.total_sessions ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Đã hoàn tất</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.completedSessions")}</p>
             <p className="mt-2 text-xl font-black text-[color:var(--brand-700)] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Hôm nay</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.today")}</p>
             <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.sessions_today ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>Ký tự trung bình</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.averageCharacters")}</p>
             <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>
               {Math.round(analytics?.avg_transcript_chars ?? 0)}
             </p>
