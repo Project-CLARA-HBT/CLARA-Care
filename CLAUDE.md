@@ -168,7 +168,8 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint. The typed task registry routes governed V4 tasks to `DEEPSEEK_PRO_MODEL=deepseek-v4-pro` for safety/reasoning and `DEEPSEEK_FLASH_MODEL=deepseek-v4-flash` for bounded low-latency work; `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single `DEEPSEEK_MODEL` path. Scribe audio has separately registry-governed ASR model and provider selections (`DEEPSEEK_AUDIO_MODEL=whisper-1` and allowlisted `SCRIBE_ASR_PRIMARY`/`SCRIBE_ASR_FALLBACK`), because audio must never be sent to a V4 text model or reported as Flash. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
 All model-backed bounded tasks resolve through the versioned task-contract
-registry. The optional Vietnamese Encoder-SLM adapter is strictly shadow-only
+registry, which applies the declared temperature and output-token ceiling at
+the client boundary. The optional Vietnamese Encoder-SLM adapter is strictly shadow-only
 (`ENCODER_SLM_SHADOW_ENABLED=false` by default): it receives a bounded,
 redacted copy only after emergency/legal guards and cannot alter an answer,
 route, authorization, DrugBank/FIDES verdict or LifeMap truth state. Disable

@@ -564,6 +564,8 @@ def build_task_client(
         min_interval_seconds=float(getattr(settings, "llm_global_min_interval_seconds", 0.4)),
         request_jitter_seconds=float(getattr(settings, "llm_global_jitter_seconds", 0.15)),
         audio_base_url=_text(settings, "deepseek_audio_base_url") if audio else "",
+        generation_temperature=contract.temperature,
+        generation_max_tokens=contract.max_tokens,
     )
     return client, selection
 

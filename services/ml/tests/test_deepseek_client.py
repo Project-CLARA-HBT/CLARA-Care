@@ -39,6 +39,49 @@ class _DummyStreamResponse(_DummyResponse):
             yield line
 
 
+def test_generate_enforces_registry_generation_contract_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def post(self, url: str, **kwargs: object) -> _DummyResponse:
+            payload = kwargs.get("json")
+            assert isinstance(payload, dict)
+            captured.update(payload)
+            return _DummyResponse(
+                200,
+                {
+                    "choices": [{"message": {"content": "ok"}}],
+                    "model": "deepseek-v4-flash",
+                },
+            )
+
+    monkeypatch.setattr("clara_ml.llm.deepseek_client.httpx.Client", FakeClient)
+    client = DeepSeekClient(
+        api_key="test-key",
+        base_url="https://api.yescale.io/v1",
+        model="deepseek-v4-flash",
+        generation_temperature=0.0,
+        generation_max_tokens=1200,
+    )
+
+    response = client.generate("hello", max_tokens=1800)
+
+    assert response.content == "ok"
+    assert captured["temperature"] == 0.0
+    assert captured["max_tokens"] == 1200
+
+
 def test_generate_failover_to_second_base(monkeypatch: pytest.MonkeyPatch) -> None:
     called_urls: list[str] = []
 

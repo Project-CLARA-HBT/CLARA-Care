@@ -108,6 +108,14 @@ def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
     assert selection.fallback_model == "deepseek-v4-pro"
 
 
+def test_task_client_applies_its_versioned_generation_contract() -> None:
+    client, selection = build_task_client(ModelTask.LIFEMAP_VISIT_EXTRACTION, _settings())
+
+    assert selection.model == "deepseek-v4-flash"
+    assert client._generation_temperature == TASK_CONTRACTS[selection.task].temperature
+    assert client._generation_max_tokens == TASK_CONTRACTS[selection.task].max_tokens
+
+
 def test_task_routing_kill_switch_restores_configured_legacy_model() -> None:
     selection = resolve_model_selection(
         ModelTask.RAG_RERANKING,

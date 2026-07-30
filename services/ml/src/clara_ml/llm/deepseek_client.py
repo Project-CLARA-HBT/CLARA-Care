@@ -39,6 +39,8 @@ class DeepSeekClient:
         request_jitter_seconds: float = 0.15,
         audio_base_url: str = "",
         fallback_model: str = "",
+        generation_temperature: float = 0.2,
+        generation_max_tokens: int | None = None,
     ) -> None:
         self._api_key = api_key
         self._base_urls = self._parse_base_urls(base_url)
@@ -63,6 +65,15 @@ class DeepSeekClient:
         self._max_concurrency = max(1, int(max_concurrency))
         self._min_interval_seconds = max(0.0, float(min_interval_seconds))
         self._request_jitter_seconds = max(0.0, float(request_jitter_seconds))
+        # Task clients receive these values exclusively from the versioned
+        # registry contract. Direct legacy/test callers preserve the previous
+        # 0.2/default-unbounded behavior by omitting both arguments.
+        self._generation_temperature = min(max(float(generation_temperature), 0.0), 1.0)
+        self._generation_max_tokens = (
+            max(0, int(generation_max_tokens))
+            if generation_max_tokens is not None
+            else None
+        )
 
     @property
     def model(self) -> str:
@@ -353,11 +364,19 @@ class DeepSeekClient:
         payload = {
             "model": self._model,
             "stream": False,
-            "temperature": 0.2,
+            "temperature": self._generation_temperature,
             "messages": messages,
         }
-        if isinstance(max_tokens, int) and max_tokens > 0:
-            payload["max_tokens"] = int(max_tokens)
+        requested_tokens = (
+            int(max_tokens) if isinstance(max_tokens, int) and max_tokens > 0 else 0
+        )
+        if self._generation_max_tokens is not None and self._generation_max_tokens > 0:
+            requested_tokens = min(
+                requested_tokens or self._generation_max_tokens,
+                self._generation_max_tokens,
+            )
+        if requested_tokens > 0:
+            payload["max_tokens"] = requested_tokens
 
         return self._guard(lambda: self._generate_once(payload))
 
