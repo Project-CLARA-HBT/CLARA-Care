@@ -2862,9 +2862,9 @@ export default function ChatWorkspacePage() {
                     : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300",
                 ].join(" ")}
                 aria-label={isTelemetryPanelOpen
-                  ? isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"
-                  : isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
-                title={isEnglishUI ? "Telemetry" : "Telemetry"}
+                  ? t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")
+                  : t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
+                title={t(uiLanguage, "chat.legacyWorkspace.telemetry.title")}
               >
                 <span className="material-symbols-outlined text-[18px]">monitoring</span>
               </button>
@@ -3956,8 +3956,8 @@ export default function ChatWorkspacePage() {
               type="button"
               onClick={() => setIsTelemetryPanelOpen(true)}
               className="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/96 px-2 text-left shadow-[0_12px_24px_-24px_rgba(15,23,42,0.36)] backdrop-blur-lg transition hover:border-cyan-300/70"
-              aria-label={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
-              title={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
+              title={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
             >
               <span className="material-symbols-outlined text-[14px] text-[var(--text-secondary)]">monitoring</span>
               <span className="text-[9px] font-semibold text-[var(--text-primary)]">
@@ -3965,7 +3965,9 @@ export default function ChatWorkspacePage() {
               </span>
               {telemetryHasSignal ? (
                 <span className="text-[8px] text-[var(--text-muted)]">
-                  {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
+                  {t(uiLanguage, "chat.legacyWorkspace.telemetry.sourceCount", {
+                    count: sourceIntel.activeCount,
+                  })}
                 </span>
               ) : null}
             </button>
@@ -3987,8 +3989,8 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={() => setIsTelemetryPanelOpen(false)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                    aria-label={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
-                    title={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                   >
                     <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
                   </button>
