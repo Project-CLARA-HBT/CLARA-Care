@@ -2264,9 +2264,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                       ),
                       const SizedBox(height: ClaraTokens.spaceXs),
                       Text(
-                        '${_str(finding['field_key'])} · '
-                        '${_str(finding['rule_version'])}',
-                        style: theme.textTheme.bodySmall,
+                        _copy[ConsumerTerm.lifeMapReviewBasedOnSavedRecords],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       if (status == 'pending') ...[
                         const SizedBox(height: ClaraTokens.spaceMd),

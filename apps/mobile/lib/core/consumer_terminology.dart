@@ -193,6 +193,7 @@ enum ConsumerTerm {
   lifeMapReviewPossibleContradiction,
   lifeMapReviewPossibleDuplicate,
   lifeMapReviewNeedsMoreInformation,
+  lifeMapReviewBasedOnSavedRecords,
   lifeMapReviewResolved,
   lifeMapReviewDismiss,
   lifeMapReviewRecorded,
@@ -892,6 +893,8 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapReviewPossibleContradiction: 'Có thể mâu thuẫn',
     ConsumerTerm.lifeMapReviewPossibleDuplicate: 'Có thể trùng',
     ConsumerTerm.lifeMapReviewNeedsMoreInformation: 'Cần bổ sung',
+    ConsumerTerm.lifeMapReviewBasedOnSavedRecords:
+        'Dựa trên các thông tin bạn đã lưu trong LifeMap.',
     ConsumerTerm.lifeMapReviewResolved: 'Tôi đã kiểm tra',
     ConsumerTerm.lifeMapReviewDismiss: 'Không cần xử lý',
     ConsumerTerm.lifeMapReviewRecorded: 'Đã ghi nhận lựa chọn của bạn.',
@@ -1660,6 +1663,8 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapReviewPossibleContradiction: 'Possible conflict',
     ConsumerTerm.lifeMapReviewPossibleDuplicate: 'Possible duplicate',
     ConsumerTerm.lifeMapReviewNeedsMoreInformation: 'Needs more information',
+    ConsumerTerm.lifeMapReviewBasedOnSavedRecords:
+        'Based on information you saved in LifeMap.',
     ConsumerTerm.lifeMapReviewResolved: 'I checked this',
     ConsumerTerm.lifeMapReviewDismiss: 'No action needed',
     ConsumerTerm.lifeMapReviewRecorded: 'Your choice was recorded.',
