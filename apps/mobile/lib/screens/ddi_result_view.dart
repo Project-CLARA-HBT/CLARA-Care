@@ -60,6 +60,49 @@ class _DdiResultCopy {
   }
 }
 
+/// Static wording for the CareGuard identity-clarification boundary.
+///
+/// This uses the locale exposed by [Localizations], which is driven at the
+/// application root by the app-wide language controller. It remains outside
+/// the shared consumer-terminology contract because that contract excludes
+/// safety dispositions, while this copy makes the fail-closed DrugBank boundary
+/// explicit. It never translates a medicine name, candidate, source version,
+/// or any authoritative API-provided clinical content.
+class _DdiMedicationClarificationCopy {
+  const _DdiMedicationClarificationCopy._(this._english);
+
+  factory _DdiMedicationClarificationCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _DdiMedicationClarificationCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get title => _english
+      ? 'The interaction check is not complete yet'
+      : 'Chưa thể hoàn tất kiểm tra tương tác';
+  String get explanation => _english
+      ? 'Choose the exact medicine for each item below before DrugBank can compare your medicines. This is not a result or an all-clear.'
+      : 'Hãy chọn đúng thuốc cho từng mục bên dưới trước khi DrugBank có thể so sánh các thuốc. Đây chưa phải là kết quả và không có nghĩa là an toàn.';
+  String get noCandidate => _english
+      ? 'There is no safe source-backed choice for this medicine. Check the package or edit the medicine in your cabinet, then try again.'
+      : 'Chưa có lựa chọn an toàn có nguồn cho thuốc này. Hãy kiểm tra vỏ thuốc hoặc sửa thuốc trong tủ, rồi thử lại.';
+  String get sourceLabel => _english ? 'DrugBank source' : 'Nguồn DrugBank';
+  String get resubmit => _english
+      ? 'Check again with selected medicines'
+      : 'Kiểm tra lại với thuốc đã chọn';
+  String get manualUnavailable => _english
+      ? 'The interaction check cannot be completed until the medicine name is identified exactly. Check the package or use Medicine cabinet to select a DrugBank-backed medicine.'
+      : 'Chưa thể hoàn tất kiểm tra vì cần xác định chính xác tên thuốc. Hãy kiểm tra vỏ thuốc hoặc dùng Tủ thuốc để chọn thuốc có nguồn DrugBank.';
+}
+
+/// Vietnamese-first manual-entry wording for a terminal clarification state.
+///
+/// The manual CareGuard screen has no owner-scoped cabinet item ID, so it must
+/// direct the person to the cabinet rather than expose an unsafe local choice.
+String ddiMedicationClarificationUnavailableMessage(BuildContext context) =>
+    _DdiMedicationClarificationCopy.forContext(context).manualUnavailable;
+
 /// Renders the End_User DDI projection ([DdiUserView]) — risk level, alerts,
 /// recommendations, and reference sources only. Runtime mode, fallback flags,
 /// and connector `source_errors` are never surfaced (Requirements 3.1, 3.6,
@@ -238,21 +281,7 @@ class DdiMedicationClarificationView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final english =
-        Localizations.localeOf(context).languageCode.toLowerCase() == 'en';
-    final title = english
-        ? 'The interaction check is not complete yet'
-        : 'Chưa thể hoàn tất kiểm tra tương tác';
-    final explanation = english
-        ? 'We need you to choose the exact medicine for the item below before DrugBank can compare your medicines. This is not a result or an all-clear.'
-        : 'Bạn cần chọn đúng thuốc cho mục bên dưới trước khi DrugBank có thể so sánh các thuốc. Đây chưa phải là kết quả và không có nghĩa là an toàn.';
-    final noCandidate = english
-        ? 'There is no safe source-backed choice for this medicine. Check the package or edit the medicine in your cabinet, then try again.'
-        : 'Chưa có lựa chọn an toàn có nguồn cho thuốc này. Hãy kiểm tra vỏ thuốc hoặc sửa thuốc trong tủ, rồi thử lại.';
-    final source = english ? 'DrugBank source' : 'Nguồn DrugBank';
-    final resubmit = english
-        ? 'Check again with selected medicines'
-        : 'Kiểm tra lại với thuốc đã chọn';
+    final copy = _DdiMedicationClarificationCopy.forContext(context);
 
     return Card(
       color: Colors.amber.shade50,
@@ -267,7 +296,7 @@ class DdiMedicationClarificationView extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    title,
+                    copy.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Colors.amber.shade900,
                           fontWeight: FontWeight.w700,
@@ -277,10 +306,10 @@ class DdiMedicationClarificationView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(explanation),
+            Text(copy.explanation),
             const SizedBox(height: 12),
             if (clarifications.isEmpty)
-              Text(noCandidate)
+              Text(copy.noCandidate)
             else
               ...clarifications.map((clarification) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -288,8 +317,8 @@ class DdiMedicationClarificationView extends StatelessWidget {
                       clarification: clarification,
                       selected: selected[clarification.cabinetItemId],
                       onSelected: onSelected,
-                      noCandidate: noCandidate,
-                      sourceLabel: source,
+                      noCandidate: copy.noCandidate,
+                      sourceLabel: copy.sourceLabel,
                     ),
                   )),
             if (clarifications.isNotEmpty) ...[
@@ -303,7 +332,7 @@ class DdiMedicationClarificationView extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh),
-                label: Text(resubmit),
+                label: Text(copy.resubmit),
               ),
             ],
           ],

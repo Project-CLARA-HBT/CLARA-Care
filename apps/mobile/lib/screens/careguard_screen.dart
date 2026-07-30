@@ -140,8 +140,7 @@ class _CareguardScreenState extends State<CareguardScreen> {
         setState(() {
           _view = null;
           _offlineCachedAt = null;
-          _error =
-              'Chưa thể hoàn tất kiểm tra vì cần xác định chính xác tên thuốc. Hãy kiểm tra vỏ thuốc hoặc dùng Tủ thuốc để chọn thuốc có nguồn DrugBank.';
+          _error = ddiMedicationClarificationUnavailableMessage(context);
         });
         return;
       }
