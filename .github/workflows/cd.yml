@@ -114,6 +114,10 @@ jobs:
             # fallback is an explicit, documented opt-in supplied deliberately via
             # the DEPLOY_ENV_FILE secret (written to .env above).
           } >> .env
+          # The governed ML runtime must declare the V4 Pro/Flash pair in the
+          # protected deployment environment.  Do this before image pulls so a
+          # stale secret cannot silently deploy the legacy single-model path.
+          REQUIRE_DEEPSEEK=true ./scripts/ops/validate_runtime_env.sh .env
 
       - name: Pull and deploy staging stack
         run: |
@@ -243,6 +247,9 @@ jobs:
             # fallback must be an explicit, documented opt-in supplied deliberately
             # via the DEPLOY_ENV_FILE secret (written to .env above).
           } >> .env
+          # Keep production on the same governed V4 Pro/Flash configuration as
+          # staging; an incomplete secret fails before any image is pulled.
+          REQUIRE_DEEPSEEK=true ./scripts/ops/validate_runtime_env.sh .env
 
       - name: Set up Python for migration checks
         uses: actions/setup-python@v5
