@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 
 from clara_ml.llm.model_registry import (
@@ -159,3 +160,17 @@ def test_task_client_uses_selected_rollback_and_keeps_audio_endpoint_scoped() ->
     assert client._timeout_seconds == 90.0
     assert client._retries_per_base == 0
     assert client._audio_base_urls == ["https://audio.example.invalid/v1"]
+
+
+def test_model_selection_telemetry_excludes_connection_values(
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="clara_ml.llm.model_registry")
+    build_task_client(ModelTask.RAG_RERANKING, _settings())
+
+    rendered = "\n".join(record.getMessage() for record in caplog.records)
+    assert "model_task_selected" in rendered
+    assert "task=rag_reranking" in rendered
+    assert "profile=flash" in rendered
+    assert "test-key" not in rendered
+    assert "example.invalid" not in rendered

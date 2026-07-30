@@ -10,6 +10,7 @@ included in a resolved selection.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import lru_cache
@@ -17,6 +18,8 @@ from pathlib import Path
 from typing import Any
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
+
+logger = logging.getLogger(__name__)
 
 
 class ModelTask(StrEnum):
@@ -264,6 +267,18 @@ def build_task_client(
     """
 
     selection = resolve_model_selection(task, settings)
+    # Deliberately bounded operational telemetry: this records the governed
+    # routing decision without query text, patient context, endpoint, key,
+    # prompt content, response content, or a trace identifier.
+    logger.info(
+        "model_task_selected task=%s profile=%s version=%s risk=%s rollback=%s registry=%s",
+        selection.task.value,
+        selection.model_profile,
+        selection.model_version,
+        selection.risk_level,
+        selection.rollback_applied,
+        selection.registry_enabled,
+    )
     client = DeepSeekClient(
         api_key=_text(settings, "deepseek_api_key"),
         base_url=_text(settings, "deepseek_base_url"),
