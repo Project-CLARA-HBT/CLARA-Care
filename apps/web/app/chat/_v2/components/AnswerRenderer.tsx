@@ -14,6 +14,7 @@ import {
 } from "@/lib/research";
 import type { UserRole } from "@/lib/auth-store";
 import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 /**
  * Typographic answer renderer for the rebuilt CLARA Chat (CHAT_V2).
@@ -25,7 +26,7 @@ import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
  *
  * When the tier2 result carries claim-to-study traceability (`tracedClaims`)
  * and a `citationRegistry`, inline sentence-level anchors are injected after
- * each matched claim and resolve into the Citation Registry appendix
+ * each matched claim and resolve into the citation appendix
  * (clara-research Requirement 11.3, 11.4). Absent/empty preserves legacy
  * rendering.
  */
@@ -41,6 +42,10 @@ function AnswerRenderer({
   uiLanguage,
   role = "normal",
 }: AnswerRendererProps) {
+  const copy = (
+    key: UITranslationKey,
+    values: Record<string, string | number> = {},
+  ) => t(uiLanguage, key, values);
   const degraded = isDegradedAnswer(result);
   const baseAnswer = result.answer?.trim() || "";
   const citations = result.tier === "tier2" ? result.citations : [];
@@ -52,7 +57,6 @@ function AnswerRenderer({
     tracedClaims.length && citationRegistry.length
       ? injectTracedClaimAnchors(baseAnswer, tracedClaims, citationRegistry)
       : baseAnswer;
-  const isEn = uiLanguage === "en";
   const clinicalAnswer =
     result.tier === "tier1" ? result.clinicalAnswer : undefined;
 
@@ -60,7 +64,7 @@ function AnswerRenderer({
     <div className="space-y-2">
       {degraded ? (
         <Badge tone="warn">
-          {isEn ? "Degraded · local fallback" : "Suy giảm · dự phòng nội bộ"}
+          {copy("chat.answerRenderer.degraded")}
         </Badge>
       ) : null}
 
@@ -69,7 +73,7 @@ function AnswerRenderer({
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
         ) : (
           <p className="text-sm text-[var(--text-muted)]">
-            {isEn ? "(No answer text)" : "(Chưa có nội dung trả lời)"}
+            {copy("chat.answerRenderer.emptyAnswer")}
           </p>
         )}
       </div>
@@ -85,17 +89,15 @@ function AnswerRenderer({
       {result.tier === "tier2" ? (
         <section
           className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3"
-          aria-label={isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
+          aria-label={copy("chat.answerRenderer.integrity.aria")}
         >
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-brand)]">
-                {isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
+                {copy("chat.answerRenderer.integrity.title")}
               </p>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {isEn
-                  ? "Inspect what supports the answer—not only the prose."
-                  : "Kiểm tra nền tảng của câu trả lời, không chỉ nội dung diễn giải."}
+                {copy("chat.answerRenderer.integrity.description")}
               </p>
             </div>
             {result.policyAction ? (
@@ -108,22 +110,22 @@ function AnswerRenderer({
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <ResearchMetric
-              label={isEn ? "Sources" : "Nguồn"}
+              label={copy("chat.answerRenderer.integrity.sources")}
               value={result.citations.length}
             />
             <ResearchMetric
-              label={isEn ? "Traced claims" : "Luận điểm truy vết"}
+              label={copy("chat.answerRenderer.integrity.tracedClaims")}
               value={result.tracedClaims.length}
             />
             <ResearchMetric
-              label={isEn ? "Deep passes" : "Lượt phân tích"}
+              label={copy("chat.answerRenderer.integrity.deepPasses")}
               value={result.deepPassCount ?? 0}
             />
             <ResearchMetric
-              label={isEn ? "Verification" : "Kiểm chứng"}
+              label={copy("chat.answerRenderer.integrity.verification")}
               value={
                 result.verificationStatus?.verdict ??
-                (isEn ? "Not reported" : "Chưa báo cáo")
+                copy("chat.answerRenderer.integrity.notReported")
               }
             />
           </div>
@@ -138,7 +140,7 @@ function AnswerRenderer({
       {citationRegistry.length ? (
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {isEn ? "Citation Registry" : "Danh mục trích dẫn"}
+            {copy("chat.answerRenderer.citationRegistry")}
           </h3>
           <ol className="mt-2 space-y-1.5">
             {citationRegistry.map((entry, index) => {
@@ -146,7 +148,9 @@ function AnswerRenderer({
                 entry.sourceType,
                 typeof entry.trustTier === "number" &&
                 Number.isFinite(entry.trustTier)
-                  ? `Tier ${entry.trustTier}`
+                  ? copy("chat.answerRenderer.trustTier", {
+                      tier: entry.trustTier,
+                    })
                   : null,
                 entry.publishedAt,
               ].filter(Boolean);
@@ -193,9 +197,9 @@ function AnswerRenderer({
       {citations.length ? (
         <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {isEn
-              ? `References (${citations.length})`
-              : `Nguồn tham khảo (${citations.length})`}
+            {copy("chat.answerRenderer.references", {
+              count: citations.length,
+            })}
           </summary>
           <ol className="mt-2 space-y-1.5">
             {citations.map((citation, index) => (

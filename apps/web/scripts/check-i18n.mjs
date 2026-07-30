@@ -204,6 +204,25 @@ const MIGRATED_SURFACES = [
       "Không có bằng chứng truy xuất được; chưa thể dùng để ra quyết định.",
     ],
   },
+  {
+    path: "app/chat/_v2/components/AnswerRenderer.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.answerRenderer.degraded",
+      "chat.answerRenderer.integrity.title",
+      "chat.answerRenderer.references",
+    ],
+    forbidden: [
+      "Degraded · local fallback",
+      "Suy giảm · dự phòng nội bộ",
+      "(No answer text)",
+      "(Chưa có nội dung trả lời)",
+      "Citation Registry",
+      "Danh mục trích dẫn",
+      "References (",
+      "Nguồn tham khảo (",
+    ],
+  },
 ];
 
 function fail(message) {
