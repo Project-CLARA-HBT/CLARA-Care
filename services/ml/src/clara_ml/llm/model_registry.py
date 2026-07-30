@@ -116,6 +116,26 @@ class AsrModelSelection:
     contract_schema_version: str
 
 
+@dataclass(frozen=True)
+class AsrProviderRoute:
+    """An allowlisted ASR provider/model pair selected by deployment config."""
+
+    provider: str
+    model: str
+    model_version: str
+
+
+@dataclass(frozen=True)
+class AsrProviderSelection:
+    """Primary/fallback ASR routes, normalized before a provider is built."""
+
+    primary: AsrProviderRoute
+    fallback: AsrProviderRoute | None
+    task: ModelTask
+    prompt_version: str
+    contract_schema_version: str
+
+
 TASK_CONTRACTS_PATH = (
     Path(__file__).resolve().parents[3] / "config" / "task_contracts" / "contracts.json"
 )
@@ -432,6 +452,66 @@ def resolve_asr_model_selection(settings: Any) -> AsrModelSelection:
         selection.task.value,
         selection.provider,
         selection.model_version,
+    )
+    return selection
+
+
+def _resolve_asr_provider_route(value: str, settings: Any) -> AsrProviderRoute:
+    """Normalize an ASR route to a closed, deployment-owned provider list."""
+
+    key = value.strip().lower()
+    if key in {"google", "google_stt", "google_stt_v2", "chirp", "chirp3"}:
+        return AsrProviderRoute(
+            provider="google_stt_v2_chirp3",
+            model="chirp_3",
+            model_version="chirp_3.asr.v1",
+        )
+    if key in {"phowhisper", "pho_whisper", "pho-whisper", "vi_whisper"}:
+        model = _text(settings, "scribe_phowhisper_model") or "phowhisper-large"
+        return AsrProviderRoute(
+            provider="phowhisper",
+            model=model,
+            model_version=f"{model}.asr.v1",
+        )
+
+    # Unknown values intentionally degrade to the released Whisper-compatible
+    # route. This matches the prior provider factory without exposing a new
+    # arbitrary provider/model execution path.
+    deepseek = resolve_asr_model_selection(settings)
+    return AsrProviderRoute(
+        provider="whisper",
+        model=deepseek.model,
+        model_version=deepseek.model_version,
+    )
+
+
+def resolve_asr_provider_selection(settings: Any) -> AsrProviderSelection:
+    """Resolve ASR primary/fallback routes through the registry boundary.
+
+    Provider aliases are accepted only from deployment settings and collapse to
+    a small allowlist.  Request parameters, queued jobs and user input cannot
+    choose an ASR provider or model.  Same-provider fallback is removed to
+    avoid repeated decoding against one unavailable backend.
+    """
+
+    task = ModelTask.SCRIBE_TRANSCRIPTION
+    contract = task_contract(task)
+    primary = _resolve_asr_provider_route(_text(settings, "scribe_asr_primary"), settings)
+    fallback = _resolve_asr_provider_route(_text(settings, "scribe_asr_fallback"), settings)
+    normalized_fallback = None if fallback.provider == primary.provider else fallback
+    selection = AsrProviderSelection(
+        primary=primary,
+        fallback=normalized_fallback,
+        task=task,
+        prompt_version=contract.prompt_version,
+        contract_schema_version=TASK_CONTRACT_SCHEMA_VERSION,
+    )
+    logger.info(
+        "asr_provider_selected task=%s primary=%s primary_version=%s fallback=%s",
+        selection.task.value,
+        selection.primary.provider,
+        selection.primary.model_version,
+        selection.fallback.provider if selection.fallback else "none",
     )
     return selection
 

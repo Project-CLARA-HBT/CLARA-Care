@@ -19,6 +19,7 @@ from clara_ml.llm.model_registry import (
     load_task_contracts,
     resolve_encoder_shadow_selection,
     resolve_asr_model_selection,
+    resolve_asr_provider_selection,
     resolve_model_selection,
 )
 
@@ -43,6 +44,9 @@ def _settings(**overrides: object) -> SimpleNamespace:
         "llm_global_jitter_seconds": 0.15,
         "deepseek_audio_base_url": "https://audio.example.invalid/v1",
         "deepseek_audio_model": "whisper-1",
+        "scribe_asr_primary": "whisper",
+        "scribe_asr_fallback": "whisper",
+        "scribe_phowhisper_model": "phowhisper-large",
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -186,6 +190,34 @@ def test_asr_payload_model_is_registry_owned_and_not_a_v4_text_route() -> None:
 def test_asr_selection_fails_closed_when_audio_model_is_missing() -> None:
     with pytest.raises(ValueError, match="deepseek_audio_model_required"):
         resolve_asr_model_selection(_settings(deepseek_audio_model=""))
+
+
+def test_asr_provider_selection_is_allowlisted_and_deduplicates_same_fallback() -> None:
+    selection = resolve_asr_provider_selection(
+        _settings(
+            scribe_asr_primary="not-a-provider",
+            scribe_asr_fallback="whisper",
+        )
+    )
+
+    assert selection.primary.provider == "whisper"
+    assert selection.primary.model == "whisper-1"
+    assert selection.fallback is None
+
+
+def test_asr_provider_selection_keeps_an_independent_phowhisper_fallback() -> None:
+    selection = resolve_asr_provider_selection(
+        _settings(
+            scribe_asr_primary="phowhisper",
+            scribe_asr_fallback="google_stt_v2",
+        )
+    )
+
+    assert selection.primary.provider == "phowhisper"
+    assert selection.primary.model == "phowhisper-large"
+    assert selection.fallback is not None
+    assert selection.fallback.provider == "google_stt_v2_chirp3"
+    assert selection.fallback.model == "chirp_3"
 
 
 def test_model_selection_telemetry_excludes_connection_values(
