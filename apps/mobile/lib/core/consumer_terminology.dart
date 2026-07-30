@@ -131,6 +131,28 @@ enum ConsumerTerm {
   lifeMapOneQuestion,
   lifeMapViewHistory,
   lifeMapLoadFailed,
+  lifeMapReplayLabel,
+  lifeMapReplayFallbackTitle,
+  lifeMapReplayDescription,
+  lifeMapReplayStale,
+  lifeMapReplayEmptyTitle,
+  lifeMapReplayEmptyDescription,
+  lifeMapReplayVersion,
+  lifeMapReplayWhy,
+  lifeMapReplayEdit,
+  lifeMapReplayDispute,
+  lifeMapReplayLoadFailed,
+  lifeMapCorrectionTitle,
+  lifeMapCorrectionNotice,
+  lifeMapCorrectionLabel,
+  lifeMapCorrectionSave,
+  lifeMapCorrectionSaved,
+  lifeMapMutationOffline,
+  lifeMapDisputeTitle,
+  lifeMapDisputeNotice,
+  lifeMapDisputeLabel,
+  lifeMapDisputeSubmit,
+  lifeMapDisputeSubmitted,
   medicinesMyMedicines,
   medicinesCabinet,
   medicinesSafety,
@@ -630,6 +652,40 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapOneQuestion: 'Một câu hỏi',
     ConsumerTerm.lifeMapViewHistory: 'Xem lịch sử',
     ConsumerTerm.lifeMapLoadFailed: 'Không thể tải LifeMap. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapReplayLabel: 'Nhìn lại hành trình',
+    ConsumerTerm.lifeMapReplayFallbackTitle: 'Lịch sử LifeMap',
+    ConsumerTerm.lifeMapReplayDescription:
+        'Mỗi mục hiển thị đúng phiên bản và quy tắc đã dùng. Chỉnh sửa cần mạng '
+            'và không được xếp hàng ngoại tuyến.',
+    ConsumerTerm.lifeMapReplayStale:
+        'Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.',
+    ConsumerTerm.lifeMapReplayEmptyTitle: 'Chưa có bản ghi',
+    ConsumerTerm.lifeMapReplayEmptyDescription:
+        'Hành trình này chưa có thông tin để xem lại.',
+    ConsumerTerm.lifeMapReplayVersion: 'Phiên bản {revision}',
+    ConsumerTerm.lifeMapReplayWhy: 'Vì sao có mục này: {reason}',
+    ConsumerTerm.lifeMapReplayEdit: 'Sửa thông tin',
+    ConsumerTerm.lifeMapReplayDispute: 'Cần xem lại',
+    ConsumerTerm.lifeMapReplayLoadFailed:
+        'Không thể tải lịch sử. Vui lòng thử lại khi có mạng.',
+    ConsumerTerm.lifeMapCorrectionTitle: 'Sửa thông tin',
+    ConsumerTerm.lifeMapCorrectionNotice:
+        'Thao tác này cần kết nối mạng và tạo một phiên bản mới. Phiên bản cũ '
+            'vẫn được giữ trong lịch sử.',
+    ConsumerTerm.lifeMapCorrectionLabel: 'Thông tin đúng',
+    ConsumerTerm.lifeMapCorrectionSave: 'Lưu phiên bản mới',
+    ConsumerTerm.lifeMapCorrectionSaved: 'Đã lưu phiên bản mới.',
+    ConsumerTerm.lifeMapMutationOffline:
+        'Không thể lưu. Thay đổi sức khỏe không được xếp hàng ngoại tuyến.',
+    ConsumerTerm.lifeMapDisputeTitle: 'Gửi để xem xét',
+    ConsumerTerm.lifeMapDisputeNotice:
+        'Tranh chấp không xóa thông tin. CLARA giữ nguồn và tạo một hàng đợi '
+            'xem xét. Thao tác này cần mạng.',
+    ConsumerTerm.lifeMapDisputeLabel:
+        'Vì sao thông tin này cần xem lại?',
+    ConsumerTerm.lifeMapDisputeSubmit: 'Gửi',
+    ConsumerTerm.lifeMapDisputeSubmitted:
+        'Đã đưa thông tin vào hàng đợi xem xét.',
     ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
     ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
     ConsumerTerm.medicinesSafety: 'An toàn',
@@ -1157,6 +1213,39 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapOneQuestion: 'One question',
     ConsumerTerm.lifeMapViewHistory: 'View history',
     ConsumerTerm.lifeMapLoadFailed: 'We could not load LifeMap. Try again.',
+    ConsumerTerm.lifeMapReplayLabel: 'Health Replay',
+    ConsumerTerm.lifeMapReplayFallbackTitle: 'LifeMap history',
+    ConsumerTerm.lifeMapReplayDescription:
+        'Each item shows the exact version and rule used. Corrections need a '
+            'network connection and are never queued offline.',
+    ConsumerTerm.lifeMapReplayStale:
+        'Some earlier results are being recalculated because source information changed.',
+    ConsumerTerm.lifeMapReplayEmptyTitle: 'No records yet',
+    ConsumerTerm.lifeMapReplayEmptyDescription:
+        'This journey has no information to review yet.',
+    ConsumerTerm.lifeMapReplayVersion: 'Version {revision}',
+    ConsumerTerm.lifeMapReplayWhy: 'Why this appears: {reason}',
+    ConsumerTerm.lifeMapReplayEdit: 'Correct information',
+    ConsumerTerm.lifeMapReplayDispute: 'Needs review',
+    ConsumerTerm.lifeMapReplayLoadFailed:
+        'We could not load the history. Try again with a network connection.',
+    ConsumerTerm.lifeMapCorrectionTitle: 'Correct information',
+    ConsumerTerm.lifeMapCorrectionNotice:
+        'This needs a network connection and creates a new version. The older '
+            'version remains in the history.',
+    ConsumerTerm.lifeMapCorrectionLabel: 'Correct information',
+    ConsumerTerm.lifeMapCorrectionSave: 'Save new version',
+    ConsumerTerm.lifeMapCorrectionSaved: 'New version saved.',
+    ConsumerTerm.lifeMapMutationOffline:
+        'We could not save this. Health changes are never queued offline.',
+    ConsumerTerm.lifeMapDisputeTitle: 'Send for review',
+    ConsumerTerm.lifeMapDisputeNotice:
+        'A dispute does not erase information. CLARA keeps the source and opens '
+            'a review queue. This action needs a network connection.',
+    ConsumerTerm.lifeMapDisputeLabel: 'Why does this information need review?',
+    ConsumerTerm.lifeMapDisputeSubmit: 'Send',
+    ConsumerTerm.lifeMapDisputeSubmitted:
+        'This information was sent to the review queue.',
     ConsumerTerm.medicinesMyMedicines: 'My medicines',
     ConsumerTerm.medicinesCabinet: 'Medicine cabinet',
     ConsumerTerm.medicinesSafety: 'Safety',

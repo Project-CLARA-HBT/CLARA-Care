@@ -846,6 +846,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             heightFactor: .85,
             child: _ReplaySheet(
               replay: replay,
+              copy: _copy,
               onCorrect: (event) async {
                 Navigator.of(sheetContext).pop();
                 final changed = await _correctReplayEvent(event);
@@ -863,7 +864,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tải lịch sử. Vui lòng thử lại khi có mạng.');
+      _showSnack(_copy[ConsumerTerm.lifeMapReplayLoadFailed]);
     }
   }
 
@@ -874,36 +875,35 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     final submitted = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Sửa thông tin'),
+        title: Text(_copy[ConsumerTerm.lifeMapCorrectionTitle]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Thao tác này cần kết nối mạng và tạo một phiên bản mới. '
-              'Phiên bản cũ vẫn được giữ trong lịch sử.',
-            ),
+            Text(_copy[ConsumerTerm.lifeMapCorrectionNotice]),
             const SizedBox(height: ClaraTokens.spaceMd),
             TextField(
               controller: controller,
               minLines: 2,
               maxLines: 5,
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Thông tin đúng'),
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.lifeMapCorrectionLabel],
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Hủy'),
+            child: Text(_copy[ConsumerTerm.medicinesCancel]),
           ),
           FilledButton(
             onPressed: () {
               final value = controller.text.trim();
               if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
             },
-            child: const Text('Lưu phiên bản mới'),
+            child: Text(_copy[ConsumerTerm.lifeMapCorrectionSave]),
           ),
         ],
       ),
@@ -918,14 +918,13 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         payload: <String, dynamic>{'text': submitted},
         reason: 'Người dùng sửa thông tin trong Replay',
       );
-      _showSnack('Đã lưu phiên bản mới.');
+      _showSnack(_copy[ConsumerTerm.lifeMapCorrectionSaved]);
       return true;
     } on ApiException catch (error) {
       _showSnack(error.message);
       return false;
     } catch (_) {
-      _showSnack(
-          'Không thể lưu. Thay đổi sức khỏe không được xếp hàng offline.');
+      _showSnack(_copy[ConsumerTerm.lifeMapMutationOffline]);
       return false;
     }
   }
@@ -937,23 +936,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     final submitted = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Gửi để xem xét'),
+        title: Text(_copy[ConsumerTerm.lifeMapDisputeTitle]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tranh chấp không xóa thông tin. CLARA giữ nguồn và tạo một '
-              'hàng đợi xem xét. Thao tác này cần mạng.',
-            ),
+            Text(_copy[ConsumerTerm.lifeMapDisputeNotice]),
             const SizedBox(height: ClaraTokens.spaceMd),
             TextField(
               controller: controller,
               minLines: 2,
               maxLines: 5,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Vì sao thông tin này cần xem lại?',
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.lifeMapDisputeLabel],
               ),
             ),
           ],
@@ -961,14 +957,14 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Hủy'),
+            child: Text(_copy[ConsumerTerm.medicinesCancel]),
           ),
           FilledButton(
             onPressed: () {
               final value = controller.text.trim();
               if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
             },
-            child: const Text('Gửi'),
+            child: Text(_copy[ConsumerTerm.lifeMapDisputeSubmit]),
           ),
         ],
       ),
@@ -985,14 +981,13 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       final disputes =
           await widget.apiClient.getLifeMapDisputes(accessToken: token);
       if (mounted) setState(() => _disputes = disputes);
-      _showSnack('Đã đưa thông tin vào hàng đợi xem xét.');
+      _showSnack(_copy[ConsumerTerm.lifeMapDisputeSubmitted]);
       return true;
     } on ApiException catch (error) {
       _showSnack(error.message);
       return false;
     } catch (_) {
-      _showSnack(
-          'Không thể gửi. Thay đổi sức khỏe không được xếp hàng offline.');
+      _showSnack(_copy[ConsumerTerm.lifeMapMutationOffline]);
       return false;
     }
   }
@@ -2447,11 +2442,13 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
 class _ReplaySheet extends StatelessWidget {
   const _ReplaySheet({
     required this.replay,
+    required this.copy,
     required this.onCorrect,
     required this.onDispute,
   });
 
   final Map<String, dynamic> replay;
+  final ConsumerTerminology copy;
   final Future<void> Function(Map<String, dynamic>) onCorrect;
   final Future<void> Function(Map<String, dynamic>) onDispute;
 
@@ -2477,21 +2474,22 @@ class _ReplaySheet extends StatelessWidget {
       ),
       children: [
         Text(
-          'Health Replay',
+          copy[ConsumerTerm.lifeMapReplayLabel],
           style: theme.textTheme.labelLarge?.copyWith(
             color: theme.colorScheme.primary,
           ),
         ),
         const SizedBox(height: ClaraTokens.spaceXs),
         Text(
-          episode is Map ? _str(episode['title']) : 'Lịch sử LifeMap',
+          episode is Map
+              ? _str(episode['title'])
+              : copy[ConsumerTerm.lifeMapReplayFallbackTitle],
           style: theme.textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
         Text(
-          'Mỗi mục hiển thị đúng phiên bản và quy tắc đã dùng. '
-          'Chỉnh sửa cần mạng và không được xếp hàng offline.',
+          copy[ConsumerTerm.lifeMapReplayDescription],
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -2502,7 +2500,7 @@ class _ReplaySheet extends StatelessWidget {
             liveRegion: true,
             child: ClaraCard.static_(
               child: Text(
-                'Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.',
+                copy[ConsumerTerm.lifeMapReplayStale],
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.error,
                 ),
@@ -2512,10 +2510,10 @@ class _ReplaySheet extends StatelessWidget {
         ],
         const SizedBox(height: ClaraTokens.spaceLg),
         if (events.isEmpty)
-          const ClaraEmptyState(
+          ClaraEmptyState(
             icon: Icons.history,
-            title: 'Chưa có bản ghi',
-            message: 'Hành trình này chưa có thông tin để xem lại.',
+            title: copy[ConsumerTerm.lifeMapReplayEmptyTitle],
+            message: copy[ConsumerTerm.lifeMapReplayEmptyDescription],
           )
         else
           ...events.whereType<Map>().map((raw) {
@@ -2533,7 +2531,12 @@ class _ReplaySheet extends StatelessWidget {
                       children: [
                         Chip(label: Text(_str(event['truth_state']))),
                         Chip(
-                          label: Text('Phiên bản ${_str(event['revision'])}'),
+                          label: Text(copy.format(
+                            ConsumerTerm.lifeMapReplayVersion,
+                            <String, Object?>{
+                              'revision': _str(event['revision']),
+                            },
+                          )),
                         ),
                       ],
                     ),
@@ -2546,7 +2549,10 @@ class _ReplaySheet extends StatelessWidget {
                     if (why is Map) ...[
                       const SizedBox(height: ClaraTokens.spaceXs),
                       Text(
-                        'Vì sao có mục này: ${_str(why['text'])}',
+                        copy.format(
+                          ConsumerTerm.lifeMapReplayWhy,
+                          <String, Object?>{'reason': _str(why['text'])},
+                        ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -2560,13 +2566,15 @@ class _ReplaySheet extends StatelessWidget {
                         TextButton.icon(
                           onPressed: () => onCorrect(event),
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Sửa thông tin'),
+                          label: Text(copy[ConsumerTerm.lifeMapReplayEdit]),
                         ),
                         if (_str(event['truth_state']) != 'disputed')
                           TextButton.icon(
                             onPressed: () => onDispute(event),
                             icon: const Icon(Icons.report_outlined, size: 18),
-                            label: const Text('Cần xem lại'),
+                            label: Text(
+                              copy[ConsumerTerm.lifeMapReplayDispute],
+                            ),
                           ),
                       ],
                     ),
