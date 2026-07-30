@@ -1,27 +1,17 @@
 # Vietnamese Clinical Language Layer v1
 
-`services/ml/src/clara_ml/nlp/vietnamese_clinical.py` is a deterministic,
-auditable pre-processing layer for Vietnamese clinical text. It retains the
-original text and emits normalized/folded text plus non-authoritative language
-cues: negation, experiencer, temporality, severity phrasing, units and a small
-medication-alias candidate set.
+`clara_ml.nlp_vi` provides the shared typed `ClinicalUtterance` packet for
+Vietnamese clinical text. It normalizes common variation and exposes bounded
+cues for negation, experiencer, temporality, severity, lab shorthand,
+allergy/adverse-effect wording, medication candidates, and emergency wording.
 
-It is deliberately **not** described as an SLM, neural model or clinical
-classifier. It must not diagnose, prescribe, choose access rights, write
-confirmed LifeMap state, replace DrugBank, or override the emergency fast-path.
-The existing router uses the same accent/stroke folding helper to prevent a
-Vietnamese spelling such as `đột quỵ` from bypassing deterministic emergency
-matching.
+The current implementation is explicitly `deterministic_fallback_v1`; it is
+not labelled an encoder, neural model, or calibrated clinical classifier. It
+does not diagnose, prescribe, decide access, or confirm a record. The task
+router uses its category/count projection only; free text does not enter
+aggregate route telemetry.
 
-Medication candidates are only an input to later clarification/DrugBank
-normalization. They are not a verified ingredient or DDI result. Ambiguous
-inputs remain unresolved and must be confirmed through the authoritative
-CareGuard source.
-
-Run the focused tests:
-
-```bash
-PYTHONPATH=services/ml/src pytest -q \
-  services/ml/tests/test_vietnamese_clinical.py \
-  services/ml/tests/test_router.py
-```
+An encoder SLM may replace individual extractors behind this contract after a
+versioned dataset, offline evaluation, shadow comparison and release gate are
+available. Deterministic emergency/legal/consent/DrugBank policy remains
+authoritative regardless of that future model.

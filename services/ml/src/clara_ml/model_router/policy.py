@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from clara_ml.nlp.vietnamese_clinical import analyze_vietnamese_clinical_text
+from clara_ml.nlp_vi import analyze_clinical_utterance
 from clara_ml.routing import RouteResult
 
 from .contracts import Language, Persona, RiskLevel, TaskName
@@ -65,14 +65,15 @@ def language_for_text(text: str) -> Language:
 def clinical_language_signals(text: str) -> dict[str, object]:
     """Return only no-PII clinical-language categories for route metadata."""
 
-    analysis = analyze_vietnamese_clinical_text(text)
+    analysis = analyze_clinical_utterance(text)
+    severity = analysis.severity[0].level if analysis.severity else None
     return {
-        "negated": analysis.negated,
-        "experiencer": analysis.experiencer,
-        "temporality": analysis.temporality,
-        "severity_cue": analysis.severity,
-        "unit_count": len(analysis.units),
-        "medication_candidate_count": len(analysis.medication_mentions),
+        "negated": bool(analysis.negated_entities),
+        "experiencer": "other" if analysis.experiencer == "family" else "self_or_unspecified",
+        "temporality": analysis.temporality[0].value if analysis.temporality else "unspecified",
+        "severity_cue": severity,
+        "unit_count": len(analysis.labs),
+        "medication_candidate_count": len(analysis.medications),
     }
 
 
