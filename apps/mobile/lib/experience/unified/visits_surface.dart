@@ -14,6 +14,7 @@
 // Vietnamese-first and PII-free.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
 import '../../core/consumer_terminology.dart';
@@ -88,6 +89,7 @@ class VisitsSurface extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     this.languageController,
+    this.useLifeMapDraft = false,
   });
 
   final ApiClient apiClient;
@@ -96,6 +98,11 @@ class VisitsSurface extends StatefulWidget {
   /// Optional app-level language state. Direct embedding remains
   /// Vietnamese-first when it is not supplied.
   final LanguageController? languageController;
+
+  /// When the server advertises `lifemap_vietnamese_drafts`, this surface is a
+  /// read-only/copy-only LifeMap draft flow.  When false it preserves the
+  /// established owner-controlled Visit lifecycle exactly.
+  final bool useLifeMapDraft;
 
   @override
   State<VisitsSurface> createState() => _VisitsSurfaceState();
@@ -116,16 +123,26 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
 
+  // --- Read-only LifeMap visit draft state ---------------------------------
+  final TextEditingController _draftGoalController = TextEditingController();
+  bool _creatingDraft = false;
+  LifeMapVisitPreparationDraft? _lifeMapDraft;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.useLifeMapDraft) {
+      _loading = false;
+    } else {
+      _load();
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _reasonController.dispose();
+    _draftGoalController.dispose();
     super.dispose();
   }
 
@@ -220,6 +237,75 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     }
   }
 
+  /// Calls only the server's read-only LifeMap draft endpoint.  The returned
+  /// object is retained in widget state for review/copy; it is never written
+  /// to a Visit, task, event, or confirmed health-record field.
+  Future<void> _createLifeMapDraft() async {
+    final token = _token;
+    if (token == null || _creatingDraft) return;
+    setState(() {
+      _creatingDraft = true;
+      _error = null;
+      _needsOnboarding = false;
+    });
+    try {
+      final draft = await widget.apiClient.createLifeMapVisitPreparationDraft(
+        accessToken: token,
+        request: LifeMapVisitPreparationDraftRequest(
+          query: _draftGoalController.text.trim(),
+          locale: _copy.locale,
+        ),
+      );
+      if (!mounted) return;
+      // This is a defence in depth check. A server response without the two
+      // safety declarations is not rendered as a draft even if a future API
+      // regression accidentally changes the endpoint response shape.
+      if (draft.status != 'emergency_escalation' &&
+          (!draft.draftOnly || !draft.requiresUserReview)) {
+        setState(() => _error = _copy[ConsumerTerm.visitDraftCreateFailed]);
+        return;
+      }
+      setState(() => _lifeMapDraft = draft);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      if (error.statusCode == 409) {
+        setState(() => _needsOnboarding = true);
+        return;
+      }
+      setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = _copy[ConsumerTerm.visitDraftCreateFailed]);
+      }
+    } finally {
+      if (mounted) setState(() => _creatingDraft = false);
+    }
+  }
+
+  String _draftForClipboard(LifeMapVisitPreparationDraft draft) {
+    final summary = draft.summary;
+    final lines = <String>[
+      draft.title,
+      if (summary?.importantNow.trim().isNotEmpty == true)
+        summary!.importantNow.trim(),
+      if (summary?.nextStep.trim().isNotEmpty == true) summary!.nextStep.trim(),
+      if (summary?.urgentHelp.trim().isNotEmpty == true)
+        summary!.urgentHelp.trim(),
+      ...draft.questionsToConsider
+          .map((question) => question.text.trim())
+          .where((text) => text.isNotEmpty)
+          .map((text) => '• $text'),
+    ];
+    return lines.where((line) => line.trim().isNotEmpty).join('\n\n');
+  }
+
+  Future<void> _copyLifeMapDraft() async {
+    final draft = _lifeMapDraft;
+    if (draft == null) return;
+    await Clipboard.setData(ClipboardData(text: _draftForClipboard(draft)));
+    if (mounted) _showSnack(_copy[ConsumerTerm.visitDraftCopied]);
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -269,12 +355,14 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
 
   Widget _buildRefreshableBody(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh:
+          widget.useLifeMapDraft ? _createLifeMapDraft : _load,
       child: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    if (widget.useLifeMapDraft) return _buildLifeMapDraftBody(context);
     if (_loading && _visits.isEmpty && !_needsOnboarding) {
       return ListView(
         children: const [
@@ -296,6 +384,288 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       );
     }
     return _buildLoaded(context);
+  }
+
+  Widget _buildLifeMapDraftBody(BuildContext context) {
+    if (_needsOnboarding) return _buildOnboardingPrompt(context);
+    if (_error != null) {
+      return ListView(
+        children: [
+          const SizedBox(height: ClaraTokens.spaceXl),
+          ErrorRetryView(message: _error!, onRetry: _createLifeMapDraft),
+        ],
+      );
+    }
+
+    final theme = Theme.of(context);
+    final draft = _lifeMapDraft;
+    final summary = draft?.summary;
+    final children = <Widget>[
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: SectionHeader(
+          title: _copy[ConsumerTerm.visitDraftTitle],
+          emphasize: true,
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: Text(
+          _copy[ConsumerTerm.visitDraftDescription],
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: ClaraCard.static_(child: _buildLifeMapDraftForm()),
+      ),
+    ];
+
+    if (draft != null) {
+      children
+        ..add(const SizedBox(height: ClaraTokens.spaceMd))
+        ..add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _buildDraftReviewNotice(theme),
+          ),
+        );
+      if (draft.status == 'emergency_escalation') {
+        children
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUrgentHelp],
+                body: draft.emergencyAnswer ?? '',
+                icon: Icons.emergency_outlined,
+              ),
+            ),
+          );
+      } else if (summary != null) {
+        children
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftImportantNow],
+                body: summary.importantNow,
+                icon: Icons.priority_high_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSources(context, summary),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftListSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUncertainty],
+                values: summary.uncertainty,
+                empty: _copy[ConsumerTerm.visitDraftNoUncertainty],
+                icon: Icons.help_outline,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftNextStep],
+                body: summary.nextStep,
+                icon: Icons.arrow_forward_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUrgentHelp],
+                body: summary.urgentHelp,
+                icon: Icons.emergency_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftListSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftQuestions],
+                values: draft.questionsToConsider
+                    .map((question) => question.text)
+                    .toList(growable: false),
+                empty: _copy[ConsumerTerm.visitDraftNoQuestions],
+                icon: Icons.question_answer_outlined,
+              ),
+            ),
+          );
+      }
+      children
+        ..add(const SizedBox(height: ClaraTokens.spaceMd))
+        ..add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ClaraButton.secondary(
+                label: _copy[ConsumerTerm.visitDraftCopy],
+                icon: Icons.copy_outlined,
+                onPressed: _copyLifeMapDraft,
+              ),
+            ),
+          ),
+        );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(
+        top: ClaraTokens.spaceMd,
+        bottom: ClaraTokens.spaceXl,
+      ),
+      children: children,
+    );
+  }
+
+  Widget _buildLifeMapDraftForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _draftGoalController,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: _copy[ConsumerTerm.visitDraftGoalLabel],
+            hintText: _copy[ConsumerTerm.visitDraftGoalHint],
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ClaraButton.primary(
+            label: _copy[ConsumerTerm.visitDraftCreate],
+            icon: Icons.auto_awesome_outlined,
+            loading: _creatingDraft,
+            onPressed: _createLifeMapDraft,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDraftReviewNotice(ThemeData theme) {
+    return ClaraCard.static_(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: theme.colorScheme.primary),
+          const SizedBox(width: ClaraTokens.spaceSm),
+          Expanded(
+            child: Text(
+              _copy[ConsumerTerm.visitDraftReviewNotice],
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDraftSection(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required IconData icon,
+  }) {
+    final theme = Theme.of(context);
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          if (body.trim().isNotEmpty) ...[
+            const SizedBox(height: ClaraTokens.spaceSm),
+            Text(body, style: theme.textTheme.bodyMedium),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDraftSources(
+    BuildContext context,
+    LifeMapVisitPreparationSummary summary,
+  ) {
+    final sources = summary.basedOn;
+    if (sources.isEmpty) {
+      return _buildDraftListSection(
+        context,
+        title: _copy[ConsumerTerm.visitDraftSources],
+        values: const <String>[],
+        empty: _copy[ConsumerTerm.visitDraftNoSources],
+        icon: Icons.source_outlined,
+      );
+    }
+    return _buildDraftListSection(
+      context,
+      title: _copy[ConsumerTerm.visitDraftSources],
+      values: sources.map((source) => source.text).toList(growable: false),
+      empty: _copy[ConsumerTerm.visitDraftNoSources],
+      icon: Icons.source_outlined,
+    );
+  }
+
+  Widget _buildDraftListSection(
+    BuildContext context, {
+    required String title,
+    required List<String> values,
+    required String empty,
+    required IconData icon,
+  }) {
+    final filtered = values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    final body = filtered.isEmpty
+        ? empty
+        : filtered.map((value) => '• $value').join('\n\n');
+    return _buildDraftSection(context, title: title, body: body, icon: icon);
   }
 
   Widget _buildOnboardingPrompt(BuildContext context) {

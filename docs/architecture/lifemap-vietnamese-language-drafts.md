@@ -11,6 +11,15 @@ one editable preparation step. The browser never persists the draft, health
 records, or capability result. A user may copy the draft for their own visit,
 but copy is not an export, a LifeMap command, or a confirmation action.
 
+The Unified mobile Today card follows the same server-authoritative capability.
+When `GET /api/v1/mobile/summary` grants `lifemap_vietnamese_drafts`, it opens
+one mobile preparation screen that calls the same endpoint and keeps the
+result only in widget memory for review or explicit clipboard copy. When the
+capability is absent, the card preserves the established Visits flow. The
+mobile client never creates a Visit, LifeMap event, task, revision or
+confirmation from this response. The emergency response is rendered as the
+server's escalation wording and is not locally paraphrased.
+
 The endpoint resolves the caller's LifeMap profile scope and medical consent
 before retrieving records. Its response contains only current revisions from
 that profile. It returns a consumer summary, exact cited source text, and

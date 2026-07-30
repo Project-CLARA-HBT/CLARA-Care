@@ -323,6 +323,25 @@ enum ConsumerTerm {
   visitsNameRequired,
   visitsLoadFailed,
   visitsCreateFailed,
+  visitDraftTitle,
+  visitDraftDescription,
+  visitDraftGoalLabel,
+  visitDraftGoalHint,
+  visitDraftCreate,
+  visitDraftCreating,
+  visitDraftReviewNotice,
+  visitDraftImportantNow,
+  visitDraftSources,
+  visitDraftNoSources,
+  visitDraftUncertainty,
+  visitDraftNoUncertainty,
+  visitDraftNextStep,
+  visitDraftUrgentHelp,
+  visitDraftQuestions,
+  visitDraftNoQuestions,
+  visitDraftCopy,
+  visitDraftCopied,
+  visitDraftCreateFailed,
   visitDetailPreparationNotice,
   visitDetailConcernsTitle,
   visitDetailConcernLabel,
@@ -1037,6 +1056,33 @@ class ConsumerTerminology {
         'Không thể tải danh sách buổi khám. Vui lòng thử lại.',
     ConsumerTerm.visitsCreateFailed:
         'Không thể tạo buổi khám. Vui lòng thử lại.',
+    ConsumerTerm.visitDraftTitle: 'Bản nháp chuẩn bị buổi khám',
+    ConsumerTerm.visitDraftDescription:
+        'Tạo bản nháp riêng tư từ các ghi nhận LifeMap để bạn xem, sửa và mang theo khi đi khám.',
+    ConsumerTerm.visitDraftGoalLabel:
+        'Bạn muốn chuẩn bị điều gì cho buổi khám?',
+    ConsumerTerm.visitDraftGoalHint:
+        'Ví dụ: Tôi muốn trao đổi các ghi nhận đau đầu gần đây.',
+    ConsumerTerm.visitDraftCreate: 'Tạo bản nháp',
+    ConsumerTerm.visitDraftCreating: 'Đang tạo bản nháp…',
+    ConsumerTerm.visitDraftReviewNotice:
+        'Đây là bản nháp để bạn tự xem và chỉnh sửa. Nó không thay đổi hồ sơ sức khỏe.',
+    ConsumerTerm.visitDraftImportantNow: 'Điều quan trọng nhất',
+    ConsumerTerm.visitDraftSources: 'CLARA dựa vào thông tin nào',
+    ConsumerTerm.visitDraftNoSources:
+        'Chưa có ghi nhận phù hợp trong phạm vi đã chọn.',
+    ConsumerTerm.visitDraftUncertainty: 'Phần chưa chắc chắn',
+    ConsumerTerm.visitDraftNoUncertainty:
+        'Không có điểm chưa chắc chắn được nêu trong bản nháp này.',
+    ConsumerTerm.visitDraftNextStep: 'Bạn có thể làm gì tiếp theo',
+    ConsumerTerm.visitDraftUrgentHelp: 'Khi nào cần hỗ trợ khẩn cấp',
+    ConsumerTerm.visitDraftQuestions: 'Câu hỏi để cân nhắc khi đi khám',
+    ConsumerTerm.visitDraftNoQuestions:
+        'Chưa có câu hỏi từ các ghi nhận hiện có.',
+    ConsumerTerm.visitDraftCopy: 'Sao chép bản nháp',
+    ConsumerTerm.visitDraftCopied: 'Đã sao chép bản nháp.',
+    ConsumerTerm.visitDraftCreateFailed:
+        'Không thể tạo bản nháp. Vui lòng kiểm tra kết nối và thử lại.',
     ConsumerTerm.visitDetailPreparationNotice:
         'CLARA giúp chuẩn bị cho cuộc trao đổi với bác sĩ, không chẩn đoán hay '
             'kê đơn. Chỉ nội dung bạn tự chọn và duyệt mới được sử dụng.',
@@ -1758,6 +1804,32 @@ class ConsumerTerminology {
     ConsumerTerm.visitsLoadFailed: 'We could not load your visits. Try again.',
     ConsumerTerm.visitsCreateFailed:
         'We could not create the visit. Try again.',
+    ConsumerTerm.visitDraftTitle: 'Visit preparation draft',
+    ConsumerTerm.visitDraftDescription:
+        'Create a private draft from LifeMap records to review, edit, and bring to your visit.',
+    ConsumerTerm.visitDraftGoalLabel: 'What would you like to prepare for?',
+    ConsumerTerm.visitDraftGoalHint:
+        'For example: I want to discuss my recent headache records.',
+    ConsumerTerm.visitDraftCreate: 'Create draft',
+    ConsumerTerm.visitDraftCreating: 'Creating draft…',
+    ConsumerTerm.visitDraftReviewNotice:
+        'This is a draft for you to review and edit. It does not change your health record.',
+    ConsumerTerm.visitDraftImportantNow: 'Most important right now',
+    ConsumerTerm.visitDraftSources: 'What CLARA used',
+    ConsumerTerm.visitDraftNoSources:
+        'There are no matching records in the selected scope yet.',
+    ConsumerTerm.visitDraftUncertainty: 'What is uncertain',
+    ConsumerTerm.visitDraftNoUncertainty:
+        'This draft does not identify an uncertainty.',
+    ConsumerTerm.visitDraftNextStep: 'What you can do next',
+    ConsumerTerm.visitDraftUrgentHelp: 'When to seek urgent help',
+    ConsumerTerm.visitDraftQuestions: 'Questions to consider at your visit',
+    ConsumerTerm.visitDraftNoQuestions:
+        'There are no questions from the current records yet.',
+    ConsumerTerm.visitDraftCopy: 'Copy draft',
+    ConsumerTerm.visitDraftCopied: 'Draft copied.',
+    ConsumerTerm.visitDraftCreateFailed:
+        'We could not create the draft. Check your connection and try again.',
     ConsumerTerm.visitDetailPreparationNotice:
         'CLARA helps you prepare for a conversation with your doctor; it does '
             'not diagnose or prescribe. Only content you choose and approve is used.',

@@ -181,7 +181,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             onAskHealth: () => _openChat(context, resolver),
             onCheckMedicines: () => _openMedicines(context, resolver),
             onSaveHealthInfo: () => _openHealthProfile(context, resolver),
-            onPrepareVisit: () => _openVisitPreparation(context),
+            onPrepareVisit: () => _openVisitPreparation(context, resolver),
             readCache: _lifeMapReadCache,
             languageController: widget.languageController,
           ),
@@ -275,13 +275,17 @@ class _UnifiedRootState extends State<UnifiedRoot> {
     );
   }
 
-  void _openVisitPreparation(BuildContext context) {
+  void _openVisitPreparation(
+    BuildContext context,
+    MobileFeatureFlagResolver resolver,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => VisitsSurface(
           apiClient: widget.apiClient,
           sessionStore: widget.sessionStore,
           languageController: widget.languageController,
+          useLifeMapDraft: resolver.lifeMapVietnameseDraftsEnabled,
         ),
       ),
     );
