@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `1dbe8c1f` through `43102b4a`. Per the current user direction, this
+including `8bd27232` through `b0ac6e40`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -42,7 +42,17 @@ This implementation pass strengthened CLARA's safety and evidence boundaries:
 - expanded catalog-backed Vietnamese/English wording across login/onboarding,
   Research, Community, Scribe, administrative RAG, and the corresponding
   Unified/Redesign mobile journeys (chat, profile/PHR, evidence, connected
-  health, community, Settings and More).
+  health, community, Settings and More);
+- added a generated web/mobile consumer-terminology contract, localized the
+  Council setup/review/result journey and the guided medicine-entry flow, and
+  extended the Unified mobile LifeMap flow through capture, replay, review,
+  question and baseline steps;
+- preserved the requested UI locale when the normal clinical-answer path
+  builds its independently verified structured explanation;
+- excluded records explicitly marked retracted by external Research sources
+  before they reach the RAG evidence set; and
+- added a read-only comparison of immutable LifeMap revisions. It does not
+  mutate truth-state, provenance, confirmation state or revision history.
 
 The repository already contained significant LifeMap, CareGuard, Council,
 Research and mobile work. The work above integrates with those safety
@@ -71,20 +81,20 @@ closed JSON and is followed by deterministic safety policy.
 | PR | Status | Evidence / limitation |
 | --- | --- | --- |
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
-| PR-02 i18n | partial | Typed vi/en catalog now covers the authenticated shell, auth/onboarding, Today, consumer chat, consent, LifeMap review, Medicines, Living Evidence, Research/source hub, Community, Scribe and administrative RAG web flows. Unified/Redesign mobile catalog work now also covers onboarding, chat, LifeMap, Medicines/cabinet, visits, family, profile/PHR, living evidence, connected health, community, Settings and More. Locale-aware dates/numbers were added where these surfaces own them. Static strings and other web/mobile domain surfaces remain; no fresh verification was run for these localization commits. |
+| PR-02 i18n | partial | Typed vi/en catalog now covers the authenticated shell, auth/onboarding, Today, consumer chat, consent, LifeMap review, Medicines (including guided entry), Living Evidence, Research/source hub, Community, Scribe, Council setup/review/result and administrative RAG web flows. `fca5fba9` adds a generated web/mobile consumer-terminology contract. Unified/Redesign mobile catalog work now also covers onboarding, chat, LifeMap capture/replay/review/questions/baselines, Medicines/cabinet, visits, family, profile/PHR, living evidence, connected health, community, Settings and More. Locale-aware dates/numbers were added where these surfaces own them. Static strings and other web/mobile domain surfaces remain; no fresh verification was run for these localization commits. |
 | PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
-| PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit/ask, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis and Research planning/reasoning use registry task contracts. `8bd27232` removes the explicit Research/RAG runtime override seam and ignores historical Control Tower/provider JSON keys, so request payloads and queued jobs cannot select a provider, endpoint, model or key. The governed configuration routes V4 Pro to safety/reasoning and V4 Flash to bounded extraction/reranking/planning; deployment validation requires the distinct profiles, DeepSeek-only mode and task routing. `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single configured DeepSeek model, while explicit rollback selects a known prior model. Runtime deployment remains unverified. |
-| PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. The hybrid-router shadow contract now carries only categorical/count language signals (never source text). No encoder SLM is bundled. |
-| PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. Safe chat intents and LifeMap ask requests have governed V4 task paths, but deterministic emergency/legal policy remains authoritative. `clara_ml.model_router` supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
-| PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. A reviewed human-usability score remains unmeasured. |
+| PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit/ask, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis and Research planning/reasoning use registry task contracts. `8bd27232` removes the explicit Research/RAG runtime override seam and ignores historical Control Tower/provider JSON keys, so request payloads and queued jobs cannot select a provider, endpoint, model or key. `59e63b90` makes the optional external Encoder-SLM shadow adapter resolve exclusively through its closed, shadow-only registry contract. The governed configuration routes V4 Pro to safety/reasoning and V4 Flash to bounded extraction/reranking/planning; deployment validation requires the distinct profiles, DeepSeek-only mode and task routing. `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single configured DeepSeek model, while explicit rollback selects a known prior model. Runtime deployment remains unverified. |
+| PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases; `70cc2877` expands the deterministic fallback clinical-language layer. The hybrid-router shadow contract carries only categorical/count language signals (never source text). No evaluated encoder SLM is bundled. |
+| PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. Safe chat intents and LifeMap ask requests have governed V4 task paths, but deterministic emergency/legal policy remains authoritative. `clara_ml.model_router` supplies a typed metadata-only shadow route; the external Encoder-SLM is still default-off and cannot alter a deterministic emergency/legal outcome, authorization, consent, DrugBank or confirmed LifeMap write. An evaluated encoder/SLM classifier is not installed. |
+| PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. `fba3e639` preserves the selected UI locale in the normal response path as well as the emergency path. A reviewed human-usability score remains unmeasured. |
 | PR-08 CareGuard | partial/pre-existing | DrugBank SQLite readiness/fail-closed path exists. `d12d15e0` requires source release/hash, canonical manifest digest, per-shard checksums and matching DDI **and** dictionary table counts before a strict full release is authoritative; deterministic Vietnamese alias matches expose DrugBank/RxCUI traceability without guessing. The deployment environment guard rejects a strict rollout without a real mounted artifact directory, SQLite, manifest integrity or required paths. Feature-flagged `CAREGUARD_WORDING_RENDERER_ENABLED` adds an optional consumer explanation only after final deterministic facts, through the fidelity verifier; it neither reads raw medication names nor changes DrugBank/risk/alerts/recommendation. Licensed full-DrugBank benchmark data is unavailable in this checkout. |
 | PR-09 Scribe | implemented safety correction in code | `eaa749c0` removes automatic code/R69 and uncalibrated percentage. `0c6b268d` additionally requires consent for clinician-edit mutations and applies version-aware edit conflict handling. The new endpoint and client tests were added but not run in this checkpoint. |
-| PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. `ee156724` removes reasoning-trace fields from ML streaming/client presentation; it does not establish a clinical specialist evaluation. |
-| PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist. `9ce7d6d3` makes synchronous Research responses pass the verifier gate before release. A reviewed RAG gold set and current regression execution are absent. |
-| PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist. `6294386d` adds a governed V4 LifeMap ask path that is read-only and retains the existing confirmation/truth-state boundary. Broader NL-query/visit-summary evaluation needs approved cases. |
+| PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. `ee156724` removes reasoning-trace fields from ML streaming/client presentation; `d153d79b` suppresses uncalibrated intake confidence; `89b1aade` and `8fdfac33` localize the setup, review and result journey. These changes do not establish a clinical specialist evaluation. |
+| PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist. `9ce7d6d3` makes synchronous Research responses pass the verifier gate before release. `9f71e9fd` filters explicitly retracted external records before final RAG evidence selection. A reviewed RAG gold set and current regression execution are absent. |
+| PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist. `6294386d` adds a governed V4 LifeMap ask path that is read-only and retains the existing confirmation/truth-state boundary. `47162ccc` adds a read-only comparison between immutable revision snapshots, without modifying source revisions or truth-state. Broader NL-query/visit-summary evaluation needs approved cases. |
 | PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. `59722a20` adds metric-specific evidence gaps and exact measurement commands for all six judge headlines. Product quality metrics remain `not_measured` until approved data/execution exists. |
 | PR-14 security/ops | partial | Release gate now fails closed on missing locked evidence. Security checkpoints upgrade Axios and its HTTP/form transitive closure, Next 15.5.22, Mermaid 10.9.6, DOMPurify 3.4.12, UUID 14.0.1 and Playwright 1.62.0. `012e0b5b` wires Scribe stage flags, ASR controls, Encoder-SLM shadow controls and CareGuard wording controls into both application compose variants instead of relying on `--env-file` substitution alone; its environment guard also rejects an unprovisioned strict DrugBank mount. The existing guard rejects a deployment environment that lacks governed V4 Pro/Flash configuration, DeepSeek-only mode or enabled task routing. CI now requires web Vitest and production-artifact Playwright E2E gates when web/CI changes; the local production-dependency audit historical record decreased from 11 (7 high, 4 moderate) to 3 high, all in the Next/PostCSS/Sharp chain without a compatible audit-proposed fix. Restore/security certification evidence, current scan results and the remaining dependency remediation remain external/ongoing work. |
-| PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. In addition to the shell/Profile hub locale checkpoints, catalog work covers onboarding, chat, LifeMap planning, Medicines hub/cabinet, Visits, Family/visit detail, PHR, living evidence, connected health, community, Settings and More. A shared generated web/mobile catalog, device E2E execution and fresh verification of these commits remain outstanding. |
+| PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. In addition to the shell/Profile hub locale checkpoints, catalog work covers onboarding, chat, LifeMap planning/capture/replay/review/questions/baselines, Medicines hub/cabinet, Visits, Family/visit detail, PHR, living evidence, connected health, community, Settings and More. `fca5fba9` provides a generated shared consumer-terminology contract rather than claiming a fully shared UI catalog. Device E2E execution and fresh verification of these commits remain outstanding. |
 
 ## Features and safety invariants preserved
 
@@ -129,8 +139,11 @@ review, E2E run or deployment was run after the following newer commits:
 `2b0bf003`, `cc60d16d`, `6cf1bc39`, `1dbe8c1f`, `6364da91`, `5f8151e0`,
 `8bd27232`, `daf1e551`, `1bf5a214`, `d12d15e0`, `012e0b5b`, `511107f9`,
 `4e898cab`, `33cb11ec`, `b15210a2`, `f1eb4fa2`, `26547a8f`, `a4989c14` and
-`3d90e878`, `43102b4a`. Tests added in those commits are therefore **not run**, rather
-than pass or fail.
+`3d90e878`, `43102b4a`, `1b6c7cbd`, `85c8e5b4`, `027423b1`, `d153d79b`,
+`70cc2877`, `59e63b90`, `fca5fba9`, `c872746c`, `9f71e9fd`, `c4249152`,
+`59037f19`, `47162ccc`, `89b1aade`, `c0ac3777`, `3628db26`, `8fdfac33`,
+`d6a5abc5`, `fba3e639`, `f24ee6f4` and `b0ac6e40`. Tests added in those
+commits are therefore **not run**, rather than pass or fail.
 
 Historical executions:
 
@@ -198,7 +211,7 @@ There are no measured before/after clinical or cost/latency improvements.
 
 ## Data migrations and rollback
 
-No database migration was added in these checkpoints. Roll back a checkpoint
+No database migration was added in these latest checkpoints. Roll back a checkpoint
 by deploying its prior commit after preserving the current database and audit
 trail; do not rewrite history. For a governed V4 task-routing incident, first
 set `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` to use the legacy single
@@ -218,11 +231,11 @@ testing resumes. Disable the force flag after recovery.
    aggregate routing telemetry and run `make eval-nightly`.
 4. Full web/domain-page i18n and common mobile terminology are not yet fully
    catalog-backed. Recent auth/onboarding, chat, consent, LifeMap, Medicines,
-   Research, Community, Scribe/admin RAG, PHR/evidence, connected-health and
-   Settings/More checkpoints make substantial progress, but the catalog source
-   is not yet shared/generated across web and mobile. Continue migration
-   surface by surface with parity tests; do not label it complete before scanner
-   scope covers them.
+   Research, Community, Council, Scribe/admin RAG, PHR/evidence,
+   connected-health and Settings/More checkpoints make substantial progress.
+   A generated consumer-terminology contract now exists, but it is not a full
+   shared/generated UI catalog. Continue migration surface by surface with
+   parity tests; do not label it complete before scanner scope covers them.
 5. RAG synthesis, reranking, NLI verification and Research planning/reasoning
    are registry-bound, and historical provider/runtime JSON inputs are ignored.
    The refactor has not received a fresh full authorization, contract or
