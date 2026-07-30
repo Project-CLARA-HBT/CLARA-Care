@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `8ca4f4c7`. Per the current user direction, this
+including `8bd27232` through `3f33a751`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -143,6 +143,14 @@ safety policy.
 - `4bf1a47f`, `524b9b02` and `ec306759`: typed vi/en migration now includes
   Chat V2 shell chrome, a bounded legacy workspace sidebar and the Research
   workspace. This is still not a claim of all-page i18n completion.
+- `14414393`: the asynchronous mobile visit-preparation review-only notice is
+  announced as a live accessibility region without changing the draft data or
+  its consent/capability conditions.
+- `8583b8e6`: Research citation trace/registry rows require a real retrieved
+  context binding; stale or injected labels cannot anchor a claim.
+- `3f33a751`: Council's shadow-specialist contract is now constrained to
+  bound evidence findings and non-prescriptive actions that cannot undercut
+  its proposed triage level. The path remains unreleased shadow evidence.
 
 All of these checkpoints have static whitespace evidence only in this pass;
 their tests, builds, evaluation and deployment remain deferred by instruction.
@@ -199,7 +207,8 @@ fail.
 
 The same no-run status applies to the subsequent implementation checkpoints
 `d53af25a`, `a4b9458c`, `99a69fbe`, `4bf1a47f`, `eda8b7d6`, `00993943`,
-`524b9b02`, `ec306759`, `1f06dab6` and `8ca4f4c7`. Their pull-request notes
+`524b9b02`, `ec306759`, `1f06dab6`, `8ca4f4c7`, `14414393`, `8583b8e6` and
+`3f33a751`. Their pull-request notes
 record only static whitespace checks; they are not evidence of runtime health.
 
 Historical executions:

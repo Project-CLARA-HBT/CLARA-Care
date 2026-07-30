@@ -40,6 +40,12 @@ recorded as implementation evidence, not release evidence.
   shell, a bounded legacy workspace sidebar, and Research workspace. These
   are incremental i18n improvements, not a claim that every domain page has
   completed migration.
+- `14414393` makes the asynchronous mobile visit-preparation safety notice a
+  screen-reader live region; `8583b8e6` requires every Research citation trace
+  to bind to retrieved context; and `3f33a751` constrains the Council shadow
+  specialist contract to source-bound findings and non-prescriptive action
+  classes that cannot undercut its own triage. None changes a released
+  diagnostic, treatment, authorization or LifeMap decision.
 
 No format/lint/type/test/build/eval/deploy command was run for these additions.
 Only static whitespace checks were recorded before their commits.
