@@ -2210,7 +2210,9 @@ export default function ChatWorkspacePage() {
   };
 
   const onRenameFolder = async (folder: WorkspaceFolder) => {
-    const name = parsePromptText(window.prompt("Đổi tên folder", folder.name));
+    const name = parsePromptText(
+      window.prompt(t(uiLanguage, "chat.legacyWorkspace.folder.renamePrompt"), folder.name)
+    );
     if (!name) return;
     try {
       const updated = await updateWorkspaceFolder(folder.id, { name });
@@ -2222,7 +2224,9 @@ export default function ChatWorkspacePage() {
   };
 
   const onDeleteFolder = async (folder: WorkspaceFolder) => {
-    const confirmed = window.confirm(`Xóa folder "${folder.name}"?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.folder.deleteConfirm", { name: folder.name })
+    );
     if (!confirmed) return;
     try {
       await deleteWorkspaceFolder(folder.id);
@@ -2502,28 +2506,28 @@ export default function ChatWorkspacePage() {
     return [
       {
         id: "new-chat",
-        label: "Chat mới",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.newChat"),
         hint: "Ctrl/⌘+Shift+N",
         keywords: ["new", "chat", "conversation"],
         run: () => createNewConversation(),
       },
       {
         id: "focus-search",
-        label: "Tìm trong workspace",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.focusSearch"),
         hint: "Ctrl/⌘+K",
         keywords: ["focus", "search", "workspace"],
         run: () => focusById("workspace-search"),
       },
       {
         id: "focus-composer",
-        label: "Nhập câu hỏi",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.focusComposer"),
         hint: "/",
         keywords: ["focus", "composer", "input", "prompt"],
         run: () => focusById("chat-composer-input"),
       },
       {
         id: "mode-fast",
-        label: "Đổi chế độ: Nhanh",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modeFast"),
         keywords: ["mode", "fast", "research"],
         run: () => {
           applyResearchMode("fast");
@@ -2532,32 +2536,32 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "mode-deep",
-        label: "Đổi chế độ: Tư duy",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modeDeep"),
         keywords: ["mode", "deep", "research"],
         run: () => applyResearchMode("deep"),
       },
       {
         id: "mode-deep-beta",
-        label: "Đổi chế độ: Pro",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modePro"),
         keywords: ["mode", "deep", "beta", "research"],
         run: () => applyResearchMode("deep_beta"),
       },
       {
         id: "stack-auto",
-        label: "Nguồn: Tự chọn",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.sourcesAuto"),
         keywords: ["retrieval", "stack", "auto"],
         run: () => setSelectedRetrievalStackMode("auto"),
       },
       {
         id: "stack-full",
-        label: "Nguồn: Đầy đủ",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.sourcesFull"),
         disabled: isFastResearchMode,
         keywords: ["retrieval", "stack", "full"],
         run: () => setSelectedRetrievalStackMode("full"),
       },
       {
         id: "export-docx",
-        label: "Xuất báo cáo (DOCX)",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.exportDocx"),
         disabled: !canExport,
         keywords: ["export", "docx", "word"],
         run: () => {
@@ -2566,7 +2570,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "export-markdown",
-        label: "Xuất hội thoại ra Markdown",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.exportMarkdown"),
         disabled: !canExport,
         keywords: ["export", "markdown", "md"],
         run: () => {
@@ -2575,7 +2579,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "share-active",
-        label: "Create public share link",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.share"),
         disabled: !canShare,
         keywords: ["share", "public", "link"],
         run: () => {
@@ -2584,7 +2588,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "revoke-share",
-        label: "Revoke active share link",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.revokeShare"),
         disabled: !canShare || !shareInfo,
         keywords: ["share", "revoke", "public"],
         run: () => {
@@ -2593,7 +2597,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "save-note",
-        label: "Save latest answer as note draft",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.saveNote"),
         disabled: !hasLatestAnswer,
         keywords: ["note", "save", "latest", "answer"],
         run: () => {
@@ -2602,7 +2606,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "open-shares-page",
-        label: "Open shares manager",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.openShares"),
         keywords: ["shares", "manager", "public"],
         run: () => {
           window.location.href = "/chat/shares";
@@ -2621,6 +2625,7 @@ export default function ChatWorkspacePage() {
     onRevokeShareActiveConversation,
     onShareActiveConversation,
     shareInfo,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
   const filteredCommandActions = useMemo(() => {
@@ -3342,14 +3347,14 @@ export default function ChatWorkspacePage() {
             <section className="min-h-0 overflow-x-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  {isEnglishUI ? "Notes" : "Ghi chú"}
+                  {t(uiLanguage, "chat.legacyWorkspace.notes.title")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void onCreateInlineNote(false)}
                   className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                 >
-                  {isEnglishUI ? "+ Draft" : "+ Nháp"}
+                  + {t(uiLanguage, "chat.legacyWorkspace.notes.draft")}
                 </button>
               </div>
               {(noteTitleDraft || noteMarkdownDraft || editingNoteId !== null) ? (
@@ -3357,19 +3362,22 @@ export default function ChatWorkspacePage() {
                   <input
                     value={noteTitleDraft}
                     onChange={(event) => setNoteTitleDraft(event.target.value)}
-                    placeholder="Tiêu đề note"
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.titlePlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.titlePlaceholder")}
                     className="min-h-[32px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                   />
                   <textarea
                     value={noteMarkdownDraft}
                     onChange={(event) => setNoteMarkdownDraft(event.target.value)}
-                    placeholder="Nội dung markdown"
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.contentPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.contentPlaceholder")}
                     className="min-h-[74px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5 text-[11px] text-[var(--text-primary)]"
                   />
                   <input
                     value={noteTagsDraft}
                     onChange={(event) => setNoteTagsDraft(event.target.value)}
-                    placeholder="tags: warfarin, ddi,..."
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.tagsPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.tagsPlaceholder")}
                     className="min-h-[32px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                   />
                   <div className="flex items-center justify-end gap-1.5">
@@ -3383,14 +3391,14 @@ export default function ChatWorkspacePage() {
                       }}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                     >
-                      Clear
+                      {t(uiLanguage, "chat.legacyWorkspace.notes.clear")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void onSaveNoteDraft()}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                     >
-                      Save
+                      {t(uiLanguage, "chat.legacyWorkspace.notes.save")}
                     </button>
                   </div>
                 </div>
@@ -3405,28 +3413,32 @@ export default function ChatWorkspacePage() {
                   {displayedNotes.slice(0, 10).map((note) => (
                     <li key={note.id} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2">
                       <p className="line-clamp-1 break-words text-xs font-semibold text-[var(--text-primary)]">{note.title}</p>
-                      <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{note.summary || note.content_markdown || "(Trống)"}</p>
+                      <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">
+                        {note.summary || note.content_markdown || t(uiLanguage, "chat.legacyWorkspace.notes.emptyContent")}
+                      </p>
                       <div className="mt-1.5 flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => onEditNote(note)}
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Edit
+                          {t(uiLanguage, "chat.legacyWorkspace.notes.edit")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onDeleteNote(note)}
                           className="rounded border border-rose-300/70 px-1.5 py-0.5 text-[10px] text-rose-600"
                         >
-                          Del
+                          {t(uiLanguage, "chat.legacyWorkspace.notes.delete")}
                         </button>
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-[var(--text-muted)]">Chưa có note.</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.legacyWorkspace.notes.empty")}
+                </p>
               )}
             </section>
             ) : null}
@@ -4047,19 +4059,20 @@ export default function ChatWorkspacePage() {
           <div className="fixed inset-0 z-[68] flex items-start justify-center bg-slate-950/40 px-4 pt-[8vh] backdrop-blur-sm">
             <button
               type="button"
-              aria-label="Đóng scope manager"
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
               onClick={() => setIsScopeManagerOpen(false)}
               className="absolute inset-0"
             />
             <div className="relative w-full max-w-3xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-2xl">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Scope Manager
+                  {t(uiLanguage, "chat.legacyWorkspace.folder.managerTitle")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsScopeManagerOpen(false)}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
+                  aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
                 >
                   ✕
                 </button>
@@ -4067,19 +4080,25 @@ export default function ChatWorkspacePage() {
 
               <div className="mb-3 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.count")}
+                  </p>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{folders.length}</p>
                 </div>
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Filter</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.filter")}
+                  </p>
                   <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">
                     {selectedFolderFilterId
-                      ? folders.find((folder) => folder.id === selectedFolderFilterId)?.name || "Custom"
-                      : "All folders"}
+                      ? folders.find((folder) => folder.id === selectedFolderFilterId)?.name || t(uiLanguage, "chat.legacyWorkspace.folder.custom")
+                      : t(uiLanguage, "chat.legacyWorkspace.folder.allOption")}
                   </p>
                 </div>
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Selected chats</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.selectedChats")}
+                  </p>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{selectedConversationIds.length}</p>
                 </div>
               </div>
@@ -4089,7 +4108,8 @@ export default function ChatWorkspacePage() {
                   <input
                     value={scopeFolderDraft}
                     onChange={(event) => setScopeFolderDraft(event.target.value)}
-                    placeholder="Tên folder mới..."
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.newPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.folder.newPlaceholder")}
                     className="min-h-[38px] flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
                   />
                   <button
@@ -4097,21 +4117,22 @@ export default function ChatWorkspacePage() {
                     onClick={() => void onCreateFolder()}
                     className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
                   >
-                    + Create folder
+                    + {t(uiLanguage, "chat.legacyWorkspace.folder.create")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedFolderFilterId(null)}
                     className="inline-flex min-h-[38px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
                   >
-                    Clear filter
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.clearFilter")}
                   </button>
                 </div>
 
                 <input
                   value={folderManagerSearch}
                   onChange={(event) => setFolderManagerSearch(event.target.value)}
-                  placeholder="Tìm folder..."
+                  aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.searchPlaceholder")}
+                  placeholder={t(uiLanguage, "chat.legacyWorkspace.folder.searchPlaceholder")}
                   className="min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
                 />
 
@@ -4122,10 +4143,10 @@ export default function ChatWorkspacePage() {
                       onClick={() => setSelectedFolderFilterId(null)}
                       className="line-clamp-1 text-left text-sm font-semibold text-[var(--text-primary)] hover:text-cyan-700"
                     >
-                      All folders
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.allOption")}
                     </button>
                     <span className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-muted)]">
-                      Filter reset
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.reset")}
                     </span>
                   </div>
 
@@ -4152,7 +4173,7 @@ export default function ChatWorkspacePage() {
                           onClick={() => setSelectedFolderFilterId(folder.id)}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
-                          Filter
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.filter")}
                         </button>
                         <button
                           type="button"
@@ -4160,7 +4181,7 @@ export default function ChatWorkspacePage() {
                           onClick={() => void onUpdateActiveConversationMeta({ folderId: folder.id })}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Assign active
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.assignActive")}
                         </button>
                         <button
                           type="button"
@@ -4168,28 +4189,28 @@ export default function ChatWorkspacePage() {
                           onClick={() => void applyBulkMetaUpdate({ folderId: folder.id })}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Assign selected
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.assignSelected")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onRenameFolder(folder)}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
-                          Edit
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.edit")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onDeleteFolder(folder)}
                           className="rounded border border-rose-300/70 px-2 py-1 text-[11px] text-rose-600"
                         >
-                          Delete
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.delete")}
                         </button>
                       </div>
                     </div>
                   ))}
                   {!folderManagerItems.length ? (
                     <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
-                      Không tìm thấy folder phù hợp.
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.empty")}
                     </p>
                   ) : null}
                 </div>
@@ -4201,7 +4222,7 @@ export default function ChatWorkspacePage() {
           <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/45 px-4 pt-[10vh] backdrop-blur-sm">
             <button
               type="button"
-              aria-label="Đóng command palette"
+              aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
               onClick={() => {
                 setIsCommandPaletteOpen(false);
                 setCommandPaletteQuery("");
@@ -4211,7 +4232,7 @@ export default function ChatWorkspacePage() {
             <div className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-2xl">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Command Palette
+                  {t(uiLanguage, "chat.commandPalette.title")}
                 </p>
                 <button
                   type="button"
@@ -4220,6 +4241,7 @@ export default function ChatWorkspacePage() {
                     setCommandPaletteQuery("");
                   }}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
+                  aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
                 >
                   ✕
                 </button>
@@ -4242,7 +4264,8 @@ export default function ChatWorkspacePage() {
                     executeCommandAction(first);
                   }
                 }}
-                placeholder="Tìm hành động... (new chat, export docx, share...)"
+                aria-label={t(uiLanguage, "chat.commandPalette.searchLabel")}
+                placeholder={t(uiLanguage, "chat.commandPalette.searchPlaceholder")}
                 className="min-h-[42px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               <div className="mt-2 max-h-[58vh] space-y-1 overflow-y-auto pr-1">
@@ -4265,7 +4288,7 @@ export default function ChatWorkspacePage() {
                   ))
                 ) : (
                   <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-4 text-sm text-[var(--text-muted)]">
-                    Không có action phù hợp.
+                    {t(uiLanguage, "chat.commandPalette.noMatches")}
                   </p>
                 )}
               </div>
