@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  formatLocaleDate,
+  t,
+  type UITranslationKey,
+} from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import type { UseWorkspace } from "@/app/chat/_v2/hooks/useWorkspace";
@@ -48,11 +53,14 @@ export type WorkspaceDrawerProps = {
 type DrawerTab = "notes" | "shares";
 
 /** Expiry presets for share creation (hours; `null` ⇒ no expiry). */
-const EXPIRY_OPTIONS: Array<{ value: number | null; vi: string; en: string }> = [
-  { value: 24, vi: "24 giờ", en: "24 hours" },
-  { value: 168, vi: "7 ngày", en: "7 days" },
-  { value: 720, vi: "30 ngày", en: "30 days" },
-  { value: null, vi: "Không hết hạn", en: "No expiry" },
+const EXPIRY_OPTIONS: Array<{
+  value: number | null;
+  label: UITranslationKey;
+}> = [
+  { value: 24, label: "chat.workspace.expiry.oneDay" },
+  { value: 168, label: "chat.workspace.expiry.sevenDays" },
+  { value: 720, label: "chat.workspace.expiry.thirtyDays" },
+  { value: null, label: "chat.workspace.expiry.none" },
 ];
 
 export default function WorkspaceDrawer({
@@ -70,7 +78,10 @@ export default function WorkspaceDrawer({
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const isEn = uiLanguage === "en";
+  const copy = (
+    key: UITranslationKey,
+    values: Record<string, string | number> = {},
+  ) => t(uiLanguage, key, values);
 
   // Keep Tab focus inside the drawer dialog while open (Req 5.4).
   useFocusTrap(open, dialogRef);
@@ -125,9 +136,9 @@ export default function WorkspaceDrawer({
       setNoteTitle("");
       setNoteBody("");
       setNoteTags("");
-      notify(isEn ? "Note saved." : "Đã lưu ghi chú.");
+      notify(copy("chat.workspace.notice.noteSaved"));
     } catch {
-      notify(isEn ? "Could not save the note." : "Không thể lưu ghi chú.");
+      notify(copy("chat.workspace.notice.noteSaveFailed"));
     } finally {
       setIsSavingNote(false);
     }
@@ -144,16 +155,14 @@ export default function WorkspaceDrawer({
       const created = rows?.find((row) => row.conversation_id === conversationId);
       if (created) onCopyShareUrl(created.public_url);
       notify(
-        rotate
-          ? isEn
-            ? "Share link rotated."
-            : "Đã làm mới liên kết."
-          : isEn
-            ? "Share link created."
-            : "Đã tạo liên kết chia sẻ.",
+        copy(
+          rotate
+            ? "chat.workspace.notice.shareRotated"
+            : "chat.workspace.notice.shareCreated",
+        ),
       );
     } catch {
-      notify(isEn ? "Could not create the share." : "Không thể tạo liên kết.");
+      notify(copy("chat.workspace.notice.shareCreateFailed"));
     } finally {
       setIsCreatingShare(false);
     }
@@ -169,9 +178,9 @@ export default function WorkspaceDrawer({
       });
       const updated = rows?.find((row) => row.conversation_id === id);
       if (updated) onCopyShareUrl(updated.public_url);
-      notify(isEn ? "Share link rotated." : "Đã làm mới liên kết.");
+      notify(copy("chat.workspace.notice.shareRotated"));
     } catch {
-      notify(isEn ? "Could not rotate the link." : "Không thể làm mới liên kết.");
+      notify(copy("chat.workspace.notice.shareRotateFailed"));
     } finally {
       setBusyShareId(null);
     }
@@ -182,9 +191,9 @@ export default function WorkspaceDrawer({
     setBusyShareId(id);
     try {
       await workspace.revokeShare(id);
-      notify(isEn ? "Share revoked." : "Đã thu hồi liên kết.");
+      notify(copy("chat.workspace.notice.shareRevoked"));
     } catch {
-      notify(isEn ? "Could not revoke the share." : "Không thể thu hồi liên kết.");
+      notify(copy("chat.workspace.notice.shareRevokeFailed"));
     } finally {
       setBusyShareId(null);
     }
@@ -197,15 +206,20 @@ export default function WorkspaceDrawer({
         conversationId,
         format,
         activeTurns,
-        activeTitle || `Conversation ${conversationId}`,
+        activeTitle ||
+          copy("chat.workspace.untitledConversation", { id: conversationId }),
       );
       notify(
-        isEn
-          ? `Exported ${format === "markdown" ? "Markdown" : "DOCX"}.`
-          : `Đã xuất ${format === "markdown" ? "Markdown" : "DOCX"}.`,
+        copy("chat.workspace.notice.exported", {
+          format: copy(
+            format === "markdown"
+              ? "chat.workspace.format.markdown"
+              : "chat.workspace.format.docx",
+          ),
+        }),
       );
     } catch {
-      notify(isEn ? "Could not export." : "Không thể xuất tài liệu.");
+      notify(copy("chat.workspace.notice.exportFailed"));
     }
   };
 
@@ -213,7 +227,7 @@ export default function WorkspaceDrawer({
     <div className="fixed inset-0 z-[65] flex justify-end">
       <button
         type="button"
-        aria-label={isEn ? "Close workspace" : "Đóng workspace"}
+        aria-label={copy("chat.workspace.closeAria")}
         onClick={onClose}
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
       />
@@ -221,16 +235,16 @@ export default function WorkspaceDrawer({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={isEn ? "Workspace" : "Không gian làm việc"}
+        aria-label={copy("chat.workspace.title")}
         className="relative flex h-full w-[min(92vw,26rem)] flex-col border-l border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-2xl"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-[var(--text-primary)]">
-            {isEn ? "Workspace" : "Không gian làm việc"}
+            {copy("chat.workspace.title")}
           </h2>
           <IconButton
             ref={closeRef}
-            label={isEn ? "Close" : "Đóng"}
+            label={copy("chat.workspace.close")}
             icon="close"
             onClick={onClose}
           />
@@ -238,11 +252,11 @@ export default function WorkspaceDrawer({
 
         {/* Export the active conversation (Requirement 6.2). */}
         <section
-          aria-label={isEn ? "Export conversation" : "Xuất cuộc trò chuyện"}
+          aria-label={copy("chat.workspace.exportAria")}
           className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5"
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-            {isEn ? "Export" : "Xuất tài liệu"}
+            {copy("chat.workspace.export")}
           </p>
           {conversationId ? (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -251,38 +265,40 @@ export default function WorkspaceDrawer({
                 variant="secondary"
                 onClick={() => void handleExport("markdown")}
               >
-                {isEn ? "Markdown (.md)" : "Markdown (.md)"}
+                {copy("chat.workspace.markdownFile")}
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => void handleExport("docx")}
               >
-                {isEn ? "Word (.docx)" : "Word (.docx)"}
+                {copy("chat.workspace.docxFile")}
               </Button>
             </div>
           ) : (
             <p className="mt-1 text-[12px] text-[var(--text-muted)]">
-              {isEn
-                ? "Open a conversation to export it."
-                : "Mở một cuộc trò chuyện để xuất."}
+              {copy("chat.workspace.openConversationToExport")}
             </p>
           )}
         </section>
 
         <div className="mt-3">
           <Tabs
-            label={isEn ? "Workspace sections" : "Mục workspace"}
+            label={copy("chat.workspace.sections")}
             activeId={tab}
             onChange={(id) => setTab(id as DrawerTab)}
             items={[
               {
                 id: "notes",
-                label: `${isEn ? "Notes" : "Ghi chú"} (${workspace.notes.length})`,
+                label: copy("chat.workspace.notesTab", {
+                  count: workspace.notes.length,
+                }),
               },
               {
                 id: "shares",
-                label: `${isEn ? "Shares" : "Chia sẻ"} (${workspace.shares.length})`,
+                label: copy("chat.workspace.sharesTab", {
+                  count: workspace.shares.length,
+                }),
               },
             ]}
           />
@@ -294,7 +310,7 @@ export default function WorkspaceDrawer({
               role="tabpanel"
               id="tabpanel-notes"
               aria-labelledby="tab-notes"
-              aria-label={isEn ? "Notes" : "Ghi chú"}
+              aria-label={copy("chat.workspace.notes")}
             >
               {/* Create note (Requirement 6.2). */}
               <div className="space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -302,15 +318,15 @@ export default function WorkspaceDrawer({
                   type="text"
                   value={noteTitle}
                   onChange={(event) => setNoteTitle(event.target.value)}
-                  placeholder={isEn ? "Note title" : "Tiêu đề ghi chú"}
-                  aria-label={isEn ? "Note title" : "Tiêu đề ghi chú"}
+                  placeholder={copy("chat.workspace.noteTitle")}
+                  aria-label={copy("chat.workspace.noteTitle")}
                   className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
                 />
                 <textarea
                   value={noteBody}
                   onChange={(event) => setNoteBody(event.target.value)}
-                  placeholder={isEn ? "Content (Markdown)" : "Nội dung (Markdown)"}
-                  aria-label={isEn ? "Note content" : "Nội dung ghi chú"}
+                  placeholder={copy("chat.workspace.noteBody")}
+                  aria-label={copy("chat.workspace.noteBodyAria")}
                   rows={3}
                   className="w-full resize-y rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
                 />
@@ -318,8 +334,8 @@ export default function WorkspaceDrawer({
                   type="text"
                   value={noteTags}
                   onChange={(event) => setNoteTags(event.target.value)}
-                  placeholder={isEn ? "Tags (comma-separated)" : "Thẻ (phân tách bằng dấu phẩy)"}
-                  aria-label={isEn ? "Note tags" : "Thẻ ghi chú"}
+                  placeholder={copy("chat.workspace.noteTags")}
+                  aria-label={copy("chat.workspace.noteTagsAria")}
                   className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
                 />
                 <Button
@@ -329,12 +345,8 @@ export default function WorkspaceDrawer({
                   onClick={() => void handleSaveNote()}
                 >
                   {isSavingNote
-                    ? isEn
-                      ? "Saving..."
-                      : "Đang lưu..."
-                    : isEn
-                      ? "Save note"
-                      : "Lưu ghi chú"}
+                    ? copy("chat.workspace.savingNote")
+                    : copy("chat.workspace.saveNote")}
                 </Button>
               </div>
 
@@ -354,18 +366,20 @@ export default function WorkspaceDrawer({
                           onClick={() => void workspace.removeNote(note.id)}
                           className="shrink-0 text-[10px] font-semibold text-[var(--status-danger-text)] hover:underline"
                         >
-                          {isEn ? "Delete" : "Xóa"}
+                          {copy("chat.workspace.deleteNote")}
                         </button>
                       </div>
                       <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">
-                        {note.summary || note.content_markdown || (isEn ? "(empty)" : "(trống)")}
+                        {note.summary ||
+                          note.content_markdown ||
+                          copy("chat.workspace.emptyNote")}
                       </p>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="mt-3 text-[12px] text-[var(--text-muted)]">
-                  {isEn ? "No notes yet." : "Chưa có ghi chú."}
+                  {copy("chat.workspace.noNotes")}
                 </p>
               )}
             </section>
@@ -374,7 +388,7 @@ export default function WorkspaceDrawer({
               role="tabpanel"
               id="tabpanel-shares"
               aria-labelledby="tab-shares"
-              aria-label={isEn ? "Shares" : "Chia sẻ"}
+              aria-label={copy("chat.workspace.shares")}
             >
               {/* Create / rotate a share for the active conversation. */}
               <div className="space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -382,7 +396,7 @@ export default function WorkspaceDrawer({
                   htmlFor="workspace-share-expiry"
                   className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
                 >
-                  {isEn ? "Link expiry" : "Thời hạn liên kết"}
+                  {copy("chat.workspace.linkExpiry")}
                 </label>
                 <select
                   id="workspace-share-expiry"
@@ -401,7 +415,7 @@ export default function WorkspaceDrawer({
                       key={option.value === null ? "none" : option.value}
                       value={option.value === null ? "none" : String(option.value)}
                     >
-                      {isEn ? option.en : option.vi}
+                      {copy(option.label)}
                     </option>
                   ))}
                 </select>
@@ -413,7 +427,7 @@ export default function WorkspaceDrawer({
                       disabled={isCreatingShare}
                       onClick={() => void handleCreateShare(false)}
                     >
-                      {isEn ? "Create link" : "Tạo liên kết"}
+                      {copy("chat.workspace.createLink")}
                     </Button>
                     <Button
                       size="sm"
@@ -421,18 +435,16 @@ export default function WorkspaceDrawer({
                       disabled={isCreatingShare}
                       onClick={() => void handleCreateShare(true)}
                     >
-                      {isEn ? "Rotate token" : "Làm mới token"}
+                      {copy("chat.workspace.rotateToken")}
                     </Button>
                   </div>
                 ) : (
                   <p className="text-[12px] text-[var(--text-muted)]">
-                    {apiUnavailable
-                      ? isEn
-                        ? "Sharing is unavailable offline."
-                        : "Chia sẻ không khả dụng khi offline."
-                      : isEn
-                        ? "Open a conversation to share it."
-                        : "Mở một cuộc trò chuyện để chia sẻ."}
+                    {copy(
+                      apiUnavailable
+                        ? "chat.workspace.sharingUnavailable"
+                        : "chat.workspace.openConversationToShare",
+                    )}
                   </p>
                 )}
               </div>
@@ -450,15 +462,18 @@ export default function WorkspaceDrawer({
                           #{item.conversation_id} · {item.conversation_title}
                         </p>
                         <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
-                          {item.is_active
-                            ? isEn
-                              ? "Active"
-                              : "Đang hoạt động"
-                            : isEn
-                              ? "Revoked"
-                              : "Đã thu hồi"}
+                          {copy(
+                            item.is_active
+                              ? "chat.workspace.status.active"
+                              : "chat.workspace.status.revoked",
+                          )}
                           {item.expires_at
-                            ? ` · ${isEn ? "expires" : "hết hạn"} ${new Date(item.expires_at).toLocaleDateString()}`
+                            ? ` · ${copy("chat.workspace.expiresAt", {
+                                date: formatLocaleDate(
+                                  uiLanguage,
+                                  item.expires_at,
+                                ),
+                              })}`
                             : ""}
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -467,7 +482,7 @@ export default function WorkspaceDrawer({
                             onClick={() => onCopyShareUrl(item.public_url)}
                             className="rounded-lg border border-[color:var(--shell-border)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)]"
                           >
-                            {isEn ? "Copy" : "Sao chép"}
+                            {copy("chat.workspace.copy")}
                           </button>
                           {item.is_active && !apiUnavailable ? (
                             <>
@@ -477,7 +492,7 @@ export default function WorkspaceDrawer({
                                 onClick={() => void handleRotate(item.conversation_id)}
                                 className="rounded-lg border border-[color:var(--shell-border)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] disabled:opacity-60"
                               >
-                                {isEn ? "Rotate" : "Làm mới"}
+                                {copy("chat.workspace.rotate")}
                               </button>
                               <button
                                 type="button"
@@ -485,7 +500,7 @@ export default function WorkspaceDrawer({
                                 onClick={() => void handleRevoke(item.conversation_id)}
                                 className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-danger-text)] disabled:opacity-60"
                               >
-                                {isEn ? "Revoke" : "Thu hồi"}
+                                {copy("chat.workspace.revoke")}
                               </button>
                             </>
                           ) : null}
@@ -496,7 +511,7 @@ export default function WorkspaceDrawer({
                 </ul>
               ) : (
                 <p className="mt-3 text-[12px] text-[var(--text-muted)]">
-                  {isEn ? "No shares yet." : "Chưa có chia sẻ."}
+                  {copy("chat.workspace.noShares")}
                 </p>
               )}
             </section>

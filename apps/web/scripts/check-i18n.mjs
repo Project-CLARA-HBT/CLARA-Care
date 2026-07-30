@@ -154,6 +154,22 @@ const MIGRATED_SURFACES = [
       "Clinical decision support",
     ],
   },
+  {
+    path: "app/chat/_v2/components/WorkspaceDrawer.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.workspace.title",
+      "chat.workspace.notice.shareCreated",
+      "formatLocaleDate(uiLanguage, item.expires_at)",
+    ],
+    forbidden: [
+      "Không gian làm việc",
+      "Workspace sections",
+      "Đã tạo liên kết chia sẻ.",
+      "Share link created.",
+      "toLocaleDateString()",
+    ],
+  },
 ];
 
 function fail(message) {
