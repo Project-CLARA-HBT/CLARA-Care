@@ -1501,6 +1501,7 @@ def routed_chat_infer(payload: dict) -> dict:
                 factcheck_verdict=str((factcheck_payload or {}).get("verdict") or "not_run"),
                 degraded=bool(answer_package["provenance"].get("fallback_used")),
             ),
+            answer_language=ui_language,
         )
         response_payload["citations"] = [
             {

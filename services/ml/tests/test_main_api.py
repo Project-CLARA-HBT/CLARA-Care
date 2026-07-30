@@ -153,6 +153,48 @@ def test_routed_chat_infer_returns_routing_and_answer():
     assert "factcheck" in body
 
 
+def test_routed_chat_passes_english_ui_language_to_structured_renderer(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The normal path must not silently render the v2 guidance in Vietnamese."""
+
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+    import clara_ml.main as main_module
+
+    original_build = main_module.build_medical_answer_v2
+
+    def _fake_run(*args, **kwargs):
+        return RagResult(
+            query="query",
+            retrieved_ids=["doc-1"],
+            answer="Monitor symptoms and seek clinical review if they worsen.",
+            model_used="local-synth-v1",
+            retrieved_context=[{"id": "doc-1", "text": "Clinical monitoring context."}],
+            context_debug={},
+            flow_events=[],
+        )
+
+    captured: list[dict[str, object]] = []
+
+    def _capture_build(**kwargs):
+        captured.append(dict(kwargs))
+        return original_build(**kwargs)
+
+    monkeypatch.setattr(rag_pipeline, "run", _fake_run)
+    monkeypatch.setattr(main_module, "build_medical_answer_v2", _capture_build)
+
+    response = client.post(
+        "/v1/chat/routed",
+        json={"query": "How should I monitor these symptoms?", "ui_language": "en"},
+    )
+
+    assert response.status_code == 200
+    assert captured[-1]["answer_language"] == "en"
+    rendered = response.json()["medical_answer_v2"]["rendered_explanation"]
+    assert rendered["summary"].startswith("CLARA is sharing")
+
+
 def test_routed_chat_infer_rule_verification_flag_overrides_legacy(monkeypatch: pytest.MonkeyPatch):
     from clara_ml.main import rag_pipeline
     from clara_ml.rag.pipeline import RagResult
