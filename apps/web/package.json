@@ -17,7 +17,7 @@
     "html-to-image": "^1.11.11",
     "material-symbols": "^0.44.2",
     "mermaid": "10.9.5",
-    "next": "15.5.14",
+    "next": "16.2.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-markdown": "^9.0.1",
