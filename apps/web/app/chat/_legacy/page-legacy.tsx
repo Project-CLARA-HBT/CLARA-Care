@@ -124,6 +124,14 @@ type ConversationVirtualItem = {
   dayLabel: ConversationDayBucket | null;
 };
 
+const CONVERSATION_DAY_LABEL_KEYS: Record<ConversationDayBucket, UITranslationKey> = {
+  today: "chat.legacyWorkspace.conversation.day.today",
+  yesterday: "chat.legacyWorkspace.conversation.day.yesterday",
+  week: "chat.legacyWorkspace.conversation.day.week",
+  older: "chat.legacyWorkspace.conversation.day.older",
+  unknown: "chat.legacyWorkspace.conversation.day.unknown",
+};
+
 const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
   id: WorkspaceLeftView;
   label: string;
@@ -168,8 +176,8 @@ function parseTagsInput(value: string): string[] {
     .slice(0, 20);
 }
 
-function buildConversationPreview(item: WorkspaceConversationItem): string {
-  const candidate = item.title || item.preview || "Conversation";
+function buildConversationPreview(item: WorkspaceConversationItem, language: UILanguage): string {
+  const candidate = item.title || item.preview || t(language, "chat.legacyWorkspace.conversation.untitled");
   return candidate.length > 80 ? `${candidate.slice(0, 80)}...` : candidate;
 }
 
@@ -195,11 +203,7 @@ function toDayKey(ts: number): ConversationDayBucket {
 }
 
 function formatConversationDayLabel(bucket: ConversationDayBucket, language: UILanguage): string {
-  if (bucket === "today") return language === "en" ? "Today" : "Hôm nay";
-  if (bucket === "yesterday") return language === "en" ? "Yesterday" : "Hôm qua";
-  if (bucket === "week") return language === "en" ? "Last 7 days" : "7 ngày qua";
-  if (bucket === "older") return language === "en" ? "Older" : "Cũ hơn";
-  return language === "en" ? "Unknown" : "Không rõ";
+  return t(language, CONVERSATION_DAY_LABEL_KEYS[bucket]);
 }
 
 function latestAnswerFromTurn(turn: ConversationItem | null): string {
@@ -3197,7 +3201,9 @@ export default function ChatWorkspacePage() {
                 </div>
               ) : null}
               {isLoadingWorkspace || isLoadingConversations ? (
-                <p className="text-xs text-[var(--text-muted)]">Đang tải...</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.sidebar.loading")}
+                </p>
               ) : displayedConversations.length ? (
                 <div
                   ref={conversationListViewportRef}
@@ -3265,6 +3271,9 @@ export default function ChatWorkspacePage() {
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
+                                  aria-label={t(uiLanguage, "chat.legacyWorkspace.conversation.selectAria", {
+                                    id: item.conversation_id,
+                                  })}
                                   onChange={(event) =>
                                     toggleConversationSelection(
                                       item.conversation_id,
@@ -3278,14 +3287,25 @@ export default function ChatWorkspacePage() {
                                 type="button"
                                 onClick={() => void onSelectConversation(item)}
                                 className="flex-1 text-left"
+                                aria-label={t(uiLanguage, "chat.legacyWorkspace.conversation.openAria", {
+                                  title: buildConversationPreview(item, uiLanguage),
+                                })}
                               >
                                 <p className="truncate whitespace-nowrap text-[12px] font-semibold leading-tight text-[var(--text-primary)]">
-                                  {buildConversationPreview(item)}
+                                  {buildConversationPreview(item, uiLanguage)}
                                 </p>
                                 <p className="mt-0.5 truncate whitespace-nowrap text-[10px] text-[var(--text-muted)]">
-                                  #{item.conversation_id} · {item.message_count} msg · {timeLabel}
-                                  {item.is_favorite ? " · fav" : ""}
-                                  {isLocalOnly ? " · local" : ""}
+                                  {t(uiLanguage, "chat.legacyWorkspace.conversation.metadata", {
+                                    id: item.conversation_id,
+                                    messages: item.message_count,
+                                    time: timeLabel,
+                                    favorite: item.is_favorite
+                                      ? t(uiLanguage, "chat.legacyWorkspace.conversation.favoriteSuffix")
+                                      : "",
+                                    local: isLocalOnly
+                                      ? t(uiLanguage, "chat.legacyWorkspace.conversation.localSuffix")
+                                      : "",
+                                  })}
                                 </p>
                               </button>
                             </div>
@@ -3296,7 +3316,7 @@ export default function ChatWorkspacePage() {
                   </div>
                   {visibleConversations.length < displayedConversations.length ? (
                     <p className="px-1 py-1 text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                      {isEnglishUI ? "Loading more conversations..." : "Đang tải thêm cuộc trò chuyện..."}
+                      {t(uiLanguage, "chat.legacyWorkspace.conversation.loadingMore")}
                     </p>
                   ) : null}
                 </div>
@@ -3304,14 +3324,14 @@ export default function ChatWorkspacePage() {
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <span className="material-symbols-outlined mb-2 text-[24px] text-[var(--text-muted)]">chat_bubble_outline</span>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    {isEnglishUI ? "No conversations match the current filters." : "Không có cuộc trò chuyện nào khớp bộ lọc hiện tại."}
+                    {t(uiLanguage, "chat.legacyWorkspace.conversation.emptyFiltered")}
                   </p>
                   <button
                     type="button"
                     onClick={createNewConversation}
                     className="mt-3 inline-flex min-h-[28px] items-center rounded-lg border border-blue-200/50 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300"
                   >
-                    + {isEnglishUI ? "Start a new chat" : "Bắt đầu chat mới"}
+                    + {t(uiLanguage, "chat.legacyWorkspace.conversation.startNew")}
                   </button>
                 </div>
               )}
