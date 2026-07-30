@@ -22,6 +22,7 @@ from clara_ml.llm.model_registry import (
     resolve_asr_provider_selection,
     resolve_model_selection,
 )
+from clara_ml.observability import model_routing_evidence
 
 
 def _settings(**overrides: object) -> SimpleNamespace:
@@ -34,6 +35,7 @@ def _settings(**overrides: object) -> SimpleNamespace:
         "deepseek_fallback_model": "",
         "model_registry_enabled": True,
         "model_registry_task_model_routing_enabled": True,
+        "model_routing_observability_enabled": False,
         "model_registry_force_rollback": False,
         "model_registry_rollback_model": "",
         "deepseek_timeout_seconds": 45.0,
@@ -50,6 +52,13 @@ def _settings(**overrides: object) -> SimpleNamespace:
     }
     values.update(overrides)
     return SimpleNamespace(**values)
+
+
+@pytest.fixture(autouse=True)
+def reset_model_routing_evidence():
+    model_routing_evidence.reset()
+    yield
+    model_routing_evidence.reset()
 
 
 def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -> None:
@@ -106,6 +115,51 @@ def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
     assert selection.model_version == FLASH_MODEL_VERSION
     assert selection.model_profile == "flash"
     assert selection.fallback_model == "deepseek-v4-pro"
+
+
+def test_registry_selection_evidence_is_default_off_and_aggregate_only() -> None:
+    resolve_model_selection(ModelTask.RAG_RERANKING, _settings())
+    assert model_routing_evidence.snapshot() == {
+        "selection_total": 0,
+        "overflow_total": 0,
+        "by_selection": [],
+    }
+
+    resolve_model_selection(
+        ModelTask.RAG_RERANKING,
+        _settings(model_routing_observability_enabled=True),
+    )
+
+    assert model_routing_evidence.snapshot() == {
+        "selection_total": 1,
+        "overflow_total": 0,
+        "by_selection": [
+            {
+                "task": "rag_reranking",
+                "profile": "flash",
+                "model_version": FLASH_MODEL_VERSION,
+                "risk_level": "medium",
+                "rollback_applied": False,
+                "count": 1,
+            }
+        ],
+    }
+
+
+def test_registry_selection_evidence_marks_rollback_without_model_identifier() -> None:
+    resolve_model_selection(
+        ModelTask.MEDICAL_SAFETY_ROUTER,
+        _settings(
+            model_routing_observability_enabled=True,
+            model_registry_force_rollback=True,
+            model_registry_rollback_model="private-prior-model-name",
+        ),
+    )
+
+    rendered = repr(model_routing_evidence.snapshot())
+    assert "private-prior-model-name" not in rendered
+    assert ROLLBACK_MODEL_VERSION in rendered
+    assert "rollback_applied': True" in rendered
 
 
 def test_lifemap_text_draft_extraction_is_governed_by_flash_contract() -> None:

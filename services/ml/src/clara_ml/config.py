@@ -131,6 +131,14 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED",
     )
+    # Aggregates only versioned registry decisions (task/profile/version/risk/
+    # rollback). It never records model prompts, input/output, endpoint,
+    # credentials, user identifiers, or request identifiers. Keep default-off
+    # until internal observability storage/export is approved.
+    model_routing_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="MODEL_ROUTING_OBSERVABILITY_ENABLED",
+    )
     # The semantic intent proposal is generated through the governed
     # MEDICAL_SAFETY_ROUTER contract. Emergency/legal deterministic guards stay
     # authoritative; this switch restores the legacy keyword intent path

@@ -46,7 +46,11 @@ from clara_ml.model_router import (
     run_encoder_slm_shadow,
 )
 from clara_ml.nlp.pii_filter import redact_pii
-from clara_ml.observability import format_metrics_prometheus, metrics_collector
+from clara_ml.observability import (
+    format_metrics_prometheus,
+    metrics_collector,
+    model_routing_evidence,
+)
 from clara_ml.observability.tracing import init_tracing, request_span
 from clara_ml.prompts.loader import PromptLoader
 from clara_ml.rag.pipeline import RagPipelineP1
@@ -1093,7 +1097,13 @@ def metrics() -> PlainTextResponse:
 
 @app.get("/metrics/json")
 def metrics_json() -> dict:
-    return metrics_collector.snapshot()
+    snapshot = metrics_collector.snapshot()
+    # Keep the historical metrics shape byte-for-byte when routing evidence is
+    # disabled. The endpoint is internally protected and the enabled payload is
+    # aggregate-only; no model identifier, prompt, request or user data exists.
+    if settings.model_routing_observability_enabled:
+        snapshot["model_routing"] = model_routing_evidence.snapshot()
+    return snapshot
 
 
 @app.post("/v1/rag/poc")

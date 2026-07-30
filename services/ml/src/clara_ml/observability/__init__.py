@@ -53,6 +53,110 @@ class InMemoryMetricsCollector:
 metrics_collector = InMemoryMetricsCollector()
 
 
+class ModelRoutingEvidenceCollector:
+    """Bounded aggregate evidence of registry selections.
+
+    This collector is intentionally narrower than request telemetry.  It sees
+    only registry-produced categorical values and persists neither request
+    identity, model identifier, prompt, input, output, endpoint nor provider
+    credential.  Callers must gate writes with the dedicated deployment flag;
+    when that flag is off, this instance remains empty and request behavior is
+    unchanged.
+    """
+
+    _SAFE_PROFILES = frozenset({"pro", "flash", "legacy", "rollback"})
+    _SAFE_RISKS = frozenset({"low", "medium", "high", "critical"})
+    _SAFE_MODEL_VERSIONS = frozenset(
+        {
+            "deepseek-v4-pro.task-route.v1",
+            "deepseek-v4-flash.task-route.v1",
+            "deepseek-rollback.v1",
+        }
+    )
+
+    def __init__(self, *, max_series: int = 128) -> None:
+        self._lock = Lock()
+        self._max_series = max(int(max_series), 1)
+        self._selection_total = 0
+        self._overflow_total = 0
+        self._by_selection: dict[tuple[str, str, str, str, bool], int] = defaultdict(int)
+
+    @classmethod
+    def _safe_task(cls, task: object) -> str:
+        """Keep task labels categorical even if a future caller is malformed."""
+
+        value = str(task)
+        if not value or len(value) > 96 or not all(
+            char.islower() or char.isdigit() or char == "_" for char in value
+        ):
+            return "unknown"
+        return value
+
+    @classmethod
+    def _safe_choice(cls, value: object, allowed: frozenset[str]) -> str:
+        candidate = str(value)
+        return candidate if candidate in allowed else "unknown"
+
+    def record_selection(
+        self,
+        *,
+        task: object,
+        profile: object,
+        model_version: object,
+        risk_level: object,
+        rollback_applied: object,
+    ) -> None:
+        """Record one registry decision without retaining a request-level trace."""
+
+        key = (
+            self._safe_task(task),
+            self._safe_choice(profile, self._SAFE_PROFILES),
+            self._safe_choice(model_version, self._SAFE_MODEL_VERSIONS),
+            self._safe_choice(risk_level, self._SAFE_RISKS),
+            bool(rollback_applied),
+        )
+        with self._lock:
+            self._selection_total += 1
+            if key not in self._by_selection and len(self._by_selection) >= self._max_series:
+                self._overflow_total += 1
+                return
+            self._by_selection[key] += 1
+
+    def snapshot(self) -> dict[str, object]:
+        """Return a deterministic, PII-free aggregate suitable for internal ops."""
+
+        with self._lock:
+            rows = [
+                {
+                    "task": task,
+                    "profile": profile,
+                    "model_version": model_version,
+                    "risk_level": risk_level,
+                    "rollback_applied": rollback_applied,
+                    "count": count,
+                }
+                for (task, profile, model_version, risk_level, rollback_applied), count in sorted(
+                    self._by_selection.items()
+                )
+            ]
+            return {
+                "selection_total": self._selection_total,
+                "overflow_total": self._overflow_total,
+                "by_selection": rows,
+            }
+
+    def reset(self) -> None:
+        """Clear aggregates; used only by process lifecycle/tests."""
+
+        with self._lock:
+            self._selection_total = 0
+            self._overflow_total = 0
+            self._by_selection.clear()
+
+
+model_routing_evidence = ModelRoutingEvidenceCollector()
+
+
 def _prometheus_label_escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 

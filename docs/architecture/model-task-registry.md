@@ -89,6 +89,7 @@ Configuration is intentionally operational rather than user-facing:
 ```text
 MODEL_REGISTRY_ENABLED=true
 MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true
+MODEL_ROUTING_OBSERVABILITY_ENABLED=false
 MODEL_REGISTRY_FORCE_ROLLBACK=false
 MODEL_REGISTRY_ROLLBACK_MODEL=
 DEEPSEEK_PRO_MODEL=deepseek-v4-pro
@@ -99,6 +100,19 @@ The production env guard requires `DEEPSEEK_MODEL` to equal
 `DEEPSEEK_PRO_MODEL`, requires the Pro and Flash identifiers to be distinct,
 and requires both registry switches to be explicitly `true`. This prevents a
 stale deploy secret from silently reverting to a legacy single-model path.
+
+## Aggregate routing evidence
+
+`MODEL_ROUTING_OBSERVABILITY_ENABLED` is a default-off, in-memory operational
+collector at the registry boundary. When enabled it counts only the closed
+selection tuple `{task, profile, model_version, risk_level, rollback_applied}`.
+It never retains a model identifier, prompt text, request identifier,
+endpoint, credential, user input or model output, and it says only that the
+registry made a selection—not that a provider call succeeded. The protected
+ML `/metrics/json` endpoint includes this `model_routing` aggregate only while
+the flag is enabled; turning it off restores its former response shape
+immediately. This is evidence for routing governance, not a cost ledger or a
+clinical-quality metric.
 
 ## Semantic intent routing
 

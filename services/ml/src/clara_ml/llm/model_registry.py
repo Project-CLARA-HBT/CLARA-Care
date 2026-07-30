@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.observability import model_routing_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -407,7 +408,7 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
 
     rollback_applied = rollback_requested and bool(rollback_model)
     model = rollback_model if rollback_applied else primary_model
-    return ModelSelection(
+    selection = ModelSelection(
         task=task,
         provider="deepseek",
         model=model,
@@ -424,6 +425,18 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
         rollback_applied=rollback_applied,
         registry_enabled=registry_enabled,
     )
+    # Aggregate only closed registry categories. This does not imply a provider
+    # invocation succeeded; it is selection evidence for governed routing and
+    # remains strictly off unless deployment enables it.
+    if _bool(settings, "model_routing_observability_enabled", False):
+        model_routing_evidence.record_selection(
+            task=selection.task.value,
+            profile=selection.model_profile,
+            model_version=selection.model_version,
+            risk_level=selection.risk_level,
+            rollback_applied=selection.rollback_applied,
+        )
+    return selection
 
 
 def resolve_asr_model_selection(settings: Any) -> AsrModelSelection:
