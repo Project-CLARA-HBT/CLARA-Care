@@ -31,6 +31,11 @@ enum ConsumerTerm {
   navigationMedicines,
   navigationProfile,
   navigationMore,
+  homeScreenToolsTitle,
+  homeScreenToolsLoadFailed,
+  homeScreenRecentTitle,
+  homeScreenNoRecentTitle,
+  homeScreenNoRecentDescription,
   profileHubToolsAndPrivacy,
   profileHubVisitsTitle,
   profileHubVisitsDescription,
@@ -669,6 +674,13 @@ class ConsumerTerminology {
   }
 
   static const Map<ConsumerTerm, String> _viMessages = {
+    ConsumerTerm.homeScreenToolsTitle: 'Công cụ',
+    ConsumerTerm.homeScreenToolsLoadFailed:
+        'Không thể tải danh sách công cụ. Vui lòng thử lại.',
+    ConsumerTerm.homeScreenRecentTitle: 'Gần đây',
+    ConsumerTerm.homeScreenNoRecentTitle: 'Chưa có hoạt động gần đây',
+    ConsumerTerm.homeScreenNoRecentDescription:
+        'Các hoạt động gần đây của bạn sẽ xuất hiện ở đây.',
     ConsumerTerm.profileHubToolsAndPrivacy: 'Công cụ & quyền riêng tư',
     ConsumerTerm.profileHubVisitsTitle: 'Chuẩn bị đi khám',
     ConsumerTerm.profileHubVisitsDescription:
@@ -1430,6 +1442,13 @@ class ConsumerTerminology {
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
+    ConsumerTerm.homeScreenToolsTitle: 'Tools',
+    ConsumerTerm.homeScreenToolsLoadFailed:
+        'We could not load the available tools. Try again.',
+    ConsumerTerm.homeScreenRecentTitle: 'Recent',
+    ConsumerTerm.homeScreenNoRecentTitle: 'No recent activity yet',
+    ConsumerTerm.homeScreenNoRecentDescription:
+        'Your recent activity will appear here.',
     ConsumerTerm.profileHubToolsAndPrivacy: 'Tools & privacy',
     ConsumerTerm.profileHubVisitsTitle: 'Prepare for a visit',
     ConsumerTerm.profileHubVisitsDescription:
