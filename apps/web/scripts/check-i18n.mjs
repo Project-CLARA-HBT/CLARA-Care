@@ -233,6 +233,25 @@ const MIGRATED_SURFACES = [
     required: ["@/lib/i18n/catalog", "chat.messageLog.aria"],
     forbidden: ['"Conversation"', '"Cuộc trò chuyện"'],
   },
+  {
+    path: "app/chat/_v2/components/TurnView.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.turnView.aria",
+      "chat.turnView.displayFailed",
+      "chat.turnView.refineEvidence",
+    ],
+    forbidden: [
+      '"Conversation turn"',
+      '"Lượt trò chuyện"',
+      '"This answer could not be displayed."',
+      '"Không thể hiển thị câu trả lời này."',
+      '"Refine with a new evidence run"',
+      '"Tinh chỉnh bằng lượt nghiên cứu mới"',
+      '"Investigate with Medical Research"',
+      '"Nghiên cứu y khoa chuyên sâu"',
+    ],
+  },
 ];
 
 function fail(message) {

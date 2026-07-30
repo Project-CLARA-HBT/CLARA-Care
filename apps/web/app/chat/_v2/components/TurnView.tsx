@@ -3,6 +3,7 @@
 import { Component, memo, type ReactNode } from "react";
 
 import type { UILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/i18n/catalog";
 import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import AnswerRenderer from "@/app/chat/_v2/components/AnswerRenderer";
@@ -62,13 +63,12 @@ function TurnView({
   role = "normal",
   onLaunchResearch,
 }: TurnViewProps) {
-  const isEn = uiLanguage === "en";
   const tier2Result = turn.result.tier === "tier2" ? turn.result : null;
 
   return (
     <article
       className="space-y-3"
-      aria-label={isEn ? "Conversation turn" : "Lượt trò chuyện"}
+      aria-label={t(uiLanguage, "chat.turnView.aria")}
     >
       {turn.query.trim() ? (
         <div className="flex justify-end">
@@ -80,11 +80,7 @@ function TurnView({
 
       <div className="rounded-2xl rounded-tl-sm border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
         <TurnErrorBoundary
-          fallbackLabel={
-            isEn
-              ? "This answer could not be displayed."
-              : "Không thể hiển thị câu trả lời này."
-          }
+          fallbackLabel={t(uiLanguage, "chat.turnView.displayFailed")}
         >
           {tier2Result ? (
             <div className="space-y-3">
@@ -116,13 +112,12 @@ function TurnView({
               >
                 biotech
               </span>
-              {tier2Result
-                ? isEn
-                  ? "Refine with a new evidence run"
-                  : "Tinh chỉnh bằng lượt nghiên cứu mới"
-                : isEn
-                  ? "Investigate with Medical Research"
-                  : "Nghiên cứu y khoa chuyên sâu"}
+              {t(
+                uiLanguage,
+                tier2Result
+                  ? "chat.turnView.refineEvidence"
+                  : "chat.turnView.investigate",
+              )}
             </button>
           </div>
         ) : null}
