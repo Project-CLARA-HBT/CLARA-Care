@@ -187,6 +187,23 @@ const MIGRATED_SURFACES = [
       "No matching action.",
     ],
   },
+  {
+    path: "app/chat/_v2/components/MedicalAnswerCanvas.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.answerCanvas.aria",
+      "chat.answerCanvas.evidence.inspectLedger",
+      "chat.answerCanvas.medicineSafety.description",
+    ],
+    forbidden: [
+      "Medical answer canvas",
+      "Bảng câu trả lời y khoa",
+      "Inspect evidence ledger",
+      "Xem sổ bằng chứng",
+      "No retrievable evidence; do not treat this as decision-ready.",
+      "Không có bằng chứng truy xuất được; chưa thể dùng để ra quyết định.",
+    ],
+  },
 ];
 
 function fail(message) {
