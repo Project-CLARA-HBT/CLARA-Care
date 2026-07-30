@@ -65,6 +65,11 @@ def _idempotent(headers: dict[str, str], key: str) -> dict[str, str]:
     return {**headers, "Idempotency-Key": key}
 
 
+def _live_grant_expiry() -> str:
+    """Return a future expiry for grant tests independent of wall-clock date."""
+    return (datetime.now(UTC) + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+
+
 def _role_account(role: str) -> tuple[dict[str, str], str, str]:
     email = f"lifemap-{role}-{uuid4().hex}@{role}.clara"
     login = client.post(
@@ -448,7 +453,7 @@ def test_doctor_requires_a_live_grant_and_admin_role_is_not_profile_access() -> 
                     "allowed_actions": ["view"],
                 },
                 "purpose": "self_care",
-                "expires_at": "2026-07-29T08:00:00Z",
+                "expires_at": _live_grant_expiry(),
             },
         )
         assert invitation.status_code == 201, recipient
@@ -560,7 +565,7 @@ def test_family_grant_rejects_data_class_escalation() -> None:
                 "allowed_actions": ["view"],
             },
             "purpose": "self_care",
-            "expires_at": "2026-07-29T08:00:00Z",
+            "expires_at": _live_grant_expiry(),
         },
     )
     assert invitation.status_code == 422
@@ -583,7 +588,7 @@ def test_expired_grant_and_confused_deputy_profile_swap_fail_closed() -> None:
                 "allowed_actions": ["view"],
             },
             "purpose": "self_care",
-            "expires_at": "2026-07-29T08:00:00Z",
+            "expires_at": _live_grant_expiry(),
         },
     ).json()
     accepted = client.post(
