@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, Literal
-from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from clara_ml.llm.model_registry import resolve_encoder_shadow_selection
 from clara_ml.nlp.pii_filter import redact_pii
 
 from .contracts import EncoderShadowPrediction
@@ -37,36 +37,6 @@ class EncoderShadowResult(BaseModel):
 ClientFactory = Callable[..., httpx.Client]
 
 
-def _setting_bool(settings: Any, name: str, default: bool = False) -> bool:
-    value = getattr(settings, name, default)
-    return value if isinstance(value, bool) else default
-
-
-def _setting_text(settings: Any, name: str) -> str:
-    return str(getattr(settings, name, "") or "").strip()
-
-
-def _setting_int(settings: Any, name: str, default: int, minimum: int, maximum: int) -> int:
-    value = getattr(settings, name, default)
-    if isinstance(value, bool):
-        return default
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return default
-    return min(max(parsed, minimum), maximum)
-
-
-def _valid_endpoint(url: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
-
-
-def _safe_model_id(settings: Any) -> str | None:
-    value = _setting_text(settings, "encoder_slm_shadow_model_id")
-    return value[:160] if value else None
-
-
 def unavailable_encoder_shadow(reason: str) -> EncoderShadowResult:
     """Create a typed outage result without leaking transport details."""
 
@@ -87,45 +57,29 @@ def run_encoder_slm_shadow(
     is represented as typed non-availability; it never raises into chat.
     """
 
-    if not _setting_bool(settings, "encoder_slm_shadow_enabled"):
-        return EncoderShadowResult(state="disabled", reason="feature_flag_disabled")
+    selection = resolve_encoder_shadow_selection(settings)
+    if selection.state == "disabled":
+        return EncoderShadowResult(state="disabled", reason=selection.reason)
+    if selection.state != "available":
+        return unavailable_encoder_shadow(selection.reason)
 
-    endpoint = _setting_text(settings, "encoder_slm_shadow_url")
-    if not endpoint:
-        return unavailable_encoder_shadow("endpoint_not_configured")
-    if not _valid_endpoint(endpoint):
-        return unavailable_encoder_shadow("endpoint_invalid")
-
-    max_chars = _setting_int(
-        settings,
-        "encoder_slm_shadow_max_input_chars",
-        default=1200,
-        minimum=64,
-        maximum=4000,
-    )
-    safe_text = redact_pii(str(redacted_text or "")).redacted_text.strip()[:max_chars]
+    safe_text = redact_pii(str(redacted_text or "")).redacted_text.strip()[
+        : selection.max_input_chars
+    ]
     if not safe_text:
         return unavailable_encoder_shadow("redacted_input_empty")
 
-    timeout_ms = _setting_int(
-        settings,
-        "encoder_slm_shadow_timeout_ms",
-        default=750,
-        minimum=100,
-        maximum=5000,
-    )
     headers = {"Accept": "application/json"}
-    api_key = _setting_text(settings, "encoder_slm_shadow_api_key")
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    if selection.api_key:
+        headers["Authorization"] = f"Bearer {selection.api_key}"
     request_body = {
         "schema_version": _SCHEMA_VERSION,
         "text": safe_text,
     }
 
     try:
-        with client_factory(timeout=timeout_ms / 1000, follow_redirects=False) as client:
-            response = client.post(endpoint, json=request_body, headers=headers)
+        with client_factory(timeout=selection.timeout_seconds, follow_redirects=False) as client:
+            response = client.post(selection.endpoint, json=request_body, headers=headers)
             response.raise_for_status()
             declared_length = response.headers.get("content-length")
             if declared_length and int(declared_length) > _MAX_RESPONSE_BYTES:
@@ -146,7 +100,7 @@ def run_encoder_slm_shadow(
         state="available",
         reason="validated_shadow_prediction",
         prediction=prediction,
-        model_id=_safe_model_id(settings),
+        model_id=selection.model_id or None,
     )
 
 

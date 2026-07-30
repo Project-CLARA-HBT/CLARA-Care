@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
+import pytest
+
 from clara_ml.llm.model_registry import (
     FLASH_MODEL_VERSION,
     PRIMARY_MODEL_VERSION,
@@ -14,6 +16,7 @@ from clara_ml.llm.model_registry import (
     ModelTask,
     build_task_client,
     load_task_contracts,
+    resolve_encoder_shadow_selection,
     resolve_model_selection,
 )
 
@@ -174,3 +177,39 @@ def test_model_selection_telemetry_excludes_connection_values(
     assert "profile=flash" in rendered
     assert "test-key" not in rendered
     assert "example.invalid" not in rendered
+
+
+def test_encoder_shadow_selection_is_registry_governed_and_never_a_primary_route() -> None:
+    selection = resolve_encoder_shadow_selection(
+        _settings(
+            encoder_slm_shadow_enabled=True,
+            encoder_slm_shadow_url="http://encoder.example.invalid/v1/route",
+            encoder_slm_shadow_api_key="encoder-test-key",
+            encoder_slm_shadow_model_id="vi-clinical-encoder-2026-07",
+        )
+    )
+
+    assert selection.task is ModelTask.ENCODER_SLM_SHADOW
+    assert selection.state == "available"
+    assert selection.prompt_version == "encoder-slm-shadow.v1"
+    assert TASK_CONTRACTS[selection.task].shadow_only is True
+    assert TASK_CONTRACTS[selection.task].allowed_model_tiers == ("encoder_slm",)
+    assert selection.endpoint == "http://encoder.example.invalid/v1/route"
+
+
+def test_encoder_shadow_registry_kill_switch_keeps_network_adapter_disabled() -> None:
+    selection = resolve_encoder_shadow_selection(
+        _settings(
+            model_registry_enabled=False,
+            encoder_slm_shadow_enabled=True,
+            encoder_slm_shadow_url="http://encoder.example.invalid/v1/route",
+        )
+    )
+
+    assert selection.state == "disabled"
+    assert selection.reason == "model_registry_disabled"
+
+
+def test_encoder_shadow_task_cannot_be_built_as_a_deepseek_primary_client() -> None:
+    with pytest.raises(ValueError, match="encoder_shadow_requires_dedicated_registry_adapter"):
+        build_task_client(ModelTask.ENCODER_SLM_SHADOW, _settings())

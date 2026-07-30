@@ -16,6 +16,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
 
@@ -39,6 +40,7 @@ class ModelTask(StrEnum):
     RAG_SYNTHESIS = "rag_synthesis"
     RESEARCH_QUERY_PLANNING = "research_query_planning"
     RESEARCH_REASONING = "research_reasoning"
+    ENCODER_SLM_SHADOW = "encoder_slm_shadow"
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,29 @@ class ModelSelection:
     fallback_model: str
     rollback_applied: bool
     registry_enabled: bool
+
+
+@dataclass(frozen=True)
+class EncoderShadowSelection:
+    """Registry-governed configuration for the non-authoritative encoder.
+
+    This is deliberately separate from :class:`ModelSelection`: an external
+    encoder is not a generative DeepSeek client.  Keeping its endpoint and
+    credential in this private selection prevents the request-path adapter
+    from independently resolving a provider or model.  Callers must treat the
+    resulting signal as shadow-only, as enforced by its task contract.
+    """
+
+    task: ModelTask
+    state: str
+    reason: str
+    endpoint: str = ""
+    api_key: str = ""
+    model_id: str = ""
+    timeout_seconds: float = 0.75
+    max_input_chars: int = 1200
+    prompt_version: str = ""
+    contract_schema_version: str = ""
 
 
 TASK_CONTRACTS_PATH = (
@@ -195,6 +220,108 @@ def _bool(settings: Any, name: str, default: bool) -> bool:
     return value if isinstance(value, bool) else default
 
 
+def _bounded_int(
+    settings: Any,
+    name: str,
+    *,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    value = getattr(settings, name, default)
+    if isinstance(value, bool):
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return min(max(parsed, minimum), maximum)
+
+
+def _valid_http_endpoint(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def resolve_encoder_shadow_selection(settings: Any) -> EncoderShadowSelection:
+    """Resolve the optional external Encoder-SLM through a closed contract.
+
+    The external endpoint is intentionally not a general model-provider
+    setting.  This resolver is the only place that may read its connection
+    configuration, and it refuses any task that is not explicitly declared as
+    an ``encoder_slm`` *and* ``shadow_only`` task.  No request text, response
+    content, endpoint, or credential is emitted in telemetry.
+    """
+
+    task = ModelTask.ENCODER_SLM_SHADOW
+    contract = task_contract(task)
+    if not contract.shadow_only or contract.allowed_model_tiers != ("encoder_slm",):
+        raise ValueError("encoder_shadow_task_contract_invalid")
+
+    shared = {
+        "task": task,
+        "prompt_version": contract.prompt_version,
+        "contract_schema_version": TASK_CONTRACT_SCHEMA_VERSION,
+    }
+    if not _bool(settings, "model_registry_enabled", True):
+        return EncoderShadowSelection(
+            state="disabled",
+            reason="model_registry_disabled",
+            **shared,
+        )
+    if not _bool(settings, "encoder_slm_shadow_enabled", False):
+        return EncoderShadowSelection(
+            state="disabled",
+            reason="feature_flag_disabled",
+            **shared,
+        )
+
+    endpoint = _text(settings, "encoder_slm_shadow_url")
+    if not endpoint:
+        return EncoderShadowSelection(
+            state="unavailable",
+            reason="endpoint_not_configured",
+            **shared,
+        )
+    if not _valid_http_endpoint(endpoint):
+        return EncoderShadowSelection(
+            state="unavailable",
+            reason="endpoint_invalid",
+            **shared,
+        )
+
+    model_id = _text(settings, "encoder_slm_shadow_model_id")[:160]
+    selection = EncoderShadowSelection(
+        state="available",
+        reason="registry_resolved",
+        endpoint=endpoint,
+        api_key=_text(settings, "encoder_slm_shadow_api_key"),
+        model_id=model_id,
+        timeout_seconds=_bounded_int(
+            settings,
+            "encoder_slm_shadow_timeout_ms",
+            default=750,
+            minimum=100,
+            maximum=5000,
+        )
+        / 1000,
+        max_input_chars=_bounded_int(
+            settings,
+            "encoder_slm_shadow_max_input_chars",
+            default=1200,
+            minimum=64,
+            maximum=4000,
+        ),
+        **shared,
+    )
+    logger.info(
+        "model_task_selected task=%s provider=external_encoder_slm prompt=%s shadow_only=true",
+        task.value,
+        selection.prompt_version,
+    )
+    return selection
+
+
 def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     """Resolve a task to the current or explicitly configured rollback model.
 
@@ -204,6 +331,11 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     """
 
     contract = task_contract(task)
+    if task is ModelTask.ENCODER_SLM_SHADOW:
+        # This task is purposefully not a DeepSeek request.  Keeping it out of
+        # the generic builder prevents a future caller from silently turning a
+        # non-authoritative Encoder-SLM signal into a primary LLM route.
+        raise ValueError("encoder_shadow_requires_dedicated_registry_adapter")
     registry_enabled = _bool(settings, "model_registry_enabled", True)
     rollback_requested = registry_enabled and _bool(
         settings, "model_registry_force_rollback", False

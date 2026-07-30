@@ -22,13 +22,15 @@ pytest
 ## Optional Encoder-SLM router shadow
 
 `ENCODER_SLM_SHADOW_ENABLED=false` is the default.  When explicitly enabled,
-the ML service sends a bounded, PII-redacted copy of a non-emergency chat input
-to `ENCODER_SLM_SHADOW_URL`.  The external endpoint must return the closed
-`clara.encoder-slm-shadow.v1` categorical schema (intent, risk category,
+the model registry resolves the dedicated `encoder_slm_shadow` task contract
+before the ML service sends a bounded, PII-redacted copy of a non-emergency
+chat input to `ENCODER_SLM_SHADOW_URL`.  The external endpoint must return the
+closed `clara.encoder-slm-shadow.v1` categorical schema (intent, risk category,
 entity categories, negation, temporality, experiencer and language).  It never
 receives an unredacted query, produces no user-facing confidence value, and
 cannot change emergency, legal, consent, RBAC, DrugBank, FIDES, or LifeMap
-truth-state decisions.
+truth-state decisions.  The task is `shadow_only` in the versioned model-task
+manifest and cannot be built through the primary DeepSeek client factory.
 
 Suggested internal-only deployment configuration:
 

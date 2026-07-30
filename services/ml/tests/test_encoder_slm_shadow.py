@@ -45,6 +45,7 @@ def _settings(**overrides: object) -> SimpleNamespace:
         "encoder_slm_shadow_model_id": "vi-clinical-encoder-2026-07",
         "encoder_slm_shadow_timeout_ms": 700,
         "encoder_slm_shadow_max_input_chars": 1200,
+        "model_registry_enabled": True,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
