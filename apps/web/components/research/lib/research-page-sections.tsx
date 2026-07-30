@@ -356,11 +356,9 @@ export function ResearchMainCard({
             {result.verificationStatus ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
                 <p className="font-semibold">
-                  FIDES-lite: {result.verificationStatus.verdict ?? "n/a"} | độ tin cậy:{" "}
-                  {typeof result.verificationStatus.confidence === "number"
-                    ? result.verificationStatus.confidence.toFixed(2)
-                    : "n/a"}
-                  {result.verificationStatus.severity ? ` | mức độ: ${result.verificationStatus.severity}` : ""}
+                  {result.verificationStatus.verdict === "pass"
+                    ? "Đã đối chiếu với nguồn hiện có"
+                    : "Cần đối chiếu thêm với nguồn và chuyên gia"}
                   {typeof result.verificationStatus.evidenceCount === "number"
                     ? ` | số bằng chứng: ${result.verificationStatus.evidenceCount}`
                     : ""}

@@ -252,6 +252,65 @@ def test_research_attribution_respects_canonical_fallback_used(monkeypatch) -> N
     assert body["attributions"][0] == body["attribution"]
 
 
+def test_sync_research_tier2_fails_closed_when_claim_verifier_is_insufficient(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct endpoint must share the async worker's evidence-release gate."""
+
+    token = _login("alice@research.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "tier": "tier2",
+                "answer": "This unsupported treatment conclusion should not be released.",
+                "answer_markdown": "This unsupported treatment conclusion should not be released.",
+                "citations": [
+                    {
+                        "source_id": "pmid:12345",
+                        "source": "pubmed",
+                        "title": "Retrieved study",
+                        "url": "https://pubmed.ncbi.nlm.nih.gov/12345/",
+                    }
+                ],
+                "verification_matrix": {
+                    "summary": {"support_ratio": 0.5},
+                    "rows": [
+                        {"claim": "Supported context.", "support_status": "supported"},
+                        {
+                            "claim": "Unsupported treatment conclusion.",
+                            "support_status": "insufficient",
+                        },
+                    ],
+                },
+                "source_target_achieved": {"achieved_document_count": 1},
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "Please release a treatment conclusion", "ui_language": "en"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["quality_gate"]["passed"] is False
+    assert payload["quality_gate"]["reasons"] == ["unsupported_claims"]
+    assert "unsupported treatment conclusion" not in payload["answer"].lower()
+    assert "No clinical conclusion is released" in payload["answer"]
+    assert payload["citations"][0]["source_id"] == "pmid:12345"
+    assert payload["verification_matrix"]["rows"][1]["support_status"] == "insufficient"
+
+
 def test_research_upload_file_json_is_parsed_as_text() -> None:
     token = _login("alice@research.clara")
 

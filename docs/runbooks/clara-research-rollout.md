@@ -54,6 +54,22 @@ API flags (`services/api/src/clara_api/core/config.py`):
 The web mobile deep-mode surface is additionally gated by the
 `RESEARCH_MOBILE_DEEP_ENABLED` remote-config flag on the mobile client.
 
+### Evidence-release boundary
+
+The evidence-release boundary is not an optional presentation flag. Both the
+synchronous `POST /api/v1/research/tier2` route and the durable
+`POST /api/v1/research/tier2/jobs` worker run the same deterministic quality
+gate after ML verification and attribution. If an answer has no resolvable
+citations, no retrieved evidence, zero support, or any unsupported/
+contradicted claim, CLARA preserves its citation and verifier artifacts but
+replaces the clinical conclusion with an abstention. This applies regardless
+of whether optional Research presentation flags are enabled.
+
+End-user views show a plain-language verification state and evidence count,
+never an uncalibrated verifier confidence percentage, raw FIDES labels, or
+chain-of-thought. Detailed verifier diagnostics stay in the appropriate
+professional/admin rails.
+
 ## Prerequisites
 
 - Spec tasks 1–21 complete (shared flag/payload foundations through the

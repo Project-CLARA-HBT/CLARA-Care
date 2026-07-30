@@ -4823,7 +4823,18 @@ def research_tier2(
         request_payload=upstream_payload,
     )
     attributed = _attach_research_attribution(normalized)
-    return _apply_role_gated_telemetry(attributed, role=token.role) or attributed
+    # Keep the synchronous endpoint on the same evidence-release boundary as
+    # the durable job worker.  Without this step, a caller could receive
+    # factual-looking prose from ``POST /tier2`` even when the ML verifier had
+    # marked one or more claims unsupported or contradicted.  The gate retains
+    # provenance and verifier diagnostics, but replaces the conclusion with an
+    # explicit abstention; it never manufactures a citation or downgrades the
+    # FIDES/safety override result.
+    gated = _apply_research_quality_gates(
+        attributed,
+        request_payload=upstream_payload,
+    )
+    return _apply_role_gated_telemetry(gated, role=token.role) or gated
 
 
 @router.post("/clarify")
