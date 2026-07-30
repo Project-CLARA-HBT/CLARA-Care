@@ -29,8 +29,8 @@ _B2 = -1.10
 
 
 @dataclass(frozen=True)
-class CouncilHeuristicScore:
-    probability: float
+class CouncilRuleShadowScore:
+    heuristic_value: float
     band: str
     top_contributors: list[dict[str, float | str]]
     model_version: str
@@ -56,10 +56,10 @@ def _feature_vector(features: Mapping[str, float]) -> list[float]:
     return [_clamp_01(float(features.get(name, 0.0))) for name in _FEATURE_ORDER]
 
 
-def _band_from_probability(probability: float, *, medium_threshold: float, high_threshold: float) -> str:
-    if probability >= high_threshold:
+def _band_from_heuristic_value(value: float, *, medium_threshold: float, high_threshold: float) -> str:
+    if value >= high_threshold:
         return "high"
-    if probability >= medium_threshold:
+    if value >= medium_threshold:
         return "medium"
     return "low"
 
@@ -80,12 +80,12 @@ def _top_contributors(vector: list[float]) -> list[dict[str, float | str]]:
     ]
 
 
-def score_council_risk(
+def score_council_rule_shadow(
     features: Mapping[str, float],
     *,
     medium_threshold: float = 0.45,
     high_threshold: float = 0.72,
-) -> CouncilHeuristicScore:
+) -> CouncilRuleShadowScore:
     vector = _feature_vector(features)
 
     hidden: list[float] = []
@@ -94,12 +94,12 @@ def score_council_risk(
         hidden.append(_relu(activation))
 
     logit = sum(weight * value for weight, value in zip(_W2, hidden)) + _B2
-    probability = _sigmoid(logit)
+    heuristic_value = _sigmoid(logit)
 
-    return CouncilHeuristicScore(
-        probability=round(probability, 4),
-        band=_band_from_probability(
-            probability,
+    return CouncilRuleShadowScore(
+        heuristic_value=round(heuristic_value, 4),
+        band=_band_from_heuristic_value(
+            heuristic_value,
             medium_threshold=medium_threshold,
             high_threshold=high_threshold,
         ),

@@ -11,7 +11,7 @@ path (Requirements 9.3, 9.4; design Correctness Properties **P11** and **P14**):
   red-flag phrase never escalates — independent of every upgrade flag and of the
   shadow neural-risk feature.
 * **P14 — Neural shadow containment.** Turning the neural risk model on (shadow
-  mode) is purely additive: it changes only the ``neural_risk`` block and never
+  mode) is purely additive: it changes only the ``rule_shadow`` block and never
   the deterministic triage / escalation / final recommendation, even when the
   neural model recommends a *higher* triage than the rule engine.
 
@@ -106,50 +106,50 @@ class TestRedFlagForcesEscalation:
         assert len(escalation["negated_red_flags"]) >= 1
         assert "Emergency escalation triggered" not in result["final_recommendation"]
 
-    def test_red_flag_escalation_independent_of_neural_flag(self) -> None:
-        """The forced escalation is identical whether or not neural risk runs."""
-        without_neural = run_council(
-            dict(_RED_FLAG_PAYLOAD, council_neural_enabled=False)
+    def test_red_flag_escalation_independent_of_rule_shadow_flag(self) -> None:
+        """The forced escalation is identical whether or not rule shadow runs."""
+        without_shadow = run_council(
+            dict(_RED_FLAG_PAYLOAD, council_rule_shadow_enabled=False)
         )
-        with_neural = run_council(
-            dict(_RED_FLAG_PAYLOAD, council_neural_enabled=True)
+        with_shadow = run_council(
+            dict(_RED_FLAG_PAYLOAD, council_rule_shadow_enabled=True)
         )
-        _assert_forced_escalation(without_neural)
-        _assert_forced_escalation(with_neural)
+        _assert_forced_escalation(without_shadow)
+        _assert_forced_escalation(with_shadow)
         for key in _DETERMINISTIC_KEYS:
-            assert without_neural[key] == with_neural[key]
+            assert without_shadow[key] == with_shadow[key]
 
 
-class TestNeuralShadowContainment:
-    """P14: enabling neural risk never changes the deterministic decision."""
+class TestRuleShadowContainment:
+    """P14: fixed rule shadow never changes the deterministic decision."""
 
     @pytest.mark.parametrize(
         "payload",
         [_RED_FLAG_PAYLOAD, _NEGATED_PAYLOAD],
         ids=["red_flag", "negated"],
     )
-    def test_enabling_neural_only_adds_neural_block(self, payload: dict) -> None:
-        baseline = run_council(dict(payload, council_neural_enabled=False))
-        shadowed = run_council(dict(payload, council_neural_enabled=True))
+    def test_enabling_rule_shadow_only_adds_rule_shadow_block(self, payload: dict) -> None:
+        baseline = run_council(dict(payload, council_rule_shadow_enabled=False))
+        shadowed = run_council(dict(payload, council_rule_shadow_enabled=True))
 
         # Every deterministic field is byte-identical.
         for key in _DETERMINISTIC_KEYS:
-            assert baseline[key] == shadowed[key], f"neural risk leaked into {key!r}"
+            assert baseline[key] == shadowed[key], f"rule shadow leaked into {key!r}"
 
-        # The neural model actually ran (shadow), so it is observably present...
-        assert baseline["neural_risk"]["enabled"] is False
-        assert shadowed["neural_risk"]["enabled"] is True
-        assert shadowed["neural_risk"]["shadow_mode"] is True
+        # The fixed rule shadow ran, so it is observably present...
+        assert baseline["rule_shadow"]["enabled"] is False
+        assert shadowed["rule_shadow"]["enabled"] is True
+        assert shadowed["rule_shadow"]["shadow_mode"] is True
 
-        # ...yet the ONLY difference between the two envelopes is neural_risk.
-        baseline_sans = {k: v for k, v in baseline.items() if k != "neural_risk"}
-        shadowed_sans = {k: v for k, v in shadowed.items() if k != "neural_risk"}
+        # ...yet the ONLY difference between the two envelopes is rule_shadow.
+        baseline_sans = {k: v for k, v in baseline.items() if k != "rule_shadow"}
+        shadowed_sans = {k: v for k, v in shadowed.items() if k != "rule_shadow"}
         assert baseline_sans == shadowed_sans
 
-    def test_neural_higher_recommendation_does_not_override_routine(self) -> None:
-        """When neural recommends a higher triage, routing stays deterministic."""
+    def test_rule_shadow_higher_recommendation_does_not_override_routine(self) -> None:
+        """When a fixed rule shadow suggests higher triage, routing stays deterministic."""
         # Sparse, conflict-prone input keeps the rule engine off emergency while
-        # pushing the neural score up; the recommended_triage may diverge.
+        # pushing the shadow band up; the recommended_triage may diverge.
         payload: dict[str, object] = {
             "symptoms": ["mild intermittent dizziness"],
             "labs": {},
@@ -157,16 +157,16 @@ class TestNeuralShadowContainment:
             "history": [],
             "specialists": ["cardiology", "neurology"],
         }
-        baseline = run_council(dict(payload, council_neural_enabled=False))
-        shadowed = run_council(dict(payload, council_neural_enabled=True))
+        baseline = run_council(dict(payload, council_rule_shadow_enabled=False))
+        shadowed = run_council(dict(payload, council_rule_shadow_enabled=True))
 
         # No red flag ⇒ deterministic escalation is NOT triggered, regardless of
         # whatever band the shadow model lands on.
         assert baseline["emergency_escalation"]["triggered"] is False
         assert shadowed["emergency_escalation"]["triggered"] is False
 
-        # Neural recommended_triage is reported but never feeds routing.
-        assert shadowed["neural_risk"]["recommended_triage"] in {
+        # The rule-shadow recommendation is reported but never feeds routing.
+        assert shadowed["rule_shadow"]["recommended_triage"] in {
             "routine_follow_up",
             "same_day_review",
             "emergency_escalation",

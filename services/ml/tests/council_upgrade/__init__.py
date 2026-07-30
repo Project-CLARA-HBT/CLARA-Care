@@ -18,8 +18,10 @@ This harness exists so the two halves of every property are cheap to express:
   ``run_council_intake`` emit their existing shapes (design Property P8;
   Requirements 9.1, 9.2).
 
-The pre-existing ``COUNCIL_NEURAL_*`` flags remain the source of truth for
-shadow-mode neural risk and are intentionally excluded from this inventory.
+The pre-existing ``COUNCIL_RULE_SHADOW_*`` flags remain the source of truth for
+the fixed-weight shadow signal and are intentionally excluded from this
+inventory. ``COUNCIL_NEURAL_*`` environment names are input-only compatibility
+aliases for older deployments.
 
 Only end-user-facing product copy is Vietnamese; this test code and its
 identifiers are intentionally English.

@@ -27,7 +27,7 @@ __all__ = [
 # ML-side feature-flag inventory (Settings attribute names).
 # ---------------------------------------------------------------------------
 # Only the *new* boolean flags the ML side reads. The pre-existing
-# ``council_neural_*`` flags are deliberately excluded — they are owned by the
+# ``council_rule_shadow_*`` flags are deliberately excluded — they are owned by the
 # shadow-mode neural risk feature and must not be perturbed by the baseline.
 COUNCIL_UPGRADE_FLAG_ATTRS: tuple[str, ...] = (
     "council_streaming_enabled",

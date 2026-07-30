@@ -45,10 +45,9 @@ export type CouncilViewModel = {
     requiresHumanHandoff: boolean;
     citationAverageStrength: number | null;
     citationTotal: number | null;
-    neuralEnabled: boolean;
-    neuralProbability: number | null;
-    neuralBand: string;
-    neuralRecommendedTriage: string;
+    ruleShadowEnabled: boolean;
+    ruleShadowBand: string;
+    ruleShadowRecommendedTriage: string;
   };
   analyze: {
     keySignals: string[];
@@ -475,10 +474,10 @@ export function buildCouncilView(snapshot: CouncilRunSnapshot): CouncilViewModel
       requiresHumanHandoff: snapshot.result.escalationMetadata?.requiresHumanHandoff ?? false,
       citationAverageStrength: snapshot.result.citationQuality?.averageEvidenceStrength ?? null,
       citationTotal: snapshot.result.citationQuality?.totalCitations ?? null,
-      neuralEnabled: snapshot.result.neuralRisk?.enabled ?? false,
-      neuralProbability: snapshot.result.neuralRisk?.riskProbability ?? null,
-      neuralBand: snapshot.result.neuralRisk?.riskBand ?? "",
-      neuralRecommendedTriage: snapshot.result.neuralRisk?.recommendedTriage ?? "",
+      ruleShadowEnabled: snapshot.result.ruleShadow?.enabled ?? false,
+      ruleShadowBand: snapshot.result.ruleShadow?.riskBand ?? "",
+      ruleShadowRecommendedTriage:
+        snapshot.result.ruleShadow?.recommendedTriage ?? "",
     },
     analyze: {
       keySignals,

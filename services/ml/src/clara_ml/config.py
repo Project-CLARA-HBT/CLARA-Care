@@ -800,23 +800,38 @@ class Settings(BaseSettings):
         ge=0,
         le=64,
     )
-    council_neural_enabled: bool = Field(
+    # Canonical name explicitly identifies this as a deterministic fixed-weight
+    # heuristic shadow. COUNCIL_NEURAL_* remains environment-only compatibility
+    # for old deployments; it is never emitted as a model name or API field.
+    council_rule_shadow_enabled: bool = Field(
         default=False,
-        validation_alias="COUNCIL_NEURAL_ENABLED",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_ENABLED",
+            "COUNCIL_NEURAL_ENABLED",
+        ),
     )
-    council_neural_shadow_mode: bool = Field(
+    council_rule_shadow_mode: bool = Field(
         default=True,
-        validation_alias="COUNCIL_NEURAL_SHADOW_MODE",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_MODE",
+            "COUNCIL_NEURAL_SHADOW_MODE",
+        ),
     )
-    council_neural_medium_threshold: float = Field(
+    council_rule_shadow_medium_threshold: float = Field(
         default=0.45,
-        validation_alias="COUNCIL_NEURAL_MEDIUM_THRESHOLD",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_MEDIUM_THRESHOLD",
+            "COUNCIL_NEURAL_MEDIUM_THRESHOLD",
+        ),
         ge=0.0,
         le=1.0,
     )
-    council_neural_high_threshold: float = Field(
+    council_rule_shadow_high_threshold: float = Field(
         default=0.72,
-        validation_alias="COUNCIL_NEURAL_HIGH_THRESHOLD",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_HIGH_THRESHOLD",
+            "COUNCIL_NEURAL_HIGH_THRESHOLD",
+        ),
         ge=0.0,
         le=1.0,
     )
@@ -832,7 +847,7 @@ class Settings(BaseSettings):
     )
 
     # --- Council upgrade feature flags (additive; default OFF) ---------------
-    # ML-side gates for the Council upgrade, mirroring the COUNCIL_NEURAL_*
+    # ML-side gates for the Council upgrade, mirroring the COUNCIL_RULE_SHADOW_*
     # pattern above. All additive + default OFF ⇒ byte-for-byte current
     # behavior: with these off, run_council / run_council_intake emit their
     # existing shapes, no SSE stage stream is produced, no ai_disclosure block

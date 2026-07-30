@@ -131,12 +131,12 @@ class TestClinicianReviewDirectiveAlwaysPresent:
         _assert_directive_present(result)
 
     @pytest.mark.parametrize(
-        "neural_enabled", [False, True], ids=["neural_off", "neural_on"]
+        "rule_shadow_enabled", [False, True], ids=["rule_shadow_off", "rule_shadow_on"]
     )
-    def test_directive_independent_of_neural_shadow(self, neural_enabled: bool) -> None:
-        """Enabling the shadow neural model never drops the directive."""
+    def test_directive_independent_of_rule_shadow(self, rule_shadow_enabled: bool) -> None:
+        """Enabling the fixed rule shadow never drops the directive."""
         result = run_council(
-            dict(_CONSENSUS_PAYLOAD, council_neural_enabled=neural_enabled)
+            dict(_CONSENSUS_PAYLOAD, council_rule_shadow_enabled=rule_shadow_enabled)
         )
         _assert_directive_present(result)
 

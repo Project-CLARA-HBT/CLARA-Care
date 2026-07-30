@@ -91,11 +91,10 @@ export type CouncilReasoningTimelineStep = {
   metadata: Record<string, unknown>;
 };
 
-export type CouncilNeuralRisk = {
+export type CouncilRuleShadow = {
   enabled: boolean;
   shadowMode: boolean;
   modelVersion: string;
-  riskProbability: number | null;
   riskBand: string;
   recommendedTriage: string;
   topContributors: Array<{
@@ -132,7 +131,7 @@ export type CouncilRunResult = {
   escalationMetadata: CouncilEscalationMetadata | null;
   citationQuality: CouncilCitationQuality | null;
   reasoningTimeline: CouncilReasoningTimelineStep[];
-  neuralRisk: CouncilNeuralRisk | null;
+  ruleShadow: CouncilRuleShadow | null;
   aiDisclosure: CouncilAiDisclosure | null;
   analysisSections: {
     analyze: string[];
@@ -441,7 +440,7 @@ function parseReasoningTimeline(value: unknown): CouncilReasoningTimelineStep[] 
     .sort((a, b) => a.sequence - b.sequence);
 }
 
-function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
+function parseRuleShadow(value: unknown): CouncilRuleShadow | null {
   const record = asRecord(value);
   if (!record) return null;
   const contributorsRaw = Array.isArray(record.top_contributors) ? record.top_contributors : [];
@@ -461,7 +460,6 @@ function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
     enabled: parseBoolean(record.enabled),
     shadowMode: parseBoolean(record.shadow_mode ?? record.shadowMode),
     modelVersion: asText(record.model_version) ?? asText(record.modelVersion) ?? "",
-    riskProbability: parseNumber(record.risk_probability ?? record.riskProbability),
     riskBand: asText(record.risk_band) ?? asText(record.riskBand) ?? "",
     recommendedTriage:
       asText(record.recommended_triage) ?? asText(record.recommendedTriage) ?? "",
@@ -478,7 +476,7 @@ function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
 // §E). With the flag off the block is absent, so this returns `null` and the
 // surfaces render byte-identically to today. `is_fallback` is true IFF a
 // degraded/heuristic path produced the output (Property P10). Mirrors the
-// `parseNeuralRisk` style above.
+// `parseRuleShadow` style above.
 // ---------------------------------------------------------------------------
 function parseCouncilDisclosure(value: unknown): CouncilAiDisclosure | null {
   const record = asRecord(value);
@@ -643,7 +641,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
   );
   const citationQuality = parseCitationQuality(pickUnknown(candidates, ["citation_quality"]));
   const reasoningTimeline = parseReasoningTimeline(pickUnknown(candidates, ["reasoning_timeline"]));
-  const neuralRisk = parseNeuralRisk(pickUnknown(candidates, ["neural_risk"]));
+  const ruleShadow = parseRuleShadow(pickUnknown(candidates, ["rule_shadow"]));
   const aiDisclosure = parseCouncilDisclosure(pickUnknown(candidates, ["ai_disclosure", "aiDisclosure"]));
 
   const policyAction = parseText(pickUnknown(candidates, ["policy_action", "action"])).toLowerCase();
@@ -723,7 +721,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     escalationMetadata,
     citationQuality,
     reasoningTimeline,
-    neuralRisk,
+    ruleShadow,
     aiDisclosure,
     analysisSections
   };

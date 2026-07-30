@@ -1030,11 +1030,11 @@ def test_council_run_returns_expected_schema():
     steps = [item["step"] for item in body["reasoning_timeline"]]
     assert "consensus_decision" in steps
     assert "safety_gate" in steps
-    assert isinstance(body["neural_risk"], dict)
-    assert body["neural_risk"]["enabled"] is False
-    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
-    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
-    assert body["neural_risk"]["trained"] is False
+    assert isinstance(body["rule_shadow"], dict)
+    assert body["rule_shadow"]["enabled"] is False
+    assert body["rule_shadow"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
+    assert body["rule_shadow"]["model_class"] == "fixed_weight_heuristic"
+    assert body["rule_shadow"]["trained"] is False
     assert isinstance(body["research"], dict)
     assert isinstance(body["deepdive"], dict)
     assert body["analyze"]["consensus_triage"] in {
@@ -1082,7 +1082,7 @@ def test_council_run_emergency_escalation_on_red_flags():
     assert body["assessment_completeness"]["emergency_floor_triggered"] is True
 
 
-def test_council_run_supports_neural_shadow_scoring():
+def test_council_run_supports_fixed_rule_shadow_scoring():
     response = client.post(
         "/v1/council/run",
         json={
@@ -1091,30 +1091,29 @@ def test_council_run_supports_neural_shadow_scoring():
             "medications": ["metformin", "ibuprofen", "aspirin"],
             "history": ["type 2 diabetes", "chronic kidney disease"],
             "specialists": ["cardiology", "endocrinology", "nephrology"],
-            "council_neural_enabled": True,
+            "council_rule_shadow_enabled": True,
         },
     )
     assert response.status_code == 200
     body = response.json()
 
-    assert isinstance(body["neural_risk"], dict)
-    assert body["neural_risk"]["enabled"] is True
-    assert body["neural_risk"]["shadow_mode"] is True
-    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
-    assert body["neural_risk"]["legacy_model_alias"] == "council-neural-shadow-v1"
-    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
-    assert body["neural_risk"]["trained"] is False
-    assert body["neural_risk"]["risk_band"] in {"low", "medium", "high"}
-    assert "risk_probability" not in body["neural_risk"]
-    assert body["neural_risk"]["score_visibility"] == "not_calibrated_not_user_facing"
-    assert body["neural_risk"]["recommended_triage"] in {
+    assert isinstance(body["rule_shadow"], dict)
+    assert body["rule_shadow"]["enabled"] is True
+    assert body["rule_shadow"]["shadow_mode"] is True
+    assert body["rule_shadow"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
+    assert body["rule_shadow"]["model_class"] == "fixed_weight_heuristic"
+    assert body["rule_shadow"]["trained"] is False
+    assert body["rule_shadow"]["risk_band"] in {"low", "medium", "high"}
+    assert "risk_probability" not in body["rule_shadow"]
+    assert body["rule_shadow"]["score_visibility"] == "not_calibrated_not_user_facing"
+    assert body["rule_shadow"]["recommended_triage"] in {
         "routine_follow_up",
         "same_day_review",
         "emergency_escalation",
     }
-    assert isinstance(body["neural_risk"]["feature_map"], dict)
-    assert isinstance(body["neural_risk"]["top_contributors"], list)
-    assert len(body["neural_risk"]["top_contributors"]) >= 1
+    assert isinstance(body["rule_shadow"]["feature_map"], dict)
+    assert isinstance(body["rule_shadow"]["top_contributors"], list)
+    assert len(body["rule_shadow"]["top_contributors"]) >= 1
 
 
 def test_council_run_negation_aware_and_insufficient_data_gate():

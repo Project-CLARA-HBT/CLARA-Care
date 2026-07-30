@@ -135,7 +135,7 @@ export default function CouncilResultPage() {
                 />
                 <CouncilMetricCard
                   label="Tín hiệu nguy cơ theo quy tắc (chỉ theo dõi)"
-                  value={view.quality.neuralEnabled ? view.quality.neuralBand || "có tín hiệu" : "chưa bật"}
+                  value={view.quality.ruleShadowEnabled ? view.quality.ruleShadowBand || "có tín hiệu" : "chưa bật"}
                   hint="Đây là điểm heuristic chưa hiệu chuẩn; không thay thế phân luồng an toàn hoặc nhận định chuyên môn."
                 />
               </div>

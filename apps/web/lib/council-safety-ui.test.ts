@@ -9,6 +9,6 @@ describe("Council heuristic-risk presentation", () => {
     expect(source).toContain("Tín hiệu nguy cơ theo quy tắc");
     expect(source).toContain("heuristic chưa hiệu chuẩn");
     expect(source).not.toContain('label="Neural Risk (Shadow)"');
-    expect(source).not.toContain("fmtPercent(view.quality.neuralProbability)");
+    expect(source).not.toContain("fmtPercent(view.quality.ruleShadowProbability)");
   });
 });

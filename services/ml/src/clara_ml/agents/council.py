@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from itertools import combinations
 from typing import Any
 
-from clara_ml.agents.council_neural import score_council_risk
+from clara_ml.agents.council_neural import score_council_rule_shadow
 from clara_ml.config import settings
 
 SUPPORTED_SPECIALISTS = (
@@ -1115,7 +1115,7 @@ def _build_escalation_metadata(
     }
 
 
-def _build_neural_feature_map(
+def _build_rule_shadow_feature_map(
     *,
     red_flags: list[str],
     conflicts: list[dict[str, object]],
@@ -1153,7 +1153,7 @@ def _build_neural_feature_map(
     }
 
 
-def _build_neural_risk_payload(
+def _build_rule_shadow_payload(
     *,
     payload: dict,
     red_flags: list[str],
@@ -1165,20 +1165,32 @@ def _build_neural_risk_payload(
     assessments: list[SpecialistAssessment],
     medications: list[str],
 ) -> dict[str, Any]:
-    neural_enabled = bool(payload.get("council_neural_enabled", settings.council_neural_enabled))
-    shadow_mode = bool(payload.get("council_neural_shadow_mode", settings.council_neural_shadow_mode))
+    # The former council_neural_* request names remain input-only aliases for
+    # rollout compatibility. This deterministic fixed-weight heuristic is not
+    # a neural model and is never represented as one in response metadata.
+    shadow_enabled = bool(
+        payload.get(
+            "council_rule_shadow_enabled",
+            payload.get("council_neural_enabled", settings.council_rule_shadow_enabled),
+        )
+    )
+    shadow_mode = bool(
+        payload.get(
+            "council_rule_shadow_mode",
+            payload.get("council_neural_shadow_mode", settings.council_rule_shadow_mode),
+        )
+    )
 
-    if not neural_enabled:
+    if not shadow_enabled:
         return {
             "enabled": False,
             "shadow_mode": shadow_mode,
             "model_version": "council-fixed-weight-heuristic-shadow-v2",
-            "legacy_model_alias": "council-neural-shadow-v1",
             "model_class": "fixed_weight_heuristic",
             "trained": False,
         }
 
-    feature_map = _build_neural_feature_map(
+    feature_map = _build_rule_shadow_feature_map(
         red_flags=red_flags,
         conflicts=conflicts,
         consensus_metadata=consensus_metadata,
@@ -1188,10 +1200,10 @@ def _build_neural_risk_payload(
         assessments=assessments,
         medications=medications,
     )
-    score = score_council_risk(
+    score = score_council_rule_shadow(
         feature_map,
-        medium_threshold=settings.council_neural_medium_threshold,
-        high_threshold=settings.council_neural_high_threshold,
+        medium_threshold=settings.council_rule_shadow_medium_threshold,
+        high_threshold=settings.council_rule_shadow_high_threshold,
     )
 
     recommended_triage = "routine_follow_up"
@@ -1204,7 +1216,6 @@ def _build_neural_risk_payload(
         "enabled": True,
         "shadow_mode": shadow_mode,
         "model_version": score.model_version,
-        "legacy_model_alias": "council-neural-shadow-v1",
         "model_class": "fixed_weight_heuristic",
         "trained": False,
         "risk_band": score.band,
@@ -1360,7 +1371,7 @@ def run_council(payload: dict) -> dict:
         needs_more_info=needs_more_info,
         final_recommendation=final_recommendation,
     )
-    neural_risk = _build_neural_risk_payload(
+    rule_shadow = _build_rule_shadow_payload(
         payload=payload,
         red_flags=red_flags,
         conflicts=conflicts,
@@ -1423,7 +1434,7 @@ def run_council(payload: dict) -> dict:
         "citations": citations,
         "citation_quality": citation_quality,
         "reasoning_timeline": reasoning_timeline,
-        "neural_risk": neural_risk,
+        "rule_shadow": rule_shadow,
         "research": {
             "mode": "rule_based_council_v2",
             "topics": research_topics,
@@ -1484,7 +1495,7 @@ def run_council(payload: dict) -> dict:
     # --- Model & fallback disclosure (Requirement 6.1, 6.3) -----------------
     # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on (read
     # from the payload override, falling back to the ML settings — mirroring the
-    # council_neural_enabled pattern), attach an ``ai_disclosure`` block naming
+    # council_rule_shadow_enabled pattern), attach an ``ai_disclosure`` block naming
     # the deterministic rule engine. A rule-engine run is never a degraded
     # fallback, so ``is_fallback`` is always False (design §E, Property P10).
     # When the flag is off, the block is omitted entirely so the envelope is
