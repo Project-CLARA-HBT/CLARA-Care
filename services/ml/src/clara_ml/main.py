@@ -1823,6 +1823,16 @@ async def scribe_transcribe(
                 detail=f"Scribe transcription failed: {exc}",
             ) from exc
 
+    # Additive, review-only correction metadata. The helper is disabled by
+    # default and never rewrites ``transcript_text``; all suggestions retain an
+    # exact source span and must be accepted by a clinician in the API/UI layer.
+    from clara_ml.scribe.correction import propose_medical_asr_corrections
+
+    medical_correction = propose_medical_asr_corrections(
+        transcript_text,
+        language=resolved_language or "vi",
+    )
+
     return {
         "text": transcript_text,
         "no_speech_detected": no_speech_detected,
@@ -1832,6 +1842,7 @@ async def scribe_transcribe(
         "session_id": session_id,
         "processing_ms": round(processing_ms, 3),
         "received_bytes": len(audio_bytes),
+        "medical_correction": medical_correction,
     }
 
 

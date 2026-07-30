@@ -27,6 +27,7 @@ class ModelTask(StrEnum):
     LIFEMAP_VISIT_EXTRACTION = "lifemap_visit_extraction"
     SCRIBE_NOTE = "scribe_note"
     SCRIBE_TRANSCRIPTION = "scribe_transcription"
+    SCRIBE_ASR_CORRECTION = "scribe_asr_correction"
     COUNCIL_SHADOW = "council_shadow"
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"

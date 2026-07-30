@@ -899,6 +899,11 @@ class Settings(BaseSettings):
     scribe_asr_code_switching: bool = Field(
         default=True, validation_alias="SCRIBE_ASR_CODE_SWITCHING"
     )
+    # Medical-ASR correction only proposes source-spanned edits. It never
+    # rewrites a transcript automatically and stays off until explicit rollout.
+    scribe_medical_correction_enabled: bool = Field(
+        default=False, validation_alias="SCRIBE_MEDICAL_CORRECTION_ENABLED"
+    )
     # PhoWhisper (self-hosted, Vietnamese-capable) HTTP provider config. Defaults keep it
     # DISABLED/degrading: with no base URL set the provider returns an empty result so the
     # composite falls back to Whisper. Selected via SCRIBE_ASR_PRIMARY/FALLBACK="phowhisper".
