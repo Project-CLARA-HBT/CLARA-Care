@@ -7,6 +7,9 @@ import { PanelCard } from "@/components/admin/analytics-primitives";
 import AsyncSection, { type AsyncState } from "@/components/ui/async-section";
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
 import api from "@/lib/http-client";
+import { t } from "@/lib/i18n/catalog";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
   KnowledgeSource,
@@ -48,11 +51,11 @@ const SOURCE_LABELS: Record<SourceHubSourceKey, string> = {
   davidrug: "DAVIDrug"
 };
 
-function formatDate(value?: string): string {
+function formatDate(value: string | undefined, language: UILanguage): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("vi-VN", { hour12: false });
+  return date.toLocaleString(language === "vi" ? "vi-VN" : "en-US", { hour12: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -120,26 +123,26 @@ type RagSourcePatch = {
 
 const RAG_TRUST_TIER_OPTIONS = [1, 2, 3, 4] as const;
 
-/** Authority tier → Vietnamese label (1 = cao nhất). */
-function ragTrustTierLabel(tier: number | null | undefined): string {
+/** Authority tier label; the source tier remains a backend-controlled value. */
+function ragTrustTierLabel(tier: number | null | undefined, language: UILanguage): string {
   switch (tier) {
     case 1:
-      return "Bậc 1 · Cơ quan quản lý / nhãn thuốc";
+      return t(language, "admin.knowledgeSources.tier.one");
     case 2:
-      return "Bậc 2 · Hướng dẫn lâm sàng";
+      return t(language, "admin.knowledgeSources.tier.two");
     case 3:
-      return "Bậc 3 · Tài liệu bình duyệt";
+      return t(language, "admin.knowledgeSources.tier.three");
     case 4:
-      return "Bậc 4 · Nguồn bổ sung";
+      return t(language, "admin.knowledgeSources.tier.four");
     default:
-      return "Chưa phân bậc";
+      return t(language, "admin.knowledgeSources.tier.unassigned");
   }
 }
 
-function ragFetchModeLabel(mode: string): string {
+function ragFetchModeLabel(mode: string, language: UILanguage): string {
   const key = (mode ?? "").trim().toLowerCase();
   if (key === "api") return "API";
-  if (key === "crawl") return "Thu thập web";
+  if (key === "crawl") return t(language, "admin.knowledgeSources.fetchMode.crawl");
   return mode || "--";
 }
 
@@ -157,6 +160,7 @@ async function patchRagRegistrySource(
 }
 
 export default function AdminKnowledgeSourcesPage() {
+  const language = useUILanguage();
   const {
     config,
     isLoading: isLoadingRag,
@@ -223,13 +227,13 @@ export default function AdminKnowledgeSourcesPage() {
     } catch (cause) {
       setError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải knowledge sources."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadSources")
         )
       );
     } finally {
       setIsLoadingSources(false);
     }
-  }, []);
+  }, [language]);
 
   const loadDocuments = async (sourceId: number) => {
     setIsLoadingDocs(true);
@@ -240,7 +244,7 @@ export default function AdminKnowledgeSourcesPage() {
     } catch (cause) {
       setError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải tài liệu của source."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadDocuments")
         )
       );
     } finally {
@@ -276,10 +280,10 @@ export default function AdminKnowledgeSourcesPage() {
       setSources((prev) => [source, ...prev]);
       setActiveSourceId(source.id);
       setNewSourceName("");
-      setMessage("Đã tạo knowledge source mới.");
+      setMessage(t(language, "admin.knowledgeSources.notice.created"));
     } catch (cause) {
       setError(
-        sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tạo source.")
+        sanitizeUpstreamError(cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.create"))
       );
     } finally {
       setIsCreatingSource(false);
@@ -295,11 +299,11 @@ export default function AdminKnowledgeSourcesPage() {
       await uploadFileToKnowledgeSource(activeSourceId, file);
       await loadDocuments(activeSourceId);
       await loadSources();
-      setMessage("Upload tài liệu thành công.");
+      setMessage(t(language, "admin.knowledgeSources.notice.uploaded"));
     } catch (cause) {
       setError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể upload file vào source."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.upload")
         )
       );
     } finally {
@@ -315,7 +319,7 @@ export default function AdminKnowledgeSourcesPage() {
     } catch (cause) {
       setError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái document."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.updateDocument")
         )
       );
     }
@@ -331,11 +335,11 @@ export default function AdminKnowledgeSourcesPage() {
     } catch (cause) {
       setSourceHubError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải federated catalog."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadCatalog")
         )
       );
     }
-  }, []);
+  }, [language]);
 
   const loadSourceHubRecords = useCallback(async (query?: string) => {
     setIsLoadingSourceHubRecords(true);
@@ -350,13 +354,13 @@ export default function AdminKnowledgeSourcesPage() {
     } catch (cause) {
       setSourceHubError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải federated records."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadRecords")
         )
       );
     } finally {
       setIsLoadingSourceHubRecords(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -370,7 +374,7 @@ export default function AdminKnowledgeSourcesPage() {
     event.preventDefault();
     const query = sourceHubSyncQuery.trim();
     if (!query) {
-      setSourceHubError("Vui lòng nhập query đồng bộ federation.");
+      setSourceHubError(t(language, "admin.knowledgeSources.error.syncQueryRequired"));
       return;
     }
 
@@ -387,16 +391,18 @@ export default function AdminKnowledgeSourcesPage() {
         limit: safeLimit
       });
       await loadSourceHubRecords(sourceHubSearchText);
-      setSourceHubMessage(
-        `Sync ${SOURCE_LABELS[result.source]}: fetched ${result.fetched}, stored ${result.stored}.`
-      );
+      setSourceHubMessage(t(language, "admin.knowledgeSources.notice.synced", {
+        source: SOURCE_LABELS[result.source],
+        fetched: result.fetched,
+        stored: result.stored
+      }));
       if (result.warnings.length) {
-        setSourceHubMessage((prev) => `${prev} Cảnh báo: ${result.warnings.join(" | ")}`);
+        setSourceHubMessage((prev) => `${prev} ${t(language, "admin.knowledgeSources.notice.warning")} ${result.warnings.join(" | ")}`);
       }
     } catch (cause) {
       setSourceHubError(
         sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể đồng bộ federation."
+          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.sync")
         )
       );
     } finally {
@@ -442,7 +448,7 @@ export default function AdminKnowledgeSourcesPage() {
         if (isRagPayloadDegraded(updated)) {
           setRagRegistryDegraded(true);
           setRagUpdateError(
-            "Dịch vụ xử lý tạm thời không khả dụng — thay đổi chưa được áp dụng. Vui lòng thử lại sau ít phút."
+            t(language, "admin.knowledgeSources.registry.updateUnavailable")
           );
           return;
         }
@@ -452,7 +458,7 @@ export default function AdminKnowledgeSourcesPage() {
             : prev
         );
         setRagUpdateNotice(
-          `Đã cập nhật nguồn ${updated.display_name || updated.source_key || source.source_key}.`
+          t(language, "admin.knowledgeSources.registry.updated", { source: updated.display_name || updated.source_key || source.source_key })
         );
       } catch (cause) {
         setRagUpdateError(
@@ -462,7 +468,7 @@ export default function AdminKnowledgeSourcesPage() {
         setRagUpdatingId(null);
       }
     },
-    [ragUpdatingId]
+    [language, ragUpdatingId]
   );
 
   const ragRegistryState = useMemo<AsyncState<RagRegistrySource[]>>(() => {
@@ -517,16 +523,16 @@ export default function AdminKnowledgeSourcesPage() {
   return (
     <AdminShell
       activeTab="knowledge-sources"
-      title="Nguồn tri thức"
-      description="Kho tri thức hợp nhất và ưu tiên nguồn truy xuất."
+      title={t(language, "admin.knowledgeSources.title")}
+      description={t(language, "admin.knowledgeSources.description")}
     >
       <div className="space-y-6">
         <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
           <article className="rounded-2xl border border-slate-200 bg-[#001c38] p-4 shadow-lg dark:border-slate-700">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">Sơ đồ kết nối nguồn tri thức</h3>
+              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">{t(language, "admin.knowledgeSources.connectionMap")}</h3>
               <span className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
-                Live
+                {t(language, "admin.knowledgeSources.live")}
               </span>
             </div>
             <div className="mt-3 grid gap-4 md:grid-cols-[1fr_0.9fr]">
@@ -551,7 +557,7 @@ export default function AdminKnowledgeSourcesPage() {
                 </svg>
               </div>
               <div className="space-y-2.5 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">Số bản ghi theo nguồn</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">{t(language, "admin.knowledgeSources.recordsBySource")}</p>
                 {sourceRecordDistribution.length ? (
                   sourceRecordDistribution.map(([source, count]) => (
                     <div key={source}>
@@ -568,7 +574,7 @@ export default function AdminKnowledgeSourcesPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-300">Chưa có record sync từ backend.</p>
+                  <p className="text-xs text-slate-300">{t(language, "admin.knowledgeSources.noSyncedRecords")}</p>
                 )}
               </div>
             </div>
@@ -576,24 +582,24 @@ export default function AdminKnowledgeSourcesPage() {
 
           <article className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Connectors</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeConnectors")}</p>
               <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{activeRagConnectors}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Retrieval connectors bật</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.activeConnectorsHint")}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Knowledge Sources</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
               <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sources.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Kho tri thức đã tạo</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.sourcesHint")}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Federated Records</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.federatedRecords")}</p>
               <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sourceHubRecords.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Records từ nguồn y khoa</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.federatedRecordsHint")}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Docs</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
               <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{activeDocumentCount}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Trong source đang chọn</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.activeDocumentsHint")}</p>
             </div>
           </article>
         </section>
@@ -612,23 +618,23 @@ export default function AdminKnowledgeSourcesPage() {
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 space-y-4 lg:col-span-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">Điều phối nguồn tri thức</h3>
+              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.orchestration")}</h3>
               <button
                 type="button"
                 onClick={() => void loadSources()}
                 className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-brand)] hover:underline dark:text-cyan-300"
               >
-                Làm mới
+                {t(language, "admin.knowledgeSources.refresh")}
               </button>
             </div>
 
             <form onSubmit={onCreateSource} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tạo nguồn tri thức</label>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.createLabel")}</label>
               <div className="mt-2 flex gap-2">
                 <input
                   value={newSourceName}
                   onChange={(event) => setNewSourceName(event.target.value)}
-                  placeholder="Tên source mới"
+                  placeholder={t(language, "admin.knowledgeSources.createPlaceholder")}
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
@@ -643,14 +649,14 @@ export default function AdminKnowledgeSourcesPage() {
 
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Ưu tiên connector truy xuất</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.priorityConnectors")}</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => void reloadRag()}
                     className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Tải lại
+                    {t(language, "admin.knowledgeSources.reload")}
                   </button>
                   <button
                     type="button"
@@ -658,7 +664,7 @@ export default function AdminKnowledgeSourcesPage() {
                     onClick={() => void saveRag()}
                     className="rounded-md bg-[color:var(--brand-700)] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
                   >
-                    {isSavingRag ? "Đang lưu..." : "Lưu"}
+                    {isSavingRag ? t(language, "admin.knowledgeSources.saving") : t(language, "admin.knowledgeSources.save")}
                   </button>
                 </div>
               </div>
@@ -675,7 +681,7 @@ export default function AdminKnowledgeSourcesPage() {
               ) : null}
 
               {isLoadingRag ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải connectors...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.loadingConnectors")}</p>
               ) : ragPriorityRows.length ? (
                 ragPriorityRows.map((source) => (
                   <div key={source.id} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition dark:border-slate-700 dark:bg-slate-900">
@@ -694,12 +700,12 @@ export default function AdminKnowledgeSourcesPage() {
                             : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         ].join(" ")}
                       >
-                        {source.enabled ? "Bật" : "Tắt"}
+                        {source.enabled ? t(language, "admin.knowledgeSources.enabled") : t(language, "admin.knowledgeSources.disabled")}
                       </button>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ưu tiên</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t(language, "admin.knowledgeSources.priority")}</span>
                         <input
                           type="range"
                           min={1}
@@ -711,7 +717,7 @@ export default function AdminKnowledgeSourcesPage() {
                         <span className="w-8 text-right text-xs font-mono font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{source.priority}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Trọng số</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t(language, "admin.knowledgeSources.weight")}</span>
                         <input
                           type="range"
                           min={0}
@@ -727,13 +733,13 @@ export default function AdminKnowledgeSourcesPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có connector nào.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.noConnectors")}</p>
               )}
 
               <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Phân bổ nguồn tri thức</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.sourceAllocation")}</p>
                 {isLoadingSources ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải nguồn tri thức...</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.loadingSources")}</p>
                 ) : knowledgePriorityRows.length ? (
                   knowledgePriorityRows.map((source) => {
                     const active = source.id === activeSourceId;
@@ -752,10 +758,10 @@ export default function AdminKnowledgeSourcesPage() {
                       <div className="mb-3 flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold text-[color:var(--text-brand)] dark:text-cyan-300">{source.name}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{source.documents_count} tài liệu</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.documentCount", { count: source.documents_count })}</p>
                         </div>
                         <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                          {source.is_active ? "Active" : "Paused"}
+                          {source.is_active ? t(language, "admin.knowledgeSources.active") : t(language, "admin.knowledgeSources.paused")}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -775,7 +781,7 @@ export default function AdminKnowledgeSourcesPage() {
                   );
                 })
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có source nào.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.noSources")}</p>
               )}
             </div>
             </div>
@@ -784,13 +790,13 @@ export default function AdminKnowledgeSourcesPage() {
           <section className="col-span-12 space-y-4 lg:col-span-7">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">Knowledge Assets</h3>
+                <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.assets")}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {activeSource ? `Source: ${activeSource.name}` : "Chưa chọn source"}
+                  {activeSource ? t(language, "admin.knowledgeSources.activeSource", { source: activeSource.name }) : t(language, "admin.knowledgeSources.noSelectedSource")}
                 </p>
               </div>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[color:var(--brand-700)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-[color:var(--brand-600)]">
-                {isUploading ? "Uploading..." : "Upload File"}
+                {isUploading ? t(language, "admin.knowledgeSources.uploading") : t(language, "admin.knowledgeSources.uploadFile")}
                 <input
                   type="file"
                   className="hidden"
@@ -810,18 +816,18 @@ export default function AdminKnowledgeSourcesPage() {
               <table className="min-w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    <th className="px-4 py-3">Document Name</th>
-                    <th className="px-4 py-3 text-right">Size</th>
-                    <th className="px-4 py-3 text-right">Tokens</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+                    <th className="px-4 py-3">{t(language, "admin.knowledgeSources.table.documentName")}</th>
+                    <th className="px-4 py-3 text-right">{t(language, "admin.knowledgeSources.table.size")}</th>
+                    <th className="px-4 py-3 text-right">{t(language, "admin.knowledgeSources.table.tokens")}</th>
+                    <th className="px-4 py-3 text-center">{t(language, "admin.knowledgeSources.table.status")}</th>
+                    <th className="px-4 py-3 text-right">{t(language, "admin.knowledgeSources.table.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoadingDocs ? (
                     <tr>
                       <td className="px-4 py-4 text-slate-500 dark:text-slate-400" colSpan={5}>
-                        Đang tải tài liệu...
+                        {t(language, "admin.knowledgeSources.loadingDocuments")}
                       </td>
                     </tr>
                   ) : documents.length ? (
@@ -833,7 +839,7 @@ export default function AdminKnowledgeSourcesPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{formatSize(document.size)}</td>
                         <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">
-                          {new Intl.NumberFormat("en").format(document.token_count)}
+                          {new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US").format(document.token_count)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span
@@ -844,7 +850,7 @@ export default function AdminKnowledgeSourcesPage() {
                                 : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                             ].join(" ")}
                           >
-                            {document.is_active ? "Ready" : "Paused"}
+                            {document.is_active ? t(language, "admin.knowledgeSources.ready") : t(language, "admin.knowledgeSources.paused")}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -853,7 +859,7 @@ export default function AdminKnowledgeSourcesPage() {
                             onClick={() => onToggleDocument(document)}
                             className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
                           >
-                            {document.is_active ? "Disable" : "Enable"}
+                            {document.is_active ? t(language, "admin.knowledgeSources.disable") : t(language, "admin.knowledgeSources.enable")}
                           </button>
                         </td>
                       </tr>
@@ -861,7 +867,7 @@ export default function AdminKnowledgeSourcesPage() {
                   ) : (
                     <tr>
                       <td className="px-4 py-4 text-slate-500 dark:text-slate-400" colSpan={5}>
-                        Chưa có document trong source này.
+                        {t(language, "admin.knowledgeSources.noDocuments")}
                       </td>
                     </tr>
                   )}
@@ -871,15 +877,15 @@ export default function AdminKnowledgeSourcesPage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Sources</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
                 <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sources.length}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Documents</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.documents")}</p>
                 <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{totalDocuments}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Active Docs</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
                 <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{documents.filter((doc) => doc.is_active).length}</p>
               </div>
             </div>
@@ -889,30 +895,30 @@ export default function AdminKnowledgeSourcesPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">Nguồn lâm sàng liên thông</h3>
+              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.federatedTitle")}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Đồng bộ dữ liệu từ PubMed, RxNorm, openFDA, DAVIDrug và các nguồn chuẩn khác.
+                {t(language, "admin.knowledgeSources.federatedDescription")}
               </p>
             </div>
             <form onSubmit={onFilterSourceHub} className="flex items-center gap-2">
               <input
                 value={sourceHubSearchText}
                 onChange={(event) => setSourceHubSearchText(event.target.value)}
-                placeholder="Lọc theo query hoặc title..."
+                placeholder={t(language, "admin.knowledgeSources.filterPlaceholder")}
                 className="min-h-[42px] w-72 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
               <button
                 type="submit"
                 className="min-h-[42px] rounded-xl border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               >
-                Lọc
+                {t(language, "admin.knowledgeSources.filter")}
               </button>
             </form>
           </div>
 
           <form onSubmit={onSyncSourceHub} className="mb-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 md:grid-cols-4">
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Source</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.source")}</span>
               <select
                 value={activeHubSource}
                 onChange={(event) => setActiveHubSource(event.target.value as SourceHubSourceKey)}
@@ -926,7 +932,7 @@ export default function AdminKnowledgeSourcesPage() {
               </select>
             </label>
             <label className="space-y-1 md:col-span-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Query</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.query")}</span>
               <input
                 value={sourceHubSyncQuery}
                 onChange={(event) => setSourceHubSyncQuery(event.target.value)}
@@ -934,7 +940,7 @@ export default function AdminKnowledgeSourcesPage() {
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Limit</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.limit")}</span>
               <input
                 value={sourceHubSyncLimit}
                 onChange={(event) => setSourceHubSyncLimit(event.target.value)}
@@ -947,7 +953,7 @@ export default function AdminKnowledgeSourcesPage() {
                 disabled={isSyncingSourceHub}
                 className="min-h-[42px] rounded-xl bg-[color:var(--brand-700)] px-4 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
               >
-                {isSyncingSourceHub ? "Đang đồng bộ..." : "Đồng bộ nguồn"}
+                {isSyncingSourceHub ? t(language, "admin.knowledgeSources.syncing") : t(language, "admin.knowledgeSources.sync")}
               </button>
             </div>
           </form>
@@ -967,18 +973,18 @@ export default function AdminKnowledgeSourcesPage() {
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  <th className="px-3 py-2">Source</th>
-                  <th className="px-3 py-2">Title</th>
-                  <th className="px-3 py-2">Query</th>
-                  <th className="px-3 py-2">Published</th>
-                  <th className="px-3 py-2">Synced</th>
+                  <th className="px-3 py-2">{t(language, "admin.knowledgeSources.source")}</th>
+                  <th className="px-3 py-2">{t(language, "admin.knowledgeSources.table.title")}</th>
+                  <th className="px-3 py-2">{t(language, "admin.knowledgeSources.query")}</th>
+                  <th className="px-3 py-2">{t(language, "admin.knowledgeSources.table.published")}</th>
+                  <th className="px-3 py-2">{t(language, "admin.knowledgeSources.table.synced")}</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoadingSourceHubRecords ? (
                   <tr>
                     <td className="px-3 py-3 text-slate-500 dark:text-slate-400" colSpan={5}>
-                      Đang tải records...
+                      {t(language, "admin.knowledgeSources.loadingRecords")}
                     </td>
                   </tr>
                 ) : sourceHubRecords.length ? (
@@ -996,14 +1002,14 @@ export default function AdminKnowledgeSourcesPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{record.query || "-"}</td>
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.published_at)}</td>
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.synced_at)}</td>
+                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.published_at, language)}</td>
+                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.synced_at, language)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td className="px-3 py-3 text-slate-500 dark:text-slate-400" colSpan={5}>
-                      Chưa có dữ liệu crawl.
+                      {t(language, "admin.knowledgeSources.noCrawledRecords")}
                     </td>
                   </tr>
                 )}
@@ -1014,13 +1020,12 @@ export default function AdminKnowledgeSourcesPage() {
 
         {/* RAG source registry (Requirements 13.2, 15.3) — additive section */}
         <PanelCard
-          title="Sổ đăng ký nguồn RAG"
-          description="Quản lý kho tri thức RAG bền vững: bậc tin cậy, giấy phép, ghi nguồn và trạng thái kích hoạt của từng nguồn."
+          title={t(language, "admin.knowledgeSources.registry.title")}
+          description={t(language, "admin.knowledgeSources.registry.description")}
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-[var(--text-muted)]">
-              Bật/tắt nguồn và điều chỉnh bậc tin cậy. Cột Giấy phép và Ghi nguồn hiển thị nghĩa vụ
-              ghi nhận bản quyền (UMLS/SNOMED/RxNorm).
+              {t(language, "admin.knowledgeSources.registry.guidance")}
             </p>
             <button
               type="button"
@@ -1028,7 +1033,7 @@ export default function AdminKnowledgeSourcesPage() {
               disabled={ragRegistryLoading || ragUpdatingId != null}
               className="rounded-[var(--radius-sm)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-60"
             >
-              {ragRegistryLoading ? "Đang làm mới..." : "Làm mới"}
+              {ragRegistryLoading ? t(language, "admin.knowledgeSources.refreshing") : t(language, "admin.knowledgeSources.refresh")}
             </button>
           </div>
 
@@ -1038,10 +1043,9 @@ export default function AdminKnowledgeSourcesPage() {
               className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-sm text-[color:var(--status-warn-text)]"
             >
               <div>
-                <p className="font-semibold">Dịch vụ xử lý tạm thời không khả dụng</p>
+                <p className="font-semibold">{t(language, "admin.knowledgeSources.registry.unavailableTitle")}</p>
                 <p className="mt-0.5">
-                  Danh sách nguồn RAG có thể chưa đầy đủ và các thay đổi chưa được áp dụng. Vui lòng
-                  thử lại.
+                  {t(language, "admin.knowledgeSources.registry.unavailableDescription")}
                 </p>
               </div>
               <button
@@ -1050,7 +1054,7 @@ export default function AdminKnowledgeSourcesPage() {
                 disabled={ragRegistryLoading || ragUpdatingId != null}
                 className="rounded-[var(--radius-sm)] border border-[color:var(--status-warn-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-[color:var(--status-warn-text)] transition hover:text-[var(--text-primary)] disabled:opacity-60"
               >
-                {ragRegistryLoading ? "Đang thử lại..." : "Thử lại"}
+                {ragRegistryLoading ? t(language, "admin.knowledgeSources.retrying") : t(language, "admin.knowledgeSources.retry")}
               </button>
             </div>
           ) : null}
@@ -1075,13 +1079,14 @@ export default function AdminKnowledgeSourcesPage() {
 
           <AsyncSection<RagRegistrySource[]>
             state={ragRegistryState}
-            loadingLabel="Đang tải sổ đăng ký nguồn RAG..."
-            emptyTitle="Chưa có nguồn RAG"
-            emptyDescription="Chưa có nguồn nào được đăng ký trong kho tri thức RAG."
+            loadingLabel={t(language, "admin.knowledgeSources.registry.loading")}
+            emptyTitle={t(language, "admin.knowledgeSources.registry.emptyTitle")}
+            emptyDescription={t(language, "admin.knowledgeSources.registry.emptyDescription")}
           >
             {(rows) => (
               <RagSourceRegistryTable
                 sources={rows}
+                language={language}
                 updatingId={ragUpdatingId}
                 onToggleEnabled={(source) =>
                   void onUpdateRagSource(source, { enabled: !source.enabled })
@@ -1105,15 +1110,17 @@ export default function AdminKnowledgeSourcesPage() {
 // an enable/disable toggle. Both controls drive PATCH /admin/rag/sources/{id}
 // via the parent's `onChangeTrustTier` / `onToggleEnabled` callbacks. Styling
 // uses the shared design tokens (no hardcoded colors) for consistency with the
-// rag-ingestion surface. All copy is Vietnamese.
+// rag-ingestion surface. Static copy is resolved from the UI catalog.
 // ---------------------------------------------------------------------------
 function RagSourceRegistryTable({
   sources,
+  language,
   updatingId,
   onToggleEnabled,
   onChangeTrustTier
 }: {
   sources: RagRegistrySource[];
+  language: UILanguage;
   updatingId: number | null;
   onToggleEnabled: (source: RagRegistrySource) => void;
   onChangeTrustTier: (source: RagRegistrySource, tier: number) => void;
@@ -1123,13 +1130,13 @@ function RagSourceRegistryTable({
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-[color:var(--shell-border)] text-[var(--text-muted)]">
-            <th className="py-2 pr-4 font-semibold">Nguồn</th>
-            <th className="py-2 pr-4 font-semibold">Bậc tin cậy</th>
-            <th className="py-2 pr-4 font-semibold">Giấy phép</th>
-            <th className="py-2 pr-4 font-semibold">Ghi nguồn</th>
-            <th className="py-2 pr-4 font-semibold">Chế độ thu thập</th>
-            <th className="py-2 pr-4 font-semibold">Trạng thái</th>
-            <th className="py-2 font-semibold text-right">Hành động</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.source")}</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.registry.trustTier")}</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.registry.license")}</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.registry.attribution")}</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.registry.fetchMode")}</th>
+            <th className="py-2 pr-4 font-semibold">{t(language, "admin.knowledgeSources.table.status")}</th>
+            <th className="py-2 font-semibold text-right">{t(language, "admin.knowledgeSources.table.action")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1160,15 +1167,15 @@ function RagSourceRegistryTable({
                         onChangeTrustTier(source, next);
                       }
                     }}
-                    aria-label={`Bậc tin cậy của ${source.display_name || source.source_key}`}
+                    aria-label={t(language, "admin.knowledgeSources.registry.trustTierFor", { source: source.display_name || source.source_key })}
                     className="min-h-[36px] rounded-[var(--radius-sm)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-sm text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {source.trust_tier == null ? (
-                      <option value="">Chưa phân bậc</option>
+                      <option value="">{t(language, "admin.knowledgeSources.tier.unassigned")}</option>
                     ) : null}
                     {RAG_TRUST_TIER_OPTIONS.map((tier) => (
                       <option key={tier} value={tier}>
-                        {ragTrustTierLabel(tier)}
+                        {ragTrustTierLabel(tier, language)}
                       </option>
                     ))}
                   </select>
@@ -1186,7 +1193,7 @@ function RagSourceRegistryTable({
                   )}
                 </td>
                 <td className="py-3 pr-4 text-[var(--text-secondary)]">
-                  {ragFetchModeLabel(source.fetch_mode)}
+                  {ragFetchModeLabel(source.fetch_mode, language)}
                 </td>
                 <td className="py-3 pr-4">
                   <span
@@ -1197,7 +1204,7 @@ function RagSourceRegistryTable({
                         : "border-[color:var(--status-neutral-border)] bg-[var(--status-neutral-bg)] text-[color:var(--status-neutral-text)]"
                     ].join(" ")}
                   >
-                    {source.enabled ? "Đang bật" : "Đã tắt"}
+                    {source.enabled ? t(language, "admin.knowledgeSources.enabled") : t(language, "admin.knowledgeSources.disabled")}
                   </span>
                 </td>
                 <td className="py-3 text-right">
@@ -1207,10 +1214,10 @@ function RagSourceRegistryTable({
                     disabled={controlsDisabled}
                     title={
                       missingId
-                        ? "Thiếu định danh nguồn — không thể cập nhật"
+                        ? t(language, "admin.knowledgeSources.registry.missingId")
                         : source.enabled
-                          ? "Tắt nguồn này"
-                          : "Bật nguồn này"
+                          ? t(language, "admin.knowledgeSources.registry.disableSource")
+                          : t(language, "admin.knowledgeSources.registry.enableSource")
                     }
                     className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -1220,7 +1227,7 @@ function RagSourceRegistryTable({
                         className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
                       />
                     ) : null}
-                    {isUpdating ? "Đang lưu..." : source.enabled ? "Tắt" : "Bật"}
+                    {isUpdating ? t(language, "admin.knowledgeSources.saving") : source.enabled ? t(language, "admin.knowledgeSources.disable") : t(language, "admin.knowledgeSources.enable")}
                   </button>
                 </td>
               </tr>
