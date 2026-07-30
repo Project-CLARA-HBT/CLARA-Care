@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from clara_ml.nlp.vietnamese_clinical import fold_vietnamese_for_matching
+from clara_ml.nlp.vietnamese_clinical import fold_vietnamese_for_matching, is_phrase_negated
 
 
 @dataclass
@@ -108,7 +108,10 @@ class P1RoleIntentRouter:
 
     def route(self, query: str, role_hint: str | None = None) -> RouteResult:
         normalized = self._normalize(query)
-        if self._contains_any(normalized, self.EMERGENCY_KEYWORDS):
+        # A deterministic emergency guard must not turn an explicitly denied
+        # symptom into an emergency.  The check remains conservative: any
+        # separate, non-negated red flag in the same message still escalates.
+        if self._contains_active_emergency(normalized):
             return RouteResult(
                 role="doctor",
                 intent="emergency_triage",
@@ -133,6 +136,13 @@ class P1RoleIntentRouter:
     @staticmethod
     def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
         return any(keyword in text for keyword in keywords)
+
+    @classmethod
+    def _contains_active_emergency(cls, text: str) -> bool:
+        return any(
+            keyword in text and not is_phrase_negated(text, keyword)
+            for keyword in cls.EMERGENCY_KEYWORDS
+        )
 
     @staticmethod
     def _count_hits(text: str, keywords: tuple[str, ...]) -> int:
