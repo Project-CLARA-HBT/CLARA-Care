@@ -32,6 +32,7 @@ from .datasets.manifest import (
     ManifestValidationError,
     validate_dataset_manifest,
 )
+from .live import LiveEvaluationError, maybe_execute_live
 from .tracks import TRACK_METADATA, EvalTrack
 
 REPORT_SCHEMA_VERSION = "clara-eval-vn.report.v1"
@@ -122,8 +123,48 @@ def _required_live_command(config: SuiteConfig) -> str:
     return "make eval-nightly"
 
 
+def _observed_binary_metrics(
+    traces: list[dict[str, Any]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """Aggregate only completed, manifest-scored binary verdicts.
+
+    Transport failures are not silently converted to a failed clinical case.
+    They remain visible in ``live-execution.json`` and leave the relevant
+    product metric not measured when no verdict was obtained.
+    """
+
+    grouped: dict[tuple[str, str], list[bool]] = {}
+    for trace in traces:
+        passed = trace.get("passed")
+        track_id = trace.get("track_id")
+        metric_id = trace.get("metric_id")
+        if not isinstance(passed, bool) or not isinstance(track_id, str) or not isinstance(metric_id, str):
+            continue
+        grouped.setdefault((track_id, metric_id), []).append(passed)
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    for (track_id, metric_id), verdicts in grouped.items():
+        successes = sum(verdicts)
+        total = len(verdicts)
+        rows[(track_id, metric_id)] = {
+            "metric_id": metric_id,
+            "state": "measured",
+            "value": successes / total,
+            "unit": "proportion",
+            "successes": successes,
+            "sample_size": total,
+            "confidence_interval": _wilson_interval(successes, total),
+            "reason": "Observed against an externally approved, de-identified live-evaluation manifest using its declared binary scorer.",
+            "measurement_command": "CLARA_EVAL_LIVE_EXECUTION_ENABLED=true make eval-nightly",
+            "track_id": track_id,
+            "track_label_vi": TRACK_METADATA[EvalTrack(track_id)]["label_vi"],
+        }
+    return rows
+
+
 def _track_metrics(
-    config: SuiteConfig, manifest: DatasetManifest
+    config: SuiteConfig,
+    manifest: DatasetManifest,
+    observed: dict[tuple[str, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Project manifest declarations into report rows without inventing values."""
 
@@ -137,6 +178,10 @@ def _track_metrics(
         }
         for metric_id in configured_track.required_metrics:
             declared = declared_by_id.get(metric_id)
+            observed_row = observed.get((track, metric_id))
+            if observed_row is not None:
+                rows.append(observed_row | {"dataset_id": entry.dataset_id})
+                continue
             # Foundation fixtures intentionally declare all product quality
             # measures unavailable.  A runner must never turn that into 0/100.
             rows.append(
@@ -244,7 +289,9 @@ def _task_contract_snapshot(root: Path) -> dict[str, Any]:
     }
 
 
-def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, Any]:
+def _model_manifest(
+    root: Path, config: SuiteConfig, run_at: str, live_execution: dict[str, Any]
+) -> dict[str, Any]:
     """Describe observed configuration shape; never expose secret values."""
 
     environment_names = [
@@ -283,6 +330,14 @@ def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, A
             "measurement_command": _required_live_command(config),
         },
         "task_contract_snapshot": task_contracts,
+        "live_execution": {
+            "state": live_execution["state"],
+            "manifest_sha256": live_execution.get("manifest_sha256"),
+            "approval_reference": live_execution.get("approval_reference"),
+            "completed_count": live_execution.get("completed_count", 0),
+            "failed_request_count": live_execution.get("failed_request_count", 0),
+            "reason": live_execution.get("reason"),
+        },
         "rollback": {
             "state": "documented",
             "method": "Select the prior registry/prompt configuration and disable the affected feature flag before redeploying.",
@@ -291,7 +346,19 @@ def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, A
     }
 
 
-def _retrieval_snapshot(config: SuiteConfig) -> dict[str, Any]:
+def _retrieval_snapshot(
+    config: SuiteConfig, live_execution: dict[str, Any]
+) -> dict[str, Any]:
+    snapshot = live_execution.get("retrieval_snapshot")
+    if live_execution.get("state") == "executed" and isinstance(snapshot, dict):
+        return {
+            "schema_version": "clara-eval-vn.retrieval-snapshot.v1",
+            "state": "observed",
+            "suite": config.suite,
+            "reference": snapshot["reference"],
+            "sha256": snapshot["sha256"],
+            "reason": "Immutable retrieval snapshot declared by the approved external live-evaluation manifest.",
+        }
     return {
         "schema_version": "clara-eval-vn.retrieval-snapshot.v1",
         "state": "not_measured",
@@ -302,7 +369,9 @@ def _retrieval_snapshot(config: SuiteConfig) -> dict[str, Any]:
     }
 
 
-def _critical_error_rows(config: SuiteConfig) -> list[dict[str, str]]:
+def _critical_error_rows(
+    config: SuiteConfig, traces: list[dict[str, Any]]
+) -> list[dict[str, str]]:
     command = _required_live_command(config)
     categories = (
         ("medical_qa_patient_communication", "unsafe_patient_guidance"),
@@ -312,7 +381,7 @@ def _critical_error_rows(config: SuiteConfig) -> list[dict[str, str]]:
         ("lifemap_invariants", "truth_state_or_provenance_violation"),
         ("council_ablation", "missed_red_flag"),
     )
-    return [
+    rows = [
         {
             "track_id": track,
             "critical_error_type": category,
@@ -323,9 +392,30 @@ def _critical_error_rows(config: SuiteConfig) -> list[dict[str, str]]:
         }
         for track, category in categories
     ]
+    observed: dict[tuple[str, str], int] = {}
+    for trace in traces:
+        if trace.get("passed") is False:
+            track = trace.get("track_id")
+            category = trace.get("critical_error_type")
+            if isinstance(track, str) and isinstance(category, str):
+                observed[(track, category)] = observed.get((track, category), 0) + 1
+    for (track, category), count in sorted(observed.items()):
+        rows.append(
+            {
+                "track_id": track,
+                "critical_error_type": category,
+                "state": "measured",
+                "count": str(count),
+                "reason": "Count of failed binary safety expectations declared in the approved live manifest; no output text is retained.",
+                "measurement_command": command,
+            }
+        )
+    return rows
 
 
-def _ablation_rows(config: SuiteConfig) -> list[dict[str, str]]:
+def _ablation_rows(
+    config: SuiteConfig, traces: list[dict[str, Any]]
+) -> list[dict[str, str]]:
     command = _required_live_command(config)
     variants = (
         ("C0", "baseline policy and emergency hard guard"),
@@ -334,7 +424,7 @@ def _ablation_rows(config: SuiteConfig) -> list[dict[str, str]]:
         ("C3", "C2 plus independent verifier"),
         ("C4", "C3 plus adjudicator and clinician review gate"),
     )
-    return [
+    rows = [
         {
             "variant": variant,
             "description": description,
@@ -346,6 +436,27 @@ def _ablation_rows(config: SuiteConfig) -> list[dict[str, str]]:
         }
         for variant, description in variants
     ]
+    grouped: dict[tuple[str, str], list[bool]] = {}
+    for trace in traces:
+        variant = trace.get("ablation_variant")
+        metric_id = trace.get("metric_id")
+        passed = trace.get("passed")
+        if isinstance(variant, str) and isinstance(metric_id, str) and isinstance(passed, bool):
+            grouped.setdefault((variant, metric_id), []).append(passed)
+    for (variant, metric_id), verdicts in sorted(grouped.items()):
+        successes = sum(verdicts)
+        rows.append(
+            {
+                "variant": variant,
+                "description": "Observed approved live ablation case(s).",
+                "metric_id": metric_id,
+                "state": "measured",
+                "value": f"{successes / len(verdicts):.6f}",
+                "reason": f"{successes}/{len(verdicts)} binary verdicts; Wilson CI is available in metrics.json when the metric is required by this suite.",
+                "measurement_command": command,
+            }
+        )
+    return rows
 
 
 def _write_csv(path: Path, rows: Iterable[dict[str, str]]) -> None:
@@ -398,7 +509,7 @@ def _write_summary(path: Path, report: dict[str, Any]) -> None:
         ]
     )
     for track in report["tracks"]:
-        lines.append(f"| {track['label_vi']} | not measured | {track['reason']} |")
+        lines.append(f"| {track['label_vi']} | {track['state']} | {track['reason']} |")
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -416,7 +527,7 @@ def _write_html(path: Path, report: dict[str, Any]) -> None:
     table_rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(track['label_vi'])}</td>"
-        '<td><span class="status">not measured</span></td>'
+        f'<td><span class="status">{html.escape(track["state"])}</span></td>'
         f"<td>{html.escape(track['reason'])}</td>"
         f"<td><code>{html.escape(track['measurement_command'])}</code></td>"
         "</tr>"
@@ -439,13 +550,39 @@ def _write_html(path: Path, report: dict[str, Any]) -> None:
 
 
 def _latency_cost_artifact(
-    config: SuiteConfig, metric_rows: list[dict[str, Any]]
+    config: SuiteConfig, metric_rows: list[dict[str, Any]], traces: list[dict[str, Any]]
 ) -> dict[str, Any]:
     routing_rows = [
         metric
         for metric in metric_rows
         if metric.get("track_id") == EvalTrack.MODEL_ROUTING_LATENCY_COST.value
     ]
+    durations = sorted(
+        float(trace["duration_ms"])
+        for trace in traces
+        if trace.get("track_id") == EvalTrack.MODEL_ROUTING_LATENCY_COST.value
+        and isinstance(trace.get("duration_ms"), (int, float))
+    )
+    if durations:
+        index = max(0, min(len(durations) - 1, int((len(durations) * 0.95) - 1)))
+        return {
+            "schema_version": "clara-eval-vn.latency-cost.v1",
+            "suite": config.suite,
+            "state": "partially_observed",
+            "reason": "Client-observed endpoint latency only; it is not provider latency or an estimated cost.",
+            "measurement_command": _required_live_command(config),
+            "client_latency_ms": {
+                "sample_size": len(durations),
+                "p95": durations[index],
+                "min": durations[0],
+                "max": durations[-1],
+            },
+            "cost": {
+                "state": "not_measured",
+                "reason": "No approved provider usage ledger was supplied; the runner never estimates cost from fixture or response text.",
+            },
+            "metrics": routing_rows,
+        }
     return {
         "schema_version": "clara-eval-vn.latency-cost.v1",
         "suite": config.suite,
@@ -488,27 +625,41 @@ def build_report(
     (target / "examples").mkdir(exist_ok=True)
 
     generated_at = _utc_now()
-    metric_rows = [_integrity_metric(manifest), *_track_metrics(config, manifest)]
-    tracks = [
-        {
-            "track_id": track.value,
-            "label_vi": TRACK_METADATA[track]["label_vi"],
-            "scope": TRACK_METADATA[track]["scope"],
-            "state": "not_measured",
-            "reason": next(
-                metric["reason"]
-                for metric in metric_rows
-                if metric.get("track_id") == track.value
-            ),
-            "measurement_command": next(
-                metric["measurement_command"]
-                for metric in metric_rows
-                if metric.get("track_id") == track.value
-            ),
-        }
-        for track in EvalTrack
-        if track.value in config.enabled_tracks
+    live_execution, live_traces = maybe_execute_live(config, repository_root=repository_root)
+    observed = _observed_binary_metrics(live_traces)
+    metric_rows = [
+        _integrity_metric(manifest),
+        *_track_metrics(config, manifest, observed),
     ]
+    tracks = []
+    for track in EvalTrack:
+        if track.value not in config.enabled_tracks:
+            continue
+        track_metrics = [
+            metric for metric in metric_rows if metric.get("track_id") == track.value
+        ]
+        measured_count = sum(metric["state"] == "measured" for metric in track_metrics)
+        state = (
+            "measured"
+            if measured_count == len(track_metrics)
+            else "partially_observed"
+            if measured_count
+            else "not_measured"
+        )
+        representative = next(
+            (metric for metric in track_metrics if metric["state"] == "not_measured"),
+            track_metrics[0],
+        )
+        tracks.append(
+            {
+                "track_id": track.value,
+                "label_vi": TRACK_METADATA[track]["label_vi"],
+                "scope": TRACK_METADATA[track]["scope"],
+                "state": state,
+                "reason": representative["reason"],
+                "measurement_command": representative["measurement_command"],
+            }
+        )
     metrics_by_id = {str(metric["metric_id"]): metric for metric in metric_rows}
     judge_headlines = [
         {
@@ -521,6 +672,12 @@ def build_report(
         }
         for metric_id, label_vi in JUDGE_HEADLINE_METRICS
     ]
+    product_metrics = metric_rows[1:]
+    release_gate_passed = (
+        live_execution["state"] == "executed"
+        and not live_execution.get("failed_request_count")
+        and all(metric["state"] == "measured" for metric in product_metrics)
+    )
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
         "runner_version": RUNNER_VERSION,
@@ -532,7 +689,9 @@ def build_report(
         "tracks": tracks,
         "judge_headlines": judge_headlines,
         "live_dependencies_requested": config.requires_live_dependencies,
-        "live_dependencies_executed": False,
+        "live_dependencies_executed": live_execution["state"] == "executed",
+        "live_execution": live_execution,
+        "release_gate_passed": release_gate_passed,
         "next_measurement_command": _required_live_command(config),
     }
     _json_dump(target / "summary.json", _summary_json(report))
@@ -540,12 +699,15 @@ def build_report(
     _json_dump(target / "dataset-manifest.json", manifest.as_dict())
     _json_dump(
         target / "model-manifest.json",
-        _model_manifest(repository_root, config, generated_at),
+        _model_manifest(repository_root, config, generated_at, live_execution),
     )
-    _json_dump(target / "retrieval-snapshot.json", _retrieval_snapshot(config))
+    _json_dump(
+        target / "retrieval-snapshot.json",
+        _retrieval_snapshot(config, live_execution),
+    )
     _json_dump(
         target / "latency-cost.json",
-        _latency_cost_artifact(config, metric_rows),
+        _latency_cost_artifact(config, metric_rows, live_traces),
     )
     _json_dump(
         target / "confidence-intervals.json",
@@ -555,8 +717,10 @@ def build_report(
             "not_measured": [metric for metric in metric_rows[1:]],
         },
     )
-    _write_csv(target / "critical-errors.csv", _critical_error_rows(config))
-    _write_csv(target / "ablations.csv", _ablation_rows(config))
+    _write_csv(
+        target / "critical-errors.csv", _critical_error_rows(config, live_traces)
+    )
+    _write_csv(target / "ablations.csv", _ablation_rows(config, live_traces))
     _write_summary(target / "summary.md", report)
     _write_html(target / "index.html", report)
     _json_dump(
@@ -565,6 +729,16 @@ def build_report(
             "state": "not_measured",
             "reason": "No approved live model outputs may be copied into a judge artifact from synthetic fixtures.",
             "measurement_command": _required_live_command(config),
+        },
+    )
+    _json_dump(
+        target / "live-execution.json",
+        {
+            "schema_version": "clara-eval-vn.live-execution.v1",
+            "state": live_execution["state"],
+            "metadata": live_execution,
+            "traces": live_traces,
+            "privacy": "No request body, response body, credential, raw case identifier, patient content, or provider output is written to this artifact.",
         },
     )
     missing_required = [
@@ -594,7 +768,13 @@ def main(argv: list[str] | None = None) -> int:
             output=args.output,
             repository_root=root,
         )
-    except (ManifestValidationError, SuiteConfigError, OSError, ValueError) as exc:
+    except (
+        ManifestValidationError,
+        SuiteConfigError,
+        LiveEvaluationError,
+        OSError,
+        ValueError,
+    ) as exc:
         print(
             json.dumps({"ok": False, "reason": str(exc)}, ensure_ascii=False),
             file=sys.stderr,
@@ -606,9 +786,9 @@ def main(argv: list[str] | None = None) -> int:
             ensure_ascii=False,
         )
     )
-    if report["release_locked"] and not report["live_dependencies_executed"]:
+    if report["release_locked"] and not report["release_gate_passed"]:
         print(
-            "release_locked_suite_blocked: no approved live, immutable evaluation evidence was executed; artifacts record not_measured.",
+            "release_locked_suite_blocked: approved complete live evidence for every required metric was not executed; artifacts record the evidence gap.",
             file=sys.stderr,
         )
         return 2

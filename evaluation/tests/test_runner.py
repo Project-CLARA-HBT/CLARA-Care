@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from evaluation.clara_eval.run import build_report, main
 from evaluation.clara_eval.tracks import REQUIRED_TRACK_IDS
@@ -13,6 +14,121 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class EvalRunnerTests(unittest.TestCase):
+    def test_opt_in_live_execution_records_only_sanitized_observation_metadata(self) -> None:
+        manifest = {
+            "schema_version": "clara-eval-vn.live-execution-manifest.v1",
+            "approval": {
+                "approved_for_live_execution": True,
+                "reference": "approved-eval-change-42",
+            },
+            "contains_phi": False,
+            "contains_secrets": False,
+            "records": [
+                {
+                    "case_id": "eval-vcu-001",
+                    "track_id": "vietnamese_clinical_understanding",
+                    "endpoint": "ml",
+                    "path": "/v1/eval-safe-route",
+                    "request": {"scenario": "deidentified-emergency-contract"},
+                    "critical_error_type": "missed_emergency",
+                    "scorer": {
+                        "type": "json_path_equals",
+                        "metric_id": "emergency_recall",
+                        "json_path": "policy.emergency",
+                        "expected": True,
+                    },
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            manifest_path = temporary_root / "approved-live.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            output = temporary_root / "nightly"
+            response = MagicMock()
+            response.status = 200
+            response.read.return_value = b'{"policy":{"emergency":true}}'
+            response.__enter__.return_value = response
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "CLARA_EVAL_LIVE_EXECUTION_ENABLED": "true",
+                        "CLARA_EVAL_LIVE_MANIFEST": str(manifest_path),
+                        "CLARA_EVAL_ML_BASE_URL": "https://approved-ml.example",
+                    },
+                    clear=False,
+                ),
+                patch("evaluation.clara_eval.live.request.urlopen", return_value=response),
+            ):
+                report, _ = build_report(
+                    config_path=ROOT / "evaluation/configs/nightly.yaml",
+                    output=output,
+                    repository_root=ROOT,
+                )
+
+            metric = next(
+                row
+                for row in report["metrics"]
+                if row["metric_id"] == "emergency_recall"
+            )
+            self.assertEqual(metric["state"], "measured")
+            self.assertEqual(metric["value"], 1.0)
+            self.assertEqual(metric["confidence_interval"]["method"], "wilson")
+            live_artifact = json.loads(
+                (output / "live-execution.json").read_text(encoding="utf-8")
+            )
+            serialized = json.dumps(live_artifact, ensure_ascii=False)
+            self.assertNotIn("deidentified-emergency-contract", serialized)
+            self.assertNotIn("eval-vcu-001", serialized)
+            self.assertNotIn("policy", serialized)
+            trace = live_artifact["traces"][0]
+            self.assertEqual(trace["outcome"], "pass")
+            self.assertTrue(trace["case_ref"])
+
+    def test_live_manifest_with_sensitive_request_key_is_rejected_before_http(self) -> None:
+        manifest = {
+            "schema_version": "clara-eval-vn.live-execution-manifest.v1",
+            "approval": {"approved_for_live_execution": True, "reference": "approved"},
+            "contains_phi": False,
+            "contains_secrets": False,
+            "records": [
+                {
+                    "case_id": "eval-vcu-002",
+                    "track_id": "vietnamese_clinical_understanding",
+                    "endpoint": "ml",
+                    "path": "/v1/eval-safe-route",
+                    "request": {"email": "must-not-be-accepted"},
+                    "scorer": {
+                        "type": "json_path_equals",
+                        "metric_id": "emergency_recall",
+                        "json_path": "policy.emergency",
+                        "expected": True,
+                    },
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            manifest_path = Path(temporary_directory) / "approved-live.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "CLARA_EVAL_LIVE_EXECUTION_ENABLED": "true",
+                        "CLARA_EVAL_LIVE_MANIFEST": str(manifest_path),
+                        "CLARA_EVAL_ML_BASE_URL": "https://approved-ml.example",
+                    },
+                    clear=False,
+                ),
+                self.assertRaisesRegex(ValueError, "live_manifest_request_has_sensitive_key"),
+            ):
+                build_report(
+                    config_path=ROOT / "evaluation/configs/nightly.yaml",
+                    output=Path(temporary_directory) / "nightly",
+                    repository_root=ROOT,
+                )
+
     def test_smoke_emits_evidence_without_claiming_clinical_quality(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "smoke"
