@@ -43,12 +43,10 @@ import {
   SCRIBE_REVIEW_TEMPLATES,
   ScribeFlowState,
   addendaHaveData,
-  addendumAuthorLabel,
   computePipelineStages,
   concatSegmentsText,
   countConfirmedEmCpt,
   emCptCodeKey,
-  formatAddendumTimestamp,
   formatGroundedClaimRate,
   groundingChip,
   groundingHasData,
@@ -66,7 +64,7 @@ import {
   type GroundingStatus,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
-import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
+import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
 
@@ -1345,6 +1343,7 @@ function renderNoteColumn(props: {
         })}
 
         {renderCodingPanel({
+          language: props.language,
           suggestions: props.emCptSuggestions,
           selections: props.emCptSelections,
           segments: props.transcriptSegments,
@@ -1373,6 +1372,7 @@ function renderNoteColumn(props: {
               {t(props.language, "scribe.enterprise.note.amend")}
             </button>
             {renderAddendumPanel({
+              language: props.language,
               available: props.addendumAvailable,
               versionKnown: props.addendumVersionKnown,
               addenda: props.addenda,
@@ -1582,6 +1582,7 @@ function renderGroundingPanel({
 // ---------------------------------------------------------------------------
 
 function renderEmCptRow(
+  language: UILanguage,
   suggestion: ScribeEmCptSuggestion,
   selections: Record<string, boolean>,
   segments: ScribeStreamSegment[],
@@ -1610,7 +1611,7 @@ function renderEmCptRow(
           onChange={() => onToggleEmCpt(suggestion)}
           className="mt-1 h-4 w-4 shrink-0 accent-[#2563EB]"
           data-testid={`scribe-coding-confirm-${key}`}
-          aria-label={`Xác nhận mã ${suggestion.code}`}
+          aria-label={t(language, "scribe.enterprise.coding.confirmCode", { code: suggestion.code })}
         />
         <span className="flex-1">
           <span className="flex flex-wrap items-center gap-2">
@@ -1619,14 +1620,20 @@ function renderEmCptRow(
             </span>
             <span className={`text-sm font-bold ${bodyTextClass}`}>{suggestion.code}</span>
             {suggestion.kind === "E/M" && suggestion.level != null ? (
-              <span className={`text-[11px] font-bold ${mutedTextClass}`}>· mức {suggestion.level}</span>
+              <span className={`text-[11px] font-bold ${mutedTextClass}`}>
+                · {t(language, "scribe.enterprise.coding.level", {
+                  level: formatLocaleNumber(language, suggestion.level),
+                })}
+              </span>
             ) : null}
             <span
               className={`text-[10px] font-black uppercase tracking-[0.1em] ${
                 selected ? "text-emerald-700 dark:text-emerald-200" : mutedTextClass
               }`}
             >
-              {selected ? "đã xác nhận" : "đề xuất"}
+              {selected
+                ? t(language, "scribe.enterprise.coding.confirmed")
+                : t(language, "scribe.enterprise.coding.suggested")}
             </span>
           </span>
           <span className={`mt-0.5 block text-sm leading-5 ${secondaryTextClass}`}>{displayVi}</span>
@@ -1644,7 +1651,7 @@ function renderEmCptRow(
               data-testid="scribe-coding-spans"
             >
               <span className={`block text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
-                Dẫn chứng
+                {t(language, "scribe.enterprise.coding.evidence")}
               </span>
               {spans.join(" · ")}
             </span>
@@ -1656,11 +1663,13 @@ function renderEmCptRow(
 }
 
 function renderCodingPanel({
+  language,
   suggestions,
   selections,
   segments,
   onToggleEmCpt,
 }: {
+  language: UILanguage;
   suggestions: ScribeEmCptSuggestion[];
   selections: Record<string, boolean>;
   segments: ScribeStreamSegment[];
@@ -1674,26 +1683,30 @@ function renderCodingPanel({
   return (
     <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-coding">
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Gợi ý mã E/M · CPT</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.coding.title")}</h4>
         <span
           className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
           data-testid="scribe-coding-confirmed-count"
         >
-          {confirmed}/{suggestions.length} đã xác nhận
+          {t(language, "scribe.enterprise.coding.confirmedCount", {
+            confirmed: formatLocaleNumber(language, confirmed),
+            total: formatLocaleNumber(language, suggestions.length),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        Các mã dưới đây chỉ mang tính tư vấn. Không mã nào được chọn sẵn — bác sĩ cần tự xác nhận
-        từng mã trước khi sử dụng.
+        {t(language, "scribe.enterprise.coding.description")}
       </p>
 
       {em.length > 0 ? (
         <div className="space-y-2" data-testid="scribe-coding-em">
           <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
-            Mức khám (E/M)
+            {t(language, "scribe.enterprise.coding.emTitle")}
           </p>
           <ul className="space-y-2">
-            {em.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
+            {em.map((suggestion) =>
+              renderEmCptRow(language, suggestion, selections, segments, onToggleEmCpt),
+            )}
           </ul>
         </div>
       ) : null}
@@ -1701,10 +1714,12 @@ function renderCodingPanel({
       {cpt.length > 0 ? (
         <div className="space-y-2" data-testid="scribe-coding-cpt">
           <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
-            Thủ thuật (CPT)
+            {t(language, "scribe.enterprise.coding.cptTitle")}
           </p>
           <ul className="space-y-2">
-            {cpt.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
+            {cpt.map((suggestion) =>
+              renderEmCptRow(language, suggestion, selections, segments, onToggleEmCpt),
+            )}
           </ul>
         </div>
       ) : null}
@@ -1723,6 +1738,7 @@ function renderCodingPanel({
 // ---------------------------------------------------------------------------
 
 function renderAddendumPanel({
+  language,
   available,
   versionKnown,
   addenda,
@@ -1731,6 +1747,7 @@ function renderAddendumPanel({
   onDraftChange,
   onSubmit,
 }: {
+  language: UILanguage;
   available: boolean;
   versionKnown: boolean;
   addenda: ScribeAddendum[];
@@ -1748,17 +1765,18 @@ function renderAddendumPanel({
       data-testid="scribe-addendum"
     >
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Phụ lục (addendum)</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.addendum.title")}</h4>
         <span
           className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
           data-testid="scribe-addendum-count"
         >
-          {addenda.length} phụ lục
+          {t(language, "scribe.enterprise.addendum.count", {
+            count: formatLocaleNumber(language, addenda.length),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        Phụ lục được gắn thời gian, KHÔNG thay đổi nội dung đã ký và không tạo bản sửa đổi mới
-        (khác với “bản sửa đổi / amend”).
+        {t(language, "scribe.enterprise.addendum.description")}
       </p>
 
       {hasAddenda ? (
@@ -1770,21 +1788,27 @@ function renderAddendumPanel({
               data-testid="scribe-addendum-item"
             >
               <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
-                {formatAddendumTimestamp(entry.created_at)} · {addendumAuthorLabel(entry.author)}
+                {t(language, "scribe.enterprise.addendum.timestamp", {
+                  date: formatAddendumTimestampForLocale(language, entry.created_at),
+                  author: addendumAuthorLabelForLocale(language, entry.author),
+                })}
               </p>
               <p className={`mt-0.5 whitespace-pre-wrap text-sm leading-5 ${bodyTextClass}`}>{entry.text}</p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có phụ lục nào.</p>
+        <p className={`text-sm font-medium ${secondaryTextClass}`}>
+          {t(language, "scribe.enterprise.addendum.empty")}
+        </p>
       )}
 
       <div className="space-y-2">
         <textarea
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
-          placeholder="Thêm thông tin bổ sung sau khi ký (không thay đổi nội dung đã ký)..."
+          placeholder={t(language, "scribe.enterprise.addendum.placeholder")}
+          aria-label={t(language, "scribe.enterprise.addendum.inputLabel")}
           className={sectionTextareaClass}
           data-testid="scribe-addendum-input"
         />
@@ -1795,9 +1819,32 @@ function renderAddendumPanel({
           className={`w-full ${primaryButtonClass}`}
           data-testid="scribe-addendum-submit"
         >
-          {submitting ? "Đang lưu..." : "Thêm phụ lục"}
+          {submitting
+            ? t(language, "scribe.enterprise.addendum.saving")
+            : t(language, "scribe.enterprise.addendum.submit")}
         </button>
       </div>
     </div>
   );
+}
+
+function formatAddendumTimestampForLocale(
+  language: UILanguage,
+  value: string | null | undefined,
+): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return formatLocaleDate(language, date, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  });
+}
+
+function addendumAuthorLabelForLocale(language: UILanguage, author: number | null | undefined): string {
+  return typeof author === "number" && Number.isFinite(author)
+    ? t(language, "scribe.enterprise.addendum.author", { id: author })
+    : t(language, "scribe.enterprise.addendum.authorFallback");
 }
