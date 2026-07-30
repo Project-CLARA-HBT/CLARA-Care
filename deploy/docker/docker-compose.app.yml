@@ -260,6 +260,10 @@ services:
     image: searxng/searxng:latest
     restart: unless-stopped
     environment:
+      # SearXNG itself overwrites settings.yml's documented placeholder with
+      # this value. Local development gets a non-production fallback; the
+      # deploy compose file requires a managed-secret value.
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-local-development-searxng-secret-change-before-deploy}
       BASE_URL: ${SEARXNG_PUBLIC_BASE_URL:-http://127.0.0.1:8888/}
       INSTANCE_NAME: CLARA SearXNG
       UWSGI_WORKERS: 2

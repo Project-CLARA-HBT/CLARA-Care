@@ -242,6 +242,10 @@ services:
     image: ${SEARXNG_IMAGE:-searxng/searxng:latest}
     restart: unless-stopped
     environment:
+      # The SearXNG image maps this to server.secret_key. Unlike local compose,
+      # production has no fallback: the managed deploy environment must supply
+      # a unique high-entropy value.
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?SEARXNG_SECRET is required in production}
       BASE_URL: ${SEARXNG_PUBLIC_BASE_URL:-http://127.0.0.1:8888/}
       INSTANCE_NAME: CLARA SearXNG
       UWSGI_WORKERS: 2

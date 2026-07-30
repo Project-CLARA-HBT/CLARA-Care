@@ -182,6 +182,13 @@ jobs:
         if: always()
         run: |
           docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-staging-ps.txt || true
+          python3 scripts/security/check_ci_artifact_safety.py /tmp/cd-staging-ps.txt
+
+      - name: Verify staging diagnostics are safe to retain
+        if: always()
+        run: |
+          python3 scripts/security/check_ci_artifact_safety.py --allow-missing \
+            /tmp/cd-staging-ps.txt /tmp/*health*.json /tmp/web-*.json
 
       - name: Upload staging smoke responses
         if: always()
@@ -194,18 +201,6 @@ jobs:
             /tmp/cd-staging-ps.txt
           if-no-files-found: ignore
 
-      - name: Upload staging logs on failure
-        if: failure()
-        run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml logs --no-color > /tmp/cd-staging.log || true
-
-      - name: Upload staging log artifact
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: cd-staging-logs-${{ github.run_id }}
-          path: /tmp/cd-staging.log
-          if-no-files-found: ignore
 
   promote-production:
     name: manual promote production + smoke
@@ -389,6 +384,13 @@ jobs:
         if: always()
         run: |
           docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-production-ps.txt || true
+          python3 scripts/security/check_ci_artifact_safety.py /tmp/cd-production-ps.txt
+
+      - name: Verify production diagnostics are safe to retain
+        if: always()
+        run: |
+          python3 scripts/security/check_ci_artifact_safety.py --allow-missing \
+            /tmp/cd-production-ps.txt /tmp/prod-*.json
 
       - name: Upload production smoke responses
         if: always()
@@ -398,17 +400,4 @@ jobs:
           path: |
             /tmp/prod-*.json
             /tmp/cd-production-ps.txt
-          if-no-files-found: ignore
-
-      - name: Upload production logs on failure
-        if: failure()
-        run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml logs --no-color > /tmp/cd-production.log || true
-
-      - name: Upload production log artifact
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: cd-production-logs-${{ github.run_id }}
-          path: /tmp/cd-production.log
           if-no-files-found: ignore

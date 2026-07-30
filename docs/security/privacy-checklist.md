@@ -8,6 +8,8 @@ Use this operational checklist before a release; it is not a certification.
 - [ ] Eval manifests/fixtures contain no PHI, secrets, prompts or provider keys.
 - [ ] Logs, telemetry, workflow artifacts and judge report were reviewed for
       names, email, free-text clinical queries and drug lists.
+- [ ] CI/CD uploaded only status/readiness diagnostics and the artifact safety
+      guard passed; raw container logs and runtime `.env` were not uploaded.
 - [ ] Model/prompt/retrieval manifests are immutable and rollback choice is
       documented before enabling a risky model path.
 - [ ] Upload type/size, retention and deletion propagation checks passed.
