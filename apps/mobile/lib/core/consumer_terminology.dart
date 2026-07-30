@@ -179,6 +179,50 @@ enum ConsumerTerm {
   visitsNameRequired,
   visitsLoadFailed,
   visitsCreateFailed,
+  familyTitle,
+  familySupporter,
+  familyNewNotification,
+  familyAccessGrant,
+  familyInvite,
+  familyClose,
+  familySharingNoteSemanticLabel,
+  familySharingNote,
+  familySharedWith,
+  familyEmptyTitle,
+  familyEmptyDescription,
+  familyNotifications,
+  familyActiveGrants,
+  familyAccessLog,
+  familyEmailLabel,
+  familyEmailHint,
+  familyScopeLabel,
+  familyScopeJourney,
+  familyScopeVisit,
+  familySharedItemLabel,
+  familyPurposeLabel,
+  familyPurposeCareCoordination,
+  familyPurposeVisitSupport,
+  familySendInvitation,
+  familyInvitationTokenNotice,
+  familyAcknowledge,
+  familyExpiresAt,
+  familyRenew,
+  familyRevoke,
+  familyRevokeConfirmTitle,
+  familyRevokeConfirmDescription,
+  familyCancel,
+  familyEmailRequired,
+  familySharedItemRequired,
+  familyInvitationCreated,
+  familyInvitationFailed,
+  familyNotificationUnavailable,
+  familyAcknowledgeFailed,
+  familyGrantUnavailable,
+  familyRevoked,
+  familyRevokeFailed,
+  familyRenewed,
+  familyRenewFailed,
+  familyLoadFailed,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -397,6 +441,67 @@ class ConsumerTerminology {
     ConsumerTerm.medicinesRouteLabel: 'Đường dùng',
     ConsumerTerm.medicinesRouteHint: 'Ví dụ: Uống',
     ConsumerTerm.medicinesFormLabel: 'Dạng thuốc',
+    ConsumerTerm.familyTitle: 'Người thân & chia sẻ',
+    ConsumerTerm.familySupporter: 'Người hỗ trợ',
+    ConsumerTerm.familyNewNotification: 'Thông báo mới',
+    ConsumerTerm.familyAccessGrant: 'Quyền truy cập',
+    ConsumerTerm.familyInvite: 'Mời người thân',
+    ConsumerTerm.familyClose: 'Đóng',
+    ConsumerTerm.familySharingNoteSemanticLabel:
+        'Lưu ý về chia sẻ với người hỗ trợ',
+    ConsumerTerm.familySharingNote:
+        'Chia sẻ tối thiểu với người hỗ trợ. Bạn chỉ chia sẻ khi đồng ý và có '
+            'thể thu hồi bất cứ lúc nào.',
+    ConsumerTerm.familySharedWith: 'Người bạn đang chia sẻ',
+    ConsumerTerm.familyEmptyTitle: 'Chưa chia sẻ với ai',
+    ConsumerTerm.familyEmptyDescription:
+        'Mời một người thân để họ có thể hỗ trợ bạn. Bạn kiểm soát những gì '
+            'được chia sẻ và có thể thu hồi bất cứ lúc nào.',
+    ConsumerTerm.familyNotifications: 'Thông báo cần xem',
+    ConsumerTerm.familyActiveGrants: 'Quyền truy cập đang mở',
+    ConsumerTerm.familyAccessLog: 'Nhật ký truy cập gần đây',
+    ConsumerTerm.familyEmailLabel: 'Email người thân',
+    ConsumerTerm.familyEmailHint: 'vidu@email.com',
+    ConsumerTerm.familyScopeLabel: 'Chỉ chia sẻ',
+    ConsumerTerm.familyScopeJourney: 'Một hành trình',
+    ConsumerTerm.familyScopeVisit: 'Một buổi khám',
+    ConsumerTerm.familySharedItemLabel: 'Mục được chia sẻ',
+    ConsumerTerm.familyPurposeLabel: 'Mục đích',
+    ConsumerTerm.familyPurposeCareCoordination: 'Phối hợp chăm sóc',
+    ConsumerTerm.familyPurposeVisitSupport: 'Hỗ trợ đi khám',
+    ConsumerTerm.familySendInvitation: 'Gửi lời mời',
+    ConsumerTerm.familyInvitationTokenNotice:
+        'Mã chỉ hiển thị lần này. Gửi mã qua kênh bạn tin cậy:',
+    ConsumerTerm.familyAcknowledge: 'Đã xem',
+    ConsumerTerm.familyExpiresAt: 'Hết hạn: {date}',
+    ConsumerTerm.familyRenew: 'Gia hạn',
+    ConsumerTerm.familyRevoke: 'Thu hồi',
+    ConsumerTerm.familyRevokeConfirmTitle: 'Thu hồi quyền truy cập?',
+    ConsumerTerm.familyRevokeConfirmDescription:
+        'Sau khi thu hồi, "{name}" sẽ không còn xem được thông tin bạn đã '
+            'chia sẻ. Bạn có thể mời lại sau này.',
+    ConsumerTerm.familyCancel: 'Hủy',
+    ConsumerTerm.familyEmailRequired: 'Vui lòng nhập email người thân.',
+    ConsumerTerm.familySharedItemRequired:
+        'Hãy chọn đúng hành trình hoặc buổi khám để chia sẻ.',
+    ConsumerTerm.familyInvitationCreated:
+        'Đã tạo mã mời. CLARA chưa tự gửi email.',
+    ConsumerTerm.familyInvitationFailed:
+        'Không thể gửi lời mời. Vui lòng thử lại.',
+    ConsumerTerm.familyNotificationUnavailable:
+        'Thông báo này không thể xác nhận.',
+    ConsumerTerm.familyAcknowledgeFailed:
+        'Không thể xác nhận. Vui lòng thử lại.',
+    ConsumerTerm.familyGrantUnavailable:
+        'Quyền truy cập này không thể thu hồi.',
+    ConsumerTerm.familyRevoked: 'Đã thu hồi quyền truy cập.',
+    ConsumerTerm.familyRevokeFailed:
+        'Không thể thu hồi. Vui lòng thử lại.',
+    ConsumerTerm.familyRenewed:
+        'Đã tạo mã gia hạn; người nhận cần chấp nhận lại.',
+    ConsumerTerm.familyRenewFailed: 'Không thể tạo lời mời gia hạn.',
+    ConsumerTerm.familyLoadFailed:
+        'Không thể tải thông tin chia sẻ. Vui lòng thử lại.',
     ConsumerTerm.medicinesFormHint: 'Ví dụ: Viên nén',
     ConsumerTerm.medicinesEditReasonLabel: 'Lý do chỉnh sửa *',
     ConsumerTerm.medicinesEditReasonHint: 'Ví dụ: Sửa thông tin đã nhập nhầm',
@@ -592,6 +697,66 @@ class ConsumerTerminology {
     ConsumerTerm.medicinesRouteLabel: 'Route',
     ConsumerTerm.medicinesRouteHint: 'For example: by mouth',
     ConsumerTerm.medicinesFormLabel: 'Form',
+    ConsumerTerm.familyTitle: 'Family & sharing',
+    ConsumerTerm.familySupporter: 'Supporter',
+    ConsumerTerm.familyNewNotification: 'New notification',
+    ConsumerTerm.familyAccessGrant: 'Access grant',
+    ConsumerTerm.familyInvite: 'Invite a supporter',
+    ConsumerTerm.familyClose: 'Close',
+    ConsumerTerm.familySharingNoteSemanticLabel:
+        'Note about sharing with a supporter',
+    ConsumerTerm.familySharingNote:
+        'Share the minimum with a supporter. You choose what to share and can '
+            'revoke access at any time.',
+    ConsumerTerm.familySharedWith: 'People you share with',
+    ConsumerTerm.familyEmptyTitle: 'Not sharing with anyone yet',
+    ConsumerTerm.familyEmptyDescription:
+        'Invite a supporter when you need help. You control what is shared and '
+            'can revoke access at any time.',
+    ConsumerTerm.familyNotifications: 'Notifications to review',
+    ConsumerTerm.familyActiveGrants: 'Active access',
+    ConsumerTerm.familyAccessLog: 'Recent access log',
+    ConsumerTerm.familyEmailLabel: 'Supporter email',
+    ConsumerTerm.familyEmailHint: 'example@email.com',
+    ConsumerTerm.familyScopeLabel: 'Share only',
+    ConsumerTerm.familyScopeJourney: 'One health journey',
+    ConsumerTerm.familyScopeVisit: 'One visit',
+    ConsumerTerm.familySharedItemLabel: 'Shared item',
+    ConsumerTerm.familyPurposeLabel: 'Purpose',
+    ConsumerTerm.familyPurposeCareCoordination: 'Care coordination',
+    ConsumerTerm.familyPurposeVisitSupport: 'Visit support',
+    ConsumerTerm.familySendInvitation: 'Send invitation',
+    ConsumerTerm.familyInvitationTokenNotice:
+        'This code is shown only once. Send it through a channel you trust:',
+    ConsumerTerm.familyAcknowledge: 'Reviewed',
+    ConsumerTerm.familyExpiresAt: 'Expires: {date}',
+    ConsumerTerm.familyRenew: 'Renew',
+    ConsumerTerm.familyRevoke: 'Revoke',
+    ConsumerTerm.familyRevokeConfirmTitle: 'Revoke access?',
+    ConsumerTerm.familyRevokeConfirmDescription:
+        'After revocation, "{name}" can no longer see what you shared. You '
+            'can invite them again later.',
+    ConsumerTerm.familyCancel: 'Cancel',
+    ConsumerTerm.familyEmailRequired: 'Enter your supporter\'s email.',
+    ConsumerTerm.familySharedItemRequired:
+        'Choose the health journey or visit you want to share.',
+    ConsumerTerm.familyInvitationCreated:
+        'Invitation code created. CLARA has not sent an email automatically.',
+    ConsumerTerm.familyInvitationFailed:
+        'We could not create the invitation. Try again.',
+    ConsumerTerm.familyNotificationUnavailable:
+        'This notification cannot be acknowledged.',
+    ConsumerTerm.familyAcknowledgeFailed:
+        'We could not acknowledge this. Try again.',
+    ConsumerTerm.familyGrantUnavailable:
+        'This access grant cannot be revoked.',
+    ConsumerTerm.familyRevoked: 'Access revoked.',
+    ConsumerTerm.familyRevokeFailed: 'We could not revoke access. Try again.',
+    ConsumerTerm.familyRenewed:
+        'Renewal code created; the recipient must accept it again.',
+    ConsumerTerm.familyRenewFailed:
+        'We could not create a renewal invitation.',
+    ConsumerTerm.familyLoadFailed:
     ConsumerTerm.medicinesFormHint: 'For example: tablet',
     ConsumerTerm.medicinesEditReasonLabel: 'Reason for edit *',
     ConsumerTerm.medicinesEditReasonHint:

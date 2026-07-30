@@ -111,6 +111,7 @@ class ProfileHub extends StatelessWidget {
         builder: (_) => FamilySurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
+          languageController: languageController,
         ),
       ),
     );
