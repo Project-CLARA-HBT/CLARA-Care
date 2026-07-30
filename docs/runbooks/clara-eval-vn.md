@@ -15,6 +15,13 @@
 snapshot, runtime model/prompt resolution and approved live evaluator are
 available. This is expected fail-closed behaviour, not a test to bypass.
 
+The GitHub `Release` workflow is manual-only. It resolves an immutable target
+SHA and proposed semantic version, runs the locked gate against that SHA, and
+only creates/pushes the tag after the gate succeeds. Do not create a `v*`
+release tag by hand to bypass this sequence: an unvalidated tag is not a
+release attestation and must be deleted only through the incident/change
+process if it was created accidentally.
+
 To continue after the external dependencies are provisioned, run:
 
 ```bash
