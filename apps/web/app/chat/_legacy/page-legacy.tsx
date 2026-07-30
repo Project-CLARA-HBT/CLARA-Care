@@ -2752,9 +2752,7 @@ export default function ChatWorkspacePage() {
     : 0;
   const activeConversationStatusLabel = activeConversationTimestamp > 0
     ? formatHistoryTime(activeConversationTimestamp)
-    : isEnglishUI
-      ? "Ready for a new chat"
-      : "Sẵn sàng cho phiên mới";
+    : t(uiLanguage, "chat.legacyWorkspace.active.ready");
   const handleWorkspacePanelResizeStart = useCallback(
     (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (typeof window === "undefined") return;
@@ -3571,20 +3569,20 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={() => setIsMobileSidebarOpen(true)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
-                    aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
-                    title={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
                   >
                     <span className="material-symbols-outlined text-[16px]">menu</span>
                   </button>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
+                    {t(uiLanguage, "chat.legacyWorkspace.active.eyebrow")}
                   </p>
                   <span className="inline-flex items-center rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-700 dark:text-cyan-300">
                     {activeModeLabel}
                   </span>
                 </div>
                 <h2 className="mt-0.5 truncate text-[1.3rem] leading-none font-semibold text-[var(--text-primary)]">
-                  {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
+                  {activeConversationMeta?.title?.trim() || t(uiLanguage, "chat.legacyWorkspace.active.newConversation")}
                 </h2>
                 <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--text-muted)]">
                   {activeConversationStatusLabel}
@@ -3597,23 +3595,23 @@ export default function ChatWorkspacePage() {
                   onClick={createNewConversation}
                   className="inline-flex min-h-[34px] items-center gap-1 rounded-full bg-blue-600 px-3.5 text-[11px] font-semibold text-white shadow-[0_10px_22px_-14px_rgba(37,99,235,0.8)] transition hover:bg-blue-700"
                 >
-                  + {isEnglishUI ? "New chat" : "Chat mới"}
+                  + {t(uiLanguage, "chat.legacyWorkspace.active.newChat")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
                   className="inline-flex min-h-[34px] items-center rounded-full border border-medical/35 bg-medical/10 px-3 text-[11px] font-semibold text-medical transition hover:bg-medical/15 disabled:cursor-not-allowed disabled:opacity-60"
-                  title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
+                  title={t(uiLanguage, "chat.legacyWorkspace.active.exportReportTitle")}
                 >
-                  {isEnglishUI ? "Export report" : "Xuất báo cáo"}
+                  {t(uiLanguage, "chat.legacyWorkspace.active.exportReport")}
                 </button>
 
                 <details className="group relative">
                   <summary
                     className="inline-flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:text-[var(--text-brand)]"
-                    aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
-                    title={isEnglishUI ? "More actions" : "Thao tác khác"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                   >
                     <span className="material-symbols-outlined text-[18px]">more_horiz</span>
                   </summary>
@@ -3630,8 +3628,8 @@ export default function ChatWorkspacePage() {
                       ].join(" ")}
                     >
                       {isTelemetryPanelOpen
-                        ? isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"
-                        : isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.active.hideTelemetry")
+                        : t(uiLanguage, "chat.legacyWorkspace.active.showTelemetry")}
                     </button>
                     ) : null}
                     <div className="space-y-1.5">
@@ -3640,7 +3638,8 @@ export default function ChatWorkspacePage() {
                         value={conversationTitleDraft}
                         onChange={(event) => setConversationTitleDraft(event.target.value)}
                         disabled={!activeConversationId}
-                        placeholder={isEnglishUI ? "Rename conversation" : "Đặt tiêu đề hội thoại"}
+                        aria-label={t(uiLanguage, "chat.legacyWorkspace.active.renamePlaceholder")}
+                        placeholder={t(uiLanguage, "chat.legacyWorkspace.active.renamePlaceholder")}
                         className="min-h-[32px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                       />
                       <button
@@ -3649,7 +3648,7 @@ export default function ChatWorkspacePage() {
                         onClick={() => void onRenameActiveConversation()}
                         className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {isEnglishUI ? "Rename" : "Đổi tên"}
+                        {t(uiLanguage, "chat.legacyWorkspace.active.rename")}
                       </button>
                     </div>
                     <button
@@ -3664,17 +3663,17 @@ export default function ChatWorkspacePage() {
                       ].join(" ")}
                     >
                       {activeConversationMeta?.is_favorite
-                        ? isEnglishUI ? "Unpin conversation" : "Bỏ ghim hội thoại"
-                        : isEnglishUI ? "Pin conversation" : "Ghim hội thoại"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.active.unpin")
+                        : t(uiLanguage, "chat.legacyWorkspace.active.pin")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void onExportActiveConversation("docx")}
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-500/15 px-3 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
-                      title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
+                      title={t(uiLanguage, "chat.legacyWorkspace.active.exportReportTitle")}
                     >
-                      {isEnglishUI ? "Export report" : "Xuất báo cáo"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.exportReport")}
                     </button>
                     <button
                       type="button"
@@ -3682,7 +3681,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isEnglishUI ? "Export .md" : "Xuất .md"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.exportMarkdown")}
                     </button>
                     <button
                       type="button"
@@ -3690,7 +3689,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId || workspaceApiUnavailable}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
                     >
-                      {isEnglishUI ? "Share" : "Chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.share")}
                     </button>
                     <button
                       type="button"
@@ -3698,7 +3697,7 @@ export default function ChatWorkspacePage() {
                       disabled={!latestAnswer.trim()}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isEnglishUI ? "Save latest answer" : "Lưu câu trả lời gần nhất"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.saveLatest")}
                     </button>
                     <button
                       type="button"
@@ -3706,13 +3705,13 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId || !shareInfo || workspaceApiUnavailable}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
                     >
-                      {isEnglishUI ? "Revoke share" : "Thu hồi chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.revokeShare")}
                     </button>
                     <Link
                       href="/chat/shares"
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
                     >
-                      {isEnglishUI ? "Manage shares" : "Quản lý chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.manageShares")}
                     </Link>
                     <button
                       type="button"
@@ -3720,7 +3719,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
                     >
-                      {isEnglishUI ? "Delete chat" : "Xóa hội thoại"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.delete")}
                     </button>
                   </div>
                 </details>
