@@ -10,6 +10,7 @@ the generated report.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -72,6 +73,7 @@ class LiveManifest:
     sha256: str
     approval_reference: str
     retrieval_snapshot: dict[str, str] | None
+    release_binding: dict[str, str] | None
     records: tuple[LiveExecutionRecord, ...]
 
 
@@ -167,7 +169,12 @@ def _parse_record(raw: Any) -> LiveExecutionRecord:
     )
 
 
-def load_live_manifest(path: Path, *, repository_root: Path) -> LiveManifest:
+def load_live_manifest(
+    path: Path,
+    *,
+    repository_root: Path,
+    require_release_binding: bool = False,
+) -> LiveManifest:
     """Validate a separately approved manifest before any request is sent."""
 
     if not path.is_absolute():
@@ -206,13 +213,66 @@ def load_live_manifest(path: Path, *, repository_root: Path) -> LiveManifest:
         ):
             raise LiveEvaluationError("live_manifest_retrieval_snapshot_invalid")
         snapshot = {"reference": snapshot["reference"], "sha256": snapshot["sha256"]}
+    release_binding = raw.get("release_binding")
+    if release_binding is not None:
+        if (
+            not isinstance(release_binding, dict)
+            or set(release_binding) != {"locked_dataset_ref", "release_ref"}
+            or not isinstance(release_binding.get("locked_dataset_ref"), str)
+            or not release_binding["locked_dataset_ref"].strip()
+            or len(release_binding["locked_dataset_ref"]) > 200
+            or not isinstance(release_binding.get("release_ref"), str)
+            or not re.fullmatch(r"[0-9a-f]{40}", release_binding["release_ref"])
+        ):
+            raise LiveEvaluationError("live_manifest_release_binding_invalid")
+        release_binding = {
+            "locked_dataset_ref": release_binding["locked_dataset_ref"].strip(),
+            "release_ref": release_binding["release_ref"],
+        }
+    if require_release_binding:
+        if release_binding is None:
+            raise LiveEvaluationError("live_manifest_release_binding_required")
+        if snapshot is None:
+            raise LiveEvaluationError("live_manifest_retrieval_snapshot_required_for_release")
     return LiveManifest(
         path=path,
         sha256=hashlib.sha256(encoded).hexdigest(),
         approval_reference=reference.strip(),
         retrieval_snapshot=snapshot,
+        release_binding=release_binding,
         records=records,
     )
+
+
+def _validated_release_binding(manifest: LiveManifest) -> dict[str, str]:
+    """Bind a locked live manifest to the exact dataset reference and release SHA.
+
+    The dataset reference itself may reveal a governed/licensed location, so the
+    sanitized artifact carries only its SHA-256. The immutable release SHA is
+    operational provenance and is safe to retain verbatim. Neither value comes
+    from request/response content.
+    """
+
+    expected_dataset_ref = os.environ.get("CLARA_EVAL_LOCKED_DATASET_REF", "").strip()
+    expected_release_ref = os.environ.get("CLARA_EVAL_RELEASE_REF", "").strip()
+    if not expected_dataset_ref:
+        raise LiveEvaluationError("live_release_locked_dataset_ref_missing")
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_release_ref):
+        raise LiveEvaluationError("live_release_ref_missing_or_invalid")
+    binding = manifest.release_binding
+    if binding is None:  # Defensive: enforced by ``load_live_manifest`` above.
+        raise LiveEvaluationError("live_manifest_release_binding_required")
+    if not hmac.compare_digest(binding["locked_dataset_ref"], expected_dataset_ref):
+        raise LiveEvaluationError("live_release_locked_dataset_ref_mismatch")
+    if not hmac.compare_digest(binding["release_ref"], expected_release_ref):
+        raise LiveEvaluationError("live_release_ref_mismatch")
+    return {
+        "state": "validated",
+        "locked_dataset_ref_sha256": hashlib.sha256(
+            expected_dataset_ref.encode("utf-8")
+        ).hexdigest(),
+        "release_ref": expected_release_ref,
+    }
 
 
 def _base_url(endpoint: str) -> str:
@@ -312,7 +372,12 @@ def maybe_execute_live(
     request payloads, responses and credentials are intentionally excluded.
     """
 
-    command = "CLARA_EVAL_LIVE_EXECUTION_ENABLED=true CLARA_EVAL_LIVE_MANIFEST=/absolute/path/to/approved.json make eval-nightly"
+    target = "eval-release" if config.release_locked else "eval-nightly"
+    command = (
+        "CLARA_EVAL_LIVE_EXECUTION_ENABLED=true "
+        "CLARA_EVAL_LIVE_MANIFEST=/absolute/path/to/approved.json "
+        f"make {target}"
+    )
     if not _is_enabled(os.environ.get("CLARA_EVAL_LIVE_EXECUTION_ENABLED")):
         return (
             {
@@ -341,7 +406,16 @@ def maybe_execute_live(
             },
             [],
         )
-    manifest = load_live_manifest(Path(manifest_path), repository_root=repository_root)
+    manifest = load_live_manifest(
+        Path(manifest_path),
+        repository_root=repository_root,
+        require_release_binding=config.release_locked,
+    )
+    release_binding = (
+        _validated_release_binding(manifest)
+        if config.release_locked
+        else {"state": "not_applicable"}
+    )
     timeout_raw = os.environ.get("CLARA_EVAL_LIVE_TIMEOUT_SECONDS", "20")
     try:
         timeout_seconds = float(timeout_raw)
@@ -359,6 +433,7 @@ def maybe_execute_live(
             "completed_count": sum(trace["passed"] is not None for trace in traces),
             "failed_request_count": sum(trace["passed"] is None for trace in traces),
             "retrieval_snapshot": manifest.retrieval_snapshot,
+            "release_binding": release_binding,
             "measurement_command": command,
         },
         traces,

@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from evaluation.clara_eval.config import load_suite_config
+from evaluation.clara_eval.live import LiveEvaluationError, maybe_execute_live
 from evaluation.clara_eval.run import build_report, main
 from evaluation.clara_eval.tracks import REQUIRED_TRACK_IDS
 
@@ -126,6 +128,83 @@ class EvalRunnerTests(unittest.TestCase):
                 build_report(
                     config_path=ROOT / "evaluation/configs/nightly.yaml",
                     output=Path(temporary_directory) / "nightly",
+                    repository_root=ROOT,
+                )
+
+    def test_release_live_manifest_binds_dataset_snapshot_and_release_sha(
+        self,
+    ) -> None:
+        """Locked runs reject a manifest that is not bound to this release context."""
+        release_ref = "a" * 40
+        manifest = {
+            "schema_version": "clara-eval-vn.live-execution-manifest.v1",
+            "approval": {
+                "approved_for_live_execution": True,
+                "reference": "approved",
+            },
+            "contains_phi": False,
+            "contains_secrets": False,
+            "retrieval_snapshot": {
+                "reference": "snapshot-2026-07",
+                "sha256": "b" * 64,
+            },
+            "release_binding": {
+                "locked_dataset_ref": "approved-dataset-revision-7",
+                "release_ref": release_ref,
+            },
+            "records": [
+                {
+                    "case_id": "eval-vcu-003",
+                    "track_id": "vietnamese_clinical_understanding",
+                    "endpoint": "ml",
+                    "path": "/v1/eval-safe-route",
+                    "request": {"scenario": "deidentified"},
+                    "scorer": {
+                        "type": "json_path_equals",
+                        "metric_id": "emergency_recall",
+                        "json_path": "policy.emergency",
+                        "expected": True,
+                    },
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            manifest_path = Path(temporary_directory) / "approved-release.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            response = MagicMock()
+            response.status = 200
+            response.read.return_value = b'{"policy":{"emergency":true}}'
+            response.__enter__.return_value = response
+            environment = {
+                "CLARA_EVAL_LIVE_EXECUTION_ENABLED": "true",
+                "CLARA_EVAL_LIVE_MANIFEST": str(manifest_path),
+                "CLARA_EVAL_ML_BASE_URL": "https://approved-ml.example",
+                "CLARA_EVAL_LOCKED_DATASET_REF": "approved-dataset-revision-7",
+                "CLARA_EVAL_RELEASE_REF": release_ref,
+            }
+            with (
+                patch.dict("os.environ", environment, clear=False),
+                patch(
+                    "evaluation.clara_eval.live.request.urlopen",
+                    return_value=response,
+                ),
+            ):
+                metadata, traces = maybe_execute_live(
+                    load_suite_config(ROOT / "evaluation/configs/release.yaml"),
+                    repository_root=ROOT,
+                )
+            self.assertEqual(metadata["release_binding"]["state"], "validated")
+            self.assertEqual(metadata["release_binding"]["release_ref"], release_ref)
+            self.assertNotIn("approved-dataset-revision-7", json.dumps(metadata))
+            self.assertEqual(len(traces), 1)
+
+            environment["CLARA_EVAL_RELEASE_REF"] = "c" * 40
+            with (
+                patch.dict("os.environ", environment, clear=False),
+                self.assertRaisesRegex(LiveEvaluationError, "live_release_ref_mismatch"),
+            ):
+                maybe_execute_live(
+                    load_suite_config(ROOT / "evaluation/configs/release.yaml"),
                     repository_root=ROOT,
                 )
 

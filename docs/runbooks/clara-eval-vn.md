@@ -26,13 +26,18 @@ To continue after the external dependencies are provisioned, run:
 
 ```bash
 CLARA_EVAL_LOCKED_DATASET_REF='approved immutable reference' \
+CLARA_EVAL_RELEASE_REF='40-character immutable Git SHA' \
+CLARA_EVAL_LIVE_EXECUTION_ENABLED=true \
+CLARA_EVAL_LIVE_MANIFEST=/secure/eval/clara-eval-vn-release-approved.json \
 CLARA_EVAL_API_BASE_URL='https://approved-api.example' \
 CLARA_EVAL_ML_BASE_URL='https://approved-ml.example' \
 make eval-release
 ```
 
-The current foundation runner will still label unavailable execution data
-`not_measured`; connect only an approved evaluator before changing this gate.
+The approved release manifest must contain a matching `release_binding` with
+the same locked dataset reference and Git SHA, plus a retrieval snapshot. The
+runner writes only a hash of the dataset reference to artifacts. It remains
+non-zero for missing/mismatched approval data; do not bypass this gate.
 
 ## Incident and rollback
 

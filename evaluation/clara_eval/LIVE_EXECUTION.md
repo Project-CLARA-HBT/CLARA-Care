@@ -25,8 +25,14 @@ The metric must be declared for the record's track.  A failed transport request
 does not become a clinical failure; it remains an execution gap.  Request and
 response bodies are never written to `artifacts/`.
 
-An optional immutable retrieval snapshot provides a reference and SHA-256.  It
+An optional immutable retrieval snapshot provides a reference and SHA-256. It
 is reported as provenance only; the runner does not fetch or infer its content.
+For the locked release suite it is required, along with a `release_binding`
+object containing the exact `locked_dataset_ref` and immutable 40-character
+`release_ref`. The evaluator compares those values to
+`CLARA_EVAL_LOCKED_DATASET_REF` and `CLARA_EVAL_RELEASE_REF` before it sends a
+request. Artifacts retain only the dataset-reference SHA-256 and the release
+SHA; they never write the governed dataset reference itself.
 
 ## Running an approved nightly evaluation
 
@@ -56,6 +62,10 @@ Optional endpoint credentials remain separate Actions secrets:
 `CLARA_EVAL_API_BEARER_TOKEN`, `CLARA_EVAL_ML_BEARER_TOKEN`, and
 `CLARA_EVAL_ML_INTERNAL_KEY`.
 
+The release workflow uses the separate `CLARA_EVAL_RELEASE_LIVE_EXECUTION_ENABLED`
+repository variable and `CLARA_EVAL_RELEASE_LIVE_MANIFEST_JSON` secret; it binds
+the manifest to its resolved release SHA before a tag can be created.
+
 Do not put the manifest in a repository variable, artifact, pull request,
 issue, or workflow output. The live flag should remain false until the
 manifest approval, endpoint allowlist, dataset license, de-identification and
@@ -64,8 +74,9 @@ retrieval snapshot have been reviewed.
 ## Release behaviour and rollback
 
 The locked release suite remains fail-closed until every configured product
-metric is observed with an approved binary scorer and no request failed.  It
-does not infer missing metrics from the synthetic fixture suite.  On a critical
-failure: preserve only sanitized artifact hashes, disable the affected feature
-flag, restore the previous model/prompt/retrieval snapshot, and rerun the
-locked suite against the previous approved manifest revision.
+metric is observed with an approved binary scorer, no request failed, a locked
+dataset reference and immutable release SHA both match, and a retrieval snapshot
+is present. It does not infer missing metrics from the synthetic fixture suite.
+On a critical failure: preserve only sanitized artifact hashes, disable the
+affected feature flag, restore the previous model/prompt/retrieval snapshot, and
+rerun the locked suite against the previous approved manifest revision.

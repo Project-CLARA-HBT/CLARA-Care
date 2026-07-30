@@ -25,6 +25,15 @@
       },
       "additionalProperties": false
     },
+    "release_binding": {
+      "type": "object",
+      "required": ["locked_dataset_ref", "release_ref"],
+      "properties": {
+        "locked_dataset_ref": {"type": "string", "minLength": 1, "maxLength": 200},
+        "release_ref": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      },
+      "additionalProperties": false
+    },
     "records": {
       "type": "array",
       "minItems": 1,

@@ -342,6 +342,7 @@ def _model_manifest(
             "completed_count": live_execution.get("completed_count", 0),
             "failed_request_count": live_execution.get("failed_request_count", 0),
             "reason": live_execution.get("reason"),
+            "release_binding": live_execution.get("release_binding"),
         },
         "rollback": {
             "state": "documented",
@@ -612,6 +613,7 @@ def _summary_json(report: dict[str, Any]) -> dict[str, Any]:
             metric["state"] == "not_measured" for metric in metrics
         ),
         "integrity": report["integrity"],
+        "release_evidence_binding": report["release_evidence_binding"],
         "judge_headlines": report["judge_headlines"],
         "next_measurement_command": report["next_measurement_command"],
     }
@@ -678,10 +680,20 @@ def build_report(
         for metric_id, label_vi in JUDGE_HEADLINE_METRICS
     ]
     product_metrics = metric_rows[1:]
+    release_binding = live_execution.get("release_binding")
+    release_binding_valid = (
+        isinstance(release_binding, dict)
+        and release_binding.get("state") == "validated"
+    )
+    retrieval_snapshot_present = isinstance(
+        live_execution.get("retrieval_snapshot"), dict
+    )
     release_gate_passed = (
         live_execution["state"] == "executed"
         and not live_execution.get("failed_request_count")
         and all(metric["state"] == "measured" for metric in product_metrics)
+        and (not config.release_locked or release_binding_valid)
+        and (not config.release_locked or retrieval_snapshot_present)
     )
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -696,6 +708,11 @@ def build_report(
         "live_dependencies_requested": config.requires_live_dependencies,
         "live_dependencies_executed": live_execution["state"] == "executed",
         "live_execution": live_execution,
+        "release_evidence_binding": (
+            release_binding
+            if isinstance(release_binding, dict)
+            else {"state": "not_observed"}
+        ),
         "release_gate_passed": release_gate_passed,
         "next_measurement_command": _required_live_command(config),
     }
