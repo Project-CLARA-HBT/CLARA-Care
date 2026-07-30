@@ -29,6 +29,7 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import { formatLocaleDate } from "@/lib/i18n/catalog";
 import type { PhrInformationSource, PhrVerificationStatus } from "@/lib/phr";
 import OcrReviewModal from "@/components/phr/ocr-review-modal";
 import PhrExportButton from "@/components/phr/export-button";
@@ -935,7 +936,10 @@ export default function PhrPage() {
             <div className="text-xs text-[var(--text-secondary)]">
               {text.updatedAt}:{" "}
               {record.updated_at
-                ? new Date(record.updated_at).toLocaleString()
+                ? formatLocaleDate(uiLanguage, record.updated_at, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
                 : text.unknown}
             </div>
             <Button
@@ -1067,6 +1071,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.allergyName}
                       placeholder={text.allergyName}
                       value={item.name}
                       onChange={(e) =>
@@ -1074,6 +1079,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.reaction}
                       placeholder={text.reaction}
                       value={item.reaction}
                       onChange={(e) =>
@@ -1081,6 +1087,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.severity}
                       placeholder={text.severity}
                       value={item.severity}
                       onChange={(e) =>
@@ -1091,6 +1098,7 @@ export default function PhrPage() {
                       }
                     />
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
@@ -1148,6 +1156,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.conditionName}
                       placeholder={text.conditionName}
                       value={item.name}
                       onChange={(e) =>
@@ -1155,6 +1164,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.status}
                       placeholder={text.status}
                       value={item.status}
                       onChange={(e) =>
@@ -1165,6 +1175,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.diagnosedOn}
                       type="date"
                       placeholder={text.diagnosedOn}
                       value={toInputDate(item.diagnosed_on)}
@@ -1175,6 +1186,7 @@ export default function PhrPage() {
                       }
                     />
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
@@ -1232,6 +1244,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.medicationName}
                       placeholder={text.medicationName}
                       value={item.name}
                       onChange={(e) =>
@@ -1239,6 +1252,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.dose}
                       placeholder={text.dose}
                       value={item.dose}
                       onChange={(e) =>
@@ -1246,6 +1260,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.frequency}
                       placeholder={text.frequency}
                       value={item.frequency}
                       onChange={(e) =>
@@ -1253,6 +1268,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.startedOn}
                       type="date"
                       placeholder={text.startedOn}
                       value={toInputDate(item.started_on)}
@@ -1275,6 +1291,7 @@ export default function PhrPage() {
                       {text.current}
                     </label>
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}

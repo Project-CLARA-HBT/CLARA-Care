@@ -7,6 +7,7 @@ import {
   type PhrShare,
   type PhrShareScope,
 } from "@/lib/phr";
+import { formatLocaleDate } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 
 /**
@@ -195,7 +196,7 @@ export default function ShareManager({
                     : text.scopeFull}{" "}
                   · {text.expiresAt}:{" "}
                   {link.expires_at
-                    ? new Date(link.expires_at).toLocaleDateString()
+                    ? formatLocaleDate(uiLanguage, link.expires_at)
                     : text.never}
                 </span>
                 <button
