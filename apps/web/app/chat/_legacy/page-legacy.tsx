@@ -3078,30 +3078,33 @@ export default function ChatWorkspacePage() {
                 <details className="group">
                   <summary 
                     className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]"
-                    aria-label={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
-                    title={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.filter.summaryAria")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.filter.summaryAria")}
                   >
                     <span>
                       {selectedFolderFilterId !== null
-                        ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
-                            folderFilterList.find((folder) => folder.id === selectedFolderFilterId)?.name || "#"
-                          }`
-                        : isEnglishUI
-                          ? "Filter by folder"
-                          : "Lọc theo thư mục"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.filter.selected", {
+                            name:
+                              folderFilterList.find((folder) => folder.id === selectedFolderFilterId)
+                                ?.name || "#",
+                          })
+                        : t(uiLanguage, "chat.legacyWorkspace.filter.placeholder")}
                     </span>
                     <span className="material-symbols-outlined text-[16px] transition group-open:rotate-180">expand_more</span>
                   </summary>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                     <select
                       value={String(selectedFolderFilterId ?? "none")}
+                      aria-label={t(uiLanguage, "chat.legacyWorkspace.filter.selectAria")}
                       onChange={(event) => {
                         const raw = event.target.value;
                         setSelectedFolderFilterId(raw === "none" ? null : Number(raw));
                       }}
                       className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                     >
-                      <option value="none">{isEnglishUI ? "All folders" : "Tất cả thư mục"}</option>
+                      <option value="none">
+                        {t(uiLanguage, "chat.legacyWorkspace.filter.allFolders")}
+                      </option>
                       {folderFilterList.map((folder) => (
                         <option key={`filter-folder-${folder.id}`} value={String(folder.id)}>
                           {folder.name}
@@ -3114,7 +3117,7 @@ export default function ChatWorkspacePage() {
                         onClick={() => setSelectedFolderFilterId(null)}
                         className="rounded-lg border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
                       >
-                        {isEnglishUI ? "Clear" : "Xóa"}
+                        {t(uiLanguage, "chat.legacyWorkspace.filter.clear")}
                       </button>
                     ) : null}
                   </div>
@@ -3124,20 +3127,27 @@ export default function ChatWorkspacePage() {
               {isSelectionMode && selectedConversationIds.length ? (
                 <div className="mb-2 space-y-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Bulk actions" : "Thao tác hàng loạt"}
+                    {t(uiLanguage, "chat.legacyWorkspace.bulk.title")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     <select
                       value={bulkFolderTarget}
                       disabled={workspaceApiUnavailable}
+                      aria-label={t(uiLanguage, "chat.legacyWorkspace.bulk.folderSelectAria")}
                       onChange={(event) => setBulkFolderTarget(event.target.value)}
                       className="min-h-[28px] rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 text-[10px] text-[var(--text-secondary)]"
                     >
-                      <option value="skip">Folder: Skip</option>
-                      <option value="none">Folder: None</option>
+                      <option value="skip">
+                        {t(uiLanguage, "chat.legacyWorkspace.bulk.folderSkip")}
+                      </option>
+                      <option value="none">
+                        {t(uiLanguage, "chat.legacyWorkspace.bulk.folderNone")}
+                      </option>
                       {folders.map((folder) => (
                         <option key={`bulk-folder-${folder.id}`} value={String(folder.id)}>
-                          Folder: {folder.name}
+                          {t(uiLanguage, "chat.legacyWorkspace.bulk.folderNamed", {
+                            name: folder.name,
+                          })}
                         </option>
                       ))}
                     </select>
@@ -3152,7 +3162,7 @@ export default function ChatWorkspacePage() {
                       }}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Apply folder
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.applyFolder")}
                     </button>
                     <button
                       type="button"
@@ -3160,7 +3170,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ isFavorite: true })}
                       className="rounded border border-amber-300/70 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Favorite
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.favorite")}
                     </button>
                     <button
                       type="button"
@@ -3168,7 +3178,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ isFavorite: false })}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Unfavorite
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.unfavorite")}
                     </button>
                     <button
                       type="button"
@@ -3176,7 +3186,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ folderId: null })}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Clear folder
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.clearFolder")}
                     </button>
                     <button
                       type="button"
@@ -3184,21 +3194,21 @@ export default function ChatWorkspacePage() {
                       onClick={() => void bulkExportSelectedConversations("markdown")}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
                     >
-                      Export .md
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.exportMarkdown")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkExportSelectedConversations("docx")}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
                     >
-                      Export .docx
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.exportDocx")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkDeleteSelectedConversations()}
                       className="rounded border border-rose-300/70 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-700"
                     >
-                      Delete selected
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.deleteSelected")}
                     </button>
                   </div>
                 </div>
