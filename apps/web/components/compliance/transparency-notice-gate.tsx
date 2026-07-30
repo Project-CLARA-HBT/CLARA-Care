@@ -14,6 +14,7 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import { t } from "@/lib/i18n/catalog";
 
 /**
  * AI Transparency Notice gate (regulatory-compliance Requirement 1.1, 1.2, 1.6;
@@ -49,25 +50,14 @@ function isMedicalSurface(pathname: string): boolean {
   );
 }
 
-const FALLBACK_TITLE: Record<UILanguage, string> = {
-  vi: "Thông báo minh bạch về hệ thống AI",
-  en: "AI System Transparency Notice",
-};
-
-const FALLBACK_BODY: Record<UILanguage, string[]> = {
-  vi: [
-    "Bạn đang tương tác với CLARA — một hệ thống trí tuệ nhân tạo hỗ trợ thông tin y tế.",
-    "CLARA cung cấp thông tin tham khảo và hỗ trợ ra quyết định; CLARA KHÔNG thay thế bác sĩ hoặc nhân viên y tế có giấy phép, không kê đơn và không đưa ra chẩn đoán xác định.",
-    "Câu trả lời có thể chưa đầy đủ hoặc chưa chính xác. Hãy luôn tham vấn chuyên môn y tế trước khi hành động.",
-    "Theo Luật Trí tuệ nhân tạo số 134/2025/QH15, CLARA được phân loại là hệ thống AI rủi ro cao trong lĩnh vực y tế và luôn duy trì sự giám sát của con người.",
-  ],
-  en: [
-    "You are interacting with CLARA — an artificial-intelligence medical information assistant.",
-    "CLARA provides reference information and decision support; it does NOT replace a licensed clinician, does not prescribe, and does not give a definitive diagnosis.",
-    "Answers may be incomplete or inaccurate. Always review with a qualified clinician before acting.",
-    "Under the Law on Artificial Intelligence No. 134/2025/QH15, CLARA is classified as a high-risk AI system in the health domain and keeps a human in oversight.",
-  ],
-};
+function fallbackParagraphs(language: UILanguage): string[] {
+  return [
+    t(language, "compliance.transparency.fallbackBody.assistant"),
+    t(language, "compliance.transparency.fallbackBody.scope"),
+    t(language, "compliance.transparency.fallbackBody.limitations"),
+    t(language, "compliance.transparency.fallbackBody.oversight"),
+  ];
+}
 
 export default function TransparencyNoticeGate() {
   const pathname = usePathname();
@@ -113,14 +103,9 @@ export default function TransparencyNoticeGate() {
           ? { ...prev, acknowledged: true, acknowledged_version: prev.version }
           : prev,
       );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : uiLanguage === "en"
-            ? "Could not record acknowledgement. Please try again."
-            : "Không thể ghi nhận xác nhận. Vui lòng thử lại.",
-      );
+    } catch {
+      // Do not surface raw transport errors on an End_User compliance gate.
+      setError(t(uiLanguage, "compliance.transparency.acknowledgeError"));
     } finally {
       setAcknowledging(false);
     }
@@ -131,15 +116,14 @@ export default function TransparencyNoticeGate() {
   if (!enabled || !onMedicalSurface) return null;
   if (!notice || !notice.enabled || notice.acknowledged) return null;
 
-  const isEn = uiLanguage === "en";
   const title =
     notice.title?.[uiLanguage]?.trim() ||
     notice.title?.vi?.trim() ||
-    FALLBACK_TITLE[uiLanguage];
+    t(uiLanguage, "compliance.transparency.fallbackTitle");
   const bodyText = notice.body?.[uiLanguage]?.trim() || notice.body?.vi?.trim();
   const paragraphs = bodyText
     ? bodyText.split(/\n{2,}|\n/).map((line) => line.trim()).filter(Boolean)
-    : FALLBACK_BODY[uiLanguage];
+    : fallbackParagraphs(uiLanguage);
 
   return (
     <div
@@ -155,7 +139,7 @@ export default function TransparencyNoticeGate() {
       >
         <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">
-            {isEn ? "AI Transparency · Law 134/2025" : "Minh bạch AI · Luật 134/2025"}
+            {t(uiLanguage, "compliance.transparency.badge")}
           </p>
           <h2
             id="transparency-notice-title"
@@ -173,7 +157,7 @@ export default function TransparencyNoticeGate() {
             <p key={index}>{line}</p>
           ))}
           <p className="text-[11px] text-[var(--text-muted)]">
-            {isEn ? "Notice version" : "Phiên bản thông báo"}: {notice.version}
+            {t(uiLanguage, "compliance.transparency.version")}: {notice.version}
           </p>
         </div>
 
@@ -194,12 +178,8 @@ export default function TransparencyNoticeGate() {
             className="inline-flex min-h-[42px] items-center rounded-xl border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {acknowledging
-              ? isEn
-                ? "Recording..."
-                : "Đang ghi nhận..."
-              : isEn
-                ? "I understand and continue"
-                : "Tôi đã hiểu và tiếp tục"}
+              ? t(uiLanguage, "compliance.transparency.acknowledging")
+              : t(uiLanguage, "compliance.transparency.acknowledge")}
           </button>
         </div>
       </div>

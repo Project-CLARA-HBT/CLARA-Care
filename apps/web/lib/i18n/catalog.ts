@@ -2107,6 +2107,16 @@ const VI_MESSAGES = {
   "council.result.noDivergence": "Không có khác biệt nổi bật.",
   "council.result.newCase": "Hội chẩn ca mới",
   "council.result.openNewCase": "Mở ca mới",
+  "compliance.transparency.badge": "Minh bạch AI · Luật 134/2025",
+  "compliance.transparency.fallbackTitle": "Thông báo minh bạch về hệ thống AI",
+  "compliance.transparency.fallbackBody.assistant": "Bạn đang tương tác với CLARA — một hệ thống trí tuệ nhân tạo hỗ trợ thông tin y tế.",
+  "compliance.transparency.fallbackBody.scope": "CLARA cung cấp thông tin tham khảo và hỗ trợ ra quyết định; CLARA KHÔNG thay thế bác sĩ hoặc nhân viên y tế có giấy phép, không kê đơn và không đưa ra chẩn đoán xác định.",
+  "compliance.transparency.fallbackBody.limitations": "Câu trả lời có thể chưa đầy đủ hoặc chưa chính xác. Hãy luôn tham vấn chuyên môn y tế trước khi hành động.",
+  "compliance.transparency.fallbackBody.oversight": "Theo Luật Trí tuệ nhân tạo số 134/2025/QH15, CLARA được phân loại là hệ thống AI rủi ro cao trong lĩnh vực y tế và luôn duy trì sự giám sát của con người.",
+  "compliance.transparency.version": "Phiên bản thông báo",
+  "compliance.transparency.acknowledging": "Đang ghi nhận...",
+  "compliance.transparency.acknowledge": "Tôi đã hiểu và tiếp tục",
+  "compliance.transparency.acknowledgeError": "Không thể ghi nhận xác nhận. Vui lòng thử lại.",
 } as const;
 
 type TranslationKey = keyof typeof VI_MESSAGES;
@@ -4215,6 +4225,16 @@ const EN_MESSAGES: MessageCatalog = {
   "council.result.noDivergence": "There are no notable differences.",
   "council.result.newCase": "Review a new case",
   "council.result.openNewCase": "Open new case",
+  "compliance.transparency.badge": "AI transparency · Law 134/2025",
+  "compliance.transparency.fallbackTitle": "AI System Transparency Notice",
+  "compliance.transparency.fallbackBody.assistant": "You are interacting with CLARA — an artificial-intelligence medical information assistant.",
+  "compliance.transparency.fallbackBody.scope": "CLARA provides reference information and decision support; it does NOT replace a licensed clinician, does not prescribe, and does not give a definitive diagnosis.",
+  "compliance.transparency.fallbackBody.limitations": "Answers may be incomplete or inaccurate. Always review with a qualified clinician before acting.",
+  "compliance.transparency.fallbackBody.oversight": "Under the Law on Artificial Intelligence No. 134/2025/QH15, CLARA is classified as a high-risk AI system in the health domain and keeps a human in oversight.",
+  "compliance.transparency.version": "Notice version",
+  "compliance.transparency.acknowledging": "Recording...",
+  "compliance.transparency.acknowledge": "I understand and continue",
+  "compliance.transparency.acknowledgeError": "Could not record acknowledgement. Please try again.",
 };
 
 export const UI_MESSAGES: Record<UILanguage, MessageCatalog> = {
