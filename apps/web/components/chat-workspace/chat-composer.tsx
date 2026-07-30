@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { ResearchExecutionMode, ResearchRetrievalStackMode } from "@/lib/research";
 import type { UILanguage } from "@/lib/ui-language";
 
@@ -22,51 +23,19 @@ type ChatComposerProps = {
   uiLanguage: UILanguage;
 };
 
-const RESEARCH_MODE_OPTIONS: Array<{ id: ResearchExecutionMode; label: Record<UILanguage, string> }> = [
-  { id: "fast", label: { vi: "Nhanh", en: "Quick" } },
-  { id: "deep", label: { vi: "Tư duy", en: "Reason" } },
-  { id: "deep_beta", label: { vi: "Pro", en: "Pro" } },
+const RESEARCH_MODE_OPTIONS: Array<{ id: ResearchExecutionMode; labelKey: UITranslationKey }> = [
+  { id: "fast", labelKey: "chat.legacyComposer.mode.fast" },
+  { id: "deep", labelKey: "chat.legacyComposer.mode.deep" },
+  { id: "deep_beta", labelKey: "chat.legacyComposer.mode.deepBeta" },
 ];
 
-const RESEARCH_RETRIEVAL_STACK_OPTIONS: Array<{ id: ResearchRetrievalStackMode; label: Record<UILanguage, string> }> = [
-  { id: "auto", label: { vi: "Tự chọn", en: "Auto" } },
-  { id: "full", label: { vi: "Đầy đủ", en: "Full" } },
+const RESEARCH_RETRIEVAL_STACK_OPTIONS: Array<{
+  id: ResearchRetrievalStackMode;
+  labelKey: UITranslationKey;
+}> = [
+  { id: "auto", labelKey: "chat.legacyComposer.retrieval.auto" },
+  { id: "full", labelKey: "chat.legacyComposer.retrieval.full" },
 ];
-
-const COMPOSER_COPY: Record<
-  UILanguage,
-  {
-    mode: string;
-    stack: string;
-    promptTray: string;
-    placeholder: string;
-    mic: string;
-    submit: string;
-    personal: string;
-    liveStatusFallback: string;
-  }
-> = {
-  vi: {
-    mode: "Cách trả lời",
-    stack: "Nguồn",
-    promptTray: "Gợi ý",
-    placeholder: "Nhập câu hỏi y tế của bạn...",
-    mic: "Ghi âm",
-    submit: "Gửi",
-    personal: "Cá nhân",
-    liveStatusFallback: "CLARA đang phân tích câu hỏi...",
-  },
-  en: {
-    mode: "Mode",
-    stack: "Sources",
-    promptTray: "Prompts",
-    placeholder: "Enter your medical question...",
-    mic: "Voice input",
-    submit: "Send",
-    personal: "Personal",
-    liveStatusFallback: "CLARA is analyzing your question...",
-  },
-};
 
 export default function ChatComposer(props: ChatComposerProps) {
   const {
@@ -91,14 +60,19 @@ export default function ChatComposer(props: ChatComposerProps) {
 
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isPromptTrayOpen, setIsPromptTrayOpen] = useState(false);
-  const copy = COMPOSER_COPY[uiLanguage];
   const activeModeLabel =
-    RESEARCH_MODE_OPTIONS.find((mode) => mode.id === selectedResearchMode)?.label[uiLanguage] ?? "Nhanh";
+    t(
+      uiLanguage,
+      RESEARCH_MODE_OPTIONS.find((mode) => mode.id === selectedResearchMode)?.labelKey ??
+        "chat.legacyComposer.mode.fast",
+    );
   const activeStackLabel =
-    RESEARCH_RETRIEVAL_STACK_OPTIONS.find((mode) => mode.id === selectedRetrievalStackMode)?.label[uiLanguage] ??
-    "Tự chọn";
+    t(
+      uiLanguage,
+      RESEARCH_RETRIEVAL_STACK_OPTIONS.find((mode) => mode.id === selectedRetrievalStackMode)?.labelKey ??
+        "chat.legacyComposer.retrieval.auto",
+    );
   const controlsSummary = `${activeModeLabel} · ${activeStackLabel}`;
-  const advancedLabel = uiLanguage === "en" ? "Options" : "Tùy chọn";
   const showRawError =
     error &&
     !/(internal server error|upstream request failed|gateway|status code: 5\d\d|^5\d\d\b)/i.test(error);
@@ -130,7 +104,9 @@ export default function ChatComposer(props: ChatComposerProps) {
                   ].join(" ")}
                   >
                     <span className="material-symbols-outlined text-[13px]">tune</span>
-                  <span className="truncate">{isControlsOpen ? controlsSummary : advancedLabel}</span>
+                  <span className="truncate">
+                    {isControlsOpen ? controlsSummary : t(uiLanguage, "chat.legacyComposer.advanced")}
+                  </span>
                   </button>
 
                 {quickPrompts.length ? (
@@ -145,14 +121,16 @@ export default function ChatComposer(props: ChatComposerProps) {
                     ].join(" ")}
                   >
                     <span className="material-symbols-outlined text-[12px]">history</span>
-                    {copy.promptTray}
+                    {t(uiLanguage, "chat.legacyComposer.promptTray")}
                   </button>
                 ) : null}
               </div>
 
               {isSubmitting || liveJobId || liveStatusNote ? (
                 <span className="inline-flex min-h-[24px] max-w-[16rem] shrink-0 items-center rounded-full border border-cyan-300/65 bg-cyan-500/12 px-2 text-[9px] font-semibold text-cyan-800 dark:text-cyan-200">
-                  <span className="truncate">{liveStatusNote || copy.liveStatusFallback}</span>
+                  <span className="truncate">
+                    {liveStatusNote || t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
+                  </span>
                 </span>
               ) : null}
             </div>
@@ -161,7 +139,7 @@ export default function ChatComposer(props: ChatComposerProps) {
               <div className="space-y-1 rounded-[0.7rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/86 px-1.5 py-1">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {copy.mode}
+                    {t(uiLanguage, "chat.legacyComposer.modeLabel")}
                   </span>
                   <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
                     {RESEARCH_MODE_OPTIONS.map((mode) => (
@@ -173,7 +151,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                         className={toneButtonClass(selectedResearchMode === mode.id, isSubmitting)}
                         aria-pressed={selectedResearchMode === mode.id}
                       >
-                        {mode.label[uiLanguage]}
+                        {t(uiLanguage, mode.labelKey)}
                       </button>
                     ))}
                   </div>
@@ -181,7 +159,7 @@ export default function ChatComposer(props: ChatComposerProps) {
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {copy.stack}
+                    {t(uiLanguage, "chat.legacyComposer.retrievalLabel")}
                   </span>
                   <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-[var(--surface-panel)] p-0.5">
                     {RESEARCH_RETRIEVAL_STACK_OPTIONS.map((mode) => {
@@ -195,7 +173,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                           className={toneButtonClass(selectedRetrievalStackMode === mode.id, disabled)}
                           aria-pressed={selectedRetrievalStackMode === mode.id}
                         >
-                          {mode.label[uiLanguage]}
+                          {t(uiLanguage, mode.labelKey)}
                         </button>
                       );
                     })}
@@ -209,7 +187,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                   aria-pressed={personalMode}
                   disabled={isSubmitting}
                 >
-                  {copy.personal}
+                  {t(uiLanguage, "chat.legacyComposer.personal")}
                 </button>
               </div>
             ) : null}
@@ -221,8 +199,8 @@ export default function ChatComposer(props: ChatComposerProps) {
                   value={query}
                   onChange={(event) => onChangeQuery(event.target.value)}
                   disabled={isSubmitting}
-                  aria-label="Chat composer input"
-                  placeholder={copy.placeholder}
+                  aria-label={t(uiLanguage, "chat.composer.questionLabel")}
+                  placeholder={t(uiLanguage, "chat.composer.placeholder")}
                   rows={1}
                   className="min-h-[44px] max-h-24 w-full resize-y border-0 bg-transparent px-0 py-2 text-sm leading-5 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
                 />
@@ -233,8 +211,8 @@ export default function ChatComposer(props: ChatComposerProps) {
                   type="submit"
                   disabled={isSubmitting || !query.trim()}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:scale-[1.02] hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
-                  aria-label={copy.submit}
-                  title={copy.submit}
+                  aria-label={t(uiLanguage, "chat.composer.send")}
+                  title={t(uiLanguage, "chat.composer.send")}
                 >
                   <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                 </button>
@@ -265,12 +243,12 @@ export default function ChatComposer(props: ChatComposerProps) {
           <div className="mt-0.5 text-[10px]">
             {isSubmitting && !liveJobId && !liveStatusNote ? (
               <p className="font-semibold text-cyan-800 dark:text-cyan-200">
-                {copy.liveStatusFallback}
+                {t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
               </p>
             ) : null}
             {liveJobId && !liveStatusNote ? (
               <p className="text-cyan-700 dark:text-cyan-300">
-                {copy.liveStatusFallback} ({liveJobId})
+                {t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
               </p>
             ) : null}
             {liveStatusNote ? <p className="text-cyan-700 dark:text-cyan-300">{liveStatusNote}</p> : null}

@@ -270,6 +270,26 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    path: "components/chat-workspace/chat-composer.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.composer.questionLabel",
+      "chat.legacyComposer.advanced",
+      "chat.legacyComposer.liveStatusFallback",
+    ],
+    forbidden: [
+      '"Chat composer input"',
+      '"Nhập câu hỏi y tế của bạn..."',
+      '"Enter your medical question..."',
+      '"Cách trả lời"',
+      '"Mode"',
+      '"Tùy chọn"',
+      '"Options"',
+      '"CLARA đang phân tích câu hỏi..."',
+      '"CLARA is analyzing your question..."',
+    ],
+  },
+  {
     path: "app/chat/_v2/ChatShell.tsx",
     required: [
       "@/lib/i18n/catalog",
