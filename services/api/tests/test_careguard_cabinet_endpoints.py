@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -842,3 +844,108 @@ def test_auto_ddi_proxy_payload(monkeypatch) -> None:
     assert body["attribution"]["source_count"] == 3
     assert isinstance(body["attributions"], list)
     assert body["attributions"][0]["channel"] == "careguard"
+
+
+def test_auto_ddi_strict_drugbank_resolution_is_owner_bound_and_forwards_raw_aliases(
+    monkeypatch,
+) -> None:
+    """The API must not let a cabinet ID or local normalization choose a drug."""
+
+    owner_token = _login("strict-drugbank-owner@example.com")
+    other_token = _login("strict-drugbank-other@example.com")
+    owner_item = client.post(
+        "/api/v1/careguard/cabinet/items",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json={"drug_name": "Panadol 500mg", "source": "manual"},
+    )
+    assert owner_item.status_code == 200
+    other_item = client.post(
+        "/api/v1/careguard/cabinet/items",
+        headers={"Authorization": f"Bearer {other_token}"},
+        json={"drug_name": "Warfarin", "source": "manual"},
+    )
+    assert other_item.status_code == 200
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard.get_settings",
+        lambda: SimpleNamespace(
+            careguard_medication_clarification_enabled=True,
+            careguard_observability_enabled=False,
+        ),
+    )
+    called = False
+
+    def _must_not_proxy(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("foreign cabinet resolution must be rejected before ML")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard.proxy_ml_post", _must_not_proxy
+    )
+    foreign_resolution = client.post(
+        "/api/v1/careguard/cabinet/auto-ddi-check",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json={
+            "resolutions": [
+                {
+                    "cabinet_item_id": other_item.json()["id"],
+                    "input_alias": "warfarin",
+                    "drugbank_id": "DB00001",
+                    "drugbank_version": "licensed-v1",
+                }
+            ]
+        },
+    )
+    assert foreign_resolution.status_code == 422
+    assert foreign_resolution.json()["detail"]["code"] == "invalid_cabinet_medication_resolution"
+    assert called is False
+
+    captured: dict[str, object] = {}
+
+    def _fake_proxy(path: str, payload: dict[str, object]) -> dict[str, object]:
+        captured["path"] = path
+        captured["payload"] = payload
+        return {
+            "status": "requires_medication_clarification",
+            "clarifications": [],
+            "urgent_support_required": False,
+            "metadata": {"drugbank": {"state": "ready", "version": "licensed-v1"}},
+        }
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.careguard.proxy_ml_post", _fake_proxy)
+    response = client.post(
+        "/api/v1/careguard/cabinet/auto-ddi-check",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json={
+            "resolutions": [
+                {
+                    "cabinet_item_id": owner_item.json()["id"],
+                    # The response alias omits a dosage; API applies the same
+                    # bounded cleanup solely for binding, not drug selection.
+                    "input_alias": "panadol",
+                    "drugbank_id": "DB00002",
+                    "drugbank_version": "licensed-v1",
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+    assert captured["path"] == "/v1/careguard/analyze"
+    payload = captured["payload"]
+    assert isinstance(payload, dict)
+    assert payload["medications"] == ["Panadol 500mg"]
+    assert isinstance(payload["medications_with_meta"], list)
+    assert len(payload["medications_with_meta"]) == 1
+    metadata = payload["medications_with_meta"][0]
+    assert metadata["drug_name"] == "Panadol 500mg"
+    assert metadata["cabinet_item_id"] == owner_item.json()["id"]
+    assert metadata["input_alias"] == "Panadol 500mg"
+    assert payload["medication_resolutions"] == [
+        {
+            "cabinet_item_id": owner_item.json()["id"],
+            "input_alias": "panadol",
+            "drugbank_id": "DB00002",
+            "drugbank_version": "licensed-v1",
+        }
+    ]

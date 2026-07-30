@@ -103,6 +103,17 @@ type AutoDdiRequest = {
   allergies?: string[];
   /** UI locale controls only presentation wording; never the DDI decision. */
   locale?: "vi" | "en";
+  /**
+   * Explicit source-backed choices returned by a prior clarification result.
+   * The API rechecks item ownership, raw alias, DrugBank ID, and index version;
+   * this client payload never confirms or persists a medicine by itself.
+   */
+  resolutions?: Array<{
+    cabinet_item_id: number;
+    input_alias: string;
+    drugbank_id: string;
+    drugbank_version: string;
+  }>;
 };
 
 type ImportDetectionsResponse = {

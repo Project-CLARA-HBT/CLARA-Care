@@ -515,6 +515,16 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_SQLITE_PATH"),
     )
+    # Default-off rollout for a stricter medication-identity boundary.  When
+    # enabled, an ambiguous or unknown user medication name must be resolved by
+    # an explicit selection from the current licensed DrugBank index before a
+    # DDI conclusion is computed.  No LLM, Vietnamese alias map, or local DDI
+    # rule may choose the identity.  Turning it off restores the legacy
+    # normalization path immediately.
+    careguard_medication_clarification_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_MEDICATION_CLARIFICATION_ENABLED"),
+    )
     # Additive consumer wording projection of an already-final CareGuard result.
     # It is intentionally OFF by default: the renderer never queries, changes,
     # or substitutes for the authoritative DrugBank decision path.

@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/field";
 import { InlineError } from "@/components/ui/surface";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import {
+  CareguardMedicationClarification,
   CareguardConsumerView,
   MINIMUM_DDI_MEDICINES,
+  medicationClarifications,
   requiresTwoMedicines,
   toCareguardUserMessage,
   toCareguardConsumerView
@@ -81,6 +83,8 @@ export default function MedicinesSafetyTab() {
 
   const [allergiesInput, setAllergiesInput] = useState("");
   const [result, setResult] = useState<CareguardConsumerView | null>(null);
+  const [clarifications, setClarifications] = useState<CareguardMedicationClarification[] | null>(null);
+  const [selectedDrugBankIds, setSelectedDrugBankIds] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   // Offline / last-known fallback state (Req 6.3). When the result on screen was
@@ -93,6 +97,11 @@ export default function MedicinesSafetyTab() {
   // requiresTwoMedicines helper collapses case-insensitive duplicates.
   const medicineNames = useMemo(() => items.map((item) => item.drug_name), [items]);
   const needsMoreMedicines = useMemo(() => requiresTwoMedicines(medicineNames), [medicineNames]);
+  const unresolvedClarification = clarifications !== null && (
+    clarifications.length === 0 || clarifications.some((clarification) => {
+      return clarification.candidates.length === 0 || !selectedDrugBankIds[clarification.cabinet_item_id];
+    })
+  );
 
   const refreshCabinet = async () => {
     setCabinetError("");
@@ -124,12 +133,38 @@ export default function MedicinesSafetyTab() {
       setError(t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES }));
       return;
     }
+    if (unresolvedClarification) {
+      setError(t(language, "medicines.safety.clarification.selectRequired"));
+      return;
+    }
     setIsChecking(true);
     try {
       const next = await runCabinetAutoDdi({
         allergies: parseLineList(allergiesInput),
-        locale: language
+        locale: language,
+        resolutions: clarifications?.flatMap((clarification) => {
+          const selectedId = selectedDrugBankIds[clarification.cabinet_item_id];
+          const selected = clarification.candidates.find((candidate) => candidate.drugbank_id === selectedId);
+          return selected
+            ? [{
+                cabinet_item_id: clarification.cabinet_item_id,
+                input_alias: clarification.input_alias,
+                drugbank_id: selected.drugbank_id,
+                drugbank_version: selected.source_version,
+              }]
+            : [];
+        }),
       });
+      const requiredClarifications = medicationClarifications(next);
+      if (requiredClarifications !== null) {
+        // This is a terminal pre-check state, not a DDI result. Do not render,
+        // track or cache it as if DrugBank had compared the medicines.
+        setClarifications(requiredClarifications);
+        setSelectedDrugBankIds({});
+        return;
+      }
+      setClarifications(null);
+      setSelectedDrugBankIds({});
       // The detailed composition accepts renderer text only after its independent
       // verifier passed. Its DDI subview continues to exclude runtime mode,
       // fallback flags, and source errors.
@@ -244,7 +279,7 @@ export default function MedicinesSafetyTab() {
             <Button
               className="mt-3"
               onClick={() => void onRunDdi()}
-              disabled={isChecking || needsMoreMedicines}
+              disabled={isChecking || needsMoreMedicines || unresolvedClarification}
               loading={isChecking}
               loadingLabel={t(language, "medicines.safety.checking")}
             >
@@ -252,9 +287,63 @@ export default function MedicinesSafetyTab() {
             </Button>
 
             {needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES })}</p> : null}
+            {unresolvedClarification ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.selectRequired")}</p> : null}
             {error ? <div className="mt-2"><InlineError message={error} onRetry={() => void onRunDdi()} /></div> : null}
           </section>
         </div>
+
+        {clarifications !== null ? (
+          <section className="chrome-panel rounded-[1.35rem] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-5 sm:p-6">
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.clarification.title")}</h3>
+            <p className="mt-1 text-sm text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.description")}</p>
+            {!clarifications.length ? <p className="mt-3 text-sm text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.noCandidate")}</p> : null}
+            <div className="mt-4 space-y-4">
+              {clarifications.map((clarification) => {
+                const cabinetItem = items.find((item) => item.id === clarification.cabinet_item_id);
+                return (
+                  <article key={clarification.cabinet_item_id} className="rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] p-4">
+                    <p className="font-semibold text-[var(--text-primary)]">{cabinetItem?.drug_name || clarification.input_alias}</p>
+                    {clarification.candidates.length ? (
+                      <fieldset className="mt-3 space-y-2">
+                        <legend className="text-sm font-medium text-[var(--text-secondary)]">{t(language, "medicines.safety.clarification.choose")}</legend>
+                        {clarification.candidates.map((candidate) => (
+                          <label key={`${candidate.drugbank_id}-${candidate.normalized_name}`} className="flex cursor-pointer gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-primary)]">
+                            <input
+                              type="radio"
+                              name={`drugbank-clarification-${clarification.cabinet_item_id}`}
+                              checked={selectedDrugBankIds[clarification.cabinet_item_id] === candidate.drugbank_id}
+                              onChange={() => setSelectedDrugBankIds((current) => ({ ...current, [clarification.cabinet_item_id]: candidate.drugbank_id }))}
+                            />
+                            <span>
+                              <span className="block font-semibold">{candidate.normalized_name}</span>
+                              {candidate.active_ingredients.length ? <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">{candidate.active_ingredients.join(", ")}</span> : null}
+                            </span>
+                          </label>
+                        ))}
+                      </fieldset>
+                    ) : (
+                      <div className="mt-3">
+                        <p className="text-sm text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.noCandidate")}</p>
+                        <Button as="link" href="/medicines?tab=cabinet" variant="secondary" className="mt-3">
+                          {t(language, "medicines.safety.clarification.editCabinet")}
+                        </Button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+            <Button
+              className="mt-4"
+              onClick={() => void onRunDdi()}
+              disabled={isChecking || unresolvedClarification}
+              loading={isChecking}
+              loadingLabel={t(language, "medicines.safety.checking")}
+            >
+              {t(language, "medicines.safety.clarification.continue")}
+            </Button>
+          </section>
+        ) : null}
 
         {result ? (
           <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.ddi.riskLevel)}`}>

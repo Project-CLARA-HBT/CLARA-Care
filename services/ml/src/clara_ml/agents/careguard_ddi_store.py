@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 _SHA256_HEX = set("0123456789abcdef")
+_INDEX_SCHEMA_VERSION = "2"
+_MAX_MEDICATION_CANDIDATES = 5
 
 
 @dataclass(frozen=True)
@@ -285,7 +287,7 @@ class DrugBankDdiStore:
         try:
             rows = conn.execute(
                 "SELECT key, value FROM meta WHERE key IN "
-                "('version', 'manifest_sha256', 'source_version', 'source_sha256')"
+                "('version', 'manifest_sha256', 'source_version', 'source_sha256', 'schema_version')"
             ).fetchall()
             return {str(key): str(value) for key, value in rows}
         except sqlite3.Error:
@@ -366,11 +368,21 @@ class DrugBankDdiStore:
                         "VALUES (?, ?, ?, ?)",
                         batch,
                     )
+            # An alias can legitimately map to several licensed DrugBank
+            # records.  The legacy primary key silently retained the first
+            # record via INSERT OR IGNORE, which made the source traversal order
+            # a hidden clinical choice.  Retain every distinct, source-backed
+            # candidate so the CareGuard caller can require an explicit user
+            # choice; no model or local dictionary is allowed to choose here.
             conn.execute(
                 "CREATE TABLE drug_dictionary ("
-                "alias TEXT PRIMARY KEY, normalized_name TEXT NOT NULL, "
+                "alias TEXT NOT NULL, normalized_name TEXT NOT NULL, "
                 "active_ingredients_json TEXT NOT NULL, rxcui TEXT NOT NULL, "
-                "drugbank_id TEXT NOT NULL)"
+                "drugbank_id TEXT NOT NULL, "
+                "PRIMARY KEY (alias, drugbank_id, normalized_name))"
+            )
+            conn.execute(
+                "CREATE INDEX drug_dictionary_alias_idx ON drug_dictionary (alias)"
             )
             for shard in manifest.dictionary_shards:
                 shard_path = Path(shard["path"])
@@ -437,6 +449,7 @@ class DrugBankDdiStore:
                 "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
                 [
                     ("dictionary_record_count", str(actual_dictionary_count)),
+                    ("schema_version", _INDEX_SCHEMA_VERSION),
                     ("manifest_sha256", manifest.manifest_sha256),
                     ("source_version", manifest.source_version),
                     ("source_sha256", manifest.source_sha256),
@@ -473,6 +486,7 @@ class DrugBankDdiStore:
             and existing.get("manifest_sha256") == manifest.manifest_sha256
             and existing.get("source_version") == manifest.source_version
             and existing.get("source_sha256") == manifest.source_sha256
+            and existing.get("schema_version") == _INDEX_SCHEMA_VERSION
         )
 
     def _index_is_complete(self, manifest: _Manifest) -> bool:
@@ -535,12 +549,81 @@ class DrugBankDdiStore:
         finally:
             conn.close()
 
-    def resolve_medication(self, medication: str) -> dict[str, object] | None:
-        """Resolve one normalized medication alias against the indexed DrugBank dictionary.
+    @staticmethod
+    def _candidate_from_row(alias: str, row: tuple[object, object, object, object]) -> dict[str, object] | None:
+        try:
+            active_ingredients = json.loads(str(row[1]))
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(active_ingredients, list):
+            return None
+        normalized_name = _normalize_med(row[0])
+        drugbank_id = str(row[3] or "").strip()
+        if not normalized_name:
+            return None
+        normalized_actives = [
+            _normalize_med(value) for value in active_ingredients if _normalize_med(value)
+        ]
+        return {
+            "alias": alias,
+            "normalized_name": normalized_name,
+            "active_ingredients": normalized_actives or [normalized_name],
+            "rxcui": str(row[2] or "").strip(),
+            "drugbank_id": drugbank_id,
+        }
 
-        This is a deterministic alias lookup, not an LLM inference. The return
-        value contains only the minimum traceability fields required to explain
-        how an input was matched; it never guesses on a miss.
+    def medication_candidates(
+        self,
+        medication: str,
+        *,
+        limit: int = _MAX_MEDICATION_CANDIDATES,
+    ) -> list[dict[str, object]]:
+        """Return bounded exact DrugBank candidates for a normalized alias.
+
+        This is intentionally an exact licensed-dictionary lookup: it performs
+        no fuzzy matching, local-alias substitution, or model inference.  An
+        empty result means that the caller must ask the user to correct the
+        name; a result with several entries means it must ask the user to choose.
+        Returned records are source-backed identifiers only and are ordered
+        deterministically for a stable user choice.
+        """
+
+        alias = _normalize_med(medication)
+        try:
+            safe_limit = min(max(int(limit), 1), _MAX_MEDICATION_CANDIDATES)
+        except (TypeError, ValueError):
+            safe_limit = _MAX_MEDICATION_CANDIDATES
+        if not alias:
+            return []
+        try:
+            conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return []
+        try:
+            rows = conn.execute(
+                "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
+                "FROM drug_dictionary WHERE alias = ? "
+                "ORDER BY drugbank_id ASC, normalized_name ASC LIMIT ?",
+                (alias, safe_limit),
+            ).fetchall()
+            candidates: list[dict[str, object]] = []
+            for row in rows:
+                candidate = self._candidate_from_row(alias, row)
+                if candidate is not None:
+                    candidates.append(candidate)
+            return candidates
+        except sqlite3.Error:
+            return []
+        finally:
+            conn.close()
+
+    def resolve_medication(self, medication: str) -> dict[str, object] | None:
+        """Legacy exact resolution retaining flag-off first-record semantics.
+
+        Candidate-aware clarification callers must use
+        :meth:`medication_candidates` and :meth:`resolve_medication_choice`.
+        This legacy helper keeps existing flag-off execution compatible while a
+        default-off clarification rollout is staged.
         """
 
         alias = _normalize_med(medication)
@@ -551,33 +634,61 @@ class DrugBankDdiStore:
         except sqlite3.Error:
             return None
         try:
+            # rowid preserves the prior build's first-record behavior for a
+            # colliding alias.  It is deliberately not used by the new strict
+            # clarification path.
             row = conn.execute(
                 "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
-                "FROM drug_dictionary WHERE alias = ?",
+                "FROM drug_dictionary WHERE alias = ? ORDER BY rowid ASC LIMIT 1",
                 (alias,),
             ).fetchone()
             if row is None:
                 return None
-            try:
-                active_ingredients = json.loads(str(row[1]))
-            except json.JSONDecodeError:
+            candidate = self._candidate_from_row(alias, row)
+            if candidate is None:
                 return None
-            if not isinstance(active_ingredients, list):
+            return {**candidate, "source_version": self._version}
+        except sqlite3.Error:
+            return None
+        finally:
+            conn.close()
+
+    def resolve_medication_choice(
+        self,
+        medication: str,
+        *,
+        drugbank_id: str,
+        source_version: str,
+    ) -> dict[str, object] | None:
+        """Validate one user selection against the current licensed index.
+
+        The submitted identifier is not trusted: it must bind to the same exact
+        normalized alias and the current artifact version, and it must resolve
+        to exactly one source-backed record.  This prevents a client from
+        swapping an arbitrary DrugBank identifier into another medication.
+        """
+
+        alias = _normalize_med(medication)
+        selected_id = str(drugbank_id or "").strip()
+        if not alias or not selected_id or source_version != self._version:
+            return None
+        try:
+            conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            rows = conn.execute(
+                "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
+                "FROM drug_dictionary WHERE alias = ? AND drugbank_id = ? "
+                "ORDER BY normalized_name ASC LIMIT 2",
+                (alias, selected_id),
+            ).fetchall()
+            if len(rows) != 1:
                 return None
-            normalized_actives = [
-                _normalize_med(value) for value in active_ingredients if _normalize_med(value)
-            ]
-            normalized_name = _normalize_med(row[0])
-            if not normalized_name:
+            candidate = self._candidate_from_row(alias, rows[0])
+            if candidate is None:
                 return None
-            return {
-                "alias": alias,
-                "normalized_name": normalized_name,
-                "active_ingredients": normalized_actives or [normalized_name],
-                "rxcui": str(row[2] or "").strip(),
-                "drugbank_id": str(row[3] or "").strip(),
-                "source_version": self._version,
-            }
+            return {**candidate, "source_version": self._version}
         except sqlite3.Error:
             return None
         finally:

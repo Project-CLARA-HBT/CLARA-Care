@@ -652,6 +652,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="CAREGUARD_OBSERVABILITY_ENABLED",
     )
+    # Keep the API and ML side of the explicit DrugBank-identity flow aligned.
+    # Default off preserves the existing cabinet payload exactly; when enabled,
+    # raw owner-scoped names and validated selection bindings are forwarded to
+    # ML, whose licensed index remains the final authority.
+    careguard_medication_clarification_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_MEDICATION_CLARIFICATION_ENABLED",
+    )
 
     # --- Admin & Observability upgrade feature flags ----------------------------
     # All additive + default OFF/empty ⇒ byte-for-byte current behavior. With

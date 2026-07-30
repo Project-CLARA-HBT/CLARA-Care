@@ -56,6 +56,7 @@ from clara_api.phr.provenance import hedge_text_bilingual
 from clara_api.phr.reconciler import find_allergy_conflicts, reconcile
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
+    CabinetDrugBankResolution,
     CabinetExpirySummary,
     CabinetImportRequest,
     CabinetImportResponse,
@@ -355,6 +356,38 @@ def _build_alias_lookup() -> dict[str, str]:
 
 def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
+
+
+_DRUGBANK_ALIAS_DOSAGE = re.compile(
+    r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|μg|ml|iu|%)\b",
+    flags=re.IGNORECASE,
+)
+_DRUGBANK_ALIAS_COUNT = re.compile(
+    r"\bx\s*\d+\b",
+    flags=re.IGNORECASE,
+)
+_DRUGBANK_ALIAS_FORMS = {
+    "tablet", "tablets", "tab", "tabs", "capsule", "capsules", "cap", "caps",
+    "syrup", "suspension", "solution", "cream", "ointment", "gel", "patch",
+    "injection", "injectable", "sl", "iv", "im", "po", "bid", "tid", "qid",
+    "od", "hs", "vien", "ống", "ong",
+}
+
+
+def _canonicalize_drugbank_alias(value: str) -> str:
+    """Bound a returned choice to its owner-scoped cabinet input.
+
+    This mirrors the internal ML alias cleanup only for request binding. It
+    never chooses a DrugBank record or produces a DDI conclusion; ML validates
+    the chosen source identifier against the current licensed index.
+    """
+
+    cleaned = _DRUGBANK_ALIAS_DOSAGE.sub(" ", _normalize_text(value))
+    cleaned = _DRUGBANK_ALIAS_COUNT.sub(" ", cleaned)
+    cleaned = re.sub(r"[/(),;+]", " ", cleaned)
+    return " ".join(
+        part for part in cleaned.split() if part and part not in _DRUGBANK_ALIAS_FORMS
+    )
 
 
 DRUG_ALIAS_LOOKUP = _build_alias_lookup()
@@ -2356,7 +2389,36 @@ def run_auto_ddi_check(
         .scalars()
         .all()
     )
-    medication_names = [item.normalized_name for item in medication_items if item.normalized_name]
+    clarification_enabled = get_settings().careguard_medication_clarification_enabled
+    resolutions_by_item: dict[int, CabinetDrugBankResolution] = {}
+    if clarification_enabled:
+        items_by_id = {item.id: item for item in medication_items}
+        for resolution in payload.resolutions:
+            item = items_by_id.get(resolution.cabinet_item_id)
+            # Do not disclose another person's item existence. The selection
+            # must bind to a current item in this user's cabinet and to its
+            # unmodified raw alias before ML can revalidate DrugBank identity.
+            if item is None or resolution.cabinet_item_id in resolutions_by_item:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"code": "invalid_cabinet_medication_resolution"},
+                )
+            if _canonicalize_drugbank_alias(resolution.input_alias) != _canonicalize_drugbank_alias(item.drug_name):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"code": "invalid_cabinet_medication_resolution"},
+                )
+            resolutions_by_item[item.id] = resolution
+
+    # The default-off rollout preserves the prior canonical cabinet payload.
+    # In strict clarification mode only, retain the user's raw cabinet label so
+    # ML can bind it to an exact licensed DrugBank alias rather than a local
+    # fuzzy/legacy normalization.
+    medication_names = [
+        (item.drug_name if clarification_enabled else item.normalized_name)
+        for item in medication_items
+        if (item.drug_name if clarification_enabled else item.normalized_name)
+    ]
     medications_with_meta = []
     for item in medication_items:
         display_name, normalized_name, rx_cui, mapping_source, mapping_confidence = (
@@ -2372,6 +2434,13 @@ def run_auto_ddi_check(
                 "mapping_confidence": mapping_confidence,
             }
         )
+        if clarification_enabled:
+            medications_with_meta[-1]["cabinet_item_id"] = item.id
+            # Keep this exact raw alias aligned and ordered with ``medications``.
+            # ML uses it only to bind a returned clarification to this owner-
+            # scoped item; the licensed DrugBank index remains the identity
+            # authority and does not trust this metadata as a selection.
+            medications_with_meta[-1]["input_alias"] = item.drug_name
 
     request_payload: dict[str, Any] = {
         "symptoms": payload.symptoms,
@@ -2384,6 +2453,16 @@ def run_auto_ddi_check(
         "locale": payload.locale,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
+    if clarification_enabled:
+        request_payload["medication_resolutions"] = [
+            {
+                "cabinet_item_id": resolution.cabinet_item_id,
+                "input_alias": resolution.input_alias,
+                "drugbank_id": resolution.drugbank_id,
+                "drugbank_version": resolution.drugbank_version,
+            }
+            for resolution in payload.resolutions
+        ]
 
     # --- PHR reconciliation + allergy-aware DDI (flag-gated, Req 7) ----------
     # Flag OFF ⇒ cabinet-only payload above, byte-for-byte legacy (Req 7.5,

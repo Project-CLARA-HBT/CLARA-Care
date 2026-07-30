@@ -252,6 +252,21 @@ const MIGRATED_SURFACES = [
       '"Nghiên cứu y khoa chuyên sâu"',
     ],
   },
+  {
+    path: "app/medicines/safety-tab.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "medicines.safety.clarification.title",
+      "medicines.safety.clarification.selectRequired",
+      "medicines.safety.clarification.continue",
+    ],
+    forbidden: [
+      "Confirm medicines before checking",
+      "Xác nhận thuốc trước khi kiểm tra",
+      "Continue interaction check",
+      "Tiếp tục kiểm tra tương tác",
+    ],
+  },
 ];
 
 function fail(message) {

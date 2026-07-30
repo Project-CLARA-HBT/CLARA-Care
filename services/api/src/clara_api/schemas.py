@@ -410,6 +410,20 @@ class CabinetImportResponse(BaseModel):
     prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
 
 
+class CabinetDrugBankResolution(BaseModel):
+    """An explicit, revalidated DrugBank identity for one owner-scoped item.
+
+    This is only a request to re-run the check.  The API verifies cabinet
+    ownership and raw-alias binding, and ML re-verifies the identifier against
+    the current licensed DrugBank index; it never confirms or persists a drug.
+    """
+
+    cabinet_item_id: int = Field(gt=0)
+    input_alias: str = Field(min_length=1, max_length=255)
+    drugbank_id: str = Field(min_length=1, max_length=128)
+    drugbank_version: str = Field(min_length=1, max_length=128)
+
+
 class CabinetAutoDdiRequest(BaseModel):
     # Bounded list inputs (Req 4.5): caps keep auto-DDI payloads from growing unbounded.
     symptoms: list[str] = Field(default_factory=list, max_length=100)
@@ -418,6 +432,9 @@ class CabinetAutoDdiRequest(BaseModel):
     # Presentation-only locale for the independently verified wording layer.
     # It is not used by DrugBank lookup, severity, or safety policy.
     locale: Literal["vi", "en"] = "vi"
+    # Additive/default-empty: source-backed choices returned by the preceding
+    # clarification terminal state.  Absent values preserve legacy behavior.
+    resolutions: list[CabinetDrugBankResolution] = Field(default_factory=list, max_length=100)
 
 
 class VnDrugMappingCreateRequest(BaseModel):

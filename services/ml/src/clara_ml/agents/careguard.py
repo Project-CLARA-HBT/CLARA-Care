@@ -544,6 +544,279 @@ def _normalize_medications_with_vn_dictionary(
     }
 
 
+def _valid_cabinet_item_id(value: object) -> int | None:
+    """Accept only a bounded positive integer supplied by the trusted API."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > 2_147_483_647:
+        return None
+    return value
+
+
+def _strict_drugbank_input_rows(
+    medications: list[str],
+    medications_with_meta: object,
+) -> list[tuple[str, int | None]]:
+    """Bind trusted cabinet IDs only when every duplicate alias is unambiguous.
+
+    `medications_with_meta` is an API-internal transport envelope, never an
+    authorization source.  An entry can bind only through a positive
+    ``cabinet_item_id`` and an exact ``input_alias`` that appears in the request
+    medication list.  Duplicate aliases receive IDs only when the number of
+    unique trusted entries exactly matches the number of raw occurrences; any
+    mismatch leaves every duplicate unbound rather than risking a selection for
+    the wrong cabinet item.
+    """
+
+    aliases = [
+        _canonicalize_medication_token(_normalize_text_token(medication))
+        for medication in medications
+    ]
+    rows = [(alias, None) for alias in aliases if alias]
+    if not isinstance(medications_with_meta, list):
+        return rows
+
+    positions_by_alias: dict[str, list[int]] = {}
+    for position, (alias, _item_id) in enumerate(rows):
+        positions_by_alias.setdefault(alias, []).append(position)
+    ids_by_alias: dict[str, list[int]] = {}
+    for entry in medications_with_meta[:100]:
+        if not isinstance(entry, dict):
+            continue
+        item_id = _valid_cabinet_item_id(entry.get("cabinet_item_id"))
+        alias = _canonicalize_medication_token(_normalize_text_token(entry.get("input_alias")))
+        if item_id is None or not alias or alias not in positions_by_alias:
+            continue
+        ids_by_alias.setdefault(alias, []).append(item_id)
+
+    for alias, positions in positions_by_alias.items():
+        item_ids = ids_by_alias.get(alias, [])
+        if len(item_ids) != len(positions) or len(set(item_ids)) != len(item_ids):
+            continue
+        for position, item_id in zip(positions, item_ids, strict=True):
+            rows[position] = (alias, item_id)
+    return rows
+
+
+def _requested_drugbank_resolutions(
+    value: object,
+) -> tuple[dict[int, tuple[str, str, str] | None], dict[str, tuple[str, str] | None]]:
+    """Parse a bounded selection packet without trusting its identifiers.
+
+    The API will bind a selection to an owner-scoped cabinet item.  ML repeats
+    the source binding here: this helper only associates the request with a
+    normalized user alias; :meth:`DrugBankDdiStore.resolve_medication_choice`
+    later checks the identifier and artifact version against the licensed index.
+    Conflicting duplicate selections deliberately become invalid rather than
+    allowing request order to choose a medication identity.
+    """
+
+    if not isinstance(value, list):
+        return {}, {}
+    requested_by_item: dict[int, tuple[str, str, str] | None] = {}
+    requested_by_alias: dict[str, tuple[str, str] | None] = {}
+    for entry in value[:100]:
+        if not isinstance(entry, dict):
+            continue
+        alias = _canonicalize_medication_token(_normalize_text_token(entry.get("input_alias")))
+        drugbank_id = str(entry.get("drugbank_id") or "").strip()[:128]
+        source_version = str(entry.get("drugbank_version") or "").strip()[:128]
+        if not alias:
+            continue
+        candidate = (drugbank_id, source_version) if drugbank_id and source_version else None
+        item_id = _valid_cabinet_item_id(entry.get("cabinet_item_id"))
+        if item_id is not None:
+            item_candidate = (alias, drugbank_id, source_version) if candidate else None
+            if item_id in requested_by_item and requested_by_item[item_id] != item_candidate:
+                requested_by_item[item_id] = None
+            else:
+                requested_by_item[item_id] = item_candidate
+        elif alias in requested_by_alias and requested_by_alias[alias] != candidate:
+            requested_by_alias[alias] = None
+        else:
+            requested_by_alias[alias] = candidate
+    return requested_by_item, requested_by_alias
+
+
+def _strict_drugbank_candidate_view(
+    candidate: dict[str, object],
+    *,
+    source_version: str,
+) -> dict[str, object] | None:
+    """Return only a bounded, source-backed candidate safe for user selection."""
+
+    drugbank_id = str(candidate.get("drugbank_id") or "").strip()
+    normalized_name = _normalize_text_token(candidate.get("normalized_name"))
+    active_ingredients = candidate.get("active_ingredients")
+    if not drugbank_id or not normalized_name or not isinstance(active_ingredients, list):
+        return None
+    return {
+        "drugbank_id": drugbank_id,
+        "normalized_name": normalized_name,
+        "active_ingredients": [
+            _normalize_text_token(item) for item in active_ingredients if _normalize_text_token(item)
+        ][:12]
+        or [normalized_name],
+        "rxcui": str(candidate.get("rxcui") or "").strip()[:64],
+        "source_version": source_version,
+    }
+
+
+def _normalize_medications_with_strict_drugbank_choices(
+    medications: list[str],
+    *,
+    requested_resolutions: object,
+    medications_with_meta: object,
+) -> tuple[list[str], dict[str, Any]]:
+    """Resolve medication identity only from a current licensed DrugBank choice.
+
+    This function is intentionally isolated from the legacy Vietnamese
+    dictionary/alias-map path.  When the rollout flag is enabled, an unknown or
+    many-to-one alias becomes a terminal clarification requirement—not a local
+    mapping, fuzzy guess, model prediction, or partial DDI check.
+    """
+
+    version, record_count = _load_vn_drug_dictionary()
+    resolution_requests_by_item, resolution_requests_by_alias = _requested_drugbank_resolutions(
+        requested_resolutions
+    )
+    store = _get_drugbank_store()
+    source_version = store.version if store is not None else ""
+    normalized_medications: list[str] = []
+    normalized_inputs: list[dict[str, str]] = []
+    mapped_items: list[dict[str, str]] = []
+    clarifications: list[dict[str, object]] = []
+    seen: set[str] = set()
+
+    for input_token, cabinet_item_id in _strict_drugbank_input_rows(
+        medications,
+        medications_with_meta,
+    ):
+        candidates = store.medication_candidates(input_token) if store is not None else []
+        requested = (
+            resolution_requests_by_item.get(cabinet_item_id)
+            if cabinet_item_id is not None
+            else resolution_requests_by_alias.get(input_token)
+        )
+        selection_alias_matches_item = bool(
+            cabinet_item_id is None
+            or requested is None
+            or requested[0] == input_token
+        )
+        selected: dict[str, object] | None = None
+        clarification_reason = ""
+        if requested is not None and selection_alias_matches_item:
+            selected_id, selected_version = (
+                (requested[1], requested[2])
+                if cabinet_item_id is not None
+                else requested
+            )
+            selected = store.resolve_medication_choice(
+                input_token,
+                drugbank_id=selected_id,
+                source_version=selected_version,
+            ) if store is not None else None
+            if selected is None:
+                clarification_reason = "invalid_or_stale_selection"
+        elif (
+            (cabinet_item_id is not None and cabinet_item_id in resolution_requests_by_item)
+            or (cabinet_item_id is None and input_token in resolution_requests_by_alias)
+        ):
+            clarification_reason = "invalid_or_conflicting_selection"
+        elif len(candidates) == 1:
+            selected = candidates[0]
+            if _strict_drugbank_candidate_view(selected, source_version=source_version) is None:
+                selected = None
+                clarification_reason = "candidate_missing_stable_identifier"
+        elif len(candidates) > 1:
+            clarification_reason = "ambiguous_alias"
+        else:
+            clarification_reason = "unrecognized_alias"
+
+        if selected is None:
+            clarification_candidates = [
+                view
+                for item in candidates
+                if (view := _strict_drugbank_candidate_view(item, source_version=source_version))
+                is not None
+            ]
+            clarification: dict[str, object] = {
+                "input_alias": input_token,
+                "reason": clarification_reason or "unrecognized_alias",
+                "candidates": clarification_candidates,
+            }
+            if cabinet_item_id is not None:
+                clarification["cabinet_item_id"] = cabinet_item_id
+            clarifications.append(clarification)
+            continue
+
+        selected_view = _strict_drugbank_candidate_view(selected, source_version=source_version)
+        if selected_view is None:
+            clarification = {
+                "input_alias": input_token,
+                "reason": "candidate_missing_stable_identifier",
+                "candidates": [],
+            }
+            if cabinet_item_id is not None:
+                clarification["cabinet_item_id"] = cabinet_item_id
+            clarifications.append(clarification)
+            continue
+        canonical = str(selected_view["normalized_name"])
+        active_ingredients = list(selected_view["active_ingredients"])
+        normalized_inputs.append(
+            {
+                "input": input_token,
+                "canonical_input": input_token,
+                "normalized_name": canonical,
+                "resolution_source": "drugbank_user_choice"
+                if requested is not None and selection_alias_matches_item
+                else "drugbank_dictionary",
+                "drugbank_id": str(selected_view["drugbank_id"]),
+            }
+        )
+        if canonical != input_token:
+            mapped_items.append(
+                {
+                    "input": input_token,
+                    "canonical_input": input_token,
+                    "normalized_name": canonical,
+                    "rxcui": str(selected_view["rxcui"]),
+                    "drugbank_id": str(selected_view["drugbank_id"]),
+                    "resolution_source": "drugbank_user_choice"
+                    if requested is not None and selection_alias_matches_item
+                    else "drugbank_dictionary",
+                }
+            )
+        for candidate in [canonical, *active_ingredients]:
+            normalized_candidate = _canonicalize_medication_token(
+                _normalize_text_token(candidate)
+            ) or _normalize_text_token(candidate)
+            if not normalized_candidate or normalized_candidate in seen:
+                continue
+            seen.add(normalized_candidate)
+            normalized_medications.append(normalized_candidate)
+
+    input_count = len([m for m in medications if _normalize_text_token(m)])
+    mapped_count = len(mapped_items)
+    return normalized_medications, {
+        "version": version,
+        "record_count": record_count,
+        "mapped_count": mapped_count,
+        "mapped_items": mapped_items[:20],
+        "input_count": input_count,
+        "normalization_confidence": round(
+            min(max((len(normalized_inputs) / input_count) if input_count else 1.0, 0.0), 1.0),
+            3,
+        ),
+        "pair_coverage_ratio": round(
+            min(max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+            3,
+        ),
+        "normalized_inputs": normalized_inputs[:20],
+        "drugbank_dictionary_version": source_version,
+        "clarifications": clarifications[:20],
+    }
+
+
 def _augment_raw_medications_with_validated_spans(
     raw_medications: list[str],
 ) -> tuple[list[str], dict[str, object]]:
@@ -1517,17 +1790,51 @@ def _rules_unavailable_result(
     }
 
 
+def _medication_clarification_required_result(
+    *,
+    raw_medications: list[str],
+    vn_dictionary_metadata: dict[str, Any],
+    readiness: dict[str, object],
+    symptoms: list[str],
+) -> dict[str, Any]:
+    """Terminal no-DDI state while a DrugBank medication identity is unresolved.
+
+    Deliberately omit ``risk``, ``ddi_alerts`` and ``recommendation``: a partial
+    comparison must never look like an all-clear or a complete interaction
+    assessment.  Urgent symptom state stays explicit so a clarification prompt
+    cannot obscure the emergency fast-path in a consuming surface.
+    """
+
+    critical_symptoms = _critical_symptom_hits(symptoms)
+    return {
+        "status": "requires_medication_clarification",
+        "clarifications": vn_dictionary_metadata.get("clarifications", []),
+        "urgent_support_required": bool(critical_symptoms),
+        "metadata": {
+            "pipeline": "p2-careguard-ddi-standard-v2",
+            "clarification_required": True,
+            "clarification_source": "drugbank_exact_dictionary",
+            "raw_medication_count": len(raw_medications),
+            "normalized_medication_count": 0,
+            "vn_dictionary_version": vn_dictionary_metadata.get("version", "unknown"),
+            "vn_dictionary_record_count": vn_dictionary_metadata.get("record_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
+            "drugbank": {
+                "state": str(readiness.get("state") or "unavailable"),
+                "version": str(readiness.get("version") or ""),
+                "manifest_matches_index": bool(readiness.get("manifest_matches_index")),
+                "integrity_verified": bool(readiness.get("integrity_verified")),
+            },
+        },
+    }
+
+
 def run_careguard_analyze(payload: dict) -> dict:
     locale = str(payload.get("locale") or "vi").strip() or "vi"
     symptoms = _normalize_text_list(payload.get("symptoms"))
     raw_medications = _normalize_text_list(payload.get("medications"))
-    normalizer_inputs, clinical_span_augmentation = _augment_raw_medications_with_validated_spans(
-        raw_medications
-    )
-    medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(
-        normalizer_inputs
-    )
-    vn_dictionary_metadata["clinical_span_augmentation"] = clinical_span_augmentation
     allergies = _normalize_text_list(payload.get("allergies"))
     labs = payload.get("labs")
 
@@ -1544,6 +1851,65 @@ def run_careguard_analyze(payload: dict) -> dict:
         payload.get("drugbank_required"),
         default=False,
     )
+
+    clarification_enabled = settings.careguard_medication_clarification_enabled
+    if clarification_enabled:
+        # The optional clinical-language span augmenter may nominate only exact
+        # source spans, but this strict identity path intentionally does not let
+        # it change which medication aliases require a licensed DrugBank choice.
+        # No model, Vietnamese alias map, or local rule can select a candidate.
+        medications, vn_dictionary_metadata = _normalize_medications_with_strict_drugbank_choices(
+            raw_medications,
+            requested_resolutions=payload.get("medication_resolutions"),
+            medications_with_meta=payload.get("medications_with_meta"),
+        )
+        vn_dictionary_metadata["clinical_span_augmentation"] = {
+            "state": "bypassed_for_drugbank_clarification",
+            "added_candidate_count": 0,
+        }
+        clarification_readiness = get_drugbank_readiness()
+        if drugbank_required and clarification_readiness.get("state") != "ready":
+            clarification_readiness["required"] = True
+            return _with_consumer_wording(
+                _drugbank_required_unavailable_result(
+                    raw_medications=raw_medications,
+                    medications=medications,
+                    allergies=allergies,
+                    symptoms=symptoms,
+                    labs=labs,
+                    vn_dictionary_metadata=vn_dictionary_metadata,
+                    external_ddi_enabled=external_ddi_enabled,
+                    external_ddi_flag_source=external_ddi_flag_source,
+                    local_ddi_rules_version=_load_local_ddi_rules()[1],
+                    readiness=clarification_readiness,
+                ),
+                locale=locale,
+            )
+        # A clarification response without a current exact licensed dictionary
+        # would invite a local/LLM fallback.  Block instead; no partial DDI or
+        # all-clear conclusion may be produced on this rollout path.
+        if clarification_readiness.get("state") != "ready":
+            return _medication_clarification_required_result(
+                raw_medications=raw_medications,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                readiness=clarification_readiness,
+                symptoms=symptoms,
+            )
+        if vn_dictionary_metadata.get("clarifications"):
+            return _medication_clarification_required_result(
+                raw_medications=raw_medications,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                readiness=clarification_readiness,
+                symptoms=symptoms,
+            )
+    else:
+        normalizer_inputs, clinical_span_augmentation = _augment_raw_medications_with_validated_spans(
+            raw_medications
+        )
+        medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(
+            normalizer_inputs
+        )
+        vn_dictionary_metadata["clinical_span_augmentation"] = clinical_span_augmentation
 
     local_rules, local_ddi_rules_version = _resolve_ddi_rules()
 

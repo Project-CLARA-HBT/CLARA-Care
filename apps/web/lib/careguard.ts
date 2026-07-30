@@ -36,7 +36,32 @@ export type CareguardAttribution = {
 
 export type CareguardSourceErrors = Record<string, string[]>;
 
+/**
+ * A source-backed DrugBank identity offered only when the deterministic index
+ * cannot safely select a medicine on the person's behalf.  It deliberately
+ * carries no risk, recommendation, or model-generated confidence.
+ */
+export type CareguardMedicationClarificationCandidate = {
+  drugbank_id: string;
+  normalized_name: string;
+  active_ingredients: string[];
+  source_version: string;
+};
+
+/** A cabinet item which must be clarified before any DDI result is produced. */
+export type CareguardMedicationClarification = {
+  cabinet_item_id: number;
+  input_alias: string;
+  candidates: CareguardMedicationClarificationCandidate[];
+};
+
 export type CareguardAnalyzeRawResponse = {
+  /**
+   * Terminal fail-closed state.  When present, callers must not project or
+   * cache this object as a DDI result.
+   */
+  status?: unknown;
+  clarifications?: unknown;
   risk_tier?: string;
   riskTier?: string;
   tier?: string;
@@ -62,6 +87,52 @@ export type CareguardAnalyzeRawResponse = {
   mode?: unknown;
   [key: string]: unknown;
 };
+
+function asSafeClarificationCandidate(value: unknown): CareguardMedicationClarificationCandidate | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  const drugbankId = typeof candidate.drugbank_id === "string" ? candidate.drugbank_id.trim() : "";
+  const normalizedName = typeof candidate.normalized_name === "string" ? candidate.normalized_name.trim() : "";
+  const sourceVersion = typeof candidate.source_version === "string" ? candidate.source_version.trim() : "";
+  if (!drugbankId || !normalizedName || !sourceVersion) return null;
+  return {
+    drugbank_id: drugbankId,
+    normalized_name: normalizedName,
+    active_ingredients: Array.isArray(candidate.active_ingredients)
+      ? candidate.active_ingredients.filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
+      : [],
+    source_version: sourceVersion,
+  };
+}
+
+/**
+ * Parse only the additive, source-backed clarification terminal state.
+ * Unknown/malformed payloads fail closed by returning no clarification rather
+ * than manufacturing a choice in the browser.
+ */
+export function medicationClarifications(
+  value: CareguardAnalyzeRawResponse,
+): CareguardMedicationClarification[] | null {
+  if (value.status !== "requires_medication_clarification") return null;
+  if (!Array.isArray(value.clarifications)) return [];
+  return value.clarifications.flatMap((raw) => {
+    if (!raw || typeof raw !== "object") return [];
+    const clarification = raw as Record<string, unknown>;
+    const cabinetItemId = clarification.cabinet_item_id;
+    const inputAlias = typeof clarification.input_alias === "string" ? clarification.input_alias.trim() : "";
+    if (!Number.isSafeInteger(cabinetItemId) || (cabinetItemId as number) <= 0 || !inputAlias) return [];
+    return [{
+      cabinet_item_id: cabinetItemId as number,
+      input_alias: inputAlias,
+      candidates: Array.isArray(clarification.candidates)
+        ? clarification.candidates.flatMap((candidate) => {
+            const parsed = asSafeClarificationCandidate(candidate);
+            return parsed ? [parsed] : [];
+          })
+        : [],
+    }];
+  });
+}
 
 export type CareguardAnalyzeResult = {
   riskTier: string | null;
