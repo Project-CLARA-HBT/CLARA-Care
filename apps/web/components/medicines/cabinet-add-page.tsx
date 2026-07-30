@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Field, Textarea } from "@/components/ui/field";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
+import { t } from "@/lib/i18n/catalog";
 import {
   AddCabinetItemPayload,
   ScanDetection,
@@ -15,6 +16,7 @@ import {
   scanReceiptFile,
   scanReceiptText
 } from "@/lib/selfmed";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 function confidenceTone(value: number): BadgeTone {
   if (value >= 0.85) return "ok";
@@ -44,6 +46,7 @@ const cardClass = "rounded-[var(--radius-xl)] border border-[color:var(--shell-b
 const helperTextClass = "mt-2 text-sm font-medium text-[color:var(--text-muted)]";
 
 export default function CabinetAddPage() {
+  const language = useUILanguage();
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [scanText, setScanText] = useState("");
   const [detections, setDetections] = useState<ScanDetection[]>([]);
@@ -536,45 +539,45 @@ export default function CabinetAddPage() {
           <section className={cardClass}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 3</p>
-                <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Nhập thuốc thủ công</h3>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.addManual.step")}</p>
+                <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.addManual.title")}</h3>
                 <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
-                  Dùng khi đơn thuốc khó OCR hoặc bạn muốn thêm từng thuốc một.
+                  {t(language, "medicines.cabinet.addManual.description")}
                 </p>
               </div>
-              <Badge tone="neutral">Tùy chọn</Badge>
+              <Badge tone="neutral">{t(language, "medicines.cabinet.addManual.optional")}</Badge>
             </div>
 
             <form onSubmit={onAddManual} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Field
-                label="Tên thuốc *"
+                label={t(language, "medicines.cabinet.addManual.name")}
                 value={manualDrugName}
                 onChange={(event) => setManualDrugName(event.target.value)}
                 required
-                placeholder="Ví dụ: Metformin"
+                placeholder={t(language, "medicines.cabinet.addManual.namePlaceholder")}
               />
 
               <Field
-                label="Brand"
+                label={t(language, "medicines.cabinet.addManual.brand")}
                 optional
                 value={manualBrandName}
                 onChange={(event) => setManualBrandName(event.target.value)}
-                placeholder="Ví dụ: Panadol Extra"
+                placeholder={t(language, "medicines.cabinet.addManual.brandPlaceholder")}
               />
 
               <Field
-                label="Hãng"
+                label={t(language, "medicines.cabinet.addManual.manufacturer")}
                 optional
                 value={manualManufacturer}
                 onChange={(event) => setManualManufacturer(event.target.value)}
-                placeholder="Ví dụ: STADA"
+                placeholder={t(language, "medicines.cabinet.addManual.manufacturerPlaceholder")}
               />
 
               <Field
-                label="Liều dùng *"
+                label={t(language, "medicines.cabinet.addManual.dose")}
                 value={manualDosage}
                 onChange={(event) => setManualDosage(event.target.value)}
-                placeholder="Ví dụ: 500mg"
+                placeholder={t(language, "medicines.cabinet.addManual.dosePlaceholder")}
                 required
               />
 
@@ -583,14 +586,14 @@ export default function CabinetAddPage() {
                   htmlFor="manual-quantity"
                   className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
                 >
-                  Số lượng
+                  {t(language, "medicines.cabinet.addManual.quantity")}
                 </label>
                 <div className="flex h-14 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] focus-within:border-[color:var(--brand-500)] focus-within:shadow-[var(--shadow-focus)]">
                   <button
                     type="button"
                     onClick={() => adjustManualQuantity(-1)}
                     className="flex w-14 items-center justify-center border-r border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                    aria-label="Giảm số lượng"
+                    aria-label={t(language, "medicines.cabinet.addManual.decreaseQuantity")}
                   >
                     -
                   </button>
@@ -599,14 +602,14 @@ export default function CabinetAddPage() {
                     value={manualQuantity}
                     onChange={(event) => setManualQuantity(event.target.value)}
                     inputMode="numeric"
-                    aria-label="Số lượng thuốc"
+                    aria-label={t(language, "medicines.cabinet.addManual.quantityInput")}
                     className="min-w-0 flex-1 bg-transparent px-4 text-center text-base font-semibold text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                   />
                   <button
                     type="button"
                     onClick={() => adjustManualQuantity(1)}
                     className="flex w-14 items-center justify-center border-l border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                    aria-label="Tăng số lượng"
+                    aria-label={t(language, "medicines.cabinet.addManual.increaseQuantity")}
                   >
                     +
                   </button>
@@ -618,11 +621,11 @@ export default function CabinetAddPage() {
                   type="submit"
                   disabled={!canAddManual}
                   loading={isAddingManual}
-                  loadingLabel="Đang thêm..."
+                  loadingLabel={t(language, "medicines.cabinet.addManual.saving")}
                 >
-                  Thêm 1 thuốc vào tủ
+                  {t(language, "medicines.cabinet.addManual.submit")}
                 </Button>
-                {!canAddManual ? <p className={helperTextClass}>Nhập ít nhất tên thuốc và liều dùng để thêm vào tủ.</p> : null}
+                {!canAddManual ? <p className={helperTextClass}>{t(language, "medicines.cabinet.addManual.requirements")}</p> : null}
               </div>
             </form>
 
