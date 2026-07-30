@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from clara_api.db.session import SessionLocal
-from clara_api.lifemap.legacy_provenance import legacy_provenance_counts
+from clara_api.lifemap.legacy.provenance import legacy_provenance_counts
 
 
 def main() -> int:
