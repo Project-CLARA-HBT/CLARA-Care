@@ -141,7 +141,7 @@ class ModelDisclosure {
     );
   }
 
-  /// A compact human-readable label, e.g. `deepseek v3.2`. Used by the chip and
+  /// A compact human-readable label, e.g. `deepseek v4-pro`. Used by the chip and
   /// for screen-reader semantics (status conveyed by text, Requirement 10.5).
   String get label {
     final family = modelFamily.trim().isEmpty

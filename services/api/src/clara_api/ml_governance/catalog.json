@@ -33,7 +33,7 @@
     {
       "id": "deepseek-council-agents",
       "kind": "provider_llm",
-      "provider": "DeepSeek/OpenAI-compatible configured endpoint",
+      "provider": "Governed DeepSeek V4 Pro/Flash via configured OpenAI-compatible endpoint",
       "implementation": "clara_ml.agents.council_model",
       "intended_use": "Multi-perspective clinical-assistant draft reasoning",
       "forbidden_uses": ["final diagnosis", "prescribing", "unverified critical claim"],

@@ -489,8 +489,8 @@ class _TransparencySection extends StatelessWidget {
     final textScaler = A11y.resolveTextScaler(context);
     const notice = kCurrentAiTransparencyNotice;
     // Reuse the shared model-disclosure label for a consistent, no-secret model
-    // family/version string (e.g. "deepseek v3.2").
-    final modelLabel = ModelDisclosure.fromModelUsed('deepseek-v3.2').label;
+    // family/version string from the governed V4 default (e.g. "deepseek v4 pro").
+    final modelLabel = ModelDisclosure.fromModelUsed('deepseek-v4-pro').label;
 
     return _SettingsGroup(
       title: _sectionTitle,

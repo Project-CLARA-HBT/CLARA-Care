@@ -68,7 +68,7 @@ def model_disclosure(model_used: str | None) -> dict[str, object]:
     if not raw:
         family, version = "unknown", "unknown"
     elif "-" in raw:
-        # e.g. "deepseek-v3.2" -> family "deepseek", version "v3.2"
+        # e.g. "deepseek-v4-pro" -> family "deepseek", version "v4-pro"
         head, _, tail = raw.partition("-")
         family, version = head, tail or "unknown"
     else:

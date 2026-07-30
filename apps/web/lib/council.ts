@@ -573,7 +573,7 @@ export async function extractCouncilIntake(payload: CouncilIntakeRequest): Promi
     labsInput,
     medicationsInput,
     historyInput,
-    modelUsed: asText(root.model_used) ?? "deepseek-v3.2",
+    modelUsed: asText(root.model_used) ?? "deepseek-v4-pro",
     warnings: parseStringArray(root.warnings),
     fieldConfidence: asRecord(root.field_confidence) as Record<string, number> | undefined,
     missingFields: parseStringArray(root.missing_fields),

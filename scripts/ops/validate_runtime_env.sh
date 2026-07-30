@@ -40,6 +40,15 @@ must_set_non_empty() {
   fi
 }
 
+must_be_positive_number() {
+  local var_name="$1"
+  local value="${ENV_VALUES[${var_name}]:-}"
+  if ! awk -v value="${value}" 'BEGIN { exit !(value ~ /^[0-9]+([.][0-9]+)?$/ && (value + 0) > 0) }'; then
+    echo "[env-guard] ${var_name} must be a positive number" >&2
+    errors=$((errors + 1))
+  fi
+}
+
 warn_if_equals() {
   local var_name="$1"
   local bad_value="$2"
@@ -71,6 +80,8 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   must_set_non_empty "DEEPSEEK_MODEL"
   must_set_non_empty "DEEPSEEK_PRO_MODEL"
   must_set_non_empty "DEEPSEEK_FLASH_MODEL"
+  must_set_non_empty "DEEPSEEK_TIMEOUT_SECONDS"
+  must_set_non_empty "ML_SERVICE_TIMEOUT_SECONDS"
   if [[ "${ENV_VALUES[DEEPSEEK_MODEL]:-}" != "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" ]]; then
     echo "[env-guard] DEEPSEEK_MODEL must equal DEEPSEEK_PRO_MODEL for the governed V4 default route" >&2
     errors=$((errors + 1))
@@ -89,6 +100,12 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   fi
   if [[ "${ENV_VALUES[MODEL_REGISTRY_ENABLED]:-}" != "true" ]]; then
     echo "[env-guard] MODEL_REGISTRY_ENABLED=true is required for the governed runtime" >&2
+    errors=$((errors + 1))
+  fi
+  must_be_positive_number "DEEPSEEK_TIMEOUT_SECONDS"
+  must_be_positive_number "ML_SERVICE_TIMEOUT_SECONDS"
+  if awk -v api_timeout="${ENV_VALUES[ML_SERVICE_TIMEOUT_SECONDS]:-0}" -v ml_timeout="${ENV_VALUES[DEEPSEEK_TIMEOUT_SECONDS]:-0}" 'BEGIN { exit !((api_timeout + 0) < (ml_timeout + 0)) }'; then
+    echo "[env-guard] ML_SERVICE_TIMEOUT_SECONDS must be >= DEEPSEEK_TIMEOUT_SECONDS" >&2
     errors=$((errors + 1))
   fi
 fi

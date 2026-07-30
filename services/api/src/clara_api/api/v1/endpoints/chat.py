@@ -385,7 +385,10 @@ def _call_ml_service(
         safe_mode_data["fallback_reason"] = f"{primary_reason};safe_mode_recovered"
         model_used = safe_mode_data.get("model_used")
         if not isinstance(model_used, str) or not model_used.strip():
-            safe_mode_data["model_used"] = "deepseek-v3.2-safe-mode"
+            # Do not fabricate a concrete model version if the safe-mode ML
+            # response omitted it. The governed V4 registry remains the source
+            # of truth for a concrete Pro/Flash identifier.
+            safe_mode_data["model_used"] = "deepseek-safe-mode"
         return safe_mode_data
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
         safe_mode_reason = f"safe_mode_unavailable:{exc.__class__.__name__}"

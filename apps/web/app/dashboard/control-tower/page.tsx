@@ -652,7 +652,7 @@ export default function ControlTowerPage() {
                     value={config?.rag_flow.llm_model ?? ""}
                     onChange={(event) => onLlmModelChange(event.target.value)}
                     placeholder={
-                      config?.rag_flow.llm_provider === "deepseek" ? "deepseek-v3.2" : "gpt-5.3-codex-high"
+                      config?.rag_flow.llm_provider === "deepseek" ? "deepseek-v4-pro" : "gpt-5.3-codex-high"
                     }
                     className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
                   />

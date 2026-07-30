@@ -222,7 +222,7 @@ export default function AdminAnswerFlowPanel() {
                 type="text"
                 value={llmModel}
                 onChange={(event) => setLlmModel(event.target.value)}
-                placeholder={llmProvider === "deepseek" ? "deepseek-v3.2" : "gpt-5.3-codex-high"}
+                placeholder={llmProvider === "deepseek" ? "deepseek-v4-pro" : "gpt-5.3-codex-high"}
                 className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
             </label>

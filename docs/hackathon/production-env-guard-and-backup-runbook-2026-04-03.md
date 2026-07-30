@@ -7,7 +7,7 @@
 ## Thành phần mới
 - `scripts/ops/validate_runtime_env.sh`
   - Validate `DATABASE_URL`, `POSTGRES_HOST`.
-  - Khi `REQUIRE_DEEPSEEK=true`, bắt buộc có `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`.
+  - Khi `REQUIRE_DEEPSEEK=true`, bắt buộc có `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, `DEEPSEEK_PRO_MODEL` và `DEEPSEEK_FLASH_MODEL`; default model phải bằng Pro, hai model phải khác nhau, và registry phải bật. `ML_SERVICE_TIMEOUT_SECONDS` phải không nhỏ hơn `DEEPSEEK_TIMEOUT_SECONDS` (default V4 của compose là 60 giây).
 - `scripts/ops/backup_env.sh`
   - Backup `.env` theo timestamp và lưu file `.sha256`.
   - Có retention (`RETENTION_DAYS`, mặc định 14).
