@@ -9,6 +9,7 @@ WORKDIR /app
 COPY services/ml/pyproject.toml /app/pyproject.toml
 COPY services/ml/uv.lock /app/uv.lock
 COPY services/ml/README.md /app/README.md
+COPY services/ml/config /app/config
 COPY services/ml/src /app/src
 
 # Use the exact graph exercised by tests. Resolving broad lower bounds during

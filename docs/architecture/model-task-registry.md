@@ -3,7 +3,16 @@
 `services/ml/src/clara_ml/llm/model_registry.py` is the typed boundary for
 model-backed tasks that can affect safety or clinical workflow. It does not let
 requests choose a provider or model. Each task declares a prompt version,
-closed output contract, and deterministic/unavailable fallback.
+closed output contract, deterministic/unavailable fallback, risk level,
+permitted tiers, tool prerequisites, token ceiling and human-review floor.
+
+The source of truth is the versioned, non-secret manifest at
+`services/ml/config/task_contracts/contracts.json`.  ML refuses to start its
+model registry when that manifest is absent, malformed, or omits a registered
+task; it deliberately does not silently fall back to a permissive in-code
+map. The container copies this manifest to `/app/config/task_contracts/`.
+The resolved selection carries the contract schema version and risk category
+for safe operational correlation, never user text or prompt content.
 
 The current registry covers the medical safety router, LifeMap Capture triage
 and visit extraction, Scribe note/transcription, Council shadow assessment,

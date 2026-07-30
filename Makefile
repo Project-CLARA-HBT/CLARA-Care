@@ -102,15 +102,19 @@ type-check:
 	fi
 
 test:
-	@targets=""; \
-	for d in services/api/tests services/ml/tests; do \
-		if [ -d "$$d" ]; then targets="$$targets $$d"; fi; \
+	@status=0; \
+	for d in services/api services/ml; do \
+		if [ ! -d "$$d/tests" ]; then continue; fi; \
+		if [ -x "$$d/.venv/bin/python" ]; then \
+			(cd "$$d" && .venv/bin/python -m pytest -q) || status=$$?; \
+		elif command -v uv >/dev/null 2>&1; then \
+			(cd "$$d" && uv run pytest -q) || status=$$?; \
+		else \
+			echo "No Python runner available for $$d (need $$d/.venv or uv)." >&2; \
+			status=127; \
+		fi; \
 	done; \
-	if [ -n "$$targets" ]; then \
-		pytest -q $$targets; \
-	else \
-		echo "No test directories found."; \
-	fi
+	exit $$status
 
 docs-check:
 	@bash scripts/docs/check-docs-links.sh

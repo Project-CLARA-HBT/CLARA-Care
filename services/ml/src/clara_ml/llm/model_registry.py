@@ -9,8 +9,11 @@ included in a resolved selection.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
@@ -35,9 +38,15 @@ class ModelTask(StrEnum):
 @dataclass(frozen=True)
 class TaskContract:
     task: ModelTask
+    risk_level: str
+    allowed_model_tiers: tuple[str, ...]
     prompt_version: str
     output_contract: str
     safety_fallback: str
+    temperature: float
+    max_tokens: int
+    required_tools: tuple[str, ...]
+    human_review_below: float
     shadow_only: bool = False
 
 
@@ -48,79 +57,106 @@ class ModelSelection:
     model: str
     model_version: str
     prompt_version: str
+    contract_schema_version: str
+    risk_level: str
     rollback_applied: bool
     registry_enabled: bool
 
 
-TASK_CONTRACTS: dict[ModelTask, TaskContract] = {
-    ModelTask.MEDICAL_SAFETY_ROUTER: TaskContract(
-        task=ModelTask.MEDICAL_SAFETY_ROUTER,
-        prompt_version="medical-safety-router.v1",
-        output_contract="closed_json_action_reason_emergency_confidence",
-        safety_fallback="deterministic_legal_guard_then_block_or_escalate",
-    ),
-    ModelTask.LIFEMAP_CAPTURE_TRIAGE: TaskContract(
-        task=ModelTask.LIFEMAP_CAPTURE_TRIAGE,
-        prompt_version="lifemap-capture-triage.v1",
-        output_contract="closed_json_emergency_confidence_rationale",
-        safety_fallback="deterministic_emergency_fast_path_then_degraded_unavailable",
-    ),
-    ModelTask.LIFEMAP_VISIT_EXTRACTION: TaskContract(
-        task=ModelTask.LIFEMAP_VISIT_EXTRACTION,
-        prompt_version="lifemap-visit-extraction.v1",
-        output_contract="source_spanned_review_candidates_only",
-        safety_fallback="unavailable_no_confirmed_instruction",
-    ),
-    ModelTask.SCRIBE_NOTE: TaskContract(
-        task=ModelTask.SCRIBE_NOTE,
-        prompt_version="scribe-note-json.v1",
-        output_contract="template_constrained_transcript_grounded_json",
-        safety_fallback="extractive_no_fabrication_note",
-    ),
-    ModelTask.SCRIBE_TRANSCRIPTION: TaskContract(
-        task=ModelTask.SCRIBE_TRANSCRIPTION,
-        prompt_version="scribe-transcription.v1",
-        output_contract="verbatim_transcript_only",
-        safety_fallback="typed_provider_failure_or_empty_transcript",
-    ),
-    ModelTask.COUNCIL_SHADOW: TaskContract(
-        task=ModelTask.COUNCIL_SHADOW,
-        prompt_version="council-shadow-assessment.v1",
-        output_contract="case_packet_bound_json",
-        safety_fallback="unavailable_shadow_result",
-        shadow_only=True,
-    ),
-    ModelTask.RAG_RERANKING: TaskContract(
-        task=ModelTask.RAG_RERANKING,
-        prompt_version="rag-reranking.v1",
-        output_contract="candidate_ids_and_bounded_relevance_scores_json",
-        safety_fallback="embedding_or_original_retrieval_order",
-    ),
-    ModelTask.FACTCHECK_NLI: TaskContract(
-        task=ModelTask.FACTCHECK_NLI,
-        prompt_version="factcheck-nli.v1",
-        output_contract="evidence_bound_claim_verdicts_json",
-        safety_fallback="deterministic_overlap_verdicts_then_fides_gate",
-    ),
-    ModelTask.RAG_SYNTHESIS: TaskContract(
-        task=ModelTask.RAG_SYNTHESIS,
-        prompt_version="rag-synthesis.v1",
-        output_contract="evidence_cited_patient_safe_markdown",
-        safety_fallback="local_synthesis_with_safety_wording",
-    ),
-    ModelTask.RESEARCH_QUERY_PLANNING: TaskContract(
-        task=ModelTask.RESEARCH_QUERY_PLANNING,
-        prompt_version="research-query-planning.v1",
-        output_contract="pico_bound_retrieval_plan_json",
-        safety_fallback="deterministic_query_plan_without_personal_data",
-    ),
-    ModelTask.RESEARCH_REASONING: TaskContract(
-        task=ModelTask.RESEARCH_REASONING,
-        prompt_version="research-reasoning.v1",
-        output_contract="retrieved_context_bound_structured_reasoning_json",
-        safety_fallback="abstain_or_evidence_bound_template_without_claim_escalation",
-    ),
-}
+TASK_CONTRACTS_PATH = (
+    Path(__file__).resolve().parents[3] / "config" / "task_contracts" / "contracts.json"
+)
+_RISK_LEVELS = frozenset({"low", "medium", "high", "critical"})
+_MODEL_TIERS = frozenset(
+    {"deterministic", "encoder_slm", "generative_slm", "medium_llm", "large_llm"}
+)
+
+
+def _contract_string(raw: dict[str, Any], key: str) -> str:
+    value = raw.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"model_task_contract_{key}_invalid")
+    return value.strip()
+
+
+def _contract_number(raw: dict[str, Any], key: str, *, minimum: float, maximum: float) -> float:
+    value = raw.get(key)
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"model_task_contract_{key}_invalid")
+    parsed = float(value)
+    if not minimum <= parsed <= maximum:
+        raise ValueError(f"model_task_contract_{key}_invalid")
+    return parsed
+
+
+@lru_cache(maxsize=1)
+def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
+    """Load the versioned task manifest or fail closed before any model call.
+
+    The manifest is non-secret deployment configuration.  Its strict shape
+    prevents an accidental partial rollout from silently falling back to a
+    permissive in-code default.
+    """
+
+    try:
+        loaded = json.loads(TASK_CONTRACTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("model_task_contract_manifest_unavailable") from exc
+    if not isinstance(loaded, dict) or set(loaded) != {"schema_version", "contracts"}:
+        raise ValueError("model_task_contract_manifest_invalid")
+    schema_version = _contract_string(loaded, "schema_version")
+    raw_contracts = loaded["contracts"]
+    if not isinstance(raw_contracts, dict):
+        raise ValueError("model_task_contract_manifest_invalid")
+    expected = {task.value for task in ModelTask}
+    if set(raw_contracts) != expected:
+        raise ValueError("model_task_contract_manifest_task_set_invalid")
+
+    contracts: dict[ModelTask, TaskContract] = {}
+    for task in ModelTask:
+        raw = raw_contracts[task.value]
+        if not isinstance(raw, dict):
+            raise ValueError("model_task_contract_invalid")
+        risk_level = _contract_string(raw, "risk_level")
+        if risk_level not in _RISK_LEVELS:
+            raise ValueError("model_task_contract_risk_level_invalid")
+        tiers = raw.get("allowed_model_tiers")
+        if (
+            not isinstance(tiers, list)
+            or not tiers
+            or not all(isinstance(tier, str) and tier in _MODEL_TIERS for tier in tiers)
+        ):
+            raise ValueError("model_task_contract_allowed_model_tiers_invalid")
+        tools = raw.get("required_tools")
+        if not isinstance(tools, list) or not all(
+            isinstance(tool, str) and tool.strip() for tool in tools
+        ):
+            raise ValueError("model_task_contract_required_tools_invalid")
+        max_tokens = _contract_number(raw, "max_tokens", minimum=0, maximum=16_000)
+        if not max_tokens.is_integer():
+            raise ValueError("model_task_contract_max_tokens_invalid")
+        shadow_only = raw.get("shadow_only")
+        if not isinstance(shadow_only, bool):
+            raise ValueError("model_task_contract_shadow_only_invalid")
+        contracts[task] = TaskContract(
+            task=task,
+            risk_level=risk_level,
+            allowed_model_tiers=tuple(tiers),
+            prompt_version=_contract_string(raw, "prompt_version"),
+            output_contract=_contract_string(raw, "output_contract"),
+            safety_fallback=_contract_string(raw, "safety_fallback"),
+            temperature=_contract_number(raw, "temperature", minimum=0, maximum=1),
+            max_tokens=int(max_tokens),
+            required_tools=tuple(tool.strip() for tool in tools),
+            human_review_below=_contract_number(
+                raw, "human_review_below", minimum=0, maximum=1
+            ),
+            shadow_only=shadow_only,
+        )
+    return schema_version, contracts
+
+
+TASK_CONTRACT_SCHEMA_VERSION, TASK_CONTRACTS = load_task_contracts()
 
 PRIMARY_MODEL_VERSION = "deepseek-primary.v1"
 ROLLBACK_MODEL_VERSION = "deepseek-rollback.v1"
@@ -172,6 +208,8 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
         model=model,
         model_version=ROLLBACK_MODEL_VERSION if rollback_applied else PRIMARY_MODEL_VERSION,
         prompt_version=contract.prompt_version,
+        contract_schema_version=TASK_CONTRACT_SCHEMA_VERSION,
+        risk_level=contract.risk_level,
         rollback_applied=rollback_applied,
         registry_enabled=registry_enabled,
     )

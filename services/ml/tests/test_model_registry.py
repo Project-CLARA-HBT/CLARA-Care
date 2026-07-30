@@ -8,8 +8,10 @@ from clara_ml.llm.model_registry import (
     PRIMARY_MODEL_VERSION,
     ROLLBACK_MODEL_VERSION,
     TASK_CONTRACTS,
+    TASK_CONTRACT_SCHEMA_VERSION,
     ModelTask,
     build_task_client,
+    load_task_contracts,
     resolve_model_selection,
 )
 
@@ -36,12 +38,25 @@ def _settings(**overrides: object) -> SimpleNamespace:
 
 
 def test_all_registered_tasks_have_closed_output_and_safe_fallback_contracts() -> None:
+    assert TASK_CONTRACT_SCHEMA_VERSION == "clara.task-contracts.v1"
     assert set(TASK_CONTRACTS) == set(ModelTask)
     for task, contract in TASK_CONTRACTS.items():
         assert contract.task is task
         assert contract.prompt_version
         assert contract.output_contract
         assert contract.safety_fallback
+        assert contract.risk_level in {"low", "medium", "high", "critical"}
+        assert contract.allowed_model_tiers
+        assert 0 <= contract.temperature <= 1
+        assert contract.max_tokens >= 0
+        assert 0 <= contract.human_review_below <= 1
+
+
+def test_checked_in_task_contract_manifest_is_the_runtime_source_of_truth() -> None:
+    schema_version, loaded = load_task_contracts()
+
+    assert schema_version == TASK_CONTRACT_SCHEMA_VERSION
+    assert loaded == TASK_CONTRACTS
 
 
 def test_research_tasks_have_closed_json_contracts() -> None:
@@ -61,6 +76,8 @@ def test_default_selection_preserves_configured_deepseek_model() -> None:
     assert selection.model == "deepseek-primary"
     assert selection.model_version == PRIMARY_MODEL_VERSION
     assert selection.prompt_version == "lifemap-capture-triage.v1"
+    assert selection.contract_schema_version == "clara.task-contracts.v1"
+    assert selection.risk_level == "critical"
     assert selection.rollback_applied is False
 
 
