@@ -26,6 +26,7 @@ import {
   getLifeMapDisputes,
   getLifeMapNextQuestion,
   getLifeMapReplay,
+  getLifeMapRevisionComparison,
   getLifeMapSummary,
   getLifeMapToday,
   getLifeMapV2Capabilities,
@@ -44,6 +45,7 @@ import {
   type LifeMapAskAnswer,
   type LifeMapDisputeCase,
   type LifeMapQuestion,
+  type LifeMapRevisionComparison,
   type LifeMapReviewFinding,
   type LifeMapSummary,
   type MedicationNormalizationProposal,
@@ -94,6 +96,45 @@ function truthStateLabel(
   }
 }
 
+function comparisonValue(value: unknown, language: "vi" | "en"): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    const record = value as { kind?: unknown; item_count?: unknown; field_count?: unknown };
+    if (record.kind === "list") {
+      return t(language, "lifemap.replay.compareList", {
+        count: String(record.item_count ?? 0),
+      });
+    }
+    if (record.kind === "structured") {
+      return t(language, "lifemap.replay.compareStructured", {
+        count: String(record.field_count ?? 0),
+      });
+    }
+  }
+  return t(language, "lifemap.replay.compareStructuredUnknown");
+}
+
+function sourceSpanLabel(sourceSpan: unknown): string {
+  if (!sourceSpan || typeof sourceSpan !== "object") return "";
+  const record = sourceSpan as {
+    start?: unknown;
+    end?: unknown;
+    fields?: Record<string, { start?: unknown; end?: unknown }>;
+  };
+  if (typeof record.start === "number" && typeof record.end === "number") {
+    return `${record.start}–${record.end}`;
+  }
+  if (record.fields && typeof record.fields === "object") {
+    const labels = Object.entries(record.fields)
+      .filter(([, item]) => typeof item?.start === "number" && typeof item?.end === "number")
+      .map(([field, item]) => `${field}: ${item.start}–${item.end}`);
+    return labels.join(" · ");
+  }
+  return "";
+}
+
 export default function LifeMapPage() {
   const language = useUILanguage();
   const copy = useCallback(
@@ -140,6 +181,9 @@ export default function LifeMapPage() {
   >({});
   const [replay, setReplay] = useState<LifeMapReplay | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
+  const [revisionComparison, setRevisionComparison] =
+    useState<LifeMapRevisionComparison | null>(null);
+  const [comparisonEventId, setComparisonEventId] = useState("");
   const [editingEvent, setEditingEvent] = useState("");
   const [correctionText, setCorrectionText] = useState("");
   const [askQuery, setAskQuery] = useState("");
@@ -514,6 +558,31 @@ export default function LifeMapPage() {
       setError(cause instanceof Error ? cause.message : copy("lifemap.error.saveCorrection"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const compareRevision = async (item: LifeMapReplay["events"][number]) => {
+    setReplayLoading(true);
+    setError("");
+    try {
+      setComparisonEventId(item.id);
+      setRevisionComparison(
+        await getLifeMapRevisionComparison(
+          item.id,
+          item.revision,
+          language,
+        ),
+      );
+    } catch (cause) {
+      setComparisonEventId("");
+      setRevisionComparison(null);
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : copy("lifemap.error.loadReplay"),
+      );
+    } finally {
+      setReplayLoading(false);
     }
   };
 
@@ -1139,6 +1208,18 @@ export default function LifeMapPage() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              icon="compare_arrows"
+                              loading={
+                                replayLoading && comparisonEventId === item.id
+                              }
+                              loadingLabel={copy("lifemap.replay.compareLoading")}
+                              onClick={() => void compareRevision(item)}
+                            >
+                              {copy("lifemap.replay.compare")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               icon="edit"
                               onClick={() => {
                                 setEditingEvent(item.id);
@@ -1162,6 +1243,70 @@ export default function LifeMapPage() {
                             ) : null}
                           </div>
                         )}
+                        {revisionComparison?.event_id === item.id ? (
+                          <div className="mt-4 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
+                            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                              {copy("lifemap.replay.compareTitle")}
+                            </h3>
+                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                              {revisionComparison.summary}
+                            </p>
+                            {revisionComparison.changes.length ? (
+                              <dl className="mt-3 space-y-3">
+                                {revisionComparison.changes.map((change) => (
+                                  <div
+                                    key={change.field}
+                                    className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-raised)] p-3"
+                                  >
+                                    <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                      {change.field === "truth_state"
+                                        ? copy("lifemap.replay.compareTruthState")
+                                        : change.field === "reason_code"
+                                          ? copy("lifemap.replay.compareReason")
+                                          : change.field.replaceAll("_", " ")}
+                                    </dt>
+                                    <dd className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                                      <span className="text-[var(--text-secondary)]">
+                                        {copy("lifemap.replay.compareBefore")}: {comparisonValue(change.before, language)}
+                                      </span>
+                                      <span className="text-[var(--text-primary)]">
+                                        {copy("lifemap.replay.compareAfter")}: {comparisonValue(change.after, language)}
+                                      </span>
+                                    </dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            ) : (
+                              <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                                {copy("lifemap.replay.compareEmpty")}
+                              </p>
+                            )}
+                            <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                              {(["before", "after"] as const).map((position) => {
+                                const source = revisionComparison.source_spans[position];
+                                const span = sourceSpanLabel(source?.source_span);
+                                return (
+                                  <p key={position}>
+                                    <span className="font-semibold text-[var(--text-primary)]">
+                                      {copy(
+                                        position === "before"
+                                          ? "lifemap.replay.compareBefore"
+                                          : "lifemap.replay.compareAfter",
+                                      )}
+                                      :
+                                    </span>{" "}
+                                    {span
+                                      ? `${copy("lifemap.replay.compareSource")}: ${span}`
+                                      : copy("lifemap.replay.compareNoSource")}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                            <p className="mt-3 text-xs text-[var(--text-muted)]">
+                              {copy("lifemap.replay.compareNotice")}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     )) : (
                       <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">

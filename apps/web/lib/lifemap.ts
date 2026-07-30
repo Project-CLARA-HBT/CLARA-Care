@@ -83,6 +83,50 @@ export type LifeMapReplay = {
   }>;
 };
 
+export type LifeMapRevisionComparison = {
+  status: "ready" | "no_prior_revision";
+  event_id: string;
+  summary: string;
+  before?: {
+    revision_id: string;
+    revision: number;
+    truth_state: string;
+    reason_code: string;
+    recorded_at?: string;
+  };
+  after: {
+    revision_id: string;
+    revision: number;
+    truth_state: string;
+    reason_code: string;
+    recorded_at?: string;
+  };
+  changes: Array<{
+    field: string;
+    before: unknown;
+    after: unknown;
+  }>;
+  source_spans: {
+    before: LifeMapRevisionSource | null;
+    after: LifeMapRevisionSource | null;
+  };
+  disclosure: {
+    deterministic: true;
+    read_only: true;
+    mutates_lifemap: false;
+    preserves_truth_state: true;
+    requires_user_review: true;
+  };
+};
+
+export type LifeMapRevisionSource = {
+  source_id: string;
+  source_kind: string;
+  original_language: string;
+  source_span: unknown;
+  observed_at: string | null;
+};
+
 export type LifeMapDisputeCase = {
   id: string;
   event_id: string;
@@ -358,6 +402,19 @@ export async function getLifeMapReplay(
   return (
     await api.get<LifeMapReplay>(
       `/episodes/${encodeURIComponent(episodeId)}/replay`,
+    )
+  ).data;
+}
+
+export async function getLifeMapRevisionComparison(
+  eventId: string,
+  afterRevision: number,
+  locale: "vi" | "en" = "vi",
+): Promise<LifeMapRevisionComparison> {
+  return (
+    await api.get<LifeMapRevisionComparison>(
+      `/lifemap/events/${encodeURIComponent(eventId)}/revision-comparison`,
+      { params: { after_revision: afterRevision, locale } },
     )
   ).data;
 }
