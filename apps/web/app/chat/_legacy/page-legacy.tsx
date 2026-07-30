@@ -34,6 +34,7 @@ import {
 } from "@/lib/user-facing-text";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import {
   getStoredUILanguage,
   onUILanguageChange,
@@ -126,13 +127,13 @@ type ConversationVirtualItem = {
 const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
   id: WorkspaceLeftView;
   label: string;
-  title: Record<UILanguage, string>;
+  titleKey: UITranslationKey;
 }> = [
-  { id: "all", label: "AL", title: { vi: "Tất cả", en: "All" } },
-  { id: "chat", label: "CH", title: { vi: "Chat", en: "Chat" } },
-  { id: "notes", label: "NT", title: { vi: "Ghi chú", en: "Notes" } },
-  { id: "discover", label: "DS", title: { vi: "Khám phá", en: "Discover" } },
-  { id: "shares", label: "SH", title: { vi: "Chia sẻ", en: "Shares" } },
+  { id: "all", label: "AL", titleKey: "chat.legacyWorkspace.view.all" },
+  { id: "chat", label: "CH", titleKey: "chat.legacyWorkspace.view.chat" },
+  { id: "notes", label: "NT", titleKey: "chat.workspace.notes" },
+  { id: "discover", label: "DS", titleKey: "chat.legacyWorkspace.view.discover" },
+  { id: "shares", label: "SH", titleKey: "chat.workspace.shares" },
 ];
 const WORKSPACE_ADVANCED_VIEW_OPTIONS = WORKSPACE_LEFT_VIEW_OPTIONS.filter(
   (option) => option.id !== "chat"
@@ -2804,7 +2805,7 @@ export default function ChatWorkspacePage() {
         {isMobileSidebarOpen ? (
           <button
             type="button"
-            aria-label="Đóng sidebar"
+            aria-label={t(uiLanguage, "chat.shell.closeSidebar")}
             onClick={() => setIsMobileSidebarOpen(false)}
             className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
           />
@@ -2828,8 +2829,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(false)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
-                title={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
+                title={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
               >
                 <span className="material-symbols-outlined text-[18px]">left_panel_open</span>
               </button>
@@ -2838,8 +2839,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={createNewConversation}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-500/10 text-cyan-700 transition hover:bg-cyan-500/15 dark:text-cyan-300"
-                aria-label={isEnglishUI ? "New chat" : "Chat mới"}
-                title={isEnglishUI ? "New chat" : "Chat mới"}
+                aria-label={t(uiLanguage, "chat.sidebar.newChat")}
+                title={t(uiLanguage, "chat.sidebar.newChat")}
               >
                 <span className="material-symbols-outlined text-[18px]">add</span>
               </button>
@@ -2880,7 +2881,7 @@ export default function ChatWorkspacePage() {
                 CLARA CHAT
               </p>
               <h2 className="mt-0.5 text-[1.4rem] leading-none font-semibold text-[var(--text-primary)]">
-                {isEnglishUI ? "Workspace" : "Không gian chat"}
+                {t(uiLanguage, "chat.workspace.title")}
               </h2>
             </div>
             <div className="flex items-center gap-1.5">
@@ -2888,8 +2889,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(true)}
                 className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
-                aria-label={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
-                title={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
+                title={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
               >
                 <span className="material-symbols-outlined text-[16px]">left_panel_close</span>
               </button>
@@ -2897,8 +2898,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
                 className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-semibold text-[var(--text-secondary)] lg:hidden"
-                aria-label={isEnglishUI ? "Close panel" : "Đóng panel"}
-                title={isEnglishUI ? "Close panel" : "Đóng panel"}
+                aria-label={t(uiLanguage, "chat.workspace.close")}
+                title={t(uiLanguage, "chat.workspace.close")}
               >
                 <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
@@ -2912,14 +2913,20 @@ export default function ChatWorkspacePage() {
                 onClick={createNewConversation}
                 className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-white transition hover:brightness-105"
               >
-                + {isEnglishUI ? "New chat" : "Chat mới"}
+                + {t(uiLanguage, "chat.sidebar.newChat")}
               </button>
               <button
                 type="button"
                 onClick={() => setIsSelectionMode((prev) => !prev)}
                 className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-blue-200/50 bg-blue-700/25 text-white transition hover:bg-blue-700/35"
-                aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
-                title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                aria-label={t(
+                  uiLanguage,
+                  isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                )}
+                title={t(
+                  uiLanguage,
+                  isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                )}
               >
                 <span className="material-symbols-outlined text-[15px]">edit_square</span>
               </button>
@@ -2936,7 +2943,7 @@ export default function ChatWorkspacePage() {
                     {effectiveSummary.conversations}
                   </p>
                   <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Chats" : "Chat"}
+                    {t(uiLanguage, "chat.legacyWorkspace.summary.chats")}
                   </p>
                 </div>
               </div>
@@ -2947,7 +2954,7 @@ export default function ChatWorkspacePage() {
                     {effectiveSummary.messages}
                   </p>
                   <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Messages" : "Tin nhắn"}
+                    {t(uiLanguage, "chat.legacyWorkspace.summary.messages")}
                   </p>
                 </div>
               </div>
@@ -2959,7 +2966,7 @@ export default function ChatWorkspacePage() {
             <details className="group">
               <summary className="inline-flex min-h-[28px] cursor-pointer list-none items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
                 <span className="material-symbols-outlined text-[14px]">more_horiz</span>
-                {isEnglishUI ? "Advanced" : "Nâng cao"}
+                {t(uiLanguage, "chat.legacyWorkspace.advanced")}
               </summary>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 <button
@@ -2987,10 +2994,10 @@ export default function ChatWorkspacePage() {
                           ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
-                      title={option.title[uiLanguage]}
-                      aria-label={option.title[uiLanguage]}
+                      title={t(uiLanguage, option.titleKey)}
+                      aria-label={t(uiLanguage, option.titleKey)}
                     >
-                      {option.title[uiLanguage]}
+                      {t(uiLanguage, option.titleKey)}
                     </button>
                   );
                 })}
@@ -3004,7 +3011,7 @@ export default function ChatWorkspacePage() {
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder={isEnglishUI ? "Search chats..." : "Tìm cuộc trò chuyện..."}
+                placeholder={t(uiLanguage, "chat.sidebar.searchPlaceholder")}
                 className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
@@ -3020,14 +3027,14 @@ export default function ChatWorkspacePage() {
               onClick={() => setIsScopeManagerOpen(true)}
               className="text-[0.95rem] font-semibold text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Folder: All" : "Folder: Tất cả"}
+              {t(uiLanguage, "chat.legacyWorkspace.folder.all")}
             </button>
             <button
               type="button"
               onClick={() => setIsScopeManagerOpen(true)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
-              aria-label={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
-              title={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
+              title={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
             >
               <span className="material-symbols-outlined text-[16px]">expand_more</span>
             </button>
@@ -3040,10 +3047,13 @@ export default function ChatWorkspacePage() {
               <div className="mb-1.5 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}{" "}
+                    {t(uiLanguage, "chat.sidebar.aria")}{" "}
                     <span className="font-medium normal-case tracking-normal">
-                      {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} ·{" "}
-                      {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
+                      {t(uiLanguage, "chat.legacyWorkspace.conversationCount", {
+                        visible: visibleConversations.length,
+                        total: displayedConversations.length,
+                        messages: displayedConversationMessageCount,
+                      })}
                     </span>
                   </p>
                   <button
@@ -3051,7 +3061,10 @@ export default function ChatWorkspacePage() {
                     onClick={() => setIsSelectionMode((prev) => !prev)}
                     className="inline-flex min-h-[24px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
                   >
-                    {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                    {t(
+                      uiLanguage,
+                      isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                    )}
                   </button>
                 </div>
                 {workspaceLeftView !== "chat" ? (
