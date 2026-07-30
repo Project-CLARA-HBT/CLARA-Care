@@ -223,6 +223,11 @@ const MIGRATED_SURFACES = [
       "Nguồn tham khảo (",
     ],
   },
+  {
+    path: "app/chat/_v2/components/FlowTimeline.tsx",
+    required: ["@/lib/i18n/catalog", "chat.flowTimeline.heading"],
+    forbidden: ["Reasoning flow", "Luồng suy luận"],
+  },
 ];
 
 function fail(message) {

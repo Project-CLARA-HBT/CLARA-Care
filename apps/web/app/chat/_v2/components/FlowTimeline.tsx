@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 
 import type { UILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/i18n/catalog";
 import type { ResearchTier2Result } from "@/lib/research";
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
@@ -44,7 +45,7 @@ function FlowTimeline({ result, uiLanguage, isRunning = false }: FlowTimelinePro
 
   if (!visibleNodes.length && !isRunning) return null;
 
-  const heading = uiLanguage === "en" ? "Reasoning flow" : "Luồng suy luận";
+  const heading = t(uiLanguage, "chat.flowTimeline.heading");
 
   return (
     <section
