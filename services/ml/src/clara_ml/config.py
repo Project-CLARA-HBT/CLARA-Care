@@ -137,6 +137,14 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED",
     )
+    # The semantic intent proposal is generated through the governed
+    # MEDICAL_SAFETY_ROUTER contract. Emergency/legal deterministic guards stay
+    # authoritative; this switch restores the legacy keyword intent path
+    # immediately if a semantic routing incident is observed.
+    semantic_intent_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="SEMANTIC_INTENT_ROUTING_ENABLED",
+    )
     model_registry_force_rollback: bool = Field(
         default=False,
         validation_alias="MODEL_REGISTRY_FORCE_ROLLBACK",

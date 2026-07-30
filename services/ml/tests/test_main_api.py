@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from clara_ml.main import (
     _classify_medical_request_with_llm,
     _detect_legal_guard_violation,
+    _semantic_intent_for_task,
     app,
 )
 from clara_ml.observability import InMemoryMetricsCollector, metrics_collector
@@ -489,6 +490,7 @@ def test_routed_chat_existing_dose_context_does_not_bypass_triage():
                 "action": "allow",
                 "reason": "none",
                 "emergency": "false",
+                "task": "medication_normalization",
                 "confidence": 0.97,
             },
             "allow",
@@ -499,6 +501,7 @@ def test_routed_chat_existing_dose_context_does_not_bypass_triage():
                 "action": "block",
                 "reason": "dosage_request",
                 "emergency": False,
+                "task": "general_health_qa",
                 "confidence": 0.96,
             },
             "block",
@@ -534,6 +537,22 @@ def test_medical_semantic_router_uses_llm_context(
     assert result["action"] == expected_action
     assert result["reason"] == expected_reason
     assert result["model_used"] == "semantic-router-test"
+
+
+@pytest.mark.parametrize(
+    ("task", "role", "expected"),
+    [
+        ("symptom_triage", "normal", "symptom_triage"),
+        ("ddi_check", "normal", "medication_safety"),
+        ("ddi_check", "doctor", "doctor_ddi_check"),
+        ("research_review", "researcher", "evidence_review"),
+        ("document_extraction", "normal", None),
+    ],
+)
+def test_semantic_task_route_is_closed_to_existing_chat_intents(
+    task: str, role: str, expected: str | None
+) -> None:
+    assert _semantic_intent_for_task(task=task, role=role) == expected
 
 
 def test_routed_chat_emergency_triage_outranks_diagnosis_guard():

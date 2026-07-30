@@ -87,6 +87,17 @@ The production env guard requires `DEEPSEEK_MODEL` to equal
 and requires both registry switches to be explicitly `true`. This prevents a
 stale deploy secret from silently reverting to a legacy single-model path.
 
+## Semantic intent routing
+
+Chat invokes `MEDICAL_SAFETY_ROUTER` before normal retrieval. Its closed task
+proposal can select only an existing non-emergency chat intent after the
+deterministic emergency and prohibited-action guards have allowed the request.
+`SEMANTIC_INTENT_ROUTING_ENABLED=false` immediately restores the legacy
+keyword intent selection; it cannot disable emergency escalation, legal
+refusal, FIDES, consent, RBAC, DrugBank or LifeMap invariants. The router
+receives a PII-redacted bounded message and records only model/task state, not
+the message or generated analysis.
+
 With task routing enabled, the manifest assigns `pro` to critical/safety and
 reasoning tasks (medical safety routing, LifeMap triage, FIDES/NLI, RAG
 synthesis, Council, Scribe note and research reasoning) and `flash` to bounded

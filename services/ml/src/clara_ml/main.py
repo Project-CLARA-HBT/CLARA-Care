@@ -520,6 +520,44 @@ def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str |
     return None
 
 
+_SEMANTIC_ROUTING_TASKS = frozenset(
+    {
+        "general_health_qa",
+        "symptom_triage",
+        "medication_normalization",
+        "ddi_check",
+        "lifemap_query",
+        "document_extraction",
+        "scribe_note",
+        "research_review",
+        "council_case",
+        "emergency",
+    }
+)
+
+
+def _semantic_intent_for_task(*, task: str, role: str) -> str | None:
+    """Map a closed semantic task proposal onto existing chat routes.
+
+    This is intentionally a narrow compatibility layer: only existing chat
+    intents can be selected and route-specific API authorization remains out of
+    scope.  Unknown/specialized tasks defer to the legacy route rather than
+    inventing a destination.  Emergency is never accepted here because the
+    caller handles it through the deterministic emergency fast path.
+    """
+
+    normalized_task = task.strip().lower()
+    if normalized_task == "general_health_qa":
+        return "general_guidance"
+    if normalized_task == "symptom_triage":
+        return "symptom_triage"
+    if normalized_task in {"medication_normalization", "ddi_check"}:
+        return "doctor_ddi_check" if role == "doctor" else "medication_safety"
+    if normalized_task == "research_review":
+        return "evidence_review" if role in {"researcher", "admin"} else "general_guidance"
+    return None
+
+
 def _classify_medical_request_with_llm(
     query: str,
     *,
@@ -553,9 +591,12 @@ def _classify_medical_request_with_llm(
             "what clinicians may evaluate are allowed. Block only direct requests for a "
             "new prescription, a personalized dose/start/stop/change instruction, or a "
             "definitive personal diagnosis. Detect urgent red flags even when phrased "
-            "indirectly. Return JSON only with keys action, reason, emergency, confidence. "
+            "indirectly. Return JSON only with keys action, reason, emergency, task, confidence. "
             "action must be allow or block. reason must be one of none, "
-            "prescription_request, dosage_request, diagnosis_request, emergency."
+            "prescription_request, dosage_request, diagnosis_request, emergency. "
+            "task must be one of general_health_qa, symptom_triage, "
+            "medication_normalization, ddi_check, lifemap_query, document_extraction, "
+            "scribe_note, research_review, council_case, emergency."
         ),
         max_tokens=180,
     )
@@ -584,6 +625,11 @@ def _classify_medical_request_with_llm(
         "emergency",
     }:
         raise ValueError("Medical intent classifier returned invalid reason")
+    task = str(parsed.get("task") or "general_health_qa").strip().lower()
+    if task not in _SEMANTIC_ROUTING_TASKS:
+        raise ValueError("Medical intent classifier returned invalid task")
+    if (task == "emergency") != emergency:
+        raise ValueError("Medical intent classifier returned inconsistent task")
     try:
         confidence = max(0.0, min(1.0, float(parsed.get("confidence") or 0.0)))
     except (TypeError, ValueError):
@@ -592,6 +638,7 @@ def _classify_medical_request_with_llm(
         "action": "allow" if emergency else action,
         "reason": reason,
         "emergency": emergency,
+        "task": task,
         "confidence": confidence,
         "model_used": response.model,
     }
@@ -1098,6 +1145,35 @@ def routed_chat_infer(payload: dict) -> dict:
         route.intent = default_by_role.get(route.role, "symptom_triage")
         route.confidence = min(route.confidence, 0.6)
 
+    semantic_intent_applied = False
+    if (
+        semantic_route
+        and intent_router_enabled
+        and settings.semantic_intent_routing_enabled
+        and semantic_route.get("action") == "allow"
+        and not semantic_route.get("emergency")
+        and float(semantic_route.get("confidence") or 0.0) >= 0.7
+    ):
+        semantic_intent = _semantic_intent_for_task(
+            task=str(semantic_route.get("task") or ""),
+            role=route.role,
+        )
+        if semantic_intent:
+            route.intent = semantic_intent
+            route.confidence = max(
+                route.confidence,
+                float(semantic_route.get("confidence") or 0.0),
+            )
+            semantic_intent_applied = True
+            preflight.stages.append(
+                {
+                    "stage": "llm_semantic_intent_router",
+                    "status": "applied",
+                    "task": str(semantic_route.get("task") or ""),
+                    "model_used": str(semantic_route.get("model_used") or ""),
+                }
+            )
+
     if (
         route.intent == "general_guidance"
         and _is_general_greeting(pii.redacted_text)
@@ -1139,6 +1215,8 @@ def routed_chat_infer(payload: dict) -> dict:
                     "rag_reranker_enabled": rag_reranker_enabled,
                     "rag_nli_enabled": rag_nli_enabled,
                     "rag_graphrag_enabled": rag_graphrag_enabled,
+                    "semantic_intent_routing_enabled": settings.semantic_intent_routing_enabled,
+                    "semantic_intent_applied": semantic_intent_applied,
                     "rag_sources_count": len(rag_sources),
                     "uploaded_documents_count": len(uploaded_documents),
                     "retrieval_profile": "smalltalk_fastpath",
@@ -1328,6 +1406,8 @@ def routed_chat_infer(payload: dict) -> dict:
             "rag_reranker_enabled": rag_reranker_enabled,
             "rag_nli_enabled": rag_nli_enabled,
             "rag_graphrag_enabled": rag_graphrag_enabled,
+            "semantic_intent_routing_enabled": settings.semantic_intent_routing_enabled,
+            "semantic_intent_applied": semantic_intent_applied,
             "rag_sources_count": len(rag_sources),
             "uploaded_documents_count": len(uploaded_documents),
             "retrieval_profile": retrieval_profile,
