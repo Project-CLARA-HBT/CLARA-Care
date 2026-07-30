@@ -482,6 +482,16 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_REQUIRED"),
     )
+    # Integrity is deliberately independent from ``careguard_drugbank_required``:
+    # a deployment may use curated rules while staging a licensed DrugBank
+    # artifact, but it must never silently trust a changed/incomplete artifact.
+    # Set this to false only as a short-lived, audited rollback for a verified
+    # legacy artifact; strict clinical deployments should pair it with
+    # ``CAREGUARD_DRUGBANK_REQUIRED=true``.
+    careguard_drugbank_manifest_integrity_required: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED"),
+    )
     # Additive consumer wording projection of an already-final CareGuard result.
     # It is intentionally OFF by default: the renderer never queries, changes,
     # or substitutes for the authoritative DrugBank decision path.

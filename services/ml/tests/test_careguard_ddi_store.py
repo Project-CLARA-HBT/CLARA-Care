@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -51,12 +52,22 @@ def _write_shards(root: Path, *, version: str = "drugbank-test-1") -> Path:
             },
         ]
     }
-    (drugbank_dir / "ddi_0.json").write_text(json.dumps(shard), encoding="utf-8")
+    shard_path = drugbank_dir / "ddi_0.json"
+    shard_path.write_text(json.dumps(shard), encoding="utf-8")
     manifest = {
         "version": version,
         "source": "drugbank",
-        "ddi_shards": [{"file": "ddi_0.json"}],
+        "source_version": "test-source-1",
+        "source_sha256": "a" * 64,
+        "ddi_shards": [
+            {"file": "ddi_0.json", "sha256": sha256(shard_path.read_bytes()).hexdigest()}
+        ],
+        "dictionary_shards": [],
     }
+    unsigned = json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    manifest["manifest_sha256"] = sha256(unsigned).hexdigest()
     (drugbank_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return drugbank_dir
 
@@ -98,6 +109,8 @@ def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
         "version": "drugbank-test-1",
         "pair_count": 2,
         "manifest_matches_index": True,
+        "integrity_verified": True,
+        "source_version": "test-source-1",
     }
 
 
@@ -133,6 +146,58 @@ def test_store_degrades_on_malformed_shard(tmp_path: Path) -> None:
     assert store.ensure_built() is None
 
 
+def test_store_fails_closed_when_a_verified_shard_changes(tmp_path: Path) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    shard_path = drugbank_dir / "ddi_0.json"
+    shard_path.write_text('{"rules": []}', encoding="utf-8")
+
+    # The manifest is still syntactically valid but its recorded artifact digest
+    # no longer matches. Strict integrity must reject it before SQLite build.
+    assert _store_for(drugbank_dir).ensure_built() is None
+
+
+def test_store_resolves_dictionary_alias_with_traceable_identifiers(tmp_path: Path) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "panadol extra",
+                "normalized_name": "paracetamol",
+                "active_ingredients": ["paracetamol", "caffeine"],
+                "rxcui": "161",
+                "drugbank_id": "DB00316",
+            }
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
+    manifest_path = drugbank_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dictionary_shards"] = [
+        {
+            "file": "dictionary_0.json",
+            "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
+        }
+    ]
+    unsigned = dict(manifest)
+    unsigned.pop("manifest_sha256", None)
+    manifest["manifest_sha256"] = sha256(
+        json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    store = _store_for(drugbank_dir)
+    assert store.ensure_built() == "drugbank-test-1"
+    assert store.resolve_medication("Panadol Extra") == {
+        "alias": "panadol extra",
+        "normalized_name": "paracetamol",
+        "active_ingredients": ["paracetamol", "caffeine"],
+        "rxcui": "161",
+        "drugbank_id": "DB00316",
+        "source_version": "drugbank-test-1",
+    }
+
+
 def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
     tmp_path: Path,
 ) -> None:
@@ -149,6 +214,8 @@ def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
         "version": "drugbank-test-1",
         "pair_count": 0,
         "manifest_matches_index": True,
+        "integrity_verified": True,
+        "source_version": "test-source-1",
     }
 
 

@@ -437,6 +437,10 @@ def _normalize_medications_with_vn_dictionary(
     normalized_inputs: list[dict[str, str]] = []
     normalized_medications: list[str] = []
     seen: set[str] = set()
+    drugbank_store = (
+        _get_drugbank_store() if settings.careguard_drugbank_sqlite_enabled else None
+    )
+    drugbank_dictionary_version = drugbank_store.version if drugbank_store else ""
 
     for medication in medications:
         input_token = _normalize_text_token(medication)
@@ -448,11 +452,39 @@ def _normalize_medications_with_vn_dictionary(
             _VN_DICTIONARY_ALIAS_LOOKUP.get(input_token, canonical_input),
         )
         active_ingredients = _VN_DICTIONARY_ACTIVE_INGREDIENTS.get(canonical, [canonical])
+        rxcui = _VN_DICTIONARY_RXCUI_MAP.get(canonical, "")
+        drugbank_id = ""
+        resolution_source = "vn_dictionary" if canonical != canonical_input else "input"
+
+        # The verified DrugBank dictionary is a deterministic alias lookup. It
+        # does not guess or use an LLM; a miss intentionally leaves the local
+        # normalized token unchanged. This preserves the Vietnamese dictionary
+        # as an additive layer while exposing licensed-source traceability.
+        if drugbank_store is not None:
+            resolution = None
+            for candidate in (input_token, canonical_input, canonical):
+                resolution = drugbank_store.resolve_medication(candidate)
+                if resolution is not None:
+                    break
+            if resolution is not None:
+                canonical = str(resolution["normalized_name"])
+                resolved_actives = resolution.get("active_ingredients")
+                if isinstance(resolved_actives, list):
+                    active_ingredients = [
+                        str(item)
+                        for item in resolved_actives
+                        if isinstance(item, str) and item
+                    ] or [canonical]
+                rxcui = str(resolution.get("rxcui") or "")
+                drugbank_id = str(resolution.get("drugbank_id") or "")
+                resolution_source = "drugbank_dictionary"
         normalized_inputs.append(
             {
                 "input": input_token,
                 "canonical_input": canonical_input,
                 "normalized_name": canonical,
+                "resolution_source": resolution_source,
+                "drugbank_id": drugbank_id,
             }
         )
 
@@ -462,7 +494,9 @@ def _normalize_medications_with_vn_dictionary(
                     "input": input_token,
                     "canonical_input": canonical_input,
                     "normalized_name": canonical,
-                    "rxcui": _VN_DICTIONARY_RXCUI_MAP.get(canonical, ""),
+                    "rxcui": rxcui,
+                    "drugbank_id": drugbank_id,
+                    "resolution_source": resolution_source,
                 }
             )
 
@@ -489,6 +523,7 @@ def _normalize_medications_with_vn_dictionary(
         "normalization_confidence": round(min(max(normalization_confidence, 0.0), 1.0), 3),
         "pair_coverage_ratio": round(min(max(pair_coverage_ratio, 0.0), 1.0), 3),
         "normalized_inputs": normalized_inputs[:20],
+        "drugbank_dictionary_version": drugbank_dictionary_version,
     }
 
 
@@ -651,6 +686,7 @@ def _get_drugbank_store() -> DrugBankDdiStore | None:
         store = DrugBankDdiStore(
             drugbank_dir=_DRUGBANK_DIR,
             manifest_path=_DRUGBANK_MANIFEST_PATH,
+            integrity_required=settings.careguard_drugbank_manifest_integrity_required,
         )
         built_version = store.ensure_built()
         _DRUGBANK_STORE = store if built_version else None
@@ -1303,6 +1339,9 @@ def _drugbank_required_unavailable_result(
             "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
             "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
             "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
             "normalization_confidence": vn_dictionary_metadata.get("normalization_confidence", 0.0),
             "normalization_pair_coverage_low": False,
             "normalized_medication_count": len(medications),
@@ -1367,6 +1406,9 @@ def _rules_unavailable_result(
             "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
             "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
             "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
             "normalization_confidence": vn_dictionary_metadata.get("normalization_confidence", 0.0),
             "normalization_pair_coverage_low": False,
             "normalized_medication_count": len(medications),
@@ -1559,6 +1601,9 @@ def run_careguard_analyze(payload: dict) -> dict:
                 "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
                 "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
                 "vn_dictionary_input_count": vn_dictionary_metadata["input_count"],
+                "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                    "drugbank_dictionary_version", ""
+                ),
                 "normalization_confidence": vn_dictionary_metadata["normalization_confidence"],
                 "normalization_pair_coverage_low": normalization_pair_coverage_low,
                 "normalized_medication_count": len(medications),
