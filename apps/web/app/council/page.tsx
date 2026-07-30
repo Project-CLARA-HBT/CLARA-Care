@@ -28,7 +28,9 @@ import {
   submitCouncilOversight,
 } from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
+import { t } from "@/lib/i18n/catalog";
 import type { UserRole } from "@/lib/navigation.config";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type SeverityLevel = "stable" | "warning" | "critical";
 type CouncilBannerState =
@@ -306,6 +308,7 @@ function bannerMeta(state: CouncilBannerState) {
 }
 
 export default function CouncilPage() {
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null | undefined>(
     undefined,
   );
@@ -1417,28 +1420,28 @@ export default function CouncilPage() {
             <div className="w-full max-w-xl rounded-xl border border-[color:var(--shell-border)] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
               <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
                 {guardAction === "override"
-                  ? "Ghi đè quyết định"
-                  : "Tạm dừng quy trình"}
+                  ? t(language, "council.guard.overrideTitle")
+                  : t(language, "council.guard.pauseTitle")}
               </h3>
               <p
                 className={`mt-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
               >
                 {guardAction === "override"
-                  ? "Bạn đang ghi đè đề xuất của hệ thống. Vui lòng nhập lý do lâm sàng."
-                  : "Bạn đang tạm dừng quy trình hội chẩn. Vui lòng nhập lý do lâm sàng."}
+                  ? t(language, "council.guard.overrideDescription")
+                  : t(language, "council.guard.pauseDescription")}
               </p>
               <label
                 className={`mt-4 block text-sm font-bold ${BODY_TEXT_CLASS}`}
                 htmlFor="guard-reason"
               >
-                Lý do lâm sàng *
+                {t(language, "council.guard.reasonLabel")}
               </label>
               <textarea
                 id="guard-reason"
                 value={guardReason}
                 onChange={(event) => setGuardReason(event.target.value)}
                 className="mt-2 min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-3 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--brand-600)] focus:ring-4 focus:ring-blue-200/70 dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-500/20"
-                placeholder="Ví dụ: Dữ liệu lâm sàng mới cho thấy cần ưu tiên xử trí khác..."
+                placeholder={t(language, "council.guard.reasonPlaceholder")}
               />
               <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
@@ -1446,7 +1449,7 @@ export default function CouncilPage() {
                   onClick={closeGuardDialog}
                   className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
-                  Hủy
+                  {t(language, "council.guard.cancel")}
                 </button>
                 <button
                   type="button"
@@ -1454,7 +1457,7 @@ export default function CouncilPage() {
                   disabled={!guardReason.trim()}
                   className="min-h-[44px] rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-bold text-white transition hover:bg-rose-700 disabled:border-rose-300 disabled:bg-rose-100 disabled:text-rose-800 disabled:hover:bg-rose-100 dark:disabled:border-rose-500/60 dark:disabled:bg-rose-500/20 dark:disabled:text-rose-100"
                 >
-                  Xác nhận
+                  {t(language, "council.guard.confirm")}
                 </button>
               </div>
             </div>
