@@ -11,19 +11,27 @@ import {
   requestResearchClarification,
   uploadResearchFile,
   type ResearchClarifyQuestion,
+  type ResearchClarifyResult,
   type SourceHubCatalogEntry,
 } from "@/lib/research";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 
 type Props = { initialTab?: "frame" | "search" | "synthesize" | "watch" };
 
-function roleLabel(role: UserRole): string {
-  if (role === "doctor") return "Bác sĩ";
-  if (role === "researcher") return "Nhà nghiên cứu";
-  if (role === "admin") return "Quản trị";
-  return "Người dùng";
+function roleLabel(language: UILanguage, role: UserRole): string {
+  const key = {
+    normal: "research.role.normal",
+    researcher: "research.role.researcher",
+    doctor: "research.role.doctor",
+    admin: "research.role.admin",
+  } as const;
+  return t(language, key[role]);
 }
 
-function resultText(payload: Record<string, unknown>): string {
+function resultText(language: UILanguage, payload: Record<string, unknown>): string {
   for (const key of [
     "answer",
     "answer_markdown",
@@ -34,10 +42,11 @@ function resultText(payload: Record<string, unknown>): string {
     const value = payload[key];
     if (typeof value === "string" && value.trim()) return value;
   }
-  return "Kết quả đã hoàn tất. Mở Chi tiết để xem toàn bộ dữ liệu và bằng chứng.";
+  return t(language, "research.result.complete");
 }
 
 export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
+  const language = useUILanguage();
   const [role, setRole] = useState<UserRole>("normal");
   const [tab, setTab] = useState(initialTab);
   const [question, setQuestion] = useState("");
@@ -55,7 +64,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
   >({});
   const [clarifyPending, setClarifyPending] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [status, setStatus] = useState("Sẵn sàng");
+  const [status, setStatus] = useState(() => t(language, "research.status.ready"));
   const [error, setError] = useState("");
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [jobId, setJobId] = useState("");
@@ -83,21 +92,21 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
     const file = event.target.files?.[0];
     if (!file) return;
     setError("");
-    setStatus(`Đang tải ${file.name}…`);
+    setStatus(t(language, "research.status.uploading", { file: file.name }));
     try {
       const uploaded = await uploadResearchFile(file);
       setUploadedFileIds((current) => [
         ...new Set([...current, ...uploaded.uploadedFileIds]),
       ]);
       setUploadedNames((current) => [...current, file.name]);
-      setStatus("Tệp đã sẵn sàng cho lượt phân tích");
+      setStatus(t(language, "research.status.fileReady"));
     } catch (cause) {
       setError(
         cause instanceof Error
-          ? cause.message
-          : "Không thể tải tệp nghiên cứu.",
+          ? sanitizeUpstreamError(cause.message)
+          : t(language, "research.error.upload"),
       );
-      setStatus("Sẵn sàng");
+      setStatus(t(language, "research.status.ready"));
     } finally {
       event.target.value = "";
     }
@@ -106,18 +115,30 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
   const run = async (event?: FormEvent) => {
     event?.preventDefault();
     if (!protocol) {
-      setError("Hãy nhập câu hỏi nghiên cứu trước khi chạy.");
+      setError(t(language, "research.error.questionRequired"));
       setTab("frame");
       return;
     }
     setError("");
     setResult(null);
     setClarifyPending(true);
-    setStatus("Đang kiểm tra câu hỏi và các trường còn thiếu…");
-    const clarification = await requestResearchClarification(protocol, {
-      researchMode: "deep",
-      uiLanguage: "vi",
-    });
+    setStatus(t(language, "research.status.reviewingQuestion"));
+    let clarification: ResearchClarifyResult;
+    try {
+      clarification = await requestResearchClarification(protocol, {
+        researchMode: "deep",
+        uiLanguage: language,
+      });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? sanitizeUpstreamError(cause.message)
+          : t(language, "research.error.run"),
+      );
+      setClarifyPending(false);
+      setStatus(t(language, "research.status.incomplete"));
+      return;
+    }
     if (
       clarification.ambiguous &&
       clarification.questions.length &&
@@ -126,13 +147,13 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
       setQuestions(clarification.questions);
       setClarifyPending(false);
       setTab("frame");
-      setStatus("Cần bạn xác nhận thêm trước khi tìm kiếm");
+      setStatus(t(language, "research.status.needsClarification"));
       return;
     }
     setClarifyPending(false);
     setIsRunning(true);
     setTab("synthesize");
-    setStatus("Đang tìm nguồn, đối chiếu bằng chứng và kiểm tra trích dẫn…");
+    setStatus(t(language, "research.status.synthesizing"));
     const options: ExecuteResearchTier2JobOptions = {
       researchMode: "deep",
       retrievalStackMode: "full",
@@ -140,7 +161,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
       sourceHubSources:
         selectedSources as ExecuteResearchTier2JobOptions["sourceHubSources"],
       clarifyingAnswers,
-      uiLanguage: "vi",
+      uiLanguage: language,
       onJobCreated: (job) => setJobId(job.job_id),
       onSnapshot: (snapshot) => {
         if (snapshot.progress && typeof snapshot.progress === "object") {
@@ -153,26 +174,24 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
     try {
       const completed = await executeResearchTier2Job(protocol, options);
       setResult(completed.finalPayload);
-      setStatus(
-        "Hoàn tất — kiểm tra từng kết luận và nguồn trước khi sử dụng.",
-      );
+      setStatus(t(language, "research.status.complete"));
     } catch (cause) {
       setError(
         cause instanceof Error
-          ? cause.message
-          : "Lượt nghiên cứu không hoàn tất.",
+          ? sanitizeUpstreamError(cause.message)
+          : t(language, "research.error.run"),
       );
-      setStatus("Lượt nghiên cứu chưa hoàn tất");
+      setStatus(t(language, "research.status.incomplete"));
     } finally {
       setIsRunning(false);
     }
   };
 
   const tabs = [
-    ["frame", "1 · Đặt câu hỏi"],
-    ["search", "2 · Nguồn & tệp"],
-    ["synthesize", "3 · Tổng hợp"],
-    ["watch", "4 · Theo dõi"],
+    ["frame", t(language, "research.tab.frame")],
+    ["search", t(language, "research.tab.search")],
+    ["synthesize", t(language, "research.tab.synthesize")],
+    ["watch", t(language, "research.tab.watch")],
   ] as const;
 
   return (
@@ -182,24 +201,22 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-brand)]">
-                CLARA Research
+                {t(language, "research.eyebrow")}
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
-                Từ câu hỏi đến bằng chứng có thể kiểm tra
+                {t(language, "research.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-                Không chỉ trả lời. CLARA lưu câu hỏi, nguồn, cách tìm, điểm chưa
-                chắc chắn và kết luận để bạn có thể kiểm tra, chia sẻ và cập
-                nhật lại.
+                {t(language, "research.description")}
               </p>
             </div>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-              {roleLabel(role)}
+              {roleLabel(language, role)}
             </span>
           </div>
           <nav
             className="mt-6 flex gap-1 overflow-x-auto"
-            aria-label="Research stages"
+            aria-label={t(language, "research.stageLabel")}
           >
             {tabs.map(([id, label]) => (
               <button
@@ -222,24 +239,24 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
             {tab === "frame" ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  PICO / PECO frame
+                  {t(language, "research.frame.eyebrow")}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
-                  Bạn muốn biết điều gì?
+                  {t(language, "research.frame.title")}
                 </h2>
                 <textarea
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   rows={5}
-                  placeholder="Ví dụ: Ở người lớn bị đái tháo đường type 2, metformin so với…"
+                  placeholder={t(language, "research.frame.placeholder")}
                   className="mt-4 w-full resize-y rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm leading-6 outline-none focus:border-[var(--brand-500)] focus:ring-2 focus:ring-blue-500/15"
                 />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
-                    ["Population", population, setPopulation],
-                    ["Intervention / Exposure", intervention, setIntervention],
-                    ["Comparator", comparator, setComparator],
-                    ["Outcomes", outcomes, setOutcomes],
+                    [t(language, "research.field.population"), population, setPopulation],
+                    [t(language, "research.field.intervention"), intervention, setIntervention],
+                    [t(language, "research.field.comparator"), comparator, setComparator],
+                    [t(language, "research.field.outcomes"), outcomes, setOutcomes],
                   ].map(([label, value, setter]) => (
                     <label key={label as string} className="space-y-1.5">
                       <span className="text-xs font-semibold text-[var(--text-secondary)]">
@@ -258,7 +275,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                 {questions.length ? (
                   <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm font-bold text-amber-900">
-                      Cần làm rõ trước khi chạy
+                      {t(language, "research.clarify.title")}
                     </p>
                     {questions.map((item) => (
                       <label
@@ -286,15 +303,13 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
             {tab === "search" ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Search plan
+                  {t(language, "research.search.eyebrow")}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
-                  Nguồn nào sẽ được đối chiếu?
+                  {t(language, "research.search.title")}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Chọn nhóm nguồn hoặc để CLARA tự định tuyến theo loại câu hỏi.
-                  Các bản ghi và thời điểm truy xuất sẽ được giữ trong lượt
-                  chạy.
+                  {t(language, "research.search.description")}
                 </p>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   {catalog.map((source) => (
@@ -319,7 +334,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                           {source.label}
                         </span>
                         <span className="block text-xs text-[var(--text-muted)]">
-                          {source.description || "Nguồn y khoa được kết nối"}
+                          {source.description || t(language, "research.search.defaultSource")}
                         </span>
                       </span>
                     </label>
@@ -332,11 +347,11 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                     className="sr-only"
                     accept=".pdf,.txt,.md,.doc,.docx"
                   />
-                  ＋ Đính kèm bài báo, protocol hoặc tài liệu nội bộ
+                  {t(language, "research.search.attach")}
                 </label>
                 {uploadedNames.length ? (
                   <p className="mt-3 text-xs text-[var(--text-secondary)]">
-                    Đã thêm: {uploadedNames.join(", ")}
+                    {t(language, "research.search.uploaded", { files: uploadedNames.join(", ") })}
                   </p>
                 ) : null}
               </>
@@ -345,19 +360,19 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
             {tab === "synthesize" ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Evidence synthesis
+                  {t(language, "research.synthesis.eyebrow")}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
-                  Kết luận có nguồn và điểm chưa chắc chắn
+                  {t(language, "research.synthesis.title")}
                 </h2>
                 {result ? (
                   <div className="mt-5 space-y-4">
                     <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm leading-7 whitespace-pre-wrap">
-                      {resultText(result)}
+                      {resultText(language, result)}
                     </div>
                     <details className="rounded-2xl border border-[color:var(--shell-border)] p-4">
                       <summary className="cursor-pointer text-sm font-semibold">
-                        Mở dữ liệu chạy và bằng chứng
+                        {t(language, "research.synthesis.details")}
                       </summary>
                       <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap text-xs text-[var(--text-secondary)]">
                         {JSON.stringify(result, null, 2)}
@@ -366,8 +381,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                   </div>
                 ) : (
                   <p className="mt-4 rounded-2xl bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
-                    Chưa có lượt chạy. Hãy đặt câu hỏi, chọn nguồn, rồi bắt đầu
-                    tổng hợp.
+                    {t(language, "research.synthesis.empty")}
                   </p>
                 )}
               </>
@@ -375,18 +389,14 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
             {tab === "watch" ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Living evidence
+                  {t(language, "research.watch.eyebrow")}
                 </p>
-                <h2 className="mt-1 text-2xl font-bold">Theo dõi thay đổi</h2>
+                <h2 className="mt-1 text-2xl font-bold">{t(language, "research.watch.title")}</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                  Lượt theo dõi sẽ phát hiện bài mới, kết quả thử nghiệm, đính
-                  chính, rút bài và thay đổi hướng dẫn ảnh hưởng đến kết luận.
-                  Bản cập nhật cần được bạn xem xét trước khi thay thế kết luận
-                  hiện tại.
+                  {t(language, "research.watch.description")}
                 </p>
                 <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--shell-border-strong)] p-5 text-sm text-[var(--text-muted)]">
-                  Watch mode sẽ dùng protocol và snapshot của lượt chạy gần nhất
-                  {jobId ? ` · job ${jobId}` : ""}.
+                  {t(language, "research.watch.note", { job: jobId ? ` · ${jobId}` : "" })}
                 </div>
               </>
             ) : null}
@@ -411,46 +421,44 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                 disabled={isRunning || clarifyPending}
                 className="min-h-11 rounded-xl bg-[var(--brand-600)] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isRunning ? "Đang tổng hợp…" : "Bắt đầu nghiên cứu"}
+                {isRunning ? t(language, "research.action.running") : t(language, "research.action.start")}
               </button>
             </div>
           </section>
           <aside className="space-y-4">
             <div className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Run manifest
+                {t(language, "research.manifest.eyebrow")}
               </p>
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">Protocol</dt>
+                  <dt className="text-[var(--text-muted)]">{t(language, "research.manifest.protocol")}</dt>
                   <dd className="text-right font-semibold">
-                    {protocol ? "Đã tạo" : "Chưa có"}
+                    {protocol ? t(language, "research.manifest.created") : t(language, "research.manifest.none")}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">Nguồn chọn</dt>
+                  <dt className="text-[var(--text-muted)]">{t(language, "research.manifest.sources")}</dt>
                   <dd className="font-semibold">
-                    {selectedSources.length || "Tự định tuyến"}
+                    {selectedSources.length || t(language, "research.manifest.auto")}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">Tệp</dt>
+                  <dt className="text-[var(--text-muted)]">{t(language, "research.manifest.files")}</dt>
                   <dd className="font-semibold">{uploadedFileIds.length}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">Job</dt>
+                  <dt className="text-[var(--text-muted)]">{t(language, "research.manifest.job")}</dt>
                   <dd className="max-w-[9rem] truncate font-mono text-xs">
-                    {jobId || "—"}
+                    {jobId || t(language, "research.manifest.none")}
                   </dd>
                 </div>
               </dl>
             </div>
             <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-5 text-sm leading-6 text-blue-950">
-              <p className="font-bold">CLARA kiểm tra gì?</p>
+              <p className="font-bold">{t(language, "research.guard.title")}</p>
               <p className="mt-2">
-                Nguồn, thời điểm, quần thể, thiết kế nghiên cứu, mâu thuẫn và
-                điểm chưa chắc chắn. Đây là tổng hợp bằng chứng, không thay thế
-                quyết định y khoa.
+                {t(language, "research.guard.description")}
               </p>
             </div>
           </aside>
