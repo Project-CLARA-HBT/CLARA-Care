@@ -158,6 +158,27 @@ enum ConsumerTerm {
   medicinesSafetyDescription,
   medicinesOpenCabinet,
   medicinesSafetyNotice,
+  visitsTitle,
+  visitsCreate,
+  visitsClose,
+  visitsProfileRequiredTitle,
+  visitsProfileRequiredDescription,
+  visitsEmptyTitle,
+  visitsEmptyDescription,
+  visitsSafetyLabel,
+  visitsSafetyNotice,
+  visitsNameLabel,
+  visitsNameHint,
+  visitsReasonLabel,
+  visitsReasonHint,
+  visitsUnnamed,
+  visitsPreparationTitle,
+  visitsOpenPreparation,
+  visitsNoSchedule,
+  visitsScheduledDate,
+  visitsNameRequired,
+  visitsLoadFailed,
+  visitsCreateFailed,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -391,6 +412,35 @@ class ConsumerTerminology {
         'CLARA là trợ lý hỗ trợ quyết định, không thay thế bác sĩ. Kết quả kiểm '
             'tra chỉ mang tính tham khảo — hãy trao đổi với dược sĩ hoặc bác sĩ '
             'trước khi thay đổi cách dùng thuốc.',
+    ConsumerTerm.visitsTitle: 'Chuẩn bị đi khám',
+    ConsumerTerm.visitsCreate: 'Tạo buổi khám',
+    ConsumerTerm.visitsClose: 'Đóng',
+    ConsumerTerm.visitsProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
+    ConsumerTerm.visitsProfileRequiredDescription:
+        'Để chuẩn bị cho buổi khám, bạn cần tạo hồ sơ sức khỏe trước. Đây là '
+            'bước giúp bạn trao đổi với bác sĩ hiệu quả hơn, không phải chẩn đoán.',
+    ConsumerTerm.visitsEmptyTitle: 'Chưa có buổi khám nào',
+    ConsumerTerm.visitsEmptyDescription:
+        'Tạo một buổi khám để chuẩn bị nội dung cần trao đổi với bác sĩ. CLARA '
+            'giúp bạn sắp xếp mối quan tâm, không phải chẩn đoán.',
+    ConsumerTerm.visitsSafetyLabel: 'Lưu ý về buổi khám',
+    ConsumerTerm.visitsSafetyNotice:
+        'Buổi khám giúp bạn chuẩn bị trước khi gặp bác sĩ. Đây không phải là tư '
+            'vấn hay chẩn đoán y tế.',
+    ConsumerTerm.visitsNameLabel: 'Tên buổi khám',
+    ConsumerTerm.visitsNameHint: 'Ví dụ: Khám tim mạch định kỳ',
+    ConsumerTerm.visitsReasonLabel: 'Lý do khám (không bắt buộc)',
+    ConsumerTerm.visitsReasonHint: 'Điều bạn muốn trao đổi với bác sĩ',
+    ConsumerTerm.visitsUnnamed: 'Buổi khám chưa đặt tên',
+    ConsumerTerm.visitsPreparationTitle: 'Chuẩn bị buổi khám',
+    ConsumerTerm.visitsOpenPreparation: 'Mở chuẩn bị',
+    ConsumerTerm.visitsNoSchedule: 'Chưa đặt lịch',
+    ConsumerTerm.visitsScheduledDate: 'Lịch: {date}',
+    ConsumerTerm.visitsNameRequired: 'Vui lòng nhập tên buổi khám.',
+    ConsumerTerm.visitsLoadFailed:
+        'Không thể tải danh sách buổi khám. Vui lòng thử lại.',
+    ConsumerTerm.visitsCreateFailed:
+        'Không thể tạo buổi khám. Vui lòng thử lại.',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -558,5 +608,33 @@ class ConsumerTerminology {
         'CLARA is a decision-support assistant, not a substitute for a doctor. '
             'Check results are for reference only — speak with a pharmacist or '
             'doctor before changing how you use a medicine.',
+    ConsumerTerm.visitsTitle: 'Prepare for a visit',
+    ConsumerTerm.visitsCreate: 'Create visit',
+    ConsumerTerm.visitsClose: 'Close',
+    ConsumerTerm.visitsProfileRequiredTitle: 'Create your health profile first',
+    ConsumerTerm.visitsProfileRequiredDescription:
+        'Create your health profile before preparing for a visit. This helps '
+            'you have a more useful conversation with your doctor; it is not a diagnosis.',
+    ConsumerTerm.visitsEmptyTitle: 'No visits yet',
+    ConsumerTerm.visitsEmptyDescription:
+        'Create a visit to prepare what you want to discuss with your doctor. '
+            'CLARA helps you organize concerns; it does not diagnose.',
+    ConsumerTerm.visitsSafetyLabel: 'Visit preparation note',
+    ConsumerTerm.visitsSafetyNotice:
+        'A visit helps you prepare before you see a doctor. It is not medical '
+            'advice or a diagnosis.',
+    ConsumerTerm.visitsNameLabel: 'Visit name',
+    ConsumerTerm.visitsNameHint: 'For example: Routine cardiology visit',
+    ConsumerTerm.visitsReasonLabel: 'Reason for visit (optional)',
+    ConsumerTerm.visitsReasonHint: 'What you want to discuss with your doctor',
+    ConsumerTerm.visitsUnnamed: 'Unnamed visit',
+    ConsumerTerm.visitsPreparationTitle: 'Visit preparation',
+    ConsumerTerm.visitsOpenPreparation: 'Open preparation',
+    ConsumerTerm.visitsNoSchedule: 'Not scheduled',
+    ConsumerTerm.visitsScheduledDate: 'Scheduled: {date}',
+    ConsumerTerm.visitsNameRequired: 'Enter a visit name.',
+    ConsumerTerm.visitsLoadFailed: 'We could not load your visits. Try again.',
+    ConsumerTerm.visitsCreateFailed:
+        'We could not create the visit. Try again.',
   };
 }

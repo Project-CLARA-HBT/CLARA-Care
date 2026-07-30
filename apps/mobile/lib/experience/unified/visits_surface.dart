@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -24,6 +25,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import '../language_controller.dart';
 import 'visit_detail_surface.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
@@ -85,10 +87,15 @@ class VisitsSurface extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Optional app-level language state. Direct embedding remains
+  /// Vietnamese-first when it is not supplied.
+  final LanguageController? languageController;
 
   @override
   State<VisitsSurface> createState() => _VisitsSurfaceState();
@@ -128,12 +135,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     return token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _load() async {
     final token = _token;
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -165,8 +176,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() =>
-          _error = 'Không thể tải danh sách buổi khám. Vui lòng thử lại.');
+      setState(() => _error = _copy[ConsumerTerm.visitsLoadFailed]);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -179,7 +189,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     if (token == null || _creating) return;
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      _showSnack('Vui lòng nhập tên buổi khám.');
+      _showSnack(_copy[ConsumerTerm.visitsNameRequired]);
       return;
     }
     setState(() => _creating = true);
@@ -202,7 +212,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tạo buổi khám. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.visitsCreateFailed]);
     } finally {
       if (mounted) {
         setState(() => _creating = false);
@@ -216,19 +226,48 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Formats an ISO date as `dd/MM/yyyy`, or a friendly fallback.
+  /// Formats an ISO date with the active UI locale, or a friendly fallback.
   String _formatScheduled(String? scheduledAt) {
     final trimmed = scheduledAt?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Chưa đặt lịch';
+    if (trimmed.isEmpty) return _copy[ConsumerTerm.visitsNoSchedule];
     final parsed = DateTime.tryParse(trimmed);
     if (parsed == null) return trimmed;
     final local = parsed.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
-    return 'Lịch: ${two(local.day)}/${two(local.month)}/${local.year}';
+    final date = _copy.locale == 'en'
+        ? '${_englishMonth(local.month)} ${local.day}, ${local.year}'
+        : '${two(local.day)}/${two(local.month)}/${local.year}';
+    return _copy.format(ConsumerTerm.visitsScheduledDate, {'date': date});
   }
+
+  String _englishMonth(int month) => const <String>[
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildRefreshableBody(context),
+      );
+    }
+    return _buildRefreshableBody(context);
+  }
+
+  Widget _buildRefreshableBody(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _load,
       child: _buildBody(context),
@@ -275,15 +314,13 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
               ),
               const SizedBox(height: ClaraTokens.spaceMd),
               Text(
-                'Hãy tạo hồ sơ sức khỏe trước',
+                _copy[ConsumerTerm.visitsProfileRequiredTitle],
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Để chuẩn bị cho buổi khám, bạn cần tạo hồ sơ sức khỏe trước. '
-                'Đây là bước giúp bạn trao đổi với bác sĩ hiệu quả hơn, không '
-                'phải chẩn đoán.',
+                _copy[ConsumerTerm.visitsProfileRequiredDescription],
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -301,11 +338,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
         padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
         child: Row(
           children: [
-            const Expanded(
-              child: SectionHeader(title: 'Buổi khám', emphasize: true),
+            Expanded(
+              child: SectionHeader(
+                title: _copy[ConsumerTerm.visitsTitle],
+                emphasize: true,
+              ),
             ),
             ClaraButton.secondary(
-              label: _formOpen ? 'Đóng' : 'Tạo buổi khám',
+              label: _formOpen
+                  ? _copy[ConsumerTerm.visitsClose]
+                  : _copy[ConsumerTerm.visitsCreate],
               icon: _formOpen ? Icons.close : Icons.add,
               onPressed: () => setState(() => _formOpen = !_formOpen),
             ),
@@ -333,12 +375,10 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       children.add(
         ClaraEmptyState(
           icon: Icons.event_note_outlined,
-          title: 'Chưa có buổi khám nào',
-          message:
-              'Tạo một buổi khám để chuẩn bị nội dung cần trao đổi với bác sĩ. '
-              'CLARA giúp bạn sắp xếp mối quan tâm, không phải chẩn đoán.',
+          title: _copy[ConsumerTerm.visitsEmptyTitle],
+          message: _copy[ConsumerTerm.visitsEmptyDescription],
           action: ClaraButton.primary(
-            label: 'Tạo buổi khám',
+            label: _copy[ConsumerTerm.visitsCreate],
             icon: Icons.add,
             onPressed: () => setState(() => _formOpen = true),
           ),
@@ -382,7 +422,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
       child: ClaraCard.static_(
-        semanticLabel: 'Lưu ý về buổi khám',
+        semanticLabel: _copy[ConsumerTerm.visitsSafetyLabel],
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -394,8 +434,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
             const SizedBox(width: ClaraTokens.spaceSm),
             Expanded(
               child: Text(
-                'Buổi khám giúp bạn chuẩn bị trước khi gặp bác sĩ. Đây không '
-                'phải là tư vấn hay chẩn đoán y tế.',
+                _copy[ConsumerTerm.visitsSafetyNotice],
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -415,9 +454,9 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
           TextField(
             controller: _titleController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Tên buổi khám',
-              hintText: 'Ví dụ: Khám tim mạch định kỳ',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.visitsNameLabel],
+              hintText: _copy[ConsumerTerm.visitsNameHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
@@ -425,16 +464,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
             controller: _reasonController,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Lý do khám (không bắt buộc)',
-              hintText: 'Điều bạn muốn trao đổi với bác sĩ',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.visitsReasonLabel],
+              hintText: _copy[ConsumerTerm.visitsReasonHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceLg),
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Tạo buổi khám',
+              label: _copy[ConsumerTerm.visitsCreate],
               icon: Icons.check,
               loading: _creating,
               onPressed: _createVisit,
@@ -475,7 +514,9 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
               const SizedBox(width: ClaraTokens.spaceSm),
               Expanded(
                 child: Text(
-                  visit.title.isEmpty ? 'Buổi khám chưa đặt tên' : visit.title,
+                  visit.title.isEmpty
+                      ? _copy[ConsumerTerm.visitsUnnamed]
+                      : visit.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -494,7 +535,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.secondary(
-              label: 'Mở chuẩn bị',
+              label: _copy[ConsumerTerm.visitsOpenPreparation],
               icon: Icons.arrow_forward,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -503,7 +544,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
                     sessionStore: widget.sessionStore,
                     visitId: visit.id,
                     title: visit.title.isEmpty
-                        ? 'Chuẩn bị buổi khám'
+                        ? _copy[ConsumerTerm.visitsPreparationTitle]
                         : visit.title,
                   ),
                 ),
