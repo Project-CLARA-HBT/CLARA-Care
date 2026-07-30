@@ -26,13 +26,8 @@ import {
   guidedFlowSteps,
   isGuidedFlowStepAhead,
 } from "@/lib/guided-flow-registry";
-
-const STEPS = guidedFlowSteps("lifemapEpisode", "vi");
-const PRIORITY_LABELS: Record<LifeMapPriority, string> = {
-  routine: "Theo dõi thường lệ",
-  soon: "Cần chú ý sớm",
-  urgent: "Ưu tiên cao",
-};
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 function draftPath(draftId: string, step: LifeMapEpisodeStep): string {
   return `/lifemap/new/${encodeURIComponent(draftId)}/${step}`;
@@ -42,6 +37,12 @@ function newIdempotencyKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `lifemap-${Date.now()}-commit`;
 }
 
+const PRIORITY_KEYS: Record<LifeMapPriority, UITranslationKey> = {
+  routine: "lifemap.guided.priority.routine",
+  soon: "lifemap.guided.priority.soon",
+  urgent: "lifemap.guided.priority.urgent",
+};
+
 export default function LifeMapEpisodeStepClient({
   draftId,
   step,
@@ -50,6 +51,7 @@ export default function LifeMapEpisodeStepClient({
   step: LifeMapEpisodeStep;
 }) {
   const router = useRouter();
+  const language = useUILanguage();
   const titleRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<GuidedFlowDraft | null>(null);
   const [title, setTitle] = useState("");
@@ -58,6 +60,7 @@ export default function LifeMapEpisodeStepClient({
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<GuidedFlowSaveState>({ kind: "idle" });
   const [validationErrors, setValidationErrors] = useState<GuidedFlowError[]>([]);
+  const priorityLabel = (value: LifeMapPriority) => t(language, PRIORITY_KEYS[value]);
 
   const hydrate = useCallback((nextDraft: GuidedFlowDraft) => {
     setDraft(nextDraft);
@@ -90,8 +93,7 @@ export default function LifeMapEpisodeStepClient({
         if (active) {
           setSaveState({
             kind: "error",
-            message:
-              "Bản nháp không còn khả dụng hoặc đã thay đổi. Quay lại LifeMap và thử lại.",
+            message: t(language, "lifemap.guided.loadError"),
           });
         }
       })
@@ -101,7 +103,7 @@ export default function LifeMapEpisodeStepClient({
     return () => {
       active = false;
     };
-  }, [draftId, hydrate, router, step]);
+  }, [draftId, hydrate, language, router, step]);
 
   const saveAndNavigate = async (target: LifeMapEpisodeStep | null) => {
     if (!draft || !target) return;
@@ -110,8 +112,8 @@ export default function LifeMapEpisodeStepClient({
         {
           id: "title-required",
           fieldId: "lifemap-episode-title",
-          fieldLabel: "Tên hành trình",
-          message: "Nhập ít nhất 2 ký tự.",
+          fieldLabel: t(language, "lifemap.guided.title.requiredLabel"),
+          message: t(language, "lifemap.guided.title.required"),
         },
       ]);
       titleRef.current?.focus();
@@ -136,8 +138,7 @@ export default function LifeMapEpisodeStepClient({
     } catch {
       setSaveState({
         kind: "error",
-        message:
-          "Không thể lưu vì bản nháp đã thay đổi hoặc kết nối bị gián đoạn. Tải lại trước khi thử tiếp.",
+        message: t(language, "lifemap.guided.saveConflict"),
       });
     }
   };
@@ -158,8 +159,7 @@ export default function LifeMapEpisodeStepClient({
     } catch {
       setSaveState({
         kind: "error",
-        message:
-          "Chưa thể tạo hành trình. Bản nháp vẫn được giữ an toàn để bạn thử lại.",
+        message: t(language, "lifemap.guided.commitError"),
       });
     }
   };
@@ -175,10 +175,10 @@ export default function LifeMapEpisodeStepClient({
       back={
         previous
           ? {
-              label: "Quay lại",
+              label: t(language, "lifemap.guided.back"),
               onClick: () => void saveAndNavigate(previous),
             }
-          : { label: "Thoát", href: "/lifemap" }
+          : { label: t(language, "lifemap.guided.exit"), href: "/lifemap" }
       }
     />
   );
@@ -187,14 +187,14 @@ export default function LifeMapEpisodeStepClient({
   if (loading) {
     content = (
       <div
-        aria-label="Đang tải bản nháp"
+        aria-label={t(language, "lifemap.guided.loadingAria")}
         className="h-32 animate-pulse rounded-[var(--radius-lg)] bg-[var(--surface-muted)]"
       />
     );
   } else if (!draft) {
     content = (
       <StepActions
-        nextLabel="Quay lại LifeMap"
+        nextLabel={t(language, "lifemap.guided.backToLifeMap")}
         nextType="button"
         onNext={() => router.replace("/lifemap")}
       />
@@ -206,12 +206,12 @@ export default function LifeMapEpisodeStepClient({
         <Field
           ref={titleRef}
           id="lifemap-episode-title"
-          label="Bạn muốn gọi hành trình này là gì?"
+          label={t(language, "lifemap.guided.title.label")}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           maxLength={255}
           autoFocus
-          placeholder="Ví dụ: Ngủ tốt hơn"
+          placeholder={t(language, "lifemap.guided.title.placeholder")}
         />
         {actions}
       </div>
@@ -221,13 +221,13 @@ export default function LifeMapEpisodeStepClient({
       <div className="space-y-5">
         <Textarea
           id="lifemap-episode-goal"
-          label="Bạn muốn đạt được điều gì?"
+          label={t(language, "lifemap.guided.goal.label")}
           optional
           value={goal}
           onChange={(event) => setGoal(event.target.value)}
           maxLength={4000}
           rows={5}
-          placeholder="Mô tả kết quả bạn muốn theo dõi."
+          placeholder={t(language, "lifemap.guided.goal.placeholder")}
         />
         {actions}
       </div>
@@ -237,16 +237,16 @@ export default function LifeMapEpisodeStepClient({
       <div className="space-y-5">
         <Select
           id="lifemap-episode-priority"
-          label="Mức ưu tiên"
+          label={t(language, "lifemap.guided.priority.label")}
           value={priority}
           onChange={(event) => setPriority(event.target.value as LifeMapPriority)}
         >
-          <option value="routine">{PRIORITY_LABELS.routine}</option>
-          <option value="soon">{PRIORITY_LABELS.soon}</option>
-          <option value="urgent">{PRIORITY_LABELS.urgent}</option>
+          <option value="routine">{priorityLabel("routine")}</option>
+          <option value="soon">{priorityLabel("soon")}</option>
+          <option value="urgent">{priorityLabel("urgent")}</option>
         </Select>
         <p className="text-sm leading-6 text-[var(--text-secondary)]">
-          Mức ưu tiên giúp sắp xếp kế hoạch; không phải đánh giá mức độ khẩn cấp y tế.
+          {t(language, "lifemap.guided.priority.hint")}
         </p>
         {actions}
       </div>
@@ -255,23 +255,23 @@ export default function LifeMapEpisodeStepClient({
     content = (
       <div className="space-y-5">
         <ReviewSection
-          title="Thông tin hành trình"
-          description="Kiểm tra trước khi tạo. Bạn vẫn có thể chỉnh sửa sau."
+          title={t(language, "lifemap.guided.review.title")}
+          description={t(language, "lifemap.guided.review.description")}
           edit={{ href: draftPath(draft.id, "title") }}
           items={[
-            { label: "Tên", value: title || "Chưa nhập" },
-            { label: "Mục tiêu", value: goal || "Chưa nhập" },
-            { label: "Ưu tiên", value: PRIORITY_LABELS[priority] },
+            { label: t(language, "lifemap.guided.review.name"), value: title || t(language, "lifemap.guided.review.notEntered") },
+            { label: t(language, "lifemap.guided.review.goal"), value: goal || t(language, "lifemap.guided.review.notEntered") },
+            { label: t(language, "lifemap.guided.review.priority"), value: priorityLabel(priority) },
           ]}
         />
         <StepActions
-          nextLabel="Tạo hành trình"
+          nextLabel={t(language, "lifemap.guided.review.create")}
           nextType="button"
           onNext={() => void commit()}
           saving={saving}
-          savingLabel="Đang tạo…"
+          savingLabel={t(language, "lifemap.guided.review.creating")}
           back={{
-            label: "Quay lại",
+            label: t(language, "lifemap.guided.back"),
             onClick: () => void saveAndNavigate("priority"),
           }}
         />
@@ -281,21 +281,21 @@ export default function LifeMapEpisodeStepClient({
 
   return (
     <GuidedFlowShell
-      eyebrow="LifeMap"
+      eyebrow={t(language, "lifemap.guided.eyebrow")}
       title={
         step === "title"
-          ? "Đặt tên cho hành trình"
+          ? t(language, "lifemap.guided.page.title")
           : step === "goal"
-            ? "Chọn một mục tiêu"
+            ? t(language, "lifemap.guided.page.goal")
             : step === "priority"
-              ? "Xác định mức ưu tiên"
-              : "Xem lại hành trình"
+              ? t(language, "lifemap.guided.page.priority")
+              : t(language, "lifemap.guided.page.review")
       }
-      description="Mỗi bước chỉ hỏi một nhóm thông tin. Bản nháp được lưu trên máy chủ và không đưa nội dung sức khoẻ vào URL."
-      steps={STEPS}
+      description={t(language, "lifemap.guided.page.description")}
+      steps={guidedFlowSteps("lifemapEpisode", language)}
       currentStep={LIFEMAP_EPISODE_STEP_IDS.indexOf(step)}
       saveState={saveState}
-      aside="LifeMap hỗ trợ tự theo dõi và chuẩn bị trao đổi với nhân viên y tế; không thay thế chẩn đoán hoặc chăm sóc khẩn cấp."
+      aside={t(language, "lifemap.guided.page.aside")}
     >
       {content}
     </GuidedFlowShell>

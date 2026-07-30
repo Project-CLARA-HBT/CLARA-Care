@@ -108,6 +108,37 @@ const MIGRATED_SURFACES = [
       "Interaction safety",
     ],
   },
+  {
+    path: "app/lifemap/new/start-client.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "@/lib/use-ui-language",
+      "lifemap.guided.start.title",
+      "guidedFlowSteps(\"lifemapEpisode\", language)",
+    ],
+    forbidden: [
+      "Tạo hành trình sức khoẻ",
+      "Create a health journey",
+      "Đang mở bản nháp an toàn của bạn",
+      "Opening your safe draft",
+    ],
+  },
+  {
+    path: "app/lifemap/new/[draftId]/[step]/step-client.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "@/lib/use-ui-language",
+      "lifemap.guided.title.label",
+      "lifemap.guided.review.create",
+      "guidedFlowSteps(\"lifemapEpisode\", language)",
+    ],
+    forbidden: [
+      "Bạn muốn gọi hành trình này là gì?",
+      "What would you like to call this journey?",
+      "Mức ưu tiên giúp sắp xếp kế hoạch",
+      "Priority helps order your plan",
+    ],
+  },
 ];
 
 function fail(message) {
