@@ -576,21 +576,28 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
   }
 
   Widget _buildDraftReviewNotice(ThemeData theme) {
-    return ClaraCard.static_(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: theme.colorScheme.primary),
-          const SizedBox(width: ClaraTokens.spaceSm),
-          Expanded(
-            child: Text(
-              _copy[ConsumerTerm.visitDraftReviewNotice],
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+    // A draft arrives after an asynchronous request. Mark the first safety
+    // notice as a live region so a screen-reader user is told that there is
+    // new review-only content without turning the draft into a confirmation.
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: ClaraCard.static_(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: theme.colorScheme.primary),
+            const SizedBox(width: ClaraTokens.spaceSm),
+            Expanded(
+              child: Text(
+                _copy[ConsumerTerm.visitDraftReviewNotice],
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
