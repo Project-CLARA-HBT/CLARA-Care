@@ -2086,11 +2086,19 @@ async def scribe_stream(
         )
 
     from clara_ml.scribe.asr import build_asr_provider
+    from clara_ml.scribe.correction import propose_medical_asr_corrections
     from clara_ml.streaming.scribe_stream import stream_scribe_sse
 
     resolved_language = (language or settings.scribe_asr_language).strip() or "vi"
     asr = build_asr_provider(settings)
     generator = _build_scribe_note_generator() if settings.rag_scribe_templates_enabled else None
+    correction_fn = (
+        (lambda transcript, detected_language: propose_medical_asr_corrections(
+            transcript, language=detected_language
+        ))
+        if settings.scribe_medical_correction_enabled
+        else None
+    )
     _ = session_id  # reserved for persistence wiring (API layer)
 
     return StreamingResponse(
@@ -2101,6 +2109,7 @@ async def scribe_stream(
             template_id=template_id,
             asr=asr,
             generator=generator,
+            correction_fn=correction_fn,
             diarization_enabled=settings.rag_scribe_diarization_enabled,
         ),
         media_type="text/event-stream",

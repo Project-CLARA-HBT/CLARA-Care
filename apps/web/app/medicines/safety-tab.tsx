@@ -7,11 +7,11 @@ import { Textarea } from "@/components/ui/field";
 import { InlineError } from "@/components/ui/surface";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import {
-  DdiUserView,
+  CareguardConsumerView,
   MINIMUM_DDI_MEDICINES,
   requiresTwoMedicines,
   toCareguardUserMessage,
-  toDdiUserView
+  toCareguardConsumerView
 } from "@/lib/careguard";
 import {
   cacheDdiUserView,
@@ -80,7 +80,7 @@ export default function MedicinesSafetyTab() {
   const [cabinetError, setCabinetError] = useState("");
 
   const [allergiesInput, setAllergiesInput] = useState("");
-  const [result, setResult] = useState<DdiUserView | null>(null);
+  const [result, setResult] = useState<CareguardConsumerView | null>(null);
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   // Offline / last-known fallback state (Req 6.3). When the result on screen was
@@ -126,19 +126,22 @@ export default function MedicinesSafetyTab() {
     }
     setIsChecking(true);
     try {
-      const next = await runCabinetAutoDdi({ allergies: parseLineList(allergiesInput) });
-      // Render ONLY the End_User projection: risk level, alerts,
-      // recommendations, and reference sources. Runtime mode, fallback flags,
-      // and source_errors are dropped by toDdiUserView (Req 3.1, 3.6, 4.1).
-      const view = toDdiUserView(next);
+      const next = await runCabinetAutoDdi({
+        allergies: parseLineList(allergiesInput),
+        locale: language
+      });
+      // The detailed composition accepts renderer text only after its independent
+      // verifier passed. Its DDI subview continues to exclude runtime mode,
+      // fallback flags, and source errors.
+      const view = toCareguardConsumerView(next);
       setResult(view);
       // Cache the last-known *projection* for offline fallback (Req 6.3). No-op
       // when CAREGUARD_OFFLINE_FALLBACK_ENABLED is off.
-      cacheDdiUserView(view);
+      cacheDdiUserView(view.ddi);
       // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
       trackCareguardDdiChecked({
-        riskLevel: view.riskLevel,
-        alertCount: view.alerts.length,
+        riskLevel: view.ddi.riskLevel,
+        alertCount: view.ddi.alerts.length,
         medicineCount: items.length,
         source: "selfmed"
       });
@@ -149,7 +152,16 @@ export default function MedicinesSafetyTab() {
       if (isCareguardOfflineFallbackEnabled() && isLikelyOfflineError(cause)) {
         const cached = readCachedDdiView();
         if (cached) {
-          setResult(cached.view);
+          setResult({
+            ddi: cached.view,
+            explanation: null,
+            conclusion: {
+              availability: "unknown",
+              authority: null,
+              sourceVersion: null,
+              medicationAmbiguity: false
+            }
+          });
           setOfflineCachedAt(cached.cachedAt);
           return;
         }
@@ -245,7 +257,7 @@ export default function MedicinesSafetyTab() {
         </div>
 
         {result ? (
-          <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskLevel)}`}>
+          <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.ddi.riskLevel)}`}>
             {offlineCachedAt ? (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
                 <Badge tone="warn">{t(language, "medicines.safety.offline")}</Badge>
@@ -261,14 +273,72 @@ export default function MedicinesSafetyTab() {
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.overview")}</p>
-              <Badge tone={riskTone(result.riskLevel)}>
-                {t(language, "medicines.safety.risk", { risk: riskLabel(language, result.riskLevel) })}
+              <Badge tone={riskTone(result.ddi.riskLevel)}>
+                {t(language, "medicines.safety.risk", { risk: riskLabel(language, result.ddi.riskLevel) })}
               </Badge>
             </div>
 
-            {result.alerts.length ? (
+            {result.conclusion.availability === "unavailable" ? (
+              <div className="mt-3 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm text-[var(--status-warn-text)]">
+                {t(language, "medicines.safety.checkUnavailable")}
+              </div>
+            ) : null}
+
+            {result.conclusion.authority === "drugbank" ? (
+              <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                {t(language, "medicines.safety.drugbankVerified", {
+                  version: result.conclusion.sourceVersion
+                    ? t(language, "medicines.safety.drugbankVersion", {
+                        version: result.conclusion.sourceVersion
+                      })
+                    : ""
+                })}
+              </p>
+            ) : null}
+
+            {result.conclusion.medicationAmbiguity ? (
+              <div className="mt-3 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm text-[var(--status-warn-text)]">
+                {t(language, "medicines.safety.nameAmbiguity")}
+              </div>
+            ) : null}
+
+            {result.explanation ? (
+              <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.mostImportant")}</p>
+                <p className="mt-1 text-base font-semibold text-[var(--text-primary)]">{result.explanation.headline}</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">{result.explanation.summary}</p>
+                {result.explanation.whyItMatters.length ? (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.whyItMatters")}</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
+                      {result.explanation.whyItMatters.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                {result.explanation.nextSteps.length ? (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.nextSteps")}</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
+                      {result.explanation.nextSteps.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                <div className="mt-3 text-sm text-[var(--text-secondary)]">
+                  <p className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.uncertainty")}</p>
+                  <p className="mt-1">{result.explanation.uncertainty}</p>
+                </div>
+                {result.explanation.safetyText ? (
+                  <div className="mt-3 text-sm text-[var(--text-secondary)]">
+                    <p className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.safetyNote")}</p>
+                    <p className="mt-1">{result.explanation.safetyText}</p>
+                  </div>
+                ) : null}
+              </article>
+            ) : null}
+
+            {result.ddi.alerts.length ? (
               <ul className="mt-3 space-y-2">
-                {result.alerts.map((alert, index) => (
+                {result.ddi.alerts.map((alert, index) => (
                   <li key={`${alert.message}-${index}`} className={`rounded-2xl border p-3 ${riskPanelClass(alert.severity)}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.message}</p>
@@ -284,11 +354,11 @@ export default function MedicinesSafetyTab() {
               <p className="mt-3 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.noAlerts")}</p>
             )}
 
-            {result.recommendations.length ? (
+            {result.ddi.recommendations.length ? (
               <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.recommendations")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
-                  {result.recommendations.map((item, index) => (
+                  {result.ddi.recommendations.map((item, index) => (
                     <li key={`${item}-${index}`}>{item}</li>
                   ))}
                 </ul>
@@ -297,9 +367,9 @@ export default function MedicinesSafetyTab() {
 
             <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.sources")}</p>
-              {result.sources.length ? (
+              {result.ddi.sources.length ? (
                 <ul className="mt-1 flex flex-wrap gap-2">
-                  {result.sources.map((source, index) => (
+                  {result.ddi.sources.map((source, index) => (
                     <li key={`${source.label}-${index}`}>
                       {source.url ? (
                         <a

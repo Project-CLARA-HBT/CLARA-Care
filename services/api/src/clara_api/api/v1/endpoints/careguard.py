@@ -68,6 +68,7 @@ from clara_api.schemas import (
     MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
     OcrConfirmGate,
+    OcrSourceCoordinate,
     VnDrugMappingAuditListResponse,
     VnDrugMappingAuditResponse,
     VnDrugMappingCreateRequest,
@@ -1885,8 +1886,9 @@ def delete_cabinet_item(
 
 
 _CAPTURE_INJECTION = re.compile(
-    r"(ignore (all|previous) instructions|system prompt|developer message|"
-    r"b[oỏ] qua (mọi|tất cả) (chỉ dẫn|hướng dẫn))",
+    r"(ignore (all|previous|prior) instructions|system prompt|developer message|"
+    r"jailbreak|do anything now|b[oỏ] qua (mọi|tất cả) (chỉ dẫn|hướng dẫn)|"
+    r"bo qua (moi|tat ca) (chi dan|huong dan))",
     re.IGNORECASE,
 )
 
@@ -1898,6 +1900,50 @@ def _capture_span(text: str, value: str) -> dict[str, int] | None:
     if start < 0:
         return None
     return {"start": start, "end": start + len(value)}
+
+
+def _attach_ocr_source_coordinates(
+    detections: list[CabinetScanDetection], *, corrected_text: str
+) -> list[CabinetScanDetection]:
+    """Attach exact, reviewable OCR text offsets without inventing image boxes."""
+
+    annotated: list[CabinetScanDetection] = []
+    for detection in detections:
+        evidence = (detection.evidence or "").strip()
+        # Fuzzy evidence is a diagnostic label (``fuzzy:x->y``), not an OCR
+        # span. Prefer the observed token; otherwise do not claim a location.
+        if evidence.startswith("fuzzy:"):
+            observed = evidence[6:].split("->", 1)[0].strip()
+            probe = observed
+        else:
+            probe = evidence
+        span = _capture_span(corrected_text, probe)
+        coordinates: list[OcrSourceCoordinate] = (
+            [
+                OcrSourceCoordinate(
+                    coordinate_system="corrected_text_codepoint_offset",
+                    start=span["start"],
+                    end=span["end"],
+                )
+            ]
+            if span is not None
+            else []
+        )
+        annotated.append(detection.model_copy(update={"source_coordinates": coordinates}))
+    return annotated
+
+
+def _reject_ocr_prompt_injection(source_text: str) -> None:
+    """Fail closed before OCR text becomes an extraction/model instruction."""
+
+    if _CAPTURE_INJECTION.search(source_text or ""):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "ocr_prompt_injection_suspected",
+                "message": "Nội dung OCR có chỉ dẫn không an toàn; không thể trích xuất thuốc.",
+            },
+        )
 
 
 def _persist_cabinet_capture_drafts(
@@ -2004,12 +2050,16 @@ def scan_cabinet_text(
 ) -> CabinetScanTextResponse:
     user = _require_user(token, db)
     correction = _apply_ocr_correction(payload.text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(
             correction.corrected_text,
             db=db,
             skip_ocr_correction=True,
         )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     capture_session_id: str | None = None
     if get_settings().lifemap_capture_enabled:
@@ -2057,12 +2107,16 @@ async def scan_cabinet_file(
         content_type=content_type,
     )
     correction = _apply_ocr_correction(extracted_text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(
             correction.corrected_text,
             db=db,
             skip_ocr_correction=True,
         )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     capture_session_id: str | None = None
     if get_settings().lifemap_capture_enabled:
@@ -2325,6 +2379,9 @@ def run_auto_ddi_check(
         "medications": sorted(set(medication_names)),
         "medications_with_meta": medications_with_meta,
         "allergies": payload.allergies,
+        # The ML renderer uses this only after deterministic DrugBank/risk
+        # policy has produced its final facts. It cannot change the conclusion.
+        "locale": payload.locale,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
 

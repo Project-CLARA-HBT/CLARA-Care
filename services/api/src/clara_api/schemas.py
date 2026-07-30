@@ -327,6 +327,25 @@ class CabinetScanTextRequest(BaseModel):
     text: str = Field(min_length=1, max_length=12000)
 
 
+class OcrSourceCoordinate(BaseModel):
+    """A reviewable source offset in the corrected OCR text.
+
+    Providers that expose image polygons can be added later without changing the
+    cabinet contract.  The current adapters reliably expose text only, so this
+    coordinate system intentionally never pretends to be a bounding box.
+    """
+
+    coordinate_system: Literal["corrected_text_codepoint_offset"]
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _ordered_offsets(self) -> "OcrSourceCoordinate":
+        if self.end < self.start:
+            raise ValueError("OCR source coordinate end must not precede start")
+        return self
+
+
 class CabinetScanDetection(BaseModel):
     drug_name: str
     normalized_name: str
@@ -346,6 +365,7 @@ class CabinetScanDetection(BaseModel):
     requires_manual_confirm: bool = False
     confirmed: bool = False
     capture_candidate_id: str | None = None
+    source_coordinates: list[OcrSourceCoordinate] = Field(default_factory=list)
 
 
 class CabinetPrioritizedField(BaseModel):
@@ -395,6 +415,9 @@ class CabinetAutoDdiRequest(BaseModel):
     symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
     allergies: list[str] = Field(default_factory=list, max_length=100)
+    # Presentation-only locale for the independently verified wording layer.
+    # It is not used by DrugBank lookup, severity, or safety policy.
+    locale: Literal["vi", "en"] = "vi"
 
 
 class VnDrugMappingCreateRequest(BaseModel):

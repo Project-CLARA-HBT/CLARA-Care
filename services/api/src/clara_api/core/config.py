@@ -265,6 +265,19 @@ class Settings(BaseSettings):
     rag_scribe_export_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_EXPORT_ENABLED"
     )
+    # Raw audio is deliberately transient in the API: uploaded bytes are relayed
+    # to the configured ASR provider and are never persisted by CLARA.  The two
+    # controls below make the remaining recording-derived data lifecycle
+    # explicit.  They default off so legacy workflows remain unchanged.
+    rag_scribe_recording_data_deletion_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_RECORDING_DATA_DELETION_ENABLED"
+    )
+    scribe_transcript_retention_days: int = Field(
+        default=0, validation_alias="SCRIBE_TRANSCRIPT_RETENTION_DAYS", ge=0, le=3650
+    )
+    scribe_audio_magic_validation_enabled: bool = Field(
+        default=False, validation_alias="SCRIBE_AUDIO_MAGIC_VALIDATION_ENABLED"
+    )
     rag_scribe_fhir_export_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
     )

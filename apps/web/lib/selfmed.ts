@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { CareguardAnalyzeRawResponse, CareguardAnalyzeResult, normalizeCareguardResult } from "@/lib/careguard";
+import { CareguardAnalyzeRawResponse } from "@/lib/careguard";
 
 export type NormalizationStatus = "matched" | "candidate" | "fallback" | "needs_review";
 
@@ -101,6 +101,8 @@ type AutoDdiRequest = {
   symptoms?: string[];
   labs?: Record<string, number | string>;
   allergies?: string[];
+  /** UI locale controls only presentation wording; never the DDI decision. */
+  locale?: "vi" | "en";
 };
 
 type ImportDetectionsResponse = {
@@ -166,7 +168,10 @@ export async function importDetections(detections: ScanDetection[]): Promise<num
   return response.data.inserted ?? 0;
 }
 
-export async function runCabinetAutoDdi(payload: AutoDdiRequest): Promise<CareguardAnalyzeResult> {
+export async function runCabinetAutoDdi(payload: AutoDdiRequest): Promise<CareguardAnalyzeRawResponse> {
   const response = await api.post<CareguardAnalyzeRawResponse>("/careguard/cabinet/auto-ddi-check", payload);
-  return normalizeCareguardResult(response.data);
+  // Keep the verified renderer projection and the safe DDI-status disclosure
+  // intact for the consumer surface. `toDdiUserView` remains the only place
+  // that creates the persistent End_User DDI projection.
+  return response.data;
 }

@@ -1225,6 +1225,8 @@ def _consumer_wording_from_final_result(
         "routine": ["monitor"],
     }
 
+    audience: Audience = "en" if locale.lower().startswith("en") else "lay_vi"
+    english = audience == "en"
     warnings: list[str] = []
     ddi_status = result.get("ddi_status")
     conclusion_available = not (
@@ -1232,11 +1234,18 @@ def _consumer_wording_from_final_result(
     )
     if metadata.get("rules_unavailable") or not conclusion_available:
         warnings.append(
-            "Chưa thể xác nhận đầy đủ tương tác thuốc từ nguồn bắt buộc; "
+            "The required source could not fully verify the medication interaction; "
+            "no alert does not mean it is safe."
+            if english
+            else "Chưa thể xác nhận đầy đủ tương tác thuốc từ nguồn bắt buộc; "
             "không có cảnh báo không đồng nghĩa là an toàn."
         )
     if metadata.get("normalization_pair_coverage_low"):
-        warnings.append("Có thể chưa nhận diện đủ thuốc để kiểm tra toàn bộ các cặp thuốc.")
+        warnings.append(
+            "One or more medicines may not have been identified well enough to check every pair."
+            if english
+            else "Có thể chưa nhận diện đủ thuốc để kiểm tra toàn bộ các cặp thuốc."
+        )
 
     evidence_labels: list[str] = []
     drugbank = metadata.get("drugbank")
@@ -1244,11 +1253,12 @@ def _consumer_wording_from_final_result(
         version = str(drugbank.get("version") or "").strip()
         evidence_labels.append(f"DrugBank{f' ({version})' if version else ''}")
     elif "local_rules" in metadata.get("source_used", []):
-        evidence_labels.append("Quy tắc kiểm tra thuốc nội bộ")
+        evidence_labels.append(
+            "Internal medication-check rules" if english else "Quy tắc kiểm tra thuốc nội bộ"
+        )
     elif isinstance(ddi_status, dict) and ddi_status.get("required_source") == "drugbank":
-        evidence_labels.append("DrugBank chưa sẵn sàng")
+        evidence_labels.append("DrugBank unavailable" if english else "DrugBank chưa sẵn sàng")
 
-    audience: Audience = "en" if locale.lower().startswith("en") else "lay_vi"
     rendered = render_explanation(
         RenderingInput(
             audience=audience,
@@ -1470,6 +1480,14 @@ def run_careguard_analyze(payload: dict) -> dict:
         payload.get("external_ddi_enabled"),
         default=settings.external_ddi_enabled,
     )
+    # A caller may tighten this guarantee (the medication-course route does),
+    # but an untrusted request can never relax a deployment-level requirement.
+    # This keeps the strict DrugBank path fail-closed even when the ML service is
+    # shared with the backward-compatible CareGuard endpoint.
+    drugbank_required = settings.careguard_drugbank_required or _as_bool(
+        payload.get("drugbank_required"),
+        default=False,
+    )
 
     local_rules, local_ddi_rules_version = _resolve_ddi_rules()
 
@@ -1504,7 +1522,9 @@ def run_careguard_analyze(payload: dict) -> dict:
             # hits (including an empty set) are authoritative; do not manufacture
             # or override licensed results with local rules.
             local_ddi_alerts = drugbank_alerts
-    if settings.careguard_drugbank_required and not drugbank_layer_version:
+    if drugbank_required and not drugbank_layer_version:
+        readiness = get_drugbank_readiness()
+        readiness["required"] = True
         return _with_consumer_wording(
             _drugbank_required_unavailable_result(
                 raw_medications=raw_medications,
@@ -1516,7 +1536,7 @@ def run_careguard_analyze(payload: dict) -> dict:
                 external_ddi_enabled=external_ddi_enabled,
                 external_ddi_flag_source=external_ddi_flag_source,
                 local_ddi_rules_version=local_ddi_rules_version,
-                readiness=get_drugbank_readiness(),
+                readiness=readiness,
             ),
             locale=locale,
         )
@@ -1627,6 +1647,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             "metadata": {
                 "pipeline": "p2-careguard-ddi-standard-v2",
                 "fallback_used": fallback_used,
+                "drugbank_required": drugbank_required,
                 "external_ddi_enabled": external_ddi_enabled,
                 "external_ddi_flag_source": external_ddi_flag_source,
                 "local_ddi_rules_version": local_ddi_rules_version,

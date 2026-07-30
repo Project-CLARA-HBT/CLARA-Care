@@ -55,6 +55,10 @@ export type CareguardAnalyzeRawResponse = {
   fallbackUsed?: unknown;
   source_errors?: unknown;
   sourceErrors?: unknown;
+  consumer_explanation?: unknown;
+  consumerExplanation?: unknown;
+  ddi_status?: unknown;
+  ddiStatus?: unknown;
   mode?: unknown;
   [key: string]: unknown;
 };
@@ -96,6 +100,39 @@ export type DdiUserView = {
   alerts: DdiUserAlert[];
   recommendations: string[];
   sources: DdiUserSource[];
+};
+
+/**
+ * Bounded, verifier-approved wording generated from already released CareGuard
+ * facts. It is presentation-only: no medication name, dose, risk score, or
+ * source decision can be changed here.
+ */
+export type CareguardConsumerExplanation = {
+  headline: string;
+  summary: string;
+  whyItMatters: string[];
+  nextSteps: string[];
+  uncertainty: string;
+  safetyText?: string;
+  sourceLabels: string[];
+};
+
+/** A non-technical disclosure of whether a DDI conclusion was available. */
+export type CareguardDdiConclusion = {
+  availability: "available" | "unavailable" | "unknown";
+  authority: "drugbank" | "other" | null;
+  sourceVersion: string | null;
+  medicationAmbiguity: boolean;
+};
+
+/**
+ * Consumer composition used by the Medicines safety surface. The existing
+ * four-field DdiUserView remains the sole offline-cache projection.
+ */
+export type CareguardConsumerView = {
+  ddi: DdiUserView;
+  explanation: CareguardConsumerExplanation | null;
+  conclusion: CareguardDdiConclusion;
 };
 
 /** Minimum number of medicines required before a DDI check may run (Requirement 3.5). */
@@ -489,6 +526,105 @@ export function normalizeCareguardResult(data: CareguardAnalyzeRawResponse): Car
     fallbackUsed,
     sourceErrors,
     sourceUsed
+  };
+}
+
+function parseConsumerExplanation(value: unknown): CareguardConsumerExplanation | null {
+  const record = asRecord(value);
+  // The browser must not make a renderer's release decision. Only an explicit
+  // independent verifier pass may reach the consumer surface.
+  if (!record || asBoolean(record.verifier_passed) !== true) return null;
+
+  const headline = sanitizeReadableLine(asText(record.headline));
+  const summary = sanitizeReadableLine(asText(record.summary));
+  const uncertainty = sanitizeReadableLine(asText(record.uncertainty_text));
+  if (!headline || !summary || !uncertainty) return null;
+
+  const safetyText = sanitizeReadableLine(asText(record.safety_text));
+  const sourceLabels = dedupeReadableLines(parseStringList(record.source_labels)).slice(0, 3);
+  const explanation: CareguardConsumerExplanation = {
+    headline,
+    summary,
+    whyItMatters: dedupeReadableLines(parseStringList(record.why_it_matters)).slice(0, 3),
+    nextSteps: dedupeReadableLines(parseStringList(record.next_steps)).slice(0, 3),
+    uncertainty,
+    sourceLabels
+  };
+  if (safetyText) explanation.safetyText = safetyText;
+  return explanation;
+}
+
+function parseSourceVersion(value: unknown): string | null {
+  const candidate = sanitizeReadableLine(asText(value));
+  // Artifact versions are controlled identifiers, never raw upstream text.
+  if (!candidate || candidate.length > 120 || !/^[a-zA-Z0-9._:+-]+$/.test(candidate)) {
+    return null;
+  }
+  return candidate;
+}
+
+function careguardConclusion(
+  data: CareguardAnalyzeRawResponse,
+  normalized: CareguardAnalyzeResult
+): CareguardDdiConclusion {
+  const metadata = asRecord(data.metadata);
+  const status = asRecord(data.ddi_status ?? data.ddiStatus) ?? asRecord(metadata?.ddi_status);
+  const conclusionAvailable = asBoolean(status?.conclusion_available);
+  const medicationAmbiguity = asBoolean(metadata?.normalization_pair_coverage_low) === true;
+
+  if (conclusionAvailable === false) {
+    return {
+      availability: "unavailable",
+      authority: null,
+      sourceVersion: null,
+      medicationAmbiguity
+    };
+  }
+
+  const drugbank = asRecord(metadata?.drugbank);
+  const drugbankReady =
+    drugbank?.state === "ready" && normalized.sourceUsed.includes("drugbank");
+  if (drugbankReady) {
+    return {
+      availability: "available",
+      authority: "drugbank",
+      sourceVersion: parseSourceVersion(drugbank?.version),
+      medicationAmbiguity
+    };
+  }
+
+  if (normalized.sourceUsed.length > 0 || conclusionAvailable === true) {
+    return {
+      availability: "available",
+      authority: "other",
+      sourceVersion: null,
+      medicationAmbiguity
+    };
+  }
+  return {
+    availability: "unknown",
+    authority: null,
+    sourceVersion: null,
+    medicationAmbiguity
+  };
+}
+
+/**
+ * Compose the task-first CareGuard view without leaking transport errors,
+ * scores, normalization confidences, or raw provenance. The deterministic
+ * DDI result remains authoritative; renderer output is accepted only after its
+ * independent verifier reports success.
+ */
+export function toCareguardConsumerView(
+  raw: CareguardAnalyzeRawResponse | CareguardAnalyzeResult
+): CareguardConsumerView {
+  const ddi = toDdiUserView(raw);
+  const data = raw as CareguardAnalyzeRawResponse;
+  const normalized = coerceCareguardResult(raw);
+  return {
+    ddi,
+    explanation: parseConsumerExplanation(data.consumer_explanation ?? data.consumerExplanation),
+    conclusion: careguardConclusion(data, normalized)
   };
 }
 

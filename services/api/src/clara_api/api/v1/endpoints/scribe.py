@@ -77,6 +77,53 @@ _MAX_NOTE_SECTION_VALUE_CHARS = 20_000
 _MAX_NOTE_SECTION_TOTAL_CHARS = 100_000
 
 
+def _audio_magic_matches(content_type: str, payload: bytes) -> bool:
+    """Reject obvious non-audio uploads before forwarding them to ASR.
+
+    This is intentionally a conservative signature check, not a media parser.
+    The ASR provider still performs authoritative decoding.  Generic octet-stream
+    is allowed only when it has one of the supported signatures.
+    """
+
+    if len(payload) < 4:
+        return False
+    is_wav = payload.startswith(b"RIFF") and payload[8:12] == b"WAVE"
+    is_mp3 = payload.startswith(b"ID3") or payload[:2] in {
+        b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"
+    }
+    is_webm = payload.startswith(b"\x1a\x45\xdf\xa3")
+    is_mp4 = len(payload) >= 12 and payload[4:8] == b"ftyp"
+    if content_type in {"audio/wav", "audio/x-wav"}:
+        return is_wav
+    if content_type in {"audio/mpeg", "audio/mp3"}:
+        return is_mp3
+    if content_type == "audio/webm":
+        return is_webm
+    if content_type in {"audio/mp4", "audio/x-m4a"}:
+        return is_mp4
+    return is_wav or is_mp3 or is_webm or is_mp4
+
+
+def _validate_audio_payload(*, content_type: str, payload: bytes, verify_magic: bool) -> None:
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Audio payload is empty.")
+    if len(payload) > _MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Audio file too large. Maximum size is 15MB.",
+        )
+    if content_type not in _ALLOWED_AUDIO_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported audio content type.",
+        )
+    if verify_magic and not _audio_magic_matches(content_type, payload):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Audio file content does not match a supported audio format.",
+        )
+
+
 class ScribeSessionCreateRequest(BaseModel):
     title: str = Field(default="", max_length=255)
     transcript: str = Field(default="", max_length=100000)
@@ -456,26 +503,14 @@ async def _call_scribe_transcribe_ml(
         )
 
     uploaded_bytes = await audio_file.read()
-    if not uploaded_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Audio payload is empty.",
-        )
-    if len(uploaded_bytes) > _MAX_AUDIO_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Audio file too large. Maximum size is 15MB.",
-        )
-
     raw_audio_content_type = audio_file.content_type or "application/octet-stream"
     audio_content_type = _normalize_audio_content_type(raw_audio_content_type)
-    if audio_content_type not in _ALLOWED_AUDIO_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported audio content type: {raw_audio_content_type}",
-        )
-
     settings = get_settings()
+    _validate_audio_payload(
+        content_type=audio_content_type,
+        payload=uploaded_bytes,
+        verify_magic=settings.scribe_audio_magic_validation_enabled,
+    )
     url = f"{settings.ml_service_url.rstrip('/')}/v1/scribe/transcribe"
     headers: dict[str, str] = {}
     if settings.ml_internal_api_key.strip():
@@ -569,8 +604,14 @@ async def scribe_transcribe(
     # request for a session with no active consent is rejected before any ASR work.
     # Fully flag-gated so the legacy batch path is byte-for-byte unchanged when off.
     settings = get_settings()
-    if settings.rag_scribe_consent_required and session_id is not None:
+    if settings.rag_scribe_consent_required:
+        if session_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cần phiên Scribe có consent trước khi gửi audio để chép lời.",
+            )
         guarded = _get_owned_session(db, user_id=user.id, session_id=session_id)
+        _require_live_visit_consent_for_session(db, user=user, item=guarded)
         _require_consent(db, settings, guarded.id)
     payload = await _call_scribe_transcribe_ml(
         audio_file=audio_file,
@@ -709,6 +750,8 @@ def update_scribe_session(
             request.metadata,
         )
     )
+    if has_mutation:
+        _require_consent(db, settings, item.id)
     if has_mutation and item.status in _IMMUTABLE_NOTE_STATUSES:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -1143,6 +1186,8 @@ _AUDIT_FLOW_STAGE: dict[str, tuple[str, str]] = {
     "note_signed": ("sign", "completed"),
     "note_addendum_added": ("addendum", "completed"),
     "note_exported": ("export", "completed"),
+    "recording_derived_data_deleted": ("retention", "deleted"),
+    "recording_derived_data_retention_purged": ("retention", "deleted"),
 }
 
 # Whitelisted coarse, non-PII audit-detail keys used to build a flow-event note.
@@ -1295,6 +1340,52 @@ def revoke_consent(
     )
     db.commit()
     return {"session_id": item.id, "consent_id": consent.id, "revoked": True}
+
+
+@router.delete("/sessions/{session_id}/recording-data")
+def delete_recording_derived_data(
+    session_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Purge transcript and diarization metadata for one owned Scribe session.
+
+    CLARA's API never stores raw audio bytes; they are forwarded in-memory to
+    ASR.  This data-rights action therefore deletes the persistent recording-
+    derived payload (canonical transcript plus ASR segment text/metadata) while
+    preserving append-only audit history and already signed clinical documents.
+    It is independently kill-switched until a retention policy is approved.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_recording_data_deletion_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe data deletion is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    transcript_chars = len(item.transcript or "")
+    segment_count = len(_session_segments_meta(item))
+    item.transcript = ""
+    # ASR metadata can contain segment text.  Delete it as one unit rather than
+    # attempting a partial redaction that could leave PHI-bearing fragments.
+    item.asr_meta_json = None
+    item.last_processed_at = None
+    item.updated_at = datetime.now(tz=UTC)
+    _record_audit(
+        db,
+        session_id=item.id,
+        actor=user.id,
+        action="recording_derived_data_deleted",
+        from_status=item.status,
+        to_status=item.status,
+        detail={"transcript_chars_deleted": transcript_chars, "segment_count_deleted": segment_count},
+    )
+    db.commit()
+    return {
+        "session_id": item.id,
+        "deleted": True,
+        "raw_audio_persisted": False,
+        "signed_note_preserved": item.status in _IMMUTABLE_NOTE_STATUSES,
+    }
 
 
 @router.post("/sessions/{session_id}/notes", response_model=ScribeSessionResponse)
@@ -1525,6 +1616,68 @@ def get_note_grounding(
     )
 
 
+@router.get("/sessions/{session_id}/review-queue")
+def get_unsupported_statement_review_queue(
+    session_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Return clinician-review items for unsupported draft-note statements.
+
+    The queue is a read-only projection of persisted grounding reports.  It does
+    not rewrite a note, turn a model verdict into truth, or expose a synthetic
+    confidence score.  A clinician must edit/re-generate then sign a fresh
+    version after resolving an item.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_grounding_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe grounding is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    versions = list(
+        db.execute(
+            select(ScribeNoteVersion)
+            .where(ScribeNoteVersion.session_id == item.id)
+            .order_by(ScribeNoteVersion.version_no.desc())
+        ).scalars()
+    )
+    review_items: list[dict[str, Any]] = []
+    for version in versions:
+        grounding = version.grounding_json
+        if not isinstance(grounding, dict):
+            continue
+        statements = grounding.get("statements")
+        if not isinstance(statements, list):
+            continue
+        for index, statement in enumerate(statements):
+            if not isinstance(statement, dict) or not bool(statement.get("significant")):
+                continue
+            if bool(statement.get("grounded")):
+                continue
+            review_items.append(
+                {
+                    "version_no": version.version_no,
+                    "statement_index": index,
+                    "section": str(statement.get("section", "")),
+                    "statement": str(statement.get("statement", "")),
+                    "critical_safety": bool(statement.get("critical_safety")),
+                    "status": str(statement.get("status", "unverified")),
+                    "supporting_span_ids": [
+                        str(value)
+                        for value in statement.get("supporting_span_ids", [])
+                        if isinstance(value, str)
+                    ],
+                }
+            )
+    return {
+        "session_id": item.id,
+        "items": review_items,
+        "requires_clinician_review": bool(review_items),
+        "note": "Các mục chỉ là cảnh báo đối chiếu transcript, không phải kết luận lâm sàng.",
+    }
+
+
 @router.get(
     "/sessions/{session_id}/notes/{version_no}/extraction",
     response_model=ScribeExtractionResponse,
@@ -1612,6 +1765,8 @@ def sign_note(
         raise HTTPException(status_code=404, detail="Scribe sign workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
+    _require_consent(db, settings, item.id)
     # Legal source states for signing are exactly those with a `-> signed` edge
     # (in_review and amended); can_transition encodes that single rule.
     if not can_transition(item.status, "signed"):
@@ -1685,6 +1840,7 @@ def amend_note(
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     _require_live_visit_consent_for_session(db, user=user, item=item)
+    _require_consent(db, settings, item.id)
     if not can_transition(item.status, "amended"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -1778,6 +1934,8 @@ def add_note_addendum(
         raise HTTPException(status_code=404, detail="Scribe addendum workflow is disabled.")
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    _require_live_visit_consent_for_session(db, user=user, item=item)
+    _require_consent(db, settings, item.id)
 
     version = _get_note_version(db, session_id=item.id, version_no=version_no)
     if version is None:
@@ -2315,6 +2473,19 @@ def export_note(
     # signed note version, encounter context from the session, and the standard
     # medical-disclaimer attribution shared with the other CLARA surfaces.
     signed_version = _signed_note_version(db, item.id)
+    # Status alone is not approval evidence.  Older/corrupt rows marked
+    # ``signed`` without a version-level clinician signature must not be
+    # exported as if they were approved clinical documents.
+    if (
+        signed_version is None
+        or not signed_version.signed
+        or signed_version.signed_by is None
+        or signed_version.signed_at is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Không thể export khi thiếu xác nhận ký duyệt của bác sĩ.",
+        )
     signed_by_label = (
         _clinician_label(db, signed_version.signed_by) if signed_version is not None else None
     )
@@ -2557,9 +2728,14 @@ async def scribe_session_stream(
     _require_consent(db, settings, item.id)
 
     audio_bytes = await audio_file.read()
-    if not audio_bytes:
-        raise HTTPException(status_code=400, detail="Audio payload is empty.")
+    if not audio_file.filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing audio file name.")
     content_type = _normalize_audio_content_type(audio_file.content_type)
+    _validate_audio_payload(
+        content_type=content_type,
+        payload=audio_bytes,
+        verify_magic=settings.scribe_audio_magic_validation_enabled,
+    )
 
     url = f"{settings.ml_service_url.rstrip('/')}/v1/scribe/stream"
     headers: dict[str, str] = {"Accept": "text/event-stream"}

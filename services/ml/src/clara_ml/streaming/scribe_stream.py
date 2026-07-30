@@ -142,6 +142,7 @@ def stream_scribe_sse(
     template_id: str | None = None,
     asr: Any,
     generator: Any | None = None,
+    correction_fn: Callable[[str, str], dict[str, Any]] | None = None,
     diarization_enabled: bool = True,
     segment_delay: float = _DEFAULT_SEGMENT_DELAY,
     token_delay: float = _DEFAULT_TOKEN_DELAY,
@@ -291,7 +292,17 @@ def stream_scribe_sse(
             logger.warning("scribe_stream_note_failed err=%s", exc.__class__.__name__)
             note_payload = None
 
-    # (4) Pipeline flow/telemetry events (Requirement 10.3) — surface the stages
+    # (4) Optional medical-ASR correction proposals. The callback is injected by
+    # the governed ML route, returns review-only source-spanned candidates, and
+    # never changes ``transcript`` or the streamed note.
+    medical_correction: dict[str, Any] | None = None
+    if correction_fn is not None:
+        try:
+            medical_correction = correction_fn(transcript, language)
+        except Exception:  # noqa: BLE001 - correction must not fail transcription
+            medical_correction = {"status": "unavailable", "suggestions": [], "applied": False}
+
+    # (5) Pipeline flow/telemetry events (Requirement 10.3) — surface the stages
     # that actually ran (transcribe, diarize, generate) using the established
     # flow-event shape, so the streamed pipeline is observable in the UI process
     # panel via the same mechanism as chat/research. PII-free: notes carry only
@@ -362,13 +373,14 @@ def stream_scribe_sse(
             )
         )
 
-    # (5) Terminal success frame with the full structured result.
+    # (6) Terminal success frame with the full structured result.
     yield sse_event(
         "done",
         {
             "transcript": transcript,
             "segments": serialized_segments,
             "note": note_payload,
+            "medical_correction": medical_correction,
             "asr_meta": asr_meta,
             "flow_events": flow_events,
         },
