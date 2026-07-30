@@ -71,12 +71,24 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   must_set_non_empty "DEEPSEEK_MODEL"
   must_set_non_empty "DEEPSEEK_PRO_MODEL"
   must_set_non_empty "DEEPSEEK_FLASH_MODEL"
+  if [[ "${ENV_VALUES[DEEPSEEK_MODEL]:-}" != "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" ]]; then
+    echo "[env-guard] DEEPSEEK_MODEL must equal DEEPSEEK_PRO_MODEL for the governed V4 default route" >&2
+    errors=$((errors + 1))
+  fi
+  if [[ "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" == "${ENV_VALUES[DEEPSEEK_FLASH_MODEL]:-}" ]]; then
+    echo "[env-guard] DEEPSEEK_PRO_MODEL and DEEPSEEK_FLASH_MODEL must be distinct" >&2
+    errors=$((errors + 1))
+  fi
   if [[ "${ENV_VALUES[LLM_DEEPSEEK_ONLY]:-}" != "true" ]]; then
     echo "[env-guard] LLM_DEEPSEEK_ONLY=true is required for the governed runtime" >&2
     errors=$((errors + 1))
   fi
   if [[ "${ENV_VALUES[MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED]:-}" != "true" ]]; then
     echo "[env-guard] MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true is required for V4 Pro/Flash task routing" >&2
+    errors=$((errors + 1))
+  fi
+  if [[ "${ENV_VALUES[MODEL_REGISTRY_ENABLED]:-}" != "true" ]]; then
+    echo "[env-guard] MODEL_REGISTRY_ENABLED=true is required for the governed runtime" >&2
     errors=$((errors + 1))
   fi
 fi

@@ -68,6 +68,11 @@ DEEPSEEK_PRO_MODEL=deepseek-v4-pro
 DEEPSEEK_FLASH_MODEL=deepseek-v4-flash
 ```
 
+The production env guard requires `DEEPSEEK_MODEL` to equal
+`DEEPSEEK_PRO_MODEL`, requires the Pro and Flash identifiers to be distinct,
+and requires both registry switches to be explicitly `true`. This prevents a
+stale deploy secret from silently reverting to a legacy single-model path.
+
 With task routing enabled, the manifest assigns `pro` to critical/safety and
 reasoning tasks (medical safety routing, LifeMap triage, FIDES/NLI, RAG
 synthesis, Council, Scribe note and research reasoning) and `flash` to bounded
