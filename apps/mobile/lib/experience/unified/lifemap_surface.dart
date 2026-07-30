@@ -591,7 +591,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tra cứu LifeMap. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.lifeMapAskLoadFailed]);
     } finally {
       if (mounted) setState(() => _asking = false);
     }
@@ -1020,8 +1020,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         episodeId: episode.id,
       );
       if (question['ask'] != true || _str(question['question_id']).isEmpty) {
-        _showSnack(
-            'Hiện chưa có câu hỏi cần thiết. CLARA ưu tiên hỏi ít nhất có thể.');
+        _showSnack(_copy[ConsumerTerm.lifeMapQuestionNoneNeeded]);
         return;
       }
       final questionId = _str(question['question_id']);
@@ -1041,15 +1040,20 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Vì sao CLARA hỏi: ${_str(question['why'])}'),
+              Text(
+                _copy.format(
+                  ConsumerTerm.lifeMapQuestionWhy,
+                  <String, Object?>{'reason': _str(question['why'])},
+                ),
+              ),
               const SizedBox(height: ClaraTokens.spaceMd),
               TextField(
                 controller: controller,
                 minLines: 2,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Câu trả lời của bạn',
-                  helperText: 'Sẽ tạo bản nháp để bạn kiểm tra trước.',
+                decoration: InputDecoration(
+                  labelText: _copy[ConsumerTerm.lifeMapQuestionAnswerLabel],
+                  helperText: _copy[ConsumerTerm.lifeMapQuestionAnswerHelp],
                 ),
               ),
             ],
@@ -1066,14 +1070,14 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                 );
                 if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               },
-              child: const Text('Để sau'),
+              child: Text(_copy[ConsumerTerm.lifeMapQuestionLater]),
             ),
             FilledButton(
               onPressed: () {
                 final value = controller.text.trim();
                 if (value.isNotEmpty) Navigator.of(dialogContext).pop(value);
               },
-              child: const Text('Tạo bản nháp'),
+              child: Text(_copy[ConsumerTerm.lifeMapQuestionCreateDraft]),
             ),
           ],
         ),
@@ -1089,11 +1093,11 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
       if (!mounted) return;
       setState(() => _captureSession = session);
       await _loadCaptureNormalizations(session);
-      _showSnack('Đã tạo bản nháp. Hãy kiểm tra rồi xác nhận.');
+      _showSnack(_copy[ConsumerTerm.lifeMapQuestionDraftCreated]);
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tải câu hỏi. Vui lòng thử lại khi có mạng.');
+      _showSnack(_copy[ConsumerTerm.lifeMapQuestionLoadFailed]);
     }
   }
 
@@ -1200,7 +1204,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         const SizedBox(height: ClaraTokens.spaceSm),
 
         if (_askEnabled) ...[
-          const SectionHeader(title: 'Hỏi LifeMap của tôi'),
+          SectionHeader(title: _copy[ConsumerTerm.lifeMapAskSectionTitle]),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ClaraTokens.spaceMd,
@@ -1946,8 +1950,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán, '
-            'kê đơn hay tự thay đổi LifeMap.',
+            _copy[ConsumerTerm.lifeMapAskSafetyNotice],
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
@@ -1956,11 +1959,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             minLines: 2,
             maxLines: 4,
             enabled: !_asking,
-            decoration: const InputDecoration(
-              labelText: 'Bạn muốn tìm điều gì?',
-              hintText: 'Ví dụ: Các ghi nhận đau đầu gần đây?',
-              helperText:
-                  'Câu trả lời chỉ ra đúng bản ghi và phiên bản đã dùng.',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapAskInputLabel],
+              hintText: _copy[ConsumerTerm.lifeMapAskInputHint],
+              helperText: _copy[ConsumerTerm.lifeMapAskInputHelp],
             ),
             onSubmitted: (_) => _askLifeMap(),
           ),
@@ -1968,7 +1970,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Tra cứu',
+              label: _copy[ConsumerTerm.lifeMapAskSubmit],
               icon: Icons.search,
               loading: _asking,
               onPressed: _askLifeMap,
@@ -2013,8 +2015,15 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                         if (source != null) ...[
                           const SizedBox(height: ClaraTokens.spaceXs),
                           Text(
-                            'Nguồn: ${_str(source['attribution'])} · '
-                            'phiên bản ${_shortRevision(source['revision_id'])}',
+                            _copy.format(
+                              ConsumerTerm.lifeMapAskCitation,
+                              <String, Object?>{
+                                'source': _str(source['attribution']),
+                                'revision': _shortRevision(
+                                  source['revision_id'],
+                                ),
+                              },
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -2028,7 +2037,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             }),
             const SizedBox(height: ClaraTokens.spaceMd),
             Text(
-              'AI có dẫn nguồn · Chỉ đọc · Không phải tư vấn y tế.',
+              _copy[ConsumerTerm.lifeMapAskAnswerSafetyNotice],
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

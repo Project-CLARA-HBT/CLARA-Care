@@ -223,6 +223,23 @@ enum ConsumerTerm {
   lifeMapCaptureSourcePreviewError,
   lifeMapCaptureSourcePreview,
   lifeMapCaptureSourceUncached,
+  lifeMapAskSectionTitle,
+  lifeMapAskSafetyNotice,
+  lifeMapAskInputLabel,
+  lifeMapAskInputHint,
+  lifeMapAskInputHelp,
+  lifeMapAskSubmit,
+  lifeMapAskCitation,
+  lifeMapAskAnswerSafetyNotice,
+  lifeMapAskLoadFailed,
+  lifeMapQuestionNoneNeeded,
+  lifeMapQuestionWhy,
+  lifeMapQuestionAnswerLabel,
+  lifeMapQuestionAnswerHelp,
+  lifeMapQuestionLater,
+  lifeMapQuestionCreateDraft,
+  lifeMapQuestionDraftCreated,
+  lifeMapQuestionLoadFailed,
   medicinesMyMedicines,
   medicinesCabinet,
   medicinesSafety,
@@ -851,6 +868,31 @@ class ConsumerTerminology {
         'Nguồn: {name} · chỉ giữ tạm trong bộ nhớ khi xem xét.',
     ConsumerTerm.lifeMapCaptureSourceUncached:
         'Ảnh nguồn không được lưu vào bộ nhớ đệm trên thiết bị. Hãy đối chiếu lại bản gốc trước khi xác nhận.',
+    ConsumerTerm.lifeMapAskSectionTitle: 'Hỏi LifeMap của tôi',
+    ConsumerTerm.lifeMapAskSafetyNotice:
+        'Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán, kê đơn hay tự thay đổi LifeMap.',
+    ConsumerTerm.lifeMapAskInputLabel: 'Bạn muốn tìm điều gì?',
+    ConsumerTerm.lifeMapAskInputHint: 'Ví dụ: Các ghi nhận đau đầu gần đây?',
+    ConsumerTerm.lifeMapAskInputHelp:
+        'Câu trả lời chỉ ra đúng bản ghi và phiên bản đã dùng.',
+    ConsumerTerm.lifeMapAskSubmit: 'Tra cứu',
+    ConsumerTerm.lifeMapAskCitation: 'Nguồn: {source} · phiên bản {revision}',
+    ConsumerTerm.lifeMapAskAnswerSafetyNotice:
+        'AI có dẫn nguồn · Chỉ đọc · Không phải tư vấn y tế.',
+    ConsumerTerm.lifeMapAskLoadFailed:
+        'Không thể tra cứu LifeMap. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapQuestionNoneNeeded:
+        'Hiện chưa có câu hỏi cần thiết. CLARA ưu tiên hỏi ít nhất có thể.',
+    ConsumerTerm.lifeMapQuestionWhy: 'Vì sao CLARA hỏi: {reason}',
+    ConsumerTerm.lifeMapQuestionAnswerLabel: 'Câu trả lời của bạn',
+    ConsumerTerm.lifeMapQuestionAnswerHelp:
+        'Sẽ tạo bản nháp để bạn kiểm tra trước.',
+    ConsumerTerm.lifeMapQuestionLater: 'Để sau',
+    ConsumerTerm.lifeMapQuestionCreateDraft: 'Tạo bản nháp',
+    ConsumerTerm.lifeMapQuestionDraftCreated:
+        'Đã tạo bản nháp. Hãy kiểm tra rồi xác nhận.',
+    ConsumerTerm.lifeMapQuestionLoadFailed:
+        'Không thể tải câu hỏi. Vui lòng thử lại khi có mạng.',
     ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
     ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
     ConsumerTerm.medicinesSafety: 'An toàn',
@@ -1506,6 +1548,31 @@ class ConsumerTerminology {
         'Source: {name} · retained in memory only while you review it.',
     ConsumerTerm.lifeMapCaptureSourceUncached:
         'The source image is not stored in the device cache. Check the original before confirming.',
+    ConsumerTerm.lifeMapAskSectionTitle: 'Ask my LifeMap',
+    ConsumerTerm.lifeMapAskSafetyNotice:
+        'Only searches information you are allowed to view. CLARA does not diagnose, prescribe, or change LifeMap on its own.',
+    ConsumerTerm.lifeMapAskInputLabel: 'What would you like to find?',
+    ConsumerTerm.lifeMapAskInputHint: 'For example: Recent headache records?',
+    ConsumerTerm.lifeMapAskInputHelp:
+        'The answer identifies the exact records and versions used.',
+    ConsumerTerm.lifeMapAskSubmit: 'Search',
+    ConsumerTerm.lifeMapAskCitation: 'Source: {source} · version {revision}',
+    ConsumerTerm.lifeMapAskAnswerSafetyNotice:
+        'AI with sources · Read-only · Not medical advice.',
+    ConsumerTerm.lifeMapAskLoadFailed:
+        'We could not search LifeMap. Try again.',
+    ConsumerTerm.lifeMapQuestionNoneNeeded:
+        'No question is needed now. CLARA asks as little as possible.',
+    ConsumerTerm.lifeMapQuestionWhy: 'Why CLARA asks: {reason}',
+    ConsumerTerm.lifeMapQuestionAnswerLabel: 'Your answer',
+    ConsumerTerm.lifeMapQuestionAnswerHelp:
+        'This creates a draft for you to review first.',
+    ConsumerTerm.lifeMapQuestionLater: 'Later',
+    ConsumerTerm.lifeMapQuestionCreateDraft: 'Create draft',
+    ConsumerTerm.lifeMapQuestionDraftCreated:
+        'Draft created. Review it, then explicitly confirm.',
+    ConsumerTerm.lifeMapQuestionLoadFailed:
+        'We could not load the question. Try again with a network connection.',
     ConsumerTerm.medicinesMyMedicines: 'My medicines',
     ConsumerTerm.medicinesCabinet: 'Medicine cabinet',
     ConsumerTerm.medicinesSafety: 'Safety',
