@@ -92,7 +92,7 @@ class Settings(BaseSettings):
         ),
     )
     llm_deepseek_only: bool = Field(
-        default=False,
+        default=True,
         validation_alias=AliasChoices(
             "LLM_DEEPSEEK_ONLY",
             "DISABLE_PRIMARY_LLM",
