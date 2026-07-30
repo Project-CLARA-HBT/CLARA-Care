@@ -1475,6 +1475,14 @@ def _build_claim_trace(
 
     # Index backing retrieved-source rows by id so each citation can inherit its provenance even
     # when the recency/trust ranking flag (R6) is off and the Citation object carries no metadata.
+    #
+    # This is also a release boundary: a Citation Registry row is allowed only
+    # when its citation id resolves to an actual retrieved row.  Citations are
+    # normally built from this same context, but keeping the check here means a
+    # malformed or stale upstream envelope cannot turn an arbitrary source label
+    # into a traceable reference.  In particular, the local
+    # ``system_fallback`` notice is not evidence and must never become a
+    # citation-registry entry or anchor a claim.
     context_by_id: dict[str, dict[str, Any]] = {}
     for row in retrieved_context or []:
         if not isinstance(row, dict):
@@ -1489,8 +1497,10 @@ def _build_claim_trace(
         citation_id = citation.source_id
         if not citation_id or citation_id in valid_ids:
             continue
-        valid_ids.add(citation_id)
         row = context_by_id.get(_ascii_fold(citation_id).strip())
+        if row is None:
+            continue
+        valid_ids.add(citation_id)
         source_type = (_row_source_type(row) if row else None) or citation.source_type or "unknown"
         trust_tier = _row_trust_tier(row) if row else None
         if trust_tier is None:

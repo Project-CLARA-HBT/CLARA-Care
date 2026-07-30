@@ -588,6 +588,24 @@ def test_build_claim_trace_suppresses_supported_claim_without_resolvable_citatio
     assert traced == []
 
 
+def test_build_claim_trace_excludes_citation_without_retrieved_source_binding():
+    # The citation registry is a provenance contract, not a best-effort display
+    # list. A stale/upstream-injected citation that does not resolve to a retrieved
+    # row must neither be surfaced in the registry nor anchor an otherwise
+    # supported claim (R11.1/R11.5/R11.6).
+    context = [{"id": "s1", "source": "pubmed", "trust_tier": 1}]
+    rows = [_claim_row("Floating claim", status="supported", evidence_ref="rogue-source")]
+    traced, registry = tier2._build_claim_trace(
+        verification_rows=rows,
+        citations=[_trace_citation("s1"), _trace_citation("rogue-source")],
+        retrieved_context=context,
+        enabled=True,
+    )
+    assert registry is not None
+    assert [entry["citation_id"] for entry in registry] == ["s1"]
+    assert traced == []
+
+
 def test_build_claim_trace_default_trust_tier_and_source_type_when_unknown():
     # The registry's trust_tier/source_type fields are always present (R11.2); an unknown
     # source falls back to the lowest authority band and an "unknown" source type.
