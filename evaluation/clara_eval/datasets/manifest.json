@@ -1,7 +1,7 @@
 {
   "schema_version": "clara-eval-vn.dataset-manifest.v1",
   "suite_id": "clara-eval-vn",
-  "suite_version": "2026-07-30.foundation.1",
+  "suite_version": "2026-07-30.foundation.2",
   "data_policy": {
     "contains_phi": false,
     "contains_secrets": false,
@@ -20,7 +20,10 @@
       "contains_phi": false,
       "contains_secrets": false,
       "clinically_representative": false,
-      "measurements": [{"metric_id": "intent_macro_f1", "state": "not_measured", "reason": "Fixture checks routing contracts only; no reviewed Vietnamese clinical corpus is available in this repository.", "command": "make eval-nightly"}]
+      "measurements": [
+        {"metric_id": "intent_macro_f1", "state": "not_measured", "reason": "Fixture checks routing contracts only; no reviewed Vietnamese clinical corpus is available in this repository.", "command": "make eval-nightly"},
+        {"metric_id": "emergency_recall", "state": "not_measured", "reason": "Không có corpus tiếng Việt nhiễu đã được chuyên gia gán nhãn tình huống khẩn cấp trong repository.", "command": "make eval-nightly"}
+      ]
     },
     {
       "dataset_id": "clara-eval-vn-medical-qa-synthetic-smoke-v1",
@@ -48,7 +51,10 @@
       "contains_phi": false,
       "contains_secrets": false,
       "clinically_representative": false,
-      "measurements": [{"metric_id": "citation_precision", "state": "not_measured", "reason": "No versioned gold claims/passages or retrieval snapshot is installed.", "command": "make eval-nightly"}]
+      "measurements": [
+        {"metric_id": "citation_precision", "state": "not_measured", "reason": "No versioned gold claims/passages or retrieval snapshot is installed.", "command": "make eval-nightly"},
+        {"metric_id": "unsupported_claim_rate", "state": "not_measured", "reason": "Không có tập gold claim tiếng Việt, phán quyết độc lập và retrieval snapshot bất biến để đo claim không được nguồn hỗ trợ.", "command": "make eval-nightly"}
+      ]
     },
     {
       "dataset_id": "clara-eval-vn-careguard-synthetic-smoke-v1",
@@ -62,7 +68,11 @@
       "contains_phi": false,
       "contains_secrets": false,
       "clinically_representative": false,
-      "measurements": [{"metric_id": "severe_ddi_recall", "state": "not_measured", "reason": "A licensed full DrugBank evaluation set and index snapshot are not available to this repository checkout.", "command": "make eval-release"}]
+      "measurements": [
+        {"metric_id": "severe_ddi_recall", "state": "not_measured", "reason": "A licensed full DrugBank evaluation set and index snapshot are not available to this repository checkout.", "command": "make eval-release"},
+        {"metric_id": "critical_ddi_recall", "state": "not_measured", "reason": "Không có full DrugBank đã được cấp phép cùng index snapshot và bộ cặp tương tác nghiêm trọng đã đối chiếu để đo recall.", "command": "make eval-release"},
+        {"metric_id": "medication_normalization_top1", "state": "not_measured", "reason": "Không có bộ ánh xạ tên thuốc tiếng Việt, tên đọc theo âm và code-switch đã được dược sĩ phê duyệt.", "command": "make eval-nightly"}
+      ]
     },
     {
       "dataset_id": "clara-eval-vn-scribe-synthetic-smoke-v1",
@@ -76,7 +86,10 @@
       "contains_phi": false,
       "contains_secrets": false,
       "clinically_representative": false,
-      "measurements": [{"metric_id": "medical_term_wer", "state": "not_measured", "reason": "No consented audio/transcript corpus with clinical adjudication is installed.", "command": "make eval-nightly"}]
+      "measurements": [
+        {"metric_id": "medical_term_wer", "state": "not_measured", "reason": "No consented audio/transcript corpus with clinical adjudication is installed.", "command": "make eval-nightly"},
+        {"metric_id": "clinician_edit_time_reduction", "state": "not_measured", "reason": "Không có nghiên cứu thời gian chỉnh sửa, có đồng thuận và đối chứng với bác sĩ/nhân viên lâm sàng.", "command": "make eval-nightly"}
+      ]
     },
     {
       "dataset_id": "clara-eval-vn-lifemap-synthetic-smoke-v1",
