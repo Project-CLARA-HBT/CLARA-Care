@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
-import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
+import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 import { trackCareguardViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
@@ -177,7 +177,7 @@ export default function MedicinesCabinetTab() {
   };
 
   return (
-    <SelfMedConsentGate>
+    <MedicalConsentGate>
       <div className="space-y-6">
         <SurfaceCard className="p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -392,6 +392,6 @@ export default function MedicinesCabinetTab() {
           </div>
         </section>
       </div>
-    </SelfMedConsentGate>
+    </MedicalConsentGate>
   );
 }

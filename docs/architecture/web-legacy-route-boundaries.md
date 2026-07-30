@@ -9,7 +9,7 @@ chúng không phải đích điều hướng mới và không tạo ra mô hình
 | `/selfmed` | `/medicines?tab=cabinet` | Alias redirect ở server. Giữ lại khi còn liên kết đã lưu. |
 | `/selfmed/ddi` | `/medicines?tab=safety` | Alias redirect ở server. Giữ lại khi còn liên kết đã lưu. |
 | `/careguard` | `/medicines?tab=safety` | Alias redirect ở server. Giữ lại khi còn liên kết đã lưu. |
-| `/selfmed/add` | `/medicines/cabinet/add` | Entry tương thích cho bookmark cũ. Link mới dùng route Medicines chuẩn, hiện tái sử dụng cùng triển khai quét/thêm đã consent-gate. |
+| `/selfmed/add` | `/medicines/cabinet/add` | Entry tương thích cho bookmark cũ. Cả hai route dùng cùng `components/medicines/cabinet-add-page.tsx`; link mới chỉ dùng route Medicines chuẩn và vẫn consent-gate. |
 | `/chat` với `NEXT_PUBLIC_CHAT_V2=false` | `/chat` V2 mặc định | Rollback có kiểm soát. Runbook Chat V2 sở hữu quyết định loại bỏ sau này. |
 | `/research/*` | `/chat` | Ranh giới tương thích redirect hiện có. |
 
@@ -21,6 +21,18 @@ chúng không phải đích điều hướng mới và không tạo ra mô hình
   hoặc dữ liệu LifeMap lịch sử.
 - Chỉ xóa route tương thích trong thay đổi được review riêng sau khi đã rà soát
   liên kết hỗ trợ và không còn yêu cầu rollback.
+
+## Thành phần được duy trì
+
+`components/medicines/cabinet-add-page.tsx` là implementation dùng chung cho
+luồng quét/toa và thêm thuốc. Nó thuộc Medicines, không thuộc route lịch sử.
+`app/selfmed/add/page.tsx` không có state, API call hoặc policy riêng: chỉ là
+alias import component đó. Vì vậy mọi sửa đổi về consent, kiểm tra tệp, DrugBank
+và UX phải thực hiện trên component Medicines một lần duy nhất.
+
+`components/medicines/medical-consent-gate.tsx` là boundary đồng thuận duy nhất
+cho tủ thuốc, quét toa và kiểm tra tương tác. Không được tạo consent gate riêng
+cho alias lịch sử vì sẽ làm sai khác chính sách hoặc trạng thái đồng thuận.
 
 ## Rollback
 

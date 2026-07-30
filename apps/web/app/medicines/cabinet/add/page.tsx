@@ -2,8 +2,8 @@
 
 /**
  * Canonical entry point for adding or scanning an item in the Medicines
- * cabinet. The implementation remains in the legacy route module for now so
- * existing bookmarks keep their exact behavior during the compatibility
- * window. New links must use this canonical Medicines-owned route.
+ * cabinet. The implementation lives in the maintained Medicines component;
+ * the historical `/selfmed/add` URL imports the same component solely as a
+ * compatibility alias.
  */
-export { default } from "@/app/selfmed/add/page";
+export { default } from "@/components/medicines/cabinet-add-page";

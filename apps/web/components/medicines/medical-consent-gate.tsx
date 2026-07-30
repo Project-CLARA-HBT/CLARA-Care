@@ -4,11 +4,18 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 
-type SelfMedConsentGateProps = {
+type MedicalConsentGateProps = {
   children: ReactNode;
 };
 
-export default function SelfMedConsentGate({ children }: SelfMedConsentGateProps) {
+/**
+ * Shared medical-consent boundary for every Medicines task.
+ *
+ * It deliberately owns no route-specific state: the cabinet, scan and
+ * interaction views all call the same consent API and get the same safe
+ * failure behaviour.
+ */
+export default function MedicalConsentGate({ children }: MedicalConsentGateProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
   const [requiredVersion, setRequiredVersion] = useState("");

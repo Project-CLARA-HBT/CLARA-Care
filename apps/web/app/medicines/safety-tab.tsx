@@ -5,7 +5,7 @@ import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/field";
 import { InlineError } from "@/components/ui/surface";
-import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
+import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import {
   DdiUserView,
   MINIMUM_DDI_MEDICINES,
@@ -163,7 +163,7 @@ export default function MedicinesSafetyTab() {
   };
 
   return (
-    <SelfMedConsentGate>
+    <MedicalConsentGate>
       <div className="space-y-5">
         <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -325,6 +325,6 @@ export default function MedicinesSafetyTab() {
           </section>
         ) : null}
       </div>
-    </SelfMedConsentGate>
+    </MedicalConsentGate>
   );
 }
