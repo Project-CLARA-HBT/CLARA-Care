@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", () => ({
@@ -25,6 +31,7 @@ import {
   StepActions,
   StepProgress,
 } from "@/components/guided-flow";
+import { saveUILanguage } from "@/lib/ui-language";
 
 const steps = [
   { id: "name", label: "Tên" },
@@ -32,13 +39,20 @@ const steps = [
   { id: "review", label: "Kiểm tra" },
 ];
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  saveUILanguage("vi");
+});
 
 describe("guided flow primitives", () => {
   it("announces the current step and exposes every step state without relying on color", () => {
-    render(<StepProgress steps={steps} currentStep={1} label="Thiết lập LifeMap" />);
+    render(
+      <StepProgress steps={steps} currentStep={1} label="Thiết lập LifeMap" />,
+    );
 
-    const progress = screen.getByRole("navigation", { name: "Thiết lập LifeMap" });
+    const progress = screen.getByRole("navigation", {
+      name: "Thiết lập LifeMap",
+    });
     expect(progress).toHaveTextContent("Bước 2 / 3");
     expect(progress).toHaveTextContent("Tên: đã hoàn tất");
     expect(progress).toHaveTextContent("Mục tiêu: hiện tại");
@@ -50,6 +64,26 @@ describe("guided flow primitives", () => {
     render(<StepProgress steps={steps} currentStep={99} />);
     expect(screen.getByText(/Bước 3 \/ 3/)).toBeInTheDocument();
     expect(screen.getByText(/Kiểm tra: hiện tại/)).toBeInTheDocument();
+  });
+
+  it("updates generic progress and save-state wording when the global locale changes", () => {
+    render(
+      <GuidedFlowShell
+        title="Setup"
+        steps={steps}
+        currentStep={0}
+        saveState={{ kind: "saved" }}
+      >
+        <p>Content</p>
+      </GuidedFlowShell>,
+    );
+
+    act(() => saveUILanguage("en"));
+
+    expect(
+      screen.getByRole("navigation", { name: "Progress" }),
+    ).toHaveTextContent("Step 1 / 3");
+    expect(screen.getByRole("status")).toHaveTextContent("Draft saved");
   });
 
   it("associates the shell heading and reports saved draft state politely", () => {
@@ -75,7 +109,9 @@ describe("guided flow primitives", () => {
     });
     expect(region).toContainElement(screen.getByLabelText("Tên hành trình"));
     expect(screen.getByRole("status")).toHaveTextContent("Đã lưu bản nháp");
-    expect(screen.getByText("Bạn có thể quay lại sau.").closest("aside")).not.toBeNull();
+    expect(
+      screen.getByText("Bạn có thể quay lại sau.").closest("aside"),
+    ).not.toBeNull();
   });
 
   it("uses an assertive alert for a save failure and does not expose raw implementation detail", () => {
@@ -90,7 +126,9 @@ describe("guided flow primitives", () => {
       </GuidedFlowShell>,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Chưa thể lưu thay đổi");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Chưa thể lưu thay đổi",
+    );
     expect(screen.getByRole("alert")).toHaveTextContent("Vui lòng thử lại.");
   });
 
@@ -111,7 +149,10 @@ describe("guided flow primitives", () => {
     fireEvent.click(screen.getByRole("button", { name: "Quay lại" }));
     expect(onNext).toHaveBeenCalledOnce();
     expect(onBack).toHaveBeenCalledOnce();
-    expect(screen.getByRole("link", { name: "Bỏ qua" })).toHaveAttribute("href", "/next");
+    expect(screen.getByRole("link", { name: "Bỏ qua" })).toHaveAttribute(
+      "href",
+      "/next",
+    );
   });
 
   it("disables navigation callbacks while saving", () => {
@@ -137,8 +178,12 @@ describe("guided flow primitives", () => {
       />,
     );
 
-    expect(screen.queryByRole("link", { name: "Quay lại" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Bỏ qua" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Quay lại" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Bỏ qua" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Quay lại" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Bỏ qua" })).toBeDisabled();
   });
@@ -156,7 +201,9 @@ describe("guided flow primitives", () => {
       />,
     );
 
-    expect(screen.getByRole("region", { name: "Thông tin cơ bản" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Thông tin cơ bản" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Tên").tagName).toBe("DT");
     expect(screen.getByText("Nguyễn An").tagName).toBe("DD");
     expect(screen.getByRole("link", { name: "Chỉnh sửa" })).toHaveAttribute(
@@ -211,7 +258,8 @@ describe("guided flow primitives", () => {
       reason: "Nguồn xác minh cần thiết chưa sẵn sàng.",
       userAction: "Kiểm tra lại tên thuốc và thử lại sau.",
       administratorAction: "Xác minh nguồn dữ liệu trong Trung tâm thiết lập.",
-      safeFallback: "Không hiển thị kết luận an toàn; hãy hỏi dược sĩ hoặc bác sĩ.",
+      safeFallback:
+        "Không hiển thị kết luận an toàn; hãy hỏi dược sĩ hoặc bác sĩ.",
       internalDetails: "DRUGBANK_PATH=/private/license.sqlite; token=secret",
       provider: "raw-upstream-provider",
     };
@@ -249,7 +297,9 @@ describe("guided flow primitives", () => {
     );
 
     expect(screen.getByText("Sẵn sàng")).toBeInTheDocument();
-    expect(screen.queryByText("Quản trị viên cần làm gì")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Quản trị viên cần làm gì"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu" }));
     expect(onOpen).toHaveBeenCalledOnce();
   });

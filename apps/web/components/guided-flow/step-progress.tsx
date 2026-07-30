@@ -2,6 +2,9 @@
 
 import { useId } from "react";
 
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+
 export type GuidedFlowStep = {
   id: string;
   label: string;
@@ -10,22 +13,35 @@ export type GuidedFlowStep = {
 export function StepProgress({
   steps,
   currentStep,
-  label = "Tiến trình",
+  label,
 }: {
   steps: GuidedFlowStep[];
   currentStep: number;
   label?: string;
 }) {
+  const language = useUILanguage();
   const descriptionId = useId();
-  const safeStep = Math.min(Math.max(currentStep, 0), Math.max(steps.length - 1, 0));
+  const safeStep = Math.min(
+    Math.max(currentStep, 0),
+    Math.max(steps.length - 1, 0),
+  );
   const active = steps[safeStep];
 
   if (steps.length === 0) return null;
 
   return (
-    <nav aria-label={label} aria-describedby={descriptionId}>
-      <p id={descriptionId} className="text-xs font-medium text-[var(--text-secondary)]">
-        Bước {safeStep + 1} / {steps.length}
+    <nav
+      aria-label={label ?? t(language, "flow.progress")}
+      aria-describedby={descriptionId}
+    >
+      <p
+        id={descriptionId}
+        className="text-xs font-medium text-[var(--text-secondary)]"
+      >
+        {t(language, "flow.stepOf", {
+          current: safeStep + 1,
+          total: steps.length,
+        })}
         <span aria-hidden="true"> · {active.label}</span>
         <span className="sr-only">: {active.label}</span>
       </p>
@@ -58,7 +74,15 @@ export function StepProgress({
                 {step.label}
               </span>
               <span className="sr-only">
-                {step.label}: {complete ? "đã hoàn tất" : current ? "hiện tại" : "chưa bắt đầu"}
+                {step.label}:{" "}
+                {t(
+                  language,
+                  complete
+                    ? "flow.complete"
+                    : current
+                      ? "flow.current"
+                      : "flow.notStarted",
+                )}
               </span>
             </li>
           );

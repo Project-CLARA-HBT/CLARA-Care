@@ -2,6 +2,9 @@
 
 import { useId } from "react";
 
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+
 export type GuidedFlowError = {
   id: string;
   message: string;
@@ -11,13 +14,14 @@ export type GuidedFlowError = {
 
 export function ErrorSummary({
   errors,
-  title = "Kiểm tra lại thông tin",
-  description = "Có một vài mục cần được sửa trước khi bạn tiếp tục.",
+  title,
+  description,
 }: {
   errors: GuidedFlowError[];
   title?: string;
   description?: string;
 }) {
+  const language = useUILanguage();
   const headingId = useId();
   const descriptionId = useId();
 
@@ -39,10 +43,10 @@ export function ErrorSummary({
         </span>
         <div className="min-w-0">
           <h2 id={headingId} className="text-sm font-semibold">
-            {title}
+            {title ?? t(language, "flow.checkInformation")}
           </h2>
           <p id={descriptionId} className="mt-1 text-sm leading-5">
-            {description}
+            {description ?? t(language, "flow.fixBeforeContinue")}
           </p>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
             {errors.map((error) => (
@@ -58,7 +62,9 @@ export function ErrorSummary({
                 ) : (
                   <>
                     {error.fieldLabel ? (
-                      <span className="font-semibold">{error.fieldLabel}: </span>
+                      <span className="font-semibold">
+                        {error.fieldLabel}:{" "}
+                      </span>
                     ) : null}
                     {error.message}
                   </>

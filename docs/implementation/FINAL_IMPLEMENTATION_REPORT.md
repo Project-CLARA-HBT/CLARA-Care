@@ -45,7 +45,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR | Status | Evidence / limitation |
 | --- | --- | --- |
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
-| PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today/shared loading-state literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
+| PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today/shared loading-state literal scanners; `/today` now reacts to locale with locale date formatting. Guided-flow progress, generic save/error state and validation summary now react to the same persisted locale via `useUILanguage`; domain-page copy migration remains incremental. |
 | PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
 | PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis (including its explicit runtime override seam) and Research planning/reasoning use registry task contracts. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. The hybrid-router shadow contract now carries only categorical/count language signals (never source text). No encoder SLM is bundled. |
@@ -99,6 +99,7 @@ Executed in this workspace:
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |
+| Guided-flow locale bridge | pass: Prettier, targeted ESLint, TypeScript, catalog tests and 13 guided-flow tests; test switches the global locale and observes English progress/save wording. |
 | Mobile Unified locale navigation | pass: `flutter test test/unified_root_test.dart` (5 tests) and targeted `flutter analyze` (no issues) |
 | Mobile debug APK build | environment-blocked: Snap Flutter reported missing `cap_dac_override`; no APK result is claimed |
 | Static active-eval | executed after portable previous-run selector fix, NO-GO as expected; it recorded zero runtime measurements and no latency samples |

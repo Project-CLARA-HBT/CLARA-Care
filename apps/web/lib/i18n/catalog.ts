@@ -40,7 +40,8 @@ const VI_MESSAGES = {
   "role.admin": "Quản trị viên",
   "family.pendingTasks": "{count} nhiệm vụ chăm sóc được chia sẻ đang chờ",
   "today.title": "Hôm nay",
-  "today.description": "Một nhịp chăm sóc rõ ràng: chỉ những việc bạn đã chấp nhận mới xuất hiện ở đây.",
+  "today.description":
+    "Một nhịp chăm sóc rõ ràng: chỉ những việc bạn đã chấp nhận mới xuất hiện ở đây.",
   "today.pending": "Việc đang chờ",
   "today.accepted": "Đã đồng ý thực hiện",
   "today.episodes": "Hành trình đang mở",
@@ -53,23 +54,40 @@ const VI_MESSAGES = {
   "today.noDueDate": "Không có hạn cụ thể",
   "today.viewTask": "Xem việc",
   "today.emptyTitle": "Hôm nay chưa có việc nào",
-  "today.emptyDescription": "Khi bạn chấp nhận một việc trong hành trình sức khỏe, nó sẽ xuất hiện ở đây. CLARA không tự thêm việc thay bạn.",
+  "today.emptyDescription":
+    "Khi bạn chấp nhận một việc trong hành trình sức khỏe, nó sẽ xuất hiện ở đây. CLARA không tự thêm việc thay bạn.",
   "today.createEpisode": "Tạo hành trình",
   "today.connectionError": "Kiểm tra kết nối rồi thử lại.",
   "today.startHere": "Bạn muốn làm gì?",
-  "today.startHereDescription": "Chọn một việc để bắt đầu. Bạn có thể quay lại bất cứ lúc nào.",
+  "today.startHereDescription":
+    "Chọn một việc để bắt đầu. Bạn có thể quay lại bất cứ lúc nào.",
   "today.askTitle": "Hỏi về sức khỏe",
-  "today.askDescription": "Nêu điều bạn đang lo; CLARA sẽ giúp xác định bước an toàn tiếp theo.",
+  "today.askDescription":
+    "Nêu điều bạn đang lo; CLARA sẽ giúp xác định bước an toàn tiếp theo.",
   "today.medicineTitle": "Kiểm tra thuốc",
-  "today.medicineDescription": "Xem thuốc đang dùng và kiểm tra tương tác có nguồn.",
+  "today.medicineDescription":
+    "Xem thuốc đang dùng và kiểm tra tương tác có nguồn.",
   "today.recordTitle": "Lưu thông tin khám",
-  "today.recordDescription": "Gom toa thuốc, kết quả và thông tin sức khỏe cá nhân.",
+  "today.recordDescription":
+    "Gom toa thuốc, kết quả và thông tin sức khỏe cá nhân.",
   "today.visitTitle": "Chuẩn bị đi khám",
-  "today.visitDescription": "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
+  "today.visitDescription":
+    "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
   "today.openAction": "Mở",
   "surface.loadFailed": "Chưa thể tải dữ liệu",
   "surface.retry": "Thử lại",
   "surface.loading": "Đang tải",
+  "flow.saveFailed": "Chưa thể lưu thay đổi",
+  "flow.savingDraft": "Đang lưu bản nháp…",
+  "flow.savedDraft": "Đã lưu bản nháp",
+  "flow.progress": "Tiến trình",
+  "flow.stepOf": "Bước {current} / {total}",
+  "flow.complete": "đã hoàn tất",
+  "flow.current": "hiện tại",
+  "flow.notStarted": "chưa bắt đầu",
+  "flow.checkInformation": "Kiểm tra lại thông tin",
+  "flow.fixBeforeContinue":
+    "Có một vài mục cần được sửa trước khi bạn tiếp tục.",
 } as const;
 
 type TranslationKey = keyof typeof VI_MESSAGES;
@@ -112,7 +130,8 @@ const EN_MESSAGES: MessageCatalog = {
   "role.admin": "Administrator",
   "family.pendingTasks": "{count} shared care task(s) pending",
   "today.title": "Today",
-  "today.description": "A clear care rhythm: only tasks you accepted appear here.",
+  "today.description":
+    "A clear care rhythm: only tasks you accepted appear here.",
   "today.pending": "Pending tasks",
   "today.accepted": "Accepted by you",
   "today.episodes": "Open journeys",
@@ -125,23 +144,40 @@ const EN_MESSAGES: MessageCatalog = {
   "today.noDueDate": "No specific due date",
   "today.viewTask": "View task",
   "today.emptyTitle": "No tasks for today",
-  "today.emptyDescription": "A task appears here after you accept it in your health journey. CLARA never adds one for you.",
+  "today.emptyDescription":
+    "A task appears here after you accept it in your health journey. CLARA never adds one for you.",
   "today.createEpisode": "Create journey",
   "today.connectionError": "Check your connection and try again.",
   "today.startHere": "What would you like to do?",
-  "today.startHereDescription": "Choose one task to start. You can return at any time.",
+  "today.startHereDescription":
+    "Choose one task to start. You can return at any time.",
   "today.askTitle": "Ask about your health",
-  "today.askDescription": "Share what concerns you; CLARA will help identify a safe next step.",
+  "today.askDescription":
+    "Share what concerns you; CLARA will help identify a safe next step.",
   "today.medicineTitle": "Check medication",
-  "today.medicineDescription": "Review current medication and source-backed interaction checks.",
+  "today.medicineDescription":
+    "Review current medication and source-backed interaction checks.",
   "today.recordTitle": "Save visit information",
-  "today.recordDescription": "Gather prescriptions, results and personal health information.",
+  "today.recordDescription":
+    "Gather prescriptions, results and personal health information.",
   "today.visitTitle": "Prepare for a visit",
-  "today.visitDescription": "Prepare your questions and important information for a visit.",
+  "today.visitDescription":
+    "Prepare your questions and important information for a visit.",
   "today.openAction": "Open",
   "surface.loadFailed": "We couldn't load the data",
   "surface.retry": "Try again",
   "surface.loading": "Loading",
+  "flow.saveFailed": "Could not save changes",
+  "flow.savingDraft": "Saving draft…",
+  "flow.savedDraft": "Draft saved",
+  "flow.progress": "Progress",
+  "flow.stepOf": "Step {current} / {total}",
+  "flow.complete": "complete",
+  "flow.current": "current",
+  "flow.notStarted": "not started",
+  "flow.checkInformation": "Check your information",
+  "flow.fixBeforeContinue":
+    "A few items need to be corrected before you continue.",
 };
 
 export const UI_MESSAGES: Record<UILanguage, MessageCatalog> = {
@@ -166,11 +202,14 @@ export function formatLocaleDate(
   value: Date | number | string,
   options: Intl.DateTimeFormatOptions = { dateStyle: "medium" },
 ): string {
-  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-US", options).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat(
+    locale === "vi" ? "vi-VN" : "en-US",
+    options,
+  ).format(new Date(value));
 }
 
 export function formatLocaleNumber(locale: UILanguage, value: number): string {
-  return new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(value);
+  return new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(
+    value,
+  );
 }

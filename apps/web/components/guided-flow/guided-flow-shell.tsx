@@ -2,6 +2,9 @@
 
 import { useId, type ReactNode } from "react";
 
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+
 import { StepProgress, type GuidedFlowStep } from "./step-progress";
 
 export type GuidedFlowSaveState =
@@ -11,6 +14,7 @@ export type GuidedFlowSaveState =
   | { kind: "error"; message: string };
 
 function SaveState({ state }: { state: GuidedFlowSaveState }) {
+  const language = useUILanguage();
   if (state.kind === "idle") return null;
 
   if (state.kind === "error") {
@@ -19,7 +23,7 @@ function SaveState({ state }: { state: GuidedFlowSaveState }) {
         role="alert"
         className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]"
       >
-        <p className="font-semibold">Chưa thể lưu thay đổi</p>
+        <p className="font-semibold">{t(language, "flow.saveFailed")}</p>
         <p className="mt-1 leading-5">{state.message}</p>
       </div>
     );
@@ -34,7 +38,11 @@ function SaveState({ state }: { state: GuidedFlowSaveState }) {
       <span className="material-symbols-outlined text-base" aria-hidden="true">
         {state.kind === "saving" ? "progress_activity" : "check_circle"}
       </span>
-      {state.message ?? (state.kind === "saving" ? "Đang lưu bản nháp…" : "Đã lưu bản nháp")}
+      {state.message ??
+        t(
+          language,
+          state.kind === "saving" ? "flow.savingDraft" : "flow.savedDraft",
+        )}
     </p>
   );
 }
@@ -89,11 +97,15 @@ export function GuidedFlowShell({
 
       <div className="mt-6 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-soft)] sm:p-7">
         <SaveState state={saveState} />
-        <div className={saveState.kind === "idle" ? "" : "mt-4"}>{children}</div>
+        <div className={saveState.kind === "idle" ? "" : "mt-4"}>
+          {children}
+        </div>
       </div>
 
       {aside ? (
-        <aside className="mt-5 text-sm leading-6 text-[var(--text-secondary)]">{aside}</aside>
+        <aside className="mt-5 text-sm leading-6 text-[var(--text-secondary)]">
+          {aside}
+        </aside>
       ) : null}
     </section>
   );
