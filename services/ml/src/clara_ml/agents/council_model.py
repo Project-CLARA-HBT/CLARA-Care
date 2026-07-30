@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError
 
@@ -33,7 +33,30 @@ _LEGACY_TRIAGE_BY_SUGGESTION = {
     "insufficient_data": "routine_follow_up",
 }
 _TRIAGE_SUGGESTIONS = frozenset(_LEGACY_TRIAGE_BY_SUGGESTION)
-_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v3"
+_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v4"
+
+# Shadow specialists can suggest only a bounded operational action class, never
+# free-text treatment or prescribing. The deterministic contract verifier also
+# rejects an action whose severity falls below the specialist's own triage
+# vote. Neither value alters the released Council result: this model path is
+# shadow-only.
+CouncilSafeNextActionClass = Literal[
+    "collect_more_information",
+    "clinician_review",
+    "same_day_in_person_review",
+    "emergency_evaluation",
+]
+_ACTION_CLASS_SEVERITY = {
+    "collect_more_information": 0,
+    "clinician_review": 1,
+    "same_day_in_person_review": 2,
+    "emergency_evaluation": 3,
+}
+_MIN_ACTION_SEVERITY_BY_TRIAGE = {
+    "routine_follow_up": 1,
+    "same_day_review": 2,
+    "emergency_escalation": 3,
+}
 
 
 class _CaseBoundFinding(BaseModel):
@@ -59,8 +82,6 @@ class CouncilSpecialistOpinionContract(BaseModel):
     supported_findings: list[_CaseBoundFinding] = Field(default_factory=list, max_length=10)
     evidence_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
     red_flags: list[StrictStr] = Field(default_factory=list, max_length=8)
-    relevant_observations: list[StrictStr] = Field(default_factory=list, max_length=10)
-    hypotheses: list[StrictStr] = Field(default_factory=list, max_length=6)
     supporting_case_fact_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
     contradicting_case_fact_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
     missing_information: list[StrictStr] = Field(
@@ -75,7 +96,7 @@ class CouncilSpecialistOpinionContract(BaseModel):
     triage_suggestion: StrictStr = Field(
         validation_alias=AliasChoices("triage_suggestion", "triage"),
     )
-    safe_next_action_class: StrictStr = Field(min_length=1, max_length=400)
+    safe_next_action_class: CouncilSafeNextActionClass
 
 
 def _client() -> DeepSeekClient:
@@ -226,8 +247,10 @@ def _normalize_assessment(
     if abstained and not (uncertainties or missing_decisive_data or suggested_questions):
         return None
 
-    safe_next_action_class = str(raw.get("safe_next_action_class", "")).strip()[:400]
-    if not safe_next_action_class:
+    safe_next_action_class = raw.get("safe_next_action_class")
+    if safe_next_action_class not in _ACTION_CLASS_SEVERITY:
+        return None
+    if _ACTION_CLASS_SEVERITY[safe_next_action_class] < _MIN_ACTION_SEVERITY_BY_TRIAGE[triage]:
         return None
 
     evidence_status = "supported_case_facts"
@@ -259,8 +282,6 @@ def _normalize_assessment(
         "specialist_opinion": specialist_opinion,
         "supported_findings": supported_findings,
         "evidence_ids": evidence_ids,
-        "relevant_observations": _text_list(raw.get("relevant_observations")),
-        "hypotheses": _text_list(raw.get("hypotheses"), limit=6),
         "supporting_case_fact_ids": supporting_ids,
         "contradicting_case_fact_ids": contradicting_ids,
         "missing_decisive_data": missing_decisive_data,
@@ -420,15 +441,16 @@ def run_model_council_shadow(
             f"Specialty: {specialist}. Independently review the case packet below. "
             "This is decision support, not diagnosis or prescribing. Use only supplied "
             "facts. Return one JSON object with keys: supported_findings (list of "
-            "{statement, evidence_ids}), evidence_ids (list), relevant_observations "
-            "(list), hypotheses (list, uncertainty explicit), supporting_case_fact_ids "
+            "{statement, evidence_ids}), evidence_ids (list), supporting_case_fact_ids "
             "(list), contradicting_case_fact_ids (list), missing_information (list), "
             "red_flags (list), uncertainties (list), suggested_questions (list), "
             "abstain (boolean), abstention_reason (string required when abstain=true), "
             "triage_suggestion "
             "(emergency|same_day|scheduled_review|self_care_information|insufficient_data), and "
-            "safe_next_action_class (string). Do not return confidence, probability, "
-            "or a diagnosis. Never invent a fact or citation.\n\n"
+            "safe_next_action_class (one of collect_more_information, clinician_review, "
+            "same_day_in_person_review, emergency_evaluation). Do not return confidence, "
+            "probability, a diagnosis, treatment instruction, or medication-dose change. "
+            "Never invent a fact or citation.\n\n"
             f"CASE_PACKET={json.dumps(packet, ensure_ascii=False, sort_keys=True)}"
         )
         try:
