@@ -1925,6 +1925,55 @@ class RagPipelineP1:
         return merged
 
     @staticmethod
+    def _is_explicitly_retracted_document(document: Document) -> bool:
+        """Recognize only structured retraction metadata on a retrieved document.
+
+        Providers and the persistent corpus can carry their own retraction
+        status.  A result marked retracted must not be offered to generation,
+        verification, or citation selection.  Free text is intentionally not
+        inspected: a valid guideline may discuss a retracted study, and that
+        must remain retrievable.  This is a fail-safe evidence exclusion, not
+        a claim about the status of records with unknown metadata.
+        """
+
+        metadata = document.metadata if isinstance(document.metadata, dict) else {}
+        for key in ("is_retracted", "retracted"):
+            if metadata.get(key) is True:
+                return True
+
+        markers = {
+            "retracted",
+            "retracted publication",
+            "retraction of publication",
+            "withdrawn publication",
+            "withdrawn",
+        }
+        for key in ("retraction_status", "publication_status", "evidence_status"):
+            if str(metadata.get(key) or "").strip().casefold() in markers:
+                return True
+
+        raw_types = metadata.get("publication_types")
+        if not isinstance(raw_types, (list, tuple, set)):
+            raw_types = [raw_types] if raw_types else []
+        return any(str(item or "").strip().casefold() in markers for item in raw_types)
+
+    @classmethod
+    def _exclude_explicitly_retracted_documents(
+        cls,
+        docs: List[Document],
+    ) -> tuple[List[Document], int]:
+        """Return eligible evidence documents and an auditable rejected count."""
+
+        retained: List[Document] = []
+        rejected = 0
+        for document in docs:
+            if cls._is_explicitly_retracted_document(document):
+                rejected += 1
+                continue
+            retained.append(document)
+        return retained, rejected
+
+    @staticmethod
     def _bounded_fast_rescue_sources(rag_sources: object) -> list[dict[str, Any]]:
         """Limit a zero-result Fast rescue to two scientific sources plus web."""
 
@@ -3240,6 +3289,27 @@ class RagPipelineP1:
         )
         retrieval_trace["graphrag_node_count"] = int(graphrag_summary.get("node_count") or 0)
         retrieval_trace["graphrag_edge_count"] = int(graphrag_summary.get("edge_count") or 0)
+
+        # A final status gate covers every ingress (live provider, persistent
+        # corpus, upload fixture, cache, and GraphRAG expansion).  Connector
+        # parsers already drop known retracted PubMed/Europe PMC records, but
+        # this boundary is required for records ingested before that behavior
+        # and for other structured providers.  The count is safe telemetry; it
+        # carries no document title, query, or patient data.
+        docs, retracted_document_count = self._exclude_explicitly_retracted_documents(docs)
+        retrieval_trace["retracted_document_count"] = retracted_document_count
+        if retracted_document_count:
+            used_stages.append("retracted_evidence_filter")
+            flow_events.append(
+                self._flow_event(
+                    stage="retracted_evidence_filter",
+                    status="completed",
+                    docs=[],
+                    note="Excluded retracted evidence records before synthesis.",
+                    component="verifier",
+                    payload={"retracted_document_count": retracted_document_count},
+                )
+            )
 
         relevance_score = self._context_relevance(query, docs)
         retrieval_trace["relevance"] = round(float(relevance_score), 4)
