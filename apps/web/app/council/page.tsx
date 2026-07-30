@@ -28,8 +28,9 @@ import {
   submitCouncilOversight,
 } from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
-import { t } from "@/lib/i18n/catalog";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import type { UserRole } from "@/lib/navigation.config";
+import type { UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
 
 type SeverityLevel = "stable" | "warning" | "critical";
@@ -70,11 +71,13 @@ function formatElapsed(fromIso?: string): string {
   return `${h}:${m}:${s}`;
 }
 
-function formatRunTimestamp(iso: string): string {
+function formatRunTimestamp(language: UILanguage, iso: string): string {
   const parsed = Date.parse(iso);
-  if (!Number.isFinite(parsed)) return "Không rõ thời điểm";
+  if (!Number.isFinite(parsed)) {
+    return t(language, "council.history.timestampUnknown");
+  }
   try {
-    return new Date(parsed).toLocaleString("vi-VN", {
+    return formatLocaleDate(language, parsed, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -82,41 +85,52 @@ function formatRunTimestamp(iso: string): string {
       minute: "2-digit",
     });
   } catch {
-    return new Date(parsed).toISOString();
+    return t(language, "council.history.timestampUnknown");
   }
 }
 
 // Derive a short, non-PII outcome label for a historical run from its snapshot.
-function summarizeRunOutcome(run: CouncilRunRecord): string {
-  if (run.emergencyTriggered) return "Cần xử trí khẩn";
-  if (!run.result) return "Đã chạy hội chẩn";
+function summarizeRunOutcome(language: UILanguage, run: CouncilRunRecord): string {
+  if (run.emergencyTriggered) {
+    return t(language, "council.history.outcome.emergency");
+  }
+  if (!run.result) return t(language, "council.history.outcome.completed");
   try {
     const normalized = normalizeCouncilRunResult(run.result);
-    if (normalized.isEmergency) return "Cần xử trí khẩn";
-    if ((normalized.conflicts?.length ?? 0) > 0) return "Có điểm bất đồng";
-    if (normalized.consensus?.trim()) return "Đã đạt đồng thuận";
-    return "Đã chạy hội chẩn";
+    if (normalized.isEmergency) {
+      return t(language, "council.history.outcome.emergency");
+    }
+    if ((normalized.conflicts?.length ?? 0) > 0) {
+      return t(language, "council.history.outcome.conflict");
+    }
+    if (normalized.consensus?.trim()) {
+      return t(language, "council.history.outcome.consensus");
+    }
+    return t(language, "council.history.outcome.completed");
   } catch {
-    return "Đã chạy hội chẩn";
+    return t(language, "council.history.outcome.completed");
   }
 }
 
 // Derive a concise, user-facing label for the model basis behind a Council
 // result (Req 6.3, 6.4). Coarse and non-identifying — safe for every role; the
 // raw model identifiers stay admin-only at the call site.
-function describeModelBasis(disclosure: CouncilAiDisclosure): string {
+function describeModelBasis(
+  language: UILanguage,
+  disclosure: CouncilAiDisclosure,
+): string {
   const family = disclosure.modelFamily.toLowerCase();
   const version = disclosure.modelVersion.toLowerCase();
   if (/rule/.test(family) || /rule/.test(version)) {
-    return "Bộ quy tắc hội chẩn xác định (rule-based)";
+    return t(language, "council.model.ruleBased");
   }
   if (/heuristic|fallback/.test(family) || /heuristic|fallback/.test(version)) {
-    return "Trích xuất dự phòng theo heuristic";
+    return t(language, "council.model.fallback");
   }
   if (/deepseek/.test(family)) {
-    return "Mô hình ngôn ngữ DeepSeek";
+    return t(language, "council.model.deepseek");
   }
-  return disclosure.modelFamily || "Mô hình AI";
+  return disclosure.modelFamily || t(language, "council.model.generic");
 }
 
 function getSeverity(
@@ -1099,7 +1113,7 @@ export default function CouncilPage() {
                   <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
                     manage_history
                   </span>
-                  Lịch sử hội chẩn
+                  {t(language, "council.history.title")}
                 </h3>
                 <ol className="space-y-3">
                   {runHistory.map((run, index) => (
@@ -1113,17 +1127,19 @@ export default function CouncilPage() {
                             className={`text-sm font-bold ${BODY_TEXT_CLASS}`}
                           >
                             {index === 0
-                              ? "Lần chạy mới nhất"
-                              : `Lần chạy #${runHistory.length - index}`}
+                              ? t(language, "council.history.latestRun")
+                              : t(language, "council.history.runNumber", {
+                                  count: runHistory.length - index,
+                                })}
                           </span>
                           {run.emergencyTriggered ? (
                             <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">
-                              Cảnh báo khẩn
+                              {t(language, "council.history.emergencyBadge")}
                             </span>
                           ) : null}
                         </div>
                         <p className={`mt-1 text-xs ${SECONDARY_TEXT_CLASS}`}>
-                          {summarizeRunOutcome(run)}
+                          {summarizeRunOutcome(language, run)}
                         </p>
                         {run.modelVersion ? (
                           <p
@@ -1136,7 +1152,7 @@ export default function CouncilPage() {
                       <span
                         className={`shrink-0 text-right text-[11px] font-mono ${MUTED_TEXT_CLASS}`}
                       >
-                        {formatRunTimestamp(run.createdAt)}
+                        {formatRunTimestamp(language, run.createdAt)}
                       </span>
                     </li>
                   ))}
@@ -1306,20 +1322,22 @@ export default function CouncilPage() {
                       <span
                         className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}
                       >
-                        Cơ sở mô hình
+                        {t(language, "council.model.basisLabel")}
                       </span>
                       {disclosure.isFallback ? (
                         <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                          Chế độ dự phòng / degraded
+                          {t(language, "council.model.degradedBadge")}
                         </span>
                       ) : null}
                     </div>
                     <p
                       className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                     >
-                      Kết quả được tạo bởi: {describeModelBasis(disclosure)}.
+                      {t(language, "council.model.generatedBy", {
+                        basis: describeModelBasis(language, disclosure),
+                      })}
                       {disclosure.isFallback
-                        ? " Đây là kết quả ở chế độ dự phòng (degraded) — hãy cân nhắc thận trọng hơn."
+                        ? t(language, "council.model.fallbackNotice")
                         : ""}
                     </p>
                     {isAdmin &&
