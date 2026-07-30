@@ -3741,7 +3741,7 @@ export default function ChatWorkspacePage() {
             <div className="mx-auto w-full max-w-none space-y-3 px-2 sm:px-2.5 lg:px-3 xl:px-4 2xl:px-5">
               {isLoadingTurns && !conversationTurns.length ? (
                 <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  {isEnglishUI ? "Loading conversation..." : "Đang tải nội dung cuộc trò chuyện..."}
+                  {t(uiLanguage, "chat.legacyWorkspace.canvas.loading")}
                 </article>
               ) : null}
 
@@ -3750,7 +3750,7 @@ export default function ChatWorkspacePage() {
                   <div className="flex items-start gap-2">
                     <span className="material-symbols-outlined mt-0.5 text-[18px]">error</span>
                     <div>
-                      <p>{isEnglishUI ? "CLARA could not complete the answer." : "CLARA chưa thể hoàn tất câu trả lời."}</p>
+                      <p>{t(uiLanguage, "chat.legacyWorkspace.canvas.error")}</p>
                       <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
                     </div>
                   </div>
@@ -3765,36 +3765,33 @@ export default function ChatWorkspacePage() {
                     </span>
                   </div>
                   <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
-                    {isEnglishUI ? "How can CLARA help you today?" : "CLARA có thể giúp gì cho bạn?"}
+                    {t(uiLanguage, "chat.legacyWorkspace.welcome.title")}
                   </h2>
                   <div className="mt-3 max-w-md space-y-1.5 text-sm text-[var(--text-secondary)]">
                     <p>
-                      {isEnglishUI ? (
-                        <>Ask about <strong>medicine, symptoms, lab results</strong> or <strong>check drug interactions</strong>.</>
-                      ) : (
-                        <>Bạn có thể hỏi về <strong>thuốc, triệu chứng, kết quả xét nghiệm</strong> hoặc <strong>kiểm tra tương tác</strong>.</>
-                      )}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.askLead")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.askTopics")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.askConnector")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.askInteractions")}</strong>.
                     </p>
                     <p>
-                      {isEnglishUI ? (
-                        <>CLARA answers with <strong>warnings</strong> and <strong>references</strong> when available.</>
-                      ) : (
-                        <>CLARA trả lời kèm <strong>cảnh báo</strong> và <strong>nguồn tham khảo</strong> khi có.</>
-                      )}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerLead")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.answerWarnings")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerConnector")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.answerSources")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerSuffix")}
                     </p>
                   </div>
                   <p className="mt-4 max-w-lg rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium leading-5 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                    {isEnglishUI
-                      ? "CLARA is an AI health information assistant, not a replacement for a clinician."
-                      : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
+                    {t(uiLanguage, "chat.legacyWorkspace.welcome.disclaimer")}
                   </p>
                   <div className="mt-8 w-full">
                     <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {isEnglishUI ? "Medication" : "Thuốc"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.medication")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {isEnglishUI ? "Symptoms" : "Triệu chứng"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.symptoms")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {isEnglishUI ? "Lab tests" : "Xét nghiệm"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.labTests")}</span>
                     </div>
                     <div className="grid w-full gap-3 sm:grid-cols-2">
                       {quickPrompts.map((prompt) => (
@@ -3824,7 +3821,7 @@ export default function ChatWorkspacePage() {
               {conversationTurns.length >= 1 && conversationTurns.length <= 2 && !isSubmitting && !isLoadingTurns ? (
                 <div className="mx-auto mt-3 flex w-full max-w-3xl flex-col items-start gap-2 px-1">
                   <p className="text-xs font-semibold text-[var(--text-muted)]">
-                    {isEnglishUI ? "Continue with?" : "Bạn muốn tiếp tục với?"}
+                    {t(uiLanguage, "chat.legacyWorkspace.canvas.continue")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {(isEnglishUI
@@ -3848,7 +3845,7 @@ export default function ChatWorkspacePage() {
                 <article className="rounded-[0.8rem] border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.42)] dark:border-cyan-600/55 dark:bg-cyan-950/35 dark:text-cyan-100">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-600 dark:bg-cyan-300" />
-                    <span>{isEnglishUI ? "CLARA is analyzing your question..." : "CLARA đang phân tích câu hỏi..."}</span>
+                    <span>{t(uiLanguage, "chat.legacyWorkspace.canvas.analyzing")}</span>
                   </div>
                 </article>
               ) : null}
