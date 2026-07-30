@@ -253,6 +253,23 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    path: "app/chat/_v2/components/TelemetryPanel.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.telemetryPanel.aria",
+      "chat.telemetryPanel.sourceIntel",
+      "chat.telemetryPanel.empty",
+    ],
+    forbidden: [
+      '"System telemetry"',
+      '"Telemetry hệ thống"',
+      '"Source intel"',
+      '"Nguồn"',
+      '"No source signal yet."',
+      '"Chưa có tín hiệu nguồn."',
+    ],
+  },
+  {
     path: "app/medicines/safety-tab.tsx",
     required: [
       "@/lib/i18n/catalog",
