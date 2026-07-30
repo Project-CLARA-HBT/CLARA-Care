@@ -20,6 +20,11 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import {
+  formatLocaleDate,
+  t,
+  type UITranslationKey,
+} from "@/lib/i18n/catalog";
 
 /**
  * DSAR self-service (regulatory-compliance Requirement 3, design §C, Property
@@ -37,8 +42,8 @@ import {
 
 type ActionCopy = {
   kind: DsarKind;
-  label: Record<UILanguage, string>;
-  desc: Record<UILanguage, string>;
+  label: UITranslationKey;
+  description: UITranslationKey;
   /** Destructive actions require an explicit confirm step. */
   destructive?: boolean;
 };
@@ -46,99 +51,38 @@ type ActionCopy = {
 const ACTIONS: ActionCopy[] = [
   {
     kind: "export",
-    label: { vi: "Xuất dữ liệu", en: "Export my data" },
-    desc: {
-      vi: "Tải về bản sao có thể đọc bằng máy của toàn bộ dữ liệu cá nhân CLARA đang lưu về bạn (hồ sơ, PHR, tủ thuốc, đồng thuận).",
-      en: "Download a machine-readable copy of all personal data CLARA holds about you (profile, PHR, medicine cabinet, consents).",
-    },
+    label: "dataRights.action.export.label",
+    description: "dataRights.action.export.description",
   },
   {
     kind: "correct",
-    label: { vi: "Yêu cầu chỉnh sửa", en: "Request correction" },
-    desc: {
-      vi: "Yêu cầu chỉnh sửa dữ liệu cá nhân không chính xác.",
-      en: "Request correction of inaccurate personal data.",
-    },
+    label: "dataRights.action.correct.label",
+    description: "dataRights.action.correct.description",
   },
   {
     kind: "restrict",
-    label: { vi: "Hạn chế xử lý", en: "Restrict processing" },
-    desc: {
-      vi: "Yêu cầu tạm dừng hoặc hạn chế việc xử lý dữ liệu cá nhân của bạn.",
-      en: "Request that processing of your personal data be paused or restricted.",
-    },
+    label: "dataRights.action.restrict.label",
+    description: "dataRights.action.restrict.description",
   },
   {
     kind: "withdraw",
-    label: { vi: "Rút đồng thuận", en: "Withdraw consent" },
-    desc: {
-      vi: "Rút đồng thuận xử lý. Bạn cũng có thể quản lý theo từng mục đích tại Trung tâm đồng thuận.",
-      en: "Withdraw processing consent. You can also manage this per-purpose in the Consent Center.",
-    },
+    label: "dataRights.action.withdraw.label",
+    description: "dataRights.action.withdraw.description",
   },
   {
     kind: "delete",
-    label: { vi: "Xóa dữ liệu", en: "Delete my data" },
-    desc: {
-      vi: "Yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn, trừ dữ liệu phải lưu theo nghĩa vụ pháp lý (được công bố bên dưới).",
-      en: "Request deletion or anonymization of your personal data, except data retained under disclosed legal obligations.",
-    },
+    label: "dataRights.action.delete.label",
+    description: "dataRights.action.delete.description",
     destructive: true,
   },
 ];
 
-const STATUS_LABELS: Record<
-  DsarRequestRecord["status"],
-  Record<UILanguage, string>
-> = {
-  received: { vi: "Đã tiếp nhận", en: "Received" },
-  in_progress: { vi: "Đang xử lý", en: "In progress" },
-  fulfilled: { vi: "Đã hoàn tất", en: "Fulfilled" },
-  rejected: { vi: "Đã từ chối", en: "Rejected" },
+const STATUS_LABELS: Record<DsarRequestRecord["status"], UITranslationKey> = {
+  received: "dataRights.status.received",
+  in_progress: "dataRights.status.inProgress",
+  fulfilled: "dataRights.status.fulfilled",
+  rejected: "dataRights.status.rejected",
 };
-
-const COPY = {
-  vi: {
-    title: "Dữ liệu của tôi",
-    description:
-      "Thực hiện quyền của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP: truy cập, chỉnh sửa, xóa, hạn chế xử lý và rút đồng thuận.",
-    disabled:
-      "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
-    loading: "Đang tải các yêu cầu của bạn...",
-    loadError: "Không thể tải danh sách yêu cầu. Vui lòng thử lại.",
-    submit: "Gửi yêu cầu",
-    submitting: "Đang gửi...",
-    exporting: "Đang chuẩn bị bản xuất...",
-    download: "Tải xuống",
-    historyTitle: "Lịch sử yêu cầu",
-    noHistory: "Bạn chưa gửi yêu cầu nào.",
-    retentionNote:
-      "Lưu ý: một số bản ghi audit/tuân thủ không chứa dữ liệu định danh sẽ được giữ lại theo nghĩa vụ pháp lý ngay cả sau khi xóa.",
-    acknowledged: "Đã ghi nhận yêu cầu. Chúng tôi sẽ xử lý trong thời hạn luật định.",
-    submittedAt: "Gửi lúc",
-    dueAt: "Hạn xử lý",
-  },
-  en: {
-    title: "My data",
-    description:
-      "Exercise your data-subject rights under Decree 13/2023/NĐ-CP: access, correction, deletion, restriction of processing, and consent withdrawal.",
-    disabled: "Data-subject requests (DSAR) are not enabled for this environment yet.",
-    loading: "Loading your requests...",
-    loadError: "Could not load your requests. Please try again.",
-    submit: "Submit request",
-    submitting: "Submitting...",
-    exporting: "Preparing export...",
-    download: "Download",
-    historyTitle: "Request history",
-    noHistory: "You have not submitted any requests yet.",
-    retentionNote:
-      "Note: certain audit/compliance records that contain no identifying data are retained under legal obligations even after deletion.",
-    acknowledged:
-      "Your request has been recorded. We will process it within the statutory window.",
-    submittedAt: "Submitted",
-    dueAt: "Due",
-  },
-} as const;
 
 export default function DataRightsPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
@@ -149,7 +93,26 @@ export default function DataRightsPage() {
   const [pendingKind, setPendingKind] = useState<DsarKind | null>(null);
   const [requests, setRequests] = useState<DsarRequestRecord[]>([]);
 
-  const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const text = useMemo(
+    () => ({
+      title: t(uiLanguage, "dataRights.title"),
+      description: t(uiLanguage, "dataRights.description"),
+      disabled: t(uiLanguage, "dataRights.disabled"),
+      loading: t(uiLanguage, "dataRights.loading"),
+      loadError: t(uiLanguage, "dataRights.loadError"),
+      submit: t(uiLanguage, "dataRights.submit"),
+      submitting: t(uiLanguage, "dataRights.submitting"),
+      exporting: t(uiLanguage, "dataRights.exporting"),
+      download: t(uiLanguage, "dataRights.download"),
+      historyTitle: t(uiLanguage, "dataRights.historyTitle"),
+      noHistory: t(uiLanguage, "dataRights.noHistory"),
+      retentionNote: t(uiLanguage, "dataRights.retentionNote"),
+      acknowledged: t(uiLanguage, "dataRights.acknowledged"),
+      submittedAt: t(uiLanguage, "dataRights.submittedAt"),
+      dueAt: t(uiLanguage, "dataRights.dueAt"),
+    }),
+    [uiLanguage],
+  );
   const flagOn = isDsarEnabled();
 
   useEffect(() => {
@@ -191,8 +154,8 @@ export default function DataRightsPage() {
       const stamp = new Date().toISOString().slice(0, 10);
       triggerBlobDownload(blob, `clara-data-export-${stamp}.json`);
       await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : text.loadError);
+    } catch {
+      setError(text.loadError);
     } finally {
       setPendingKind(null);
     }
@@ -207,8 +170,8 @@ export default function DataRightsPage() {
         await submitDsarRequest(kind);
         setNotice(text.acknowledged);
         await refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : text.loadError);
+      } catch {
+        setError(text.loadError);
       } finally {
         setPendingKind(null);
       }
@@ -216,7 +179,6 @@ export default function DataRightsPage() {
     [refresh, text.acknowledged, text.loadError],
   );
 
-  const isEn = uiLanguage === "en";
   const showDisabled = !flagOn || (!loading && !enabled);
 
   return (
@@ -251,10 +213,10 @@ export default function DataRightsPage() {
                     className="flex flex-col p-4"
                   >
                     <p className="text-sm font-bold text-[var(--text-primary)]">
-                      {action.label[uiLanguage]}
+                      {t(uiLanguage, action.label)}
                     </p>
                     <p className="mt-1 flex-1 text-[13px] leading-6 text-[var(--text-secondary)]">
-                      {action.desc[uiLanguage]}
+                      {t(uiLanguage, action.description)}
                     </p>
                     {action.destructive && action.kind === "delete" ? (
                       <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
@@ -270,7 +232,7 @@ export default function DataRightsPage() {
                           variant="danger"
                           size="sm"
                         >
-                          {action.label[uiLanguage]}
+                          {t(uiLanguage, action.label)}
                         </Button>
                       </div>
                     ) : (
@@ -319,29 +281,34 @@ export default function DataRightsPage() {
                     >
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-[var(--text-primary)]">
-                          {ACTIONS.find((a) => a.kind === request.kind)?.label[
-                            uiLanguage
-                          ] ?? request.kind}
+                          {t(
+                            uiLanguage,
+                            ACTIONS.find((action) => action.kind === request.kind)
+                              ?.label ?? "dataRights.action.unknown",
+                          )}
                         </p>
                         <p className="text-[11px] text-[var(--text-muted)]">
                           {request.created_at
-                            ? `${text.submittedAt}: ${new Date(request.created_at).toLocaleString()}`
+                            ? `${text.submittedAt}: ${formatLocaleDate(uiLanguage, request.created_at, { dateStyle: "medium", timeStyle: "short" })}`
                             : ""}
                           {request.due_at
-                            ? ` · ${text.dueAt}: ${new Date(request.due_at).toLocaleDateString()}`
+                            ? ` · ${text.dueAt}: ${formatLocaleDate(uiLanguage, request.due_at)}`
                             : ""}
                         </p>
                       </div>
                       <Badge tone="neutral">
-                        {STATUS_LABELS[request.status]?.[uiLanguage] ??
-                          request.status}
+                        {t(
+                          uiLanguage,
+                          STATUS_LABELS[request.status] ??
+                            "dataRights.status.unknown",
+                        )}
                       </Badge>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="mt-2 text-sm text-[var(--text-muted)]">
-                  {isEn ? COPY.en.noHistory : COPY.vi.noHistory}
+                  {text.noHistory}
                 </p>
               )}
             </SurfaceCard>
