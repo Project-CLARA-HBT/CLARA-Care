@@ -56,4 +56,46 @@ void main() {
     expect(find.text('No tasks for today'), findsOneWidget);
     expect(find.text('Hôm nay chưa có việc nào'), findsNothing);
   });
+
+  testWidgets('Today exposes and invokes the four task-first entry points',
+      (tester) async {
+    final api = FakeApiClient()
+      ..stub('getLifeMapToday', response: <String, dynamic>{
+        'tasks': const <Map<String, dynamic>>[],
+        'episodes': const <Map<String, dynamic>>[],
+        'pending_confirmation_count': 0,
+      });
+    final session = await FakeSessionStore.authenticated();
+    var askHealth = 0;
+    var checkMedicine = 0;
+    var saveHealthInfo = 0;
+    var prepareVisit = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TodaySurface(
+            apiClient: api,
+            sessionStore: session,
+            onAskHealth: () => askHealth++,
+            onCheckMedicines: () => checkMedicine++,
+            onSaveHealthInfo: () => saveHealthInfo++,
+            onPrepareVisit: () => prepareVisit++,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bạn muốn làm gì hôm nay?'), findsOneWidget);
+    await tester.tap(find.text('Hỏi về vấn đề sức khỏe'));
+    await tester.tap(find.text('Kiểm tra thuốc'));
+    await tester.tap(find.text('Lưu thông tin sức khỏe'));
+    await tester.tap(find.text('Chuẩn bị cho buổi khám'));
+
+    expect(askHealth, 1);
+    expect(checkMedicine, 1);
+    expect(saveHealthInfo, 1);
+    expect(prepareVisit, 1);
+  });
 }

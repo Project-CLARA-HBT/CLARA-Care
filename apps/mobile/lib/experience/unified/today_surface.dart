@@ -68,6 +68,10 @@ class TodaySurface extends StatefulWidget {
     required this.sessionStore,
     this.onNeedsOnboarding,
     this.onOpenLifeMap,
+    this.onAskHealth,
+    this.onCheckMedicines,
+    this.onSaveHealthInfo,
+    this.onPrepareVisit,
     this.readCache,
     this.languageController,
   });
@@ -81,6 +85,13 @@ class TodaySurface extends StatefulWidget {
 
   /// Invoked when the user chooses to open the full LifeMap surface.
   final VoidCallback? onOpenLifeMap;
+
+  /// Task-first entry points. They navigate only to existing consent-gated
+  /// surfaces and never create or confirm health data on the user's behalf.
+  final VoidCallback? onAskHealth;
+  final VoidCallback? onCheckMedicines;
+  final VoidCallback? onSaveHealthInfo;
+  final VoidCallback? onPrepareVisit;
   final LifeMapReadCache? readCache;
 
   /// Optional app-level language state. Omit only for legacy/direct embedding;
@@ -378,6 +389,8 @@ class _TodaySurfaceState extends State<TodaySurface> {
       const SizedBox(height: ClaraTokens.spaceSm),
       _buildStats(context),
       const SizedBox(height: ClaraTokens.spaceLg),
+      _buildStartHere(context),
+      const SizedBox(height: ClaraTokens.spaceLg),
       SectionHeader(title: _copy[ConsumerTerm.todayAccepted]),
     ];
 
@@ -419,6 +432,62 @@ class _TodaySurfaceState extends State<TodaySurface> {
         bottom: ClaraTokens.spaceXl,
       ),
       children: children,
+    );
+  }
+
+  /// The primary consumer actions intentionally come before the agenda so a
+  /// person can begin with a concrete task without learning CLARA vocabulary.
+  Widget _buildStartHere(BuildContext context) {
+    final actions = <_TodayStartAction>[
+      _TodayStartAction(
+        icon: Icons.forum_outlined,
+        title: _copy[ConsumerTerm.todayAskHealthTitle],
+        description: _copy[ConsumerTerm.todayAskHealthDescription],
+        onTap: widget.onAskHealth,
+      ),
+      _TodayStartAction(
+        icon: Icons.medication_outlined,
+        title: _copy[ConsumerTerm.todayCheckMedicineTitle],
+        description: _copy[ConsumerTerm.todayCheckMedicineDescription],
+        onTap: widget.onCheckMedicines,
+      ),
+      _TodayStartAction(
+        icon: Icons.folder_shared_outlined,
+        title: _copy[ConsumerTerm.todaySaveHealthInfoTitle],
+        description: _copy[ConsumerTerm.todaySaveHealthInfoDescription],
+        onTap: widget.onSaveHealthInfo,
+      ),
+      _TodayStartAction(
+        icon: Icons.event_note_outlined,
+        title: _copy[ConsumerTerm.todayPrepareVisitTitle],
+        description: _copy[ConsumerTerm.todayPrepareVisitDescription],
+        onTap: widget.onPrepareVisit,
+      ),
+    ].where((action) => action.onTap != null).toList(growable: false);
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: _copy[ConsumerTerm.todayStartHereTitle]),
+          const SizedBox(height: ClaraTokens.spaceXs),
+          Text(
+            _copy[ConsumerTerm.todayStartHereDescription],
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          ...actions.map(
+            (action) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _TodayStartActionCard(action: action),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -527,6 +596,67 @@ class _TodaySurfaceState extends State<TodaySurface> {
             loading: busy,
             onPressed:
                 _offlineCachedAt == null ? () => _completeTask(task) : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayStartAction {
+  const _TodayStartAction({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback? onTap;
+}
+
+class _TodayStartActionCard extends StatelessWidget {
+  const _TodayStartActionCard({required this.action});
+
+  final _TodayStartAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ClaraCard(
+      onTap: action.onTap!,
+      semanticLabel: '${action.title}. ${action.description}',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(action.icon, color: theme.colorScheme.primary, size: 28),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: ClaraTokens.spaceXs),
+                Text(
+                  action.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: ClaraTokens.spaceSm),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ],
       ),

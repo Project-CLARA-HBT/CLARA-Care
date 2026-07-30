@@ -52,6 +52,16 @@ enum ConsumerTerm {
   profileHubSettingsTitle,
   profileHubSettingsDescription,
   todayTitle,
+  todayStartHereTitle,
+  todayStartHereDescription,
+  todayAskHealthTitle,
+  todayAskHealthDescription,
+  todayCheckMedicineTitle,
+  todayCheckMedicineDescription,
+  todaySaveHealthInfoTitle,
+  todaySaveHealthInfoDescription,
+  todayPrepareVisitTitle,
+  todayPrepareVisitDescription,
   todayOpenLifeMap,
   todayPending,
   todayAccepted,
@@ -661,6 +671,21 @@ class ConsumerTerminology {
     ConsumerTerm.profileHubSettingsTitle: 'Cài đặt',
     ConsumerTerm.profileHubSettingsDescription:
         'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
+    ConsumerTerm.todayStartHereTitle: 'Bạn muốn làm gì hôm nay?',
+    ConsumerTerm.todayStartHereDescription:
+        'Chọn một việc. CLARA sẽ chỉ dùng thông tin bạn đã cho phép.',
+    ConsumerTerm.todayAskHealthTitle: 'Hỏi về vấn đề sức khỏe',
+    ConsumerTerm.todayAskHealthDescription:
+        'Trao đổi với CLARA và nhận hướng dẫn rõ ràng về bước tiếp theo.',
+    ConsumerTerm.todayCheckMedicineTitle: 'Kiểm tra thuốc',
+    ConsumerTerm.todayCheckMedicineDescription:
+        'Xem thuốc đang dùng và kiểm tra an toàn từ nguồn thuốc đã xác minh.',
+    ConsumerTerm.todaySaveHealthInfoTitle: 'Lưu thông tin sức khỏe',
+    ConsumerTerm.todaySaveHealthInfoDescription:
+        'Cập nhật hồ sơ của bạn. Thông tin chỉ được lưu khi bạn tự xác nhận.',
+    ConsumerTerm.todayPrepareVisitTitle: 'Chuẩn bị cho buổi khám',
+    ConsumerTerm.todayPrepareVisitDescription:
+        'Gom điều cần hỏi và thông tin bạn muốn mang theo khi đi khám.',
     ConsumerTerm.todayUnnamedTask: 'Việc chưa đặt tên',
     ConsumerTerm.todayProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
     ConsumerTerm.todayProfileRequiredDescription:
@@ -1368,6 +1393,21 @@ class ConsumerTerminology {
     ConsumerTerm.profileHubSettingsTitle: 'Settings',
     ConsumerTerm.profileHubSettingsDescription:
         'Appearance, language, account, and privacy',
+    ConsumerTerm.todayStartHereTitle: 'What would you like to do today?',
+    ConsumerTerm.todayStartHereDescription:
+        'Choose one task. CLARA only uses the information you have allowed.',
+    ConsumerTerm.todayAskHealthTitle: 'Ask about a health concern',
+    ConsumerTerm.todayAskHealthDescription:
+        'Talk with CLARA and get clear guidance on the next step.',
+    ConsumerTerm.todayCheckMedicineTitle: 'Check a medicine',
+    ConsumerTerm.todayCheckMedicineDescription:
+        'Review your medicines and safety information from a verified drug source.',
+    ConsumerTerm.todaySaveHealthInfoTitle: 'Save health information',
+    ConsumerTerm.todaySaveHealthInfoDescription:
+        'Update your profile. Nothing is saved until you confirm it yourself.',
+    ConsumerTerm.todayPrepareVisitTitle: 'Prepare for a visit',
+    ConsumerTerm.todayPrepareVisitDescription:
+        'Gather questions and information you want to bring to your appointment.',
     ConsumerTerm.todayUnnamedTask: 'Unnamed task',
     ConsumerTerm.todayProfileRequiredTitle: 'Create your health profile first',
     ConsumerTerm.todayProfileRequiredDescription:

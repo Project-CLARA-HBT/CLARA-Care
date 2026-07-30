@@ -42,6 +42,7 @@ import 'medicines_hub.dart';
 import 'onboarding_flow.dart';
 import 'profile_hub.dart';
 import 'today_surface.dart';
+import 'visits_surface.dart';
 
 /// Coarse, no-PII screen-view event for the unified shell.
 const String kUnifiedShellViewedEvent = 'mobile_unified_shell_viewed';
@@ -141,16 +142,20 @@ class _UnifiedRootState extends State<UnifiedRoot> {
   Widget _buildShell(MobileFeatureFlagResolver resolver) {
     final languageController = widget.languageController;
     if (languageController == null) {
-      return _buildLocalizedShell(resolver, 'vi');
+      return _buildLocalizedShell(context, resolver, 'vi');
     }
     return AnimatedBuilder(
       animation: languageController,
-      builder: (context, _) =>
-          _buildLocalizedShell(resolver, languageController.languageCode),
+      builder: (context, _) => _buildLocalizedShell(
+        context,
+        resolver,
+        languageController.languageCode,
+      ),
     );
   }
 
   Widget _buildLocalizedShell(
+    BuildContext context,
     MobileFeatureFlagResolver resolver,
     String languageCode,
   ) {
@@ -173,6 +178,10 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             onNeedsOnboarding: () => setState(() => _needsOnboarding = true),
+            onAskHealth: () => _openChat(context, resolver),
+            onCheckMedicines: () => _openMedicines(context, resolver),
+            onSaveHealthInfo: () => _openHealthProfile(context, resolver),
+            onPrepareVisit: () => _openVisitPreparation(context),
             readCache: _lifeMapReadCache,
             languageController: widget.languageController,
           ),
@@ -218,6 +227,63 @@ class _UnifiedRootState extends State<UnifiedRoot> {
           ),
         ),
       ],
+    );
+  }
+
+  /// These routes are intentionally explicit rather than synthetic shortcuts:
+  /// every card opens the same existing consent-gated surface available from
+  /// the unified navigation. None writes health data or bypasses onboarding.
+  void _openChat(BuildContext context, MobileFeatureFlagResolver resolver) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatSurfaceV3(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openMedicines(BuildContext context, MobileFeatureFlagResolver resolver) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MedicinesHub(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openHealthProfile(
+    BuildContext context,
+    MobileFeatureFlagResolver resolver,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PhrSurfaceV3(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openVisitPreparation(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VisitsSurface(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          languageController: widget.languageController,
+        ),
+      ),
     );
   }
 }
