@@ -831,6 +831,10 @@ class Settings(BaseSettings):
     lifemap_ask_ai_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_ASK_AI_ENABLED"
     )
+    lifemap_ask_semantic_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="LIFEMAP_ASK_SEMANTIC_ROUTING_ENABLED",
+    )
     lifemap_ai_summaries_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_SUMMARIES_ENABLED"
     )

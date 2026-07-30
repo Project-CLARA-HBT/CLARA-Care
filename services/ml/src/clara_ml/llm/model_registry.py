@@ -26,6 +26,7 @@ class ModelTask(StrEnum):
     """LLM tasks with independently reviewable safety contracts."""
 
     MEDICAL_SAFETY_ROUTER = "medical_safety_router"
+    LIFEMAP_ASK_ROUTER = "lifemap_ask_router"
     LIFEMAP_CAPTURE_TRIAGE = "lifemap_capture_triage"
     LIFEMAP_VISIT_EXTRACTION = "lifemap_visit_extraction"
     SCRIBE_NOTE = "scribe_note"

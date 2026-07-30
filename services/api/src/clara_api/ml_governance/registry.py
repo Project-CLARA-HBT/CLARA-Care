@@ -131,6 +131,8 @@ def safe_operational_manifest(values: dict[str, Any]) -> dict[str, Any]:
         "ood",
         "fallback_used",
         "locale",
+        "semantic_route_used",
+        "semantic_route_degraded",
     }
     if set(values) - allowed:
         raise GovernanceError("operational_manifest_contains_unknown_fields")

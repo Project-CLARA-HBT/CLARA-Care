@@ -15,8 +15,8 @@ The resolved selection carries the contract schema version, risk category and
 model profile for safe operational correlation, never user text or prompt
 content.
 
-The current registry covers the medical safety router, LifeMap Capture triage
-and visit extraction, Scribe note/transcription, Council shadow assessment,
+The current registry covers the medical safety router, LifeMap Ask semantic
+routing, LifeMap Capture triage and visit extraction, Scribe note/transcription, Council shadow assessment,
 LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
 query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,
@@ -97,6 +97,20 @@ keyword intent selection; it cannot disable emergency escalation, legal
 refusal, FIDES, consent, RBAC, DrugBank or LifeMap invariants. The router
 receives a PII-redacted bounded message and records only model/task state, not
 the message or generated analysis.
+
+`POST /api/v1/lifemap/v2/ask` uses a distinct `LIFEMAP_ASK_ROUTER` task after
+its deterministic emergency and legal fast paths and after API consent/profile
+scope checks, but before LifeMap retrieval. The API sends only the bounded
+question and locale to `/v1/lifemap/ask/route`; profile ids, grants, events,
+revisions, retrieved text and source citations never cross that route. The
+router may return only five closed intents, a legal block, or emergency
+escalation. It cannot return an answer or mutate a record. API still retrieves
+only current authorized revisions and builds/verifies exact-revision claims
+deterministically. Provider errors, malformed output, or confidence below 0.7
+restore the existing deterministic route. The response intentionally reports
+only enabled/used/degraded state, never a model confidence. Set
+`LIFEMAP_ASK_SEMANTIC_ROUTING_ENABLED=false` and restart API for an immediate
+rollback; deterministic emergency/legal guards remain active either way.
 
 With task routing enabled, the manifest assigns `pro` to critical/safety and
 reasoning tasks (medical safety routing, LifeMap triage, FIDES/NLI, RAG

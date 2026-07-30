@@ -4,6 +4,7 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from statistics import median
 from time import perf_counter
+from typing import cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -32,6 +33,7 @@ from clara_api.db.models import (
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.lifemap.baselines import recompute_baseline, serialize_snapshot
 from clara_api.lifemap.commands import (
     add_outbox,
@@ -40,6 +42,8 @@ from clara_api.lifemap.commands import (
     store_command,
 )
 from clara_api.lifemap.intelligence import (
+    AskIntent,
+    SafetyRoute,
     deterministic_answer,
     hierarchical_summary,
     retrieve_revision_evidence,
@@ -131,6 +135,117 @@ _ASK_LIFEMAP_USE_CASE = {
     "requires_consent": True,
 }
 
+_LIFEMAP_ASK_INTENTS = frozenset(
+    {
+        "timeline_lookup",
+        "comparison",
+        "visit_preparation",
+        "missingness",
+        "explanation",
+    }
+)
+_LIFEMAP_ASK_BLOCK_REASONS = frozenset(
+    {"prescription_request", "dosage_request", "diagnosis_request"}
+)
+
+
+def _semantic_ask_route(
+    *,
+    query: str,
+    locale: str,
+    fallback: SafetyRoute,
+) -> tuple[SafetyRoute, dict[str, object]]:
+    """Ask ML only for a closed semantic route, never LifeMap facts.
+
+    The deterministic emergency/legal route has already run before this helper.
+    The downstream request contains only the user's bounded question and locale;
+    no profile, consent, episode, event, revision or retrieved evidence crosses
+    the API-to-ML boundary.  A provider failure, malformed payload, or low
+    confidence restores the pre-existing deterministic route immediately.
+    """
+
+    settings = get_settings()
+    if not settings.lifemap_ask_semantic_routing_enabled:
+        return fallback, {
+            "enabled": False,
+            "used": False,
+            "degraded": False,
+            "model_ref": "deterministic-grounded-fallback@1",
+        }
+    fallback_payload = {
+        "action": "allow",
+        "reason": "none",
+        "emergency": False,
+        "intent": fallback.intent,
+        "confidence": 0.0,
+        "model_used": "deterministic-grounded-fallback@1",
+        "degraded": True,
+    }
+    result = proxy_ml_post(
+        "/v1/lifemap/ask/route",
+        {"query": query, "locale": locale},
+        fail_soft_payload=fallback_payload,
+    )
+    if result.get("fallback") or result.get("degraded") is True:
+        return fallback, {
+            "enabled": True,
+            "used": False,
+            "degraded": True,
+            "model_ref": "deterministic-grounded-fallback@1",
+        }
+
+    action = result.get("action")
+    reason = result.get("reason")
+    emergency = result.get("emergency")
+    intent = result.get("intent")
+    confidence = result.get("confidence")
+    model_ref = result.get("model_used")
+    if (
+        action not in {"allow", "block"}
+        or not isinstance(reason, str)
+        or not isinstance(emergency, bool)
+        or not isinstance(intent, str)
+        or intent not in _LIFEMAP_ASK_INTENTS
+        or not isinstance(confidence, int | float)
+        or isinstance(confidence, bool)
+        or not 0.0 <= float(confidence) <= 1.0
+        or not isinstance(model_ref, str)
+        or not model_ref.strip()
+    ):
+        return fallback, {
+            "enabled": True,
+            "used": False,
+            "degraded": True,
+            "model_ref": "deterministic-grounded-fallback@1",
+        }
+    if emergency:
+        return SafetyRoute(intent="timeline_lookup", emergency=True), {
+            "enabled": True,
+            "used": True,
+            "degraded": False,
+            "model_ref": model_ref.strip()[:128],
+        }
+    if action == "block" and reason in _LIFEMAP_ASK_BLOCK_REASONS:
+        return SafetyRoute(intent="explanation", blocked_reason="legal_guard"), {
+            "enabled": True,
+            "used": True,
+            "degraded": False,
+            "model_ref": model_ref.strip()[:128],
+        }
+    if action == "allow" and reason == "none" and float(confidence) >= 0.7:
+        return SafetyRoute(intent=cast(AskIntent, intent)), {
+            "enabled": True,
+            "used": True,
+            "degraded": False,
+            "model_ref": model_ref.strip()[:128],
+        }
+    return fallback, {
+        "enabled": True,
+        "used": False,
+        "degraded": False,
+        "model_ref": "deterministic-grounded-fallback@1",
+    }
+
 
 def _emergency_visit_draft(locale: str) -> dict:
     return {
@@ -215,6 +330,53 @@ def ask_lifemap_v2(
     started = perf_counter()
     scope = _scope(db, token, x_profile)
     consent = ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    route, semantic_route = _semantic_ask_route(
+        query=payload.query,
+        locale=payload.locale,
+        fallback=route,
+    )
+    if route.emergency:
+        return {
+            "status": "emergency_escalation",
+            "intent": route.intent,
+            "answer": (
+                "Hãy gọi cấp cứu địa phương ngay hoặc đến khoa cấp cứu gần nhất."
+                if payload.locale.startswith("vi")
+                else "Call local emergency services now or go to the nearest emergency department."
+            ),
+            "claims": [],
+            "evidence": [],
+            "unknown": [],
+            "conflicting": [],
+            "stale": [],
+            "disputed": [],
+            "abstention_code": "emergency_fast_path",
+            "verification": {"retrieval_bypassed": True},
+            "disclosure": {
+                **disclosure,
+                "mode": (
+                    "semantic_route_deterministic_grounded_answer"
+                    if semantic_route["used"]
+                    else "deterministic_grounded_fallback"
+                ),
+                "semantic_routing": {
+                    "enabled": semantic_route["enabled"],
+                    "used": semantic_route["used"],
+                    "degraded": semantic_route["degraded"],
+                },
+            },
+        }
+    if route.blocked_reason:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": route.blocked_reason,
+                "message": (
+                    "LifeMap chỉ có thể hỗ trợ tra cứu và chuẩn bị câu hỏi; "
+                    "không chẩn đoán, kê đơn hoặc đưa liều cá nhân."
+                ),
+            },
+        )
     episode = (
         _episode_for_profile(db, scope.profile.id, payload.episode_id)
         if payload.episode_id
@@ -285,13 +447,15 @@ def ask_lifemap_v2(
                 "ood": False,
                 "fallback_used": True,
                 "locale": payload.locale,
+                "semantic_route_used": semantic_route["used"],
+                "semantic_route_degraded": semantic_route["degraded"],
             }
         )
         inference = MLInferenceManifest(
             context_manifest_id=context_manifest.id,
             use_case_id="lifemap.ask.v1",
-            model_ref="deterministic-grounded-fallback@1",
-            release_state="fallback",
+            model_ref=str(semantic_route["model_ref"]),
+            release_state=("champion" if semantic_route["used"] else "fallback"),
             outcome=str(answer["status"]),
             abstention_code=str(answer["abstention_code"]),
             operational_json=operational,
@@ -307,10 +471,22 @@ def ask_lifemap_v2(
         "intent": route.intent,
         "evidence": [row.public_dict() for row in evidence],
         "verification": verification,
-        "disclosure": disclosure,
+        "disclosure": {
+            **disclosure,
+            "mode": (
+                "semantic_route_deterministic_grounded_answer"
+                if semantic_route["used"]
+                else "deterministic_grounded_fallback"
+            ),
+            "semantic_routing": {
+                "enabled": semantic_route["enabled"],
+                "used": semantic_route["used"],
+                "degraded": semantic_route["degraded"],
+            },
+        },
         "context_manifest_id": context_id,
         "inference_manifest_id": inference_id,
-        "model": "deterministic-grounded-fallback@1",
+        "model": str(semantic_route["model_ref"]),
         "template": "ask-lifemap-v1",
         "retrieval_index": "profile-temporal-hybrid-current-revisions-v1",
         "policy": "lifemap-ai-safe-read-v1",
