@@ -106,6 +106,13 @@ const QUICK_PROMPTS_BY_LANGUAGE: Record<UILanguage, string[]> = {
   ],
 };
 
+const FOLLOW_UP_QUERY_KEYS: readonly UITranslationKey[] = [
+  "chat.legacyWorkspace.followUp.checkInteractions",
+  "chat.legacyWorkspace.followUp.askSideEffects",
+  "chat.legacyWorkspace.followUp.enterMedicationList",
+  "chat.legacyWorkspace.followUp.createConsultReport",
+];
+
 const LOCAL_WORKSPACE_MAX_ITEMS = 80;
 
 type WorkspaceLeftView = "all" | "chat" | "notes" | "discover" | "shares";
@@ -2740,6 +2747,10 @@ export default function ChatWorkspacePage() {
 
   const isEnglishUI = uiLanguage === "en";
   const quickPrompts = useMemo(() => QUICK_PROMPTS_BY_LANGUAGE[uiLanguage], [uiLanguage]);
+  const followUpSuggestions = useMemo(
+    () => FOLLOW_UP_QUERY_KEYS.map((key) => t(uiLanguage, key)),
+    [uiLanguage]
+  );
   const visibleLogicFlowNodes = logicFlowNodes.filter(
     (node) => node.status !== "pending" || Boolean(node.detail)
   );
@@ -3834,10 +3845,7 @@ export default function ChatWorkspacePage() {
                     {t(uiLanguage, "chat.legacyWorkspace.canvas.continue")}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {(isEnglishUI
-                      ? ["Check drug interactions", "Ask about side effects", "Enter my medication list", "Create a consult report"]
-                      : ["Kiểm tra tương tác thuốc", "Hỏi về tác dụng phụ", "Nhập danh sách thuốc của tôi", "Tạo báo cáo tư vấn"]
-                    ).map((suggestion) => (
+                    {followUpSuggestions.map((suggestion) => (
                       <button
                         key={suggestion}
                         type="button"
@@ -4067,9 +4075,7 @@ export default function ChatWorkspacePage() {
                   </>
                 ) : (
                   <p className="mt-2 rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2 text-[10px] leading-4 text-[var(--text-muted)]">
-                    {isEnglishUI
-                      ? "Signal will appear after the next research answer."
-                      : "Tín hiệu sẽ hiện sau câu trả lời research tiếp theo."}
+                    {t(uiLanguage, "chat.legacyWorkspace.telemetry.emptySignal")}
                   </p>
                 )}
               </div>
