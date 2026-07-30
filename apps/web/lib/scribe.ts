@@ -101,6 +101,28 @@ export type ScribeTranscribeResponse = {
   received_bytes?: number;
   session_transcript_chars?: number;
   session_updated_at?: string | null;
+  /** Additive, review-only ASR terminology candidates. Never applied by the API. */
+  medical_correction?: ScribeMedicalCorrectionResult;
+};
+
+export type ScribeMedicalCorrectionSuggestion = {
+  source_text: string;
+  replacement_text: string;
+  kind: "medication_term" | "clinical_term" | "procedure_term";
+  rationale: string;
+  start: number;
+  end: number;
+  status: "suggested_requires_clinician_review";
+};
+
+/**
+ * The API keeps this additive metadata separate from the verbatim transcript.
+ * Any client that uses it must require an explicit clinician action per row.
+ */
+export type ScribeMedicalCorrectionResult = {
+  status?: string;
+  suggestions?: ScribeMedicalCorrectionSuggestion[];
+  applied?: false;
 };
 
 function asText(value: unknown): string {

@@ -34,6 +34,7 @@ import {
   type ScribeExportFormat,
   type ScribeEmCptSuggestion,
   type ScribeGroundingReport,
+  type ScribeMedicalCorrectionSuggestion,
 } from "@/lib/scribe";
 import {
   DEFAULT_SCRIBE_TEMPLATE_ID,
@@ -176,6 +177,30 @@ function sectionsToRecord(sections: NoteSectionEntry[]): Record<string, string> 
   return record;
 }
 
+function normalizeMedicalCorrections(value: unknown): ScribeMedicalCorrectionSuggestion[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is ScribeMedicalCorrectionSuggestion => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Record<string, unknown>;
+      return (
+        typeof row.source_text === "string" &&
+        typeof row.replacement_text === "string" &&
+        typeof row.rationale === "string" &&
+        ["medication_term", "clinical_term", "procedure_term"].includes(String(row.kind)) &&
+        Number.isInteger(row.start) &&
+        Number.isInteger(row.end) &&
+        row.status === "suggested_requires_clinician_review" &&
+        row.source_text.length > 0 &&
+        row.source_text.length <= 160 &&
+        row.replacement_text.length > 0 &&
+        row.replacement_text.length <= 160 &&
+        !/\d/.test(row.replacement_text)
+      );
+    })
+    .slice(0, 12);
+}
+
 export default function EnterpriseReview({ session, onSessionChange, pushNotice }: EnterpriseReviewProps) {
   const sessionId = session?.id ?? null;
   const sessionStatus = (session?.status ?? "").trim().toLowerCase();
@@ -194,6 +219,9 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const [usedBatchFallback, setUsedBatchFallback] = useState(false);
   const [degradedCount, setDegradedCount] = useState(0);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+  const [medicalCorrections, setMedicalCorrections] = useState<
+    ScribeMedicalCorrectionSuggestion[]
+  >([]);
 
   const [templateId, setTemplateId] = useState<string>(DEFAULT_SCRIBE_TEMPLATE_ID);
   const [generating, setGenerating] = useState(false);
@@ -250,6 +278,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     setUsedBatchFallback(false);
     setDegradedCount(0);
     setTranscriptionError(null);
+    setMedicalCorrections([]);
     setSigned(SIGNED_STATUSES.has((session?.status ?? "").trim().toLowerCase()));
     setExported((session?.status ?? "").trim().toLowerCase() === "exported");
 
@@ -359,6 +388,12 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         setUsedBatchFallback(true);
         if (text) {
           setTranscriptDraft((prev) => (prev.trim() ? `${prev.trimEnd()}\n${text}` : text));
+        }
+        const correction = response.medical_correction;
+        if (correction?.status === "review_required") {
+          setMedicalCorrections(normalizeMedicalCorrections(correction.suggestions));
+        } else {
+          setMedicalCorrections([]);
         }
         pushNotice("success", "Đã phiên âm theo lô (chế độ dự phòng).");
       } catch (error) {
@@ -778,6 +813,40 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       }));
   }, [segments, transcriptDraft]);
 
+  const applyMedicalCorrection = useCallback(
+    (suggestion: ScribeMedicalCorrectionSuggestion) => {
+      if (alreadySigned) return;
+      const start = suggestion.start;
+      const end = suggestion.end;
+      if (
+        start < 0 ||
+        end <= start ||
+        transcriptDraft.slice(start, end) !== suggestion.source_text
+      ) {
+        pushNotice(
+          "error",
+          "Bản ghi đã thay đổi nên đề xuất này không còn khớp. Hãy tự đối chiếu trước khi sửa.",
+        );
+        return;
+      }
+      setTranscriptDraft(
+        `${transcriptDraft.slice(0, start)}${suggestion.replacement_text}${transcriptDraft.slice(end)}`,
+      );
+      setMedicalCorrections((current) =>
+        current.filter(
+          (item) =>
+            !(
+              item.start === suggestion.start &&
+              item.end === suggestion.end &&
+              item.source_text === suggestion.source_text
+            ),
+        ),
+      );
+      pushNotice("success", "Đã áp dụng một đề xuất sau khi bạn xác nhận.");
+    },
+    [alreadySigned, pushNotice, transcriptDraft],
+  );
+
   if (!session) {
     return (
       <div className={`col-span-12 ${panelPaddedClass}`}>
@@ -804,11 +873,13 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         usedBatchFallback,
         degradedCount,
         transcriptionError,
+        medicalCorrections,
         alreadySigned,
         onCaptureConsent,
         onStartRecording,
         onStopRecording: stopMediaRecorder,
         onTranscriptChange: setTranscriptDraft,
+        onApplyMedicalCorrection: applyMedicalCorrection,
         onUploadClick: () => fileInputRef.current?.click(),
       })}
       {renderNoteColumn({
@@ -918,11 +989,13 @@ function renderTranscriptColumn(props: {
   usedBatchFallback: boolean;
   degradedCount: number;
   transcriptionError: string | null;
+  medicalCorrections: ScribeMedicalCorrectionSuggestion[];
   alreadySigned: boolean;
   onCaptureConsent: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onTranscriptChange: (value: string) => void;
+  onApplyMedicalCorrection: (suggestion: ScribeMedicalCorrectionSuggestion) => void;
   onUploadClick: () => void;
 }) {
   const consentGateOpen = props.consentRequired && !props.consentCaptured;
@@ -1021,6 +1094,38 @@ function renderTranscriptColumn(props: {
           <p className="mx-5 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
             Streaming gặp sự cố ({props.transcriptionError}). Đã chuyển sang phiên âm theo lô.
           </p>
+        ) : null}
+
+        {props.medicalCorrections.length ? (
+          <section className="mx-5 mb-3 rounded-lg border border-sky-300 bg-sky-50 px-3 py-3 text-sm dark:border-sky-700 dark:bg-sky-950/30">
+            <h4 className="font-semibold text-sky-950 dark:text-sky-100">Đề xuất thuật ngữ cần bác sĩ duyệt</h4>
+            <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>
+              CLARA không tự sửa bản ghi. Chỉ áp dụng từng đề xuất sau khi bạn đối chiếu với âm thanh hoặc nguồn gốc.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {props.medicalCorrections.map((suggestion) => (
+                <li
+                  key={`${suggestion.start}-${suggestion.end}-${suggestion.source_text}`}
+                  className="rounded-md border border-sky-200 bg-white p-2 dark:border-sky-800 dark:bg-slate-950/50"
+                >
+                  <p className={`text-xs ${bodyTextClass}`}>
+                    <span className="font-semibold">“{suggestion.source_text}”</span>
+                    {" → "}
+                    <span className="font-semibold">“{suggestion.replacement_text}”</span>
+                  </p>
+                  <p className={`mt-1 text-[11px] ${mutedTextClass}`}>{suggestion.rationale}</p>
+                  <button
+                    type="button"
+                    className={`mt-2 ${secondaryButtonClass}`}
+                    disabled={props.alreadySigned}
+                    onClick={() => props.onApplyMedicalCorrection(suggestion)}
+                  >
+                    Tôi đã đối chiếu — áp dụng
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
 
         <div className="border-t border-[#B6D4FE] p-4 dark:border-sky-800">
