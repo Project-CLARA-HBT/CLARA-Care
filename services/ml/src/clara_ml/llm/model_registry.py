@@ -546,6 +546,10 @@ def build_task_client(
     between unknown model versions during an incident.
     """
 
+    # ``resolve_model_selection`` validates the registered task, while this
+    # binding carries the manifest-owned generation limits into the executable
+    # client. Request paths never supply temperature or token values here.
+    contract = task_contract(task)
     selection = resolve_model_selection(task, settings)
     # Deliberately bounded operational telemetry: this records the governed
     # routing decision without query text, patient context, endpoint, key,
