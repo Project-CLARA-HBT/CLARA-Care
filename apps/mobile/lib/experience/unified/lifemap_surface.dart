@@ -614,7 +614,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tạo bản tóm tắt. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.lifeMapSummaryLoadFailed]);
     } finally {
       if (mounted) setState(() => _summarizing = false);
     }
@@ -638,7 +638,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể kiểm tra thông tin. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.lifeMapReviewLoadFailed]);
     } finally {
       if (mounted) setState(() => _reviewing = false);
     }
@@ -1216,7 +1216,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         ],
 
         if (_summaryEnabled) ...[
-          const SectionHeader(title: 'Nhìn lại LifeMap'),
+          SectionHeader(title: _copy[ConsumerTerm.lifeMapSummarySectionTitle]),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ClaraTokens.spaceMd,
@@ -1230,7 +1230,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         ],
 
         if (_reviewEnabled) ...[
-          const SectionHeader(title: 'Thông tin cần bạn kiểm tra'),
+          SectionHeader(title: _copy[ConsumerTerm.lifeMapReviewSectionTitle]),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ClaraTokens.spaceMd,
@@ -2036,8 +2036,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang '
-            'tranh chấp hay mâu thuẫn.',
+            _copy[ConsumerTerm.lifeMapSummaryDescription],
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
@@ -2045,14 +2044,24 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             key: ValueKey<String>(_summaryLevel),
             initialValue: _summaryLevel,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Phạm vi'),
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.lifeMapSummaryScope],
+            ),
             items: <DropdownMenuItem<String>>[
-              const DropdownMenuItem(value: 'day', child: Text('Theo ngày')),
-              const DropdownMenuItem(value: 'week', child: Text('Theo tuần')),
+              DropdownMenuItem(
+                value: 'day',
+                child: Text(_copy[ConsumerTerm.lifeMapSummaryDay]),
+              ),
+              DropdownMenuItem(
+                value: 'week',
+                child: Text(_copy[ConsumerTerm.lifeMapSummaryWeek]),
+              ),
               DropdownMenuItem(
                 value: 'episode',
                 enabled: _selectedEpisodeId != null,
-                child: const Text('Hành trình đang chọn'),
+                child: Text(
+                  _copy[ConsumerTerm.lifeMapSummarySelectedJourney],
+                ),
               ),
             ],
             onChanged: _summarizing
@@ -2069,7 +2078,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.secondary(
-              label: 'Tạo tóm tắt',
+              label: _copy[ConsumerTerm.lifeMapSummaryCreate],
               icon: Icons.summarize_outlined,
               loading: _summarizing,
               onPressed: _loadLifeMapSummary,
@@ -2089,7 +2098,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
               Padding(
                 padding: const EdgeInsets.only(top: ClaraTokens.spaceSm),
                 child: Text(
-                  'Chưa đủ bản ghi để tạo tóm tắt.',
+                  _copy[ConsumerTerm.lifeMapSummaryEmpty],
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -2133,7 +2142,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                                 Text(
                                   '${_str(rawClaim['attribution'])} · '
                                   '${_str(rawClaim['occurred_at'])} · '
-                                  'nguồn $citations',
+                                  _copy.format(
+                                    ConsumerTerm.lifeMapSummaryCitation,
+                                    <String, Object?>{'citations': citations},
+                                  ),
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -2158,7 +2170,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             }),
             const SizedBox(height: ClaraTokens.spaceMd),
             Text(
-              'Tóm tắt theo quy tắc, có liên kết nguồn và không phải tư vấn y tế.',
+              _copy[ConsumerTerm.lifeMapSummarySafetyNotice],
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -2176,13 +2188,12 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA '
-            'không tự chọn bản nào đúng.',
+            _copy[ConsumerTerm.lifeMapReviewDescription],
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           ClaraButton.secondary(
-            label: 'Kiểm tra',
+            label: _copy[ConsumerTerm.lifeMapReviewCheck],
             icon: Icons.fact_check_outlined,
             loading: _reviewing,
             onPressed: _scanReviewFindings,
@@ -2191,10 +2202,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             final status = _str(finding['status']);
             final kind = _str(finding['kind']);
             final label = kind == 'contradiction'
-                ? 'Có thể mâu thuẫn'
+                ? _copy[ConsumerTerm.lifeMapReviewPossibleContradiction]
                 : kind == 'duplicate'
-                    ? 'Có thể trùng'
-                    : 'Cần bổ sung';
+                    ? _copy[ConsumerTerm.lifeMapReviewPossibleDuplicate]
+                    : _copy[ConsumerTerm.lifeMapReviewNeedsMoreInformation];
             return Padding(
               padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
               child: DecoratedBox(
@@ -2225,12 +2236,12 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                           runSpacing: ClaraTokens.spaceSm,
                           children: [
                             ClaraButton.primary(
-                              label: 'Tôi đã kiểm tra',
+                              label: _copy[ConsumerTerm.lifeMapReviewResolved],
                               onPressed: () =>
                                   _actOnFinding(finding, 'resolved'),
                             ),
                             ClaraButton.secondary(
-                              label: 'Không cần xử lý',
+                              label: _copy[ConsumerTerm.lifeMapReviewDismiss],
                               onPressed: () =>
                                   _actOnFinding(finding, 'dismissed'),
                             ),
@@ -2238,7 +2249,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                         ),
                       ] else
                         Text(
-                          'Đã ghi nhận lựa chọn của bạn.',
+                          _copy[ConsumerTerm.lifeMapReviewRecorded],
                           style: theme.textTheme.bodySmall,
                         ),
                     ],
