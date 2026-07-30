@@ -176,6 +176,15 @@ redacted copy only after emergency/legal guards and cannot alter an answer,
 route, authorization, DrugBank/FIDES verdict or LifeMap truth state. Disable
 the flag and restart ML to roll it back immediately.
 
+LifeMap free-text capture is separately dark by default. When both
+`LIFEMAP_CAPTURE_ENABLED` and `LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED` are
+enabled in API and ML, the V4 Flash text-draft task may classify at most five
+exact Unicode source spans into closed review categories. API reconstructs the
+phrases, preserves the original non-reviewable provenance row and requires an
+explicit review before creating the existing `text` event; model output cannot
+confirm, mutate truth state or provide a confidence score. Turn the extraction
+flag off and restart both services for an immediate rollback.
+
 > Note: when `LLM_DEEPSEEK_ONLY` is enabled and a supplied runtime matches the configured DeepSeek env, the pipeline must reuse the default DeepSeek client (preserving its longer timeout) rather than constructing a short-timeout runtime client — and the API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 
 ## Safety-First Guardrails (invariants)

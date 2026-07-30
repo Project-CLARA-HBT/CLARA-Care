@@ -1506,7 +1506,12 @@ export default function LifeMapPage() {
                       ) : null}
                     </div>
                   ) : null}
-                  {captureSession.candidates.map((candidate) => (
+                  {captureSession.candidates
+                    // Source rows preserve the exact original note for
+                    // provenance. They are never reviewable/confirmable; show
+                    // only the separately reviewable text drafts to consumers.
+                    .filter((candidate) => candidate.type !== "text_source")
+                    .map((candidate) => (
                     <div
                       key={candidate.id}
                       className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"

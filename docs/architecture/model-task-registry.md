@@ -16,7 +16,7 @@ model profile for safe operational correlation, never user text or prompt
 content.
 
 The current registry covers the medical safety router, LifeMap Ask semantic
-routing, LifeMap Capture triage and visit extraction, Scribe note/transcription, Council shadow assessment,
+routing, LifeMap Capture triage, free-text draft extraction and visit extraction, Scribe note/transcription, Council shadow assessment,
 LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
 query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,

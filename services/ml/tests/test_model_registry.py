@@ -108,6 +108,20 @@ def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
     assert selection.fallback_model == "deepseek-v4-pro"
 
 
+def test_lifemap_text_draft_extraction_is_governed_by_flash_contract() -> None:
+    selection = resolve_model_selection(
+        ModelTask.LIFEMAP_TEXT_DRAFT_EXTRACTION,
+        _settings(),
+    )
+
+    assert selection.model == "deepseek-v4-flash"
+    assert selection.model_profile == "flash"
+    assert selection.prompt_version == "lifemap-text-draft-extraction.v1"
+    assert TASK_CONTRACTS[selection.task].output_contract == (
+        "exact_source_spans_and_closed_categories_review_drafts_only"
+    )
+
+
 def test_task_client_applies_its_versioned_generation_contract() -> None:
     client, selection = build_task_client(ModelTask.LIFEMAP_VISIT_EXTRACTION, _settings())
 

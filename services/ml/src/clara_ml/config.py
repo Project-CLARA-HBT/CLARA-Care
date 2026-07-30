@@ -15,6 +15,10 @@ DEEP_BETA_REPORT_HARD_MAX_WORDS = 15000
 class Settings(BaseSettings):
     app_name: str = "clara-ml"
     environment: str = "development"
+    lifemap_text_draft_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
+    )
     default_embedder: str = "bge-m3"
     embedding_api_key: str = Field(
         default="",

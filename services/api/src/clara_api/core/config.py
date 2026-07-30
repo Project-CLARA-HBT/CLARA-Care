@@ -799,6 +799,10 @@ class Settings(BaseSettings):
     lifemap_capture_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_CAPTURE_ENABLED"
     )
+    lifemap_text_draft_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
+    )
     lifemap_capture_object_store_url: str = Field(
         default="", validation_alias="LIFEMAP_CAPTURE_OBJECT_STORE_URL"
     )

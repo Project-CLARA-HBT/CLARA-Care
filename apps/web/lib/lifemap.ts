@@ -293,6 +293,13 @@ export type CaptureCandidate = {
         fields: Record<string, { start: number; end: number }>;
         text_checksum?: string;
       }
+    | {
+        kind: "source_text";
+        source_candidate_id: string;
+        text_checksum: string;
+        start: number;
+        end: number;
+      }
     | null;
   missing_critical_fields: string[];
   security_findings: string[];
