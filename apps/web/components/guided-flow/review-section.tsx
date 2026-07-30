@@ -3,6 +3,8 @@
 import { useId, type MouseEventHandler, type ReactNode } from "react";
 
 import Button from "@/components/ui/button";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 export type ReviewItem = {
   label: string;
@@ -26,6 +28,7 @@ export function ReviewSection({
     onClick?: MouseEventHandler<HTMLButtonElement>;
   };
 }) {
+  const language = useUILanguage();
   const headingId = useId();
 
   return (
@@ -44,11 +47,11 @@ export function ReviewSection({
         </div>
         {edit?.href ? (
           <Button as="link" href={edit.href} variant="ghost" size="sm">
-            {edit.label ?? "Chỉnh sửa"}
+            {edit.label ?? t(language, "action.edit")}
           </Button>
         ) : edit ? (
           <Button type="button" variant="ghost" size="sm" onClick={edit.onClick}>
-            {edit.label ?? "Chỉnh sửa"}
+            {edit.label ?? t(language, "action.edit")}
           </Button>
         ) : null}
       </div>

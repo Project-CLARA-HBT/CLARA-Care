@@ -8,14 +8,17 @@ import Button from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
+import { t } from "@/lib/i18n/catalog";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type UserRole = "normal" | "researcher" | "doctor";
 
-function normalizeRegisterErrorMessage(message: string): string {
+function normalizeRegisterErrorMessage(message: string, language: UILanguage): string {
   const normalized = message.trim();
   const lowered = normalized.toLowerCase();
   if (!normalized) {
-    return "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút.";
+    return t(language, "auth.register.failure");
   }
   if (
     lowered.includes("internal server error") ||
@@ -24,28 +27,29 @@ function normalizeRegisterErrorMessage(message: string): string {
     lowered.includes("gateway") ||
     lowered.includes("timeout")
   ) {
-    return "Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút hoặc kiểm tra kết nối.";
+    return t(language, "auth.register.failureConnection");
   }
   return normalized;
 }
 
-function getPasswordValidationError(password: string): string | null {
+function getPasswordValidationError(password: string, language: UILanguage): string | null {
   if (password.length < 8) {
-    return "Mật khẩu phải có ít nhất 8 ký tự.";
+    return t(language, "auth.register.passwordTooShort");
   }
   if (password !== password.trim()) {
-    return "Mật khẩu không được chứa khoảng trắng ở đầu/cuối.";
+    return t(language, "auth.register.passwordWhitespace");
   }
   const hasAlpha = /[A-Za-z]/.test(password);
   const hasDigit = /\d/.test(password);
   if (!hasAlpha || !hasDigit) {
-    return "Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số.";
+    return t(language, "auth.register.passwordRequirements");
   }
   return null;
 }
 
 export default function RegisterPage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,16 +59,20 @@ export default function RegisterPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const passwordValidationError = getPasswordValidationError(password);
+  const [needsVerificationLink, setNeedsVerificationLink] = useState(false);
+  const passwordValidationError = getPasswordValidationError(password, language);
   const confirmPasswordError =
-    confirmPassword && password !== confirmPassword ? "Mật khẩu xác nhận không khớp." : "";
+    confirmPassword && password !== confirmPassword
+      ? t(language, "auth.register.passwordMismatch")
+      : "";
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
     setNotice("");
+    setNeedsVerificationLink(false);
     if (!acceptedLegal) {
-      setError("Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.");
+      setError(t(language, "auth.register.acceptRequired"));
       return;
     }
     if (passwordValidationError) {
@@ -72,7 +80,7 @@ export default function RegisterPage() {
       return;
     }
     if (password !== confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp.");
+      setError(t(language, "auth.register.passwordMismatch"));
       return;
     }
     setIsSubmitting(true);
@@ -91,20 +99,23 @@ export default function RegisterPage() {
       const deliveryStatus = (response.data?.email_delivery_status as string | undefined) ?? "";
 
       if (isVerified) {
-        setNotice("Đăng ký thành công. Bạn có thể đăng nhập ngay.");
+        setNotice(t(language, "auth.register.success"));
         setTimeout(() => router.push("/login"), 1000);
       } else if (tokenPreview) {
-        setNotice(`Đăng ký thành công. Mã xác thực (dev): ${tokenPreview}`);
+        setNotice(t(language, "auth.register.successPreview", { token: tokenPreview }));
+        setNeedsVerificationLink(true);
       } else if (deliveryStatus === "sent") {
-        setNotice("Đăng ký thành công. Hệ thống đã gửi email xác thực, vui lòng kiểm tra hộp thư.");
+        setNotice(t(language, "auth.register.successSent"));
+        setNeedsVerificationLink(true);
       } else {
-        setNotice("Đăng ký thành công. Vui lòng xác thực email trước khi đăng nhập.");
+        setNotice(t(language, "auth.register.successVerify"));
+        setNeedsVerificationLink(true);
       }
     } catch (cause) {
       setError(
         cause instanceof Error
-          ? normalizeRegisterErrorMessage(cause.message)
-          : "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút."
+          ? normalizeRegisterErrorMessage(cause.message, language)
+          : t(language, "auth.register.failure")
       );
     } finally {
       setIsSubmitting(false);
@@ -114,57 +125,57 @@ export default function RegisterPage() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
       <SurfaceCard className="w-full p-7 sm:p-9">
-        <Badge tone="brand">The Clara Care</Badge>
+        <Badge tone="brand">{t(language, "auth.brand")}</Badge>
         <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
-          Tạo tài khoản
+          {t(language, "auth.register.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          Khởi tạo tài khoản CLARA và chọn vai trò phù hợp nhu cầu của bạn.
+          {t(language, "auth.register.description")}
         </p>
 
         <form className="mt-7 space-y-4" onSubmit={onSubmit}>
           <Field
             id="register-full-name"
-            label="Họ và tên"
+            label={t(language, "auth.register.fullName")}
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            placeholder="Nguyễn Văn A"
+            placeholder={t(language, "auth.register.fullNamePlaceholder")}
             required
           />
           <Field
             id="register-email"
-            label="Email"
+            label={t(language, "auth.email")}
             type="email"
             inputMode="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@example.com"
+            placeholder={t(language, "auth.emailPlaceholder")}
             required
           />
           <div className="space-y-1.5">
             <Field
               id="register-password"
-              label="Mật khẩu"
+              label={t(language, "auth.register.password")}
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Tối thiểu 8 ký tự"
+              placeholder={t(language, "auth.register.passwordPlaceholder")}
               autoComplete="new-password"
               minLength={8}
               required
             />
             <p className="text-sm text-[var(--text-secondary)]">
-              Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối.
+              {t(language, "auth.register.passwordHint")}
             </p>
           </div>
           <div className="space-y-1.5">
             <Field
               id="register-confirm-password"
-              label="Xác nhận mật khẩu"
+              label={t(language, "auth.register.confirmPassword")}
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Nhập lại mật khẩu"
+              placeholder={t(language, "auth.register.confirmPasswordPlaceholder")}
               autoComplete="new-password"
               minLength={8}
               required
@@ -176,20 +187,20 @@ export default function RegisterPage() {
               </p>
             ) : (
               <p className="text-sm text-[var(--text-secondary)]">
-                Nhập lại mật khẩu để tránh gõ nhầm.
+                {t(language, "auth.register.confirmPasswordHint")}
               </p>
             )}
           </div>
 
           <Select
             id="register-role"
-            label="Vai trò sử dụng"
+            label={t(language, "auth.register.role")}
             value={role}
             onChange={(event) => setRole(event.target.value as UserRole)}
           >
-            <option value="normal">Người dùng cá nhân</option>
-            <option value="researcher">Nhà nghiên cứu</option>
-            <option value="doctor">Bác sĩ</option>
+            <option value="normal">{t(language, "auth.register.role.normal")}</option>
+            <option value="researcher">{t(language, "auth.register.role.researcher")}</option>
+            <option value="doctor">{t(language, "auth.register.role.doctor")}</option>
           </Select>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
@@ -200,26 +211,26 @@ export default function RegisterPage() {
               className="focus-ring mt-1 h-5 w-5 rounded border-[color:var(--shell-border-strong)]"
             />
             <span className="text-sm leading-6 text-[var(--text-secondary)]">
-              Tôi đồng ý với{" "}
+              {t(language, "auth.register.acceptLegal")} {" "}
               <Link
                 href="/legal/terms"
                 className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
               >
-                Điều khoản sử dụng
+                {t(language, "auth.register.terms")}
               </Link>
               ,{" "}
               <Link
                 href="/legal/privacy"
                 className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
               >
-                Chính sách quyền riêng tư
+                {t(language, "auth.register.privacy")}
               </Link>{" "}
               và{" "}
               <Link
                 href="/legal/consent"
                 className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
               >
-                Đồng thuận sử dụng y tế
+                {t(language, "auth.register.medicalConsent")}
               </Link>
               .
             </span>
@@ -242,26 +253,26 @@ export default function RegisterPage() {
             </p>
           ) : null}
 
-          {notice.includes("xác thực") ? (
+          {needsVerificationLink ? (
             <Link
               href={`/verify-email?email=${encodeURIComponent(email)}`}
               className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
             >
-              Đi đến trang xác thực email
+              {t(language, "auth.register.goToVerify")}
             </Link>
           ) : null}
 
-          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang xử lý...">
-            Tạo tài khoản
+          <Button type="submit" block loading={isSubmitting} loadingLabel={t(language, "auth.register.submitting")}>
+            {t(language, "auth.register.submit")}
           </Button>
 
           <p className="text-sm text-[var(--text-secondary)]">
-            Đã có tài khoản?{" "}
+            {t(language, "auth.register.hasAccount")} {" "}
             <Link
               href="/login"
               className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
             >
-              Đăng nhập
+              {t(language, "auth.login.submit")}
             </Link>
           </p>
         </form>

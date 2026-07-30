@@ -8,6 +8,9 @@ import type {
   TextareaHTMLAttributes,
 } from "react";
 
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+
 const CONTROL =
   "w-full rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[var(--text-muted)] hover:border-[color:var(--shell-border-strong)] focus:border-[color:var(--brand-500)] focus:shadow-[var(--shadow-focus)] disabled:cursor-not-allowed disabled:opacity-60";
 
@@ -22,6 +25,7 @@ function Label({
   optional?: boolean;
   htmlFor: string;
 }) {
+  const language = useUILanguage();
   return (
     <label
       htmlFor={htmlFor}
@@ -29,7 +33,9 @@ function Label({
     >
       {label}
       {optional ? (
-        <span className="ml-1 font-normal text-[var(--text-muted)]">(không bắt buộc)</span>
+        <span className="ml-1 font-normal text-[var(--text-muted)]">
+          {t(language, "field.optional")}
+        </span>
       ) : null}
       {hint ? <span className="ml-1 font-normal text-[var(--text-muted)]">{hint}</span> : null}
     </label>
