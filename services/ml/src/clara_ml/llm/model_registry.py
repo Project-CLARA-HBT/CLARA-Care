@@ -32,6 +32,7 @@ class ModelTask(StrEnum):
     SCRIBE_NOTE = "scribe_note"
     SCRIBE_TRANSCRIPTION = "scribe_transcription"
     SCRIBE_ASR_CORRECTION = "scribe_asr_correction"
+    COUNCIL_INTAKE = "council_intake"
     COUNCIL_SHADOW = "council_shadow"
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"

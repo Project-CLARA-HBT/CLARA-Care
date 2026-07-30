@@ -13,12 +13,69 @@ import json
 import re
 from typing import Any
 
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError
+
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_task_client
 
-_TRIAGE = {"routine_follow_up", "same_day_review", "emergency_escalation"}
-_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v2"
+_LEGACY_TRIAGE = {"routine_follow_up", "same_day_review", "emergency_escalation"}
+_TRIAGE_SUGGESTION_BY_LEGACY = {
+    "routine_follow_up": "scheduled_review",
+    "same_day_review": "same_day",
+    "emergency_escalation": "emergency",
+}
+_LEGACY_TRIAGE_BY_SUGGESTION = {
+    "scheduled_review": "routine_follow_up",
+    "self_care_information": "routine_follow_up",
+    "same_day": "same_day_review",
+    "emergency": "emergency_escalation",
+    "insufficient_data": "routine_follow_up",
+}
+_TRIAGE_SUGGESTIONS = frozenset(_LEGACY_TRIAGE_BY_SUGGESTION)
+_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v3"
+
+
+class _CaseBoundFinding(BaseModel):
+    """One model claim whose evidence must be a case-packet fact ID."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    statement: StrictStr = Field(min_length=1, max_length=600)
+    evidence_ids: list[StrictStr] = Field(default_factory=list, max_length=12)
+
+
+class CouncilSpecialistOpinionContract(BaseModel):
+    """Strict, versioned input contract for an independent shadow specialist.
+
+    This object is deliberately internal: a valid model parse is still not a
+    verified clinical assertion.  ``_normalize_assessment`` additionally binds
+    every finding to immutable case facts and the shadow adjudicator has no
+    authority to release or alter the deterministic Council result.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    supported_findings: list[_CaseBoundFinding] = Field(default_factory=list, max_length=10)
+    evidence_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
+    red_flags: list[StrictStr] = Field(default_factory=list, max_length=8)
+    relevant_observations: list[StrictStr] = Field(default_factory=list, max_length=10)
+    hypotheses: list[StrictStr] = Field(default_factory=list, max_length=6)
+    supporting_case_fact_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
+    contradicting_case_fact_ids: list[StrictStr] = Field(default_factory=list, max_length=20)
+    missing_information: list[StrictStr] = Field(
+        default_factory=list,
+        max_length=10,
+        validation_alias=AliasChoices("missing_information", "missing_decisive_data"),
+    )
+    uncertainties: list[StrictStr] = Field(default_factory=list, max_length=8)
+    suggested_questions: list[StrictStr] = Field(default_factory=list, max_length=8)
+    abstain: StrictBool = False
+    abstention_reason: StrictStr = ""
+    triage_suggestion: StrictStr = Field(
+        validation_alias=AliasChoices("triage_suggestion", "triage"),
+    )
+    safe_next_action_class: StrictStr = Field(min_length=1, max_length=400)
 
 
 def _client() -> DeepSeekClient:
@@ -115,8 +172,22 @@ def _normalize_assessment(
     model: str,
     valid_fact_ids: set[str],
 ) -> dict[str, Any] | None:
-    triage = str(raw.get("triage", "")).strip().lower()
-    if triage not in _TRIAGE:
+    try:
+        # Parse first so malformed/extra model output cannot drift the shadow
+        # contract.  ``Strict*`` fields reject coerced booleans/numbers; this is
+        # an input boundary, not an LLM self-check.
+        raw = CouncilSpecialistOpinionContract.model_validate(raw).model_dump()
+    except ValidationError:
+        return None
+
+    raw_triage = str(raw.get("triage_suggestion", raw.get("triage", ""))).strip().lower()
+    if raw_triage in _LEGACY_TRIAGE:
+        triage = raw_triage
+        triage_suggestion = _TRIAGE_SUGGESTION_BY_LEGACY[triage]
+    elif raw_triage in _TRIAGE_SUGGESTIONS:
+        triage_suggestion = raw_triage
+        triage = _LEGACY_TRIAGE_BY_SUGGESTION[triage_suggestion]
+    else:
         return None
     abstained = raw.get("abstain", False)
     if not isinstance(abstained, bool):
@@ -150,7 +221,7 @@ def _normalize_assessment(
             evidence_ids.append(fact_id)
 
     uncertainties = _text_list(raw.get("uncertainties"), limit=8)
-    missing_decisive_data = _text_list(raw.get("missing_decisive_data"), limit=10)
+    missing_decisive_data = _text_list(raw.get("missing_information"), limit=10)
     suggested_questions = _text_list(raw.get("suggested_questions"), limit=8)
     if abstained and not (uncertainties or missing_decisive_data or suggested_questions):
         return None
@@ -165,9 +236,27 @@ def _normalize_assessment(
     elif missing_decisive_data or uncertainties:
         evidence_status = "supported_with_uncertainties"
 
+    # ``specialist_opinion`` is the canonical minimum Council specialist
+    # contract.  The richer compatibility fields below retain per-finding case
+    # fact bindings, which are stronger than a bare prose list.  Candidates for
+    # red flags are deliberately not released from a model response: only the
+    # deterministic emergency tools can raise an emergency floor.
+    specialist_opinion = {
+        "specialty": specialist,
+        "supported_findings": [item["statement"] for item in supported_findings],
+        "evidence_ids": evidence_ids,
+        "red_flags": [],
+        "missing_information": missing_decisive_data,
+        "uncertainties": uncertainties,
+        "suggested_questions": suggested_questions,
+        "triage_suggestion": triage_suggestion,
+        "abstained": abstained,
+    }
+
     return {
         "contract_version": _SHADOW_CONTRACT_VERSION,
         "specialist": specialist,
+        "specialist_opinion": specialist_opinion,
         "supported_findings": supported_findings,
         "evidence_ids": evidence_ids,
         "relevant_observations": _text_list(raw.get("relevant_observations")),
@@ -180,6 +269,7 @@ def _normalize_assessment(
         "abstained": abstained,
         "abstention_reason": abstention_reason if abstained else None,
         "triage": triage,
+        "triage_suggestion": triage_suggestion,
         "safe_next_action_class": safe_next_action_class,
         "model": model,
         "evidence_scope": "case_packet_only",
@@ -227,7 +317,7 @@ def _shadow_adjudication(assessments: list[dict[str, Any]]) -> dict[str, Any]:
     evaluation.
     """
 
-    triage_counts = {item: 0 for item in sorted(_TRIAGE)}
+    triage_counts = {item: 0 for item in sorted(_LEGACY_TRIAGE)}
     evidence_ids: set[str] = set()
     supported_findings = 0
     abstention_count = 0
@@ -253,6 +343,25 @@ def _shadow_adjudication(assessments: list[dict[str, Any]]) -> dict[str, Any]:
         }[value],
         default="routine_follow_up",
     )
+    missing_source_claim_count = 0
+    verified_claim_count = 0
+    verified_specialists: list[str] = []
+    for assessment in assessments:
+        findings = assessment.get("supported_findings", [])
+        if not isinstance(findings, list):
+            continue
+        specialist_verified = True
+        for finding in findings:
+            if not isinstance(finding, dict) or not finding.get("evidence_ids"):
+                missing_source_claim_count += 1
+                specialist_verified = False
+            else:
+                verified_claim_count += 1
+        if specialist_verified and findings:
+            specialist = assessment.get("specialist")
+            if isinstance(specialist, str):
+                verified_specialists.append(specialist)
+
     return {
         "stage": "deterministic_shadow_adjudication",
         "status": "not_release_eligible",
@@ -262,6 +371,17 @@ def _shadow_adjudication(assessments: list[dict[str, Any]]) -> dict[str, Any]:
         "supported_finding_count": supported_findings,
         "evidence_ids": sorted(evidence_ids),
         "abstention_count": abstention_count,
+        "claim_verification": {
+            "method": "per_finding_case_fact_id_validation",
+            "verified_claim_count": verified_claim_count,
+            "missing_source_claim_count": missing_source_claim_count,
+            "verified_specialists": sorted(verified_specialists),
+            "self_verification_performed": False,
+        },
+        "adjudicator_scope": {
+            "may": ["detect_consensus", "detect_disagreement", "identify_missing_sources"],
+            "may_not": ["make_release_decision", "override_safety_policy", "confirm_facts"],
+        },
         "requires_human_review": True,
         "self_verification_performed": False,
         "release_effect": "none_shadow_only",
@@ -302,10 +422,11 @@ def run_model_council_shadow(
             "facts. Return one JSON object with keys: supported_findings (list of "
             "{statement, evidence_ids}), evidence_ids (list), relevant_observations "
             "(list), hypotheses (list, uncertainty explicit), supporting_case_fact_ids "
-            "(list), contradicting_case_fact_ids (list), missing_decisive_data (list), "
-            "uncertainties (list), suggested_questions (list), abstain (boolean), "
-            "abstention_reason (string required when abstain=true), triage "
-            "(routine_follow_up|same_day_review|emergency_escalation), and "
+            "(list), contradicting_case_fact_ids (list), missing_information (list), "
+            "red_flags (list), uncertainties (list), suggested_questions (list), "
+            "abstain (boolean), abstention_reason (string required when abstain=true), "
+            "triage_suggestion "
+            "(emergency|same_day|scheduled_review|self_care_information|insufficient_data), and "
             "safe_next_action_class (string). Do not return confidence, probability, "
             "or a diagnosis. Never invent a fact or citation.\n\n"
             f"CASE_PACKET={json.dumps(packet, ensure_ascii=False, sort_keys=True)}"

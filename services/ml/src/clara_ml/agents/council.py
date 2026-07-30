@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from itertools import combinations
 from typing import Any
 
-from clara_ml.agents.council_neural import score_council_rule_shadow
+from clara_ml.agents.council_heuristic_risk import score_council_rule_shadow
 from clara_ml.config import settings
 
 SUPPORTED_SPECIALISTS = (
