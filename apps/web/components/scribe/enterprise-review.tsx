@@ -66,6 +66,9 @@ import {
   type GroundingStatus,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
 
 type NoticeTone = "success" | "error";
 
@@ -203,6 +206,7 @@ function normalizeMedicalCorrections(value: unknown): ScribeMedicalCorrectionSug
 }
 
 export default function EnterpriseReview({ session, onSessionChange, pushNotice }: EnterpriseReviewProps) {
+  const language = useUILanguage();
   const sessionId = session?.id ?? null;
   const sessionStatus = (session?.status ?? "").trim().toLowerCase();
   const alreadySigned = SIGNED_STATUSES.has(sessionStatus);
@@ -863,6 +867,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     <div className="col-span-12 grid grid-cols-12 gap-5">
       {renderProcessPanel({ stages, sessionStatus })}
       {renderTranscriptColumn({
+        language,
         consentCaptured,
         consentRequired,
         capturingConsent,
@@ -979,6 +984,7 @@ function renderProcessPanel({
 }
 
 function renderTranscriptColumn(props: {
+  language: UILanguage;
   consentCaptured: boolean;
   consentRequired: boolean;
   capturingConsent: boolean;
@@ -1006,10 +1012,10 @@ function renderTranscriptColumn(props: {
       {consentGateOpen ? (
         <div className={`${panelPaddedClass} border-amber-300`} data-testid="scribe-consent-gate">
           <h3 className="text-xs font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
-            Cổng đồng thuận
+            {t(props.language, "scribe.enterprise.consent.title")}
           </h3>
           <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
-            Cần ghi nhận đồng thuận của người bệnh trước khi ghi âm hoặc phiên âm cuộc khám.
+            {t(props.language, "scribe.enterprise.consent.description")}
           </p>
           <button
             type="button"
@@ -1018,24 +1024,30 @@ function renderTranscriptColumn(props: {
             className={`mt-3 ${primaryButtonClass}`}
             data-testid="scribe-capture-consent"
           >
-            {props.capturingConsent ? "Đang ghi nhận..." : "Ghi nhận đồng thuận"}
+            {props.capturingConsent
+              ? t(props.language, "scribe.enterprise.consent.capturing")
+              : t(props.language, "scribe.enterprise.consent.capture")}
           </button>
         </div>
       ) : null}
 
       <div className={panelClass}>
         <div className="flex items-center justify-between border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
-          <h3 className={sectionTitleClass}>Bản ghi trực tiếp</h3>
+          <h3 className={sectionTitleClass}>{t(props.language, "scribe.transcript.liveTitle")}</h3>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1D4ED8] dark:text-sky-100">
             <span className={`h-2 w-2 rounded-full ${props.recording ? "bg-rose-500 animate-pulse" : props.transcribing ? "bg-[#2563EB] animate-pulse" : "bg-slate-500"}`} />
-            {props.recording ? "Đang ghi" : props.transcribing ? "Đang phiên âm" : "Sẵn sàng"}
+            {props.recording
+              ? t(props.language, "scribe.status.recording")
+              : props.transcribing
+                ? t(props.language, "scribe.status.transcribing")
+                : t(props.language, "scribe.status.ready")}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
           {props.recording ? (
             <button type="button" onClick={props.onStopRecording} className={dangerButtonClass}>
-              Dừng ghi âm
+              {t(props.language, "scribe.action.stopRecording")}
             </button>
           ) : (
             <button
@@ -1045,7 +1057,7 @@ function renderTranscriptColumn(props: {
               className={primaryButtonClass}
               data-testid="scribe-start-recording"
             >
-              Bắt đầu ghi âm
+              {t(props.language, "scribe.action.startRecording")}
             </button>
           )}
           <button
@@ -1054,16 +1066,20 @@ function renderTranscriptColumn(props: {
             disabled={!props.canRecord || props.transcribing || props.recording}
             className={secondaryButtonClass}
           >
-            Tải tệp âm thanh
+            {t(props.language, "scribe.enterprise.transcript.uploadAudio")}
           </button>
           {props.alreadySigned ? (
-            <span className={`text-[11px] font-semibold ${mutedTextClass}`}>Ghi chú đã ký — chỉ đọc.</span>
+            <span className={`text-[11px] font-semibold ${mutedTextClass}`}>
+              {t(props.language, "scribe.enterprise.transcript.signedReadOnly")}
+            </span>
           ) : null}
         </div>
 
         <div className="max-h-[320px] space-y-3 overflow-y-auto p-5 clara-scrollbar" data-testid="scribe-transcript">
           {props.transcriptRows.length === 0 ? (
-            <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có nội dung phiên âm.</p>
+            <p className={`text-sm font-medium ${secondaryTextClass}`}>
+              {t(props.language, "scribe.enterprise.transcript.empty")}
+            </p>
           ) : (
             props.transcriptRows.map((segment) => {
               const chip = speakerChip(segment.speaker);
@@ -1072,11 +1088,11 @@ function renderTranscriptColumn(props: {
                   <span
                     className={`h-fit shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${SPEAKER_CHIP_CLASSES[chip.tone]}`}
                   >
-                    {chip.label}
+                    {speakerLabel(props.language, chip.tone)}
                   </span>
                   <p className={`text-sm leading-6 ${segment.degraded ? "italic " + mutedTextClass : secondaryTextClass}`}>
                     {segment.text}
-                    {segment.degraded ? " (tín hiệu yếu)" : ""}
+                    {segment.degraded ? ` (${t(props.language, "scribe.enterprise.transcript.weakSignal")})` : ""}
                   </p>
                 </div>
               );
@@ -1094,15 +1110,17 @@ function renderTranscriptColumn(props: {
 
         {props.transcriptionError ? (
           <p className="mx-5 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-            Streaming gặp sự cố ({props.transcriptionError}). Đã chuyển sang phiên âm theo lô.
+            {t(props.language, "scribe.enterprise.transcript.streamingFallback")}
           </p>
         ) : null}
 
         {props.medicalCorrections.length ? (
           <section className="mx-5 mb-3 rounded-lg border border-sky-300 bg-sky-50 px-3 py-3 text-sm dark:border-sky-700 dark:bg-sky-950/30">
-            <h4 className="font-semibold text-sky-950 dark:text-sky-100">Đề xuất thuật ngữ cần bác sĩ duyệt</h4>
+            <h4 className="font-semibold text-sky-950 dark:text-sky-100">
+              {t(props.language, "scribe.enterprise.corrections.title")}
+            </h4>
             <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>
-              CLARA không tự sửa bản ghi. Chỉ áp dụng từng đề xuất sau khi bạn đối chiếu với âm thanh hoặc nguồn gốc.
+              {t(props.language, "scribe.enterprise.corrections.description")}
             </p>
             <ul className="mt-3 space-y-2">
               {props.medicalCorrections.map((suggestion) => (
@@ -1122,7 +1140,7 @@ function renderTranscriptColumn(props: {
                     disabled={props.alreadySigned}
                     onClick={() => props.onApplyMedicalCorrection(suggestion)}
                   >
-                    Tôi đã đối chiếu — áp dụng
+                    {t(props.language, "scribe.enterprise.corrections.apply")}
                   </button>
                 </li>
               ))}
@@ -1134,18 +1152,35 @@ function renderTranscriptColumn(props: {
           <textarea
             value={props.transcriptDraft}
             onChange={(event) => props.onTranscriptChange(event.target.value)}
-            placeholder="Bản ghi sẽ hiển thị ở đây; bạn có thể chỉnh sửa trước khi soạn ghi chú."
+            placeholder={t(props.language, "scribe.enterprise.transcript.placeholder")}
             disabled={props.alreadySigned}
             className={sectionTextareaClass}
           />
           <p className={`mt-2 text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-            {props.usedBatchFallback ? "Nguồn: phiên âm theo lô" : "Nguồn: phiên âm trực tiếp"}
-            {props.degradedCount > 0 ? ` · ${props.degradedCount} đoạn tín hiệu yếu` : ""}
+            {props.usedBatchFallback
+              ? t(props.language, "scribe.enterprise.transcript.sourceBatch")
+              : t(props.language, "scribe.enterprise.transcript.sourceLive")}
+            {props.degradedCount > 0
+              ? ` · ${t(props.language, "scribe.enterprise.transcript.degradedCount", { count: props.degradedCount })}`
+              : ""}
           </p>
         </div>
       </div>
     </article>
   );
+}
+
+function speakerLabel(language: UILanguage, speaker: "clinician" | "patient" | "other" | "unknown"): string {
+  switch (speaker) {
+    case "clinician":
+      return t(language, "scribe.speaker.clinician");
+    case "patient":
+      return t(language, "scribe.speaker.patient");
+    case "other":
+      return t(language, "scribe.enterprise.speaker.other");
+    default:
+      return t(language, "scribe.enterprise.speaker.unknown");
+  }
 }
 
 function renderNoteColumn(props: {
