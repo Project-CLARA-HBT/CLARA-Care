@@ -805,6 +805,29 @@ class _ScribePlaceholder extends StatelessWidget {
 /// While consent is absent it makes clear that processing is blocked; capturing
 /// unlocks processing and revoking re-blocks it. Status is conveyed by text +
 /// icon, not color alone (Req 10.5).
+class _ScribeConsentCopy {
+  const _ScribeConsentCopy._(this._english);
+
+  factory _ScribeConsentCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _ScribeConsentCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get semanticLabel =>
+      _english ? 'Patient consent' : 'Đồng ý của bệnh nhân';
+  String get captured => _english
+      ? 'Patient consent has been captured.'
+      : 'Đã thu thập sự đồng ý của bệnh nhân.';
+  String get missing => _english
+      ? 'Patient consent has not been captured — transcript processing is blocked.'
+      : 'Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.';
+  String get prefix => _english ? 'Consent' : 'Đồng ý';
+  String get capture => _english ? 'Capture consent' : 'Thu thập sự đồng ý';
+  String get revoke => _english ? 'Revoke consent' : 'Thu hồi sự đồng ý';
+}
+
 class _ConsentGateCard extends StatelessWidget {
   const _ConsentGateCard({
     required this.captured,
@@ -820,30 +843,31 @@ class _ConsentGateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _ScribeConsentCopy.forContext(context);
     return ClaraCard.static_(
       key: const Key('scribe-v3-consent-gate'),
-      semanticLabel: 'Đồng ý của bệnh nhân',
+      semanticLabel: copy.semanticLabel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           StatusByText(
             label: captured
-                ? 'Đã thu thập sự đồng ý của bệnh nhân.'
-                : 'Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.',
+                ? copy.captured
+                : copy.missing,
             level: captured ? A11yStatusLevel.success : A11yStatusLevel.warning,
             icon: captured ? Icons.verified_user : Icons.gpp_maybe,
-            semanticsPrefix: 'Đồng ý',
+            semanticsPrefix: copy.prefix,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           if (!captured)
             ClaraButton.primary(
-              label: 'Thu thập sự đồng ý',
+              label: copy.capture,
               icon: Icons.verified_user_outlined,
               onPressed: busy ? null : onCapture,
             )
           else
             ClaraButton.secondary(
-              label: 'Thu hồi sự đồng ý',
+              label: copy.revoke,
               icon: Icons.gpp_bad_outlined,
               onPressed: busy ? null : onRevoke,
             ),
