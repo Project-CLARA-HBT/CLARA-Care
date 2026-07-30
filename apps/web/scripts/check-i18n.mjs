@@ -17,6 +17,11 @@ const CATALOG_PATH = resolve(WEB_ROOT, "lib/i18n/catalog.ts");
 
 const MIGRATED_SURFACES = [
   {
+    path: "app/layout.tsx",
+    required: ["UI_LANGUAGE_COOKIE_NAME", "await cookies()"],
+    forbidden: ['<html lang="vi"'],
+  },
+  {
     path: "components/app-shell.tsx",
     required: ["@/lib/i18n/catalog", "action.askClara", "language.preference"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Tùy chọn ngôn ngữ", "Language preferences"],
