@@ -600,18 +600,30 @@ async def scribe_transcribe(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     user = _get_user_by_token(db, token)
+    # A caller may still use the legacy unscoped batch endpoint while the
+    # encounter-consent rollout flag is off.  Supplying ``session_id`` is
+    # different: it claims an encounter-bound processing context, so resolve it
+    # owner-scoped and always honour that visit's independently captured
+    # recording consent before forwarding any audio to ASR.  This prevents a
+    # withdrawn visit consent from being bypassed through the legacy batch
+    # route, while preserving the unscoped legacy path.
+    settings = get_settings()
+    guarded: ScribeSession | None = None
+    if session_id is not None:
+        guarded = _get_owned_session(db, user_id=user.id, session_id=session_id)
+        _require_live_visit_consent_for_session(db, user=user, item=guarded)
+
     # Consent guard (Requirement 4.1): when consent is required, a transcription
     # request for a session with no active consent is rejected before any ASR work.
-    # Fully flag-gated so the legacy batch path is byte-for-byte unchanged when off.
-    settings = get_settings()
+    # An unscoped request remains unavailable under this flag because it cannot
+    # be linked to an immutable encounter-consent audit record.
     if settings.rag_scribe_consent_required:
         if session_id is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Cần phiên Scribe có consent trước khi gửi audio để chép lời.",
             )
-        guarded = _get_owned_session(db, user_id=user.id, session_id=session_id)
-        _require_live_visit_consent_for_session(db, user=user, item=guarded)
+        assert guarded is not None
         _require_consent(db, settings, guarded.id)
     payload = await _call_scribe_transcribe_ml(
         audio_file=audio_file,
@@ -623,7 +635,11 @@ async def scribe_transcribe(
 
     text = str(payload.get("text", "")).strip()
     if append_to_session and session_id is not None and text:
-        session_item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+        # ``guarded`` is already owner-scoped above whenever a session id is
+        # supplied, so the append cannot race into a different clinician's
+        # session after ASR has completed.
+        assert guarded is not None
+        session_item = guarded
         existing = session_item.transcript or ""
         separator = "\n" if existing.strip() else ""
         session_item.transcript = f"{existing.rstrip()}{separator}{text}".strip()
