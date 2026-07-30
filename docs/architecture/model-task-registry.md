@@ -12,6 +12,13 @@ query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,
 FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
 
+RAG's explicit internal runtime connection seam is also registry-bound: it
+passes its already-authorized DeepSeek connection values through a read-only
+settings overlay to the `RAG_SYNTHESIS` contract. It therefore keeps the
+legacy short override timeout while applying the same prompt version and
+rollback selection as the default RAG client. It does not construct a provider
+client directly.
+
 The registry selects only the provider/model boundary. It never converts a
 heuristic, embedding scorer or fixed-weight Council rule into a neural model,
 and it never permits LLM output to confirm a LifeMap record, prescribe, change

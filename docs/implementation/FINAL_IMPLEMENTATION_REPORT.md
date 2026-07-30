@@ -47,7 +47,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-01 Audit/ADRs | implemented | Architecture inventory, ADRs and master ledger: `919b8ba7`; static active-eval baseline is NO-GO (`442c85e5`). |
 | PR-02 i18n | partial | Typed vi/en catalog, parity tests and shell/Today/shared loading-state literal scanners; `/today` now reacts to locale with locale date formatting. Domain-page migration remains incremental. |
 | PR-03 task-first UX | implemented primary journey | Today now begins with four consumer tasks (ask, medicine check, save visit information, prepare visit). Research/evidence remain deep-link-compatible but no longer crowd personal navigation. Dense legacy surfaces remain. |
-| PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis and Research planning/reasoning—including the legacy internal runtime seam—use registry task contracts. |
+| PR-04 registry/contracts | implemented for bounded tasks | Safety triage, LifeMap capture/visit, Scribe, Council shadow, RAG reranking/NLI, RAG synthesis (including its explicit runtime override seam) and Research planning/reasoning use registry task contracts. |
 | PR-05 Vietnamese clinical layer | implemented v1 | `1f16c7c6` adds normalization, typo handling, negation, experiencer, temporality, units and medication aliases. The hybrid-router shadow contract now carries only categorical/count language signals (never source text). No encoder SLM is bundled. |
 | PR-06 hybrid router | partial | Closed-schema semantic safety router has deterministic emergency/legal fallback. `clara_ml.model_router` now supplies a typed metadata-only shadow route which only raises risk; an evaluated encoder/SLM classifier is not installed. |
 | PR-07 renderer | implemented deterministic baseline | Structured input, audience templates, independent fidelity verifier and deterministic Vietnamese fallback are integrated into `medical_answer_v2`. A reviewed human-usability score remains unmeasured. |
@@ -91,6 +91,7 @@ Executed in this workspace:
 | Eval smoke and judge runner | pass via `python -m evaluation.clara_eval.run ...` |
 | Eval release suite | expected non-zero (2): no approved locked/live evidence; diagnostics written |
 | Model registry focused suite | pass: 39 tests (registry, Council shadow, capture triage, main API) |
+| RAG registry runtime seam | pass: 34 focused RAG/registry tests; direct provider construction is absent from `rag/pipeline.py` |
 | Vietnamese language/router focused suite | pass: 14 tests |
 | LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
 | CareGuard normalization/DrugBank focused suite | pass: 42 tests |
@@ -145,9 +146,9 @@ ML, then run `make eval-smoke`. Disable the force flag after recovery.
    catalog-backed. Continue catalog migration surface by surface with parity
    tests; do not label it complete before the scanner scope covers them.
 5. RAG synthesis, reranking, NLI verification and Research planning/reasoning
-   are registry-bound. Research's legacy internal runtime seam now uses a
+   are registry-bound. Both Research and RAG synthesis runtime seams use a
    constrained DeepSeek settings overlay and cannot bypass task selection or
-   rollback; its API payload origin still merits separate authorization review.
+   rollback; their API payload origins still merit separate authorization review.
 6. Server deploy remains blocked by the previously observed low remote disk
    capacity; do not rebuild remotely until capacity is restored.
 7. GitHub reported 130 dependency advisories on the default branch at push time

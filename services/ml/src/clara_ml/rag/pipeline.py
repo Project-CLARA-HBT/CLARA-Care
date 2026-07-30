@@ -23,7 +23,7 @@ from uuid import uuid4
 # initialization of modules that are loaded transitively regardless.
 import clara_ml.rag.store  # noqa: E402,F401  (side-effect import; see note above)
 from clara_ml.config import settings
-from clara_ml.llm.deepseek_client import DeepSeekClient, DeepSeekResponse
+from clara_ml.llm.deepseek_client import DeepSeekResponse
 from clara_ml.llm.model_registry import ModelTask, build_task_client
 from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
@@ -304,6 +304,24 @@ class LlmGenerator(Protocol):
     def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse: ...
 
 
+class _RegistrySettingsOverlay:
+    """Read-only settings view for an already-authorized runtime override.
+
+    ``llm_runtime`` is an internal, pre-resolved seam.  It must not become a
+    second construction path that skips task contracts, model rollback or the
+    configured provider policy.  This overlay supplies only its existing
+    connection values to :func:`build_task_client`, without changing global
+    process settings.
+    """
+
+    def __init__(self, base: Any, **overrides: object) -> None:
+        self._base = base
+        self._overrides = overrides
+
+    def __getattr__(self, name: str) -> Any:
+        return self._overrides.get(name, getattr(self._base, name))
+
+
 class RagPipelineP1:
     """P1 pipeline: retrieve -> LLM answer (if available) -> deterministic fallback."""
 
@@ -363,21 +381,20 @@ class RagPipelineP1:
             ):
                 self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
             else:
-                self._llm_client = DeepSeekClient(
-                    api_key=self._deepseek_api_key,
-                    base_url=deepseek_base_url or settings.deepseek_base_url,
-                    model=deepseek_model or settings.deepseek_model,
+                self._llm_client, _ = build_task_client(
+                    ModelTask.RAG_SYNTHESIS,
+                    self._registry_settings_for_values(
+                        settings,
+                        api_key=self._deepseek_api_key,
+                        base_url=deepseek_base_url or settings.deepseek_base_url,
+                        model=deepseek_model or settings.deepseek_model,
+                    ),
                     timeout_seconds=(
                         settings.deepseek_timeout_seconds
                         if deepseek_timeout_seconds is None
                         else deepseek_timeout_seconds
                     ),
                     retries_per_base=settings.deepseek_retries_per_base,
-                    retry_backoff_seconds=settings.deepseek_retry_backoff_seconds,
-                    max_concurrency=settings.llm_global_max_concurrency,
-                    min_interval_seconds=settings.llm_global_min_interval_seconds,
-                    request_jitter_seconds=settings.llm_global_jitter_seconds,
-                    fallback_model=settings.deepseek_fallback_model,
                 )
         self._graphrag = GraphRagSidecar()
         # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
@@ -1638,6 +1655,23 @@ class RagPipelineP1:
         runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
         return max(2.0, min(runtime_timeout_seconds, 18.0))
 
+    @staticmethod
+    def _registry_settings_for_values(
+        settings: Any,
+        *,
+        api_key: str,
+        base_url: str,
+        model: str,
+    ) -> _RegistrySettingsOverlay:
+        """Adapt internal runtime values without bypassing the model registry."""
+
+        return _RegistrySettingsOverlay(
+            settings,
+            deepseek_api_key=api_key,
+            deepseek_base_url=base_url,
+            deepseek_model=model,
+        )
+
     def resolve_llm_client(self, llm_runtime: Any, settings: Any = None) -> LlmGenerator | None:
         """Resolve the LLM client a request should use (Requirement 2.3, Property 2).
 
@@ -1645,8 +1679,8 @@ class RagPipelineP1:
           configured DeepSeek env, the default client is reused as-is so its
           longer timeout is never silently capped to ``min(deepseek_timeout, 18s)``.
         - For a non-matching, fully-specified runtime override (api_key +
-          base_url + model), an explicit short-timeout client is built via
-          :meth:`DeepSeekClient.from_runtime`.
+          base_url + model), a short-timeout client is built through the
+          registered ``RAG_SYNTHESIS`` task contract.
         - When only an api key is supplied (no base_url/model), no client can be
           built and ``None`` is returned.
         - Otherwise (no override) the default client is returned unchanged.
@@ -1663,18 +1697,18 @@ class RagPipelineP1:
             base_url = str(llm_runtime.get("base_url") or "").strip()
             model = str(llm_runtime.get("model") or "").strip()
             if api_key and base_url and model:
-                return DeepSeekClient.from_runtime(
-                    llm_runtime,
+                client, _ = build_task_client(
+                    ModelTask.RAG_SYNTHESIS,
+                    self._registry_settings_for_values(
+                        settings,
+                        api_key=api_key,
+                        base_url=base_url,
+                        model=model,
+                    ),
                     timeout_seconds=self._runtime_client_timeout_seconds(settings),
                     retries_per_base=0,
-                    retry_backoff_seconds=min(
-                        max(float(settings.deepseek_retry_backoff_seconds), 0.0),
-                        0.25,
-                    ),
-                    max_concurrency=settings.llm_global_max_concurrency,
-                    min_interval_seconds=settings.llm_global_min_interval_seconds,
-                    request_jitter_seconds=settings.llm_global_jitter_seconds,
                 )
+                return client
             if api_key:
                 # api key supplied without base_url/model: cannot build a client.
                 return None

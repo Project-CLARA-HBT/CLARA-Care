@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekResponse
+from clara_ml.llm.model_registry import ModelTask
 from clara_ml.rag.langchain_adapter import build_prompt
 from clara_ml.rag.pipeline import RagPipelineP0
 from clara_ml.rag.retriever import Document
@@ -217,6 +218,42 @@ def test_rag_pipeline_uses_provider_when_key_exists():
     assert result.model_used == "deepseek-v3.2"
 
 
+def test_rag_pipeline_explicit_connection_values_use_registered_task_client(monkeypatch):
+    calls: list[dict[str, object]] = []
+
+    def _registered_client(task, task_settings, *, timeout_seconds, retries_per_base):
+        calls.append(
+            {
+                "task": task,
+                "api_key": task_settings.deepseek_api_key,
+                "base_url": task_settings.deepseek_base_url,
+                "model": task_settings.deepseek_model,
+                "timeout_seconds": timeout_seconds,
+                "retries_per_base": retries_per_base,
+            }
+        )
+        return _SuccessfulClient(), object()
+
+    monkeypatch.setattr("clara_ml.rag.pipeline.build_task_client", _registered_client)
+    RagPipelineP0(
+        deepseek_api_key="explicit-key",
+        deepseek_base_url="https://internal.example/v1",
+        deepseek_model="explicit-model",
+        deepseek_timeout_seconds=31,
+    )
+
+    assert calls == [
+        {
+            "task": ModelTask.RAG_SYNTHESIS,
+            "api_key": "explicit-key",
+            "base_url": "https://internal.example/v1",
+            "model": "explicit-model",
+            "timeout_seconds": 31,
+            "retries_per_base": settings.deepseek_retries_per_base,
+        }
+    ]
+
+
 def test_rag_pipeline_fallback_when_deepseek_fails():
     pipe = RagPipelineP0(
         deepseek_api_key="test-key",
@@ -322,7 +359,7 @@ def test_rag_pipeline_recovers_from_transient_llm_failure_with_compact_retry():
     )
 
 
-def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime(monkeypatch):
+def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime():
     pipe = RagPipelineP0(
         deepseek_api_key="deepseek-only-key",
         llm_client=_SuccessfulClient(),
@@ -335,7 +372,6 @@ def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime(m
         settings.deepseek_base_url = "https://api.yescale.vip/v1"
         settings.deepseek_model = "deepseek-v3.2"
         _RecordingRuntimeClient.calls = []
-        monkeypatch.setattr("clara_ml.rag.pipeline.DeepSeekClient", _RecordingRuntimeClient)
 
         result = pipe.run(
             "khi bi so mui toi nen lam gi",
@@ -366,7 +402,21 @@ def test_rag_pipeline_caps_timeout_for_runtime_override_client(monkeypatch):
         settings.deepseek_timeout_seconds = 60
         settings.llm_deepseek_only = False
         _RecordingRuntimeClient.calls = []
-        monkeypatch.setattr("clara_ml.rag.pipeline.DeepSeekClient", _RecordingRuntimeClient)
+
+        def _registered_client(task, task_settings, *, timeout_seconds, retries_per_base):
+            assert task is ModelTask.RAG_SYNTHESIS
+            assert retries_per_base == 0
+            return (
+                _RecordingRuntimeClient(
+                    api_key=task_settings.deepseek_api_key,
+                    base_url=task_settings.deepseek_base_url,
+                    model=task_settings.deepseek_model,
+                    timeout_seconds=timeout_seconds,
+                ),
+                object(),
+            )
+
+        monkeypatch.setattr("clara_ml.rag.pipeline.build_task_client", _registered_client)
 
         result = pipe.run(
             "compare dash and mediterranean",
