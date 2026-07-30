@@ -46,6 +46,9 @@ recorded as implementation evidence, not release evidence.
   specialist contract to source-bound findings and non-prescriptive action
   classes that cannot undercut its own triage. None changes a released
   diagnostic, treatment, authorization or LifeMap decision.
+- `4fd15a63` localizes the legacy-chat composer and removes its raw job ID from
+  end-user status. `8bbc1689` localizes the transparency gate fallback and
+  replaces its raw acknowledgement error with safe catalog wording.
 
 No format/lint/type/test/build/eval/deploy command was run for these additions.
 Only static whitespace checks were recorded before their commits.

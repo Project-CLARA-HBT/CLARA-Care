@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `3f33a751`. Per the current user direction, this
+including `8bd27232` through `8bbc1689`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -151,6 +151,10 @@ safety policy.
 - `3f33a751`: Council's shadow-specialist contract is now constrained to
   bound evidence findings and non-prescriptive actions that cannot undercut
   its proposed triage level. The path remains unreleased shadow evidence.
+- `4fd15a63` and `8bbc1689`: the remaining bounded legacy Chat composer and
+  the AI Transparency Notice gate are catalog-backed. The composer no longer
+  displays a raw job identifier; acknowledgement errors are sanitized rather
+  than exposing transport detail.
 
 All of these checkpoints have static whitespace evidence only in this pass;
 their tests, builds, evaluation and deployment remain deferred by instruction.
@@ -208,7 +212,7 @@ fail.
 The same no-run status applies to the subsequent implementation checkpoints
 `d53af25a`, `a4b9458c`, `99a69fbe`, `4bf1a47f`, `eda8b7d6`, `00993943`,
 `524b9b02`, `ec306759`, `1f06dab6`, `8ca4f4c7`, `14414393`, `8583b8e6` and
-`3f33a751`. Their pull-request notes
+`3f33a751`, `4fd15a63` and `8bbc1689`. Their pull-request notes
 record only static whitespace checks; they are not evidence of runtime health.
 
 Historical executions:
