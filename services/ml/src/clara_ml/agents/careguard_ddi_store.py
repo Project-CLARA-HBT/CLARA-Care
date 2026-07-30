@@ -50,6 +50,8 @@ class _Manifest:
     source_version: str
     source_sha256: str
     manifest_sha256: str
+    ddi_rule_count: int
+    dictionary_record_count: int
     ddi_shards: tuple[dict[str, Any], ...]
     dictionary_shards: tuple[dict[str, Any], ...]
 
@@ -94,11 +96,12 @@ class DrugBankDdiStore:
         *,
         drugbank_dir: Path,
         manifest_path: Path,
+        sqlite_path: Path | None = None,
         integrity_required: bool = True,
     ) -> None:
         self._dir = drugbank_dir
         self._manifest_path = manifest_path
-        self._db_path = drugbank_dir / "ddi_index.sqlite"
+        self._db_path = sqlite_path or drugbank_dir / "ddi_index.sqlite"
         self._integrity_required = integrity_required
         self._version = ""
 
@@ -120,7 +123,9 @@ class DrugBankDdiStore:
         database_identity = self._existing_db_identity()
         database_version = database_identity.get("version", "")
         pair_count = 0
+        dictionary_record_count = 0
         pair_table_readable = False
+        dictionary_table_readable = False
         if self._db_path.exists():
             try:
                 conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
@@ -129,26 +134,58 @@ class DrugBankDdiStore:
                         "SELECT value FROM meta WHERE key = 'pair_count'"
                     ).fetchone()
                     pair_count = int(row[0]) if row and str(row[0]).isdigit() else 0
+                    dictionary_row = conn.execute(
+                        "SELECT value FROM meta WHERE key = 'dictionary_record_count'"
+                    ).fetchone()
+                    dictionary_record_count = (
+                        int(dictionary_row[0])
+                        if dictionary_row and str(dictionary_row[0]).isdigit()
+                        else 0
+                    )
                     # Validate the interaction table itself, not only its
                     # self-reported metadata. ``LIMIT 1`` is constant-time on
                     # the indexed table and catches a corrupt/incomplete DB
                     # whose meta table still looks healthy.
                     conn.execute("SELECT 1 FROM ddi_pairs LIMIT 1").fetchone()
                     pair_table_readable = True
+                    # DrugBank-backed Vietnamese normalization is part of the
+                    # same licensed artifact boundary. A DDI index with a
+                    # missing/corrupt dictionary must not advertise complete
+                    # full-DrugBank readiness.
+                    conn.execute("SELECT 1 FROM drug_dictionary LIMIT 1").fetchone()
+                    dictionary_table_readable = True
                 finally:
                     conn.close()
             except (sqlite3.Error, OSError, ValueError):
                 pair_count = 0
+                dictionary_record_count = 0
                 pair_table_readable = False
+                dictionary_table_readable = False
 
-        ready = bool(
+        integrity_verified = bool(manifest is not None and self._integrity_required)
+        identity_matches = bool(
             manifest is not None
             and database_version == manifest_version
             and database_identity.get("manifest_sha256") == manifest.manifest_sha256
             and database_identity.get("source_version") == manifest.source_version
             and database_identity.get("source_sha256") == manifest.source_sha256
+        )
+
+        counts_match = bool(
+            not self._integrity_required
+            or (
+                manifest is not None
+                and pair_count == manifest.ddi_rule_count
+                and dictionary_record_count == manifest.dictionary_record_count
+            )
+        )
+        ready = bool(
+            identity_matches
+            and counts_match
             and pair_count > 0
+            and dictionary_record_count > 0
             and pair_table_readable
+            and dictionary_table_readable
         )
         if ready:
             state = "ready"
@@ -160,14 +197,9 @@ class DrugBankDdiStore:
             "state": state,
             "version": database_version or manifest_version,
             "pair_count": pair_count,
-            "manifest_matches_index": bool(
-                manifest is not None
-                and database_version == manifest_version
-                and database_identity.get("manifest_sha256") == manifest.manifest_sha256
-                and database_identity.get("source_version") == manifest.source_version
-                and database_identity.get("source_sha256") == manifest.source_sha256
-            ),
-            "integrity_verified": manifest is not None,
+            "dictionary_record_count": dictionary_record_count,
+            "manifest_matches_index": identity_matches,
+            "integrity_verified": integrity_verified,
             "source_version": manifest.source_version if manifest else "",
         }
 
@@ -176,7 +208,7 @@ class DrugBankDdiStore:
     def _read_manifest(self) -> _Manifest | None:
         try:
             payload = json.loads(self._manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             return None
         if not isinstance(payload, dict):
             return None
@@ -192,12 +224,18 @@ class DrugBankDdiStore:
         source_version = str(payload.get("source_version") or "").strip()
         source_sha256 = str(payload.get("source_sha256") or "").strip().lower()
         manifest_sha256 = str(payload.get("manifest_sha256") or "").strip().lower()
+        ddi_rule_count = payload.get("ddi_rule_count")
+        dictionary_record_count = payload.get("dictionary_record_count")
         if self._integrity_required:
             if (
                 source != "drugbank"
                 or not source_version
                 or not _is_sha256(source_sha256)
                 or not _is_sha256(manifest_sha256)
+                or type(ddi_rule_count) is not int
+                or ddi_rule_count <= 0
+                or type(dictionary_record_count) is not int
+                or dictionary_record_count <= 0
                 or _canonical_manifest_sha256(payload) != manifest_sha256
             ):
                 return None
@@ -211,6 +249,8 @@ class DrugBankDdiStore:
             source_version=source_version,
             source_sha256=source_sha256,
             manifest_sha256=manifest_sha256,
+            ddi_rule_count=int(ddi_rule_count or 0),
+            dictionary_record_count=int(dictionary_record_count or 0),
             ddi_shards=tuple(normalized_ddi),
             dictionary_shards=tuple(normalized_dictionary),
         )
@@ -266,25 +306,21 @@ class DrugBankDdiStore:
         if manifest is None:
             return None
         existing = self._existing_db_identity()
-        if (
-            existing.get("version") == manifest.version
-            and existing.get("manifest_sha256") == manifest.manifest_sha256
-            and existing.get("source_version") == manifest.source_version
-            and existing.get("source_sha256") == manifest.source_sha256
-        ):
+        if self._matches_manifest(existing, manifest) and self._index_is_complete(manifest):
             self._version = manifest.version
             return manifest.version
 
         # Build into a temp file, then atomically replace, so a partial build is
         # never observed and concurrent readers keep the old (valid) DB.
-        tmp_fd, tmp_name = tempfile.mkstemp(
-            prefix="ddi_index.", suffix=".sqlite.tmp", dir=str(self._dir)
-        )
-        tmp_path = Path(tmp_name)
+        tmp_path: Path | None = None
         conn: sqlite3.Connection | None = None
         try:
             import os
 
+            tmp_fd, tmp_name = tempfile.mkstemp(
+                prefix="ddi_index.", suffix=".sqlite.tmp", dir=str(self._db_path.parent)
+            )
+            tmp_path = Path(tmp_name)
             os.close(tmp_fd)
             conn = sqlite3.connect(str(tmp_path))
             conn.execute("PRAGMA journal_mode=OFF")
@@ -297,7 +333,6 @@ class DrugBankDdiStore:
             )
             conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
 
-            total = 0
             for shard in manifest.ddi_shards:
                 shard_path = Path(shard["path"])
                 try:
@@ -305,7 +340,7 @@ class DrugBankDdiStore:
                     if shard["sha256"] and _sha256_bytes(raw_bytes) != shard["sha256"]:
                         return None
                     shard_payload = json.loads(raw_bytes.decode("utf-8"))
-                except (OSError, json.JSONDecodeError):
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                     return None
                 if not isinstance(shard_payload, dict):
                     return None
@@ -331,14 +366,12 @@ class DrugBankDdiStore:
                         "VALUES (?, ?, ?, ?)",
                         batch,
                     )
-                    total += len(batch)
             conn.execute(
                 "CREATE TABLE drug_dictionary ("
                 "alias TEXT PRIMARY KEY, normalized_name TEXT NOT NULL, "
                 "active_ingredients_json TEXT NOT NULL, rxcui TEXT NOT NULL, "
                 "drugbank_id TEXT NOT NULL)"
             )
-            dictionary_total = 0
             for shard in manifest.dictionary_shards:
                 shard_path = Path(shard["path"])
                 try:
@@ -346,7 +379,7 @@ class DrugBankDdiStore:
                     if shard["sha256"] and _sha256_bytes(raw_bytes) != shard["sha256"]:
                         return None
                     shard_payload = json.loads(raw_bytes.decode("utf-8"))
-                except (OSError, json.JSONDecodeError):
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                     return None
                 if not isinstance(shard_payload, dict):
                     return None
@@ -383,19 +416,27 @@ class DrugBankDdiStore:
                         "VALUES (?, ?, ?, ?, ?)",
                         batch_dictionary,
                     )
-                    dictionary_total += len(batch_dictionary)
+            actual_pair_count = int(conn.execute("SELECT COUNT(*) FROM ddi_pairs").fetchone()[0])
+            actual_dictionary_count = int(
+                conn.execute("SELECT COUNT(*) FROM drug_dictionary").fetchone()[0]
+            )
+            if self._integrity_required and (
+                actual_pair_count != manifest.ddi_rule_count
+                or actual_dictionary_count != manifest.dictionary_record_count
+            ):
+                return None
             conn.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('version', ?)",
                 (manifest.version,),
             )
             conn.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('pair_count', ?)",
-                (str(total),),
+                (str(actual_pair_count),),
             )
             conn.executemany(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
                 [
-                    ("dictionary_record_count", str(dictionary_total)),
+                    ("dictionary_record_count", str(actual_dictionary_count)),
                     ("manifest_sha256", manifest.manifest_sha256),
                     ("source_version", manifest.source_version),
                     ("source_sha256", manifest.source_sha256),
@@ -404,12 +445,13 @@ class DrugBankDdiStore:
             conn.commit()
             conn.close()
             conn = None
+            assert tmp_path is not None
             tmp_path.replace(self._db_path)
             self._version = manifest.version
             logger.info(
                 "drugbank ddi sqlite index built: version=%s pairs=%d",
                 manifest.version,
-                total,
+                actual_pair_count,
             )
             return manifest.version
         except (sqlite3.Error, OSError):
@@ -418,11 +460,37 @@ class DrugBankDdiStore:
         finally:
             if conn is not None:
                 conn.close()
-            if tmp_path.exists():
+            if tmp_path is not None and tmp_path.exists():
                 try:
                     tmp_path.unlink()
                 except OSError:
                     pass
+
+    @staticmethod
+    def _matches_manifest(existing: dict[str, str], manifest: _Manifest) -> bool:
+        return bool(
+            existing.get("version") == manifest.version
+            and existing.get("manifest_sha256") == manifest.manifest_sha256
+            and existing.get("source_version") == manifest.source_version
+            and existing.get("source_sha256") == manifest.source_sha256
+        )
+
+    def _index_is_complete(self, manifest: _Manifest) -> bool:
+        """Confirm a matching metadata row still represents a readable full index."""
+
+        readiness = self.readiness()
+        return bool(
+            readiness.get("state") == "ready"
+            and readiness.get("version") == manifest.version
+            and (
+                not self._integrity_required
+                or (
+                    readiness.get("pair_count") == manifest.ddi_rule_count
+                    and readiness.get("dictionary_record_count")
+                    == manifest.dictionary_record_count
+                )
+            )
+        )
 
     # -- lookup -----------------------------------------------------------
 

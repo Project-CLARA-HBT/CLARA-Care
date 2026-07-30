@@ -54,6 +54,19 @@ def _write_shards(root: Path, *, version: str = "drugbank-test-1") -> Path:
     }
     shard_path = drugbank_dir / "ddi_0.json"
     shard_path.write_text(json.dumps(shard), encoding="utf-8")
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "drugbankonly_a",
+                "normalized_name": "drugbankonly_a",
+                "active_ingredients": ["drugbankonly_a"],
+                "rxcui": "",
+                "drugbank_id": "DBTESTA",
+            }
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
     manifest = {
         "version": version,
         "source": "drugbank",
@@ -62,7 +75,14 @@ def _write_shards(root: Path, *, version: str = "drugbank-test-1") -> Path:
         "ddi_shards": [
             {"file": "ddi_0.json", "sha256": sha256(shard_path.read_bytes()).hexdigest()}
         ],
-        "dictionary_shards": [],
+        "ddi_rule_count": 2,
+        "dictionary_record_count": 1,
+        "dictionary_shards": [
+            {
+                "file": "dictionary_0.json",
+                "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
+            }
+        ],
     }
     unsigned = json.dumps(
         manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -108,6 +128,7 @@ def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
         "state": "ready",
         "version": "drugbank-test-1",
         "pair_count": 2,
+        "dictionary_record_count": 1,
         "manifest_matches_index": True,
         "integrity_verified": True,
         "source_version": "test-source-1",
@@ -179,6 +200,7 @@ def test_store_resolves_dictionary_alias_with_traceable_identifiers(tmp_path: Pa
             "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
         }
     ]
+    manifest["dictionary_record_count"] = 1
     unsigned = dict(manifest)
     unsigned.pop("manifest_sha256", None)
     manifest["manifest_sha256"] = sha256(
@@ -213,6 +235,7 @@ def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
         "state": "degraded",
         "version": "drugbank-test-1",
         "pair_count": 0,
+        "dictionary_record_count": 0,
         "manifest_matches_index": True,
         "integrity_verified": True,
         "source_version": "test-source-1",

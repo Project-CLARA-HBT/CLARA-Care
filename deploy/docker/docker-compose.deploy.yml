@@ -189,8 +189,8 @@ services:
       CAREGUARD_DRUGBANK_SQLITE_ENABLED: ${CAREGUARD_DRUGBANK_SQLITE_ENABLED:-true}
       CAREGUARD_DRUGBANK_REQUIRED: ${CAREGUARD_DRUGBANK_REQUIRED:-false}
       CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED: ${CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED:-true}
-      CAREGUARD_DRUGBANK_SQLITE_PATH: ${CAREGUARD_DRUGBANK_SQLITE_PATH:-}
-      CAREGUARD_DRUGBANK_MANIFEST_PATH: ${CAREGUARD_DRUGBANK_MANIFEST_PATH:-}
+      CAREGUARD_DRUGBANK_SQLITE_PATH: ${CAREGUARD_DRUGBANK_SQLITE_PATH:-/var/lib/clara/drugbank/ddi_index.sqlite}
+      CAREGUARD_DRUGBANK_MANIFEST_PATH: ${CAREGUARD_DRUGBANK_MANIFEST_PATH:-/var/lib/clara/drugbank/manifest.json}
       COUNCIL_LLM_SHADOW_ENABLED: ${COUNCIL_LLM_SHADOW_ENABLED:-false}
       COUNCIL_LLM_MAX_TOKENS: ${COUNCIL_LLM_MAX_TOKENS:-1200}
       SCRIBE_ASR_PRIMARY: ${SCRIBE_ASR_PRIMARY:-whisper}
@@ -241,6 +241,10 @@ services:
       - clara_local
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
+    # Licensed artifact bundle is ML-only; the host path must be provisioned
+    # from approved DrugBank material before strict mode is enabled.
+    volumes:
+      - ${CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR:-./data/drugbank}:/var/lib/clara/drugbank
     # Container healthcheck (Requirement 6.4). Uses the ML /health liveness
     # endpoint (unchanged shape) via the in-image python interpreter, since the
     # slim base image ships no curl/wget. Additive: orchestration liveness only.

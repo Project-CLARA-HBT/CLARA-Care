@@ -52,6 +52,22 @@ _VN_DICTIONARY_ALIAS_LOOKUP: dict[str, str] = {}
 _VN_DICTIONARY_ACTIVE_INGREDIENTS: dict[str, list[str]] = {}
 _VN_DICTIONARY_RXCUI_MAP: dict[str, str] = {}
 
+
+def _configured_drugbank_paths() -> tuple[Path, Path, Path]:
+    """Resolve the deployment-owned DrugBank bundle without exposing paths.
+
+    Empty settings preserve the package-local development fixture. Production
+    may mount a licensed bundle outside the image and point the manifest and
+    SQLite index at independent, container-visible locations. The manifest's
+    directory remains the only permitted root for its relative shard paths.
+    """
+
+    configured_manifest = settings.careguard_drugbank_manifest_path.strip()
+    manifest_path = Path(configured_manifest) if configured_manifest else _DRUGBANK_MANIFEST_PATH
+    configured_sqlite = settings.careguard_drugbank_sqlite_path.strip()
+    sqlite_path = Path(configured_sqlite) if configured_sqlite else manifest_path.parent / "ddi_index.sqlite"
+    return manifest_path.parent, manifest_path, sqlite_path
+
 _CRITICAL_SYMPTOMS = {
     "chest pain",
     "shortness of breath",
@@ -681,11 +697,25 @@ def _get_drugbank_store() -> DrugBankDdiStore | None:
     """
     global _DRUGBANK_STORE, _DRUGBANK_STORE_READY
     if _DRUGBANK_STORE_READY:
-        return _DRUGBANK_STORE
+        try:
+            if (
+                _DRUGBANK_STORE is not None
+                and _DRUGBANK_STORE.readiness().get("state") == "ready"
+            ):
+                return _DRUGBANK_STORE
+        except Exception:  # noqa: BLE001 - a readiness failure must fail closed
+            pass
+        # A mounted bundle can arrive or be atomically refreshed after this
+        # process started. Re-evaluate a degraded/missing store instead of
+        # retaining an unsafe stale cache until a manual restart.
+        _DRUGBANK_STORE_READY = False
+        _DRUGBANK_STORE = None
     try:
+        drugbank_dir, manifest_path, sqlite_path = _configured_drugbank_paths()
         store = DrugBankDdiStore(
-            drugbank_dir=_DRUGBANK_DIR,
-            manifest_path=_DRUGBANK_MANIFEST_PATH,
+            drugbank_dir=drugbank_dir,
+            manifest_path=manifest_path,
+            sqlite_path=sqlite_path,
             integrity_required=settings.careguard_drugbank_manifest_integrity_required,
         )
         built_version = store.ensure_built()
@@ -758,7 +788,9 @@ def get_drugbank_readiness() -> dict[str, object]:
             "state": "disabled",
             "version": "",
             "pair_count": 0,
+            "dictionary_record_count": 0,
             "manifest_matches_index": False,
+            "integrity_verified": False,
             "required": bool(settings.careguard_drugbank_required),
         }
     store = _get_drugbank_store()
@@ -767,7 +799,9 @@ def get_drugbank_readiness() -> dict[str, object]:
             "state": "unavailable",
             "version": "",
             "pair_count": 0,
+            "dictionary_record_count": 0,
             "manifest_matches_index": False,
+            "integrity_verified": False,
             "required": bool(settings.careguard_drugbank_required),
         }
     readiness = store.readiness()

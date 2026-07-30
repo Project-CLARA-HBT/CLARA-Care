@@ -193,8 +193,8 @@ services:
       CAREGUARD_DRUGBANK_SQLITE_ENABLED: ${CAREGUARD_DRUGBANK_SQLITE_ENABLED:-true}
       CAREGUARD_DRUGBANK_REQUIRED: ${CAREGUARD_DRUGBANK_REQUIRED:-false}
       CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED: ${CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED:-true}
-      CAREGUARD_DRUGBANK_SQLITE_PATH: ${CAREGUARD_DRUGBANK_SQLITE_PATH:-}
-      CAREGUARD_DRUGBANK_MANIFEST_PATH: ${CAREGUARD_DRUGBANK_MANIFEST_PATH:-}
+      CAREGUARD_DRUGBANK_SQLITE_PATH: ${CAREGUARD_DRUGBANK_SQLITE_PATH:-/var/lib/clara/drugbank/ddi_index.sqlite}
+      CAREGUARD_DRUGBANK_MANIFEST_PATH: ${CAREGUARD_DRUGBANK_MANIFEST_PATH:-/var/lib/clara/drugbank/manifest.json}
       COUNCIL_LLM_SHADOW_ENABLED: ${COUNCIL_LLM_SHADOW_ENABLED:-false}
       COUNCIL_LLM_MAX_TOKENS: ${COUNCIL_LLM_MAX_TOKENS:-1200}
       SCRIBE_ASR_PRIMARY: ${SCRIBE_ASR_PRIMARY:-whisper}
@@ -233,6 +233,11 @@ services:
         condition: service_started
     ports:
       - "127.0.0.1:${APP_ML_PORT:-8110}:8010"
+    # Licensed DrugBank artifacts live outside the image and repository. The
+    # bundle is writable only to let the store atomically create/rebuild its
+    # SQLite index; do not mount it into API or web containers.
+    volumes:
+      - ${CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR:-./data/drugbank}:/var/lib/clara/drugbank
     logging: *default-logging
 
   ocr:

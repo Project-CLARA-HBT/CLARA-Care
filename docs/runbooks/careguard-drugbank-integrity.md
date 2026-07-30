@@ -32,6 +32,28 @@ artifact. Record the approved artifact version and revert this setting as soon
 as a checksum-bearing ingest is available. Do not use this switch to accept an
 unknown source or to bypass a failed checksum in clinical strict mode.
 
+## Container release boundary
+
+The ML compose services mount only the approved artifact directory at
+`/var/lib/clara/drugbank`; API and web never receive that mount. Configure
+container-visible paths explicitly, then use strict mode only after the bundle
+has been provisioned:
+
+```dotenv
+CAREGUARD_DRUGBANK_ARTIFACT_HOST_DIR=/secure/clara/drugbank
+CAREGUARD_DRUGBANK_MANIFEST_PATH=/var/lib/clara/drugbank/manifest.json
+CAREGUARD_DRUGBANK_SQLITE_PATH=/var/lib/clara/drugbank/ddi_index.sqlite
+CAREGUARD_DRUGBANK_SQLITE_ENABLED=true
+CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED=true
+CAREGUARD_DRUGBANK_REQUIRED=true
+```
+
+The runtime rejects a strict configuration that disables the SQLite layer or
+integrity checks. Readiness is `ready` only when the manifest/source identity,
+actual DDI pair count, and actual dictionary record count all match the
+indexed database. A changed/missing dictionary is therefore not presented as a
+full DrugBank-backed Vietnamese medication normalization service.
+
 ## Rebuild procedure
 
 Run this only where the licensed XML is available:
@@ -43,7 +65,8 @@ uv run python scripts/data/drugbank_ingest.py \
   --source-version <licensed-release-id>
 ```
 
-Restart the ML service to build the index atomically. Check `/health/ready` for
-`drugbank.state=ready`, `manifest_matches_index=true`, and
-`integrity_verified=true`; never log the licensed interaction text or source
-path in health/telemetry output.
+Restart the ML service to build the index atomically. Check the authenticated
+`/api/v1/careguard/drugbank/status` route for `drugbank.state=ready`,
+`manifest_matches_index=true`, `integrity_verified=true`, a positive
+`pair_count`, and a positive `dictionary_record_count`; never log the licensed
+interaction text or source path in health/telemetry output.

@@ -476,6 +476,19 @@ class Settings(BaseSettings):
         default=True,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED"),
     )
+    # Container-visible paths for a licensed DrugBank artifact bundle. Empty
+    # values retain the small development bundle location in the ML package.
+    # Production mounts the licensed manifest/shards and its prebuilt SQLite
+    # index outside the image; the CareGuard store resolves these paths once at
+    # startup and never exposes them in health responses or telemetry.
+    careguard_drugbank_manifest_path: str = Field(
+        default="",
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_MANIFEST_PATH"),
+    )
+    careguard_drugbank_sqlite_path: str = Field(
+        default="",
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_SQLITE_PATH"),
+    )
     # Additive consumer wording projection of an already-final CareGuard result.
     # It is intentionally OFF by default: the renderer never queries, changes,
     # or substitutes for the authoritative DrugBank decision path.
@@ -1171,6 +1184,24 @@ class Settings(BaseSettings):
                 hard_max,
             )
             self.deep_beta_report_min_words = self.deep_beta_report_max_words_cap
+
+        # A clinical DrugBank-only deployment may not silently turn off either
+        # the on-disk index or artifact-integrity verification. Refuse this
+        # contradiction during configuration parsing so the service cannot make
+        # a DDI conclusion from a legacy/curated fallback while claiming the
+        # licensed source is mandatory.
+        if self.careguard_drugbank_required and not self.careguard_drugbank_sqlite_enabled:
+            raise ValueError(
+                "CAREGUARD_DRUGBANK_REQUIRED requires CAREGUARD_DRUGBANK_SQLITE_ENABLED=true"
+            )
+        if (
+            self.careguard_drugbank_required
+            and not self.careguard_drugbank_manifest_integrity_required
+        ):
+            raise ValueError(
+                "CAREGUARD_DRUGBANK_REQUIRED requires "
+                "CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED=true"
+            )
 
         return self
 

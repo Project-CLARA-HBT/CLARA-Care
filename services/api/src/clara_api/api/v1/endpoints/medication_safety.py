@@ -61,6 +61,7 @@ def _ready_drugbank() -> dict[str, Any]:
         or not isinstance(readiness.get("version"), str)
         or not readiness["version"].strip()
         or readiness.get("manifest_matches_index") is not True
+        or readiness.get("integrity_verified") is not True
     ):
         raise _unavailable(readiness)
     return readiness

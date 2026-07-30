@@ -96,7 +96,11 @@ def drugbank_status(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DrugBank readiness is not reported by the ML service",
         )
-    if readiness.get("required") is True and readiness.get("state") != "ready":
+    if readiness.get("required") is True and (
+        readiness.get("state") != "ready"
+        or readiness.get("manifest_matches_index") is not True
+        or readiness.get("integrity_verified") is not True
+    ):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
