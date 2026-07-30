@@ -275,6 +275,7 @@ def _task_contract_snapshot(root: Path) -> dict[str, Any]:
                 "prompt_version": prompt_version,
                 "risk_level": contract.get("risk_level"),
                 "allowed_model_tiers": contract.get("allowed_model_tiers"),
+                "model_profile": contract.get("model_profile"),
                 "output_contract": contract.get("output_contract"),
                 "shadow_only": contract.get("shadow_only"),
             }
@@ -296,6 +297,10 @@ def _model_manifest(
 
     environment_names = [
         "LLM_DEEPSEEK_ONLY",
+        "DEEPSEEK_MODEL",
+        "DEEPSEEK_PRO_MODEL",
+        "DEEPSEEK_FLASH_MODEL",
+        "MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED",
         "CLARA_EVAL_API_BASE_URL",
         "CLARA_EVAL_ML_BASE_URL",
         "CLARA_EVAL_LOCKED_DATASET_REF",

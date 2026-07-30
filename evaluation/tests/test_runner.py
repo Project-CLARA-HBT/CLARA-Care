@@ -177,9 +177,12 @@ class EvalRunnerTests(unittest.TestCase):
             )
             contracts = model_manifest["task_contract_snapshot"]
             self.assertEqual(contracts["state"], "configured_not_executed")
-            self.assertEqual(contracts["schema_version"], "clara.task-contracts.v1")
+            self.assertEqual(contracts["schema_version"], "clara.task-contracts.v2")
             self.assertTrue(contracts["sha256"])
             self.assertTrue(contracts["contracts"])
+            self.assertTrue(
+                all(row["model_profile"] in {"pro", "flash"} for row in contracts["contracts"])
+            )
             self.assertEqual(
                 model_manifest["model_registry"]["state"],
                 "configured_not_executed",

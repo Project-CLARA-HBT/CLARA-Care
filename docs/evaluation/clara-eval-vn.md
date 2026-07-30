@@ -41,6 +41,12 @@ retrieval snapshot, runtime model/prompt resolution, and approved live
 execution evidence. Configure its values out of band; do not commit datasets,
 tokens, patient content, or provider keys.
 
+The checked-in task-contract manifest also records whether each task is
+assigned the governed `pro` or `flash` DeepSeek V4 profile. Judge artifacts
+capture that configuration but label it `configured_not_executed` until a
+credentialed live trace is supplied; they never turn a configured model into a
+measured quality or latency result.
+
 ## Data and model cards
 
 - Dataset card: `evaluation/clara_eval/datasets/README.md`,
