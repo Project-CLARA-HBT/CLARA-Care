@@ -554,6 +554,7 @@ enum ConsumerTerm {
   settingsPrivacyDescription,
   settingsTransparencyTitle,
   settingsAiModelLabel,
+  settingsAiModelGovernedRoute,
   settingsAboutTitle,
   settingsVersion,
   settingsAboutDescription,
@@ -1325,6 +1326,8 @@ class ConsumerTerminology {
         'CLARA chỉ xử lý dữ liệu sức khỏe bạn tự khai báo và yêu cầu đồng ý theo phiên bản trước khi cung cấp nội dung y tế. Bạn có thể xem lại và quản lý đồng ý trong mục "Quyền riêng tư & đồng ý" ở phần Thêm.',
     ConsumerTerm.settingsTransparencyTitle: 'Minh bạch AI',
     ConsumerTerm.settingsAiModelLabel: 'Mô hình AI',
+    ConsumerTerm.settingsAiModelGovernedRoute:
+        'DeepSeek V4 Pro / Flash — được chọn theo từng tác vụ',
     ConsumerTerm.settingsAboutTitle: 'Giới thiệu',
     ConsumerTerm.settingsVersion: 'Phiên bản {version}',
     ConsumerTerm.settingsAboutDescription:
@@ -2032,6 +2035,8 @@ class ConsumerTerminology {
         'CLARA only processes health information you provide and requires versioned consent before it provides medical content. You can review and manage consent in Privacy & consent under More.',
     ConsumerTerm.settingsTransparencyTitle: 'AI transparency',
     ConsumerTerm.settingsAiModelLabel: 'AI model',
+    ConsumerTerm.settingsAiModelGovernedRoute:
+        'DeepSeek V4 Pro / Flash — selected for each task',
     ConsumerTerm.settingsAboutTitle: 'About',
     ConsumerTerm.settingsVersion: 'Version {version}',
     ConsumerTerm.settingsAboutDescription:

@@ -43,7 +43,6 @@ import '../../core/a11y.dart';
 import '../../core/ai_transparency_notice.dart';
 import '../../core/api_client.dart';
 import '../../core/consumer_terminology.dart';
-import '../../core/model_disclosure.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/section_header.dart';
@@ -515,9 +514,11 @@ class _TransparencySection extends StatelessWidget {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
     final notice = currentAiTransparencyNoticeForLocale(locale);
-    // Reuse the shared model-disclosure label for a consistent, no-secret model
-    // family/version string from the governed V4 default (e.g. "deepseek v4 pro").
-    final modelLabel = ModelDisclosure.fromModelUsed('deepseek-v4-pro').label;
+    // This screen has no response envelope, so it must not claim that a
+    // particular task used Pro. Per-response model chips retain the actual
+    // server disclosure; the static setting correctly describes the governed
+    // V4 Pro/Flash task router without exposing endpoint or credential data.
+    final modelLabel = copy[ConsumerTerm.settingsAiModelGovernedRoute];
 
     return _SettingsGroup(
       title: copy[ConsumerTerm.settingsTransparencyTitle],
