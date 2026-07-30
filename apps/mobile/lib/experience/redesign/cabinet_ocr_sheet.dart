@@ -67,7 +67,7 @@ class _CabinetOcrCopy {
   String get scanning => _english ? 'Reading medicine label…' : 'Đang nhận dạng nhãn thuốc…';
   String get reviewDescription => _english
       ? 'Check the identified information, select medicines to add, then choose “Add to cabinet”. Low-confidence items need your manual confirmation before they are added.'
-      : 'Kiểm tra thông tin nhận dạng, tick chọn các thuốc muốn thêm rồi nhấn “Thêm vào tủ thuốc”. Các mục có độ tin cậy thấp cần bạn xác nhận thủ công trước khi thêm.';
+      : 'Kiểm tra thông tin nhận dạng, tick chọn các thuốc muốn thêm rồi nhấn “Thêm vào tủ thuốc”. Những mục chưa đọc rõ từ nguồn cần bạn xác nhận thủ công trước khi thêm.';
   String get addToCabinet => _english ? 'Add to cabinet' : 'Thêm vào tủ thuốc';
   String get retake => _english ? 'Take another photo' : 'Chụp lại';
   String get noDetection => _english

@@ -887,7 +887,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapCaptureOnlineNotice:
         'Chỉ xử lý khi có mạng. CLARA không tự xác nhận và dữ liệu ngoại tuyến có thể đã cũ.',
     ConsumerTerm.lifeMapCaptureLowConfidence:
-        'Một số trường có độ tin cậy thấp. Hãy đối chiếu nguồn.',
+        'Một số phần chưa đọc rõ từ nguồn. Hãy đối chiếu trước khi lưu.',
     ConsumerTerm.lifeMapCaptureMissingFields: 'Cần bổ sung: {fields}',
     ConsumerTerm.lifeMapCaptureUnsafe:
         'Nguồn có nội dung không an toàn; không thể xác nhận.',
@@ -1608,7 +1608,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapCaptureOnlineNotice:
         'This is only processed online. CLARA never confirms it automatically, and offline information may be stale.',
     ConsumerTerm.lifeMapCaptureLowConfidence:
-        'Some fields have low confidence. Check the source.',
+        'Some parts are unclear from the source. Compare them before saving.',
     ConsumerTerm.lifeMapCaptureMissingFields: 'Missing: {fields}',
     ConsumerTerm.lifeMapCaptureUnsafe:
         'The source contains unsafe content and cannot be confirmed.',
