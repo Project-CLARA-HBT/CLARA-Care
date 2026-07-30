@@ -171,6 +171,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             sessionStore: widget.sessionStore,
             onNeedsOnboarding: () => setState(() => _needsOnboarding = true),
             readCache: _lifeMapReadCache,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(

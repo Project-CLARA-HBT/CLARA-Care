@@ -11,11 +11,13 @@
 // the user has no PHR profile yet; that case routes to onboarding via
 // [TodaySurface.onNeedsOnboarding] and renders a gentle prompt rather than an
 // error. Loading uses skeletons, failures reuse `ErrorRetryView`, and an empty
-// agenda uses `ClaraEmptyState`. All copy is Vietnamese-first and PII-free.
+// agenda uses `ClaraEmptyState`. Product copy comes from the versioned,
+// Vietnamese-first terminology contract and remains PII-free.
 
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
@@ -23,6 +25,7 @@ import '../../theme/components/clara_card.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
+import '../language_controller.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 
@@ -66,6 +69,7 @@ class TodaySurface extends StatefulWidget {
     this.onNeedsOnboarding,
     this.onOpenLifeMap,
     this.readCache,
+    this.languageController,
   });
 
   final ApiClient apiClient;
@@ -78,6 +82,10 @@ class TodaySurface extends StatefulWidget {
   /// Invoked when the user chooses to open the full LifeMap surface.
   final VoidCallback? onOpenLifeMap;
   final LifeMapReadCache? readCache;
+
+  /// Optional app-level language state. Omit only for legacy/direct embedding;
+  /// it then resolves Vietnamese through [ConsumerTerminology]'s fallback.
+  final LanguageController? languageController;
 
   @override
   State<TodaySurface> createState() => _TodaySurfaceState();
@@ -111,12 +119,16 @@ class _TodaySurfaceState extends State<TodaySurface> {
     return token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _load() async {
     final token = _token;
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -169,7 +181,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
     } catch (_) {
       if (!mounted) return;
       if (await _restoreOfflineCache()) return;
-      setState(() => _error = 'Không thể tải lịch hôm nay. Vui lòng thử lại.');
+      setState(() => _error = _copy[ConsumerTerm.todayLoadFailed]);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -204,7 +216,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
 
   Future<void> _completeTask(_TodayTask task) async {
     if (_offlineCachedAt != null) {
-      _showSnack('Bạn đang ngoại tuyến. Kết nối mạng để hoàn tất việc này.');
+      _showSnack(_copy[ConsumerTerm.todayOfflineActionBlocked]);
       return;
     }
     final token = _token;
@@ -217,7 +229,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể hoàn tất việc này. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.todayCompleteFailed]);
     } finally {
       if (mounted) {
         setState(() => _completing.remove(task.id));
@@ -235,16 +247,45 @@ class _TodaySurfaceState extends State<TodaySurface> {
   /// task has no concrete deadline.
   String _formatDue(String? dueAt) {
     final trimmed = dueAt?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Không có hạn cụ thể';
+    if (trimmed.isEmpty) return _copy[ConsumerTerm.todayNoDueDate];
     final parsed = DateTime.tryParse(trimmed);
-    if (parsed == null) return 'Không có hạn cụ thể';
+    if (parsed == null) return _copy[ConsumerTerm.todayNoDueDate];
     final local = parsed.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
-    return 'Hạn: ${two(local.day)}/${two(local.month)}/${local.year}';
+    final date = _copy.locale == 'en'
+        ? '${_englishMonth(local.month)} ${local.day}, ${local.year}'
+        : '${two(local.day)}/${two(local.month)}/${local.year}';
+    return _copy.format(ConsumerTerm.todayDueDate, {'date': date});
   }
+
+  String _englishMonth(int month) => const <String>[
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildRefreshableBody(context),
+      );
+    }
+    return _buildRefreshableBody(context);
+  }
+
+  Widget _buildRefreshableBody(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _load,
       child: _buildBody(context),
@@ -291,22 +332,20 @@ class _TodaySurfaceState extends State<TodaySurface> {
               ),
               const SizedBox(height: ClaraTokens.spaceMd),
               Text(
-                'Hãy tạo hồ sơ sức khỏe trước',
+                _copy[ConsumerTerm.todayProfileRequiredTitle],
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Để CLARA gợi ý và theo dõi các việc chăm sóc cá nhân, bạn cần '
-                'tạo hồ sơ sức khỏe. Đây là kế hoạch cá nhân, không phải chẩn '
-                'đoán.',
+                _copy[ConsumerTerm.todayProfileRequiredDescription],
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: ClaraTokens.spaceLg),
               ClaraButton.primary(
-                label: 'Tạo hồ sơ sức khỏe',
+                label: _copy[ConsumerTerm.todayCreateProfile],
                 icon: Icons.arrow_forward,
                 onPressed: () => widget.onNeedsOnboarding?.call(),
               ),
@@ -322,31 +361,32 @@ class _TodaySurfaceState extends State<TodaySurface> {
       if (_offlineCachedAt != null) _buildOfflineNotice(context),
       Row(
         children: [
-          const Expanded(
-            child: SectionHeader(title: 'Hôm nay', emphasize: true),
+          Expanded(
+            child: SectionHeader(
+              title: _copy[ConsumerTerm.todayTitle],
+              emphasize: true,
+            ),
           ),
           if (widget.onOpenLifeMap != null)
             TextButton.icon(
               onPressed: widget.onOpenLifeMap,
               icon: const Icon(Icons.map_outlined, size: 18),
-              label: const Text('Mở LifeMap'),
+              label: Text(_copy[ConsumerTerm.todayOpenLifeMap]),
             ),
         ],
       ),
       const SizedBox(height: ClaraTokens.spaceSm),
       _buildStats(context),
       const SizedBox(height: ClaraTokens.spaceLg),
-      const SectionHeader(title: 'Việc bạn đã chấp nhận'),
+      SectionHeader(title: _copy[ConsumerTerm.todayAccepted]),
     ];
 
     if (_tasks.isEmpty) {
       children.add(
-        const ClaraEmptyState(
+        ClaraEmptyState(
           icon: Icons.task_alt_outlined,
-          title: 'Hôm nay chưa có việc nào',
-          message:
-              'Những việc chăm sóc bạn chấp nhận trong LifeMap sẽ xuất hiện ở '
-              'đây để bạn theo dõi và hoàn tất.',
+          title: _copy[ConsumerTerm.todayEmptyTitle],
+          message: _copy[ConsumerTerm.todayEmptyDescription],
         ),
       );
     } else {
@@ -388,13 +428,19 @@ class _TodaySurfaceState extends State<TodaySurface> {
         !now.isBefore(_offlineValidUntil!.toUtc());
     final cachedAt = _offlineCachedAt!.toLocal();
     String two(int value) => value.toString().padLeft(2, '0');
-    final timestamp = '${two(cachedAt.hour)}:${two(cachedAt.minute)} '
-        '${two(cachedAt.day)}/${two(cachedAt.month)}/${cachedAt.year}';
+    final timestamp = _copy.locale == 'en'
+        ? '${_englishMonth(cachedAt.month)} ${cachedAt.day}, '
+            '${cachedAt.year} at ${two(cachedAt.hour)}:${two(cachedAt.minute)}'
+        : '${two(cachedAt.hour)}:${two(cachedAt.minute)} '
+            '${two(cachedAt.day)}/${two(cachedAt.month)}/${cachedAt.year}';
     return Semantics(
       liveRegion: true,
       label: stale
-          ? 'Ngoại tuyến. Dữ liệu đã cũ, chỉ để tham khảo.'
-          : 'Ngoại tuyến. Dữ liệu lưu lúc $timestamp, chỉ để tham khảo.',
+          ? _copy[ConsumerTerm.todayOfflineStale]
+          : _copy.format(
+              ConsumerTerm.todayOfflineFresh,
+              {'timestamp': timestamp},
+            ),
       child: Container(
         margin: const EdgeInsets.fromLTRB(
           ClaraTokens.spaceMd,
@@ -409,8 +455,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
         ),
         child: Text(
           stale
-              ? 'Ngoại tuyến · dữ liệu đã cũ · không thể thực hiện thay đổi.'
-              : 'Ngoại tuyến · lưu lúc $timestamp · không thể thực hiện thay đổi.',
+              ? _copy[ConsumerTerm.todayOfflineStale]
+              : _copy.format(
+                  ConsumerTerm.todayOfflineFresh,
+                  {'timestamp': timestamp},
+                ),
         ),
       ),
     );
@@ -425,17 +474,17 @@ class _TodaySurfaceState extends State<TodaySurface> {
         children: [
           _StatCard(
             icon: Icons.pending_actions_outlined,
-            label: 'Việc đang chờ',
+            label: _copy[ConsumerTerm.todayPending],
             value: _tasks.length,
           ),
           _StatCard(
             icon: Icons.route_outlined,
-            label: 'Hành trình đang mở',
+            label: _copy[ConsumerTerm.todayEpisodes],
             value: _episodes.length,
           ),
           _StatCard(
             icon: Icons.mark_email_unread_outlined,
-            label: 'Cần xác nhận',
+            label: _copy[ConsumerTerm.todayConfirmation],
             value: _pendingConfirmationCount,
           ),
         ],
@@ -455,7 +504,9 @@ class _TodaySurfaceState extends State<TodaySurface> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  task.title.isEmpty ? 'Việc chưa đặt tên' : task.title,
+                  task.title.isEmpty
+                      ? _copy[ConsumerTerm.todayUnnamedTask]
+                      : task.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -471,7 +522,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
           ),
           const SizedBox(width: ClaraTokens.spaceSm),
           ClaraButton.primary(
-            label: 'Hoàn tất',
+            label: _copy[ConsumerTerm.actionComplete],
             icon: Icons.check,
             loading: busy,
             onPressed:
