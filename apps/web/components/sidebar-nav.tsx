@@ -93,7 +93,7 @@ export default function SidebarNav({
               CLARA
             </span>
             <span className="block truncate text-[11px] font-medium text-[var(--text-muted)]">
-              {uiLanguage === "en" ? "Your health assistant" : "Trợ lý y tế của bạn"}
+              {t(uiLanguage, "brand.healthAssistant")}
             </span>
           </Link>
         ) : null}
